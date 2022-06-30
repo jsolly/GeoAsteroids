@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch_Chrome",
+      "request": "launch",
+      "type": "pwa-chrome",
+      "runtimeArgs": [
+        "--incognito",
+      ],
+      "url": "http://127.0.0.1:5500/javascript-template.html",
+    },
+  ],
+}
