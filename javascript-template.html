@@ -306,11 +306,39 @@
                     ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
                 }
 
+                // draw lasers
                 for (var i = 0; i < ship.lasers.length; i++) {
-                        ctx.fillStyle = "salmon";
-                        ctx.beginPath();
-                        ctx.arc(ship.lasers[i].x, ship.lasers[i].y, SHIP_SIZE / 15, 0, Math.PI * 2, false);
-                        ctx.fill();
+                    ctx.fillStyle = "salmon";
+                    ctx.beginPath();
+                    ctx.arc(ship.lasers[i].x, ship.lasers[i].y, SHIP_SIZE / 15, 0, Math.PI * 2, false);
+                    ctx.fill();
+                }
+
+                // detect laser hits on asteroids
+                var ax, ay, ar, lx, ly, ly;
+                for (var i = roids.length - 1; i >= 0; i--) {
+
+                    //grab asteroid properties
+                    ax = roids[i].x;
+                    ay = roids[i].y;
+                    ar = roids[i].r;
+
+                    for (var j = ship.lasers.length - 1; j >= 0; j--) {
+
+                        // grab laser properties
+                        lx = ship.lasers[j].x;
+                        ly = ship.lasers[j].y;
+
+                        // detect hits
+                        if (distBetweenPoints(ax, ay, lx, ly) < ar) {
+                            ship.lasers.splice(j, 1);
+
+                            // remove asteroid 
+                            roids.splice(i, 1);
+                            break;
+                        }
+                    }
+
                 }
 
                 // check for asteroid collisions
@@ -350,14 +378,14 @@
                 }
 
                 // move the lasers
-                 for (var i = ship.lasers.length - 1; i >= 0; i--) {
+                for (var i = ship.lasers.length - 1; i >= 0; i--) {
                     // check laser distance
-                      if(ship.lasers[i].distTraveled > LASER_DIST * canv.width){
+                    if (ship.lasers[i].distTraveled > LASER_DIST * canv.width) {
                         ship.lasers.splice(i, 1);
                         continue;
                     }
                     ship.lasers[i].x += ship.lasers[i].xv;
-                    ship.lasers[i].y +=ship.lasers[i].yv;
+                    ship.lasers[i].y += ship.lasers[i].yv;
 
                     // calculate distance traveled 
                     ship.lasers[i].distTraveled += Math.sqrt(Math.pow(ship.lasers[i].xv, 2) + Math.pow(ship.lasers[i].yv, 2));
@@ -373,7 +401,7 @@
                     } else if (ship.lasers[i].y > canv.height) {
                         ship.lasers[i].y = 0;
                     }
-                }               
+                }
 
                 // move the asteroids
                 for (var i = 0; i < roids.length; i++) {
