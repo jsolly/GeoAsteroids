@@ -7,6 +7,10 @@
 
 
 <body>
+    <div>
+        <button id="toggle-sound" onclick="toggleSound()">Toggle Sound</button>
+        <button id="toggle-music" onclick="toggleMusic()">Toggle Music</button>
+    </div>
     <canvas id="gameCanvas" width=800 height=600</canvas>
         <script>
             const FPS = 60; // Frames per second
@@ -38,8 +42,8 @@
             const TEXT_FADE_TIME = 2.5; // text fade in seconds
             const TEXT_SIZE = 40; // Text font height in pixels
             const SAVE_KEY_SCORE = "highscore"; // Save key for localstorage of high score.
-            const SOUND_ON = true;
-            const MUSIC_ON = true;
+            var SOUND_ON = true;
+            var MUSIC_ON = true;
 
             //** @type {HTMLCanvasElement} */
             var canv = document.getElementById("gameCanvas");
@@ -65,6 +69,16 @@
             // Set up game loop
             setInterval(update, 1000 / FPS)
 
+            function toggleSound() {
+                SOUND_ON = !SOUND_ON
+                document.getElementById("toggle-sound").blur();
+            }
+
+            function toggleMusic() {
+                MUSIC_ON = !MUSIC_ON
+                document.getElementById("toggle-music").blur();
+
+            }
 
             function createAsteroidBelt() {
                 roids = [];
@@ -154,6 +168,8 @@
                 ship.dead = true;
                 text = "Game Over";
                 textAlpha = 1.0;
+                music.tempo = 1.0;
+
             }
 
             function keyDown(/** @type {KeyboardEvent} */ ev) {
@@ -223,6 +239,7 @@
                 score = 0;
                 ship = newShip();
 
+
                 // get the high score from local storage
                 var scoreStr = localStorage.getItem(SAVE_KEY_SCORE);
                 if (scoreStr == null) {
@@ -287,16 +304,14 @@
                 this.beatTime = 0; // the frames left before next beat
 
                 this.play = function () {
-                    if (MUSIC_ON) {
                         if (this.low) {
                             this.soundLow.play()
                         } else {
                             this.soundHigh.play()
                         }
                         this.low = !this.low;
-                    }
                 }
-                this.setAsteroidRatio = function(ratio){
+                this.setAsteroidRatio = function (ratio) {
                     this.tempo = 1.0 - 0.75 * (1.0 - ratio);
 
                 }
@@ -337,7 +352,9 @@
                 var exploding = ship.explodeTime > 0;
 
                 // tick the music
-                music.tick();
+                if (MUSIC_ON) {
+                    music.tick();
+                }
 
                 // draw space
                 ctx.fillStyle = "black"
