@@ -39,7 +39,7 @@
             const TEXT_SIZE = 40; // Text font height in pixels
             const SAVE_KEY_SCORE = "highscore"; // Save key for localstorage of high score.
             const SOUND_ON = true;
-            const MUSIC_ON = false;
+            const MUSIC_ON = true;
 
             //** @type {HTMLCanvasElement} */
             var canv = document.getElementById("gameCanvas");
@@ -53,6 +53,7 @@
 
             // set up the music
             var music = new Music("sounds/music-low.m4a", "sounds/music-high.m4a")
+            var roidsLeft, roidsTotal;
 
             // setup the game parameters
             var level, lives, roids, score, scoreHigh, ship, text, textAlpha;
@@ -67,6 +68,8 @@
 
             function createAsteroidBelt() {
                 roids = [];
+                roidsTotal = (ROID_NUM + level) * 7
+                roidsLeft = roidsTotal
                 var x, y;
                 for (var i = 0; i < ROID_NUM + level; i++) {
                     // random asteroid location (not touching ship)
@@ -105,6 +108,10 @@
                 // destroy the asteroid
                 roids.splice(i, 1);
                 fxHit.play();
+
+                // calculate remianing ratio of remaining asteroids to determine music tempo
+                roidsLeft--;
+                music.setAsteroidRatio(roidsLeft == 0 ? 1 : roidsLeft / roidsTotal)
 
                 // new level when no more asteroids
                 if (roids.length == 0) {
@@ -272,23 +279,30 @@
                 ship.canShoot = false;
             }
 
-            function Music(srcLow, srcHigh){
+            function Music(srcLow, srcHigh) {
                 this.soundLow = new Audio(srcLow);
                 this.soundHigh = new Audio(srcHigh);
                 this.low = true;
                 this.tempo = 1.0; // seconds per beat
                 this.beatTime = 0; // the frames left before next beat
 
-                this.play = function() {
-                    if (this.low) {
-                        this.soundLow.play()
-                    } else {
-                        this.soundHigh.play()
+                this.play = function () {
+                    if (MUSIC_ON) {
+                        if (this.low) {
+                            this.soundLow.play()
+                        } else {
+                            this.soundHigh.play()
+                        }
+                        this.low = !this.low;
                     }
-                    this.low = !this.low;
                 }
-                this.tick = function() {
-                    if(this.beatTime == 0) {
+                this.setAsteroidRatio = function(ratio){
+                    this.tempo = 1.0 - 0.75 * (1.0 - ratio);
+
+                }
+
+                this.tick = function () {
+                    if (this.beatTime == 0) {
                         this.play();
                         this.beatTime = Math.ceil(this.tempo * FPS);
 
