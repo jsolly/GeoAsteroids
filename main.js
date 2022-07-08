@@ -1,13 +1,13 @@
 import {
     SHIP_SIZE, SHIP_INV_DUR, SHIP_INV_BLINK_DUR, SHIP_EXPLODE_DUR, SHIP_THRUST, TURN_SPEED,
-    FPS, MUSIC_ON, SOUND_ON,
+    FPS, MUSIC_ON,
     SHOW_BOUNDING, FRICTION, SHOW_CENTRE_DOT,
-    LASER_MAX, LASER_SPEED, LASER_DIST, LASER_EXPLODE_DUR
+    LASER_MAX, LASER_SPEED, LASER_DIST, LASER_EXPLODE_DUR, START_LIVES
 } from './modules/constants.mjs';
 import { distBetweenPoints } from './modules/utils.mjs';
 import { createAsteroidBelt, drawAsteroids, destroyAsteroid } from './modules/asteroids.mjs';
-import { getCurrentHighScore, drawScores, newLevel, updateLives } from './modules/scoreLevelLives.mjs';
-import { drawGameText, drawLives } from './modules/draw.mjs';
+import { drawScores, drawLives, newLevel, resetScoreLevelLives } from './modules/scoreLevelLives.mjs';
+import { drawGameText, setTextProperties, getTextAlpha } from './modules/draw.mjs';
 //** @type {HTMLCanvasElement} */
 canv = document.getElementById("gameCanvas");
 ctx = canv.getContext("2d");
@@ -25,11 +25,11 @@ var music = new Music("sounds/music-low.m4a", "sounds/music-high.m4a")
 
 // setup the game parameters
 
-var ship, canv, ctx, roids, roidBelt, roidsLeft, roidsTotal, textAlpha, lives, text;
+var ship, canv, ctx, roids, roidBelt, roidsLeft, roidsTotal, lives, text;
 newGame();
 function newGame() {
+    resetScoreLevelLives();
     ship = newShip();
-    getCurrentHighScore();
     roidBelt = createAsteroidBelt(canv, ship);
     roids = roidBelt.roids
     roidsLeft = roidBelt.roidsLeft
@@ -40,8 +40,7 @@ function newGame() {
 
 function gameOver() {
     ship.dead = true;
-    text = "Game Over";
-    textAlpha = 1.0;
+    setTextProperties("Game Over", 1.0)
     music.tempo = 1.0;
 
 }
@@ -57,7 +56,7 @@ setInterval(update, 1000 / FPS)
 
 var sound_on = false;
 function toggleSound() {
-     sound_on = !sound_on
+    sound_on = !sound_on
     document.getElementById("toggle-sound").blur();
 }
 var music_on = MUSIC_ON;
@@ -134,7 +133,7 @@ function keyUp(/** @type {KeyboardEvent} */ ev) {
     }
 }
 
-function newShip() {
+function newShip(current_lives = START_LIVES) {
     return {
         x: canv.width / 2,
         y: canv.height / 2,
@@ -144,6 +143,8 @@ function newShip() {
         blinkTime: Math.ceil(SHIP_INV_BLINK_DUR * FPS),
         canShoot: true,
         dead: false,
+        exploding: false,
+        lives: current_lives,
         lasers: [],
         explodeTime: 0,
         rot: 0,
@@ -225,21 +226,28 @@ function Sound(src, maxStreams = 1, vol = 0.05) {
 
 
 function update() {
+    // draw space
+    ctx.fillStyle = "black"
+    ctx.fillRect(0, 0, canv.width, canv.height);
+    
+    if (getTextAlpha() >= 0) {
+        drawGameText(ctx, canv);
+    } else if (ship.dead) {
+        newGame();
+    }
     var blinkOn = ship.blinkCount % 2 == 0;
-    var exploding = ship.explodeTime > 0;
+    ship.exploding = ship.explodeTime > 0;
+
+    drawAsteroids(ctx);
+    drawScores(ctx, canv);
+    drawLives(ship);
+
+
 
     // tick the music
     if (music_on) {
         music.tick();
     }
-
-    // draw space
-    ctx.fillStyle = "black"
-    ctx.fillRect(0, 0, canv.width, canv.height);
-
-    // draw the asteroids
-    drawAsteroids(ctx);
-
 
     // Thrust ship
     if (ship.thrusting && !ship.dead) {
@@ -248,7 +256,7 @@ function update() {
         fxThrust.play();
 
         // draw the thruster
-        if (!exploding && blinkOn) {
+        if (!ship.exploding && blinkOn) {
             ctx.fillStyle = "red";
             ctx.strokeStyle = "yellow";
             ctx.lineWidth = SHIP_SIZE / 10;
@@ -277,7 +285,7 @@ function update() {
     }
 
     // draw triangular ship
-    if (!exploding) {
+    if (!ship.exploding) {
         if (blinkOn && !ship.dead) {
             drawShip(ship.x, ship.y, ship.a);
         }
@@ -355,11 +363,6 @@ function update() {
         }
     }
 
-    drawGameText(ship, ctx, canv);
-    drawLives();
-    
-
-    drawScores(ctx, canv);
 
     // detect laser hits on asteroids
     var ax, ay, ar, lx, ly, ly;
@@ -384,7 +387,7 @@ function update() {
                 fxHit.play();
 
                 if (roids.length == 0) {
-                    text = newLevel();
+                    newLevel();
                     roidBelt = createAsteroidBelt(canv, ship);
                     roids = roidBelt.roids
                     roidsLeft = roidBelt.roidsLeft
@@ -399,8 +402,7 @@ function update() {
     }
 
     // check for asteroid collisions (when not exploding)
-    if (!exploding) {
-
+    if (!ship.exploding) {
         // only check when not blinking
         if (ship.blinkCount == 0 && !ship.dead) {
             for (var i = 0; i < roids.length; i++) {
@@ -408,9 +410,9 @@ function update() {
                     explodeShip();
                     destroyAsteroid(i, roids);
                     fxHit.play();
-                    
+
                     if (roids.length == 0) {
-                        text = newLevel();
+                        newLevel();
                         roidBelt = createAsteroidBelt(canv, ship);
                         roids = roidBelt.roids
                         roidsLeft = roidBelt.roidsLeft
@@ -434,8 +436,18 @@ function update() {
         // reduce explode time
         ship.explodeTime--;
 
-        updateLives(ship);
+
+        if (ship.explodeTime == 0) {
+            ship.lives--;
+            if (ship.lives == 0) {
+                gameOver();
+            } else {
+                ship = newShip(ship.lives);
+            }
+        }
     }
+
+
 
     // handle edge of screen
     if (ship.x < 0 - ship.r) {
@@ -506,3 +518,4 @@ function update() {
         }
     }
 }
+export { newShip, drawShip, gameOver, newGame }
