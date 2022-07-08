@@ -20,9 +20,9 @@ export const TEXT_FADE_TIME = 2.5; // text fade in seconds
 export const TEXT_SIZE = 40; // Text font height in pixels
 export const SAVE_KEY_SCORE = "highscore"; // Save key for localstorage of high score.
 
-export var SOUND_ON = true;
-export var MUSIC_ON = false;
-export var STARTING_SCORE = 0;
+export const SOUND_ON = true;
+export const MUSIC_ON = false;
+export const STARTING_SCORE = 0;
 
 export const ROID_NUM = 1; // starting number of asteroids
 export const ROID_SPEED = 50; // starting asteroid max speed in pixels per second

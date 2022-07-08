@@ -1,5 +1,5 @@
 import { distBetweenPoints } from './utils.mjs';
-import { updateScores, getCurrentLevel } from './scoreAndLevel.mjs';
+import { updateScores, getCurrentLevel } from './scoreLevelLives.mjs';
 import {
     ROID_NUM, ROID_SIZE, ROID_SPEED, FPS, ROID_VERTICES, ROID_JAGG,
     ROID_POINTS_LRG, ROID_POINTS_MED, ROID_POINTS_SML,
