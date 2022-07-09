@@ -2,9 +2,12 @@ import { distBetweenPoints } from './utils.mjs';
 import { updateScores, getCurrentLevel } from './scoreLevelLives.mjs';
 import {
     ROID_NUM, ROID_SIZE, ROID_SPEED, FPS, ROID_VERTICES, ROID_JAGG,
-    ROID_POINTS_LRG, ROID_POINTS_MED, ROID_POINTS_SML,
+    ROID_POINTS_LRG, ROID_POINTS_MED, ROID_POINTS_SML, DEBUG,
 } from './constants.mjs';
+import { getCanv, getCTX } from './canvas.mjs';
+import { getShip } from './ship.mjs';
 
+var roids, roidsTotal, roidsLeft;
 function newAsteroid(x, y, r) {
     var level = getCurrentLevel();
     var lvlMult = 1 + 0.1 * level;
@@ -25,9 +28,15 @@ function newAsteroid(x, y, r) {
     return roid;
 }
 
-var roids, roidsTotal, roidsLeft;
-function createAsteroidBelt(canv, ship) {
-    var current_level = getCurrentLevel()
+function getRoidsInfo() {
+    return { "roids": roids, "roidsLeft": roidsLeft, "roidsTotal": roidsTotal }
+}
+
+
+function createAsteroidBelt() {
+    let canv = getCanv();
+    let ship = getShip();
+    let current_level = getCurrentLevel()
     roids = [];
     roidsTotal = (ROID_NUM + current_level) * 7
     roidsLeft = roidsTotal
@@ -72,7 +81,8 @@ function destroyAsteroid(i, roids) {
 
 
 var x, y, r, a, vertices, offsets
-function drawAsteroids(ctx, show_bounding = false) {
+function drawAsteroids() {
+    let ctx = getCTX();
     for (var i = 0; i < roids.length; i++) {
         ctx.strokeStyle = "slategrey";
         ctx.lineWidth = 1.5;
@@ -99,7 +109,7 @@ function drawAsteroids(ctx, show_bounding = false) {
         ctx.closePath();
         ctx.stroke();
         // show asteroid's collision circle
-        if (show_bounding) {
+        if (DEBUG) {
             ctx.strokeStyle = "lime";
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2, false);
@@ -109,4 +119,24 @@ function drawAsteroids(ctx, show_bounding = false) {
 
 }
 
-export { createAsteroidBelt, destroyAsteroid, drawAsteroids }
+function moveAsteroids(){
+    let canv = getCanv();
+    for (var i = 0; i < roids.length; i++) {
+        roids[i].x += roids[i].xv;
+        roids[i].y += roids[i].yv;
+        // handle edge of screen
+        if (roids[i].x < 0 - roids[i].r) {
+            roids[i].x = canv.width + roids[i].r;
+        } else if (roids[i].x > canv.width + roids[i].r) {
+            roids[i].x = 0 + roids[i].r;
+        }
+
+        if (roids[i].y < 0 - roids[i].r) {
+            roids[i].y = canv.height + roids[i].r;
+        } else if (roids[i].y > canv.height + roids[i].r) {
+            roids[i].y = 0 + roids[i].r;
+        }
+    }
+}
+
+export { createAsteroidBelt, destroyAsteroid, drawAsteroids, getRoidsInfo, moveAsteroids }

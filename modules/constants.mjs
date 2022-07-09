@@ -14,8 +14,7 @@ export const LASER_MAX = 10 // Upper limit of how many lasers can be on screen a
 export const LASER_DIST = 0.6 // The max distance a laser can travel as fraction of screen width
 export const LASER_EXPLODE_DUR = 0.1 // Laser explode time in seconds
 
-export const SHOW_BOUNDING = false; // show/hide collision boundary
-export const SHOW_CENTRE_DOT = false; // show or hide ship's centre dot
+export const DEBUG = false // Show extra features like collision boundaries and ship center dot
 export const TEXT_FADE_TIME = 2.5; // text fade in seconds
 export const TEXT_SIZE = 40; // Text font height in pixels
 export const SAVE_KEY_SCORE = "highscore"; // Save key for localstorage of high score.

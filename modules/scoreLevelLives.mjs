@@ -1,6 +1,6 @@
 import { STARTING_SCORE, SAVE_KEY_SCORE, START_LEVEL, TEXT_SIZE, START_LIVES, SHIP_SIZE } from './constants.mjs';
-import { setTextProperties } from './draw.mjs';
-import { drawShip } from '../main.js';
+import { getCanv, getCTX, setTextProperties } from './canvas.mjs';
+import { drawShip, getShip } from './ship.mjs';
 var current_score = STARTING_SCORE
 var current_level = START_LEVEL
 var current_lives = START_LIVES
@@ -31,7 +31,8 @@ function updateScores(valToAdd) {
     checkHighScore();
 }
 
-function drawLives(ship) {
+function drawLives() {
+    let ship = getShip();
     let lifeColor;
     for (var i = 0; i < ship.lives; i++) {
         lifeColor = ship.exploding && i == ship.lives - 1 ? "red" : "white";
@@ -40,7 +41,9 @@ function drawLives(ship) {
     }
 }
 
-function drawScores(ctx, canv) {
+function drawScores() {
+    let ctx = getCTX();
+    let canv = getCanv();
     // draw the score
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
