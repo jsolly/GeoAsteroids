@@ -2,6 +2,7 @@
 const express = require('express');
 const path = require('path');
 var favicon = require('serve-favicon')
+const PORT = process.env.PORT || 5000
 const app = express();
 
 app.get('/', (req, res) => {
@@ -12,6 +13,4 @@ app.get('/', (req, res) => {
 app.use(favicon(path.join(__dirname, '/public', 'favicon.ico')))
 app.use(express.static(path.join(__dirname, '/public')));
 
-app.listen(process.env.PORT || 4000, function () {
-    console.log('Node app is working!');
-});
+app.listen(PORT, () => console.log(`Listening on ${ PORT }`))
