@@ -4,11 +4,13 @@
     {
       "name": "Launch_Chrome",
       "request": "launch",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "runtimeArgs": [
         "--incognito",
       ],
-      "url": "http://127.0.0.1:5000/public/home.html",
+      "url": "http://127.0.0.1:4000",
+      "preLaunchTask": "node start",
+      "postDebugTask": "StopTasks"
     },
   ],
 }

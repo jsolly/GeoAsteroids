@@ -2,13 +2,10 @@
   "version": "2.0.0",
   "tasks": [
       {
-          "label": "LiveReload",
+          "label": "node start",
           "type": "shell",
-          "command": "${config:python.defaultInterpreterPath}",
-          "args": ["manage.py", "livereload"],
-          "options": {
-            "cwd": "${workspaceFolder}/django_project",
-          },
+          "command": "node",
+          "args": ["app.js"],
           "isBackground": true,
           "problemMatcher": {
               "pattern": {
