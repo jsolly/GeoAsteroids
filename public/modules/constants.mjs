@@ -2,14 +2,14 @@ export const FPS = 60; // Frames per second
 export const TURN_SPEED = 240; // turn speed in degrees per second
 export const START_LEVEL = 0;
 export const START_LIVES = 3;
-export const FRICTION = 0.7; // Friction coefficient (0 = no friction, 1 = a lot of friction)
+export const FRICTION = 0; // Friction coefficient (0 = no friction, 1 = a lot of friction)
 export const SHIP_THRUST = 5; // Thrust speed in pixels per second per second (Acceleration)
 export const SHIP_SIZE = 30; // ship height in pixels
 export const SHIP_EXPLODE_DUR = 0.3; // Ship explode time in seconds
 export const SHIP_INV_DUR = 3; // Length of time ship is invulnerable in seconds
 export const SHIP_INV_BLINK_DUR = 0.1; // length of time between blinks when ship is invulnerable
 
-export const LASER_SPEED = 500; //How fast the laser moves in pixels per second
+export const LASER_SPEED = 300; //How fast the laser moves in pixels per second
 export const LASER_MAX = 10 // Upper limit of how many lasers can be on screen at any given time
 export const LASER_DIST = 0.6 // The max distance a laser can travel as fraction of screen width
 export const LASER_EXPLODE_DUR = 0.1 // Laser explode time in seconds

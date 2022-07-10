@@ -51,7 +51,7 @@ function explodeShip() {
 
 function thrustShip() {
     if (ship.thrusting && !ship.dead) {
-        ship.thrust.x += SHIP_THRUST * Math.cos(ship.a) / FPS;
+        ship.thrust.x -= SHIP_THRUST * Math.cos(ship.a) / FPS;
         ship.thrust.y -= SHIP_THRUST * Math.sin(ship.a) / FPS;
         fxThrust.play();
 
@@ -74,23 +74,24 @@ function moveShip() {
 }
 
 function drawThruster() {
-    let ctx = getCTX()
+    let ctx = getCTX();
+    let cvs = getCanv();
     if (!ship.exploding && ship.blinkOn) {
         ctx.fillStyle = "red";
         ctx.strokeStyle = "yellow";
         ctx.lineWidth = SHIP_SIZE / 10;
         ctx.beginPath();
         ctx.moveTo( // rear left
-            ship.x - ship.r * (2 / 3 * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
-            ship.y + ship.r * (2 / 3 * Math.sin(ship.a) - 0.5 * Math.cos(ship.a))
+            cvs.width/2 + ship.r * (2 / 3 * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
+            cvs.height/2 + ship.r * (2 / 3 * Math.sin(ship.a) - 0.5 * Math.cos(ship.a))
         );
         ctx.lineTo( // rear center (behind ship)
-            ship.x - ship.r * 5 / 3 * Math.cos(ship.a),
-            ship.y + ship.r * 5 / 3 * Math.sin(ship.a)
+            cvs.width/2 + ship.r * 5 / 3 * Math.cos(ship.a),
+            cvs.height/2 + ship.r * 5 / 3 * Math.sin(ship.a)
         );
         ctx.lineTo( // rear right
-            ship.x - ship.r * (2 / 3 * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
-            ship.y + ship.r * (2 / 3 * Math.sin(ship.a) + 0.5 * Math.cos(ship.a))
+            cvs.width/2 + ship.r * (2 / 3 * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
+            cvs.height/2 + ship.r * (2 / 3 * Math.sin(ship.a) + 0.5 * Math.cos(ship.a))
         )
         ctx.closePath();
         ctx.fill();
@@ -114,6 +115,39 @@ function drawShip(x, y, a, color = "white") {
     ctx.lineTo( // rear right
         x - ship.r * (2 / 3 * Math.cos(a) - Math.sin(a)),
         y + ship.r * (2 / 3 * Math.sin(a) + Math.cos(a))
+    )
+    ctx.closePath();
+    ctx.stroke();
+}
+
+function drawShipRelative(a, color = "white") {
+    /*
+    An overload of drawShip that doesn't ask for the position of the ship.
+    Only the angle(a)
+
+    Inputs:
+    a(number) : The angle in radians(?)
+    
+    Outputs:
+    void
+
+    */
+    let ctx = getCTX();
+    let cvs = getCanv();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = SHIP_SIZE / 20;
+    ctx.beginPath();
+    ctx.moveTo( // nose of ship
+        cvs.width/2 + 4 / 3 * ship.r * Math.cos(a+1.06),
+        cvs.height/2 +4 / 3 * ship.r * Math.sin(a+1.06)
+    );
+    ctx.lineTo( // rear left
+        cvs.width/2 + ship.r * (-1 / 3 * Math.cos(a+1.06) + Math.sin(a+1.06)),
+        cvs.height/2 + ship.r * (-1 / 3 * Math.sin(a+1.06) - Math.cos(a+1.06))
+    );
+    ctx.lineTo( // rear right
+        cvs.width/2 + ship.r * (-1 / 3 * Math.cos(a+1.06) - Math.sin(a+1.06)),
+        cvs.height/2 + ship.r * (-1 / 3 * Math.sin(a+1.06) + Math.cos(a+1.06))
     )
     ctx.closePath();
     ctx.stroke();
@@ -144,4 +178,4 @@ function drawShipExplosion() {
     ctx.fill();
 }
 
-export { newShip, getShip, drawShip, drawShipExplosion, explodeShip, killShip, drawThruster, thrustShip, moveShip, setBlinkOn, setExploding }
+export { newShip, getShip, drawShip,drawShipRelative, drawShipExplosion, explodeShip, killShip, drawThruster, thrustShip, moveShip, setBlinkOn, setExploding }

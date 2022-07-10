@@ -1,10 +1,10 @@
 import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './modules/constants.mjs';
 import { distBetweenPoints } from './modules/utils.mjs';
-import { createAsteroidBelt, drawAsteroids, destroyAsteroid, getRoidsInfo, moveAsteroids } from './modules/asteroids.mjs';
+import { createAsteroidBelt, drawAsteroidsRelative, destroyAsteroid, getRoidsInfo, moveAsteroids } from './modules/asteroids.mjs';
 import { drawScores, drawLives, newLevel, resetScoreLevelLives } from './modules/scoreLevelLives.mjs';
 import { drawGameText, setTextProperties, getTextAlpha, drawSpace, drawDebugFeatures } from './modules/canvas.mjs';
 import { getMusicOn, fxHit, music } from './modules/soundsMusic.mjs';
-import { newShip, getShip, drawShip, drawShipExplosion, explodeShip, killShip, thrustShip, moveShip, setBlinkOn, setExploding } from './modules/ship.mjs';
+import { newShip, getShip, drawShip,drawShipRelative, drawShipExplosion, explodeShip, killShip, thrustShip, moveShip, setBlinkOn, setExploding } from './modules/ship.mjs';
 import { drawLasers, moveLasers } from './modules/lasers.mjs';
 import { detectLaserHits, handleShipEdgeOfScreen } from './modules/collisions.mjs';
 
@@ -34,7 +34,7 @@ function update() {
     setBlinkOn();
     setExploding();
     drawSpace();
-    drawAsteroids();
+    drawAsteroidsRelative(ship);
     drawScores();
     drawLives();
 
@@ -53,7 +53,7 @@ function update() {
     // draw triangular ship
     if (!ship.exploding) {
         if (ship.blinkOn && !ship.dead) {
-            drawShip(ship.x, ship.y, ship.a);
+            drawShipRelative(ship.a);
         }
         
         // handle blinking
@@ -112,7 +112,7 @@ function update() {
     if (!ship.exploding) {
         moveShip();
     }
-    handleShipEdgeOfScreen();
+    // handleShipEdgeOfScreen();
     moveLasers();
     moveAsteroids();
 }

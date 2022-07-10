@@ -74,9 +74,6 @@ function destroyAsteroid(i, roids) {
     updateScores(score)
     roids.splice(i, 1);
     roidsLeft--;
-
-
-
 }
 
 
@@ -119,24 +116,62 @@ function drawAsteroids() {
 
 }
 
+function drawAsteroidsRelative(ship) {
+    let ctx = getCTX();
+    let cvs = getCanv();
+    for (var i = 0; i < roids.length; i++) {
+        ctx.strokeStyle = "slategrey";
+        ctx.lineWidth = 1.5;
+        // get asteroid properties
+        x = -(ship.x-cvs.width/2)+roids[i].x;
+        y = -(ship.y-cvs.height/2) +roids[i].y;
+        r = roids[i].r;
+        a = roids[i].a;
+        vertices = roids[i].vertices;
+        offsets = roids[i].offsets
+        // draw a path
+        ctx.beginPath();
+        ctx.moveTo(
+            x + r * offsets[0] * Math.cos(a),
+            y + r * offsets[0] * Math.sin(a)
+        )
+        // draw the polygon
+        for (var j = 1; j < vertices; j++) {
+            ctx.lineTo(
+                x + r * offsets[j] * Math.cos(a + j * Math.PI * 2 / vertices),
+                y + r * offsets[j] * Math.sin(a + j * Math.PI * 2 / vertices)
+            );
+        }
+        ctx.closePath();
+        ctx.stroke();
+        // show asteroid's collision circle
+        if (DEBUG) {
+            ctx.strokeStyle = "lime";
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2, false);
+            ctx.stroke();
+        }
+    }
+}
+
 function moveAsteroids(){
     let canv = getCanv();
     for (var i = 0; i < roids.length; i++) {
         roids[i].x += roids[i].xv;
         roids[i].y += roids[i].yv;
         // handle edge of screen
-        if (roids[i].x < 0 - roids[i].r) {
-            roids[i].x = canv.width + roids[i].r;
-        } else if (roids[i].x > canv.width + roids[i].r) {
-            roids[i].x = 0 + roids[i].r;
-        }
+        // if (roids[i].x < 0 - roids[i].r) {
+        //     roids[i].x = canv.width + roids[i].r;
+        // } else if (roids[i].x > canv.width + roids[i].r) {
+        //     roids[i].x = 0 + roids[i].r;
+        // }
 
-        if (roids[i].y < 0 - roids[i].r) {
-            roids[i].y = canv.height + roids[i].r;
-        } else if (roids[i].y > canv.height + roids[i].r) {
-            roids[i].y = 0 + roids[i].r;
-        }
+        // if (roids[i].y < 0 - roids[i].r) {
+        //     roids[i].y = canv.height + roids[i].r;
+        // } else if (roids[i].y > canv.height + roids[i].r) {
+        //     roids[i].y = 0 + roids[i].r;
+        // }
     }
 }
 
-export { createAsteroidBelt, destroyAsteroid, drawAsteroids, getRoidsInfo, moveAsteroids }
+export { createAsteroidBelt, destroyAsteroid, drawAsteroids, drawAsteroidsRelative, getRoidsInfo, moveAsteroids }
