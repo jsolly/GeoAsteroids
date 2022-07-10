@@ -5,10 +5,10 @@ var favicon = require('serve-favicon')
 const app = express();
 
 // set up rate limiter: maximum of five requests per minute
-var RateLimit = require('express-rate-limit');
-var limiter = new RateLimit({
-  windowMs: 1*60*1000, // 1 minute
-  max: 5
+var rateLimit = require('express-rate-limit')
+var limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
 });
 
 // apply rate limiter to all requests
