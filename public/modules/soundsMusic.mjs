@@ -24,7 +24,7 @@ function get_sound_preference(){
         localStorage.setItem(SAVE_KEY_SOUND_ON, false); // set preference to False if not found
         return false
     }
-    return sound_pref
+    return (sound_pref === 'true')
 }
 
 function get_music_preference(){
@@ -33,7 +33,7 @@ function get_music_preference(){
         localStorage.setItem(SAVE_KEY_MUSIC_ON, false); // set preference to False if not found
         return false
     }
-    return music_pref
+    return (music_pref === 'true')
 }
 
 function toggleSound() {
