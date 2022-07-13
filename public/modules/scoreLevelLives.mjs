@@ -1,6 +1,7 @@
 import { STARTING_SCORE, SAVE_KEY_SCORE, START_LEVEL, TEXT_SIZE, START_LIVES, SHIP_SIZE } from './constants.mjs';
 import { getCanv, getCTX, setTextProperties } from './canvas.mjs';
 import { drawShip, getShip } from './ship.mjs';
+import { createAsteroidBelt } from './asteroids.mjs';
 var current_score = STARTING_SCORE
 var current_level = START_LEVEL
 var current_lives = START_LIVES
@@ -66,6 +67,7 @@ function newLevel() {
     textAlpha = 1.0
     current_level++;
     setTextProperties(text, textAlpha)
+    createAsteroidBelt();
 
 }
 var scoreHigh;
