@@ -12,23 +12,15 @@
     
 
     {
-      "name": "Launch_Chrome",
+      "name": "Launch_Chrome + node",
       "request": "launch",
       "type": "chrome",
       "runtimeArgs": [
         "--incognito",
       ],
       "url": "http://127.0.0.1:4000",
+      "preLaunchTask": "Launch_Node",
+      "postDebugTask": "StopTasks"
     },
   ],
-  "compounds": [
-    {
-      "name": "Chrome + Node",
-      "configurations": [
-        "Launch_Chrome",
-        "Start_Node"
-      ],
-      "stopAll": true
-    }
-  ]
 }

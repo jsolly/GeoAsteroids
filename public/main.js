@@ -1,7 +1,7 @@
 import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './modules/constants.mjs';
-import { distBetweenPoints, loadUserSettings } from './modules/utils.mjs';
+import { distBetweenPoints } from './modules/utils.mjs';
 import { drawAsteroids, destroyAsteroid, getRoidsInfo, moveAsteroids } from './modules/asteroids.mjs';
-import { drawScores, drawLives, newLevel } from './modules/scoreLevelLives.mjs';
+import { drawScores, drawLives, newLevel, resetScoreLevelLives } from './modules/scoreLevelLives.mjs';
 import { drawGameText, setTextProperties, getTextAlpha, drawSpace, drawDebugFeatures } from './modules/canvas.mjs';
 import { getMusicOn, fxHit, music } from './modules/soundsMusic.mjs';
 import { newShip, getShip, drawShip, drawShipExplosion, explodeShip, killShip, thrustShip, moveShip, setBlinkOn, setExploding } from './modules/ship.mjs';
@@ -10,7 +10,7 @@ import { detectLaserHits, handleShipEdgeOfScreen } from './modules/collisions.mj
 
 newGame();
 function newGame() {
-    loadUserSettings();
+    resetScoreLevelLives();
     newShip();
     newLevel();
 }
