@@ -1,6 +1,6 @@
 import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './modules/constants.mjs';
 import { distBetweenPoints } from './modules/utils.mjs';
-import { createAsteroidBelt, drawAsteroids, destroyAsteroid, getRoidsInfo, moveAsteroids } from './modules/asteroids.mjs';
+import { drawAsteroids, destroyAsteroid, getRoidsInfo, moveAsteroids } from './modules/asteroids.mjs';
 import { drawScores, drawLives, newLevel, resetScoreLevelLives } from './modules/scoreLevelLives.mjs';
 import { drawGameText, setTextProperties, getTextAlpha, drawSpace, drawDebugFeatures } from './modules/canvas.mjs';
 import { getMusicOn, fxHit, music } from './modules/soundsMusic.mjs';
@@ -12,8 +12,7 @@ newGame();
 function newGame() {
     resetScoreLevelLives();
     newShip();
-    createAsteroidBelt();
-    newLevel()
+    newLevel();
 }
 
 function gameOver() {
@@ -86,7 +85,6 @@ function update() {
                     
                     if (roids.length == 0) {
                         newLevel();
-                        createAsteroidBelt();
                     }
                     // calculate remianing ratio of remaining asteroids to determine music tempo
                     music.setAsteroidRatio()

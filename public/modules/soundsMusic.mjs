@@ -1,5 +1,5 @@
 import { keyUp, keyDown } from './keybindings.mjs';
-import { FPS, MUSIC_ON } from './constants.mjs';
+import { FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON } from './constants.mjs';
 import { getRoidsInfo } from './asteroids.mjs';
 document.addEventListener("keydown", keyDown);
 document.addEventListener("keyup", keyUp);
@@ -14,17 +14,36 @@ const fxHit = new Sound("sounds/hit.m4a", maxStreams = 5, vol = 0.05);
 const fxExplode = new Sound("sounds/explode.m4a", maxStreams = 1, vol = 0.05);
 const fxLaser = new Sound("sounds/laser.m4a", maxStreams = 5, vol = 0.05);
 const music = new Music("sounds/music-low.m4a", "sounds/music-high.m4a")
+var sound_on = get_sound_preference()
+var music_on = get_music_preference()
 
 
+function get_sound_preference(){
+    let sound_pref = localStorage.getItem(SAVE_KEY_SOUND_ON);
+    if (sound_pref == null) {
+        localStorage.setItem(SAVE_KEY_SOUND_ON, false); // set preference to False if not found
+        return false
+    }
+    return (sound_pref === 'true')
+}
 
-var sound_on = false;
+function get_music_preference(){
+    let music_pref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
+    if (music_pref == null) {
+        localStorage.setItem(SAVE_KEY_MUSIC_ON, false); // set preference to False if not found
+        return false
+    }
+    return (music_pref === 'true')
+}
+
 function toggleSound() {
     sound_on = !sound_on
+    localStorage.setItem(SAVE_KEY_SOUND_ON, sound_on);
     document.getElementById("toggle-sound").blur();
 }
-var music_on = MUSIC_ON;
 function toggleMusic() {
     music_on = !music_on
+    localStorage.setItem(SAVE_KEY_MUSIC_ON, music_on);
     document.getElementById("toggle-music").blur();
 
 }
