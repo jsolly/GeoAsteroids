@@ -13,13 +13,13 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
             break;
 
         case 37: // left arrow (rotate ship left)
-            ship.rot = TURN_SPEED / 180 * Math.PI / FPS
+            ship.rot = -TURN_SPEED / 180 * Math.PI / FPS
             break;
         case 38: // up arrow (thrust the ship forward)
             ship.thrusting = true
             break;
         case 39: // right arrow (rotate ship right)
-            ship.rot = -TURN_SPEED / 180 * Math.PI / FPS
+            ship.rot = TURN_SPEED / 180 * Math.PI / FPS
             break;
     }
 }
