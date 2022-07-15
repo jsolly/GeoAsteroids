@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node app.js",
+    "lint":"eslint"
   },
   "repository": {
     "type": "git",
@@ -20,5 +21,9 @@
   "dependencies": {
     "express": "^4.18.1",
     "express-rate-limit": "^6.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.19.0",
+    "eslint-config-google": "^0.14.0"
   }
 }
