@@ -13,9 +13,9 @@ function newShip(current_lives = START_LIVES, current_blinkOn = false) {
     ship = {
         x: canv.width / 2,
         y: canv.height / 2,
-        t:0,
-        xv:0,
-        yv:0,
+        t: 0,
+        xv: 0,
+        yv: 0,
         r: SHIP_SIZE / 2,
         a: 90 / 180 * Math.PI, // convert to radians
         blinkCount: Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR),
@@ -29,10 +29,6 @@ function newShip(current_lives = START_LIVES, current_blinkOn = false) {
         explodeTime: 0,
         rot: 0,
         thrusting: false,
-        thrust: {
-            x: 0,
-            y: 0
-        }
     }
 }
 
@@ -85,16 +81,16 @@ function drawThruster() {
         ctx.lineWidth = SHIP_SIZE / 10;
         ctx.beginPath();
         ctx.moveTo( // rear left
-            cvs.width/2 + ship.r * (2 / 3 * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
-            cvs.height/2 + ship.r * (2 / 3 * Math.sin(ship.a) - 0.5 * Math.cos(ship.a))
+            cvs.width / 2 + ship.r * (2 / 3 * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
+            cvs.height / 2 + ship.r * (2 / 3 * Math.sin(ship.a) - 0.5 * Math.cos(ship.a))
         );
         ctx.lineTo( // rear center (behind ship)
-            cvs.width/2 + ship.r * 5 / 3 * Math.cos(ship.a),
-            cvs.height/2 + ship.r * 5 / 3 * Math.sin(ship.a)
+            cvs.width / 2 + ship.r * 5 / 3 * Math.cos(ship.a),
+            cvs.height / 2 + ship.r * 5 / 3 * Math.sin(ship.a)
         );
         ctx.lineTo( // rear right
-            cvs.width/2 + ship.r * (2 / 3 * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
-            cvs.height/2 + ship.r * (2 / 3 * Math.sin(ship.a) + 0.5 * Math.cos(ship.a))
+            cvs.width / 2 + ship.r * (2 / 3 * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
+            cvs.height / 2 + ship.r * (2 / 3 * Math.sin(ship.a) + 0.5 * Math.cos(ship.a))
         )
         ctx.closePath();
         ctx.fill();
@@ -129,7 +125,7 @@ function drawShipRelative(a, color = "white") {
     Only the angle(a)
 
     Inputs:
-    a(number) : The angle in radians(?)
+    a(number) : The angle in radians
     
     Outputs:
     void
@@ -141,16 +137,16 @@ function drawShipRelative(a, color = "white") {
     ctx.lineWidth = SHIP_SIZE / 20;
     ctx.beginPath();
     ctx.moveTo( // nose of ship
-        cvs.width/2 + 4 / 3 * ship.r * Math.cos(a+1.06),
-        cvs.height/2 +4 / 3 * ship.r * Math.sin(a+1.06)
+        cvs.width / 2 + 4 / 3 * ship.r * Math.cos(a + 1.06),
+        cvs.height / 2 + 4 / 3 * ship.r * Math.sin(a + 1.06)
     );
     ctx.lineTo( // rear left
-        cvs.width/2 + ship.r * (-1 / 3 * Math.cos(a+1.06) + Math.sin(a+1.06)),
-        cvs.height/2 + ship.r * (-1 / 3 * Math.sin(a+1.06) - Math.cos(a+1.06))
+        cvs.width / 2 + ship.r * (-1 / 3 * Math.cos(a + 1.06) + Math.sin(a + 1.06)),
+        cvs.height / 2 + ship.r * (-1 / 3 * Math.sin(a + 1.06) - Math.cos(a + 1.06))
     );
     ctx.lineTo( // rear right
-        cvs.width/2 + ship.r * (-1 / 3 * Math.cos(a+1.06) - Math.sin(a+1.06)),
-        cvs.height/2 + ship.r * (-1 / 3 * Math.sin(a+1.06) + Math.cos(a+1.06))
+        cvs.width / 2 + ship.r * (-1 / 3 * Math.cos(a + 1.06) - Math.sin(a + 1.06)),
+        cvs.height / 2 + ship.r * (-1 / 3 * Math.sin(a + 1.06) + Math.cos(a + 1.06))
     )
     ctx.closePath();
     ctx.stroke();
@@ -181,4 +177,4 @@ function drawShipExplosion() {
     ctx.fill();
 }
 
-export { newShip, getShip, drawShip,drawShipRelative, drawShipExplosion, explodeShip, killShip, drawThruster, thrustShip, moveShip, setBlinkOn, setExploding }
+export { newShip, getShip, drawShip, drawShipRelative, drawShipExplosion, explodeShip, killShip, drawThruster, thrustShip, moveShip, setBlinkOn, setExploding }

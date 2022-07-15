@@ -31,27 +31,27 @@ function drawLasers() {
         if (ship.lasers[i].explodeTime == 0) {
             ctx.fillStyle = "salmon";
             ctx.beginPath();
-            ctx.arc((ship.lasers[i].x-ship.x)+cvs.width/2, (ship.lasers[i].y-ship.y)+cvs.height/2, SHIP_SIZE / 15, 0, Math.PI * 2, false);
+            ctx.arc((ship.lasers[i].x - ship.x) + cvs.width / 2, (ship.lasers[i].y - ship.y) + cvs.height / 2, SHIP_SIZE / 15, 0, Math.PI * 2, false);
             ctx.fill();
         } else {
             // draw explosion
             ctx.fillStyle = "orangered";
             ctx.beginPath();
-            ctx.arc((ship.lasers[i].x-ship.x)+cvs.width/2, (ship.lasers[i].y-ship.y)+cvs.height/2, ship.r * 0.75, 0, Math.PI * 2, false);
+            ctx.arc((ship.lasers[i].x - ship.x) + cvs.width / 2, (ship.lasers[i].y - ship.y) + cvs.height / 2, ship.r * 0.75, 0, Math.PI * 2, false);
             ctx.fill();
             ctx.fillStyle = "salmon";
             ctx.beginPath();
-            ctx.arc(ship.lasers[i].x-(ship.x-cvs.width), ship.lasers[i].y-(ship.y-cvs.height), ship.r * 0.5, 0, Math.PI * 2, false);
+            ctx.arc(ship.lasers[i].x - (ship.x - cvs.width), ship.lasers[i].y - (ship.y - cvs.height), ship.r * 0.5, 0, Math.PI * 2, false);
             ctx.fill();
             ctx.fillStyle = "pink";
             ctx.beginPath();
-            ctx.arc(ship.lasers[i].x-(ship.x-cvs.width), ship.lasers[i].y-(ship.y-cvs.height), ship.r * 0.25, 0, Math.PI * 2, false);
+            ctx.arc(ship.lasers[i].x - (ship.x - cvs.width), ship.lasers[i].y - (ship.y - cvs.height), ship.r * 0.25, 0, Math.PI * 2, false);
             ctx.fill();
         }
     }
 }
 
-function moveLasers(){
+function moveLasers() {
     let canv = getCanv();
     let ship = getShip();
     for (var i = ship.lasers.length - 1; i >= 0; i--) {
@@ -59,7 +59,7 @@ function moveLasers(){
         if (ship.lasers[i].distTraveled > LASER_DIST * canv.width) {
             ship.lasers.splice(i, 1);
             continue;
-        } 
+        }
 
         // handle the explosion
         if (ship.lasers[i].explodeTime > 0) {
@@ -75,7 +75,7 @@ function moveLasers(){
             ship.lasers[i].y += ship.lasers[i].yv;
 
             // calculate distance traveled 
-            ship.lasers[i].distTraveled +=.5;//Math.sqrt(Math.pow(ship.lasers[i].xv, 2) + Math.pow(ship.lasers[i].yv, 2));
+            ship.lasers[i].distTraveled += .5;//Math.sqrt(Math.pow(ship.lasers[i].xv, 2) + Math.pow(ship.lasers[i].yv, 2));
             //handleLaserEdgeofScreen(i);
         }
     }
