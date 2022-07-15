@@ -45,7 +45,7 @@ jobs:
     - name: Lint with eslint
       run: npm run lint
 
-    - name: Enforce formatting with Prettier
+    - name: Check formatting with Prettier
       run: npx prettier --check
 
 
