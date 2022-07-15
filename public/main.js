@@ -12,8 +12,7 @@ newGame();
 function newGame() {
     resetScoreLevelLives();
     newShip();
-    createAsteroidBelt();
-    newLevel()
+    newLevel();
 }
 
 function gameOver() {
@@ -86,7 +85,6 @@ function update() {
                     
                     if (roids.length == 0) {
                         newLevel();
-                        createAsteroidBelt();
                     }
                     // calculate remianing ratio of remaining asteroids to determine music tempo
                     music.setAsteroidRatio()

@@ -17,10 +17,10 @@ export const LASER_EXPLODE_DUR = 0.1 // Laser explode time in seconds
 export const DEBUG = false // Show extra features like collision boundaries and ship center dot
 export const TEXT_FADE_TIME = 2.5; // text fade in seconds
 export const TEXT_SIZE = 40; // Text font height in pixels
-export const SAVE_KEY_SCORE = "highscore"; // Save key for localstorage of high score.
+export const SAVE_KEY_HIGH_SCORE = "highscore"; // Save key for localstorage of high score.
+export const SAVE_KEY_SOUND_ON = "music_on"; // Save key for localstorage of high score.
+export const SAVE_KEY_MUSIC_ON = "sound_on"; // Save key for localstorage of high score.
 
-export const SOUND_ON = true;
-export const MUSIC_ON = false;
 export const STARTING_SCORE = 0;
 
 export const ROID_NUM = 1; // starting number of asteroids

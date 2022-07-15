@@ -2,13 +2,25 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch_Chrome",
+      "type": "node",
       "request": "launch",
-      "type": "pwa-chrome",
+      "name": "Start_Node",
+      "program": "${workspaceFolder}/app.js"
+
+    },
+
+    
+
+    {
+      "name": "Launch_Chrome + node",
+      "request": "launch",
+      "type": "chrome",
       "runtimeArgs": [
         "--incognito",
       ],
-      "url": "http://127.0.0.1:5000/public/home.html",
+      "url": "http://127.0.0.1:4000",
+      "preLaunchTask": "Launch_Node",
+      "postDebugTask": "StopTasks"
     },
   ],
 }
