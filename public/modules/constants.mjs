@@ -31,3 +31,5 @@ export const ROID_JAGG = 0.5; // The jaggedness of the asteroids (0 = smooth, 1 
 export const ROID_POINTS_LRG = 20 // points for a large asteroid 
 export const ROID_POINTS_MED = 50 // points for a medium asteroid 
 export const ROID_POINTS_SML = 100 // points for a small asteroid 
+
+export const SPEED_OF_LIGHT = 30

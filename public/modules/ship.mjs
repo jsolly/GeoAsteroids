@@ -13,6 +13,9 @@ function newShip(current_lives = START_LIVES, current_blinkOn = false) {
     ship = {
         x: canv.width / 2,
         y: canv.height / 2,
+        t:0,
+        xv:0,
+        yv:0,
         r: SHIP_SIZE / 2,
         a: 90 / 180 * Math.PI, // convert to radians
         blinkCount: Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR),
@@ -51,15 +54,15 @@ function explodeShip() {
 
 function thrustShip() {
     if (ship.thrusting && !ship.dead) {
-        ship.thrust.x -= SHIP_THRUST * Math.cos(ship.a) / FPS;
-        ship.thrust.y -= SHIP_THRUST * Math.sin(ship.a) / FPS;
+        ship.xv -= SHIP_THRUST * Math.cos(ship.a) / FPS;
+        ship.yv -= SHIP_THRUST * Math.sin(ship.a) / FPS;
         fxThrust.play();
 
         drawThruster();
     } else {
         // apply friction when ship not thrusting
-        ship.thrust.x -= FRICTION * ship.thrust.x / FPS;
-        ship.thrust.y -= FRICTION * ship.thrust.y / FPS;
+        ship.xv -= FRICTION * ship.xv / FPS;
+        ship.yv -= FRICTION * ship.yv / FPS;
         fxThrust.stop();
     }
 }
@@ -69,8 +72,8 @@ function moveShip() {
     ship.a += ship.rot;
 
     // move the ship
-    ship.x += ship.thrust.x;
-    ship.y += ship.thrust.y;
+    ship.x += ship.xv;
+    ship.y += ship.yv;
 }
 
 function drawThruster() {

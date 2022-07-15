@@ -12,8 +12,8 @@ function shootLaser() {
         ship.lasers.push({
             x: ship.x,
             y: ship.y,
-            xv: -LASER_SPEED * Math.cos(-ship.a) / FPS + ship.thrust.x,
-            yv: LASER_SPEED * Math.sin(-ship.a) / FPS + ship.thrust.y,
+            xv: -LASER_SPEED * Math.cos(-ship.a) / FPS + ship.xv,
+            yv: LASER_SPEED * Math.sin(-ship.a) / FPS + ship.yv,
             distTraveled: 0,
             explodeTime: 0
         });

@@ -14,6 +14,7 @@ function newAsteroid(x, y, r) {
     var roid = {
         x: x,
         y: y,
+        t:0,
         xv: Math.random() * ROID_SPEED * lvlMult / FPS * (Math.random() < 0.5 ? 1 : -1),
         yv: Math.random() * ROID_SPEED * lvlMult / FPS * (Math.random() < 0.5 ? 1 : -1),
         a: Math.random() * Math.PI * 2, // in radians
@@ -156,7 +157,10 @@ function drawAsteroidsRelative(ship) {
 
 function moveAsteroids(){
     let canv = getCanv();
+    let ship = getShip();
     for (var i = 0; i < roids.length; i++) {
+        // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
+        // let dt = 1/Math.sqrt(1-beta_squared)
         roids[i].x += roids[i].xv;
         roids[i].y += roids[i].yv;
         // handle edge of screen
