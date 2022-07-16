@@ -4,9 +4,8 @@ const path = require('path');
 const app = express();
 
 // set up rate limiter: maximum of five requests per minute
-var rateLimit = require('express-rate-limit');
-const { listenerCount } = require('process');
-var limiter = rateLimit({
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
 });
@@ -15,12 +14,11 @@ var limiter = rateLimit({
 app.use(limiter);
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '/public/index.html'));
+  res.sendFile(path.join(__dirname, '/public/index.html'));
 });
-
 
 app.use(express.static(path.join(__dirname, '/public')));
 
-var listener = app.listen(process.env.PORT || 4000, function () {
-    console.log('Node app is working on port ' + listener.address().port);
+const listener = app.listen(process.env.PORT || 4000, function() {
+  console.log('Node app is working on port ' + listener.address().port);
 });
