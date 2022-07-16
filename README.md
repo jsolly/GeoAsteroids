@@ -24,6 +24,7 @@ A 2D spaceship game
 
 ```bash
     $ git clone git@github.com:jsolly/GeoAsteroids.git
+    $ npm install
     $ node app.js
 ```
 
