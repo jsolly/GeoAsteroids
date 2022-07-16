@@ -6,22 +6,17 @@
       "request": "launch",
       "name": "Start_Node",
       "program": "${workspaceFolder}/app.js"
-
     },
-
-    
 
     {
       "name": "Launch_Chrome + node",
       "request": "launch",
       "type": "chrome",
       "webRoot": "/Users/johnsolly/Documents/code/GeoAsteroids/public/",
-      "runtimeArgs": [
-        "--incognito",
-      ],
+      "runtimeArgs": ["--incognito"],
       "url": "http://127.0.0.1:4000",
       "preLaunchTask": "Launch_Node",
       "postDebugTask": "StopTasks"
-    },
-  ],
+    }
+  ]
 }
