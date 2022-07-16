@@ -42,6 +42,7 @@ A 2D spaceship game
 - Asteroid collisions using circular bounding box
 - Static code analysis using CodeQL
 - NPM Dependency checking via Dependabot
+- 100% ESlint compliant
 
 ## Coverage, Tests, Linting
 
@@ -52,6 +53,9 @@ TODO
 #### Test
 
 TODO
+
+#### Linting (with ESlint)
+$ npm run lint
 
 ---
 
