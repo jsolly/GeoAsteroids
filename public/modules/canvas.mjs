@@ -1,9 +1,9 @@
-import { FPS } from "./constants.mjs";
+import {FPS} from './constants.mjs';
 
 /* Drawing Constants*/
-const GAME_CANVAS = document.getElementById("gameCanvas");
-const GAME_CONTEXT = GAME_CANVAS.getContext("2d");
-const GAME_CENTER = { x: GAME_CANVAS.width / 2, y: GAME_CANVAS.height / 2 };
+const GAME_CANVAS = document.getElementById('gameCanvas');
+const GAME_CONTEXT = GAME_CANVAS.getContext('2d');
+const GAME_CENTER = {x: GAME_CANVAS.width / 2, y: GAME_CANVAS.height / 2};
 const TEXT_SIZE = 40; // Text font height in pixels
 const TEXT_FADE_TIME = 2.5; // text fade in seconds.
 const ctx = GAME_CONTEXT;
@@ -33,7 +33,7 @@ function getTextAlpha() {
  * Draws the background
  */
 function drawSpace() {
-  ctx.fillStyle = "black";
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, cvs.width, cvs.height);
 }
 
@@ -50,10 +50,10 @@ function drawSpace() {
  * value so the text eventually disappears.
  */
 function drawGameText() {
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "rgba(255,255,255, " + textAlpha + ")";
-  ctx.font = "small-caps " + TEXT_SIZE + "px dejavu sans mono";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255, ' + textAlpha + ')';
+  ctx.font = 'small-caps ' + TEXT_SIZE + 'px dejavu sans mono';
   ctx.fillText(text, cvs.width / 2, (cvs.height * 3) / 4);
   textAlpha -= 1.0 / TEXT_FADE_TIME / FPS;
 }
@@ -64,13 +64,13 @@ function drawGameText() {
  */
 function drawDebugFeatures() {
   // Draw Ship collision bounding box (if needed)
-  ctx.strokeStyle = "lime";
+  ctx.strokeStyle = 'lime';
   ctx.beginPath();
   ctx.arc(ship.x, ship.y, ship.r, 0, Math.PI * 2, false);
   ctx.stroke();
 
   // show ship's centre dot
-  ctx.fillStyle = "red";
+  ctx.fillStyle = 'red';
   ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
 }
 

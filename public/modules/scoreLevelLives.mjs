@@ -3,15 +3,15 @@ import {
   SAVE_KEY_HIGH_SCORE,
   START_LEVEL,
   SHIP_SIZE,
-} from "./constants.mjs";
+} from './constants.mjs';
 import {
   setTextProperties,
   GAME_CANVAS,
   GAME_CONTEXT,
   TEXT_SIZE,
-} from "./canvas.mjs";
-import { drawShip, ship } from "./ship.mjs";
-import { createAsteroidBelt } from "./asteroids.mjs";
+} from './canvas.mjs';
+import {drawShip, ship} from './ship.mjs';
+import {createAsteroidBelt} from './asteroids.mjs';
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
 
@@ -45,12 +45,12 @@ function updateScores(valToAdd) {
 function drawLives() {
   let lifeColor;
   for (let i = 0; i < ship.lives; i++) {
-    lifeColor = ship.exploding && i == ship.lives - 1 ? "red" : "white";
+    lifeColor = ship.exploding && i == ship.lives - 1 ? 'red' : 'white';
     drawShip(
-      SHIP_SIZE + i * SHIP_SIZE * 1.2,
-      SHIP_SIZE,
-      0.5 * Math.PI,
-      lifeColor
+        SHIP_SIZE + i * SHIP_SIZE * 1.2,
+        SHIP_SIZE,
+        0.5 * Math.PI,
+        lifeColor,
     );
   }
 }
@@ -62,18 +62,18 @@ function drawScores() {
   const ctx = GAME_CONTEXT;
   const cvs = GAME_CANVAS;
   // draw the score
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "white";
-  ctx.font = TEXT_SIZE + "px dejavu sans mono";
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'white';
+  ctx.font = TEXT_SIZE + 'px dejavu sans mono';
   ctx.fillText(currentScore, cvs.width - 15, 30);
 
   // draw the high score
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "white";
-  ctx.font = TEXT_SIZE * 0.75 + "px dejavu sans mono";
-  ctx.fillText("BEST " + getHighScore(), cvs.width / 2, 30);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'white';
+  ctx.font = TEXT_SIZE * 0.75 + 'px dejavu sans mono';
+  ctx.fillText('BEST ' + getHighScore(), cvs.width / 2, 30);
 }
 let text;
 let textAlpha;
@@ -82,7 +82,7 @@ let textAlpha;
  * levels up
  */
 function newLevel() {
-  text = "Level " + (currentLevel + 1);
+  text = 'Level ' + (currentLevel + 1);
   textAlpha = 1.0;
   currentLevel++;
   setTextProperties(text, textAlpha);

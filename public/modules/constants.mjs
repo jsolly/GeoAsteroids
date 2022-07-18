@@ -34,6 +34,6 @@ export const ROID_POINTS_SML = 100; // points for a small asteroid
 /* Game Settings Constants*/
 export const STARTING_SCORE = 0;
 export const DEBUG = false; // Show ship collision boundary and ship center dot
-export const SAVE_KEY_HIGH_SCORE = "highscore"; // localstorage of high score.
-export const SAVE_KEY_SOUND_ON = "musicOn"; // localstorage of high score.
-export const SAVE_KEY_MUSIC_ON = "soundOn"; // localstorage of high score.
+export const SAVE_KEY_HIGH_SCORE = 'highscore'; // localstorage of high score.
+export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
+export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.

@@ -1,6 +1,6 @@
-import { ship } from "./ship.mjs";
-import { TURN_SPEED, FPS } from "./constants.mjs";
-import { shootLaser } from "./lasers.mjs";
+import {ship} from './ship.mjs';
+import {TURN_SPEED, FPS} from './constants.mjs';
+import {shootLaser} from './lasers.mjs';
 
 /**
  *
@@ -52,4 +52,4 @@ function keyUp(/** @type {KeyboardEvent} */ ev) {
   }
 }
 
-export { keyUp, keyDown };
+export {keyUp, keyDown};

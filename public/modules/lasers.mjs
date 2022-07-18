@@ -4,11 +4,11 @@ import {
   LASER_SPEED,
   LASER_MAX,
   LASER_DIST,
-} from "./constants.mjs";
-import { ship } from "./ship.mjs";
-import { fxLaser } from "./soundsMusic.mjs";
+} from './constants.mjs';
+import {ship} from './ship.mjs';
+import {fxLaser} from './soundsMusic.mjs';
 // import {handleLaserEdgeofScreen} from './collisions.mjs';
-import { GAME_CANVAS, GAME_CONTEXT } from "./canvas.mjs";
+import {GAME_CANVAS, GAME_CONTEXT} from './canvas.mjs';
 const ctx = GAME_CONTEXT;
 const cvs = GAME_CANVAS;
 
@@ -38,50 +38,50 @@ function shootLaser() {
 function drawLasers() {
   for (let i = 0; i < ship.lasers.length; i++) {
     if (ship.lasers[i].explodeTime == 0) {
-      ctx.fillStyle = "salmon";
+      ctx.fillStyle = 'salmon';
       ctx.beginPath();
       ctx.arc(
-        ship.lasers[i].x - ship.x + cvs.width / 2,
-        ship.lasers[i].y - ship.y + cvs.height / 2,
-        SHIP_SIZE / 15,
-        0,
-        Math.PI * 2,
-        false
+          ship.lasers[i].x - ship.x + cvs.width / 2,
+          ship.lasers[i].y - ship.y + cvs.height / 2,
+          SHIP_SIZE / 15,
+          0,
+          Math.PI * 2,
+          false,
       );
       ctx.fill();
     } else {
       // draw explosion
-      ctx.fillStyle = "orangered";
+      ctx.fillStyle = 'orangered';
       ctx.beginPath();
       ctx.arc(
-        ship.lasers[i].x - ship.x + cvs.width / 2,
-        ship.lasers[i].y - ship.y + cvs.height / 2,
-        ship.r * 0.75,
-        0,
-        Math.PI * 2,
-        false
+          ship.lasers[i].x - ship.x + cvs.width / 2,
+          ship.lasers[i].y - ship.y + cvs.height / 2,
+          ship.r * 0.75,
+          0,
+          Math.PI * 2,
+          false,
       );
       ctx.fill();
-      ctx.fillStyle = "salmon";
+      ctx.fillStyle = 'salmon';
       ctx.beginPath();
       ctx.arc(
-        ship.lasers[i].x - (ship.x - cvs.width),
-        ship.lasers[i].y - (ship.y - cvs.height),
-        ship.r * 0.5,
-        0,
-        Math.PI * 2,
-        false
+          ship.lasers[i].x - (ship.x - cvs.width),
+          ship.lasers[i].y - (ship.y - cvs.height),
+          ship.r * 0.5,
+          0,
+          Math.PI * 2,
+          false,
       );
       ctx.fill();
-      ctx.fillStyle = "pink";
+      ctx.fillStyle = 'pink';
       ctx.beginPath();
       ctx.arc(
-        ship.lasers[i].x - (ship.x - cvs.width),
-        ship.lasers[i].y - (ship.y - cvs.height),
-        ship.r * 0.25,
-        0,
-        Math.PI * 2,
-        false
+          ship.lasers[i].x - (ship.x - cvs.width),
+          ship.lasers[i].y - (ship.y - cvs.height),
+          ship.r * 0.25,
+          0,
+          Math.PI * 2,
+          false,
       );
       ctx.fill();
     }
@@ -119,4 +119,4 @@ function moveLasers() {
   }
 }
 
-export { drawLasers, shootLaser, moveLasers };
+export {drawLasers, shootLaser, moveLasers};

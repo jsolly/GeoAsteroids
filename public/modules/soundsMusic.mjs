@@ -1,24 +1,19 @@
-import { keyUp, keyDown } from "./keybindings.mjs";
-import { FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON } from "./constants.mjs";
-import { getRoidsInfo } from "./asteroids.mjs";
-document.addEventListener("keydown", keyDown);
-document.addEventListener("keyup", keyUp);
-const toggleMusicButton = document.getElementById("toggle-music");
-const toggleSoundButton = document.getElementById("toggle-sound");
-toggleSoundButton.addEventListener("click", toggleSound);
-toggleMusicButton.addEventListener("click", toggleMusic);
-
-let maxStreams;
-let vol;
-const fxThrust = new Sound("sounds/thrust.m4a", (maxStreams = 1), (vol = 0.05));
-const fxHit = new Sound("sounds/hit.m4a", (maxStreams = 5), (vol = 0.05));
-const fxExplode = new Sound(
-  "sounds/explode.m4a",
-  (maxStreams = 1),
-  (vol = 0.05)
-);
-const fxLaser = new Sound("sounds/laser.m4a", (maxStreams = 5), (vol = 0.05));
-const music = new Music("sounds/music-low.m4a", "sounds/music-high.m4a");
+import {keyUp, keyDown} from './keybindings.mjs';
+import {FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON} from './constants.mjs';
+import {getRoidsInfo} from './asteroids.mjs';
+document.addEventListener('keydown', keyDown);
+document.addEventListener('keyup', keyUp);
+const toggleMusicButton = document.getElementById('toggle-music');
+const toggleSoundButton = document.getElementById('toggle-sound');
+toggleSoundButton.addEventListener('click', toggleSound);
+toggleMusicButton.addEventListener('click', toggleMusic);
+const fxThrust = new Sound('sounds/thrust.m4a');
+const maxStreams = 5;
+const vol = 0.05;
+const fxLaser = new Sound('sounds/laser.m4a', maxStreams, vol);
+const fxHit = new Sound('sounds/hit.m4a', maxStreams, vol);
+const fxExplode = new Sound('sounds/explode.m4a');
+const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 let soundOn = getSoundPreference();
 let musicOn = getMusicPreference();
 
@@ -32,7 +27,7 @@ function getSoundPreference() {
     localStorage.setItem(SAVE_KEY_SOUND_ON, false); // False if not found
     return false;
   }
-  return soundPref === "true";
+  return soundPref === 'true';
 }
 
 /**
@@ -45,7 +40,7 @@ function getMusicPreference() {
     localStorage.setItem(SAVE_KEY_MUSIC_ON, false); // False if not found
     return false;
   }
-  return musicPref === "true";
+  return musicPref === 'true';
 }
 
 /**
@@ -54,7 +49,7 @@ function getMusicPreference() {
 function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem(SAVE_KEY_SOUND_ON, soundOn);
-  document.getElementById("toggle-sound").blur();
+  document.getElementById('toggle-sound').blur();
 }
 
 /**
@@ -63,7 +58,7 @@ function toggleSound() {
 function toggleMusic() {
   musicOn = !musicOn;
   localStorage.setItem(SAVE_KEY_MUSIC_ON, musicOn);
-  document.getElementById("toggle-music").blur();
+  document.getElementById('toggle-music').blur();
 }
 
 /**
@@ -85,7 +80,7 @@ function Music(srcLow, srcHigh) {
   this.tempo = 1.0; // seconds per beat
   this.beatTime = 0; // the frames left before next beat
 
-  this.play = function () {
+  this.play = function() {
     if (this.low) {
       this.soundLow.play();
     } else {
@@ -93,7 +88,7 @@ function Music(srcLow, srcHigh) {
     }
     this.low = !this.low;
   };
-  this.setAsteroidRatio = function () {
+  this.setAsteroidRatio = function() {
     const roidsInfo = getRoidsInfo();
     const ratio =
       roidsInfo.roidsLeft == 0 ? 1 : roidsInfo.roidsLeft / roidsInfo.roidsTotal;
@@ -101,7 +96,7 @@ function Music(srcLow, srcHigh) {
     this.tempo = 1.0 - 0.75 * (1.0 - ratio);
   };
 
-  this.tick = function () {
+  this.tick = function() {
     if (this.beatTime == 0) {
       this.play();
       this.beatTime = Math.ceil(this.tempo * FPS);
@@ -124,16 +119,16 @@ function Sound(src, maxStreams = 1, vol = 0.05) {
     this.streams.push(new Audio(src));
     this.streams[i].volume = vol;
   }
-  this.play = function () {
+  this.play = function() {
     if (soundOn) {
       this.streamNum = (this.streamNum + 1) % maxStreams;
       this.streams[this.streamNum].play();
     }
   };
-  this.stop = function () {
+  this.stop = function() {
     this.streams[this.streamNum].pause();
     this.streams[this.streamNum].currentTime = 0;
   };
 }
 
-export { Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music };
+export {Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music};

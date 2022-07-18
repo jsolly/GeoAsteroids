@@ -1,5 +1,5 @@
-import { distBetweenPoints } from "./utils.mjs";
-import { updateScores, getCurrentLevel } from "./scoreLevelLives.mjs";
+import {distBetweenPoints} from './utils.mjs';
+import {updateScores, getCurrentLevel} from './scoreLevelLives.mjs';
 import {
   ROID_NUM,
   ROID_SIZE,
@@ -11,9 +11,9 @@ import {
   ROID_POINTS_MED,
   ROID_POINTS_SML,
   DEBUG,
-} from "./constants.mjs";
-import { ship } from "./ship.mjs";
-import { GAME_CANVAS, GAME_CONTEXT } from "./canvas.mjs";
+} from './constants.mjs';
+import {ship} from './ship.mjs';
+import {GAME_CANVAS, GAME_CONTEXT} from './canvas.mjs';
 
 let roids;
 let roidsTotal;
@@ -42,7 +42,7 @@ function newAsteroid(x, y, r) {
     r: r,
     offsets: [],
     vertices: Math.floor(
-      Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2
+        Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2,
     ),
   };
   for (let i = 0; i < roid.vertices; i++) {
@@ -56,7 +56,7 @@ function newAsteroid(x, y, r) {
  * @return {[Array]} Array of Asteroids
  */
 function getRoidsInfo() {
-  return { roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal };
+  return {roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal};
 }
 /**
  *
@@ -78,7 +78,7 @@ function createAsteroidBelt() {
     } while (distBetweenPoints(ship.x, ship.y, x, y) < ROID_SIZE * 2 + ship.r);
     roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 2), currentLevel, FPS));
   }
-  return { roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal };
+  return {roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal};
 }
 /**
  *
@@ -124,7 +124,7 @@ let offsets;
 function drawAsteroids() {
   const ctx = GAME_CONTEXT;
   for (let i = 0; i < roids.length; i++) {
-    ctx.strokeStyle = "slategrey";
+    ctx.strokeStyle = 'slategrey';
     ctx.lineWidth = 1.5;
     // get asteroid properties
     x = roids[i].x;
@@ -136,21 +136,21 @@ function drawAsteroids() {
     // draw a path
     ctx.beginPath();
     ctx.moveTo(
-      x + r * offsets[0] * Math.cos(a),
-      y + r * offsets[0] * Math.sin(a)
+        x + r * offsets[0] * Math.cos(a),
+        y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       ctx.lineTo(
-        x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
+          x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
+          y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
     ctx.closePath();
     ctx.stroke();
     // show asteroid's collision circle
     if (DEBUG) {
-      ctx.strokeStyle = "lime";
+      ctx.strokeStyle = 'lime';
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2, false);
       ctx.stroke();
@@ -165,7 +165,7 @@ function drawAsteroidsRelative(ship) {
   const ctx = GAME_CONTEXT;
   const cvs = GAME_CANVAS;
   for (let i = 0; i < roids.length; i++) {
-    ctx.strokeStyle = "slategrey";
+    ctx.strokeStyle = 'slategrey';
     ctx.lineWidth = 1.5;
     // get asteroid properties
     x = -(ship.x - cvs.width / 2) + roids[i].x;
@@ -177,21 +177,21 @@ function drawAsteroidsRelative(ship) {
     // draw a path
     ctx.beginPath();
     ctx.moveTo(
-      x + r * offsets[0] * Math.cos(a),
-      y + r * offsets[0] * Math.sin(a)
+        x + r * offsets[0] * Math.cos(a),
+        y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       ctx.lineTo(
-        x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
+          x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
+          y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
     ctx.closePath();
     ctx.stroke();
     // show asteroid's collision circle
     if (DEBUG) {
-      ctx.strokeStyle = "lime";
+      ctx.strokeStyle = 'lime';
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2, false);
       ctx.stroke();
