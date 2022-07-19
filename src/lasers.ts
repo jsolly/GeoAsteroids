@@ -4,11 +4,11 @@ import {
   LASER_SPEED,
   LASER_MAX,
   LASER_DIST,
-} from './constants.mjs';
-import {ship} from './ship.mjs';
-import {fxLaser} from './soundsMusic.mjs';
-// import {handleLaserEdgeofScreen} from './collisions.mjs';
-import {GAME_CANVAS, GAME_CONTEXT} from './canvas.mjs';
+} from './constants.js';
+import {ship} from './ship.js';
+import {fxLaser} from './soundsMusic.js';
+// import {handleLaserEdgeofScreen} from './collisions.js';
+import {GAME_CANVAS, GAME_CONTEXT} from './canvas.js';
 const ctx = GAME_CONTEXT;
 const cvs = GAME_CANVAS;
 

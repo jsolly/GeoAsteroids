@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "outDir": "./built", //removed "module": "CommonJS" to resolve Uncaught ReferenceError: exports is not defined
+        "rootDir": "./src",
+        "strict": false
+    }
+}

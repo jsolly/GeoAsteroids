@@ -1,5 +1,5 @@
-import {distBetweenPoints} from './utils.mjs';
-import {updateScores, getCurrentLevel} from './scoreLevelLives.mjs';
+import {distBetweenPoints} from './utils.js';
+import {updateScores, getCurrentLevel} from './scoreLevelLives.js';
 import {
   ROID_NUM,
   ROID_SIZE,
@@ -11,9 +11,9 @@ import {
   ROID_POINTS_MED,
   ROID_POINTS_SML,
   DEBUG,
-} from './constants.mjs';
-import {ship} from './ship.mjs';
-import {GAME_CANVAS, GAME_CONTEXT} from './canvas.mjs';
+} from './constants.js';
+import {ship} from './ship.js';
+import {GAME_CANVAS, GAME_CONTEXT} from './canvas.js';
 
 let roids;
 let roidsTotal;
