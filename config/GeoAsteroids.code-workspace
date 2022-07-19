@@ -27,5 +27,8 @@
 		},
 		"editor.formatOnSave": true,
 		"window.autoDetectColorScheme": true,
+		"files.exclude": {
+			"**/.git": false
+		},
 	}
 }
