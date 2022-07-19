@@ -14,16 +14,18 @@
 		"git.confirmSync": false,
 		"explorer.confirmDelete": false,
 		"editor.minimap.enabled": false,
-		"editor.rulers": [80],
+		"editor.rulers": [
+			80
+		],
 		"[jsonc]": {
 			"editor.defaultFormatter": "vscode.json-language-features"
 		},
-		"workbench.colorTheme": "Default Light+",
 		"javascript.format.enable": false,
 		"eslint.format.enable": true,
 		"[javascript]": {
 			"editor.defaultFormatter": "dbaeumer.vscode-eslint"
 		},
 		"editor.formatOnSave": true,
+		"window.autoDetectColorScheme": true,
 	}
 }
