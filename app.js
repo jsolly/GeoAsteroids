@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.use(express.static(path.join(__dirname, '/src')));
+app.use(express.static(path.join(__dirname, '/built')));
 
 const listener = app.listen(process.env.PORT || 4000, function() {
   console.log('Node app is working on port ' + listener.address().port);
