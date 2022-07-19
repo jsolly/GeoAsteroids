@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
-    "lint": "eslint src --ext .js,.mjs",
-    "lint-fix": "eslint src --fix --ext .js,.mjs",
+    "lint": "eslint src --ext .js,.ts",
+    "lint-fix": "eslint src --fix --ext .js,.ts",
     "prepare": "husky install"
   },
   "repository": {

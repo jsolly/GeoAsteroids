@@ -1,6 +1,6 @@
-import {ship} from './ship.mjs';
-import {TURN_SPEED, FPS} from './constants.mjs';
-import {shootLaser} from './lasers.mjs';
+import {ship} from './ship.js';
+import {TURN_SPEED, FPS} from './constants.js';
+import {shootLaser} from './lasers.js';
 
 /**
  *

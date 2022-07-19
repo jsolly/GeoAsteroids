@@ -7,9 +7,9 @@ import {
   FPS,
   START_LIVES,
   FRICTION,
-} from './constants.mjs';
-import {fxExplode, fxThrust} from './soundsMusic.mjs';
-import {GAME_CANVAS, GAME_CONTEXT, GAME_CENTER} from './canvas.mjs';
+} from './constants.js';
+import {fxExplode, fxThrust} from './soundsMusic.js';
+import {GAME_CANVAS, GAME_CONTEXT, GAME_CENTER} from './canvas.js';
 const ctx = GAME_CONTEXT;
 const cvs = GAME_CANVAS;
 let ship = {

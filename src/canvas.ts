@@ -1,4 +1,4 @@
-import {FPS} from './constants.mjs';
+import {FPS} from './constants.js';
 
 /* Drawing Constants*/
 const GAME_CANVAS = document.getElementById('gameCanvas');

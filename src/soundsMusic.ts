@@ -1,6 +1,6 @@
-import {keyUp, keyDown} from './keybindings.mjs';
-import {FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON} from './constants.mjs';
-import {getRoidsInfo} from './asteroids.mjs';
+import {keyUp, keyDown} from './keybindings.js';
+import {FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON} from './constants.js';
+import {getRoidsInfo} from './asteroids.js';
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
 const toggleMusicButton = document.getElementById('toggle-music');

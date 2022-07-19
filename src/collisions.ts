@@ -1,15 +1,15 @@
-import {LASER_EXPLODE_DUR, FPS} from './constants.mjs';
+import {LASER_EXPLODE_DUR, FPS} from './constants.js';
 import {
   destroyAsteroid,
   createAsteroidBelt,
   getRoidsInfo,
-} from './asteroids.mjs';
-import {ship} from './ship.mjs';
-import {newLevel} from './scoreLevelLives.mjs';
-import {distBetweenPoints} from './utils.mjs';
-import {fxHit, music} from './soundsMusic.mjs';
-import {update} from '../main.js';
-import {GAME_CANVAS} from './canvas.mjs';
+} from './asteroids.js';
+import {ship} from './ship.js';
+import {newLevel} from './scoreLevelLives.js';
+import {distBetweenPoints} from './utils.js';
+import {fxHit, music} from './soundsMusic.js';
+import {update} from './main.js';
+import {GAME_CANVAS} from './canvas.js';
 // detect laser hits on asteroids
 let ax;
 let ay;

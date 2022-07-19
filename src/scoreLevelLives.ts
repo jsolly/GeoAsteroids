@@ -3,15 +3,15 @@ import {
   SAVE_KEY_HIGH_SCORE,
   START_LEVEL,
   SHIP_SIZE,
-} from './constants.mjs';
+} from './constants.js';
 import {
   setTextProperties,
   GAME_CANVAS,
   GAME_CONTEXT,
   TEXT_SIZE,
-} from './canvas.mjs';
-import {drawShip, ship} from './ship.mjs';
-import {createAsteroidBelt} from './asteroids.mjs';
+} from './canvas.js';
+import {drawShip, ship} from './ship.js';
+import {createAsteroidBelt} from './asteroids.js';
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
 
