@@ -26,7 +26,7 @@ let ship = {
 /**
  *
  * @param {number} currentLives - Current lives (1-CURRENT_LIVES)
- * @param {Boolean} currentBlinkOn - Whether the ship is blinking or not.
+ * @param {Boolean} currentBlinkOn - Whether the ship is blinking or not
  */
 function resetShip(currentLives = START_LIVES, currentBlinkOn = false) {
   ship = {
