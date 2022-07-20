@@ -20,7 +20,7 @@ let roidsTotal;
 let roidsLeft;
 /**
  *
- * @param {number} x - X coordinate of the Asteroid
+ * @param {number} x - X coordinate of the Asteroid.
  * @param {number} y - Y coordinate of the Asteroid
  * @param {number} r - Astroid radius in pixels
  * @return {[Object]} Asteroid
