@@ -9,12 +9,11 @@ import {
   FRICTION,
 } from './constants.js';
 import {fxExplode, fxThrust} from './soundsMusic.js';
-import {GAME_CANVAS, GAME_CONTEXT, GAME_CENTER} from './canvas.js';
-const ctx = GAME_CONTEXT;
-const cvs = GAME_CANVAS;
+import {getCanvConsts} from './canvas.js';
+const {cvs, ctx, center} = getCanvConsts();
 let ship = {
-  x: GAME_CENTER.x,
-  y: GAME_CENTER.y,
+  x: center.x,
+  y: center.y,
   t: 0,
   xv: 0,
   yv: 0,
@@ -40,8 +39,8 @@ let ship = {
  */
 function resetShip(currentLives = START_LIVES, currentBlinkOn = false) {
   ship = {
-    x: GAME_CENTER.x,
-    y: GAME_CENTER.y,
+    x: center.x,
+    y: center.y,
     t: 0,
     xv: 0,
     yv: 0,
@@ -122,8 +121,6 @@ function moveShip() {
  * draw the ship's thruster on the canvas
  */
 function drawThruster() {
-  const ctx = GAME_CONTEXT;
-  const cvs = GAME_CANVAS;
   if (!ship.exploding && ship.blinkOn) {
     ctx.fillStyle = 'red';
     ctx.strokeStyle = 'yellow';
@@ -161,7 +158,6 @@ function drawThruster() {
  * @param {string} color
  */
 function drawShip(x, y, a, color = 'white') {
-  const ctx = GAME_CONTEXT;
   ctx.strokeStyle = color;
   ctx.lineWidth = SHIP_SIZE / 20;
   ctx.beginPath();
@@ -230,7 +226,6 @@ function drawShipRelative(a, color = 'white') {
  * Draw the explosion when a ship is destroyed
  */
 function drawShipExplosion() {
-  const ctx = GAME_CONTEXT;
   ctx.fillStyle = 'darkred';
   ctx.beginPath();
   ctx.arc(ship.x, ship.y, ship.r * 1.7, 0, Math.PI * 2, false);

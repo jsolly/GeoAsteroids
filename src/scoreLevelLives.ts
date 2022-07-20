@@ -6,14 +6,14 @@ import {
 } from './constants.js';
 import {
   setTextProperties,
-  GAME_CANVAS,
-  GAME_CONTEXT,
   TEXT_SIZE,
+  getCanvConsts,
 } from './canvas.js';
 import {drawShip, ship} from './ship.js';
 import {createAsteroidBelt} from './asteroids.js';
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
+const {cvs, ctx} = getCanvConsts();
 
 /**
  * Set score, level, lives, back to default (called inside gameOver())
@@ -59,14 +59,12 @@ function drawLives() {
  * Draw current score and high score on canvas
  */
 function drawScores() {
-  const ctx = GAME_CONTEXT;
-  const cvs = GAME_CANVAS;
   // draw the score
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'white';
   ctx.font = TEXT_SIZE + 'px dejavu sans mono';
-  ctx.fillText(currentScore, cvs.width - 15, 30);
+  ctx.fillText(String(currentScore), cvs.width - 15, 30);
 
   // draw the high score
   ctx.textAlign = 'center';
@@ -93,17 +91,18 @@ function newLevel() {
  * @return {number} - The current high score.
  */
 function getHighScore() {
-  let highScore = localStorage.getItem(SAVE_KEY_HIGH_SCORE);
+  const highScore = localStorage.getItem(SAVE_KEY_HIGH_SCORE);
   if (highScore == null) {
-    localStorage.setItem(SAVE_KEY_HIGH_SCORE, 0); // set to 0 if null
+    localStorage.setItem(SAVE_KEY_HIGH_SCORE, '0'); // set to 0 if null
     return 0;
   }
-  if (currentScore > highScore) {
-    highScore = currentScore;
-    localStorage.setItem(SAVE_KEY_HIGH_SCORE, highScore);
-    return highScore;
+  let numberHighScore = Number(highScore);
+  if (currentScore > numberHighScore) {
+    numberHighScore = currentScore;
+    localStorage.setItem(SAVE_KEY_HIGH_SCORE, String(numberHighScore));
+    return numberHighScore;
   } else {
-    return highScore;
+    return numberHighScore;
   }
 }
 export {
