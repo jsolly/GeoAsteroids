@@ -10,17 +10,6 @@
     "lint:fix": "eslint . --fix --ext .js,.ts",
     "prepare": "husky install"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*": [
-      "npm run lint:fix",
-      "git add"
-    ]
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jsolly/GeoAsteroids.git"
@@ -42,5 +31,8 @@
     "eslint-config-google": "^0.14.0",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3"
+  },
+  "lint-staged": {
+    "*.{js,ts}": "eslint --cache --fix"
   }
 }
