@@ -13,7 +13,7 @@ const ctx = GAME_CONTEXT;
 const cvs = GAME_CANVAS;
 
 /**
- * Add a laser to an array of lasers and play a laser shoot sound.
+ * Add a laser to an array of lasers and play a laser shoot sound!
  */
 function shootLaser() {
   // Create laser object
