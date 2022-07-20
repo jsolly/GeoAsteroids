@@ -1,14 +1,32 @@
 import {FPS} from './constants.js';
+import {ship} from './ship.js';
+/**
+ *
+ * @return {
+ *          {cvs:Object,
+ *            ctx:Object,
+ *            center:{x:number,
+ *                    y:number
+ *                    }
+ *          }
+ * } cvs is an HTMLCanvasElement and contains info about the current canvas (width, height).
+ *   ctx is an object that lets you draw on the canvas
+ *   The center has and x and y value which are the horizontal and vertical dimensions in pixels
+ */
+function getCanvConsts() {
+  const canvas = document.getElementById('gameCanvas'); // Cheating a little bit https://stackoverflow.com/questions/48966233/how-do-i-solve-property-width-does-not-exist-on-type-htmlelement-when-typ
+  return {
+    'cvs': canvas,
+    'ctx': canvas.getContext('2d'),
+    'center': {x: canvas.width / 2, y: canvas.height / 2},
+  };
+}
 /* Drawing Constants*/
-const GAME_CANVAS = document.getElementById('gameCanvas');
-const GAME_CONTEXT = GAME_CANVAS.getContext('2d');
-const GAME_CENTER = {x: GAME_CANVAS.width / 2, y: GAME_CANVAS.height / 2};
 const TEXT_SIZE = 40; // Text font height in pixels
 const TEXT_FADE_TIME = 2.5; // text fade in seconds.
-const ctx = GAME_CONTEXT;
-const cvs = GAME_CANVAS;
 let text;
 let textAlpha;
+const {cvs, ctx} = getCanvConsts();
 /**
  *
  * @param {string} CurrenText Text to be displayed on canvas
@@ -64,4 +82,4 @@ function drawDebugFeatures() {
   ctx.fillStyle = 'red';
   ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
 }
-export {drawGameText, setTextProperties, getTextAlpha, TEXT_SIZE, TEXT_FADE_TIME, GAME_CANVAS, GAME_CONTEXT, GAME_CENTER, drawSpace, drawDebugFeatures};
+export {drawGameText, setTextProperties, getTextAlpha, TEXT_SIZE, TEXT_FADE_TIME, getCanvConsts, drawSpace, drawDebugFeatures};

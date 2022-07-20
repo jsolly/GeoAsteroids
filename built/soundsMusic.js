@@ -23,7 +23,7 @@ let musicOn = getMusicPreference();
 function getSoundPreference() {
   const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
   if (soundPref == null) {
-    localStorage.setItem(SAVE_KEY_SOUND_ON, false); // False if not found
+    localStorage.setItem(SAVE_KEY_SOUND_ON, 'false'); // False if not found
     return false;
   }
   return soundPref === 'true';
@@ -35,7 +35,7 @@ function getSoundPreference() {
 function getMusicPreference() {
   const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
   if (musicPref == null) {
-    localStorage.setItem(SAVE_KEY_MUSIC_ON, false); // False if not found
+    localStorage.setItem(SAVE_KEY_MUSIC_ON, 'false'); // False if not found
     return false;
   }
   return musicPref === 'true';
@@ -45,7 +45,7 @@ function getMusicPreference() {
  */
 function toggleSound() {
   soundOn = !soundOn;
-  localStorage.setItem(SAVE_KEY_SOUND_ON, soundOn);
+  localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
   document.getElementById('toggle-sound').blur();
 }
 /**
@@ -53,7 +53,7 @@ function toggleSound() {
  */
 function toggleMusic() {
   musicOn = !musicOn;
-  localStorage.setItem(SAVE_KEY_MUSIC_ON, musicOn);
+  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
   document.getElementById('toggle-music').blur();
 }
 /**

@@ -8,10 +8,8 @@ import {
 import {ship} from './ship.js';
 import {fxLaser} from './soundsMusic.js';
 // import {handleLaserEdgeofScreen} from './collisions.js';
-import {GAME_CANVAS, GAME_CONTEXT} from './canvas.js';
-const ctx = GAME_CONTEXT;
-const cvs = GAME_CANVAS;
-
+import {getCanvConsts} from './canvas.js';
+const {cvs, ctx} = getCanvConsts();
 /**
  * Add a laser to an array of lasers and play a laser shoot sound!
  */

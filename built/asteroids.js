@@ -2,7 +2,8 @@ import {distBetweenPoints} from './utils.js';
 import {updateScores, getCurrentLevel} from './scoreLevelLives.js';
 import {ROID_NUM, ROID_SIZE, ROID_SPEED, FPS, ROID_VERTICES, ROID_JAGG, ROID_POINTS_LRG, ROID_POINTS_MED, ROID_POINTS_SML, DEBUG} from './constants.js';
 import {ship} from './ship.js';
-import {GAME_CANVAS, GAME_CONTEXT} from './canvas.js';
+import {getCanvConsts} from './canvas.js';
+const {cvs, ctx} = getCanvConsts();
 let roids;
 let roidsTotal;
 let roidsLeft;
@@ -46,7 +47,6 @@ function getRoidsInfo() {
  * @return {[Array]} Array of Asteroids
  */
 function createAsteroidBelt() {
-  const cvs = GAME_CANVAS;
   const currentLevel = getCurrentLevel();
   roids = [];
   roidsTotal = (ROID_NUM + currentLevel) * 7;
@@ -59,7 +59,7 @@ function createAsteroidBelt() {
       x = Math.floor(Math.random() * cvs.width);
       y = Math.floor(Math.random() * cvs.height);
     } while (distBetweenPoints(ship.x, ship.y, x, y) < ROID_SIZE * 2 + ship.r);
-    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 2), currentLevel, FPS));
+    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 2)));
   }
   return {roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal};
 }
@@ -103,7 +103,6 @@ let offsets;
  * Draws astroids on the canvas from an array of Asteroids
  */
 function drawAsteroids() {
-  const ctx = GAME_CONTEXT;
   for (let i = 0; i < roids.length; i++) {
     ctx.strokeStyle = 'slategrey';
     ctx.lineWidth = 1.5;
@@ -137,8 +136,6 @@ function drawAsteroids() {
  * @param {Ship} ship
  */
 function drawAsteroidsRelative(ship) {
-  const ctx = GAME_CONTEXT;
-  const cvs = GAME_CANVAS;
   for (let i = 0; i < roids.length; i++) {
     ctx.strokeStyle = 'slategrey';
     ctx.lineWidth = 1.5;
