@@ -17,9 +17,19 @@ import {getCanvConsts} from './canvas.js';
 
 const {cvs, ctx} = getCanvConsts();
 
-let roids;
-let roidsTotal;
-let roidsLeft;
+let roids: {
+  x: number,
+  y: number,
+  t: number,
+  xv:number,
+  yv:number,
+  a:number,
+  r:number,
+  offsets: number[],
+  vertices: number
+};
+let roidsTotal: number;
+let roidsLeft: number;
 /**
  *
  * @param {number} x - X coordinate of the Asteroid.
@@ -27,9 +37,10 @@ let roidsLeft;
  * @param {number} r - Astroid radius in pixels
  * @return {[Object]} Asteroid
  */
-function newAsteroid(x, y, r) {
+function newAsteroid(x:number, y:number, r:number) {
   const level = getCurrentLevel();
   const lvlMult = 1 + 0.1 * level;
+
   const roid = {
     x: x,
     y: y,
@@ -87,7 +98,7 @@ function createAsteroidBelt() {
  *
  * @param {Array} roids - Array of Asteroids
  */
-function destroyAsteroid(i, roids) {
+function destroyAsteroid(i:number, roids) {
   const x = roids[i].x;
   const y = roids[i].y;
   const r = roids[i].r;

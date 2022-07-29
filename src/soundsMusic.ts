@@ -112,7 +112,7 @@ function Music(srcLow, srcHigh) {
  * @param {number} maxStreams - Number of simultaneous instances of a sound.
  * @param {float} vol - Volume of sound. 0 (silent) - 1 (very loud)
  */
-function Sound(src, maxStreams = 1, vol = 0.05) {
+function Sound(src:string, maxStreams = 1, vol = 0.05) {
   this.streamNum = 0;
   this.streams = [];
   for (let i = 0; i < maxStreams; i++) {

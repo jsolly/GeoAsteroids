@@ -2,7 +2,8 @@ import {SHIP_SIZE, SHIP_INV_DUR, SHIP_INV_BLINK_DUR, SHIP_EXPLODE_DUR, SHIP_THRU
 import {fxExplode, fxThrust} from './soundsMusic.js';
 import {getCanvConsts} from './canvas.js';
 const {cvs, ctx, center} = getCanvConsts();
-let ship = {
+let ship;
+ship = {
   x: center.x,
   y: center.y,
   t: 0,

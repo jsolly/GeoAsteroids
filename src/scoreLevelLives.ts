@@ -36,7 +36,7 @@ function getCurrentLevel() {
  * Called when the user does something to get points such as
  * destroying an asteroid
  */
-function updateScores(valToAdd) {
+function updateScores(valToAdd: number) {
   currentScore += valToAdd;
 }
 /**

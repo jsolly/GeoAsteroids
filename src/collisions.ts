@@ -81,7 +81,7 @@ function handleShipEdgeOfScreen() {
  * @param {number} i - Index of laser to handle offscreen
  * @todo remove this func? I think we want to let lasers exit the canvas.
  */
-function handleLaserEdgeofScreen(i) {
+function handleLaserEdgeofScreen(i: number) {
   // handle edge of screen
   if (ship.lasers[i].x < 0) {
     ship.lasers[i].x = cvs.width;

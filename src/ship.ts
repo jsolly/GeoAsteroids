@@ -11,7 +11,28 @@ import {
 import {fxExplode, fxThrust} from './soundsMusic.js';
 import {getCanvConsts} from './canvas.js';
 const {cvs, ctx, center} = getCanvConsts();
-let ship = {
+let ship: {
+  x: number,
+  y: number,
+  t: number,
+  xv: number,
+  yv: number,
+  r: number,
+  a: number
+  blinkCount: number
+  blinkTime: number,
+  blinkOn: boolean,
+  canShoot: boolean,
+  dead: boolean,
+  exploding: boolean,
+  lives: number,
+  lasers: [],
+  explodeTime: number,
+  rot: number,
+  thrusting: boolean,
+};
+
+ship = {
   x: center.x,
   y: center.y,
   t: 0,

@@ -28,15 +28,15 @@ function getCanvConsts() {
 const TEXT_SIZE = 40; // Text font height in pixels
 const TEXT_FADE_TIME = 2.5; // text fade in seconds.
 
-let text;
-let textAlpha;
+let text: String;
+let textAlpha: number;
 const {cvs, ctx} = getCanvConsts();
 /**
  *
  * @param {string} CurrenText Text to be displayed on canvas
  * @param {number} CurrenTextAlpha Opacity (0-1) of text to be displayed.
  */
-function setTextProperties(CurrenText, CurrenTextAlpha) {
+function setTextProperties(CurrenText: string, CurrenTextAlpha: number) {
   text = CurrenText;
   textAlpha = CurrenTextAlpha;
 }
