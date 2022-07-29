@@ -33,3 +33,8 @@ export const DEBUG = false; // Show ship collision boundary and ship center dot
 export const SAVE_KEY_HIGH_SCORE = 'highscore'; // localstorage of high score.
 export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
 export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
+/* Drawing Constants*/
+export const TEXT_SIZE = 40; // Text font height in pixels
+export const TEXT_FADE_TIME = 2.5; // text fade in seconds.
+export const CVS = document.getElementById('gameCanvas'); // Cheating a little bit https://stackoverflow.com/questions/48966233/how-do-i-solve-property-width-does-not-exist-on-type-htmlelement-when-typ
+export const CTX = CVS.getContext('2d');
