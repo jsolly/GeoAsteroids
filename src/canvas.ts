@@ -73,8 +73,6 @@ export {
   drawGameText,
   setTextProperties,
   getTextAlpha,
-  TEXT_SIZE,
-  TEXT_FADE_TIME,
   drawSpace,
   drawDebugFeatures,
 };

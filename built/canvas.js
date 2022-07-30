@@ -57,4 +57,4 @@ function drawDebugFeatures() {
   CTX.fillStyle = 'red';
   CTX.fillRect(ship.x - 1, ship.y - 1, 2, 2);
 }
-export {drawGameText, setTextProperties, getTextAlpha, TEXT_SIZE, TEXT_FADE_TIME, drawSpace, drawDebugFeatures};
+export {drawGameText, setTextProperties, getTextAlpha, drawSpace, drawDebugFeatures};

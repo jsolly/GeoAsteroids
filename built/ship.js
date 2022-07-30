@@ -9,21 +9,19 @@ class Ship {
      * @param {number} lives - Create a ship with a given number of lives
      * @param {boolean} blinkOn - Determine if ship should be blinking or not
      */
-  constructor(lives, blinkOn) {
+  constructor(lives = START_LIVES, blinkOn = false) {
     this.x = CVS.width;
     this.y = CVS.height;
     this.t = 0;
     this.xv = 0;
     this.yv = 0;
-    this.r = SHIP_SIZE / 2;
+    this.r = SHIP_SIZE / 2; // radius in pixels
     this.a = (90 / 180) * Math.PI; // convert to radians;
     this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
     this.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-    this.blinkOn = false;
     this.canShoot = true;
     this.dead = false;
     this.exploding = false;
-    this.lives = START_LIVES;
     this.lasers = [];
     this.explodeTime = 0;
     this.rot = 0;
