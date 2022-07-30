@@ -22,7 +22,7 @@
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
   "dependencies": {
     "express": "^4.18.1",
-    "express-rate-limit": "^6.4.0"
+    "express-rate-limit": "^6.5.1"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.31.0",
