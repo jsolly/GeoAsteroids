@@ -4,6 +4,7 @@ import {
   LASER_SPEED,
   LASER_MAX,
   LASER_DIST,
+  CVS,
   CTX,
 } from './constants.js';
 import {ship} from './ship.js';

@@ -1,4 +1,4 @@
-import {SHIP_SIZE, FPS, LASER_SPEED, LASER_MAX, LASER_DIST, CTX} from './constants.js';
+import {SHIP_SIZE, FPS, LASER_SPEED, LASER_MAX, LASER_DIST, CVS, CTX} from './constants.js';
 import {ship} from './ship.js';
 import {fxLaser} from './soundsMusic.js';
 // import {handleLaserEdgeofScreen} from './collisions.js';

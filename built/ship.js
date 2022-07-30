@@ -1,26 +1,40 @@
 import {SHIP_SIZE, SHIP_INV_DUR, SHIP_INV_BLINK_DUR, SHIP_EXPLODE_DUR, SHIP_THRUST, FPS, START_LIVES, FRICTION, CVS, CTX} from './constants.js';
 import {fxExplode, fxThrust} from './soundsMusic.js';
-let ship;
-ship = {
-  x: CVS.width,
-  y: CVS.height,
-  t: 0,
-  xv: 0,
-  yv: 0,
-  r: SHIP_SIZE / 2,
-  a: (90 / 180) * Math.PI,
-  blinkCount: Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR),
-  blinkTime: Math.ceil(SHIP_INV_BLINK_DUR * FPS),
-  blinkOn: false,
-  canShoot: true,
-  dead: false,
-  exploding: false,
-  lives: START_LIVES,
-  lasers: [],
-  explodeTime: 0,
-  rot: 0,
-  thrusting: false,
-};
+/**
+ *
+ */
+class Ship {
+  /**
+     *
+     * @param {number} lives - Create a ship with a given number of lives
+     * @param {boolean} blinkOn - Determine if ship should be blinking or not
+     */
+  constructor(lives, blinkOn) {
+    this.x = CVS.width;
+    this.y = CVS.height;
+    this.t = 0;
+    this.xv = 0;
+    this.yv = 0;
+    this.r = SHIP_SIZE / 2;
+    this.a = (90 / 180) * Math.PI; // convert to radians;
+    this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+    this.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+    this.blinkOn = false;
+    this.canShoot = true;
+    this.dead = false;
+    this.exploding = false;
+    this.lives = START_LIVES;
+    this.lasers = [];
+    this.explodeTime = 0;
+    this.rot = 0;
+    this.thrusting = false;
+    this.lives = lives;
+    this.blinkOn = blinkOn;
+  }
+}
+const blinkOn = false;
+const lives = START_LIVES;
+let ship = new Ship(lives, blinkOn);
 /**
  *
  * @param {number} currentLives - Current lives (1-CURRENT_LIVES)
@@ -210,4 +224,4 @@ function drawShipExplosion() {
   CTX.arc(ship.x, ship.y, ship.r * 0.5, 0, Math.PI * 2, false);
   CTX.fill();
 }
-export {resetShip, drawShip, drawShipRelative, drawShipExplosion, explodeShip, killShip, drawThruster, thrustShip, moveShip, setBlinkOn, setExploding, ship};
+export {resetShip, drawShip, drawShipRelative, drawShipExplosion, explodeShip, killShip, drawThruster, thrustShip, moveShip, setBlinkOn, setExploding, Ship, ship};

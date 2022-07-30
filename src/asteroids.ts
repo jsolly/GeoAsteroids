@@ -14,9 +14,9 @@ import {
   CTX,
   CVS,
 } from './constants.js';
-import {ship} from './ship.js';
+import {Ship, ship} from './ship.js';
 
-let roids: {
+let roid: {
   x: number,
   y: number,
   t: number,
@@ -27,6 +27,9 @@ let roids: {
   offsets: number[],
   vertices: number
 };
+
+let roids: typeof roid[];
+
 let roidsTotal: number;
 let roidsLeft: number;
 /**
@@ -40,7 +43,7 @@ function newAsteroid(x:number, y:number, r:number) {
   const level = getCurrentLevel();
   const lvlMult = 1 + 0.1 * level;
 
-  const roid = {
+  roid = {
     x: x,
     y: y,
     t: 0,
@@ -97,7 +100,7 @@ function createAsteroidBelt() {
  *
  * @param {Array} roids - Array of Asteroids
  */
-function destroyAsteroid(i:number, roids) {
+function destroyAsteroid(i:number, roids: typeof roid[]) {
   const x = roids[i].x;
   const y = roids[i].y;
   const r = roids[i].r;
@@ -171,7 +174,7 @@ function drawAsteroids() {
  *
  * @param {Ship} ship
  */
-function drawAsteroidsRelative(ship) {
+function drawAsteroidsRelative(ship: Ship) {
   for (let i = 0; i < roids.length; i++) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;

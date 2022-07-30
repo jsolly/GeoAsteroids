@@ -2,6 +2,7 @@ import {distBetweenPoints} from './utils.js';
 import {updateScores, getCurrentLevel} from './scoreLevelLives.js';
 import {ROID_NUM, ROID_SIZE, ROID_SPEED, FPS, ROID_VERTICES, ROID_JAGG, ROID_POINTS_LRG, ROID_POINTS_MED, ROID_POINTS_SML, DEBUG, CTX, CVS} from './constants.js';
 import {ship} from './ship.js';
+let roid;
 let roids;
 let roidsTotal;
 let roidsLeft;
@@ -15,7 +16,7 @@ let roidsLeft;
 function newAsteroid(x, y, r) {
   const level = getCurrentLevel();
   const lvlMult = 1 + 0.1 * level;
-  const roid = {
+  roid = {
     x: x,
     y: y,
     t: 0,

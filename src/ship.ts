@@ -12,47 +12,42 @@ import {
 } from './constants.js';
 import {fxExplode, fxThrust} from './soundsMusic.js';
 import {laser} from './lasers.js';
-let ship: {
-  x: number,
-  y: number,
-  t: number,
-  xv: number,
-  yv: number,
-  r: number,
-  a: number
-  blinkCount: number
-  blinkTime: number,
-  blinkOn: boolean,
-  canShoot: boolean,
-  dead: boolean,
-  exploding: boolean,
-  lives: number,
-  lasers: typeof laser[],
-  explodeTime: number,
-  rot: number,
-  thrusting: boolean,
-};
 
-ship = {
-  x: CVS.width,
-  y: CVS.height,
-  t: 0,
-  xv: 0,
-  yv: 0,
-  r: SHIP_SIZE / 2,
-  a: (90 / 180) * Math.PI, // convert to radians
-  blinkCount: Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR),
-  blinkTime: Math.ceil(SHIP_INV_BLINK_DUR * FPS),
-  blinkOn: false,
-  canShoot: true,
-  dead: false,
-  exploding: false,
-  lives: START_LIVES,
-  lasers: [],
-  explodeTime: 0,
-  rot: 0,
-  thrusting: false,
-};
+/**
+ *
+ */
+class Ship {
+  x: number = CVS.width;
+  y: number = CVS.height;
+  t: number = 0;
+  xv: number = 0;
+  yv: number = 0;
+  r: number = SHIP_SIZE / 2;
+  a: number = (90 / 180) * Math.PI; // convert to radians;
+  blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+  blinkTime: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+  blinkOn: boolean = false;
+  canShoot: boolean = true;
+  dead: boolean = false;
+  exploding: boolean = false;
+  lives: number = START_LIVES;
+  lasers: typeof laser[] = [];
+  explodeTime: number = 0;
+  rot: number = 0;
+  thrusting: boolean = false;
+  /**
+   *
+   * @param {number} lives - Create a ship with a given number of lives
+   * @param {boolean} blinkOn - Determine if ship should be blinking or not
+   */
+  constructor(lives:number, blinkOn:boolean) {
+    this.lives = lives;
+    this.blinkOn = blinkOn;
+  }
+}
+const blinkOn = false;
+const lives = START_LIVES;
+let ship = new Ship(lives, blinkOn);
 
 /**
  *
@@ -179,7 +174,7 @@ function drawThruster() {
  * @param {number} a
  * @param {string} color
  */
-function drawShip(x, y, a, color = 'white') {
+function drawShip(x:number, y:number, a:number, color = 'white') {
   CTX.strokeStyle = color;
   CTX.lineWidth = SHIP_SIZE / 20;
   CTX.beginPath();
@@ -206,7 +201,7 @@ function drawShip(x, y, a, color = 'white') {
  * @param {number} a - Angle of the ship in radians
  * @param {string} color - Color of the ship
  */
-function drawShipRelative(a, color = 'white') {
+function drawShipRelative(a:number, color = 'white') {
   /*
     An overload of drawShip that doesn't ask for the position of the ship.
     Only the angle(a)
@@ -281,5 +276,6 @@ export {
   moveShip,
   setBlinkOn,
   setExploding,
+  Ship,
   ship,
 };

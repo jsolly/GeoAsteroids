@@ -73,7 +73,7 @@ function getMusicOn() {
  * @param {string} srcLow - Path to sound for downbeat
  * @param {string} srcHigh - Path to sound for upbeat
  */
-function Music(srcLow, srcHigh) {
+function Music(srcLow: string, srcHigh: string) {
   this.soundLow = new Audio(srcLow);
   this.soundHigh = new Audio(srcHigh);
   this.low = true;
