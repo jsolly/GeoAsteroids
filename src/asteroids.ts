@@ -11,15 +11,27 @@ import {
   ROID_POINTS_MED,
   ROID_POINTS_SML,
   DEBUG,
+  CTX,
+  CVS,
 } from './constants.js';
-import {ship} from './ship.js';
-import {getCanvConsts} from './canvas.js';
+import {Ship, ship} from './ship.js';
 
-const {cvs, ctx} = getCanvConsts();
+let roid: {
+  x: number,
+  y: number,
+  t: number,
+  xv:number,
+  yv:number,
+  a:number,
+  r:number,
+  offsets: number[],
+  vertices: number
+};
 
-let roids;
-let roidsTotal;
-let roidsLeft;
+let roids: typeof roid[];
+
+let roidsTotal: number;
+let roidsLeft: number;
 /**
  *
  * @param {number} x - X coordinate of the Asteroid.
@@ -27,10 +39,11 @@ let roidsLeft;
  * @param {number} r - Astroid radius in pixels
  * @return {[Object]} Asteroid
  */
-function newAsteroid(x, y, r) {
+function newAsteroid(x:number, y:number, r:number) {
   const level = getCurrentLevel();
   const lvlMult = 1 + 0.1 * level;
-  const roid = {
+
+  roid = {
     x: x,
     y: y,
     t: 0,
@@ -74,8 +87,8 @@ function createAsteroidBelt() {
   for (let i = 0; i < ROID_NUM + currentLevel; i++) {
     // random asteroid location (not touching ship)
     do {
-      x = Math.floor(Math.random() * cvs.width);
-      y = Math.floor(Math.random() * cvs.height);
+      x = Math.floor(Math.random() * CVS.width);
+      y = Math.floor(Math.random() * CVS.height);
     } while (distBetweenPoints(ship.x, ship.y, x, y) < ROID_SIZE * 2 + ship.r);
     roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 2)));
   }
@@ -87,7 +100,7 @@ function createAsteroidBelt() {
  *
  * @param {Array} roids - Array of Asteroids
  */
-function destroyAsteroid(i, roids) {
+function destroyAsteroid(i:number, roids: typeof roid[]) {
   const x = roids[i].x;
   const y = roids[i].y;
   const r = roids[i].r;
@@ -124,8 +137,8 @@ let offsets;
  */
 function drawAsteroids() {
   for (let i = 0; i < roids.length; i++) {
-    ctx.strokeStyle = 'slategrey';
-    ctx.lineWidth = 1.5;
+    CTX.strokeStyle = 'slategrey';
+    CTX.lineWidth = 1.5;
     // get asteroid properties
     x = roids[i].x;
     y = roids[i].y;
@@ -134,26 +147,26 @@ function drawAsteroids() {
     vertices = roids[i].vertices;
     offsets = roids[i].offsets;
     // draw a path
-    ctx.beginPath();
-    ctx.moveTo(
+    CTX.beginPath();
+    CTX.moveTo(
         x + r * offsets[0] * Math.cos(a),
         y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
-      ctx.lineTo(
+      CTX.lineTo(
           x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
           y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
-    ctx.closePath();
-    ctx.stroke();
+    CTX.closePath();
+    CTX.stroke();
     // show asteroid's collision circle
     if (DEBUG) {
-      ctx.strokeStyle = 'lime';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2, false);
-      ctx.stroke();
+      CTX.strokeStyle = 'lime';
+      CTX.beginPath();
+      CTX.arc(x, y, r, 0, Math.PI * 2, false);
+      CTX.stroke();
     }
   }
 }
@@ -161,38 +174,38 @@ function drawAsteroids() {
  *
  * @param {Ship} ship
  */
-function drawAsteroidsRelative(ship) {
+function drawAsteroidsRelative(ship: Ship) {
   for (let i = 0; i < roids.length; i++) {
-    ctx.strokeStyle = 'slategrey';
-    ctx.lineWidth = 1.5;
+    CTX.strokeStyle = 'slategrey';
+    CTX.lineWidth = 1.5;
     // get asteroid properties
-    x = -(ship.x - cvs.width / 2) + roids[i].x;
-    y = -(ship.y - cvs.height / 2) + roids[i].y;
+    x = -(ship.x - CVS.width / 2) + roids[i].x;
+    y = -(ship.y - CVS.height / 2) + roids[i].y;
     r = roids[i].r;
     a = roids[i].a;
     vertices = roids[i].vertices;
     offsets = roids[i].offsets;
     // draw a path
-    ctx.beginPath();
-    ctx.moveTo(
+    CTX.beginPath();
+    CTX.moveTo(
         x + r * offsets[0] * Math.cos(a),
         y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
-      ctx.lineTo(
+      CTX.lineTo(
           x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
           y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
-    ctx.closePath();
-    ctx.stroke();
+    CTX.closePath();
+    CTX.stroke();
     // show asteroid's collision circle
     if (DEBUG) {
-      ctx.strokeStyle = 'lime';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2, false);
-      ctx.stroke();
+      CTX.strokeStyle = 'lime';
+      CTX.beginPath();
+      CTX.arc(x, y, r, 0, Math.PI * 2, false);
+      CTX.stroke();
     }
   }
 }
@@ -200,7 +213,7 @@ function drawAsteroidsRelative(ship) {
  * Move all asteroids in an array using their x and y velocity
  */
 function moveAsteroids() {
-  // const cvs = getCanv();
+  // const CVS = getCanv();
   // ;
   for (let i = 0; i < roids.length; i++) {
     // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
@@ -209,14 +222,14 @@ function moveAsteroids() {
     roids[i].y += roids[i].yv;
     // handle edge of screen
     // if (roids[i].x < 0 - roids[i].r) {
-    //     roids[i].x = cvs.width + roids[i].r;
-    // } else if (roids[i].x > cvs.width + roids[i].r) {
+    //     roids[i].x = CVS.width + roids[i].r;
+    // } else if (roids[i].x > CVS.width + roids[i].r) {
     //     roids[i].x = 0 + roids[i].r;
     // }
 
     // if (roids[i].y < 0 - roids[i].r) {
-    //     roids[i].y = cvs.height + roids[i].r;
-    // } else if (roids[i].y > cvs.height + roids[i].r) {
+    //     roids[i].y = CVS.height + roids[i].r;
+    // } else if (roids[i].y > CVS.height + roids[i].r) {
     //     roids[i].y = 0 + roids[i].r;
     // }
   }

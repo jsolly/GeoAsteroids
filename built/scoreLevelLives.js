@@ -1,10 +1,9 @@
-import {STARTING_SCORE, SAVE_KEY_HIGH_SCORE, START_LEVEL, SHIP_SIZE} from './constants.js';
-import {setTextProperties, TEXT_SIZE, getCanvConsts} from './canvas.js';
+import {STARTING_SCORE, SAVE_KEY_HIGH_SCORE, START_LEVEL, SHIP_SIZE, CVS, CTX, TEXT_SIZE} from './constants.js';
+import {setTextProperties} from './canvas.js';
 import {drawShip, ship} from './ship.js';
 import {createAsteroidBelt} from './asteroids.js';
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
-const {cvs, ctx} = getCanvConsts();
 /**
  * Set score, level, lives, back to default (called inside gameOver())
  */
@@ -42,17 +41,17 @@ function drawLives() {
  */
 function drawScores() {
   // draw the score
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'white';
-  ctx.font = TEXT_SIZE + 'px dejavu sans mono';
-  ctx.fillText(String(currentScore), cvs.width - 15, 30);
+  CTX.textAlign = 'right';
+  CTX.textBaseline = 'middle';
+  CTX.fillStyle = 'white';
+  CTX.font = TEXT_SIZE + 'px dejavu sans mono';
+  CTX.fillText(String(currentScore), CVS.width - 15, 30);
   // draw the high score
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'white';
-  ctx.font = TEXT_SIZE * 0.75 + 'px dejavu sans mono';
-  ctx.fillText('BEST ' + getHighScore(), cvs.width / 2, 30);
+  CTX.textAlign = 'center';
+  CTX.textBaseline = 'middle';
+  CTX.fillStyle = 'white';
+  CTX.font = TEXT_SIZE * 0.75 + 'px dejavu sans mono';
+  CTX.fillText('BEST ' + getHighScore(), CVS.width / 2, 30);
 }
 let text;
 let textAlpha;

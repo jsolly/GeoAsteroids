@@ -11,7 +11,7 @@
       "name": "Launch_Chrome + node",
       "request": "launch",
       "type": "chrome",
-      "webRoot": "/Users/johnsolly/Documents/code/GeoAsteroids/src/",
+      "webRoot": "/Users/johnsolly/Documents/code/GeoAsteroids/built/",
       "runtimeArgs": [
         "--incognito"
       ],

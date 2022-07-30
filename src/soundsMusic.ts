@@ -3,15 +3,131 @@ import {FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON} from './constants.js';
 import {getRoidsInfo} from './asteroids.js';
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
-const toggleMusicButton = document.getElementById('toggle-music');
-const toggleSoundButton = document.getElementById('toggle-sound');
+const toggleMusicButton = document.getElementById('toggle-music')!;
+const toggleSoundButton = document.getElementById('toggle-sound')!;
 toggleSoundButton.addEventListener('click', toggleSound);
 toggleMusicButton.addEventListener('click', toggleMusic);
+
+
+/**
+ * Plays and stops sounds
+ * @param {string} src - Path to sound file
+ * @param {number} maxStreams - Number of simultaneous instances of a sound.
+ * @param {float} vol - Volume of sound. 0 (silent) - 1 (very loud)
+ */
+
+
+/**
+ *
+//  */
+class Sound {
+  src: string;
+  maxStreams: number;
+  vol: number;
+  streamNum: number = 0;
+  streams: HTMLAudioElement[] = [];
+
+
+  /**
+   *
+   * @param {string} src - Set the file source of the sound
+   * @param {number} maxStreams - Set how many simultaneous sounds can occur
+   * @param {number} vol - Set the loudness of the sound
+   */
+  constructor(src:string, maxStreams: number=1, vol:number=0.05) {
+    this.src = src;
+    this.maxStreams = maxStreams;
+    this.vol = vol;
+    for (let i = 0; i < maxStreams; i++) {
+      this.streams.push(new Audio(src));
+      this.streams[i].volume = vol;
+    }
+  }
+
+  /**
+   *
+   */
+  play(): void {
+    if (soundOn) {
+      this.streamNum = (this.streamNum + 1) % maxStreams;
+      this.streams[this.streamNum].play();
+    }
+  }
+  /**
+   *
+   */
+  stop(): void {
+    this.streams[this.streamNum].pause();
+    this.streams[this.streamNum].currentTime = 0;
+  }
+}
+
+/**
+ *
+ */
+class Music {
+  srcLow: string;
+  soundLow: HTMLAudioElement;
+  srcHigh: string;
+  soundHigh: HTMLAudioElement;
+  low:boolean = true;
+  tempo:number = 1.0; // seconds per beat
+  beatTime:number = 0; // the frames left before next beat
+
+
+  /**
+   *
+   * @param {string} srcLow - The audio file path for the downbeat sound
+   * @param {string} srcHigh - The audio file path for the upbeat sound
+   */
+  constructor(srcLow:string, srcHigh:string) {
+    this.srcLow = srcLow;
+    this.soundLow = new Audio(srcLow);
+    this.srcHigh = srcHigh;
+    this.soundHigh = new Audio(srcHigh);
+  }
+
+  /**
+   *
+   */
+  play(): void {
+    if (this.low) {
+      this.soundLow.play();
+    } else {
+      this.soundHigh.play();
+    }
+    this.low = !this.low;
+  }
+
+  /**
+   *
+   */
+  setAsteroidRatio(): void {
+    const roidsInfo = getRoidsInfo();
+    const ratio =
+      roidsInfo.roidsLeft == 0 ? 1 : roidsInfo.roidsLeft / roidsInfo.roidsTotal;
+
+    this.tempo = 1.0 - 0.75 * (1.0 - ratio);
+  }
+
+  /**
+   *
+   */
+  tick(): void {
+    if (this.beatTime == 0) {
+      this.play();
+      this.beatTime = Math.ceil(this.tempo * FPS);
+    } else {
+      this.beatTime--;
+    }
+  }
+}
+
+
 const fxThrust = new Sound('sounds/thrust.m4a');
 const maxStreams = 5;
-const vol = 0.05;
-const fxLaser = new Sound('sounds/laser.m4a', maxStreams, vol);
-const fxHit = new Sound('sounds/hit.m4a', maxStreams, vol);
+const fxLaser = new Sound('sounds/laser.m4a', maxStreams);
+const fxHit = new Sound('sounds/hit.m4a', maxStreams);
 const fxExplode = new Sound('sounds/explode.m4a');
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 let soundOn = getSoundPreference();
@@ -49,7 +165,7 @@ function getMusicPreference() {
 function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
-  document.getElementById('toggle-sound').blur();
+  document.getElementById('toggle-sound')!.blur();
 }
 
 /**
@@ -58,7 +174,7 @@ function toggleSound() {
 function toggleMusic() {
   musicOn = !musicOn;
   localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
-  document.getElementById('toggle-music').blur();
+  document.getElementById('toggle-music')!.blur();
 }
 
 /**
@@ -67,68 +183,6 @@ function toggleMusic() {
  */
 function getMusicOn() {
   return musicOn;
-}
-/**
- * Plays music and controls tempo based on asteroids left
- * @param {string} srcLow - Path to sound for downbeat
- * @param {string} srcHigh - Path to sound for upbeat
- */
-function Music(srcLow, srcHigh) {
-  this.soundLow = new Audio(srcLow);
-  this.soundHigh = new Audio(srcHigh);
-  this.low = true;
-  this.tempo = 1.0; // seconds per beat
-  this.beatTime = 0; // the frames left before next beat
-
-  this.play = function() {
-    if (this.low) {
-      this.soundLow.play();
-    } else {
-      this.soundHigh.play();
-    }
-    this.low = !this.low;
-  };
-  this.setAsteroidRatio = function() {
-    const roidsInfo = getRoidsInfo();
-    const ratio =
-      roidsInfo.roidsLeft == 0 ? 1 : roidsInfo.roidsLeft / roidsInfo.roidsTotal;
-
-    this.tempo = 1.0 - 0.75 * (1.0 - ratio);
-  };
-
-  this.tick = function() {
-    if (this.beatTime == 0) {
-      this.play();
-      this.beatTime = Math.ceil(this.tempo * FPS);
-    } else {
-      this.beatTime--;
-    }
-  };
-}
-
-/**
- * Plays and stops sounds
- * @param {string} src - Path to sound file
- * @param {number} maxStreams - Number of simultaneous instances of a sound.
- * @param {float} vol - Volume of sound. 0 (silent) - 1 (very loud)
- */
-function Sound(src, maxStreams = 1, vol = 0.05) {
-  this.streamNum = 0;
-  this.streams = [];
-  for (let i = 0; i < maxStreams; i++) {
-    this.streams.push(new Audio(src));
-    this.streams[i].volume = vol;
-  }
-  this.play = function() {
-    if (soundOn) {
-      this.streamNum = (this.streamNum + 1) % maxStreams;
-      this.streams[this.streamNum].play();
-    }
-  };
-  this.stop = function() {
-    this.streams[this.streamNum].pause();
-    this.streams[this.streamNum].currentTime = 0;
-  };
 }
 
 export {Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music};
