@@ -24,7 +24,7 @@ class Sound {
   src: string;
   maxStreams: number;
   vol: number;
-  streamNum: number = 0;
+  streamNum = 0;
   streams: HTMLAudioElement[] = [];
 
 
@@ -34,7 +34,7 @@ class Sound {
    * @param {number} maxStreams - Set how many simultaneous sounds can occur
    * @param {number} vol - Set the loudness of the sound
    */
-  constructor(src:string, maxStreams: number=1, vol:number=0.05) {
+  constructor(src:string, maxStreams=1, vol=0.05) {
     this.src = src;
     this.maxStreams = maxStreams;
     this.vol = vol;
@@ -70,9 +70,9 @@ class Music {
   soundLow: HTMLAudioElement;
   srcHigh: string;
   soundHigh: HTMLAudioElement;
-  low:boolean = true;
-  tempo:number = 1.0; // seconds per beat
-  beatTime:number = 0; // the frames left before next beat
+  low = true;
+  tempo = 1.0; // seconds per beat
+  beatTime = 0; // the frames left before next beat
 
 
   /**

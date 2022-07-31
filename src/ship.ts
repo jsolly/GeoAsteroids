@@ -19,28 +19,28 @@ import {laser} from './lasers.js';
 class Ship {
   x: number = CVS.width;
   y: number = CVS.height;
-  t: number = 0;
-  xv: number = 0;
-  yv: number = 0;
+  t = 0;
+  xv = 0;
+  yv = 0;
   readonly r: number = SHIP_SIZE / 2; // radius in pixels
   a: number = (90 / 180) * Math.PI; // convert to radians;
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   blinkTime: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
   blinkOn: boolean;
-  canShoot: boolean = true;
-  dead: boolean = false;
-  exploding: boolean = false;
+  canShoot = true;
+  dead = false;
+  exploding = false;
   lives: number;
   lasers: typeof laser[] = [];
-  explodeTime: number = 0;
-  rot: number = 0;
-  thrusting: boolean = false;
+  explodeTime = 0;
+  rot = 0;
+  thrusting = false;
   /**
    *
    * @param {number} lives - Create a ship with a given number of lives
    * @param {boolean} blinkOn - Determine if ship should be blinking or not
    */
-  constructor(lives:number=START_LIVES, blinkOn:boolean = false) {
+  constructor(lives:number=START_LIVES, blinkOn = false) {
     this.lives = lives;
     this.blinkOn = blinkOn;
   }

@@ -31,5 +31,9 @@
 			"**/.git": false
 		},
 		"editor.fontSize": 12,
+		"javascript.suggest.completeJSDocs": false,
+		"typescript.suggest.completeJSDocs": false,
+		"javascript.suggest.jsdoc.generateReturns": false,
+		"typescript.suggest.jsdoc.generateReturns": false,
 	}
 }

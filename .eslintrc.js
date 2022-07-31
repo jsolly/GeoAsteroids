@@ -4,7 +4,7 @@ module.exports = {
     'es2021': true,
   },
   'extends': [
-    'google',
+    'plugin:@typescript-eslint/recommended',
   ],
   'parser': '@typescript-eslint/parser',
   'parserOptions': {
@@ -12,9 +12,11 @@ module.exports = {
     'sourceType': 'module',
   },
   'plugins': [
-    '@typescript-eslint',
+    '@typescript-eslint/eslint-plugin',
+    'eslint-plugin-tsdoc',
   ],
   'rules': {
     'max-len': 'off',
+    'tsdoc/syntax': 'warn',
   },
 };
