@@ -9,7 +9,6 @@ import {
 } from './constants.js';
 import {ship} from './ship.js';
 import {fxLaser} from './soundsMusic.js';
-// import {handleLaserEdgeofScreen} from './collisions.js';
 
 let laser: {
   x:number,
@@ -122,9 +121,6 @@ function moveLasers() {
 
       // calculate distance traveled
       ship.lasers[i].distTraveled += 0.5;
-      // Math.sqrt(Math.pow(ship.lasers[i].xv, 2) + \
-      // Math.pow(ship.lasers[i].yv, 2));
-      // handleLaserEdgeofScreen(i);
     }
   }
 }

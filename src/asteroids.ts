@@ -213,26 +213,12 @@ function drawAsteroidsRelative(ship: Ship) {
  * Move all asteroids in an array using their x and y velocity
  */
 function moveAsteroids() {
-  // const CVS = getCanv();
-  // ;
   for (let i = 0; i < roids.length; i++) {
     // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
     // let dt = 1/Math.sqrt(1-beta_squared)
     roids[i].x += roids[i].xv;
     roids[i].y += roids[i].yv;
-    // handle edge of screen
-    // if (roids[i].x < 0 - roids[i].r) {
-    //     roids[i].x = CVS.width + roids[i].r;
-    // } else if (roids[i].x > CVS.width + roids[i].r) {
-    //     roids[i].x = 0 + roids[i].r;
-    // }
-
-    // if (roids[i].y < 0 - roids[i].r) {
-    //     roids[i].y = CVS.height + roids[i].r;
-    // } else if (roids[i].y > CVS.height + roids[i].r) {
-    //     roids[i].y = 0 + roids[i].r;
-    // }
-  }
+}
 }
 
 export {

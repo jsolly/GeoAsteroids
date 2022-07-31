@@ -148,7 +148,6 @@ function update() {
   if (!ship.exploding) {
     moveShip();
   }
-  // handleShipEdgeOfScreen();
   moveLasers();
   moveAsteroids();
 }
