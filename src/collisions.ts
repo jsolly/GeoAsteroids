@@ -77,7 +77,7 @@ function handleShipEdgeOfScreen() {
 }
 /**
  * moves a laser back into the canvas if it goes offscreen
- * @param {number} i - Index of laser to handle offscreen
+ * @param i - Index of laser to handle offscreen
  * @todo remove this func? I think we want to let lasers exit the canvas.
  */
 function handleLaserEdgeofScreen(i: number) {

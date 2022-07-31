@@ -4,8 +4,8 @@ import {shootLaser} from './lasers.js';
 
 /**
  *
- * @param {string} ev - Event fired when key is pressed down
- * @return {boolean} False if ship is dead @todo I think this is wrong
+ * @param ev - Event fired when key is pressed down
+ * @returns False if ship is dead @todo I think this is wrong
  */
 function keyDown(ev:KeyboardEvent) {
   if (ship.dead) {
@@ -29,8 +29,8 @@ function keyDown(ev:KeyboardEvent) {
 }
 /**
  *
- * @param {string} ev - Event fired when key is released
- * @return {False} if ship is dead @todo I think this is wrong
+ * @param ev - Event fired when key is released
+ * @returns if ship is dead @todo I think this is wrong
  */
 function keyUp(ev:KeyboardEvent) {
   if (ship.dead) {

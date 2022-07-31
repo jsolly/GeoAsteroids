@@ -37,8 +37,8 @@ class Ship {
   thrusting = false;
   /**
    *
-   * @param {number} lives - Create a ship with a given number of lives
-   * @param {boolean} blinkOn - Determine if ship should be blinking or not
+   * @param lives - Create a ship with a given number of lives
+   * @param blinkOn - Determine if ship should be blinking or not
    */
   constructor(lives:number=START_LIVES, blinkOn = false) {
     this.lives = lives;
@@ -51,8 +51,8 @@ let ship = new Ship(lives, blinkOn);
 
 /**
  *
- * @param {number} currentLives - Current lives (1-CURRENT_LIVES)
- * @param {Boolean} currentBlinkOn - Whether the ship is blinking or not
+ * @param currentLives - Current lives (1-CURRENT_LIVES)
+ * @param currentBlinkOn - Whether the ship is blinking or not
  */
 function resetShip(currentLives = START_LIVES, currentBlinkOn = false) {
   ship = {
@@ -169,10 +169,10 @@ function drawThruster() {
 }
 /**
  *
- * @param {number} x - Ship's x coordinate
- * @param {number} y
- * @param {number} a
- * @param {string} color
+ * @param x - Ship's x coordinate in pixels
+ * @param y - Ship's y coordinate in pixels
+ * @param a - Ship angle in radians
+ * @param color - Ship color used for outline
  */
 function drawShip(x:number, y:number, a:number, color = 'white') {
   CTX.strokeStyle = color;
@@ -198,8 +198,8 @@ function drawShip(x:number, y:number, a:number, color = 'white') {
 }
 /**
  *
- * @param {number} a - Angle of the ship in radians
- * @param {string} color - Color of the ship
+ * @param a - Angle of the ship in radians
+ * @param color - Color of the ship
  */
 function drawShipRelative(a:number, color = 'white') {
   /*

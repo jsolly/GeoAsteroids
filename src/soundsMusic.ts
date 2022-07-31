@@ -11,9 +11,9 @@ toggleMusicButton.addEventListener('click', toggleMusic);
 
 /**
  * Plays and stops sounds
- * @param {string} src - Path to sound file
- * @param {number} maxStreams - Number of simultaneous instances of a sound.
- * @param {float} vol - Volume of sound. 0 (silent) - 1 (very loud)
+ * @param src - Path to sound file
+ * @param maxStreams - Number of simultaneous instances of a sound.
+ * @param vol - Volume of sound. 0 (silent) - 1 (very loud)
  */
 
 
@@ -30,9 +30,9 @@ class Sound {
 
   /**
    *
-   * @param {string} src - Set the file source of the sound
-   * @param {number} maxStreams - Set how many simultaneous sounds can occur
-   * @param {number} vol - Set the loudness of the sound
+   * @param src - Set the file source of the sound
+   * @param maxStreams - Set how many simultaneous sounds can occur
+   * @param vol - Set the loudness of the sound
    */
   constructor(src:string, maxStreams=1, vol=0.05) {
     this.src = src;
@@ -77,8 +77,8 @@ class Music {
 
   /**
    *
-   * @param {string} srcLow - The audio file path for the downbeat sound
-   * @param {string} srcHigh - The audio file path for the upbeat sound
+   * @param srcLow - The audio file path for the downbeat sound
+   * @param srcHigh - The audio file path for the upbeat sound
    */
   constructor(srcLow:string, srcHigh:string) {
     this.srcLow = srcLow;
@@ -135,7 +135,7 @@ let musicOn = getMusicPreference();
 
 /**
  *
- * @return {Boolean} If sound should be playing or not.
+ * @returns If sound should be playing or not.
  */
 function getSoundPreference() {
   const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
@@ -148,7 +148,7 @@ function getSoundPreference() {
 
 /**
  *
- * @return {Boolean} If music should be playing or not
+ * @returns If music should be playing or not
  */
 function getMusicPreference() {
   const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
@@ -179,7 +179,7 @@ function toggleMusic() {
 
 /**
  *
- * @return {Boolean} True if music is on. False if not.
+ * @returns True if music is on. False if not.
  */
 function getMusicOn() {
   return musicOn;

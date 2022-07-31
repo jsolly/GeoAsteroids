@@ -25,7 +25,7 @@ function resetScoreLevelLives() {
 }
 
 /**
- * @return {number} Return current level (0-infinity)
+ * @returns Return current level (0-infinity)
  */
 function getCurrentLevel() {
   return currentLevel;
@@ -33,7 +33,7 @@ function getCurrentLevel() {
 
 /**
  *
- * @param {number} valToAdd - A score to add to the current score.
+ * @param valToAdd - A score to add to the current score.
  * Called when the user does something to get points such as
  * destroying an asteroid
  */
@@ -89,7 +89,7 @@ function newLevel() {
 }
 /**
  *
- * @return {number} - The current high score.
+ * @returns - The current high score.
  */
 function getHighScore() {
   const highScore = localStorage.getItem(SAVE_KEY_HIGH_SCORE);

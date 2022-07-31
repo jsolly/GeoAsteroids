@@ -18,5 +18,6 @@ module.exports = {
   'rules': {
     'max-len': 'off',
     'tsdoc/syntax': 'warn',
+    '@typescript-eslint/no-var-requires': 0,
   },
 };

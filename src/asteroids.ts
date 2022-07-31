@@ -34,10 +34,10 @@ let roidsTotal: number;
 let roidsLeft: number;
 /**
  *
- * @param {number} x - X coordinate of the Asteroid.
- * @param {number} y - Y coordinate of the Asteroid
- * @param {number} r - Astroid radius in pixels
- * @return {[Object]} Asteroid
+ * @param x - X coordinate of the Asteroid.
+ * @param y - Y coordinate of the Asteroid
+ * @param r - Astroid radius in pixels
+ * @returns Asteroid
  */
 function newAsteroid(x:number, y:number, r:number) {
   const level = getCurrentLevel();
@@ -68,14 +68,14 @@ function newAsteroid(x:number, y:number, r:number) {
 }
 /**
  *
- * @return {[Array]} Array of Asteroids
+ * @returns Array of Asteroids
  */
 function getRoidsInfo() {
   return {roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal};
 }
 /**
  *
- * @return {[Array]} Array of Asteroids
+ * @returns Array of Asteroids
  */
 function createAsteroidBelt() {
   const currentLevel = getCurrentLevel();
@@ -96,9 +96,9 @@ function createAsteroidBelt() {
 }
 /**
  *
- * @param {number} i - index of asteroid to be removed
+ * @param i - index of asteroid to be removed
  *
- * @param {Array} roids - Array of Asteroids
+ * @param roids - Array of Asteroids
  */
 function destroyAsteroid(i:number, roids: typeof roid[]) {
   const x = roids[i].x;
@@ -172,7 +172,7 @@ function drawAsteroids() {
 }
 /**
  *
- * @param {Ship} ship
+ * @param ship - A Ship object
  */
 function drawAsteroidsRelative(ship: Ship) {
   for (let i = 0; i < roids.length; i++) {

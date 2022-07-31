@@ -8,8 +8,8 @@ let textAlpha: number;
 
 /**
  *
- * @param {string} CurrenText Text to be displayed on canvas
- * @param {number} CurrenTextAlpha Opacity (0-1) of text to be displayed.
+ * @param CurrenText - Text to be displayed on canvas
+ * @param CurrenTextAlpha - Opacity (0-1) of text to be displayed.
  */
 function setTextProperties(CurrenText: string, CurrenTextAlpha: number) {
   text = CurrenText;
@@ -18,7 +18,7 @@ function setTextProperties(CurrenText: string, CurrenTextAlpha: number) {
 
 /**
  *
- * @return {number}
+ * @returns
  */
 function getTextAlpha() {
   return textAlpha;
