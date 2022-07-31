@@ -3,8 +3,8 @@ import {FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON} from './constants.js';
 import {getRoidsInfo} from './asteroids.js';
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
-const toggleMusicButton = document.getElementById('toggle-music')!;
-const toggleSoundButton = document.getElementById('toggle-sound')!;
+const toggleMusicButton = document.getElementById('toggle-music');
+const toggleSoundButton = document.getElementById('toggle-sound');
 toggleSoundButton.addEventListener('click', toggleSound);
 toggleMusicButton.addEventListener('click', toggleMusic);
 
@@ -165,7 +165,7 @@ function getMusicPreference() {
 function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
-  document.getElementById('toggle-sound')!.blur();
+  document.getElementById('toggle-sound').blur();
 }
 
 /**
@@ -174,7 +174,7 @@ function toggleSound() {
 function toggleMusic() {
   musicOn = !musicOn;
   localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
-  document.getElementById('toggle-music')!.blur();
+  document.getElementById('toggle-music').blur();
 }
 
 /**
