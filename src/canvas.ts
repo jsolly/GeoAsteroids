@@ -32,14 +32,6 @@ function drawSpace() {
   CTX.fillRect(0, 0, CVS.width, CVS.height);
 }
 
-// function drawTriangle(
-//     use_CENTER=true,
-//     location=none,
-//     strokeColor='white',å
-//     fillColor=none) {
-
-// }
-
 /**
  * Draws text such as "Game Over", "Level 1." Text usually has an Alpha + fade
  * value so the text eventually disappears.
