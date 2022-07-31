@@ -179,8 +179,8 @@ function drawAsteroidsRelative(ship: Ship) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
     // get asteroid properties
-    x = -(ship.x - CVS.width / 2) + roids[i].x;
-    y = -(ship.y - CVS.height / 2) + roids[i].y;
+    x = CVS.width / 2 - ship.x + roids[i].x;
+    y = CVS.height / 2 - ship.y + roids[i].y;
     r = roids[i].r;
     a = roids[i].a;
     vertices = roids[i].vertices;
