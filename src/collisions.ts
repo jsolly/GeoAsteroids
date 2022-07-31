@@ -1,4 +1,4 @@
-import {LASER_EXPLODE_DUR, FPS, CVS} from './constants.js';
+import {LASER_EXPLODE_DUR, FPS} from './constants.js';
 import {
   destroyAsteroid,
   createAsteroidBelt,
