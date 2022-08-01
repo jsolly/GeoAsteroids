@@ -1,5 +1,5 @@
-import {distBetweenPoints} from './utils.js';
-import {updateScores, getCurrentLevel} from './scoreLevelLives.js';
+import { distBetweenPoints } from './utils.js';
+import { updateScores, getCurrentLevel } from './scoreLevelLives.js';
 import {
   ROID_NUM,
   ROID_SIZE,
@@ -12,20 +12,20 @@ import {
   ROID_POINTS_SML,
   DEBUG,
   CTX,
-  CVS,
+  CVS
 } from './constants.js';
-import {Ship, ship} from './ship.js';
+import { Ship, ship } from './ship.js';
 
 let roid: {
-  x: number,
-  y: number,
-  t: number,
-  xv:number,
-  yv:number,
-  a:number,
-  r:number,
-  offsets: number[],
-  vertices: number
+  x: number;
+  y: number;
+  t: number;
+  xv: number;
+  yv: number;
+  a: number;
+  r: number;
+  offsets: number[];
+  vertices: number;
 };
 
 let roids: typeof roid[];
@@ -39,7 +39,7 @@ let roidsLeft: number;
  * @param r - Astroid radius in pixels
  * @returns Asteroid
  */
-function newAsteroid(x:number, y:number, r:number) {
+function newAsteroid(x: number, y: number, r: number): typeof roid {
   const level = getCurrentLevel();
   const lvlMult = 1 + 0.1 * level;
 
@@ -57,8 +57,8 @@ function newAsteroid(x:number, y:number, r:number) {
     r: r,
     offsets: [],
     vertices: Math.floor(
-        Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2,
-    ),
+      Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2
+    )
   };
   for (let i = 0; i < roid.vertices; i++) {
     roid.offsets.push(Math.random() * ROID_JAGG * 2 + 1 - ROID_JAGG);
@@ -71,13 +71,13 @@ function newAsteroid(x:number, y:number, r:number) {
  * @returns Array of Asteroids
  */
 function getRoidsInfo() {
-  return {roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal};
+  return { roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal };
 }
 /**
  *
  * @returns Array of Asteroids
  */
-function createAsteroidBelt() {
+function createAsteroidBelt(): void {
   const currentLevel = getCurrentLevel();
   roids = [];
   roidsTotal = (ROID_NUM + currentLevel) * 7;
@@ -92,7 +92,6 @@ function createAsteroidBelt() {
     } while (distBetweenPoints(ship.x, ship.y, x, y) < ROID_SIZE * 2 + ship.r);
     roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 2)));
   }
-  return {roids: roids, roidsLeft: roidsLeft, roidsTotal: roidsTotal};
 }
 /**
  *
@@ -100,7 +99,7 @@ function createAsteroidBelt() {
  *
  * @param roids - Array of Asteroids
  */
-function destroyAsteroid(i:number, roids: typeof roid[]) {
+function destroyAsteroid(i: number, roids: typeof roid[]): void {
   const x = roids[i].x;
   const y = roids[i].y;
   const r = roids[i].r;
@@ -135,7 +134,7 @@ let offsets;
 /**
  * Draws astroids on the canvas from an array of Asteroids
  */
-function drawAsteroids() {
+function drawAsteroids(): void {
   for (let i = 0; i < roids.length; i++) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
@@ -149,14 +148,14 @@ function drawAsteroids() {
     // draw a path
     CTX.beginPath();
     CTX.moveTo(
-        x + r * offsets[0] * Math.cos(a),
-        y + r * offsets[0] * Math.sin(a),
+      x + r * offsets[0] * Math.cos(a),
+      y + r * offsets[0] * Math.sin(a)
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       CTX.lineTo(
-          x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-          y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
+        x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
+        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
       );
     }
     CTX.closePath();
@@ -174,7 +173,7 @@ function drawAsteroids() {
  *
  * @param ship - A Ship object
  */
-function drawAsteroidsRelative(ship: Ship) {
+function drawAsteroidsRelative(ship: Ship): void {
   for (let i = 0; i < roids.length; i++) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
@@ -188,14 +187,14 @@ function drawAsteroidsRelative(ship: Ship) {
     // draw a path
     CTX.beginPath();
     CTX.moveTo(
-        x + r * offsets[0] * Math.cos(a),
-        y + r * offsets[0] * Math.sin(a),
+      x + r * offsets[0] * Math.cos(a),
+      y + r * offsets[0] * Math.sin(a)
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       CTX.lineTo(
-          x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-          y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
+        x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
+        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
       );
     }
     CTX.closePath();
@@ -212,13 +211,13 @@ function drawAsteroidsRelative(ship: Ship) {
 /**
  * Move all asteroids in an array using their x and y velocity
  */
-function moveAsteroids() {
+function moveAsteroids(): void {
   for (let i = 0; i < roids.length; i++) {
     // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
     // let dt = 1/Math.sqrt(1-beta_squared)
     roids[i].x += roids[i].xv;
     roids[i].y += roids[i].yv;
-}
+  }
 }
 
 export {
@@ -227,5 +226,5 @@ export {
   drawAsteroids,
   drawAsteroidsRelative,
   getRoidsInfo,
-  moveAsteroids,
+  moveAsteroids
 };

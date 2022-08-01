@@ -1,14 +1,14 @@
-import {LASER_EXPLODE_DUR, FPS} from './constants.js';
+import { LASER_EXPLODE_DUR, FPS } from './constants.js';
 import {
   destroyAsteroid,
   createAsteroidBelt,
-  getRoidsInfo,
+  getRoidsInfo
 } from './asteroids.js';
-import {ship} from './ship.js';
-import {newLevel} from './scoreLevelLives.js';
-import {distBetweenPoints} from './utils.js';
-import {fxHit, music} from './soundsMusic.js';
-import {update} from './main.js';
+import { ship } from './ship.js';
+import { newLevel } from './scoreLevelLives.js';
+import { distBetweenPoints } from './utils.js';
+import { fxHit, music } from './soundsMusic.js';
+import { update } from './main.js';
 // detect laser hits on asteroids
 let ax;
 let ay;
@@ -16,12 +16,11 @@ let ar;
 let lx;
 let ly;
 
-
 /**
  * Detects whether a laser has hit an asteroid. Plays a sound if true and
  * calls destroyAsteroid(). If there are no astroids left, call newLevel().
  */
-function detectLaserHits() {
+function detectLaserHits(): void {
   const roids = getRoidsInfo().roids;
   for (let i = roids.length - 1; i >= 0; i--) {
     // grab asteroid properties
@@ -58,4 +57,4 @@ function detectLaserHits() {
   }
 }
 
-export {detectLaserHits};
+export { detectLaserHits };

@@ -1,6 +1,6 @@
-import {keyUp, keyDown} from './keybindings.js';
-import {FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON} from './constants.js';
-import {getRoidsInfo} from './asteroids.js';
+import { keyUp, keyDown } from './keybindings.js';
+import { FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON } from './constants.js';
+import { getRoidsInfo } from './asteroids.js';
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
 const toggleMusicButton = document.getElementById('toggle-music');
@@ -8,14 +8,12 @@ const toggleSoundButton = document.getElementById('toggle-sound');
 toggleSoundButton.addEventListener('click', toggleSound);
 toggleMusicButton.addEventListener('click', toggleMusic);
 
-
 /**
  * Plays and stops sounds
  * @param src - Path to sound file
  * @param maxStreams - Number of simultaneous instances of a sound.
  * @param vol - Volume of sound. 0 (silent) - 1 (very loud)
  */
-
 
 /**
  *
@@ -27,14 +25,13 @@ class Sound {
   streamNum = 0;
   streams: HTMLAudioElement[] = [];
 
-
   /**
    *
    * @param src - Set the file source of the sound
    * @param maxStreams - Set how many simultaneous sounds can occur
    * @param vol - Set the loudness of the sound
    */
-  constructor(src:string, maxStreams=1, vol=0.05) {
+  constructor(src: string, maxStreams = 1, vol = 0.05) {
     this.src = src;
     this.maxStreams = maxStreams;
     this.vol = vol;
@@ -74,13 +71,12 @@ class Music {
   tempo = 1.0; // seconds per beat
   beatTime = 0; // the frames left before next beat
 
-
   /**
    *
    * @param srcLow - The audio file path for the downbeat sound
    * @param srcHigh - The audio file path for the upbeat sound
    */
-  constructor(srcLow:string, srcHigh:string) {
+  constructor(srcLow: string, srcHigh: string) {
     this.srcLow = srcLow;
     this.soundLow = new Audio(srcLow);
     this.srcHigh = srcHigh;
@@ -123,7 +119,6 @@ class Music {
   }
 }
 
-
 const fxThrust = new Sound('sounds/thrust.m4a');
 const maxStreams = 5;
 const fxLaser = new Sound('sounds/laser.m4a', maxStreams);
@@ -137,7 +132,7 @@ let musicOn = getMusicPreference();
  *
  * @returns If sound should be playing or not.
  */
-function getSoundPreference() {
+function getSoundPreference(): boolean {
   const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
   if (soundPref == null) {
     localStorage.setItem(SAVE_KEY_SOUND_ON, 'false'); // False if not found
@@ -150,7 +145,7 @@ function getSoundPreference() {
  *
  * @returns If music should be playing or not
  */
-function getMusicPreference() {
+function getMusicPreference(): boolean {
   const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
   if (musicPref == null) {
     localStorage.setItem(SAVE_KEY_MUSIC_ON, 'false'); // False if not found
@@ -162,7 +157,7 @@ function getMusicPreference() {
 /**
  * Flip sound to opposite of existing state
  */
-function toggleSound() {
+function toggleSound(): void {
   soundOn = !soundOn;
   localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
   document.getElementById('toggle-sound').blur();
@@ -171,7 +166,7 @@ function toggleSound() {
 /**
  * Flip music to opposite of existing state
  */
-function toggleMusic() {
+function toggleMusic(): void {
   musicOn = !musicOn;
   localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
   document.getElementById('toggle-music').blur();
@@ -181,8 +176,8 @@ function toggleMusic() {
  *
  * @returns True if music is on. False if not.
  */
-function getMusicOn() {
+function getMusicOn(): boolean {
   return musicOn;
 }
 
-export {Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music};
+export { Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music };

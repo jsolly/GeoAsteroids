@@ -7,8 +7,8 @@
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
-    "lint": "eslint . --ext .js,.ts",
-    "lint:fix": "eslint . --fix --ext .js,.ts",
+    "lint": "eslint . --ext [.js .ts]",
+    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "prepare": "husky install"
   },
   "repository": {
@@ -30,11 +30,18 @@
     "@typescript-eslint/parser": "^5.31.0",
     "eslint": "^8.20.0",
     "eslint-config-google": "^0.14.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-tsdoc": "^0.2.16",
     "husky": "^8.0.1",
-    "lint-staged": "^13.0.3"
+    "lint-staged": "^13.0.3",
+    "prettier": "^2.7.1"
   },
   "lint-staged": {
-    "*.{js,ts}": "eslint --cache --fix"
+    "*.ts": [
+      "eslint",
+      "prettier --write"
+    ],
+    "**/*": "prettier --write --ignore-unknown"
   }
 }

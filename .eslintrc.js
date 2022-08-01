@@ -1,23 +1,29 @@
 module.exports = {
-  'env': {
-    'browser': true,
-    'es2021': true,
+  env: {
+    browser: true,
+    es2021: true,
+    node: true
   },
-  'extends': [
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',
+    'plugin:prettier/recommended'
   ],
-  'parser': '@typescript-eslint/parser',
-  'parserOptions': {
-    'ecmaVersion': 'latest',
-    'sourceType': 'module',
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module'
   },
-  'plugins': [
+  plugins: [
     '@typescript-eslint/eslint-plugin',
     'eslint-plugin-tsdoc',
   ],
-  'rules': {
+  rules: {
     'max-len': 'off',
     'tsdoc/syntax': 'warn',
+    '@typescript-eslint/explicit-function-return-type': 'warn',
     '@typescript-eslint/no-var-requires': 0,
-  },
+    'prettier/prettier': "error"
+  }
 };

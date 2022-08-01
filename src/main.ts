@@ -1,25 +1,25 @@
-import {SHIP_INV_BLINK_DUR, FPS, DEBUG} from './constants.js';
-import {distBetweenPoints} from './utils.js';
+import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
+import { distBetweenPoints } from './utils.js';
 import {
   drawAsteroidsRelative,
   destroyAsteroid,
   getRoidsInfo,
-  moveAsteroids,
+  moveAsteroids
 } from './asteroids.js';
 import {
   drawScores,
   drawLives,
   newLevel,
-  resetScoreLevelLives,
+  resetScoreLevelLives
 } from './scoreLevelLives.js';
 import {
   drawGameText,
   setTextProperties,
   getTextAlpha,
   drawSpace,
-  drawDebugFeatures,
+  drawDebugFeatures
 } from './canvas.js';
-import {getMusicOn, fxHit, music} from './soundsMusic.js';
+import { getMusicOn, fxHit, music } from './soundsMusic.js';
 import {
   resetShip,
   drawShipRelative,
@@ -30,17 +30,17 @@ import {
   moveShip,
   setBlinkOn,
   setExploding,
-  ship,
+  ship
 } from './ship.js';
-import {drawLasers, moveLasers} from './lasers.js';
-import {detectLaserHits} from './collisions.js';
+import { drawLasers, moveLasers } from './lasers.js';
+import { detectLaserHits } from './collisions.js';
 
 newGame();
 
 /**
  * Resets score, ship, and level for a new game.
  */
-function newGame() {
+function newGame(): void {
   resetScoreLevelLives();
   resetShip();
   newLevel();
@@ -48,7 +48,7 @@ function newGame() {
 /**
  * Called when ship lives = 0. Calls functions to end the game.
  */
-function gameOver() {
+function gameOver(): void {
   killShip();
   setTextProperties('Game Over', 1.0);
   music.tempo = 1.0;
@@ -61,7 +61,7 @@ setInterval(update, 1000 / FPS);
 /**
  * Runs the game. Called every frame to move the game forward.
  */
-function update() {
+function update(): void {
   if (DEBUG) {
     drawDebugFeatures();
   }
@@ -151,4 +151,4 @@ function update() {
   moveLasers();
   moveAsteroids();
 }
-export {gameOver, newGame, update};
+export { gameOver, newGame, update };
