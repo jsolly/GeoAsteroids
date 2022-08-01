@@ -135,16 +135,16 @@ let offsets;
  * Draws astroids on the canvas from an array of Asteroids
  */
 function drawAsteroids(): void {
-  for (let i = 0; i < roids.length; i++) {
+  for (roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
     // get asteroid properties
-    x = roids[i].x;
-    y = roids[i].y;
-    r = roids[i].r;
-    a = roids[i].a;
-    vertices = roids[i].vertices;
-    offsets = roids[i].offsets;
+    x = roid.x;
+    y = roid.y;
+    r = roid.r;
+    a = roid.a;
+    vertices = roid.vertices;
+    offsets = roid.offsets;
     // draw a path
     CTX.beginPath();
     CTX.moveTo(
@@ -174,16 +174,16 @@ function drawAsteroids(): void {
  * @param ship - A Ship object
  */
 function drawAsteroidsRelative(ship: Ship): void {
-  for (let i = 0; i < roids.length; i++) {
+  for (roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
     // get asteroid properties
-    x = CVS.width / 2 - ship.x + roids[i].x;
-    y = CVS.height / 2 - ship.y + roids[i].y;
-    r = roids[i].r;
-    a = roids[i].a;
-    vertices = roids[i].vertices;
-    offsets = roids[i].offsets;
+    x = CVS.width / 2 - ship.x + roid.x;
+    y = CVS.height / 2 - ship.y + roid.y;
+    r = roid.r;
+    a = roid.a;
+    vertices = roid.vertices;
+    offsets = roid.offsets;
     // draw a path
     CTX.beginPath();
     CTX.moveTo(
@@ -212,11 +212,11 @@ function drawAsteroidsRelative(ship: Ship): void {
  * Move all asteroids in an array using their x and y velocity
  */
 function moveAsteroids(): void {
-  for (let i = 0; i < roids.length; i++) {
+  for (roid of roids) {
     // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
     // let dt = 1/Math.sqrt(1-beta_squared)
-    roids[i].x += roids[i].xv;
-    roids[i].y += roids[i].yv;
+    roid.x += roid.xv;
+    roid.y += roid.yv;
   }
 }
 

@@ -44,13 +44,13 @@ function shootLaser(): void {
  * Draw lasers from an array on the canvas
  */
 function drawLasers(): void {
-  for (let i = 0; i < ship.lasers.length; i++) {
-    if (ship.lasers[i].explodeTime == 0) {
+  for (laser of ship.lasers) {
+    if (laser.explodeTime == 0) {
       CTX.fillStyle = 'salmon';
       CTX.beginPath();
       CTX.arc(
-        ship.lasers[i].x - ship.x + CVS.width / 2,
-        ship.lasers[i].y - ship.y + CVS.height / 2,
+        laser.x - ship.x + CVS.width / 2,
+        laser.y - ship.y + CVS.height / 2,
         SHIP_SIZE / 15,
         0,
         Math.PI * 2,
@@ -62,8 +62,8 @@ function drawLasers(): void {
       CTX.fillStyle = 'orangered';
       CTX.beginPath();
       CTX.arc(
-        ship.lasers[i].x - ship.x + CVS.width / 2,
-        ship.lasers[i].y - ship.y + CVS.height / 2,
+        laser.x - ship.x + CVS.width / 2,
+        laser.y - ship.y + CVS.height / 2,
         ship.r * 0.75,
         0,
         Math.PI * 2,
@@ -73,8 +73,8 @@ function drawLasers(): void {
       CTX.fillStyle = 'salmon';
       CTX.beginPath();
       CTX.arc(
-        ship.lasers[i].x - (ship.x - CVS.width),
-        ship.lasers[i].y - (ship.y - CVS.height),
+        laser.x - (ship.x - CVS.width),
+        laser.y - (ship.y - CVS.height),
         ship.r * 0.5,
         0,
         Math.PI * 2,
@@ -84,8 +84,8 @@ function drawLasers(): void {
       CTX.fillStyle = 'pink';
       CTX.beginPath();
       CTX.arc(
-        ship.lasers[i].x - (ship.x - CVS.width),
-        ship.lasers[i].y - (ship.y - CVS.height),
+        laser.x - (ship.x - CVS.width),
+        laser.y - (ship.y - CVS.height),
         ship.r * 0.25,
         0,
         Math.PI * 2,
@@ -101,25 +101,25 @@ function drawLasers(): void {
 function moveLasers(): void {
   for (let i = ship.lasers.length - 1; i >= 0; i--) {
     // check laser distance
-    if (ship.lasers[i].distTraveled > LASER_DIST * CVS.width) {
+    if (laser.distTraveled > LASER_DIST * CVS.width) {
       ship.lasers.splice(i, 1);
       continue;
     }
 
     // handle the explosion
-    if (ship.lasers[i].explodeTime > 0) {
-      ship.lasers[i].explodeTime--;
+    if (laser.explodeTime > 0) {
+      laser.explodeTime--;
 
-      if (ship.lasers[i].explodeTime == 0) {
+      if (laser.explodeTime == 0) {
         ship.lasers.splice(i, 1);
         continue;
       }
     } else {
-      ship.lasers[i].x += ship.lasers[i].xv;
-      ship.lasers[i].y += ship.lasers[i].yv;
+      laser.x += laser.xv;
+      laser.y += laser.yv;
 
       // calculate distance traveled
-      ship.lasers[i].distTraveled += 0.5;
+      laser.distTraveled += 0.5;
     }
   }
 }
