@@ -22,7 +22,7 @@ class Ship {
   t = 0;
   xv = 0;
   yv = 0;
-  readonly r: number = SHIP_SIZE / 2; // radius in pixels
+  readonly r: number = SHIP_SIZE / 2;
   a: number = (90 / 180) * Math.PI; // convert to radians;
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   blinkTime: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
