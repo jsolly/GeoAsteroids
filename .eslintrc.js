@@ -8,6 +8,7 @@ module.exports = {
   plugins: [
     '@typescript-eslint/eslint-plugin',
     'eslint-plugin-tsdoc',
+    'extra-rules',
     'prettier'
   ],
   extends: [
@@ -27,9 +28,11 @@ module.exports = {
     'max-len': 'off',
     'tsdoc/syntax': 'warn',
     '@typescript-eslint/explicit-function-return-type': 'warn',
-    '@typescript-eslint/no-var-requires': 0,
-    '@typescript-eslint/no-unnecessary-condition': 0,
-    'no-console': 1, // Means warning
-    'prettier/prettier': 2 // Means error
+    '@typescript-eslint/no-var-requires': 'off',
+    '@typescript-eslint/no-unnecessary-condition': 'off',
+    'no-console': 'warn',
+    'extra-rules/camel_case': 'warn',
+    'extra-rules/no-commented-out-code': 'warn',
+    'prettier/prettier': 'error'
   }
 };
