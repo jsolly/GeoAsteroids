@@ -17,19 +17,12 @@
 		"editor.rulers": [
 			80
 		],
-		"[jsonc]": {
-			"editor.defaultFormatter": "vscode.json-language-features"
-		},
-		"javascript.format.enable": false,
-		"eslint.format.enable": true,
-		"[javascript]": {
-			"editor.defaultFormatter": "dbaeumer.vscode-eslint"
-		},
-		"editor.formatOnSave": true,
 		"window.autoDetectColorScheme": true,
 		"files.exclude": {
 			"**/.git": false
 		},
 		"editor.fontSize": 12,
+		"editor.formatOnPaste": true,
+		"editor.formatOnSave": true,
 	}
 }

@@ -7,51 +7,48 @@ import {
   CTX,
   TEXT_SIZE,
 } from './constants.js';
-import {
-  setTextProperties,
-} from './canvas.js';
-import {drawShip, ship} from './ship.js';
-import {createAsteroidBelt} from './asteroids.js';
+import { setTextProperties } from './canvas.js';
+import { drawShip, ship } from './ship.js';
+import { createAsteroidBelt } from './asteroids.js';
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
-
 
 /**
  * Set score, level, lives, back to default (called inside gameOver())
  */
-function resetScoreLevelLives() {
+function resetScoreLevelLives(): void {
   currentScore = STARTING_SCORE;
   currentLevel = START_LEVEL;
 }
 
 /**
- * @return {number} Return current level (0-infinity)
+ * @returns Return current level (0-infinity)
  */
-function getCurrentLevel() {
+function getCurrentLevel(): number {
   return currentLevel;
 }
 
 /**
  *
- * @param {number} valToAdd - A score to add to the current score.
+ * @param valToAdd - A score to add to the current score.
  * Called when the user does something to get points such as
  * destroying an asteroid
  */
-function updateScores(valToAdd: number) {
+function updateScores(valToAdd: number): void {
   currentScore += valToAdd;
 }
 /**
  * Draw number of lives left on canvas
  */
-function drawLives() {
+function drawLives(): void {
   let lifeColor;
   for (let i = 0; i < ship.lives; i++) {
     lifeColor = ship.exploding && i == ship.lives - 1 ? 'red' : 'white';
     drawShip(
-        SHIP_SIZE + i * SHIP_SIZE * 1.2,
-        SHIP_SIZE,
-        0.5 * Math.PI,
-        lifeColor,
+      SHIP_SIZE + i * SHIP_SIZE * 1.2,
+      SHIP_SIZE,
+      0.5 * Math.PI,
+      lifeColor,
     );
   }
 }
@@ -59,20 +56,20 @@ function drawLives() {
 /**
  * Draw current score and high score on canvas
  */
-function drawScores() {
+function drawScores(): void {
   // draw the score
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
-  CTX.font = TEXT_SIZE + 'px dejavu sans mono';
+  CTX.font = String(TEXT_SIZE) + 'px dejavu sans mono';
   CTX.fillText(String(currentScore), CVS.width - 15, 30);
 
   // draw the high score
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
-  CTX.font = TEXT_SIZE * 0.75 + 'px dejavu sans mono';
-  CTX.fillText('BEST ' + getHighScore(), CVS.width / 2, 30);
+  CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
+  CTX.fillText('BEST ' + String(getHighScore()), CVS.width / 2, 30);
 }
 let text;
 let textAlpha;
@@ -80,8 +77,8 @@ let textAlpha;
  * Start a new level. This is called on game start and when the player
  * levels up
  */
-function newLevel() {
-  text = 'Level ' + (currentLevel + 1);
+function newLevel(): void {
+  text = 'Level ' + String(currentLevel + 1);
   textAlpha = 1.0;
   currentLevel++;
   setTextProperties(text, textAlpha);
@@ -89,9 +86,9 @@ function newLevel() {
 }
 /**
  *
- * @return {number} - The current high score.
+ * @returns - The current high score.
  */
-function getHighScore() {
+function getHighScore(): number {
   const highScore = localStorage.getItem(SAVE_KEY_HIGH_SCORE);
   if (highScore == null) {
     localStorage.setItem(SAVE_KEY_HIGH_SCORE, '0'); // set to 0 if null
