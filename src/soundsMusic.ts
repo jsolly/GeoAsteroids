@@ -47,7 +47,7 @@ class Sound {
   play(): void {
     if (soundOn) {
       this.streamNum = (this.streamNum + 1) % maxStreams;
-      this.streams[this.streamNum].play();
+      void this.streams[this.streamNum].play();
     }
   }
   /**
@@ -88,9 +88,9 @@ class Music {
    */
   play(): void {
     if (this.low) {
-      this.soundLow.play();
+      void this.soundLow.play();
     } else {
-      this.soundHigh.play();
+      void this.soundHigh.play();
     }
     this.low = !this.low;
   }
