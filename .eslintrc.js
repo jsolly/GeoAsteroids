@@ -2,14 +2,14 @@ module.exports = {
   env: {
     browser: true,
     es2021: true,
-    node: true
+    node: true,
   },
   parser: '@typescript-eslint/parser',
   plugins: [
     '@typescript-eslint/eslint-plugin',
     'eslint-plugin-tsdoc',
     'extra-rules',
-    'prettier'
+    'prettier',
   ],
   extends: [
     'eslint:recommended',
@@ -17,12 +17,12 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'plugin:@typescript-eslint/strict',
-    'prettier'
+    'plugin:prettier/recommended',
   ],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: ['./tsconfig.json']
+    project: ['./tsconfig.json'],
   },
   rules: {
     'max-len': 'off',
@@ -33,6 +33,5 @@ module.exports = {
     'no-console': 'warn',
     'extra-rules/camel_case': 'warn',
     'extra-rules/no-commented-out-code': 'warn',
-    'prettier/prettier': 'error'
-  }
+  },
 };

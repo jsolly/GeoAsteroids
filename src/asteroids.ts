@@ -12,7 +12,7 @@ import {
   ROID_POINTS_SML,
   DEBUG,
   CTX,
-  CVS
+  CVS,
 } from './constants.js';
 import { Ship, ship } from './ship.js';
 
@@ -57,8 +57,8 @@ function newAsteroid(x: number, y: number, r: number): typeof roid {
     r: r,
     offsets: [],
     vertices: Math.floor(
-      Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2
-    )
+      Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2,
+    ),
   };
   for (let i = 0; i < roid.vertices; i++) {
     roid.offsets.push(Math.random() * ROID_JAGG * 2 + 1 - ROID_JAGG);
@@ -149,13 +149,13 @@ function drawAsteroids(): void {
     CTX.beginPath();
     CTX.moveTo(
       x + r * offsets[0] * Math.cos(a),
-      y + r * offsets[0] * Math.sin(a)
+      y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       CTX.lineTo(
         x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
+        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
     CTX.closePath();
@@ -188,13 +188,13 @@ function drawAsteroidsRelative(ship: Ship): void {
     CTX.beginPath();
     CTX.moveTo(
       x + r * offsets[0] * Math.cos(a),
-      y + r * offsets[0] * Math.sin(a)
+      y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       CTX.lineTo(
         x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
+        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
     CTX.closePath();
@@ -226,5 +226,5 @@ export {
   drawAsteroids,
   drawAsteroidsRelative,
   getRoidsInfo,
-  moveAsteroids
+  moveAsteroids,
 };

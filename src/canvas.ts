@@ -37,8 +37,8 @@ function drawSpace(): void {
 function drawGameText(): void {
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
-  CTX.fillStyle = 'rgba(255,255,255, ' + textAlpha + ')';
-  CTX.font = 'small-caps ' + TEXT_SIZE + 'px dejavu sans mono';
+  CTX.fillStyle = 'rgba(255,255,255, ' + String(textAlpha) + ')';
+  CTX.font = 'small-caps ' + String(TEXT_SIZE) + 'px dejavu sans mono';
   CTX.fillText(text, CVS.width / 2, (CVS.height * 3) / 4);
   textAlpha -= 1.0 / TEXT_FADE_TIME / FPS;
 }
@@ -64,5 +64,5 @@ export {
   setTextProperties,
   getTextAlpha,
   drawSpace,
-  drawDebugFeatures
+  drawDebugFeatures,
 };

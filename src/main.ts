@@ -4,20 +4,20 @@ import {
   drawAsteroidsRelative,
   destroyAsteroid,
   getRoidsInfo,
-  moveAsteroids
+  moveAsteroids,
 } from './asteroids.js';
 import {
   drawScores,
   drawLives,
   newLevel,
-  resetScoreLevelLives
+  resetScoreLevelLives,
 } from './scoreLevelLives.js';
 import {
   drawGameText,
   setTextProperties,
   getTextAlpha,
   drawSpace,
-  drawDebugFeatures
+  drawDebugFeatures,
 } from './canvas.js';
 import { getMusicOn, fxHit, music } from './soundsMusic.js';
 import {
@@ -30,7 +30,7 @@ import {
   moveShip,
   setBlinkOn,
   setExploding,
-  ship
+  ship,
 } from './ship.js';
 import { drawLasers, moveLasers } from './lasers.js';
 import { detectLaserHits } from './collisions.js';

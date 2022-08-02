@@ -8,7 +8,7 @@ import {
   START_LIVES,
   FRICTION,
   CVS,
-  CTX
+  CTX,
 } from './constants.js';
 import { fxExplode, fxThrust } from './soundsMusic.js';
 import { laser } from './lasers.js';
@@ -73,7 +73,7 @@ function resetShip(currentLives = START_LIVES, currentBlinkOn = false): void {
     lasers: [],
     explodeTime: 0,
     rot: 0,
-    thrusting: false
+    thrusting: false,
   };
 }
 
@@ -148,19 +148,19 @@ function drawThruster(): void {
       CVS.width / 2 +
         ship.r * ((2 / 3) * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
       CVS.height / 2 +
-        ship.r * ((2 / 3) * Math.sin(ship.a) - 0.5 * Math.cos(ship.a))
+        ship.r * ((2 / 3) * Math.sin(ship.a) - 0.5 * Math.cos(ship.a)),
     );
     CTX.lineTo(
       // rear CENTER (behind ship)
       CVS.width / 2 + ((ship.r * 5) / 3) * Math.cos(ship.a),
-      CVS.height / 2 + ((ship.r * 5) / 3) * Math.sin(ship.a)
+      CVS.height / 2 + ((ship.r * 5) / 3) * Math.sin(ship.a),
     );
     CTX.lineTo(
       // rear right
       CVS.width / 2 +
         ship.r * ((2 / 3) * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
       CVS.height / 2 +
-        ship.r * ((2 / 3) * Math.sin(ship.a) + 0.5 * Math.cos(ship.a))
+        ship.r * ((2 / 3) * Math.sin(ship.a) + 0.5 * Math.cos(ship.a)),
     );
     CTX.closePath();
     CTX.fill();
@@ -181,17 +181,17 @@ function drawShip(x: number, y: number, a: number, color = 'white'): void {
   CTX.moveTo(
     // nose of ship
     x + (4 / 3) * ship.r * Math.cos(a),
-    y - (4 / 3) * ship.r * Math.sin(a)
+    y - (4 / 3) * ship.r * Math.sin(a),
   );
   CTX.lineTo(
     // rear left
     x - ship.r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
-    y + ship.r * ((2 / 3) * Math.sin(a) - Math.cos(a))
+    y + ship.r * ((2 / 3) * Math.sin(a) - Math.cos(a)),
   );
   CTX.lineTo(
     // rear right
     x - ship.r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
-    y + ship.r * ((2 / 3) * Math.sin(a) + Math.cos(a))
+    y + ship.r * ((2 / 3) * Math.sin(a) + Math.cos(a)),
   );
   CTX.closePath();
   CTX.stroke();
@@ -220,21 +220,21 @@ function drawShipRelative(a: number, color = 'white'): void {
   CTX.moveTo(
     // nose of ship
     CVS.width / 2 + (4 / 3) * ship.r * Math.cos(a + 1.06),
-    CVS.height / 2 + (4 / 3) * ship.r * Math.sin(a + 1.06)
+    CVS.height / 2 + (4 / 3) * ship.r * Math.sin(a + 1.06),
   );
   CTX.lineTo(
     // rear left
     CVS.width / 2 +
       ship.r * ((-1 / 3) * Math.cos(a + 1.06) + Math.sin(a + 1.06)),
     CVS.height / 2 +
-      ship.r * ((-1 / 3) * Math.sin(a + 1.06) - Math.cos(a + 1.06))
+      ship.r * ((-1 / 3) * Math.sin(a + 1.06) - Math.cos(a + 1.06)),
   );
   CTX.lineTo(
     // rear right
     CVS.width / 2 +
       ship.r * ((-1 / 3) * Math.cos(a + 1.06) - Math.sin(a + 1.06)),
     CVS.height / 2 +
-      ship.r * ((-1 / 3) * Math.sin(a + 1.06) + Math.cos(a + 1.06))
+      ship.r * ((-1 / 3) * Math.sin(a + 1.06) + Math.cos(a + 1.06)),
   );
   CTX.closePath();
   CTX.stroke();
@@ -277,5 +277,5 @@ export {
   setBlinkOn,
   setExploding,
   Ship,
-  ship
+  ship,
 };

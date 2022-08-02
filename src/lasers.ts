@@ -5,7 +5,7 @@ import {
   LASER_MAX,
   LASER_DIST,
   CVS,
-  CTX
+  CTX,
 } from './constants.js';
 import { ship } from './ship.js';
 import { fxLaser } from './soundsMusic.js';
@@ -31,7 +31,7 @@ function shootLaser(): void {
       xv: (-LASER_SPEED * Math.cos(-ship.a)) / FPS + ship.xv,
       yv: (LASER_SPEED * Math.sin(-ship.a)) / FPS + ship.yv,
       distTraveled: 0,
-      explodeTime: 0
+      explodeTime: 0,
     };
     ship.lasers.push(laser);
     fxLaser.play();
@@ -54,7 +54,7 @@ function drawLasers(): void {
         SHIP_SIZE / 15,
         0,
         Math.PI * 2,
-        false
+        false,
       );
       CTX.fill();
     } else {
@@ -67,7 +67,7 @@ function drawLasers(): void {
         ship.r * 0.75,
         0,
         Math.PI * 2,
-        false
+        false,
       );
       CTX.fill();
       CTX.fillStyle = 'salmon';
@@ -78,7 +78,7 @@ function drawLasers(): void {
         ship.r * 0.5,
         0,
         Math.PI * 2,
-        false
+        false,
       );
       CTX.fill();
       CTX.fillStyle = 'pink';
@@ -89,7 +89,7 @@ function drawLasers(): void {
         ship.r * 0.25,
         0,
         Math.PI * 2,
-        false
+        false,
       );
       CTX.fill();
     }

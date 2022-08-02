@@ -2,7 +2,7 @@ import { LASER_EXPLODE_DUR, FPS } from './constants.js';
 import {
   destroyAsteroid,
   createAsteroidBelt,
-  getRoidsInfo
+  getRoidsInfo,
 } from './asteroids.js';
 import { ship } from './ship.js';
 import { newLevel } from './scoreLevelLives.js';

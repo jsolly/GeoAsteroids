@@ -5,7 +5,7 @@ import {
   SHIP_SIZE,
   CVS,
   CTX,
-  TEXT_SIZE
+  TEXT_SIZE,
 } from './constants.js';
 import { setTextProperties } from './canvas.js';
 import { drawShip, ship } from './ship.js';
@@ -48,7 +48,7 @@ function drawLives(): void {
       SHIP_SIZE + i * SHIP_SIZE * 1.2,
       SHIP_SIZE,
       0.5 * Math.PI,
-      lifeColor
+      lifeColor,
     );
   }
 }
@@ -61,15 +61,15 @@ function drawScores(): void {
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
-  CTX.font = TEXT_SIZE + 'px dejavu sans mono';
+  CTX.font = String(TEXT_SIZE) + 'px dejavu sans mono';
   CTX.fillText(String(currentScore), CVS.width - 15, 30);
 
   // draw the high score
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
-  CTX.font = TEXT_SIZE * 0.75 + 'px dejavu sans mono';
-  CTX.fillText('BEST ' + getHighScore(), CVS.width / 2, 30);
+  CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
+  CTX.fillText('BEST ' + String(getHighScore()), CVS.width / 2, 30);
 }
 let text;
 let textAlpha;
@@ -78,7 +78,7 @@ let textAlpha;
  * levels up
  */
 function newLevel(): void {
-  text = 'Level ' + (currentLevel + 1);
+  text = 'Level ' + String(currentLevel + 1);
   textAlpha = 1.0;
   currentLevel++;
   setTextProperties(text, textAlpha);
@@ -109,5 +109,5 @@ export {
   newLevel,
   updateScores,
   getCurrentLevel,
-  resetScoreLevelLives
+  resetScoreLevelLives,
 };

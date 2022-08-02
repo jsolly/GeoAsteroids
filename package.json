@@ -37,7 +37,7 @@
     "eslint-plugin-tsdoc": "^0.2.16",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
-    "prettier": "^2.7.1"
+    "prettier": "2.7.1"
   },
   "lint-staged": {
     "*.ts": [
