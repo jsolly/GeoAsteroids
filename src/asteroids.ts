@@ -70,7 +70,11 @@ function newAsteroid(x: number, y: number, r: number): typeof roid {
  *
  * @returns Array of Asteroids
  */
-function getRoidsInfo() {
+function getRoidsInfo(): {
+  roids: typeof roid[];
+  roidsLeft: number;
+  roidsTotal: number;
+} {
   return { roids, roidsLeft, roidsTotal };
 }
 /**
