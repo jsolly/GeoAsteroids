@@ -30,7 +30,6 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'warn',
     '@typescript-eslint/no-var-requires': 'off',
     '@typescript-eslint/no-unnecessary-condition': 'off',
-    '@typescript-eslint/no-floating-promises': 'off',
     'no-console': 'warn',
     'extra-rules/camel_case': 'warn',
     'extra-rules/no-commented-out-code': 'warn',
