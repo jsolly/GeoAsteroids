@@ -1,13 +1,12 @@
 {
-    "compilerOptions": {
-        "target": "ES6",
-        "outDir": "./built", //removed "module": "CommonJS" to resolve Uncaught ReferenceError: exports is not defined
-        "module": "ES2022",
-        "rootDir": "./src",
-        "strict": true,
-        "strictNullChecks": false
-    },
-    "include": [
-        "src"
-    ]
+  "compilerOptions": {
+    "target": "ES6",
+    "outDir": "./built", //removed "module": "CommonJS" to resolve Uncaught ReferenceError: exports is not defined
+    "sourceMap": true,
+    "module": "ES2022",
+    "rootDir": "./src",
+    "strict": true,
+    "strictNullChecks": false
+  },
+  "include": ["src"]
 }

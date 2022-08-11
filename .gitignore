@@ -11,4 +11,4 @@ npm-debug.log
 .eslintcache
 
 # Transpiled JavaScript
-built/*.js
+built/*.js*
