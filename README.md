@@ -1,6 +1,6 @@
 # GeoAsteroids
 
-A 2D spaceship game
+A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 [![Build Status](http://img.shields.io/travis/badges/badgerbadgerbadger.svg?style=flat-square)](https://travis-ci.org/badges/badgerbadgerbadger) [![Coverage Status](http://img.shields.io/coveralls/badges/badgerbadgerbadger.svg?style=flat-square)](https://coveralls.io/r/badges/badgerbadgerbadger) [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
 
@@ -43,9 +43,11 @@ A 2D spaceship game
 - Asteroid collisions using circular bounding box
 - Static code analysis using CodeQL
 - NPM Dependency checking via Dependabot
-- 100% ESlint compliant
+- 100% linted with Eslint + additional rules.
+- TypeScript under 'strict' mode with no errors or warnings.
 
 ## Coverage, Tests, Linting
+
 
 #### Coverage
 
