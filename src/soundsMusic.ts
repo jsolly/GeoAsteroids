@@ -19,9 +19,6 @@ toggleMusicButton.addEventListener('click', toggleMusic);
  *
 //  */
 class Sound {
-  src: string;
-  maxStreams: number;
-  vol: number;
   streamNum = 0;
   streams: HTMLAudioElement[] = [];
 
@@ -32,9 +29,6 @@ class Sound {
    * @param vol - Set the loudness of the sound
    */
   constructor(src: string, maxStreams = 1, vol = 0.05) {
-    this.src = src;
-    this.maxStreams = maxStreams;
-    this.vol = vol;
     for (let i = 0; i < maxStreams; i++) {
       this.streams.push(new Audio(src));
       this.streams[i].volume = vol;

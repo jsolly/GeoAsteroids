@@ -26,11 +26,9 @@ class Ship {
   a: number = (90 / 180) * Math.PI; // convert to radians;
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   blinkTime: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-  blinkOn: boolean;
   canShoot = true;
   dead = false;
   exploding = false;
-  lives: number;
   lasers: typeof laser[] = [];
   explodeTime = 0;
   rot = 0;
@@ -40,10 +38,10 @@ class Ship {
    * @param lives - Create a ship with a given number of lives
    * @param blinkOn - Determine if ship should be blinking or not
    */
-  constructor(lives: number = START_LIVES, blinkOn = false) {
-    this.lives = lives;
-    this.blinkOn = blinkOn;
-  }
+  constructor(
+    public lives: number = START_LIVES,
+    public blinkOn: boolean = false,
+  ) {}
 }
 const blinkOn = false;
 const lives = START_LIVES;
