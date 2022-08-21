@@ -43,10 +43,14 @@ function updateScores(valToAdd: number): void {
 function drawLives(ship: Ship): void {
   let lifeColor;
   for (let i = 0; i < ship.lives; i++) {
-    lifeColor = ship.exploding && i == ship.lives - 1 ? 'red' : 'white';
+    lifeColor = getLifeColor(ship, i);
     const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
     drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
   }
+}
+
+function getLifeColor(ship: Ship, currLives: number): string {
+  return ship.exploding && currLives == ship.lives - 1 ? 'red' : 'white';
 }
 
 /**
