@@ -1,4 +1,3 @@
-import { keyUp, keyDown } from './keybindings.js';
 import {
   FPS,
   SAVE_KEY_MUSIC_ON,
@@ -7,8 +6,7 @@ import {
 } from './constants.js';
 import { getCurrentLevel } from './scoreLevelLives.js';
 import { Roid } from './asteroids.js';
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
+
 const toggleMusicButton = document.getElementById('toggle-music');
 const toggleSoundButton = document.getElementById('toggle-sound');
 toggleSoundButton.addEventListener('click', toggleSound);
