@@ -1,4 +1,4 @@
-import { ship } from './ship.js';
+import { Ship } from './ship.js';
 import { TURN_SPEED, FPS } from './constants.js';
 import { shootLaser } from './lasers.js';
 
@@ -7,11 +7,11 @@ import { shootLaser } from './lasers.js';
  * @param ev - Event fired when key is pressed down
  * @returns False if ship is dead
  */
-function keyDown(ev: KeyboardEvent): void {
+function keyDown(ship: Ship, ev: KeyboardEvent): void {
   if (!ship.dead) {
     switch (ev.code) {
       case 'Space': // Shoot laser
-        shootLaser();
+        shootLaser(ship);
         break;
 
       case 'ArrowLeft': // left arrow (rotate ship left)
@@ -31,7 +31,7 @@ function keyDown(ev: KeyboardEvent): void {
  * @param ev - Event fired when key is released
  * @returns False if ship is dead
  */
-function keyUp(ev: KeyboardEvent): void {
+function keyUp(ship: Ship, ev: KeyboardEvent): void {
   if (!ship.dead) {
     switch (ev.code) {
       case 'Space': // Allow shooting

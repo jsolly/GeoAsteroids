@@ -6,13 +6,15 @@
  * @param y2 - Second y
  * @returns The distance between two points in pixels
  */
-function distBetweenPoints(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): number {
-  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+class Point {
+  constructor(public x: number, public y: number) {}
 }
 
-export { distBetweenPoints };
+function distBetweenPoints(point1: Point, point2: Point): number {
+  return Math.sqrt(
+    Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2),
+  );
+}
+
+export { distBetweenPoints, Point };

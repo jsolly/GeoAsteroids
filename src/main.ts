@@ -1,16 +1,22 @@
-import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
+import {
+  SHIP_INV_BLINK_DUR,
+  FPS,
+  DEBUG,
+  LASER_EXPLODE_DUR,
+} from './constants.js';
 import { distBetweenPoints } from './utils.js';
 import {
   drawAsteroidsRelative,
   destroyAsteroid,
-  getRoidsInfo,
   moveAsteroids,
+  asteroidBelt,
+  Roid,
 } from './asteroids.js';
 import {
   drawScores,
   drawLives,
-  newLevel,
   resetScoreLevelLives,
+  newLevelText,
 } from './scoreLevelLives.js';
 import {
   drawGameText,
@@ -30,26 +36,37 @@ import {
   moveShip,
   setBlinkOn,
   setExploding,
-  ship,
+  Ship,
 } from './ship.js';
-import { drawLasers, moveLasers } from './lasers.js';
-import { detectLaserHits } from './collisions.js';
+import { drawLasers, moveLasers, Laser } from './lasers.js';
+// import { detectLaserHits } from './collisions.js';
 
-newGame();
-
+let ship: Ship;
+let roids: Roid[];
 /**
  * Resets score, ship, and level for a new game.
  */
 function newGame(): void {
   resetScoreLevelLives();
-  resetShip();
+  ship = new Ship();
   newLevel();
 }
+
+/**
+ * Start a new level. This is called on game start and when the player
+ * levels up
+ */
+function newLevel(): void {
+  newLevelText();
+  roids = new asteroidBelt(ship).roids;
+  update();
+}
+
 /**
  * Called when ship lives = 0. Calls functions to end the game.
  */
 function gameOver(): void {
-  killShip();
+  killShip(ship);
   setTextProperties('Game Over', 1.0);
   music.tempo = 1.0;
   update();
@@ -63,16 +80,15 @@ setInterval(update, 1000 / FPS);
  */
 function update(): void {
   if (DEBUG) {
-    drawDebugFeatures();
+    drawDebugFeatures(ship);
   }
 
-  const roids = getRoidsInfo().roids;
-  setBlinkOn();
-  setExploding();
+  setBlinkOn(ship);
+  setExploding(ship);
   drawSpace();
-  drawAsteroidsRelative(ship);
+  drawAsteroidsRelative(ship, roids);
   drawScores();
-  drawLives();
+  drawLives(ship);
 
   if (getTextAlpha() >= 0) {
     drawGameText();
@@ -88,7 +104,7 @@ function update(): void {
   // draw triangular ship
   if (!ship.exploding) {
     if (ship.blinkOn && !ship.dead) {
-      drawShipRelative(ship.a);
+      drawShipRelative(ship);
     }
 
     // handle blinking
@@ -103,11 +119,39 @@ function update(): void {
       }
     }
   } else {
-    drawShipExplosion();
+    drawShipExplosion(ship);
   }
 
-  drawLasers();
-  detectLaserHits();
+  drawLasers(ship);
+
+  // detect laser hits
+  for (let i = roids.length - 1; i >= 0; i--) {
+    for (let j = ship.lasers.length - 1; j >= 0; j--) {
+      // detect hits
+      if (isHit(ship.lasers[j], roids[i])) {
+        // remove asteroid and activate laser explosion
+        destroyAsteroid(i, roids);
+        fxHit.play();
+        if (roids.length == 0) {
+          newLevel();
+        }
+        ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+
+        // calculate remianing ratio of remaining asteroids to determine
+        // music tempo
+        music.setAsteroidRatio(roids);
+      }
+    }
+  }
+
+  function isHit(laser: Laser, roid: Roid): boolean {
+    if (
+      laser.explodeTime == 0 &&
+      distBetweenPoints(roid.centroid, laser.centroid) < roid.r
+    ) {
+      return true;
+    }
+  }
 
   // check for asteroid collisions (when not exploding)
   if (!ship.exploding) {
@@ -115,17 +159,17 @@ function update(): void {
     if (ship.blinkCount == 0 && !ship.dead) {
       for (let i = 0; i < roids.length; i++) {
         if (
-          distBetweenPoints(ship.x, ship.y, roids[i].x, roids[i].y) <
+          distBetweenPoints(ship.centroid, roids[i].centroid) <
           ship.r + roids[i].r
         ) {
-          explodeShip();
+          explodeShip(ship);
           destroyAsteroid(i, roids);
           fxHit.play();
 
           if (roids.length == 0) {
             newLevel();
           }
-          music.setAsteroidRatio();
+          music.setAsteroidRatio(roids);
           update();
         }
       }
@@ -144,11 +188,11 @@ function update(): void {
     }
   }
 
-  thrustShip();
+  thrustShip(ship);
   if (!ship.exploding) {
-    moveShip();
+    moveShip(ship);
   }
-  moveLasers();
-  moveAsteroids();
+  moveLasers(ship);
+  moveAsteroids(roids);
 }
 export { gameOver, newGame, update };

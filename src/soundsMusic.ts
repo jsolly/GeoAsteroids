@@ -1,6 +1,12 @@
 import { keyUp, keyDown } from './keybindings.js';
-import { FPS, SAVE_KEY_MUSIC_ON, SAVE_KEY_SOUND_ON } from './constants.js';
-import { getRoidsInfo } from './asteroids.js';
+import {
+  FPS,
+  SAVE_KEY_MUSIC_ON,
+  SAVE_KEY_SOUND_ON,
+  ROID_NUM,
+} from './constants.js';
+import { getCurrentLevel } from './scoreLevelLives.js';
+import { Roid } from './asteroids.js';
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
 const toggleMusicButton = document.getElementById('toggle-music');
@@ -92,10 +98,10 @@ class Music {
   /**
    *
    */
-  setAsteroidRatio(): void {
-    const roidsInfo = getRoidsInfo();
-    const ratio =
-      roidsInfo.roidsLeft == 0 ? 1 : roidsInfo.roidsLeft / roidsInfo.roidsTotal;
+  setAsteroidRatio(roids: Roid[]): void {
+    const currentLevel = getCurrentLevel();
+    const roidsTotal = (ROID_NUM + currentLevel) * 7;
+    const ratio = roids.length == 0 ? 1 : roids.length / roidsTotal;
 
     this.tempo = 1.0 - 0.75 * (1.0 - ratio);
   }
