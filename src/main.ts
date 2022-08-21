@@ -41,14 +41,14 @@ import {
 import { drawLasers, moveLasers, Laser } from './lasers.js';
 // import { detectLaserHits } from './collisions.js';
 
-const ship = new Ship();
-let roids = new asteroidBelt(ship).roids;
-
+let ship: Ship;
+let roids: Roid[];
 /**
  * Resets score, ship, and level for a new game.
  */
 function newGame(): void {
   resetScoreLevelLives();
+  ship = new Ship();
   newLevel();
 }
 
@@ -58,6 +58,8 @@ function newGame(): void {
  */
 function newLevel(): void {
   newLevelText();
+  roids = new asteroidBelt(ship).roids;
+  update();
 }
 
 /**
@@ -132,8 +134,6 @@ function update(): void {
         fxHit.play();
         if (roids.length == 0) {
           newLevel();
-          roids = new asteroidBelt(ship).roids;
-          update();
         }
         ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
 
