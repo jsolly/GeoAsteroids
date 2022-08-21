@@ -7,9 +7,9 @@ import {
   CTX,
   TEXT_SIZE,
 } from './constants.js';
-import { setTextProperties } from './canvas.js';
-import { drawShip, ship } from './ship.js';
-import { createAsteroidBelt } from './asteroids.js';
+import { Point } from './utils.js';
+import { setTextProperties, drawTriangle } from './canvas.js';
+import { Ship } from './ship.js';
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
 
@@ -40,16 +40,12 @@ function updateScores(valToAdd: number): void {
 /**
  * Draw number of lives left on canvas
  */
-function drawLives(): void {
+function drawLives(ship: Ship): void {
   let lifeColor;
   for (let i = 0; i < ship.lives; i++) {
     lifeColor = ship.exploding && i == ship.lives - 1 ? 'red' : 'white';
-    drawShip(
-      SHIP_SIZE + i * SHIP_SIZE * 1.2,
-      SHIP_SIZE,
-      0.5 * Math.PI,
-      lifeColor,
-    );
+    const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
+    drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
   }
 }
 
@@ -77,12 +73,11 @@ let textAlpha;
  * Start a new level. This is called on game start and when the player
  * levels up
  */
-function newLevel(): void {
+function newLevelText(): void {
   text = 'Level ' + String(currentLevel + 1);
   textAlpha = 1.0;
   currentLevel++;
   setTextProperties(text, textAlpha);
-  createAsteroidBelt();
 }
 /**
  *
@@ -106,7 +101,7 @@ function getHighScore(): number {
 export {
   drawScores,
   drawLives,
-  newLevel,
+  newLevelText,
   updateScores,
   getCurrentLevel,
   resetScoreLevelLives,

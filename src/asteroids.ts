@@ -1,4 +1,4 @@
-import { distBetweenPoints } from './utils.js';
+import { distBetweenPoints, Point } from './utils.js';
 import { updateScores, getCurrentLevel } from './scoreLevelLives.js';
 import {
   ROID_NUM,
@@ -14,24 +14,43 @@ import {
   CTX,
   CVS,
 } from './constants.js';
-import { Ship, ship } from './ship.js';
+import { Ship } from './ship.js';
 
-let roid: {
-  x: number;
-  y: number;
-  t: number;
-  xv: number;
-  yv: number;
-  a: number;
-  r: number;
-  offsets: number[];
-  vertices: number;
-};
+class Roid {
+  constructor(
+    public centroid: Point,
+    public t: number,
+    public xv: number,
+    public yv: number,
+    public a: number,
+    public r: number,
+    public vertices: number,
+    public offsets: number[],
+  ) {
+    for (let i = 0; i < vertices; i++) {
+      offsets.push(Math.random() * ROID_JAGG * 2 + 1 - ROID_JAGG);
+    }
+  }
+}
 
-let roids: typeof roid[];
-
-let roidsTotal: number;
-let roidsLeft: number;
+class asteroidBelt {
+  roids: Roid[] = [];
+  currentLevel = getCurrentLevel();
+  constructor(private ship: Ship) {
+    for (let i = 0; i < ROID_NUM + this.currentLevel; i++) {
+      let astroidCentroid: Point;
+      do {
+        const x = Math.floor(Math.random() * CVS.width);
+        const y = Math.floor(Math.random() * CVS.height);
+        astroidCentroid = new Point(x, y);
+      } while (
+        distBetweenPoints(ship.centroid, astroidCentroid) <
+        ROID_SIZE * 2 + ship.r
+      );
+      this.roids.push(newAsteroid(astroidCentroid, Math.ceil(ROID_SIZE / 2)));
+    }
+  }
+}
 /**
  *
  * @param x - X coordinate of the Asteroid.
@@ -39,86 +58,46 @@ let roidsLeft: number;
  * @param r - Astroid radius in pixels
  * @returns Asteroid
  */
-function newAsteroid(x: number, y: number, r: number): typeof roid {
+function newAsteroid(centroid: Point, r: number): Roid {
   const level = getCurrentLevel();
   const lvlMult = 1 + 0.1 * level;
+  const xv =
+    ((Math.random() * ROID_SPEED * lvlMult) / FPS) *
+    (Math.random() < 0.5 ? 1 : -1);
+  const yv =
+    ((Math.random() * ROID_SPEED * lvlMult) / FPS) *
+    (Math.random() < 0.5 ? 1 : -1);
+  const a = Math.random() * Math.PI * 2; // in radians
+  const offsets: number[] = [];
+  const vertices = Math.floor(
+    Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2,
+  );
 
-  roid = {
-    x: x,
-    y: y,
-    t: 0,
-    xv:
-      ((Math.random() * ROID_SPEED * lvlMult) / FPS) *
-      (Math.random() < 0.5 ? 1 : -1),
-    yv:
-      ((Math.random() * ROID_SPEED * lvlMult) / FPS) *
-      (Math.random() < 0.5 ? 1 : -1),
-    a: Math.random() * Math.PI * 2, // in radians
-    r: r,
-    offsets: [],
-    vertices: Math.floor(
-      Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2,
-    ),
-  };
-  for (let i = 0; i < roid.vertices; i++) {
-    roid.offsets.push(Math.random() * ROID_JAGG * 2 + 1 - ROID_JAGG);
-  }
+  const roid = new Roid(centroid, 0, xv, yv, a, r, vertices, offsets);
 
   return roid;
 }
-/**
- *
- * @returns Array of Asteroids
- */
-function getRoidsInfo(): {
-  roids: typeof roid[];
-  roidsLeft: number;
-  roidsTotal: number;
-} {
-  return { roids, roidsLeft, roidsTotal };
-}
-/**
- *
- * @returns Array of Asteroids
- */
-function createAsteroidBelt(): void {
-  const currentLevel = getCurrentLevel();
-  roids = [];
-  roidsTotal = (ROID_NUM + currentLevel) * 7;
-  roidsLeft = roidsTotal;
-  let x;
-  let y;
-  for (let i = 0; i < ROID_NUM + currentLevel; i++) {
-    // random asteroid location (not touching ship)
-    do {
-      x = Math.floor(Math.random() * CVS.width);
-      y = Math.floor(Math.random() * CVS.height);
-    } while (distBetweenPoints(ship.x, ship.y, x, y) < ROID_SIZE * 2 + ship.r);
-    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 2)));
-  }
-}
+
 /**
  *
  * @param i - index of asteroid to be removed
  *
  * @param roids - Array of Asteroids
  */
-function destroyAsteroid(i: number, roids: typeof roid[]): void {
-  const x = roids[i].x;
-  const y = roids[i].y;
+function destroyAsteroid(i: number, roids: Roid[]): void {
   const r = roids[i].r;
   let score = 0;
 
   // split the asteroid if applicable
   if (r == Math.ceil(ROID_SIZE / 2)) {
     // large asteroid
-    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 4)));
-    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 4)));
+    roids.push(newAsteroid(roids[i].centroid, Math.ceil(ROID_SIZE / 4)));
+    roids.push(newAsteroid(roids[i].centroid, Math.ceil(ROID_SIZE / 4)));
     score += ROID_POINTS_LRG;
   } else if (r == Math.ceil(ROID_SIZE / 4)) {
     // medium asteroid
-    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 8)));
-    roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE / 8)));
+    roids.push(newAsteroid(roids[i].centroid, Math.ceil(ROID_SIZE / 8)));
+    roids.push(newAsteroid(roids[i].centroid, Math.ceil(ROID_SIZE / 8)));
     score += ROID_POINTS_MED;
     // small asteroid
   } else {
@@ -126,7 +105,6 @@ function destroyAsteroid(i: number, roids: typeof roid[]): void {
   }
   updateScores(score);
   roids.splice(i, 1);
-  roidsLeft--;
 }
 
 let x;
@@ -138,13 +116,13 @@ let offsets;
 /**
  * Draws astroids on the canvas from an array of Asteroids
  */
-function drawAsteroids(): void {
-  for (roid of roids) {
+function drawAsteroids(roids: Roid[]): void {
+  for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
     // get asteroid properties
-    x = roid.x;
-    y = roid.y;
+    x = roid.centroid.x;
+    y = roid.centroid.y;
     r = roid.r;
     a = roid.a;
     vertices = roid.vertices;
@@ -177,13 +155,13 @@ function drawAsteroids(): void {
  *
  * @param ship - A Ship object
  */
-function drawAsteroidsRelative(ship: Ship): void {
-  for (roid of roids) {
+function drawAsteroidsRelative(ship: Ship, roids: Roid[]): void {
+  for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
     // get asteroid properties
-    x = CVS.width / 2 - ship.x + roid.x;
-    y = CVS.height / 2 - ship.y + roid.y;
+    x = CVS.width / 2 - ship.centroid.x + roid.centroid.x;
+    y = CVS.height / 2 - ship.centroid.y + roid.centroid.y;
     r = roid.r;
     a = roid.a;
     vertices = roid.vertices;
@@ -215,20 +193,20 @@ function drawAsteroidsRelative(ship: Ship): void {
 /**
  * Move all asteroids in an array using their x and y velocity
  */
-function moveAsteroids(): void {
-  for (roid of roids) {
+function moveAsteroids(roids: Roid[]): void {
+  for (const roid of roids) {
     // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
     // let dt = 1/Math.sqrt(1-beta_squared)
-    roid.x += roid.xv;
-    roid.y += roid.yv;
+    roid.centroid.x += roid.xv;
+    roid.centroid.y += roid.yv;
   }
 }
 
 export {
-  createAsteroidBelt,
   destroyAsteroid,
   drawAsteroids,
   drawAsteroidsRelative,
-  getRoidsInfo,
   moveAsteroids,
+  asteroidBelt,
+  Roid,
 };

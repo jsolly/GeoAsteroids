@@ -1,6 +1,13 @@
-import { FPS, CTX, CVS, TEXT_SIZE, TEXT_FADE_TIME } from './constants.js';
-import { ship } from './ship.js';
-
+import {
+  FPS,
+  CTX,
+  CVS,
+  TEXT_SIZE,
+  TEXT_FADE_TIME,
+  SHIP_SIZE,
+} from './constants.js';
+import { Point } from './utils.js';
+import { Ship } from './ship.js';
 let text: string;
 let textAlpha: number;
 
@@ -47,16 +54,45 @@ function drawGameText(): void {
  * Draws the polygons that are used to detect collisions. Also shows you the
  * CENTER dot for the ship.
  */
-function drawDebugFeatures(): void {
+function drawDebugFeatures(ship: Ship): void {
+  const x = ship.centroid.x;
+  const y = ship.centroid.y;
   // Draw Ship collision bounding box (if needed)
   CTX.strokeStyle = 'lime';
   CTX.beginPath();
-  CTX.arc(ship.x, ship.y, ship.r, 0, Math.PI * 2, false);
+  CTX.arc(x, y, ship.r, 0, Math.PI * 2, false);
   CTX.stroke();
 
   // show ship's centre dot
   CTX.fillStyle = 'red';
-  CTX.fillRect(ship.x - 1, ship.y - 1, 2, 2);
+  CTX.fillRect(x - 1, y - 1, 2, 2);
+}
+
+function drawTriangle(centroid: Point, a: number, color = 'white'): void {
+  const r = SHIP_SIZE / 2;
+  const x = centroid.x;
+  const y = centroid.y;
+
+  CTX.strokeStyle = color;
+  CTX.lineWidth = SHIP_SIZE / 20;
+  CTX.beginPath();
+  CTX.moveTo(
+    // nose of ship
+    x + (4 / 3) * r * Math.cos(a),
+    y - (4 / 3) * r * Math.sin(a),
+  );
+  CTX.lineTo(
+    // rear left
+    x - r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
+    y + r * ((2 / 3) * Math.sin(a) - Math.cos(a)),
+  );
+  CTX.lineTo(
+    // rear right
+    x - r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
+    y + r * ((2 / 3) * Math.sin(a) + Math.cos(a)),
+  );
+  CTX.closePath();
+  CTX.stroke();
 }
 
 export {
@@ -65,4 +101,5 @@ export {
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
+  drawTriangle,
 };
