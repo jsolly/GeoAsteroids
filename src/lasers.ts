@@ -25,6 +25,12 @@ class Laser {
  * Add a laser to an array of lasers and play a laser shoot sound!
  */
 function shootLaser(ship: Ship): void {
+  function canShootAndBelowLaserMax(ship: Ship): boolean {
+    if (ship.canShoot && ship.lasers.length < LASER_MAX) {
+      return true;
+    }
+  }
+
   // Create laser object
   if (canShootAndBelowLaserMax) {
     const xv: number = (-LASER_SPEED * Math.cos(-ship.a)) / FPS + ship.xv;
@@ -35,12 +41,6 @@ function shootLaser(ship: Ship): void {
   }
   // prevent further shooting
   ship.canShoot = false;
-}
-
-function canShootAndBelowLaserMax(ship: Ship): boolean {
-  if (ship.canShoot && ship.lasers.length < LASER_MAX) {
-    return true;
-  }
 }
 
 /**
