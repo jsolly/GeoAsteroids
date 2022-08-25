@@ -21,8 +21,7 @@ const listener = app.listen(process.env.PORT || 4000, function () {
 app.use(express.static(path.join(__dirname, '../built')));
 
 app.get('/', (req: Request, res: Response) => {
-  // res.sendFile('main.js', { root: __dirname });
-  res.render('index');
+  res.sendFile(path.join(__dirname, 'built/index.html'));
 });
 
 app.use((req: Request, res: Response) => {
