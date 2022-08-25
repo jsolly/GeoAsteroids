@@ -4,8 +4,8 @@
     {
       "label": "Launch_Node",
       "type": "shell",
-      "command": "node",
-      "args": ["app.js"],
+      "command": "nodemon",
+      "args": ["app"],
       "isBackground": true,
       "problemMatcher": {
         "pattern": {

@@ -26,5 +26,5 @@ app.get('/', (req, res) => {
 app.use(express.static(path.join(__dirname, '/built')));
 
 app.use((req, res) => {
-  res.status(404).sendFile('built/404Page.html', { root: __dirname });
+  res.status(404).sendFile('views/404Page.html', { root: __dirname });
 });

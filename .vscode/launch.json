@@ -5,7 +5,7 @@
       "type": "node",
       "request": "launch",
       "name": "Start_Node",
-      "program": "${workspaceFolder}/app.js"
+      "program": "${workspaceFolder}/app"
     },
     {
       "name": "Launch_Chrome + node",
