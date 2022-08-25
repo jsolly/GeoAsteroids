@@ -3,7 +3,6 @@ import {
   FPS,
   DEBUG,
   LASER_EXPLODE_DUR,
-  TURN_SPEED,
 } from './constants.js';
 import { distBetweenPoints } from './utils.js';
 import {
@@ -39,61 +38,13 @@ import {
   setExploding,
   Ship,
 } from './ship.js';
-import { drawLasers, moveLasers, shootLaser, Laser } from './lasers.js';
-// import { detectLaserHits } from './collisions.js';
+import { drawLasers, moveLasers, Laser } from './lasers.js';
+import { keyUp, keyDown } from './keybindings.js';
 
 let ship: Ship;
 let roids: Roid[];
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
-
-/**
- *
- * @param ev - Event fired when key is pressed down
- * @returns False if ship is dead
- */
-function keyDown(ev: KeyboardEvent): void {
-  if (!ship.dead) {
-    switch (ev.code) {
-      case 'Space': // Shoot laser
-        shootLaser(ship);
-        break;
-
-      case 'ArrowLeft': // left arrow (rotate ship left)
-        ship.rot = ((-TURN_SPEED / 180) * Math.PI) / FPS;
-        break;
-      case 'ArrowUp': // up arrow (thrust the ship forward)
-        ship.thrusting = true;
-        break;
-      case 'ArrowRight': // right arrow (rotate ship right)
-        ship.rot = ((TURN_SPEED / 180) * Math.PI) / FPS;
-        break;
-    }
-  }
-}
-/**
- *
- * @param ev - Event fired when key is released
- * @returns False if ship is dead
- */
-function keyUp(ev: KeyboardEvent): void {
-  if (!ship.dead) {
-    switch (ev.code) {
-      case 'Space': // Allow shooting
-        ship.canShoot = true;
-        break;
-      case 'ArrowLeft': // Release left arrow. (stop rotating ship left)
-        ship.rot = 0;
-        break;
-      case 'ArrowUp': // Release up arrow. (stop thrusting the ship forward)
-        ship.thrusting = false;
-        break;
-      case 'ArrowRight': // Release right arrow (stop rotating ship right)
-        ship.rot = 0;
-        break;
-    }
-  }
-}
+document.addEventListener('keydown', (evt) => keyDown(ship, evt));
+document.addEventListener('keyup', (evt) => keyUp(ship, evt));
 
 /**
  * Resets score, ship, and level for a new game.
@@ -111,7 +62,6 @@ function newGame(): void {
 function newLevel(): void {
   newLevelText();
   roids = new asteroidBelt(ship).roids;
-  update();
 }
 
 /**
