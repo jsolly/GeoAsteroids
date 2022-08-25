@@ -24,7 +24,6 @@
 		"editor.fontSize": 12,
 		"editor.formatOnPaste": true,
 		"editor.formatOnSave": true,
-		"blockman.n01LineHeight": 0,
         "editor.guides.indentation": false,
         "editor.guides.bracketPairs": false,
 	}

@@ -131,6 +131,9 @@ setInterval(update, 1000 / FPS);
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
+  if (!ship) {
+    newGame();
+  }
   if (DEBUG) {
     drawDebugFeatures(ship);
   }
