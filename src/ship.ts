@@ -81,6 +81,7 @@ function setExploding(ship: Ship): void {
  */
 function explodeShip(ship: Ship): void {
   ship.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+  ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   fxExplode.play();
 }
 
@@ -149,7 +150,7 @@ function drawThruster(ship: Ship): void {
 
 /**
  *
- * @param ship The current Ship
+ * @param ship - The current Ship
  */
 function drawShipRelative(ship: Ship): void {
   /*
