@@ -15,7 +15,9 @@ const limiter = rateLimit({
 // apply rate limiter to all requests
 app.use(limiter);
 
-app.listen(4000, () => console.log('Server Running!'));
+const listener = app.listen(process.env.PORT || 4000, function () {
+  // console.log('Node app is working on port ' + listener.address().port);
+});
 
 app.get('/', (req: Request, res: Response) => {
   res.sendFile('built/main.js', { root: __dirname });
