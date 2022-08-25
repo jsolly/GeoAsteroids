@@ -44,7 +44,7 @@ class Sound {
    */
   play(): void {
     if (soundOn) {
-      this.streamNum = (this.streamNum + 1) % maxStreams;
+      this.streamNum = (this.streamNum + 1) % this.streams.length;
       void this.streams[this.streamNum].play();
     }
   }
