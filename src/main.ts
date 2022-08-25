@@ -200,4 +200,3 @@ function update(): void {
   moveLasers(ship);
   moveAsteroids(roids);
 }
-export { gameOver, newGame, update, keyUp, keyDown };

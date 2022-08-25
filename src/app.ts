@@ -18,13 +18,12 @@ app.use(limiter);
 const listener = app.listen(process.env.PORT || 4000, function () {
   // console.log('Node app is working on port ' + listener.address().port);
 });
+app.use(express.static(path.join(__dirname, '../built')));
 
 app.get('/', (req: Request, res: Response) => {
-  res.sendFile('built/main.js', { root: __dirname });
+  // res.sendFile('main.js', { root: __dirname });
   res.render('index');
 });
-
-app.use(express.static(path.join(__dirname, '/built')));
 
 app.use((req: Request, res: Response) => {
   res.status(404).render('404Page.ejs');
