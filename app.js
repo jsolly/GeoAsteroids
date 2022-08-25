@@ -20,4 +20,8 @@ app.get('/', (req, res) => {
   res.sendFile('built/index.html', { root: __dirname });
 });
 
-app.use(express.static('/built'), { root: __dirname });
+app.use(express.static(path.join(__dirname, '/built')));
+
+app.use((req, res) => {
+  res.sendFile('built/404Page.html', { root: __dirname });
+});
