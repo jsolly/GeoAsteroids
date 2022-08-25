@@ -20,7 +20,8 @@ const listener = app.listen(process.env.PORT || 4000, function () {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile('built/index.html', { root: __dirname });
+  res.sendFile('built/main.js', { root: __dirname });
+  res.render('index');
 });
 
 app.use(express.static(path.join(__dirname, '/built')));
