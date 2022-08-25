@@ -5,7 +5,7 @@
       "label": "Launch_Node",
       "type": "shell",
       "command": "nodemon",
-      "args": ["app"],
+      "args": ["app.js"],
       "isBackground": true,
       "problemMatcher": {
         "pattern": {

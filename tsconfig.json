@@ -3,10 +3,12 @@
     "target": "ES6",
     "outDir": "./built", //removed "module": "CommonJS" to resolve Uncaught ReferenceError: exports is not defined
     "sourceMap": true,
-    "module": "ES2022",
+    "module": "commonJS",
     "rootDir": "./src",
     "strict": true,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "moduleResolution": "node",
+    "esModuleInterop": true
   },
-  "include": ["src"]
+  "include": ["src", "src/app.ts"]
 }
