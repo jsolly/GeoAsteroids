@@ -95,8 +95,6 @@ function keyUp(ev: KeyboardEvent): void {
   }
 }
 
-export { keyUp, keyDown };
-
 /**
  * Resets score, ship, and level for a new game.
  */
@@ -249,4 +247,4 @@ function update(): void {
   moveLasers(ship);
   moveAsteroids(roids);
 }
-export { gameOver, newGame, update };
+export { gameOver, newGame, update, keyUp, keyDown };
