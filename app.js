@@ -3,6 +3,9 @@ const express = require('express');
 const app = express();
 const path = require('path');
 
+// Register View Engine
+app.set('view engine', 'ejs');
+
 // set up rate limiter: maximum of five requests per minute
 const rateLimit = require('express-rate-limit');
 const limiter = rateLimit({
