@@ -7,6 +7,15 @@
       "name": "Start_Node",
       "program": "${workspaceFolder}/public/app.js"
     },
+        {
+      "name": "Launch_Chrome",
+      "request": "launch",
+      "type": "chrome",
+      "runtimeArgs": ["--incognito"],
+      "url": "http://127.0.0.1:4000",
+      "outFiles": ["${workspaceFolder}/src/**/*.js"],
+       "webRoot": "${workspaceFolder}/src"
+    }
     {
       "name": "Launch_Chrome + node",
       "request": "launch",
