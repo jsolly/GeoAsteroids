@@ -1,13 +1,21 @@
 {
   "compilerOptions": {
-    "target": "ES6",
-    "outDir": "public", //removed "module": "CommonJS" to resolve Uncaught ReferenceError: exports is not defined
-    "sourceMap": true,
-    "rootDir": "./src",
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "moduleResolution": "Node",
     "strict": true,
-    "strictNullChecks": false,
-    "moduleResolution": "node",
-    "esModuleInterop": true
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false
   },
   "include": ["src"]
 }
