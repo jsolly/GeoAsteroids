@@ -15,7 +15,7 @@
       "runtimeArgs": ["--incognito"],
       "url": "http://127.0.0.1:4000",
       "preLaunchTask": "Launch_Node",
-      "outFiles": ["${workspaceFolder}/public/**/*.js"]
+      "outFiles": ["${workspaceFolder}/src/**/*.js"]
     }
   ]
 }
