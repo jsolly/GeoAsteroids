@@ -25,7 +25,7 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 ```bash
     $ git clone git@github.com:jsolly/GeoAsteroids.git
     $ npm install
-    $ node app.js
+    $ npm run dev
 ```
 
 ---
