@@ -8,7 +8,7 @@
  */
 
 class Point {
-  constructor(public x: number, public y: number) {}
+  constructor(readonly x: number, readonly y: number) {}
 }
 
 function distBetweenPoints(point1: Point, point2: Point): number {

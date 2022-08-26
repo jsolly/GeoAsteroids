@@ -22,7 +22,7 @@ export const LASER_DIST = 0.6;
 export const LASER_EXPLODE_DUR = 0.1; // Laser explode time in seconds
 
 /* Asteroid Constants*/
-export const ROID_NUM = 1; // starting number of asteroids
+export const ROID_NUM = 20; // starting number of asteroids
 export const ROID_SPEED = 50; // starting asteroid speed in pixels per second
 export const ROID_SIZE = 50; // startin size of asteroids in pixels
 export const ROID_VERTICES = 10; // average number of vertices on each asteroid
