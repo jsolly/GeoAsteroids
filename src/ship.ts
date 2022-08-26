@@ -110,8 +110,10 @@ function moveShip(ship: Ship): void {
   ship.a += ship.rot;
 
   // move the ship
-  ship.centroid.x += ship.xv;
-  ship.centroid.y += ship.yv;
+  ship.centroid = new Point(
+    ship.centroid.x + ship.xv,
+    ship.centroid.y + ship.yv,
+  );
 }
 
 /**

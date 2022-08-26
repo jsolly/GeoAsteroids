@@ -16,7 +16,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.listen(process.env.PORT || 4000, function () {
-  // console.log('Node app is working on port ' + listener.address().port);
+  // console.log(`Node app is working on port ${listener.address().port}`);
 });
 app.use(express.static(path.join(__dirname, '../public')));
 

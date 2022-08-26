@@ -15,14 +15,14 @@
       "url": "http://127.0.0.1:4000",
       "outFiles": ["${workspaceFolder}/src/**/*.js"],
        "webRoot": "${workspaceFolder}/src"
-    }
+    },
     {
       "name": "Launch_Chrome + node",
       "request": "launch",
       "type": "chrome",
       "webRoot": "/Users/johnsolly/Documents/code/GeoAsteroids/public/",
       "runtimeArgs": ["--incognito"],
-      "url": "http://127.0.0.1:4000",
+      "url": "http://127.0.0.1:5173",
       "preLaunchTask": "Launch_Node",
       "outFiles": ["${workspaceFolder}/src/**/*.js"]
     }
