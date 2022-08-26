@@ -126,8 +126,10 @@ function moveLasers(ship: Ship): void {
         continue;
       }
     } else {
-      laser.centroid.x += laser.xv;
-      laser.centroid.y += laser.yv;
+      laser.centroid = new Point(
+        laser.centroid.x + laser.xv,
+        laser.centroid.y + laser.yv,
+      );
 
       // calculate distance traveled
       laser.distTraveled += 0.5;
