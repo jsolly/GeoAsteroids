@@ -29,6 +29,7 @@ function shootLaser(ship: Ship): void {
     if (ship.canShoot && ship.lasers.length < LASER_MAX) {
       return true;
     }
+    return false;
   }
 
   // Create laser object

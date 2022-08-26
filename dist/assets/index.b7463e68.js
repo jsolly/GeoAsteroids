@@ -589,7 +589,7 @@ function _() {
         (l.lasers[o].explodeTime = Math.ceil(mt * d)),
         I.setAsteroidRatio(u));
   function t(e, o) {
-    return e.explodeTime == 0 && B(o.centroid, e.centroid) < o.r;
+    return e.explodeTime == 0 && B(o.centroid, e.centroid) < o.r, !0;
   }
   if (l.exploding)
     l.explodeTime--,
