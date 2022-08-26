@@ -5,17 +5,17 @@
       "type": "node",
       "request": "launch",
       "name": "Start_Node",
-      "program": "${workspaceFolder}/built/app.js"
+      "program": "${workspaceFolder}/public/app.js"
     },
     {
       "name": "Launch_Chrome + node",
       "request": "launch",
       "type": "chrome",
-      "webRoot": "/Users/johnsolly/Documents/code/GeoAsteroids/built/",
+      "webRoot": "/Users/johnsolly/Documents/code/GeoAsteroids/public/",
       "runtimeArgs": ["--incognito"],
       "url": "http://127.0.0.1:4000",
       "preLaunchTask": "Launch_Node",
-      "outFiles": ["${workspaceFolder}/built/**/*.js"]
+      "outFiles": ["${workspaceFolder}/public/**/*.js"]
     }
   ]
 }

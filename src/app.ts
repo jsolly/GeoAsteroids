@@ -18,10 +18,10 @@ app.use(limiter);
 const listener = app.listen(process.env.PORT || 4000, function () {
   // console.log('Node app is working on port ' + listener.address().port);
 });
-app.use(express.static(path.join(__dirname, '../built')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 app.get('/', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, 'built/index.html'));
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 app.use((req: Request, res: Response) => {
