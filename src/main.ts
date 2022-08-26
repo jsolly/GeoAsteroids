@@ -130,8 +130,8 @@ function update(): void {
   drawLasers(ship);
 
   // detect laser hits
-  for (let i = roids.length - 1; i >= 0; i--) {
-    for (let j = ship.lasers.length - 1; j >= 0; j--) {
+  for (let j = ship.lasers.length - 1; j >= 0; j--) {
+    for (let i = roids.length - 1; i >= 0; i--) {
       // detect hits
       if (isHit(ship.lasers[j], roids[i])) {
         // remove asteroid and activate laser explosion
