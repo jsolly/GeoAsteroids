@@ -24,8 +24,8 @@ class Roid {
     public yv: number,
     public a: number,
     public r: number,
-    public vertices: number,
     public offsets: number[],
+    public vertices: number,
   ) {
     for (let i = 0; i < vertices; i++) {
       offsets.push(Math.random() * ROID_JAGG * 2 + 1 - ROID_JAGG);

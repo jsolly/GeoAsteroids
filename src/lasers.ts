@@ -36,7 +36,8 @@ function shootLaser(ship: Ship): void {
   if (canShootAndBelowLaserMax) {
     const xv: number = (-LASER_SPEED * Math.cos(-ship.a)) / FPS + ship.xv;
     const yv: number = (LASER_SPEED * Math.sin(-ship.a)) / FPS + ship.yv;
-    const laser = new Laser(ship.centroid, xv, yv, 0, 0);
+    const laserStartPoint = new Point(ship.centroid.x, ship.centroid.y);
+    const laser = new Laser(laserStartPoint, xv, yv, 0, 0);
     ship.lasers.push(laser);
     fxLaser.play();
   }
