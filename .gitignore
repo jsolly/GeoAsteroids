@@ -10,6 +10,5 @@ npm-debug.log
 # Other
 .eslintcache
 
-# Transpiled JavaScript
-public/*.js*
-geo-asteroids
+# Vite Build Files
+dist/*
