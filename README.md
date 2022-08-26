@@ -45,6 +45,7 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 - NPM Dependency checking via Dependabot
 - 100% linted with Eslint + additional rules.
 - TypeScript under 'strict' mode with no errors or warnings.
+- JS bundling with vite
 
 ## Coverage, Tests, Linting
 
