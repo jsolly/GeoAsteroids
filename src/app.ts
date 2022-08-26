@@ -1,5 +1,5 @@
 // Importing modules
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Response } from 'express';
 const app: Application = express();
 import path from 'path';
 
@@ -15,15 +15,15 @@ const limiter = rateLimit({
 // apply rate limiter to all requests
 app.use(limiter);
 
-const listener = app.listen(process.env.PORT || 4000, function () {
+app.listen(process.env.PORT || 4000, function () {
   // console.log('Node app is working on port ' + listener.address().port);
 });
 app.use(express.static(path.join(__dirname, '../public')));
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (res: Response) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-app.use((req: Request, res: Response) => {
+app.use((res: Response) => {
   res.status(404).render('404Page.ejs');
 });
