@@ -156,6 +156,7 @@ function update(): void {
     ) {
       return true;
     }
+    return true;
   }
 
   // check for asteroid collisions (when not exploding)

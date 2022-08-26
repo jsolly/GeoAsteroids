@@ -36,7 +36,7 @@ class Roid {
 class asteroidBelt {
   roids: Roid[] = [];
   currentLevel = getCurrentLevel();
-  constructor(private ship: Ship) {
+  constructor(ship: Ship) {
     for (let i = 0; i < ROID_NUM + this.currentLevel; i++) {
       let astroidCentroid: Point;
       do {
