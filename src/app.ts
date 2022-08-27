@@ -3,9 +3,6 @@ import express, { Application, Response } from 'express';
 const app: Application = express();
 import path from 'path';
 
-// Register View Engine
-app.set('view engine', 'ejs');
-
 // set up rate limiter: maximum of five requests per minute
 import rateLimit from 'express-rate-limit';
 const limiter = rateLimit({
@@ -25,5 +22,5 @@ app.get('/', (res: Response) => {
 });
 
 app.use((res: Response) => {
-  res.status(404).render('404Page.ejs');
+  res.sendFile(path.join(__dirname, 'public/404Page.html'));
 });
