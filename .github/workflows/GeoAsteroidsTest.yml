@@ -40,7 +40,7 @@ jobs:
           node-version: "16.x"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm ci
 
       - name: Lint with eslint
-        run: npm run lint
+        run: pnpm run lint
