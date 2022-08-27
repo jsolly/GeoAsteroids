@@ -22,8 +22,11 @@ jobs:
         language: ["javascript"]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7
+
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
@@ -38,9 +41,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16.x"
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm ci
+        run: pnpm install
 
       - name: Lint with eslint
         run: pnpm run lint
