@@ -1,26 +1,18 @@
 import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
-import { detectLaserHits } from './collisions.js';
+import { detectLaserHits, detectRoidHits } from './collisions.js';
 
-import { drawRoidsRelative, destroyRoid, moveRoids } from './asteroids.js';
-import {
-  drawScores,
-  drawLives,
-  newLevel,
-  gameOver,
-  newGame,
-} from './scoreLevelLives.js';
+import { drawRoidsRelative, moveRoids } from './asteroids.js';
+import { drawScores, drawLives, newGame } from './scoreLevelLives.js';
 import {
   drawGameText,
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
 } from './canvas.js';
-import { getMusicOn, fxHit, music } from './soundsMusic.js';
+import { getMusicOn, music } from './soundsMusic.js';
 import {
-  resetShip,
   drawShipRelative,
   drawShipExplosion,
-  explodeShip,
   thrustShip,
   moveShip,
   setBlinkOn,
@@ -87,42 +79,7 @@ function update(): void {
 
   drawLasers(ship);
   detectLaserHits(ship, currRoidBelt);
-
-  // check for asteroid collisions (when not exploding)
-  if (!ship.exploding) {
-    // only check when not blinking
-    if (ship.blinkCount == 0 && !ship.dead) {
-      for (let i = 0; i < roids.length; i++) {
-        if (
-          ship.centroid.distToPoint(roids[i].centroid) <
-          ship.r + roids[i].r
-        ) {
-          explodeShip(ship);
-          destroyRoid(i, roids);
-          fxHit.play();
-
-          if (roids.length == 0) {
-            newLevel(ship, currRoidBelt);
-          }
-          music.setRoidRatio(roids);
-          update();
-        }
-      }
-    }
-  } else {
-    // reduce explode time
-    ship.explodeTime--;
-    if (ship.explodeTime == 0) {
-      ship.lives--;
-      if (ship.lives == 0) {
-        gameOver(ship);
-        update();
-      } else {
-        resetShip(ship.lives, ship.blinkOn);
-        update();
-      }
-    }
-  }
+  detectRoidHits(ship, currRoidBelt);
 
   thrustShip(ship);
   if (!ship.exploding) {
@@ -131,3 +88,5 @@ function update(): void {
   moveLasers(ship);
   moveRoids(roids);
 }
+
+export { update };
