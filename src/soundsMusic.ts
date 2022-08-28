@@ -96,7 +96,7 @@ class Music {
   /**
    *
    */
-  setAsteroidRatio(roids: Roid[]): void {
+  setRoidRatio(roids: Roid[]): void {
     const currentLevel = getCurrentLevel();
     const roidsTotal = (ROID_NUM + currentLevel) * 7;
     const ratio = roids.length == 0 ? 1 : roids.length / roidsTotal;

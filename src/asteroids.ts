@@ -45,22 +45,25 @@ class Roid {
   }
 }
 
-class asteroidBelt {
+class roidBelt {
   roids: Roid[] = [];
   private currentLevel = getCurrentLevel();
   constructor(ship: Ship) {
     for (let i = 0; i < ROID_NUM + this.currentLevel; i++) {
-      let astroidCentroid: Point;
-      do {
-        const x = Math.floor(Math.random() * CVS.width);
-        const y = Math.floor(Math.random() * CVS.height);
-        astroidCentroid = new Point(x, y);
-      } while (
-        ship.centroid.distToPoint(astroidCentroid) <
-        ROID_SIZE * 2 + ship.r
-      );
-      this.roids.push(new Roid(astroidCentroid, Math.ceil(ROID_SIZE / 2)));
+      this.generateNewBelt(ship);
     }
+  }
+  generateNewBelt(ship: Ship): void {
+    let astroidCentroid: Point;
+    do {
+      const x = Math.floor(Math.random() * CVS.width);
+      const y = Math.floor(Math.random() * CVS.height);
+      astroidCentroid = new Point(x, y);
+    } while (
+      ship.centroid.distToPoint(astroidCentroid) <
+      ROID_SIZE * 2 + ship.r
+    );
+    this.roids.push(new Roid(astroidCentroid, Math.ceil(ROID_SIZE / 2)));
   }
 }
 
@@ -70,7 +73,7 @@ class asteroidBelt {
  *
  * @param roids - Array of Asteroids
  */
-function destroyAsteroid(i: number, roids: Roid[]): void {
+function destroyRoid(i: number, roids: Roid[]): void {
   const r = roids[i].r;
   let score = 0;
 
@@ -95,7 +98,7 @@ function destroyAsteroid(i: number, roids: Roid[]): void {
 /**
  * Draws astroids on the canvas from an array of Asteroids
  */
-function drawAsteroids(roids: Roid[]): void {
+function drawRoids(roids: Roid[]): void {
   for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
@@ -134,7 +137,7 @@ function drawAsteroids(roids: Roid[]): void {
  *
  * @param ship - A Ship object
  */
-function drawAsteroidsRelative(ship: Ship, roids: Roid[]): void {
+function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
@@ -172,7 +175,7 @@ function drawAsteroidsRelative(ship: Ship, roids: Roid[]): void {
 /**
  * Move all asteroids in an array using their x and y velocity
  */
-function moveAsteroids(roids: Roid[]): void {
+function moveRoids(roids: Roid[]): void {
   for (const roid of roids) {
     // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
     // let dt = 1/Math.sqrt(1-beta_squared)
@@ -183,11 +186,4 @@ function moveAsteroids(roids: Roid[]): void {
   }
 }
 
-export {
-  destroyAsteroid,
-  drawAsteroids,
-  drawAsteroidsRelative,
-  moveAsteroids,
-  asteroidBelt,
-  Roid,
-};
+export { destroyRoid, drawRoids, drawRoidsRelative, moveRoids, roidBelt, Roid };

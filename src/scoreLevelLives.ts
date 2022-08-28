@@ -9,7 +9,10 @@ import {
 } from './constants.js';
 import { Point } from './utils.js';
 import { setTextProperties, drawTriangle } from './canvas.js';
-import { Ship } from './ship.js';
+import { Ship, killShip } from './ship.js';
+import { roidBelt } from './asteroids';
+import { music } from './soundsMusic.js';
+
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
 
@@ -102,6 +105,35 @@ function getHighScore(): number {
     return numberHighScore;
   }
 }
+
+/**
+ * Start a new level. This is called on game start and when the player
+ * levels up
+ */
+function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
+  newLevelText();
+  currRoidBelt.generateNewBelt(ship);
+}
+
+/**
+ * Resets score, ship, and level for a new game.
+ */
+function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
+  resetScoreLevelLives();
+  const ship = new Ship();
+  const currRoidBelt = new roidBelt(ship);
+  return { ship, currRoidBelt };
+}
+
+/**
+ * Called when ship lives = 0. Calls functions to end the game.
+ */
+function gameOver(ship: Ship): void {
+  killShip(ship);
+  setTextProperties('Game Over', 1.0);
+  music.tempo = 1.0;
+}
+
 export {
   drawScores,
   drawLives,
@@ -109,4 +141,7 @@ export {
   updateScores,
   getCurrentLevel,
   resetScoreLevelLives,
+  newLevel,
+  newGame,
+  gameOver,
 };

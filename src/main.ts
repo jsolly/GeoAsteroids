@@ -1,25 +1,16 @@
-import {
-  SHIP_INV_BLINK_DUR,
-  FPS,
-  DEBUG,
-  LASER_EXPLODE_DUR,
-} from './constants.js';
-import {
-  drawAsteroidsRelative,
-  destroyAsteroid,
-  moveAsteroids,
-  asteroidBelt,
-  Roid,
-} from './asteroids.js';
+import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
+import { detectLaserHits } from './collisions.js';
+
+import { drawRoidsRelative, destroyRoid, moveRoids } from './asteroids.js';
 import {
   drawScores,
   drawLives,
-  resetScoreLevelLives,
-  newLevelText,
+  newLevel,
+  gameOver,
+  newGame,
 } from './scoreLevelLives.js';
 import {
   drawGameText,
-  setTextProperties,
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
@@ -30,48 +21,19 @@ import {
   drawShipRelative,
   drawShipExplosion,
   explodeShip,
-  killShip,
   thrustShip,
   moveShip,
   setBlinkOn,
   setExploding,
-  Ship,
 } from './ship.js';
-import { drawLasers, moveLasers, Laser } from './lasers.js';
+import { drawLasers, moveLasers } from './lasers.js';
 import { keyUp, keyDown } from './keybindings.js';
 
-let ship: Ship;
-let roids: Roid[];
+const { ship, currRoidBelt } = newGame();
+const roids = currRoidBelt.roids;
+
 document.addEventListener('keydown', (evt) => keyDown(ship, evt));
 document.addEventListener('keyup', (evt) => keyUp(ship, evt));
-
-/**
- * Resets score, ship, and level for a new game.
- */
-function newGame(): void {
-  resetScoreLevelLives();
-  ship = new Ship();
-  newLevel();
-}
-
-/**
- * Start a new level. This is called on game start and when the player
- * levels up
- */
-function newLevel(): void {
-  newLevelText();
-  roids = new asteroidBelt(ship).roids;
-}
-
-/**
- * Called when ship lives = 0. Calls functions to end the game.
- */
-function gameOver(): void {
-  killShip(ship);
-  setTextProperties('Game Over', 1.0);
-  music.tempo = 1.0;
-  update();
-}
 
 // Set up game loop
 setInterval(update, 1000 / FPS);
@@ -80,9 +42,6 @@ setInterval(update, 1000 / FPS);
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
-  if (!ship) {
-    newGame();
-  }
   if (DEBUG) {
     drawDebugFeatures(ship);
   }
@@ -90,7 +49,7 @@ function update(): void {
   setBlinkOn(ship);
   setExploding(ship);
   drawSpace();
-  drawAsteroidsRelative(ship, roids);
+  drawRoidsRelative(ship, roids);
   drawScores();
   drawLives(ship);
 
@@ -127,36 +86,7 @@ function update(): void {
   }
 
   drawLasers(ship);
-
-  // detect laser hits
-  for (let j = ship.lasers.length - 1; j >= 0; j--) {
-    for (let i = roids.length - 1; i >= 0; i--) {
-      // detect hits
-      if (isHit(ship.lasers[j], roids[i])) {
-        // remove asteroid and activate laser explosion
-        destroyAsteroid(i, roids);
-        fxHit.play();
-        if (roids.length == 0) {
-          newLevel();
-        }
-        ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-
-        // calculate remianing ratio of remaining asteroids to determine
-        // music tempo
-        music.setAsteroidRatio(roids);
-      }
-    }
-  }
-
-  function isHit(laser: Laser, roid: Roid): boolean {
-    if (
-      laser.explodeTime == 0 &&
-      roid.centroid.distToPoint(laser.centroid) < roid.r
-    ) {
-      return true;
-    }
-    return false;
-  }
+  detectLaserHits(ship, currRoidBelt);
 
   // check for asteroid collisions (when not exploding)
   if (!ship.exploding) {
@@ -168,13 +98,13 @@ function update(): void {
           ship.r + roids[i].r
         ) {
           explodeShip(ship);
-          destroyAsteroid(i, roids);
+          destroyRoid(i, roids);
           fxHit.play();
 
           if (roids.length == 0) {
-            newLevel();
+            newLevel(ship, currRoidBelt);
           }
-          music.setAsteroidRatio(roids);
+          music.setRoidRatio(roids);
           update();
         }
       }
@@ -185,7 +115,8 @@ function update(): void {
     if (ship.explodeTime == 0) {
       ship.lives--;
       if (ship.lives == 0) {
-        gameOver();
+        gameOver(ship);
+        update();
       } else {
         resetShip(ship.lives, ship.blinkOn);
         update();
@@ -198,5 +129,5 @@ function update(): void {
     moveShip(ship);
   }
   moveLasers(ship);
-  moveAsteroids(roids);
+  moveRoids(roids);
 }
