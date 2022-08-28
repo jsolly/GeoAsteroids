@@ -24,8 +24,8 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 ```bash
     $ git clone git@github.com:jsolly/GeoAsteroids.git
-    $ npm install
-    $ npm run dev
+    $ pnpm install
+    $ pnpm run dev
 ```
 
 ---
@@ -59,7 +59,7 @@ TODO
 TODO
 
 #### Linting (with ESlint)
-$ npm run lint
+$ pnpm run lint
 
 ---
 
