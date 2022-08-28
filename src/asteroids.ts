@@ -1,4 +1,4 @@
-import { distBetweenPoints, Point } from './utils.js';
+import { Point } from './utils.js';
 import { updateScores, getCurrentLevel } from './scoreLevelLives.js';
 import {
   ROID_NUM,
@@ -56,7 +56,7 @@ class asteroidBelt {
         const y = Math.floor(Math.random() * CVS.height);
         astroidCentroid = new Point(x, y);
       } while (
-        distBetweenPoints(ship.centroid, astroidCentroid) <
+        ship.centroid.distToPoint(astroidCentroid) <
         ROID_SIZE * 2 + ship.r
       );
       this.roids.push(new Roid(astroidCentroid, Math.ceil(ROID_SIZE / 2)));

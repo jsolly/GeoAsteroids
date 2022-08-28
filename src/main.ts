@@ -4,7 +4,6 @@ import {
   DEBUG,
   LASER_EXPLODE_DUR,
 } from './constants.js';
-import { distBetweenPoints } from './utils.js';
 import {
   drawAsteroidsRelative,
   destroyAsteroid,
@@ -152,7 +151,7 @@ function update(): void {
   function isHit(laser: Laser, roid: Roid): boolean {
     if (
       laser.explodeTime == 0 &&
-      distBetweenPoints(roid.centroid, laser.centroid) < roid.r
+      roid.centroid.distToPoint(laser.centroid) < roid.r
     ) {
       return true;
     }
@@ -165,7 +164,7 @@ function update(): void {
     if (ship.blinkCount == 0 && !ship.dead) {
       for (let i = 0; i < roids.length; i++) {
         if (
-          distBetweenPoints(ship.centroid, roids[i].centroid) <
+          ship.centroid.distToPoint(roids[i].centroid) <
           ship.r + roids[i].r
         ) {
           explodeShip(ship);

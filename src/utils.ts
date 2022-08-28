@@ -9,12 +9,16 @@
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
+
+  movePoint(x: number, y: number): Point {
+    return new Point(x, y);
+  }
+
+  distToPoint(targetPoint: Point): number {
+    return Math.sqrt(
+      Math.pow(this.x - targetPoint.x, 2) + Math.pow(this.y - targetPoint.y, 2),
+    );
+  }
 }
 
-function distBetweenPoints(point1: Point, point2: Point): number {
-  return Math.sqrt(
-    Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2),
-  );
-}
-
-export { distBetweenPoints, Point };
+export { Point };
