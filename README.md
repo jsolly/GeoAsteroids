@@ -22,7 +22,7 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 ## Installation (Install <a href="https://nodejs.org/en/" rel="noopener noreferrer">Node.js</a> first if you don't have it already!)
 
-```bash
+```shell
     $ git clone git@github.com:jsolly/GeoAsteroids.git
     $ cd GeoAsteroids
     $ npm install pnpm
