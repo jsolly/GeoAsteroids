@@ -18,7 +18,7 @@ import { Point } from './utils.js';
  *
  */
 class Ship {
-  centroid = new Point(CVS.width, CVS.height);
+  centroid = new Point(CVS.width / 2, CVS.height / 2);
   t = 0;
   xv = 0;
   yv = 0;
@@ -42,25 +42,10 @@ class Ship {
     public lives: number = START_LIVES,
     public blinkOn: boolean = false,
   ) {}
-}
 
-/**
- *
- * @param currentLives - Current lives (1-CURRENT_LIVES)
- * @param currentBlinkOn - Whether the ship is blinking or not
- */
-function resetShip(currentLives = START_LIVES, currentBlinkOn = false): Ship {
-  return new Ship(currentLives, currentBlinkOn);
-}
-
-function newShip(): Ship {
-  return new Ship();
-}
-/**
- * Switch ship into a dead state. This ends the game.
- */
-function killShip(ship: Ship): void {
-  ship.dead = true;
+  die(): void {
+    this.dead = true;
+  }
 }
 
 /**
@@ -197,8 +182,8 @@ function drawShipRelative(ship: Ship): void {
  * Draw the explosion when a ship is destroyed
  */
 function drawShipExplosion(ship: Ship): void {
-  const x = ship.centroid.x;
-  const y = ship.centroid.y;
+  const x = CVS.width / 2;
+  const y = CVS.height / 2;
   CTX.fillStyle = 'darkred';
   CTX.beginPath();
   CTX.arc(x, y, ship.r * 1.7, 0, Math.PI * 2, false);
@@ -221,16 +206,13 @@ function drawShipExplosion(ship: Ship): void {
   CTX.fill();
 }
 export {
-  resetShip,
   drawShipRelative,
   drawShipExplosion,
   explodeShip,
-  killShip,
   drawThruster,
   thrustShip,
   moveShip,
   setBlinkOn,
   setExploding,
-  newShip,
   Ship,
 };

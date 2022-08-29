@@ -1,9 +1,8 @@
-import { Ship, explodeShip, resetShip } from './ship.js';
+import { Ship, explodeShip } from './ship.js';
 import { roidBelt, destroyRoid, Roid } from './asteroids.js';
 import { music, fxHit } from './soundsMusic.js';
 import { FPS, LASER_EXPLODE_DUR } from './constants.js';
 import { newLevel, gameOver } from './scoreLevelLives.js';
-import { update } from './main.js';
 
 import { Laser } from './lasers.js';
 
@@ -49,7 +48,6 @@ function detectRoidHits(ship: Ship, roidBelt: roidBelt): void {
             newLevel(ship, roidBelt);
           }
           music.setRoidRatio(roids);
-          update();
         }
       }
     }
@@ -60,10 +58,6 @@ function detectRoidHits(ship: Ship, roidBelt: roidBelt): void {
       ship.lives--;
       if (ship.lives == 0) {
         gameOver(ship);
-        update();
-      } else {
-        resetShip(ship.lives, ship.blinkOn);
-        update();
       }
     }
   }

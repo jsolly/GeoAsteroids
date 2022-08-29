@@ -9,7 +9,7 @@ import {
 } from './constants.js';
 import { Point } from './utils.js';
 import { setTextProperties, drawTriangle } from './canvas.js';
-import { Ship, killShip } from './ship.js';
+import { Ship } from './ship.js';
 import { roidBelt } from './asteroids';
 import { music } from './soundsMusic.js';
 
@@ -122,6 +122,7 @@ function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
   resetScoreLevelLives();
   const ship = new Ship();
   const currRoidBelt = new roidBelt(ship);
+  newLevel(ship, currRoidBelt);
   return { ship, currRoidBelt };
 }
 
@@ -129,7 +130,7 @@ function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
  * Called when ship lives = 0. Calls functions to end the game.
  */
 function gameOver(ship: Ship): void {
-  killShip(ship);
+  ship.die();
   setTextProperties('Game Over', 1.0);
   music.tempo = 1.0;
 }

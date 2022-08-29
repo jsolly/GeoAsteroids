@@ -21,11 +21,10 @@ import {
 import { drawLasers, moveLasers } from './lasers.js';
 import { keyUp, keyDown } from './keybindings.js';
 
-const { ship, currRoidBelt } = newGame();
-const roids = currRoidBelt.roids;
+let { ship, currRoidBelt } = newGame();
 
-document.addEventListener('keydown', (evt) => keyDown(ship, evt));
-document.addEventListener('keyup', (evt) => keyUp(ship, evt));
+document.addEventListener('keydown', keyDown);
+document.addEventListener('keyup', keyUp);
 
 // Set up game loop
 setInterval(update, 1000 / FPS);
@@ -34,6 +33,8 @@ setInterval(update, 1000 / FPS);
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
+  const roids = currRoidBelt.roids;
+
   if (DEBUG) {
     drawDebugFeatures(ship);
   }
@@ -48,7 +49,7 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    newGame();
+    ({ ship, currRoidBelt } = newGame());
   }
 
   // tick the music
@@ -89,4 +90,4 @@ function update(): void {
   moveRoids(roids);
 }
 
-export { update };
+export { ship };
