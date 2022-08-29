@@ -112,7 +112,7 @@ function getHighScore(): number {
  */
 function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
   newLevelText();
-  currRoidBelt.generateNewBelt(ship);
+  currRoidBelt.addRoid(ship);
 }
 
 /**

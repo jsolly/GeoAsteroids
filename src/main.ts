@@ -1,7 +1,7 @@
 import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 
-import { drawRoidsRelative, moveRoids } from './asteroids.js';
+import { drawRoidsRelative, moveRoids, spawnRoids } from './asteroids.js';
 import { drawScores, drawLives, newGame } from './scoreLevelLives.js';
 import {
   drawGameText,
@@ -34,6 +34,7 @@ setInterval(update, 1000 / FPS);
  */
 function update(): void {
   const roids = currRoidBelt.roids;
+  spawnRoids(currRoidBelt, ship);
 
   if (DEBUG) {
     drawDebugFeatures(ship);

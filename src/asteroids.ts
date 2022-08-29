@@ -13,6 +13,7 @@ import {
   DEBUG,
   CTX,
   CVS,
+  ROID_SPAWN_TIME,
 } from './constants.js';
 import { Ship } from './ship.js';
 
@@ -47,24 +48,33 @@ class Roid {
 
 class roidBelt {
   roids: Roid[] = [];
+  spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
   private currentLevel = getCurrentLevel();
   constructor(ship: Ship) {
     for (let i = 0; i < ROID_NUM + this.currentLevel; i++) {
-      this.generateNewBelt(ship);
+      this.addRoid(ship);
     }
   }
-  generateNewBelt(ship: Ship): void {
-    let astroidCentroid: Point;
-    do {
-      const x = Math.floor(Math.random() * CVS.width);
-      const y = Math.floor(Math.random() * CVS.height);
-      astroidCentroid = new Point(x, y);
-    } while (
-      ship.centroid.distToPoint(astroidCentroid) <
-      ROID_SIZE * 2 + ship.r
-    );
+  addRoid(ship: Ship): void {
+    const x =
+      ship.centroid.x +
+      (ROID_SIZE * 4 + ship.r) * (Math.random() < 0.5 ? 1 : -1); // 50% chance of True or False
+    const y =
+      ship.centroid.y +
+      (ROID_SIZE * 4 + ship.r) * (Math.random() < 0.5 ? 1 : -1);
+    const astroidCentroid = new Point(x, y);
     this.roids.push(new Roid(astroidCentroid, Math.ceil(ROID_SIZE / 2)));
   }
+}
+
+function spawnRoids(currRoidBelt: roidBelt, ship: Ship): void {
+  if (currRoidBelt.spawnTime == 0) {
+    for (let i = 0; i < 4; i++) {
+      currRoidBelt.addRoid(ship);
+      currRoidBelt.spawnTime = ROID_SPAWN_TIME * FPS;
+    }
+  }
+  currRoidBelt.spawnTime--;
 }
 
 /**
@@ -186,4 +196,12 @@ function moveRoids(roids: Roid[]): void {
   }
 }
 
-export { destroyRoid, drawRoids, drawRoidsRelative, moveRoids, roidBelt, Roid };
+export {
+  destroyRoid,
+  drawRoids,
+  drawRoidsRelative,
+  moveRoids,
+  spawnRoids,
+  roidBelt,
+  Roid,
+};
