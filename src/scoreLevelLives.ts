@@ -118,12 +118,13 @@ function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
 /**
  * Resets score, ship, and level for a new game.
  */
-function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
+function newGame(): { ship: Ship; currRoidBelt: roidBelt; nextLevel: number } {
   resetScoreLevelLives();
   const ship = new Ship();
   const currRoidBelt = new roidBelt(ship);
+  const nextLevel = 1000;
   newLevel(ship, currRoidBelt);
-  return { ship, currRoidBelt };
+  return { ship, currRoidBelt, nextLevel };
 }
 
 /**
@@ -145,4 +146,5 @@ export {
   newLevel,
   newGame,
   gameOver,
+  currentScore,
 };

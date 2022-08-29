@@ -16,9 +16,6 @@ function detectLaserHits(ship: Ship, roidBelt: roidBelt): void {
         // remove asteroid and activate laser explosion
         destroyRoid(i, roids);
         fxHit.play();
-        if (roids.length == 0) {
-          newLevel(ship, roidBelt);
-        }
         ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
 
         // calculate remianing ratio of remaining asteroids to determine
@@ -44,9 +41,6 @@ function detectRoidHits(ship: Ship, roidBelt: roidBelt): void {
           destroyRoid(i, roids);
           fxHit.play();
 
-          if (roids.length == 0) {
-            newLevel(ship, roidBelt);
-          }
           music.setRoidRatio(roids);
         }
       }

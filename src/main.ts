@@ -2,7 +2,13 @@ import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 
 import { drawRoidsRelative, moveRoids, spawnRoids } from './asteroids.js';
-import { drawScores, drawLives, newGame } from './scoreLevelLives.js';
+import {
+  drawScores,
+  drawLives,
+  newGame,
+  currentScore,
+  newLevel,
+} from './scoreLevelLives.js';
 import {
   drawGameText,
   getTextAlpha,
@@ -21,7 +27,7 @@ import {
 import { drawLasers, moveLasers } from './lasers.js';
 import { keyUp, keyDown } from './keybindings.js';
 
-let { ship, currRoidBelt } = newGame();
+let { ship, currRoidBelt, nextLevel } = newGame();
 
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
@@ -33,6 +39,10 @@ setInterval(update, 1000 / FPS);
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
+  if (currentScore > nextLevel) {
+    newLevel(ship, currRoidBelt);
+    nextLevel += 1000;
+  }
   const roids = currRoidBelt.roids;
   spawnRoids(currRoidBelt, ship);
 
@@ -50,7 +60,7 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    ({ ship, currRoidBelt } = newGame());
+    ({ ship, currRoidBelt, nextLevel } = newGame());
   }
 
   // tick the music
