@@ -54,11 +54,11 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 #### Coverage
 
-TODO
+pnpm run coverage
 
 #### Test
 
-TODO
+$ pnpm run test
 
 #### Linting (with ESlint)
 $ pnpm run lint
