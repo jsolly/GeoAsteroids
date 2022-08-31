@@ -1,4 +1,4 @@
-import { assert, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { Point } from '../src/utils';
 // Edit an assertion and save to see HMR in action
 
