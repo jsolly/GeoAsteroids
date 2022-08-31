@@ -9,11 +9,13 @@
     "build": "tsc && vite build",
     "watch": "vite build --watch",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts",
     "lint-fix": "eslint . --ext .ts --fix",
     "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "prepare": "husky install"
+    
   },
   "repository": {
     "type": "git",
@@ -38,7 +40,8 @@
     "lint-staged": "^13.0.3",
     "prettier": "2.7.1",
     "typescript": "^4.6.4",
-    "vite": "^3.0.7"
+    "vite": "^3.0.7",
+    "vitest": "^0.22.1"
   },
   "lint-staged": {
     "*.ts": [
