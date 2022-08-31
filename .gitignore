@@ -10,5 +10,6 @@ npm-debug.log
 # Other
 .eslintcache
 
-# Vite Build Files
+# Vite
 dist/*
+coverage
