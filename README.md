@@ -54,7 +54,7 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 #### Coverage
 
-pnpm run coverage
+$ pnpm run coverage
 
 #### Test
 
