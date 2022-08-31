@@ -7,8 +7,8 @@ currently being supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| current   | :white_check_mark: |
+| current | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-Reach out to me on Twitter @_jsolly. I'll respond within a week.
+Reach out to me on Twitter @\_jsolly. I'll respond within a week.

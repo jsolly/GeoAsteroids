@@ -6,3 +6,10 @@
 /node_modules
 npm-debug.log
 /.env
+
+# Other
+.eslintcache
+
+# Vite
+dist/*
+coverage

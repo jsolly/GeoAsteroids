@@ -1,11 +1,12 @@
 # GeoAsteroids
 
-A 2D spaceship game
+A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 [![Build Status](http://img.shields.io/travis/badges/badgerbadgerbadger.svg?style=flat-square)](https://travis-ci.org/badges/badgerbadgerbadger) [![Coverage Status](http://img.shields.io/coveralls/badges/badgerbadgerbadger.svg?style=flat-square)](https://coveralls.io/r/badges/badgerbadgerbadger) [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
 
 
-![2022-07-10_13-06-08](https://user-images.githubusercontent.com/9572232/178160431-46101a8c-3153-44cc-8c99-08cb870009d6.png)
+
+![GeoAsteroids_playthrough (3)](https://user-images.githubusercontent.com/9572232/179308016-71265497-1d05-4750-bfd5-0f336cf7ae77.gif)
 
 ---
 
@@ -19,11 +20,14 @@ A 2D spaceship game
 - [Support](#support)
 - [License](#license)
 
+## Installation (Install <a href="https://nodejs.org/en/" rel="noopener noreferrer">Node.js</a> first if you don't have it already!)
 
-## Installation
-```bash
+```shell
     $ git clone git@github.com:jsolly/GeoAsteroids.git
-    $ node app.js
+    $ cd GeoAsteroids
+    $ npm install pnpm
+    $ pnpm install
+    $ pnpm run dev
 ```
 
 ---
@@ -31,20 +35,33 @@ A 2D spaceship game
 ## Features
 
 #### Functional Features
+
 - Moving asteroids with variable jaggedness and size
 - Points, lives and levels
 - Spaceship with laser and thruster
+
 #### Non-Functional Features
+
 - Asteroid collisions using circular bounding box
 - Static code analysis using CodeQL
 - NPM Dependency checking via Dependabot
+- 100% linted with Eslint + additional rules.
+- TypeScript under 'strict' mode with no errors or warnings.
+- JS bundling with vite
 
 ## Coverage, Tests, Linting
+
+
 #### Coverage
-TODO
+
+$ pnpm run coverage
 
 #### Test
-TODO
+
+$ pnpm run test
+
+#### Linting (with ESlint)
+$ pnpm run lint
 
 ---
 
@@ -55,10 +72,11 @@ Want to work on this with me? DM me <a href="https://twitter.com/_jsolly" target
 ### Step 1
 
 - **Option 1**
-    - 🍴 Fork this repo!
+
+  - 🍴 Fork this repo!
 
 - **Option 2**
-    - 👯 Clone to your local machine using `https://github.com/jsolly/blogthedata.git`
+  - 👯 Clone to your local machine using `https://github.com/jsolly/blogthedata.git`
 
 ### Step 2
 
@@ -88,6 +106,7 @@ Reach out to me at one of the following places!
 ---
 
 ## Donations
+
 <a href='https://ko-fi.com/S6S6CSR2Q' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://cdn.ko-fi.com/cdn/kofi2.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
 ---

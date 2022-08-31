@@ -5,6 +5,26 @@
 		}
 	],
 	"settings": {
-		"liveServer.settings.CustomBrowser": "chrome:PrivateMode"
+		"liveServer.settings.CustomBrowser": "chrome:PrivateMode",
+		"workbench.startupEditor": "none",
+		"kite.showWelcomeNotificationOnStartup": false,
+		"liveServer.settings.donotShowInfoMsg": true,
+		"liveServer.settings.NoBrowser": true,
+		"explorer.confirmDragAndDrop": false,
+		"git.confirmSync": false,
+		"explorer.confirmDelete": false,
+		"editor.minimap.enabled": false,
+		"editor.rulers": [
+			80
+		],
+		"window.autoDetectColorScheme": true,
+		"files.exclude": {
+			"**/.git": false
+		},
+		"editor.fontSize": 12,
+		"editor.formatOnPaste": true,
+		"editor.formatOnSave": true,
+        "editor.guides.indentation": false,
+        "editor.guides.bracketPairs": false,
 	}
 }
