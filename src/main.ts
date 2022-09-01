@@ -31,9 +31,22 @@ let { ship, currRoidBelt, nextLevel } = newGame();
 
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
+const el = document.getElementById('start-game');
+el.addEventListener('click', startGame);
 
-// Set up game loop
-setInterval(update, 1000 / FPS);
+function toggleScreen(id: string, toggle: boolean): void {
+  const element = document.getElementById(id);
+  const display = toggle ? 'block' : 'none';
+  element.style.display = display;
+}
+
+function startGame(): void {
+  toggleScreen('start-screen-btn', false);
+  toggleScreen('gameArea', true);
+
+  // Set up game loop
+  setInterval(update, 1000 / FPS);
+}
 
 /**
  * Runs the game. Called every frame to move the game forward.
