@@ -54,7 +54,7 @@ function toggleScreen(id: string, toggle: boolean): void {
 }
 
 function startGame(): void {
-  toggleScreen('start-screen-btn', false);
+  toggleScreen('start-screen', false);
   toggleScreen('gameArea', true);
   // Set up game loop
   gameInterval = setInterval(update, 1000 / FPS);
@@ -108,7 +108,7 @@ function update(): void {
     ({ ship, currRoidBelt } = newGame());
     clearInterval(gameInterval);
     el.innerText = 'Play Again! 🚀';
-    toggleScreen('start-screen-btn', true);
+    toggleScreen('start-screen', true);
     toggleScreen('gameArea', false);
   }
 

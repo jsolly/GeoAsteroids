@@ -9,8 +9,17 @@
     bottom: 0;
     left: 0;
     right: 0;
+    background-color: black;
 }
 
+* {
+    font-size: 1.1em;
+    color: white;
+}
+
+li {
+    margin-bottom: 0.5em;
+}
 body {
     background-color: black;
     background-image: url("public/spaceBackground.jpg");
@@ -19,40 +28,22 @@ body {
 #attribution {
     position: absolute;
     bottom: 10px;
+    font-size: 0.5em;
 }
 
 a {
     text-decoration: none;
-    color: white;
 }
 
-#start-game {
-    border:none;
-    appearance:none;
-    outline:none;
-    display:inline-block;
-    font-size:1.5em;
-    cursor:pointer;
-    text-decoration:none;
-    padding:12px 48px 12px 48px;
-    border-radius:4px;
-    color:#ffffff;
-    background-color: hsl(300, 100%, 25%);
-    border: 2px solid #ffffff;
-}
-#start-game {   transition-duration: 0.4s; }
-#start-game:hover {
-    font-size:1.6em;
-    background-color:hsl(300, 100%, 30%);
-}
+
 
 .screen {
     padding: 20px;     
     position: fixed;     
     top:50%;     
     left:50%;     
-    margin-top: -100px;     
-    margin-left: -100px;     
+    margin-top: -200px;     
+    margin-left: -125px;     
     height:200px;     
     width:250px;     
     text-align: center;
