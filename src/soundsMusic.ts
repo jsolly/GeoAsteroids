@@ -9,9 +9,12 @@ import { Roid } from './asteroids.js';
 
 const toggleMusicButton = document.getElementById('toggle-music');
 const toggleSoundButton = document.getElementById('toggle-sound');
-toggleSoundButton.addEventListener('click', toggleSound);
-toggleMusicButton.addEventListener('click', toggleMusic);
-
+if (toggleSoundButton) {
+  toggleSoundButton.addEventListener('click', toggleSound);
+}
+if (toggleMusicButton) {
+  toggleMusicButton.addEventListener('click', toggleMusic);
+}
 /**
  * Plays and stops sounds
  * @param src - Path to sound file
@@ -158,7 +161,12 @@ function getMusicPreference(): boolean {
 function toggleSound(): void {
   soundOn = !soundOn;
   localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
-  document.getElementById('toggle-sound').blur();
+  const toggleSound = document.getElementById('toggle-sound');
+  if (toggleSound) {
+    toggleSound.blur();
+  } else {
+    throw Error('Toggle Sound Element not found by ID');
+  }
 }
 
 /**
@@ -167,7 +175,12 @@ function toggleSound(): void {
 function toggleMusic(): void {
   musicOn = !musicOn;
   localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
-  document.getElementById('toggle-music').blur();
+  const toggleMusic = document.getElementById('toggle-music');
+  if (toggleMusic) {
+    toggleMusic.blur();
+  } else {
+    throw Error('Toggle Music Element not found by ID');
+  }
 }
 
 /**

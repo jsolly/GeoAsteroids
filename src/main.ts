@@ -45,12 +45,18 @@ let gameInterval: NodeJS.Timer;
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
 const el = document.getElementById('start-game');
+if (!el) {
+  throw Error('Could not find start game element');
+}
 el.addEventListener('click', startGame);
-
 function toggleScreen(id: string, toggle: boolean): void {
   const element = document.getElementById(id);
   const display = toggle ? 'block' : 'none';
-  element.style.display = display;
+  if (element) {
+    element.style.display = display;
+  } else {
+    throw Error(`element with id: ${id} could not be found`);
+  }
 }
 
 function startGame(): void {
@@ -107,7 +113,13 @@ function update(): void {
   } else if (ship.dead) {
     ({ ship, currRoidBelt } = newGame());
     clearInterval(gameInterval);
-    el.innerText = 'Play Again! 🚀';
+    if (el?.innerText) {
+      el.innerText = 'Play Again! 🚀';
+    } else {
+      throw Error(
+        'I could not access the innerText property of the start game button',
+      );
+    }
     toggleScreen('start-screen', true);
     toggleScreen('gameArea', false);
   }
