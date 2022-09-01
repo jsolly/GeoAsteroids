@@ -1,19 +1,30 @@
-import { SHIP_INV_BLINK_DUR, FPS, DEBUG } from './constants.js';
+import {
+  SHIP_INV_BLINK_DUR,
+  FPS,
+  DEBUG,
+  NEXT_LEVEL_POINTS,
+} from './constants.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
-
-import { drawRoidsRelative, moveRoids, spawnRoids } from './asteroids.js';
+import { keyUp, keyDown } from './keybindings.js';
+import {
+  drawRoidsRelative,
+  moveRoids,
+  spawnRoids,
+  roidBelt,
+} from './asteroids.js';
 import {
   drawScores,
   drawLives,
-  newGame,
   currentScore,
   newLevel,
+  resetScoreLevelLives,
 } from './scoreLevelLives.js';
 import {
   drawGameText,
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
+  setTextProperties,
 } from './canvas.js';
 import { getMusicOn, music } from './soundsMusic.js';
 import {
@@ -23,11 +34,13 @@ import {
   moveShip,
   setBlinkOn,
   setExploding,
+  Ship,
 } from './ship.js';
 import { drawLasers, moveLasers } from './lasers.js';
-import { keyUp, keyDown } from './keybindings.js';
 
-let { ship, currRoidBelt, nextLevel } = newGame();
+let { ship, currRoidBelt } = newGame();
+let nextLevel = NEXT_LEVEL_POINTS;
+let gameInterval: NodeJS.Timer;
 
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
@@ -43,9 +56,28 @@ function toggleScreen(id: string, toggle: boolean): void {
 function startGame(): void {
   toggleScreen('start-screen-btn', false);
   toggleScreen('gameArea', true);
-
   // Set up game loop
-  setInterval(update, 1000 / FPS);
+  gameInterval = setInterval(update, 1000 / FPS);
+}
+
+/**
+ * Resets score, ship, and level for a new game.
+ */
+function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
+  resetScoreLevelLives();
+  const ship = new Ship();
+  const currRoidBelt = new roidBelt(ship);
+  newLevel(ship, currRoidBelt);
+  return { ship, currRoidBelt };
+}
+
+/**
+ * Called when ship lives = 0. Calls functions to end the game.
+ */
+function gameOver(ship: Ship): void {
+  ship.die();
+  setTextProperties('Game Over', 1.0);
+  music.tempo = 1.0;
 }
 
 /**
@@ -73,7 +105,11 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    ({ ship, currRoidBelt, nextLevel } = newGame());
+    ({ ship, currRoidBelt } = newGame());
+    clearInterval(gameInterval);
+    el.innerText = 'Play Again! 🚀';
+    toggleScreen('start-screen-btn', true);
+    toggleScreen('gameArea', false);
   }
 
   // tick the music
@@ -114,4 +150,4 @@ function update(): void {
   moveRoids(roids);
 }
 
-export { ship };
+export { ship, gameOver };

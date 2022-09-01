@@ -2,7 +2,7 @@ import { Ship, explodeShip } from './ship.js';
 import { roidBelt, destroyRoid, Roid } from './asteroids.js';
 import { music, fxHit } from './soundsMusic.js';
 import { FPS, LASER_EXPLODE_DUR } from './constants.js';
-import { gameOver } from './scoreLevelLives.js';
+import { gameOver } from './main.js';
 
 import { Laser } from './lasers.js';
 

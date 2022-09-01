@@ -11,7 +11,6 @@ import { Point } from './utils.js';
 import { setTextProperties, drawTriangle } from './canvas.js';
 import { Ship } from './ship.js';
 import { roidBelt } from './asteroids';
-import { music } from './soundsMusic.js';
 
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
@@ -115,27 +114,6 @@ function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
   currRoidBelt.addRoid(ship);
 }
 
-/**
- * Resets score, ship, and level for a new game.
- */
-function newGame(): { ship: Ship; currRoidBelt: roidBelt; nextLevel: number } {
-  resetScoreLevelLives();
-  const ship = new Ship();
-  const currRoidBelt = new roidBelt(ship);
-  const nextLevel = 1000;
-  newLevel(ship, currRoidBelt);
-  return { ship, currRoidBelt, nextLevel };
-}
-
-/**
- * Called when ship lives = 0. Calls functions to end the game.
- */
-function gameOver(ship: Ship): void {
-  ship.die();
-  setTextProperties('Game Over', 1.0);
-  music.tempo = 1.0;
-}
-
 export {
   drawScores,
   drawLives,
@@ -144,7 +122,5 @@ export {
   getCurrentLevel,
   resetScoreLevelLives,
   newLevel,
-  newGame,
-  gameOver,
   currentScore,
 };

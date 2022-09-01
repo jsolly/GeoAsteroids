@@ -38,6 +38,7 @@ export const DEBUG = false; // Show ship collision boundary and ship center dot
 export const SAVE_KEY_HIGH_SCORE = 'highscore'; // localstorage of high score.
 export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
 export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
+export const NEXT_LEVEL_POINTS = 1000;
 
 /* Drawing Constants*/
 export const TEXT_SIZE = 40; // Text font height in pixels
