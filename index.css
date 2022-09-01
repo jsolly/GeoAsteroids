@@ -37,14 +37,9 @@ a {
 
 
 
-.screen {
-    padding: 20px;     
-    position: fixed;     
-    top:50%;     
-    left:50%;     
-    margin-top: -200px;     
-    margin-left: -125px;     
-    height:200px;     
-    width:250px;     
+.screen { 
+    position: fixed;          
+    left:50%;      
+    margin-left: -125px;             
     text-align: center;
 }
