@@ -4,14 +4,12 @@ import {
   LASER_SPEED,
   LASER_MAX,
   LASER_DIST,
+  CVS,
+  CTX,
 } from './constants.js';
 import { Ship } from './ship.js';
 import { fxLaser } from './soundsMusic.js';
 import { Point } from './utils.js';
-import { getCanvas, getContext } from './canvas.js';
-
-const ctx: CanvasRenderingContext2D = getContext();
-const cvs: HTMLCanvasElement = getCanvas();
 
 class Laser {
   constructor(
@@ -57,52 +55,52 @@ function drawLasers(ship: Ship): void {
     const shipX = ship.centroid.x;
     const shipY = ship.centroid.y;
     if (laser.explodeTime == 0) {
-      ctx.fillStyle = 'salmon';
-      ctx.beginPath();
-      ctx.arc(
-        lx - shipX + cvs.width / 2,
-        ly - shipY + cvs.height / 2,
+      CTX.fillStyle = 'salmon';
+      CTX.beginPath();
+      CTX.arc(
+        lx - shipX + CVS.width / 2,
+        ly - shipY + CVS.height / 2,
         SHIP_SIZE / 15,
         0,
         Math.PI * 2,
         false,
       );
-      ctx.fill();
+      CTX.fill();
     } else {
       // draw explosion
-      ctx.fillStyle = 'orangered';
-      ctx.beginPath();
-      ctx.arc(
-        lx - shipX + cvs.width / 2,
-        ly - shipY + cvs.height / 2,
+      CTX.fillStyle = 'orangered';
+      CTX.beginPath();
+      CTX.arc(
+        lx - shipX + CVS.width / 2,
+        ly - shipY + CVS.height / 2,
         ship.r * 0.75,
         0,
         Math.PI * 2,
         false,
       );
-      ctx.fill();
-      ctx.fillStyle = 'salmon';
-      ctx.beginPath();
-      ctx.arc(
-        lx - (shipX - cvs.width),
-        ly - (shipY - cvs.height),
+      CTX.fill();
+      CTX.fillStyle = 'salmon';
+      CTX.beginPath();
+      CTX.arc(
+        lx - (shipX - CVS.width),
+        ly - (shipY - CVS.height),
         ship.r * 0.5,
         0,
         Math.PI * 2,
         false,
       );
-      ctx.fill();
-      ctx.fillStyle = 'pink';
-      ctx.beginPath();
-      ctx.arc(
-        lx - (shipX - cvs.width),
-        ly - (shipY - cvs.height),
+      CTX.fill();
+      CTX.fillStyle = 'pink';
+      CTX.beginPath();
+      CTX.arc(
+        lx - (shipX - CVS.width),
+        ly - (shipY - CVS.height),
         ship.r * 0.25,
         0,
         Math.PI * 2,
         false,
       );
-      ctx.fill();
+      CTX.fill();
     }
   }
 }
@@ -114,7 +112,7 @@ function moveLasers(ship: Ship): void {
     const laser = ship.lasers[i];
 
     // check laser distance
-    if (laser.distTraveled > LASER_DIST * cvs.width) {
+    if (laser.distTraveled > LASER_DIST * CVS.width) {
       ship.lasers.splice(i, 1);
       continue;
     }

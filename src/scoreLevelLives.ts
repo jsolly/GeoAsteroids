@@ -4,15 +4,13 @@ import {
   START_LEVEL,
   SHIP_SIZE,
   TEXT_SIZE,
+  CVS,
+  CTX,
 } from './constants.js';
 import { Point } from './utils.js';
 import { setTextProperties, drawTriangle } from './canvas.js';
 import { Ship } from './ship.js';
 import { roidBelt } from './asteroids';
-import { getCanvas, getContext } from './canvas.js';
-
-const ctx: CanvasRenderingContext2D = getContext();
-const cvs: HTMLCanvasElement = getCanvas();
 
 let currentScore = STARTING_SCORE;
 let currentLevel = START_LEVEL;
@@ -62,18 +60,18 @@ function getLifeColor(ship: Ship, currLives: number): string {
  */
 function drawScores(): void {
   // draw the score
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'white';
-  ctx.font = String(TEXT_SIZE) + 'px dejavu sans mono';
-  ctx.fillText(String(currentScore), cvs.width - 15, 30);
+  CTX.textAlign = 'right';
+  CTX.textBaseline = 'middle';
+  CTX.fillStyle = 'white';
+  CTX.font = String(TEXT_SIZE) + 'px dejavu sans mono';
+  CTX.fillText(String(currentScore), CVS.width - 15, 30);
 
   // draw the high score
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'white';
-  ctx.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
-  ctx.fillText('BEST ' + String(getHighScore()), cvs.width / 2, 30);
+  CTX.textAlign = 'center';
+  CTX.textBaseline = 'middle';
+  CTX.fillStyle = 'white';
+  CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
+  CTX.fillText('BEST ' + String(getHighScore()), CVS.width / 2, 30);
 }
 let text;
 let textAlpha;

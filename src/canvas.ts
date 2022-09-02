@@ -1,27 +1,15 @@
-import { FPS, TEXT_SIZE, TEXT_FADE_TIME, SHIP_SIZE } from './constants.js';
+import {
+  FPS,
+  TEXT_SIZE,
+  TEXT_FADE_TIME,
+  SHIP_SIZE,
+  CVS,
+  CTX,
+} from './constants.js';
 import { Point } from './utils.js';
 import { Ship } from './ship.js';
 let text: string;
 let textAlpha: number;
-const ctx = getContext();
-const cvs = getCanvas();
-
-function getCanvas(): HTMLCanvasElement {
-  const cvs = document.querySelector('canvas');
-  if (cvs) {
-    return cvs;
-  }
-  throw Error('Could not get Canvas');
-}
-
-function getContext(): CanvasRenderingContext2D {
-  const cvs = getCanvas();
-  const ctx = cvs.getContext('2d');
-  if (ctx) {
-    return ctx;
-  }
-  throw Error('Could not get Context');
-}
 
 /**
  *
@@ -45,10 +33,8 @@ function getTextAlpha(): number {
  * Draws the background
  */
 function drawSpace(): void {
-  const ctx = getContext();
-  const cvs = getCanvas();
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, cvs.width, cvs.height);
+  CTX.fillStyle = 'black';
+  CTX.fillRect(0, 0, CVS.width, CVS.height);
 }
 
 /**
@@ -56,11 +42,11 @@ function drawSpace(): void {
  * value so the text eventually disappears.
  */
 function drawGameText(): void {
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255,255,255, ' + String(textAlpha) + ')';
-  ctx.font = 'small-caps ' + String(TEXT_SIZE) + 'px dejavu sans mono';
-  ctx.fillText(text, cvs.width / 2, (cvs.height * 3) / 4);
+  CTX.textAlign = 'center';
+  CTX.textBaseline = 'middle';
+  CTX.fillStyle = 'rgba(255,255,255, ' + String(textAlpha) + ')';
+  CTX.font = 'small-caps ' + String(TEXT_SIZE) + 'px dejavu sans mono';
+  CTX.fillText(text, CVS.width / 2, (CVS.height * 3) / 4);
   textAlpha -= 1.0 / TEXT_FADE_TIME / FPS;
 }
 
@@ -72,14 +58,14 @@ function drawDebugFeatures(ship: Ship): void {
   const x = ship.centroid.x;
   const y = ship.centroid.y;
   // Draw Ship collision bounding box (if needed)
-  ctx.strokeStyle = 'lime';
-  ctx.beginPath();
-  ctx.arc(x, y, ship.r, 0, Math.PI * 2, false);
-  ctx.stroke();
+  CTX.strokeStyle = 'lime';
+  CTX.beginPath();
+  CTX.arc(x, y, ship.r, 0, Math.PI * 2, false);
+  CTX.stroke();
 
   // show ship's centre dot
-  ctx.fillStyle = 'red';
-  ctx.fillRect(x - 1, y - 1, 2, 2);
+  CTX.fillStyle = 'red';
+  CTX.fillRect(x - 1, y - 1, 2, 2);
 }
 
 function drawTriangle(centroid: Point, a: number, color = 'white'): void {
@@ -87,34 +73,32 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
   const x = centroid.x;
   const y = centroid.y;
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = SHIP_SIZE / 20;
-  ctx.beginPath();
-  ctx.moveTo(
+  CTX.strokeStyle = color;
+  CTX.lineWidth = SHIP_SIZE / 20;
+  CTX.beginPath();
+  CTX.moveTo(
     // nose of ship
     x + (4 / 3) * r * Math.cos(a),
     y - (4 / 3) * r * Math.sin(a),
   );
-  ctx.lineTo(
+  CTX.lineTo(
     // rear left
     x - r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
     y + r * ((2 / 3) * Math.sin(a) - Math.cos(a)),
   );
-  ctx.lineTo(
+  CTX.lineTo(
     // rear right
     x - r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
     y + r * ((2 / 3) * Math.sin(a) + Math.cos(a)),
   );
-  ctx.closePath();
-  ctx.stroke();
+  CTX.closePath();
+  CTX.stroke();
 }
 
 export {
   drawGameText,
   setTextProperties,
   getTextAlpha,
-  getContext,
-  getCanvas,
   drawSpace,
   drawDebugFeatures,
   drawTriangle,

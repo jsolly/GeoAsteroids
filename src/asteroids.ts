@@ -12,12 +12,10 @@ import {
   ROID_POINTS_SML,
   DEBUG,
   ROID_SPAWN_TIME,
+  CVS,
+  CTX,
 } from './constants.js';
 import { Ship } from './ship.js';
-import { getCanvas, getContext } from './canvas.js';
-
-const ctx: CanvasRenderingContext2D = getContext();
-const cvs: HTMLCanvasElement = getCanvas();
 
 class Roid {
   readonly a: number;
@@ -112,8 +110,8 @@ function destroyRoid(i: number, roids: Roid[]): void {
  */
 function drawRoids(roids: Roid[]): void {
   for (const roid of roids) {
-    ctx.strokeStyle = 'slategrey';
-    ctx.lineWidth = 1.5;
+    CTX.strokeStyle = 'slategrey';
+    CTX.lineWidth = 1.5;
     // get asteroid properties
     const x = roid.centroid.x;
     const y = roid.centroid.y;
@@ -122,26 +120,26 @@ function drawRoids(roids: Roid[]): void {
     const vertices = roid.vertices;
     const offsets = roid.offsets;
     // draw a path
-    ctx.beginPath();
-    ctx.moveTo(
+    CTX.beginPath();
+    CTX.moveTo(
       x + r * offsets[0] * Math.cos(a),
       y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
-      ctx.lineTo(
+      CTX.lineTo(
         x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
         y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
-    ctx.closePath();
-    ctx.stroke();
+    CTX.closePath();
+    CTX.stroke();
     // show asteroid's collision circle
     if (DEBUG) {
-      ctx.strokeStyle = 'lime';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2, false);
-      ctx.stroke();
+      CTX.strokeStyle = 'lime';
+      CTX.beginPath();
+      CTX.arc(x, y, r, 0, Math.PI * 2, false);
+      CTX.stroke();
     }
   }
 }
@@ -151,36 +149,36 @@ function drawRoids(roids: Roid[]): void {
  */
 function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   for (const roid of roids) {
-    ctx.strokeStyle = 'slategrey';
-    ctx.lineWidth = 1.5;
+    CTX.strokeStyle = 'slategrey';
+    CTX.lineWidth = 1.5;
     // get asteroid properties
-    const x = cvs.width / 2 - ship.centroid.x + roid.centroid.x;
-    const y = cvs.height / 2 - ship.centroid.y + roid.centroid.y;
+    const x = CVS.width / 2 - ship.centroid.x + roid.centroid.x;
+    const y = CVS.height / 2 - ship.centroid.y + roid.centroid.y;
     const r = roid.r;
     const a = roid.a;
     const vertices = roid.vertices;
     const offsets = roid.offsets;
     // draw a path
-    ctx.beginPath();
-    ctx.moveTo(
+    CTX.beginPath();
+    CTX.moveTo(
       x + r * offsets[0] * Math.cos(a),
       y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
-      ctx.lineTo(
+      CTX.lineTo(
         x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
         y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
-    ctx.closePath();
-    ctx.stroke();
+    CTX.closePath();
+    CTX.stroke();
     // show asteroid's collision circle
     if (DEBUG) {
-      ctx.strokeStyle = 'lime';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2, false);
-      ctx.stroke();
+      CTX.strokeStyle = 'lime';
+      CTX.beginPath();
+      CTX.arc(x, y, r, 0, Math.PI * 2, false);
+      CTX.stroke();
     }
   }
 }

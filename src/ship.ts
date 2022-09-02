@@ -7,20 +7,18 @@ import {
   FPS,
   START_LIVES,
   FRICTION,
+  CVS,
+  CTX,
 } from './constants.js';
 import { fxExplode, fxThrust } from './soundsMusic.js';
 import { Laser } from './lasers.js';
 import { Point } from './utils.js';
-import { getCanvas, getContext } from './canvas.js';
-
-const ctx: CanvasRenderingContext2D = getContext();
-const cvs: HTMLCanvasElement = getCanvas();
 
 /**
  *
  */
 class Ship {
-  centroid = new Point(cvs.width / 2, cvs.height / 2);
+  centroid = new Point(CVS.width / 2, CVS.height / 2);
   t = 0;
   xv = 0;
   yv = 0;
@@ -108,32 +106,32 @@ function moveShip(ship: Ship): void {
  */
 function drawThruster(ship: Ship): void {
   if (!ship.exploding && ship.blinkOn) {
-    ctx.fillStyle = 'red';
-    ctx.strokeStyle = 'yellow';
-    ctx.lineWidth = SHIP_SIZE / 10;
-    ctx.beginPath();
-    ctx.moveTo(
+    CTX.fillStyle = 'red';
+    CTX.strokeStyle = 'yellow';
+    CTX.lineWidth = SHIP_SIZE / 10;
+    CTX.beginPath();
+    CTX.moveTo(
       // rear left
-      cvs.width / 2 +
+      CVS.width / 2 +
         ship.r * ((2 / 3) * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
-      cvs.height / 2 +
+      CVS.height / 2 +
         ship.r * ((2 / 3) * Math.sin(ship.a) - 0.5 * Math.cos(ship.a)),
     );
-    ctx.lineTo(
+    CTX.lineTo(
       // rear CENTER (behind ship)
-      cvs.width / 2 + ((ship.r * 5) / 3) * Math.cos(ship.a),
-      cvs.height / 2 + ((ship.r * 5) / 3) * Math.sin(ship.a),
+      CVS.width / 2 + ((ship.r * 5) / 3) * Math.cos(ship.a),
+      CVS.height / 2 + ((ship.r * 5) / 3) * Math.sin(ship.a),
     );
-    ctx.lineTo(
+    CTX.lineTo(
       // rear right
-      cvs.width / 2 +
+      CVS.width / 2 +
         ship.r * ((2 / 3) * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
-      cvs.height / 2 +
+      CVS.height / 2 +
         ship.r * ((2 / 3) * Math.sin(ship.a) + 0.5 * Math.cos(ship.a)),
     );
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    CTX.closePath();
+    CTX.fill();
+    CTX.stroke();
   }
 }
 
@@ -155,57 +153,57 @@ function drawShipRelative(ship: Ship): void {
     */
 
   const a = ship.a;
-  ctx.strokeStyle = 'white';
-  ctx.lineWidth = SHIP_SIZE / 20;
-  ctx.beginPath();
-  ctx.moveTo(
+  CTX.strokeStyle = 'white';
+  CTX.lineWidth = SHIP_SIZE / 20;
+  CTX.beginPath();
+  CTX.moveTo(
     // nose of ship
-    cvs.width / 2 + (4 / 3) * ship.r * Math.cos(a + 1.06),
-    cvs.height / 2 + (4 / 3) * ship.r * Math.sin(a + 1.06),
+    CVS.width / 2 + (4 / 3) * ship.r * Math.cos(a + 1.06),
+    CVS.height / 2 + (4 / 3) * ship.r * Math.sin(a + 1.06),
   );
-  ctx.lineTo(
+  CTX.lineTo(
     // rear left
-    cvs.width / 2 +
+    CVS.width / 2 +
       ship.r * ((-1 / 3) * Math.cos(a + 1.06) + Math.sin(a + 1.06)),
-    cvs.height / 2 +
+    CVS.height / 2 +
       ship.r * ((-1 / 3) * Math.sin(a + 1.06) - Math.cos(a + 1.06)),
   );
-  ctx.lineTo(
+  CTX.lineTo(
     // rear right
-    cvs.width / 2 +
+    CVS.width / 2 +
       ship.r * ((-1 / 3) * Math.cos(a + 1.06) - Math.sin(a + 1.06)),
-    cvs.height / 2 +
+    CVS.height / 2 +
       ship.r * ((-1 / 3) * Math.sin(a + 1.06) + Math.cos(a + 1.06)),
   );
-  ctx.closePath();
-  ctx.stroke();
+  CTX.closePath();
+  CTX.stroke();
 }
 /**
  * Draw the explosion when a ship is destroyed
  */
 function drawShipExplosion(ship: Ship): void {
-  const x = cvs.width / 2;
-  const y = cvs.height / 2;
-  ctx.fillStyle = 'darkred';
-  ctx.beginPath();
-  ctx.arc(x, y, ship.r * 1.7, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = 'red';
-  ctx.beginPath();
-  ctx.arc(x, y, ship.r * 1.4, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = 'Orange';
-  ctx.beginPath();
-  ctx.arc(x, y, ship.r * 1.1, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = 'Yellow';
-  ctx.beginPath();
-  ctx.arc(x, y, ship.r * 0.8, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = 'White';
-  ctx.beginPath();
-  ctx.arc(x, y, ship.r * 0.5, 0, Math.PI * 2, false);
-  ctx.fill();
+  const x = CVS.width / 2;
+  const y = CVS.height / 2;
+  CTX.fillStyle = 'darkred';
+  CTX.beginPath();
+  CTX.arc(x, y, ship.r * 1.7, 0, Math.PI * 2, false);
+  CTX.fill();
+  CTX.fillStyle = 'red';
+  CTX.beginPath();
+  CTX.arc(x, y, ship.r * 1.4, 0, Math.PI * 2, false);
+  CTX.fill();
+  CTX.fillStyle = 'Orange';
+  CTX.beginPath();
+  CTX.arc(x, y, ship.r * 1.1, 0, Math.PI * 2, false);
+  CTX.fill();
+  CTX.fillStyle = 'Yellow';
+  CTX.beginPath();
+  CTX.arc(x, y, ship.r * 0.8, 0, Math.PI * 2, false);
+  CTX.fill();
+  CTX.fillStyle = 'White';
+  CTX.beginPath();
+  CTX.arc(x, y, ship.r * 0.5, 0, Math.PI * 2, false);
+  CTX.fill();
 }
 export {
   drawShipRelative,
