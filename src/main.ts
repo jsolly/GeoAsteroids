@@ -5,7 +5,7 @@ import {
   NEXT_LEVEL_POINTS,
 } from './constants.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
-import { keyUp, keyDown } from './keybindings.js';
+import { toggleScreen, startGameBtn } from './events.js';
 import {
   drawRoidsRelative,
   moveRoids,
@@ -41,23 +41,6 @@ import { drawLasers, moveLasers } from './lasers.js';
 let { ship, currRoidBelt } = newGame();
 let nextLevel = NEXT_LEVEL_POINTS;
 let gameInterval: NodeJS.Timer;
-
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
-const el = document.getElementById('start-game');
-if (!el) {
-  throw Error('Could not find start game element');
-}
-el.addEventListener('click', startGame);
-function toggleScreen(id: string, toggle: boolean): void {
-  const element = document.getElementById(id);
-  const display = toggle ? 'block' : 'none';
-  if (element) {
-    element.style.display = display;
-  } else {
-    throw Error(`element with id: ${id} could not be found`);
-  }
-}
 
 function startGame(): void {
   toggleScreen('start-screen', false);
@@ -113,12 +96,8 @@ function update(): void {
   } else if (ship.dead) {
     ({ ship, currRoidBelt } = newGame());
     clearInterval(gameInterval);
-    if (el?.innerText) {
-      el.innerText = 'Play Again! 🚀';
-    } else {
-      throw Error(
-        'I could not access the innerText property of the start game button',
-      );
+    if (startGameBtn) {
+      startGameBtn.innerText = 'Play Again! 🚀';
     }
     toggleScreen('start-screen', true);
     toggleScreen('gameArea', false);
@@ -162,4 +141,4 @@ function update(): void {
   moveRoids(roids);
 }
 
-export { ship, gameOver };
+export { ship, gameOver, startGame };
