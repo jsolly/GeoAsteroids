@@ -33,7 +33,7 @@ function shootLaser(ship: Ship): void {
   }
 
   // Create laser object
-  if (canShootAndBelowLaserMax) {
+  if (canShootAndBelowLaserMax(ship)) {
     const xv: number = (-LASER_SPEED * Math.cos(-ship.a)) / FPS + ship.xv;
     const yv: number = (LASER_SPEED * Math.sin(-ship.a)) / FPS + ship.yv;
     const laserStartPoint = new Point(ship.centroid.x, ship.centroid.y);

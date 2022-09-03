@@ -3,9 +3,9 @@ import {
   SAVE_KEY_HIGH_SCORE,
   START_LEVEL,
   SHIP_SIZE,
+  TEXT_SIZE,
   CVS,
   CTX,
-  TEXT_SIZE,
 } from './constants.js';
 import { Point } from './utils.js';
 import { setTextProperties, drawTriangle } from './canvas.js';

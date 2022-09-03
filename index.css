@@ -1,45 +1,47 @@
 #gameWrapper {
-    padding: 0;
-    margin: auto;
-    display: block;
-    width: 800px;
-    height: 600px;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: black;
+  padding: 0;
+  margin: auto;
+  display: block;
+  width: 800px;
+  height: 600px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: black;
 }
 
 * {
-    font-size: 1.1em;
-    color: white;
+  font-size: 1.1em;
+  color: white;
 }
 
-li {
-    margin-bottom: 0.5em;
+:is(li, h1) {
+  margin-bottom: 1em;
+}
+
+h2 {
+  margin-bottom: 0.5em;
 }
 body {
-    background-color: black;
-    background-image: url("public/spaceBackground.jpg");
+  background-color: black;
+  background-image: url('/spaceBackground.jpg');
 }
 
 #attribution {
-    position: absolute;
-    bottom: 10px;
-    font-size: 0.5em;
+  position: absolute;
+  bottom: 10px;
+  font-size: 0.5em;
 }
 
 a {
-    text-decoration: none;
+  text-decoration: none;
 }
 
-
-
-.screen { 
-    position: fixed;          
-    left:50%;      
-    margin-left: -125px;             
-    text-align: center;
+.screen {
+  position: fixed;
+  left: 50%;
+  margin-left: -125px;
+  text-align: center;
 }

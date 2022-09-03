@@ -1,3 +1,41 @@
+export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
+export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
+
+/* Preferences from Localstorage */
+/**
+ *
+ * @returns If sound should be playing or not.
+ */
+function getSoundPreference(): boolean {
+  const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
+  return soundPref === 'true'; // Everything comes out of local storage as a string
+}
+
+/**
+ *
+ * @returns If music should be playing or not
+ */
+function getMusicPreference(): boolean {
+  const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
+  return musicPref === 'true'; // Everything comes out of local storage as a string
+}
+
+const defaultSoundPref = document.getElementById(
+  'soundPref',
+) as HTMLInputElement;
+
+const defaultMusicPref = document.getElementById(
+  'musicPref',
+) as HTMLInputElement;
+
+if (getSoundPreference()) {
+  defaultSoundPref.checked = true;
+}
+
+if (getMusicPreference()) {
+  defaultMusicPref.checked = true;
+}
+
 /* Physics Constants*/
 export const FPS = 60; // Frames per second
 export const SPEED_OF_LIGHT = 30; // pixels per second
@@ -22,7 +60,6 @@ export const LASER_DIST = 0.6;
 export const LASER_EXPLODE_DUR = 0.1; // Laser explode time in seconds
 
 /* Asteroid Constants*/
-export const ROID_NUM = 5; // starting number of asteroids
 export const ROID_SPEED = 50; // starting asteroid speed in pixels per second
 export const ROID_SIZE = 50; // startin size of asteroids in pixels
 export const ROID_VERTICES = 10; // average number of vertices on each asteroid
@@ -36,12 +73,36 @@ export const ROID_SPAWN_TIME = 1; // One asteroid every three seconds
 export const STARTING_SCORE = 0;
 export const DEBUG = false; // Show ship collision boundary and ship center dot
 export const SAVE_KEY_HIGH_SCORE = 'highscore'; // localstorage of high score.
-export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
-export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
 export const NEXT_LEVEL_POINTS = 1000;
 
 /* Drawing Constants*/
 export const TEXT_SIZE = 40; // Text font height in pixels
 export const TEXT_FADE_TIME = 2.5; // text fade in seconds.
-export const CVS = document.querySelector('canvas');
-export const CTX = CVS.getContext('2d');
+const _CVS = document.querySelector('canvas');
+if (!_CVS) throw new Error("Couldn't find canvas element");
+const _CTX = _CVS.getContext('2d');
+if (!_CTX) throw new Error("Couldn't obtain canvas context");
+
+export const CVS = _CVS;
+export const CTX = _CTX;
+
+let ROID_NUM: number;
+function setDifficulty(difficulty: string): void {
+  switch (difficulty) {
+    case 'easy':
+      ROID_NUM = 5;
+      break;
+    case 'medium':
+      ROID_NUM = 10;
+      break;
+    case 'hard':
+      ROID_NUM = 50;
+      break;
+  }
+}
+
+function getRoidNum(): number {
+  return ROID_NUM;
+}
+
+export { setDifficulty, getRoidNum, getMusicPreference, getSoundPreference };

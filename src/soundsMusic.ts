@@ -2,16 +2,11 @@ import {
   FPS,
   SAVE_KEY_MUSIC_ON,
   SAVE_KEY_SOUND_ON,
-  ROID_NUM,
+  getRoidNum,
+  getSoundPreference,
 } from './constants.js';
 import { getCurrentLevel } from './scoreLevelLives.js';
 import { Roid } from './asteroids.js';
-
-const toggleMusicButton = document.getElementById('toggle-music');
-const toggleSoundButton = document.getElementById('toggle-sound');
-toggleSoundButton.addEventListener('click', toggleSound);
-toggleMusicButton.addEventListener('click', toggleMusic);
-
 /**
  * Plays and stops sounds
  * @param src - Path to sound file
@@ -43,7 +38,7 @@ class Sound {
    *
    */
   play(): void {
-    if (soundOn) {
+    if (getSoundPreference()) {
       this.streamNum = (this.streamNum + 1) % this.streams.length;
       void this.streams[this.streamNum].play();
     }
@@ -97,8 +92,9 @@ class Music {
    *
    */
   setRoidRatio(roids: Roid[]): void {
+    const roidNum = getRoidNum();
     const currentLevel = getCurrentLevel();
-    const roidsTotal = (ROID_NUM + currentLevel) * 7;
+    const roidsTotal = (roidNum + currentLevel) * 7;
     const ratio = roids.length == 0 ? 1 : roids.length / roidsTotal;
 
     this.tempo = 1.0 - 0.75 * (1.0 - ratio);
@@ -123,59 +119,23 @@ const fxLaser = new Sound('sounds/laser.m4a', maxStreams);
 const fxHit = new Sound('sounds/hit.m4a', maxStreams);
 const fxExplode = new Sound('sounds/explode.m4a');
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
-let soundOn = getSoundPreference();
-let musicOn = getMusicPreference();
 
-/**
- *
- * @returns If sound should be playing or not.
- */
-function getSoundPreference(): boolean {
-  const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
-  if (soundPref == null) {
-    localStorage.setItem(SAVE_KEY_SOUND_ON, 'false'); // False if not found
-    return false;
-  }
-  return soundPref === 'true';
+function setMusic(pref: boolean): void {
+  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(pref));
 }
 
-/**
- *
- * @returns If music should be playing or not
- */
-function getMusicPreference(): boolean {
-  const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
-  if (musicPref == null) {
-    localStorage.setItem(SAVE_KEY_MUSIC_ON, 'false'); // False if not found
-    return false;
-  }
-  return musicPref === 'true';
+function setSound(pref: boolean): void {
+  localStorage.setItem(SAVE_KEY_SOUND_ON, String(pref));
 }
 
-/**
- * Flip sound to opposite of existing state
- */
-function toggleSound(): void {
-  soundOn = !soundOn;
-  localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
-  document.getElementById('toggle-sound').blur();
-}
-
-/**
- * Flip music to opposite of existing state
- */
-function toggleMusic(): void {
-  musicOn = !musicOn;
-  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
-  document.getElementById('toggle-music').blur();
-}
-
-/**
- *
- * @returns True if music is on. False if not.
- */
-function getMusicOn(): boolean {
-  return musicOn;
-}
-
-export { Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music };
+export {
+  Sound,
+  Music,
+  setMusic,
+  setSound,
+  music,
+  fxThrust,
+  fxExplode,
+  fxHit,
+  fxLaser,
+};

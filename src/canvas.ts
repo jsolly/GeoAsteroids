@@ -1,10 +1,10 @@
 import {
   FPS,
-  CTX,
-  CVS,
   TEXT_SIZE,
   TEXT_FADE_TIME,
   SHIP_SIZE,
+  CVS,
+  CTX,
 } from './constants.js';
 import { Point } from './utils.js';
 import { Ship } from './ship.js';

@@ -3,9 +3,10 @@ import {
   FPS,
   DEBUG,
   NEXT_LEVEL_POINTS,
+  getMusicPreference,
 } from './constants.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
-import { keyUp, keyDown } from './keybindings.js';
+import { toggleScreen, startGameBtn } from './events.js';
 import {
   drawRoidsRelative,
   moveRoids,
@@ -26,7 +27,7 @@ import {
   drawDebugFeatures,
   setTextProperties,
 } from './canvas.js';
-import { getMusicOn, music } from './soundsMusic.js';
+import { music } from './soundsMusic.js';
 import {
   drawShipRelative,
   drawShipExplosion,
@@ -38,22 +39,13 @@ import {
 } from './ship.js';
 import { drawLasers, moveLasers } from './lasers.js';
 
-let { ship, currRoidBelt } = newGame();
+let ship: Ship;
+let currRoidBelt: roidBelt;
 let nextLevel = NEXT_LEVEL_POINTS;
 let gameInterval: NodeJS.Timer;
 
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
-const el = document.getElementById('start-game');
-el.addEventListener('click', startGame);
-
-function toggleScreen(id: string, toggle: boolean): void {
-  const element = document.getElementById(id);
-  const display = toggle ? 'block' : 'none';
-  element.style.display = display;
-}
-
 function startGame(): void {
+  newGame();
   toggleScreen('start-screen', false);
   toggleScreen('gameArea', true);
   // Set up game loop
@@ -63,12 +55,11 @@ function startGame(): void {
 /**
  * Resets score, ship, and level for a new game.
  */
-function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
+function newGame(): void {
   resetScoreLevelLives();
-  const ship = new Ship();
-  const currRoidBelt = new roidBelt(ship);
+  ship = new Ship();
+  currRoidBelt = new roidBelt(ship);
   newLevel(ship, currRoidBelt);
-  return { ship, currRoidBelt };
 }
 
 /**
@@ -105,15 +96,16 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    ({ ship, currRoidBelt } = newGame());
+    newGame();
     clearInterval(gameInterval);
-    el.innerText = 'Play Again! 🚀';
+    startGameBtn.innerText = 'Play Again! 🚀';
+
     toggleScreen('start-screen', true);
     toggleScreen('gameArea', false);
   }
 
   // tick the music
-  if (getMusicOn()) {
+  if (getMusicPreference()) {
     music.tick();
   }
 
@@ -150,4 +142,4 @@ function update(): void {
   moveRoids(roids);
 }
 
-export { ship, gameOver };
+export { ship, gameOver, startGame };
