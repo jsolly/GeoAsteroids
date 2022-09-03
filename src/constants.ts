@@ -1,3 +1,41 @@
+export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
+export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
+
+/* Preferences from Localstorage */
+/**
+ *
+ * @returns If sound should be playing or not.
+ */
+function getSoundPreference(): boolean {
+  const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
+  return soundPref === 'true'; // Everything comes out of local storage as a string
+}
+
+/**
+ *
+ * @returns If music should be playing or not
+ */
+function getMusicPreference(): boolean {
+  const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
+  return musicPref === 'true'; // Everything comes out of local storage as a string
+}
+
+const defaultSoundPref = document.getElementById(
+  'soundPref',
+) as HTMLInputElement;
+
+const defaultMusicPref = document.getElementById(
+  'musicPref',
+) as HTMLInputElement;
+
+if (getSoundPreference()) {
+  defaultSoundPref.checked = true;
+}
+
+if (getMusicPreference()) {
+  defaultMusicPref.checked = true;
+}
+
 /* Physics Constants*/
 export const FPS = 60; // Frames per second
 export const SPEED_OF_LIGHT = 30; // pixels per second
@@ -35,8 +73,6 @@ export const ROID_SPAWN_TIME = 1; // One asteroid every three seconds
 export const STARTING_SCORE = 0;
 export const DEBUG = false; // Show ship collision boundary and ship center dot
 export const SAVE_KEY_HIGH_SCORE = 'highscore'; // localstorage of high score.
-export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
-export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
 export const NEXT_LEVEL_POINTS = 1000;
 
 /* Drawing Constants*/
@@ -69,4 +105,4 @@ function getRoidNum(): number {
   return ROID_NUM;
 }
 
-export { setDifficulty, getRoidNum };
+export { setDifficulty, getRoidNum, getMusicPreference, getSoundPreference };

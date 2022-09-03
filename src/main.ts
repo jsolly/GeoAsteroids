@@ -3,6 +3,7 @@ import {
   FPS,
   DEBUG,
   NEXT_LEVEL_POINTS,
+  getMusicPreference,
 } from './constants.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 import { toggleScreen, startGameBtn } from './events.js';
@@ -26,7 +27,7 @@ import {
   drawDebugFeatures,
   setTextProperties,
 } from './canvas.js';
-import { getMusicPreference, music } from './soundsMusic.js';
+import { music } from './soundsMusic.js';
 import {
   drawShipRelative,
   drawShipExplosion,

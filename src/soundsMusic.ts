@@ -3,18 +3,10 @@ import {
   SAVE_KEY_MUSIC_ON,
   SAVE_KEY_SOUND_ON,
   getRoidNum,
+  getSoundPreference,
 } from './constants.js';
 import { getCurrentLevel } from './scoreLevelLives.js';
 import { Roid } from './asteroids.js';
-
-const toggleMusicButton = document.getElementById('toggle-music');
-const toggleSoundButton = document.getElementById('toggle-sound');
-if (toggleSoundButton) {
-  toggleSoundButton.addEventListener('click', toggleSound);
-}
-if (toggleMusicButton) {
-  toggleMusicButton.addEventListener('click', toggleMusic);
-}
 /**
  * Plays and stops sounds
  * @param src - Path to sound file
@@ -128,57 +120,6 @@ const fxHit = new Sound('sounds/hit.m4a', maxStreams);
 const fxExplode = new Sound('sounds/explode.m4a');
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 
-/**
- *
- * @returns If sound should be playing or not.
- */
-function getSoundPreference(): boolean {
-  const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
-  if (soundPref == null) {
-    localStorage.setItem(SAVE_KEY_SOUND_ON, 'false'); // False if not found
-    return false;
-  }
-  return soundPref === 'true';
-}
-
-/**
- *
- * @returns If music should be playing or not
- */
-function getMusicPreference(): boolean {
-  const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
-  if (musicPref == null) {
-    localStorage.setItem(SAVE_KEY_MUSIC_ON, 'false'); // False if not found
-    return false;
-  }
-  return musicPref === 'true';
-}
-
-/**
- * Flip sound to opposite of existing state
- */
-function toggleSound(): void {
-  const soundOn = getSoundPreference();
-  localStorage.setItem(SAVE_KEY_SOUND_ON, String(!soundOn));
-  const toggleSound = document.getElementById(
-    'toggle-sound',
-  ) as HTMLButtonElement;
-
-  toggleSound.blur();
-}
-
-/**
- * Flip music to opposite of existing state
- */
-function toggleMusic(): void {
-  const musicOn = getMusicPreference();
-  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(!musicOn));
-  const toggleMusic = document.getElementById(
-    'toggle-music',
-  ) as HTMLButtonElement;
-  toggleMusic.blur();
-}
-
 function setMusic(pref: boolean): void {
   localStorage.setItem(SAVE_KEY_MUSIC_ON, String(pref));
 }
@@ -191,7 +132,6 @@ export {
   Sound,
   Music,
   setMusic,
-  getMusicPreference,
   setSound,
   music,
   fxThrust,
