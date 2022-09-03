@@ -17,7 +17,11 @@
   color: white;
 }
 
-li {
+:is(li, h1) {
+  margin-bottom: 1em;
+}
+
+h2 {
   margin-bottom: 0.5em;
 }
 body {
