@@ -26,7 +26,7 @@ import {
   drawDebugFeatures,
   setTextProperties,
 } from './canvas.js';
-import { getMusicOn, music } from './soundsMusic.js';
+import { getMusicPreference, music } from './soundsMusic.js';
 import {
   drawShipRelative,
   drawShipExplosion,
@@ -38,11 +38,13 @@ import {
 } from './ship.js';
 import { drawLasers, moveLasers } from './lasers.js';
 
-let { ship, currRoidBelt } = newGame();
+let ship: Ship;
+let currRoidBelt: roidBelt;
 let nextLevel = NEXT_LEVEL_POINTS;
 let gameInterval: NodeJS.Timer;
 
 function startGame(): void {
+  newGame();
   toggleScreen('start-screen', false);
   toggleScreen('gameArea', true);
   // Set up game loop
@@ -52,12 +54,11 @@ function startGame(): void {
 /**
  * Resets score, ship, and level for a new game.
  */
-function newGame(): { ship: Ship; currRoidBelt: roidBelt } {
+function newGame(): void {
   resetScoreLevelLives();
-  const ship = new Ship();
-  const currRoidBelt = new roidBelt(ship);
+  ship = new Ship();
+  currRoidBelt = new roidBelt(ship);
   newLevel(ship, currRoidBelt);
-  return { ship, currRoidBelt };
 }
 
 /**
@@ -94,17 +95,16 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    ({ ship, currRoidBelt } = newGame());
+    newGame();
     clearInterval(gameInterval);
-    if (startGameBtn) {
-      startGameBtn.innerText = 'Play Again! 🚀';
-    }
+    startGameBtn.innerText = 'Play Again! 🚀';
+
     toggleScreen('start-screen', true);
     toggleScreen('gameArea', false);
   }
 
   // tick the music
-  if (getMusicOn()) {
+  if (getMusicPreference()) {
     music.tick();
   }
 

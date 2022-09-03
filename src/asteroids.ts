@@ -1,7 +1,6 @@
 import { Point } from './utils.js';
 import { updateScores, getCurrentLevel } from './scoreLevelLives.js';
 import {
-  ROID_NUM,
   ROID_SIZE,
   ROID_SPEED,
   FPS,
@@ -14,6 +13,7 @@ import {
   ROID_SPAWN_TIME,
   CVS,
   CTX,
+  getRoidNum,
 } from './constants.js';
 import { Ship } from './ship.js';
 
@@ -47,11 +47,12 @@ class Roid {
 }
 
 class roidBelt {
+  ROID_NUM = getRoidNum();
   roids: Roid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
   private currentLevel = getCurrentLevel();
   constructor(ship: Ship) {
-    for (let i = 0; i < ROID_NUM + this.currentLevel; i++) {
+    for (let i = 0; i < this.ROID_NUM + this.currentLevel; i++) {
       this.addRoid(ship);
     }
   }

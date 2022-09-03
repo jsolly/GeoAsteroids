@@ -22,7 +22,6 @@ export const LASER_DIST = 0.6;
 export const LASER_EXPLODE_DUR = 0.1; // Laser explode time in seconds
 
 /* Asteroid Constants*/
-export const ROID_NUM = 5; // starting number of asteroids
 export const ROID_SPEED = 50; // starting asteroid speed in pixels per second
 export const ROID_SIZE = 50; // startin size of asteroids in pixels
 export const ROID_VERTICES = 10; // average number of vertices on each asteroid
@@ -50,3 +49,24 @@ if (!_CTX) throw new Error("Couldn't obtain canvas context");
 
 export const CVS = _CVS;
 export const CTX = _CTX;
+
+let ROID_NUM: number;
+function setDifficulty(difficulty: string): void {
+  switch (difficulty) {
+    case 'easy':
+      ROID_NUM = 5;
+      break;
+    case 'medium':
+      ROID_NUM = 10;
+      break;
+    case 'hard':
+      ROID_NUM = 50;
+      break;
+  }
+}
+
+function getRoidNum(): number {
+  return ROID_NUM;
+}
+
+export { setDifficulty, getRoidNum };

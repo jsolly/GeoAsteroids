@@ -2,7 +2,7 @@ import {
   FPS,
   SAVE_KEY_MUSIC_ON,
   SAVE_KEY_SOUND_ON,
-  ROID_NUM,
+  getRoidNum,
 } from './constants.js';
 import { getCurrentLevel } from './scoreLevelLives.js';
 import { Roid } from './asteroids.js';
@@ -46,7 +46,7 @@ class Sound {
    *
    */
   play(): void {
-    if (soundOn) {
+    if (getSoundPreference()) {
       this.streamNum = (this.streamNum + 1) % this.streams.length;
       void this.streams[this.streamNum].play();
     }
@@ -100,8 +100,9 @@ class Music {
    *
    */
   setRoidRatio(roids: Roid[]): void {
+    const roidNum = getRoidNum();
     const currentLevel = getCurrentLevel();
-    const roidsTotal = (ROID_NUM + currentLevel) * 7;
+    const roidsTotal = (roidNum + currentLevel) * 7;
     const ratio = roids.length == 0 ? 1 : roids.length / roidsTotal;
 
     this.tempo = 1.0 - 0.75 * (1.0 - ratio);
@@ -126,8 +127,6 @@ const fxLaser = new Sound('sounds/laser.m4a', maxStreams);
 const fxHit = new Sound('sounds/hit.m4a', maxStreams);
 const fxExplode = new Sound('sounds/explode.m4a');
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
-let soundOn = getSoundPreference();
-let musicOn = getMusicPreference();
 
 /**
  *
@@ -159,36 +158,44 @@ function getMusicPreference(): boolean {
  * Flip sound to opposite of existing state
  */
 function toggleSound(): void {
-  soundOn = !soundOn;
-  localStorage.setItem(SAVE_KEY_SOUND_ON, String(soundOn));
-  const toggleSound = document.getElementById('toggle-sound');
-  if (toggleSound) {
-    toggleSound.blur();
-  } else {
-    throw Error('Toggle Sound Element not found by ID');
-  }
+  const soundOn = getSoundPreference();
+  localStorage.setItem(SAVE_KEY_SOUND_ON, String(!soundOn));
+  const toggleSound = document.getElementById(
+    'toggle-sound',
+  ) as HTMLButtonElement;
+
+  toggleSound.blur();
 }
 
 /**
  * Flip music to opposite of existing state
  */
 function toggleMusic(): void {
-  musicOn = !musicOn;
-  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(musicOn));
-  const toggleMusic = document.getElementById('toggle-music');
-  if (toggleMusic) {
-    toggleMusic.blur();
-  } else {
-    throw Error('Toggle Music Element not found by ID');
-  }
+  const musicOn = getMusicPreference();
+  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(!musicOn));
+  const toggleMusic = document.getElementById(
+    'toggle-music',
+  ) as HTMLButtonElement;
+  toggleMusic.blur();
 }
 
-/**
- *
- * @returns True if music is on. False if not.
- */
-function getMusicOn(): boolean {
-  return musicOn;
+function setMusic(pref: boolean): void {
+  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(pref));
 }
 
-export { Sound, Music, getMusicOn, fxThrust, fxExplode, fxHit, fxLaser, music };
+function setSound(pref: boolean): void {
+  localStorage.setItem(SAVE_KEY_SOUND_ON, String(pref));
+}
+
+export {
+  Sound,
+  Music,
+  setMusic,
+  getMusicPreference,
+  setSound,
+  music,
+  fxThrust,
+  fxExplode,
+  fxHit,
+  fxLaser,
+};
