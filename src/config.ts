@@ -73,10 +73,13 @@ export const NEXT_LEVEL_POINTS = 1000;
 /* Drawing Constants*/
 export const TEXT_SIZE = 40; // Text font height in pixels
 export const TEXT_FADE_TIME = 2.5; // text fade in seconds.
-export const CVS = document.querySelector('canvas');
-if (!CVS) throw new Error("Couldn't find canvas element");
-export const CTX = CVS.getContext('2d');
-if (!CTX) throw new Error("Couldn't obtain canvas context");
+const _CVS = document.querySelector('canvas');
+if (!_CVS) throw new Error("Couldn't find canvas element");
+const _CTX = _CVS.getContext('2d');
+if (!_CTX) throw new Error("Couldn't obtain canvas context");
+
+export const CVS = _CVS;
+export const CTX = _CTX;
 
 export enum Difficulty {
   'easy',
