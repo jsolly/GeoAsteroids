@@ -1,23 +1,18 @@
-export const SAVE_KEY_SOUND_ON = 'musicOn'; // localstorage of high score.
-export const SAVE_KEY_MUSIC_ON = 'soundOn'; // localstorage of high score.
+export const LOCAL_STORAGE_KEYS = {
+  soundOn: 'soundOn',
+  musicOn: 'musicOn',
+};
 
 /* Preferences from Localstorage */
-/**
- *
- * @returns If sound should be playing or not.
- */
-function getSoundPreference(): boolean {
-  const soundPref = localStorage.getItem(SAVE_KEY_SOUND_ON);
-  return soundPref === 'true'; // Everything comes out of local storage as a string
+
+export function soundIsOn(): boolean {
+  const soundPref = localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn);
+  return soundPref === 'true';
 }
 
-/**
- *
- * @returns If music should be playing or not
- */
-function getMusicPreference(): boolean {
-  const musicPref = localStorage.getItem(SAVE_KEY_MUSIC_ON);
-  return musicPref === 'true'; // Everything comes out of local storage as a string
+export function musicIsOn(): boolean {
+  const musicPref = localStorage.getItem(LOCAL_STORAGE_KEYS.musicOn);
+  return musicPref === 'true';
 }
 
 const defaultSoundPref = document.getElementById(
@@ -28,11 +23,11 @@ const defaultMusicPref = document.getElementById(
   'musicPref',
 ) as HTMLInputElement;
 
-if (getSoundPreference()) {
+if (soundIsOn()) {
   defaultSoundPref.checked = true;
 }
 
-if (getMusicPreference()) {
+if (musicIsOn()) {
   defaultMusicPref.checked = true;
 }
 
@@ -78,31 +73,28 @@ export const NEXT_LEVEL_POINTS = 1000;
 /* Drawing Constants*/
 export const TEXT_SIZE = 40; // Text font height in pixels
 export const TEXT_FADE_TIME = 2.5; // text fade in seconds.
-const _CVS = document.querySelector('canvas');
-if (!_CVS) throw new Error("Couldn't find canvas element");
-const _CTX = _CVS.getContext('2d');
-if (!_CTX) throw new Error("Couldn't obtain canvas context");
+export const CVS = document.querySelector('canvas');
+if (!CVS) throw new Error("Couldn't find canvas element");
+export const CTX = CVS.getContext('2d');
+if (!CTX) throw new Error("Couldn't obtain canvas context");
 
-export const CVS = _CVS;
-export const CTX = _CTX;
-
-let ROID_NUM: number;
-function setDifficulty(difficulty: string): void {
-  switch (difficulty) {
-    case 'easy':
-      ROID_NUM = 5;
-      break;
-    case 'medium':
-      ROID_NUM = 10;
-      break;
-    case 'hard':
-      ROID_NUM = 50;
-      break;
-  }
+export enum Difficulty {
+  'easy',
+  'medium',
+  'hard',
 }
 
-function getRoidNum(): number {
-  return ROID_NUM;
+const ROID_NUM_BY_DIFFICULTY: Record<number, Difficulty> = {
+  [Difficulty.easy]: 5,
+  [Difficulty.medium]: 10,
+  [Difficulty.hard]: 50,
+};
+
+let difficulty: Difficulty;
+export function setDifficulty(newDifficulty: Difficulty): void {
+  difficulty = newDifficulty;
 }
 
-export { setDifficulty, getRoidNum, getMusicPreference, getSoundPreference };
+export function getRoidNum(): number {
+  return ROID_NUM_BY_DIFFICULTY[difficulty];
+}

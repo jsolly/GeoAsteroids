@@ -9,7 +9,7 @@ import {
   FRICTION,
   CVS,
   CTX,
-} from './constants.js';
+} from './config.js';
 import { fxExplode, fxThrust } from './soundsMusic.js';
 import { Laser } from './lasers.js';
 import { Point } from './utils.js';

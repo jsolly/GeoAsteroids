@@ -1,6 +1,6 @@
 import { keyDown, keyUp } from './keybindings.js';
 import { setSound, setMusic } from './soundsMusic.js';
-import { setDifficulty } from './constants.js';
+import { setDifficulty, Difficulty } from './config.js';
 
 import { startGame } from './main.js';
 document.addEventListener('keydown', keyDown);
@@ -14,36 +14,28 @@ const hardBtn = document.getElementById('hard') as HTMLInputElement;
 
 startGameBtn.addEventListener('click', startGame);
 soundCheckBox.addEventListener('change', function (): void {
-  if (this.checked) {
-    setSound(true);
-  } else {
-    setSound(false);
-  }
+  setSound(this.checked);
 });
 
 musicCheckBox.addEventListener('change', function (): void {
-  if (this.checked) {
-    setMusic(true);
-  } else {
-    setMusic(false);
-  }
+  setMusic(this.checked);
 });
 
 easyBtn.addEventListener('change', function (): void {
   if (this.checked) {
-    setDifficulty('easy');
+    setDifficulty(Difficulty.easy);
   }
 });
 
 medBtn.addEventListener('change', function (): void {
   if (this.checked) {
-    setDifficulty('medium');
+    setDifficulty(Difficulty.medium);
   }
 });
 
 hardBtn.addEventListener('change', function (): void {
   if (this.checked) {
-    setDifficulty('hard');
+    setDifficulty(Difficulty.hard);
   }
 });
 

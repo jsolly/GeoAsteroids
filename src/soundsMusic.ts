@@ -1,10 +1,4 @@
-import {
-  FPS,
-  SAVE_KEY_MUSIC_ON,
-  SAVE_KEY_SOUND_ON,
-  getRoidNum,
-  getSoundPreference,
-} from './constants.js';
+import { FPS, LOCAL_STORAGE_KEYS, getRoidNum, soundIsOn } from './config.js';
 import { getCurrentLevel } from './scoreLevelLives.js';
 import { Roid } from './asteroids.js';
 /**
@@ -38,7 +32,7 @@ class Sound {
    *
    */
   play(): void {
-    if (getSoundPreference()) {
+    if (soundIsOn()) {
       this.streamNum = (this.streamNum + 1) % this.streams.length;
       void this.streams[this.streamNum].play();
     }
@@ -121,11 +115,11 @@ const fxExplode = new Sound('sounds/explode.m4a');
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 
 function setMusic(pref: boolean): void {
-  localStorage.setItem(SAVE_KEY_MUSIC_ON, String(pref));
+  localStorage.setItem(LOCAL_STORAGE_KEYS.musicOn, String(pref));
 }
 
 function setSound(pref: boolean): void {
-  localStorage.setItem(SAVE_KEY_SOUND_ON, String(pref));
+  localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, String(pref));
 }
 
 export {

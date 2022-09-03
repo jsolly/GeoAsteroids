@@ -1,7 +1,7 @@
 import { shootLaser } from './lasers.js';
 import { ship } from './main.js';
 
-import { FPS, TURN_SPEED } from './constants.js';
+import { FPS, TURN_SPEED } from './config.js';
 
 /**
  *

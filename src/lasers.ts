@@ -6,7 +6,7 @@ import {
   LASER_DIST,
   CVS,
   CTX,
-} from './constants.js';
+} from './config.js';
 import { Ship } from './ship.js';
 import { fxLaser } from './soundsMusic.js';
 import { Point } from './utils.js';

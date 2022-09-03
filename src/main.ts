@@ -3,8 +3,8 @@ import {
   FPS,
   DEBUG,
   NEXT_LEVEL_POINTS,
-  getMusicPreference,
-} from './constants.js';
+  musicIsOn,
+} from './config.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 import { toggleScreen, startGameBtn } from './events.js';
 import {
@@ -105,7 +105,7 @@ function update(): void {
   }
 
   // tick the music
-  if (getMusicPreference()) {
+  if (musicIsOn()) {
     music.tick();
   }
 

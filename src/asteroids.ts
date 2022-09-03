@@ -14,7 +14,7 @@ import {
   CVS,
   CTX,
   getRoidNum,
-} from './constants.js';
+} from './config.js';
 import { Ship } from './ship.js';
 
 class Roid {
@@ -46,13 +46,13 @@ class Roid {
   }
 }
 
-class roidBelt {
-  ROID_NUM = getRoidNum();
+class RoidBelt {
+  roidNum = getRoidNum();
   roids: Roid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
   private currentLevel = getCurrentLevel();
   constructor(ship: Ship) {
-    for (let i = 0; i < this.ROID_NUM + this.currentLevel; i++) {
+    for (let i = 0; i < this.roidNum + this.currentLevel; i++) {
       this.addRoid(ship);
     }
   }
@@ -68,7 +68,7 @@ class roidBelt {
   }
 }
 
-function spawnRoids(currRoidBelt: roidBelt, ship: Ship): void {
+function spawnRoids(currRoidBelt: RoidBelt, ship: Ship): void {
   if (currRoidBelt.spawnTime == 0) {
     for (let i = 0; i < 4; i++) {
       currRoidBelt.addRoid(ship);
@@ -203,6 +203,6 @@ export {
   drawRoidsRelative,
   moveRoids,
   spawnRoids,
-  roidBelt,
+  RoidBelt as roidBelt,
   Roid,
 };

@@ -5,7 +5,7 @@ import {
   SHIP_SIZE,
   CVS,
   CTX,
-} from './constants.js';
+} from './config.js';
 import { Point } from './utils.js';
 import { Ship } from './ship.js';
 let text: string;

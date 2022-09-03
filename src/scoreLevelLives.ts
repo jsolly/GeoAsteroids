@@ -6,7 +6,7 @@ import {
   TEXT_SIZE,
   CVS,
   CTX,
-} from './constants.js';
+} from './config.js';
 import { Point } from './utils.js';
 import { setTextProperties, drawTriangle } from './canvas.js';
 import { Ship } from './ship.js';
