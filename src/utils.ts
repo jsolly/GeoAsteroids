@@ -15,8 +15,11 @@ class Point {
   }
 
   distToPoint(targetPoint: Point): number {
-    return Math.sqrt(
-      Math.pow(this.x - targetPoint.x, 2) + Math.pow(this.y - targetPoint.y, 2),
+    return Math.floor(
+      Math.sqrt(
+        Math.pow(this.x - targetPoint.x, 2) +
+          Math.pow(this.y - targetPoint.y, 2),
+      ),
     );
   }
 }

@@ -11,12 +11,11 @@ import {
   ROID_POINTS_SML,
   DEBUG,
   ROID_SPAWN_TIME,
-  CVS,
   CTX,
+  CVS,
   getRoidNum,
 } from './config.js';
 import { Ship } from './ship.js';
-
 class Roid {
   readonly a: number;
   readonly offsets: number[] = [];

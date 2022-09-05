@@ -38,6 +38,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-tsdoc": "^0.2.16",
     "husky": "^8.0.1",
+    "jsdom": "^20.0.0",
     "lint-staged": "^13.0.3",
     "prettier": "2.7.1",
     "typescript": "^4.8.2",
@@ -49,5 +50,8 @@
       "eslint",
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "happy-dom": "^6.0.4"
   }
 }
