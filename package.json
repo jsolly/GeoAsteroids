@@ -52,6 +52,8 @@
     ]
   },
   "dependencies": {
+    "@types/jsdom": "^20.0.0",
+    "canvas": "^2.10.0",
     "happy-dom": "^6.0.4"
   }
 }
