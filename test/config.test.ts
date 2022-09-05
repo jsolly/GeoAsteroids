@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-
 import { LOCAL_STORAGE_KEYS, soundIsOn, musicIsOn } from '../src/config';
 
 test.concurrent('Local Storage Keys', () => {
