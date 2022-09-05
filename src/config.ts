@@ -77,14 +77,7 @@ export const TEXT_FADE_TIME = 2.5; // text fade in seconds.
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const CVS = document.querySelector('canvas')!;
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-export const CTX = getContext()!;
-function getContext(): CanvasRenderingContext2D | null {
-  if (CVS) {
-    return CVS.getContext('2d');
-  } else {
-    return null;
-  }
-}
+export const CTX = CVS.getContext('2d')!;
 
 export enum Difficulty {
   'easy',
