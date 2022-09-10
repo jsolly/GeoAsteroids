@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { Point } from '../src/utils';
-import { Laser, shootLaser } from '../src/lasers';
+import { Laser, moveLasers, shootLaser } from '../src/lasers';
 import { Ship } from '../src/ship';
 
 test.concurrent('Laser Creation', () => {
@@ -15,4 +15,14 @@ test.concurrent('Shoot Laser', () => {
   const currentLaserCount = testShip.lasers.length;
   shootLaser(testShip);
   expect(testShip.lasers.length).toEqual(currentLaserCount + 1);
+});
+
+test.concurrent('Move Lasers', () => {
+  const testShip = new Ship(3, false);
+  shootLaser(testShip);
+
+  const firstLaser = testShip.lasers[0];
+  const firstLaserLocationY = firstLaser.centroid.y;
+  moveLasers(testShip);
+  expect(firstLaser.centroid.x).not.equal(firstLaserLocationY);
 });

@@ -1,5 +1,12 @@
 import { expect, test } from 'vitest';
-import { LOCAL_STORAGE_KEYS, soundIsOn, musicIsOn } from '../src/config';
+import {
+  LOCAL_STORAGE_KEYS,
+  soundIsOn,
+  musicIsOn,
+  getRoidNum,
+  setDifficulty,
+  Difficulty,
+} from '../src/config';
 
 test.concurrent('Local Storage Keys', () => {
   expect(LOCAL_STORAGE_KEYS.soundOn).toBe('soundOn');
@@ -24,4 +31,9 @@ test.concurrent('Music On', () => {
 test.concurrent('Music Off', () => {
   localStorage.setItem('musicOn', 'false');
   expect(musicIsOn()).toBe(false);
+});
+test.concurrent('Set Difficulty', () => {
+  expect(getRoidNum()).toBe(undefined);
+  setDifficulty(Difficulty.easy);
+  expect(getRoidNum()).toBe(5);
 });
