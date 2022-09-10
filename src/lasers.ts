@@ -1,12 +1,4 @@
-import {
-  SHIP_SIZE,
-  FPS,
-  LASER_SPEED,
-  LASER_MAX,
-  LASER_DIST,
-  CVS,
-  CTX,
-} from './config.js';
+import { FPS, LASER_SPEED, LASER_MAX, LASER_DIST, CVS } from './config.js';
 import { Ship } from './ship.js';
 import { fxLaser } from './soundsMusic.js';
 import { Point } from './utils.js';
@@ -46,65 +38,6 @@ function shootLaser(ship: Ship): void {
 }
 
 /**
- * Draw lasers from an array on the canvas
- */
-function drawLasers(ship: Ship): void {
-  for (const laser of ship.lasers) {
-    const ly = laser.centroid.y;
-    const lx = laser.centroid.x;
-    const shipX = ship.centroid.x;
-    const shipY = ship.centroid.y;
-    if (laser.explodeTime == 0) {
-      CTX.fillStyle = 'salmon';
-      CTX.beginPath();
-      CTX.arc(
-        lx - shipX + CVS.width / 2,
-        ly - shipY + CVS.height / 2,
-        SHIP_SIZE / 15,
-        0,
-        Math.PI * 2,
-        false,
-      );
-      CTX.fill();
-    } else {
-      // draw explosion
-      CTX.fillStyle = 'orangered';
-      CTX.beginPath();
-      CTX.arc(
-        lx - shipX + CVS.width / 2,
-        ly - shipY + CVS.height / 2,
-        ship.r * 0.75,
-        0,
-        Math.PI * 2,
-        false,
-      );
-      CTX.fill();
-      CTX.fillStyle = 'salmon';
-      CTX.beginPath();
-      CTX.arc(
-        lx - (shipX - CVS.width),
-        ly - (shipY - CVS.height),
-        ship.r * 0.5,
-        0,
-        Math.PI * 2,
-        false,
-      );
-      CTX.fill();
-      CTX.fillStyle = 'pink';
-      CTX.beginPath();
-      CTX.arc(
-        lx - (shipX - CVS.width),
-        ly - (shipY - CVS.height),
-        ship.r * 0.25,
-        0,
-        Math.PI * 2,
-        false,
-      );
-      CTX.fill();
-    }
-  }
-}
-/**
  * Move all lasers in an array by their x and y velocity
  */
 function moveLasers(ship: Ship): void {
@@ -137,4 +70,4 @@ function moveLasers(ship: Ship): void {
   }
 }
 
-export { drawLasers, shootLaser, moveLasers, Laser };
+export { shootLaser, moveLasers, Laser };

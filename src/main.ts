@@ -7,12 +7,7 @@ import {
 } from './config.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 import { toggleScreen, startGameBtn } from './events.js';
-import {
-  drawRoidsRelative,
-  moveRoids,
-  spawnRoids,
-  roidBelt,
-} from './asteroids.js';
+import { moveRoids, spawnRoids, roidBelt } from './asteroids.js';
 import {
   drawScores,
   drawLives,
@@ -25,19 +20,21 @@ import {
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
+  drawLasers,
   setTextProperties,
+  drawShipRelative,
+  drawShipExplosion,
+  drawRoidsRelative,
 } from './canvas.js';
 import { music } from './soundsMusic.js';
 import {
-  drawShipRelative,
-  drawShipExplosion,
   thrustShip,
   moveShip,
   setBlinkOn,
   setExploding,
   Ship,
 } from './ship.js';
-import { drawLasers, moveLasers } from './lasers.js';
+import { moveLasers } from './lasers.js';
 
 let ship: Ship;
 let currRoidBelt: roidBelt;
