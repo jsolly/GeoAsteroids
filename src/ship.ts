@@ -46,28 +46,27 @@ class Ship {
   die(): void {
     this.dead = true;
   }
-}
 
-/**
- * Set ship to blinking (invulnerable)
- */
-function setBlinkOn(ship: Ship): void {
-  ship.blinkOn = ship.blinkCount % 2 == 0;
-}
-
-/**
- * As long as a ship has an explode time, it is exploding.
- */
-function setExploding(ship: Ship): void {
-  ship.exploding = ship.explodeTime > 0;
-}
-/**
- * Set ship explode time. It will explode for SHIP_EXPLODE_DUR
- */
-function explodeShip(ship: Ship): void {
-  ship.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
-  ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-  fxExplode.play();
+  /**
+   * Set ship to blinking (invulnerable)
+   */
+  setBlinkOn(): void {
+    this.blinkOn = this.blinkCount % 2 == 0;
+  }
+  /**
+   * As long as a ship has an explode time, it is exploding.
+   */
+  setExploding(): void {
+    this.exploding = this.explodeTime > 0;
+  }
+  /**
+   * Set ship explode time. It will explode for SHIP_EXPLODE_DUR
+   */
+  explode(): void {
+    this.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+    this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+    fxExplode.play();
+  }
 }
 
 /**
@@ -101,4 +100,4 @@ function moveShip(ship: Ship): void {
   );
 }
 
-export { explodeShip, thrustShip, moveShip, setBlinkOn, setExploding, Ship };
+export { thrustShip, moveShip, Ship };

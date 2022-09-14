@@ -27,13 +27,7 @@ import {
   drawRoidsRelative,
 } from './canvas.js';
 import { music } from './soundsMusic.js';
-import {
-  thrustShip,
-  moveShip,
-  setBlinkOn,
-  setExploding,
-  Ship,
-} from './ship.js';
+import { thrustShip, moveShip, Ship } from './ship.js';
 import { moveLasers } from './lasers.js';
 
 let ship: Ship;
@@ -83,8 +77,8 @@ function update(): void {
     drawDebugFeatures(ship);
   }
 
-  setBlinkOn(ship);
-  setExploding(ship);
+  ship.setBlinkOn();
+  ship.setExploding();
   drawSpace();
   drawRoidsRelative(ship, roids);
   drawScores();

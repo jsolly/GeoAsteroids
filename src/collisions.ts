@@ -1,4 +1,4 @@
-import { Ship, explodeShip } from './ship.js';
+import { Ship } from './ship.js';
 import { roidBelt, destroyRoid, Roid } from './asteroids.js';
 import { music, fxHit } from './soundsMusic.js';
 import { FPS, LASER_EXPLODE_DUR } from './config.js';
@@ -37,7 +37,7 @@ function detectRoidHits(ship: Ship, roidBelt: roidBelt): void {
           ship.centroid.distToPoint(roids[i].centroid) <
           ship.r + roids[i].r
         ) {
-          explodeShip(ship);
+          ship.explode();
           destroyRoid(i, roids);
           fxHit.play();
 
