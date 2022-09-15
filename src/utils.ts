@@ -1,3 +1,5 @@
+import { SAVE_KEY_HIGH_SCORE } from './config.js';
+
 /**
  *
  * @param x1 - First x
@@ -24,4 +26,24 @@ class Point {
   }
 }
 
-export { Point };
+/**
+ *
+ * @returns - The current high score.
+ */
+function getHighScore(): number {
+  const highScore = localStorage.getItem(SAVE_KEY_HIGH_SCORE);
+  if (highScore == null) {
+    localStorage.setItem(SAVE_KEY_HIGH_SCORE, '0'); // set to 0 if null
+    return 0;
+  }
+  return Number(localStorage.getItem(SAVE_KEY_HIGH_SCORE));
+}
+
+function updateHighScore(currScore: number): void {
+  const highScore = getHighScore();
+  if (currScore > highScore) {
+    localStorage.setItem(SAVE_KEY_HIGH_SCORE, String(currScore));
+  }
+}
+
+export { Point, getHighScore, updateHighScore };

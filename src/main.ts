@@ -4,36 +4,35 @@ import {
   DEBUG,
   NEXT_LEVEL_POINTS,
   musicIsOn,
+  STARTING_SCORE,
+  START_LEVEL,
 } from './config.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 import { toggleScreen, startGameBtn } from './events.js';
 import { moveRoids, spawnRoids, roidBelt } from './asteroids.js';
 import {
-  drawScores,
-  drawLives,
-  currentScore,
-  newLevel,
-  resetScoreLevelLives,
-} from './scoreLevelLives.js';
-import {
   drawGameText,
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
-  drawLasers,
   setTextProperties,
-  drawShipRelative,
-  drawShipExplosion,
-  drawRoidsRelative,
+  drawScores,
+  drawLives,
+  newLevelText,
 } from './canvas.js';
 import { music } from './soundsMusic.js';
 import { thrustShip, moveShip, Ship } from './ship.js';
 import { moveLasers } from './lasers.js';
+import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
+import { drawLasers } from './lasersCanv.js';
+import { drawRoidsRelative } from './asteroidsCanv.js';
 
 let ship: Ship;
 let currRoidBelt: roidBelt;
 let nextLevel = NEXT_LEVEL_POINTS;
 let gameInterval: NodeJS.Timer;
+let currScore = STARTING_SCORE;
+let currLevel = START_LEVEL;
 
 function startGame(): void {
   newGame();
@@ -47,10 +46,24 @@ function startGame(): void {
  * Resets score, ship, and level for a new game.
  */
 function newGame(): void {
-  resetScoreLevelLives();
   ship = new Ship();
   currRoidBelt = new roidBelt(ship);
   newLevel(ship, currRoidBelt);
+  currScore = STARTING_SCORE;
+  currLevel = START_LEVEL;
+}
+
+/**
+ * Start a new level. This is called on game start and when the player
+ * levels up
+ */
+function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
+  newLevelText(currLevel);
+  currRoidBelt.addRoid(ship);
+}
+
+function updateCurrScore(valtoAdd: number): void {
+  currScore += valtoAdd;
 }
 
 /**
@@ -66,7 +79,7 @@ function gameOver(ship: Ship): void {
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
-  if (currentScore > nextLevel) {
+  if (currScore > nextLevel) {
     newLevel(ship, currRoidBelt);
     nextLevel += 1000;
   }
@@ -81,7 +94,7 @@ function update(): void {
   ship.setExploding();
   drawSpace();
   drawRoidsRelative(ship, roids);
-  drawScores();
+  drawScores(currScore);
   drawLives(ship);
 
   if (getTextAlpha() >= 0) {
@@ -133,4 +146,12 @@ function update(): void {
   moveRoids(roids);
 }
 
-export { ship, gameOver, startGame };
+export {
+  ship,
+  gameOver,
+  startGame,
+  currScore,
+  currLevel,
+  updateCurrScore,
+  newLevel,
+};

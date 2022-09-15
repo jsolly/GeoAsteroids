@@ -1,6 +1,6 @@
 import { FPS, LOCAL_STORAGE_KEYS, getRoidNum, soundIsOn } from './config.js';
-import { getCurrentLevel } from './scoreLevelLives.js';
 import { Roid } from './asteroids.js';
+import { currLevel } from './main.js';
 /**
  * Plays and stops sounds
  * @param src - Path to sound file
@@ -87,8 +87,7 @@ class Music {
    */
   setRoidRatio(roids: Roid[]): void {
     const roidNum = getRoidNum();
-    const currentLevel = getCurrentLevel();
-    const roidsTotal = (roidNum + currentLevel) * 7;
+    const roidsTotal = (roidNum + currLevel) * 7;
     const ratio = roids.length == 0 ? 1 : roids.length / roidsTotal;
 
     this.tempo = 1.0 - 0.75 * (1.0 - ratio);

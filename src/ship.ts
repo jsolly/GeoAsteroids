@@ -12,7 +12,7 @@ import {
 import { fxExplode, fxThrust } from './soundsMusic.js';
 import { Laser } from './lasers.js';
 import { Point } from './utils.js';
-import { drawThruster } from './canvas.js';
+import { drawThruster } from './shipCanv.js';
 
 /**
  *

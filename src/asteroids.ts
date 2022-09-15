@@ -1,5 +1,4 @@
 import { Point } from './utils.js';
-import { updateScores, getCurrentLevel } from './scoreLevelLives.js';
 import {
   ROID_SIZE,
   ROID_SPEED,
@@ -13,6 +12,7 @@ import {
   getRoidNum,
 } from './config.js';
 import { Ship } from './ship.js';
+import { currLevel, updateCurrScore } from './main.js';
 class Roid {
   readonly a: number;
   readonly offsets: number[] = [];
@@ -21,8 +21,7 @@ class Roid {
   yv: number;
 
   constructor(public centroid: Point, public r: number) {
-    const level = getCurrentLevel();
-    const lvlMult = 1 + 0.1 * level;
+    const lvlMult = 1 + 0.1 * currLevel;
     this.a = Math.random() * Math.PI * 2; // in radians
     this.xv =
       ((Math.random() * ROID_SPEED * lvlMult) / FPS) *
@@ -46,7 +45,7 @@ class RoidBelt {
   roidNum = getRoidNum();
   roids: Roid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
-  private currentLevel = getCurrentLevel();
+  private currentLevel = currLevel;
   constructor(ship: Ship) {
     for (let i = 0; i < this.roidNum + this.currentLevel; i++) {
       this.addRoid(ship);
@@ -99,7 +98,7 @@ function destroyRoid(i: number, roids: Roid[]): void {
   } else {
     score += ROID_POINTS_SML;
   }
-  updateScores(score);
+  updateCurrScore(score);
   roids.splice(i, 1);
 }
 
