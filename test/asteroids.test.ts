@@ -8,7 +8,7 @@ import {
   moveRoids,
 } from '../src/asteroids';
 import { Ship } from '../src/ship';
-import { newLevel } from '../src/scoreLevelLives';
+import { newLevel } from '../src/main';
 
 test.concurrent('Roid Creation', () => {
   const roidPoint = new Point(10, 20);
