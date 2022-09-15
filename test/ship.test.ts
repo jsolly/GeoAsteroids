@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { Ship } from '../src/ship';
+import { moveShip, Ship, thrustShip } from '../src/ship';
 
 test.concurrent('Ship Creation', () => {
   const testShip = new Ship();
@@ -20,4 +20,24 @@ test.concurrent('Ship setBlinkOn', () => {
   testShip.blinkCount = 1; // Simulate odd count (no blink)
   testShip.setBlinkOn();
   expect(testShip.blinkOn).toBeFalsy();
+});
+
+test.concurrent('Thrust Ship', () => {
+  const testShip = new Ship();
+  testShip.thrusting = true;
+  thrustShip(testShip);
+  expect(testShip.xv).toBeLessThan(0);
+  expect(testShip.yv).toBeLessThan(0);
+});
+
+test.concurrent('Move Ship', () => {
+  const testShip = new Ship();
+  testShip.rot = 1;
+  moveShip(testShip);
+  expect(testShip.a).toBeGreaterThan(0);
+  testShip.xv = 1;
+  testShip.yv = 1;
+  moveShip(testShip);
+  expect(testShip.centroid.x).toBeGreaterThan(0);
+  expect(testShip.centroid.y).toBeGreaterThan(0);
 });

@@ -54,18 +54,18 @@ class Ship {
     this.blinkOn = this.blinkCount % 2 == 0;
   }
   /**
-   * As long as a ship has an explode time, it is exploding.
-   */
-  setExploding(): void {
-    this.exploding = this.explodeTime > 0;
-  }
-  /**
    * Set ship explode time. It will explode for SHIP_EXPLODE_DUR
    */
   explode(): void {
     this.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
     this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
     fxExplode.play();
+  }
+  /**
+   * As long as a ship has an explode time, it is exploding.
+   */
+  setExploding(): void {
+    this.exploding = this.explodeTime > 0;
   }
 }
 
