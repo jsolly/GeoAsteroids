@@ -1,21 +1,13 @@
 import { SAVE_KEY_HIGH_SCORE } from './config.js';
-
-/**
- *
- * @param x1 - First x
- * @param y1 - First y
- * @param x2 - Second x
- * @param y2 - Second y
- * @returns The distance between two points in pixels
- */
-
 class Point {
   constructor(readonly x: number, readonly y: number) {}
 
   movePoint(x: number, y: number): Point {
     return new Point(x, y);
   }
-
+  /**
+   * Returns the euclidian distance from the Point instance to another Point instance.
+   */
   distToPoint(targetPoint: Point): number {
     return Math.floor(
       Math.sqrt(
