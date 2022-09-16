@@ -136,9 +136,8 @@ function drawScores(currScore: number): void {
  * levels up
  */
 function newLevelText(currentLevel: number): void {
-  text = 'Level ' + String(currentLevel + 1);
+  text = 'Level ' + String(currentLevel);
   textAlpha = 1.0;
-  currentLevel++;
   setTextProperties(text, textAlpha);
 }
 

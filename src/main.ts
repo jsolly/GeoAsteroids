@@ -48,9 +48,9 @@ function startGame(): void {
 function newGame(): void {
   ship = new Ship();
   currRoidBelt = new roidBelt(ship);
-  newLevel(ship, currRoidBelt);
   currScore = STARTING_SCORE;
   currLevel = START_LEVEL;
+  newLevel(ship, currRoidBelt);
 }
 
 /**
@@ -58,6 +58,7 @@ function newGame(): void {
  * levels up
  */
 function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
+  currLevel += 1;
   newLevelText(currLevel);
   currRoidBelt.addRoid(ship);
 }
