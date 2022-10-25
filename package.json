@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
   "devDependencies": {
-    "@types/node": "^18.7.18",
+    "@types/node": "^18.11.5",
     "@typescript-eslint/eslint-plugin": "^5.40.1",
     "@typescript-eslint/parser": "^5.38.0",
     "@vitest/coverage-c8": "^0.23.4",
