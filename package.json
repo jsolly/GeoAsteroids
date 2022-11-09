@@ -53,6 +53,6 @@
   "dependencies": {
     "@types/jsdom": "^20.0.0",
     "canvas": "^2.10.1",
-    "happy-dom": "^6.0.4"
+    "happy-dom": "^7.6.7"
   }
 }
