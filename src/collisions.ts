@@ -1,6 +1,6 @@
 import { Ship } from './ship.js';
 import { roidBelt, destroyRoid, Roid } from './asteroids.js';
-import { music, fxHit } from './soundsMusic.js';
+import { fxHit } from './soundsMusic.js';
 import { FPS, LASER_EXPLODE_DUR } from './config.js';
 import { gameOver } from './main.js';
 
