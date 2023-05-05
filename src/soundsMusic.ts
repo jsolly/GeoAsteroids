@@ -1,6 +1,4 @@
-import { FPS, LOCAL_STORAGE_KEYS, getRoidNum, soundIsOn } from './config.js';
-import { Roid } from './asteroids.js';
-import { currLevel } from './main.js';
+import { FPS, LOCAL_STORAGE_KEYS, soundIsOn } from './config.js';
 /**
  * Plays and stops sounds
  * @param src - Path to sound file
@@ -85,12 +83,16 @@ class Music {
   /**
    *
    */
-  setRoidRatio(roids: Roid[]): void {
-    const roidNum = getRoidNum();
-    const roidsTotal = (roidNum + currLevel) * 7;
-    const ratio = roids.length == 0 ? 1 : roids.length / roidsTotal;
+  setMusicTempo(currLevel: number): void {
+    const minTempo = 0.25; // Set a lower minimum tempo
+    const maxTempo = 4.0; // Set a higher maximum tempo
+    const levelsToMinTempo = 15; // Decrease the number of levels to reach minTempo
 
-    this.tempo = 1.0 - 0.75 * (1.0 - ratio);
+    // Calculate the ratio based on the user level
+    const ratio = Math.min(currLevel / levelsToMinTempo, 1);
+
+    // Set the tempo by interpolating between the maximum and minimum tempo based on the ratio
+    this.tempo = maxTempo - (maxTempo - minTempo) * ratio;
   }
 
   /**

@@ -61,6 +61,7 @@ function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
   currLevel += 1;
   newLevelText(currLevel);
   currRoidBelt.addRoid(ship);
+  music.setMusicTempo(currLevel);
 }
 
 function updateCurrScore(valtoAdd: number): void {
