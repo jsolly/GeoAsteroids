@@ -10,27 +10,37 @@ function drawThruster(ship: Ship): void {
     const rearLeft = {
       x:
         CVS.width / 2 +
-        ship.r * ((2 / 3) * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
+        ship.r * ((2 / 3) * Math.cos(ship.a) + 0.6 * Math.sin(ship.a)),
       y:
         CVS.height / 2 +
-        ship.r * ((2 / 3) * Math.sin(ship.a) - 0.5 * Math.cos(ship.a)),
+        ship.r * ((2 / 3) * Math.sin(ship.a) - 0.6 * Math.cos(ship.a)),
     };
 
     const rearCenter = {
-      x: CVS.width / 2 + ((ship.r * 5) / 3) * Math.cos(ship.a),
-      y: CVS.height / 2 + ((ship.r * 5) / 3) * Math.sin(ship.a),
+      x: CVS.width / 2 + ((ship.r * 6) / 3) * Math.cos(ship.a),
+      y: CVS.height / 2 + ((ship.r * 6) / 3) * Math.sin(ship.a),
     };
 
     const rearRight = {
       x:
         CVS.width / 2 +
-        ship.r * ((2 / 3) * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
+        ship.r * ((2 / 3) * Math.cos(ship.a) - 0.6 * Math.sin(ship.a)),
       y:
         CVS.height / 2 +
-        ship.r * ((2 / 3) * Math.sin(ship.a) + 0.5 * Math.cos(ship.a)),
+        ship.r * ((2 / 3) * Math.sin(ship.a) + 0.6 * Math.cos(ship.a)),
     };
 
-    CTX.fillStyle = 'red';
+    const gradient = CTX.createLinearGradient(
+      rearCenter.x,
+      rearCenter.y,
+      (rearLeft.x + rearRight.x) / 2,
+      (rearLeft.y + rearRight.y) / 2,
+    );
+    gradient.addColorStop(0, 'red');
+    gradient.addColorStop(0.5, 'orange');
+    gradient.addColorStop(1, 'yellow');
+
+    CTX.fillStyle = gradient;
     CTX.strokeStyle = 'yellow';
     CTX.lineWidth = SHIP_SIZE / 10;
     CTX.beginPath();
