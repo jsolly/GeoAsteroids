@@ -59,8 +59,16 @@ function drawThruster(ship: Ship): void {
  */
 function drawShipRelative(ship: Ship): void {
   const { a } = ship;
-
   const nose = {
+    x:
+      CVS.width / 2 +
+      ship.r * ((-1 / 3) * Math.cos(a + 1.06) - Math.sin(a + 1.06)),
+    y:
+      CVS.height / 2 +
+      ship.r * ((-1 / 3) * Math.sin(a + 1.06) + Math.cos(a + 1.06)),
+  };
+
+  const rearRight = {
     x: CVS.width / 2 + (4 / 3) * ship.r * Math.cos(a + 1.06),
     y: CVS.height / 2 + (4 / 3) * ship.r * Math.sin(a + 1.06),
   };
@@ -72,15 +80,6 @@ function drawShipRelative(ship: Ship): void {
     y:
       CVS.height / 2 +
       ship.r * ((-1 / 3) * Math.sin(a + 1.06) - Math.cos(a + 1.06)),
-  };
-
-  const rearRight = {
-    x:
-      CVS.width / 2 +
-      ship.r * ((-1 / 3) * Math.cos(a + 1.06) - Math.sin(a + 1.06)),
-    y:
-      CVS.height / 2 +
-      ship.r * ((-1 / 3) * Math.sin(a + 1.06) + Math.cos(a + 1.06)),
   };
 
   CTX.strokeStyle = 'white';

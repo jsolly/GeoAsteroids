@@ -28,11 +28,21 @@ function shootLaser(ship: Ship): void {
   if (canShootAndBelowLaserMax(ship)) {
     const xv: number = (-LASER_SPEED * Math.cos(-ship.a)) / FPS + ship.xv;
     const yv: number = (LASER_SPEED * Math.sin(-ship.a)) / FPS + ship.yv;
-    const laserStartPoint = new Point(ship.centroid.x, ship.centroid.y);
+
+    const noseX =
+      ship.centroid.x +
+      ship.r * ((-1 / 3) * Math.cos(ship.a + 1.06) - Math.sin(ship.a + 1.06));
+    const noseY =
+      ship.centroid.y +
+      ship.r * ((-1 / 3) * Math.sin(ship.a + 1.06) + Math.cos(ship.a + 1.06));
+
+    const laserStartPoint = new Point(noseX, noseY);
+
     const laser = new Laser(laserStartPoint, xv, yv, 0, 0);
     ship.lasers.push(laser);
     fxLaser.play();
   }
+
   // prevent further shooting
   ship.canShoot = false;
 }
