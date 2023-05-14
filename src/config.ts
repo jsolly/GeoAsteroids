@@ -85,7 +85,7 @@ export enum Difficulty {
   'hard',
 }
 
-const ROID_NUM_BY_DIFFICULTY: Record<number, Difficulty> = {
+const ROID_NUM_BY_DIFFICULTY: Record<Difficulty, number> = {
   [Difficulty.easy]: 5,
   [Difficulty.medium]: 10,
   [Difficulty.hard]: 50,
