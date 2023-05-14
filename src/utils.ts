@@ -1,4 +1,4 @@
-import { SAVE_KEY_HIGH_SCORE } from './config.js';
+import { SAVE_KEY_PERSONAL_BEST } from './config.js';
 class Point {
   constructor(readonly x: number, readonly y: number) {}
 
@@ -20,22 +20,22 @@ class Point {
 
 /**
  *
- * @returns - The current high score.
+ * @returns - The current personal best score from local storage.
  */
-function getHighScore(): number {
-  const highScore = localStorage.getItem(SAVE_KEY_HIGH_SCORE);
-  if (highScore == null) {
-    localStorage.setItem(SAVE_KEY_HIGH_SCORE, '0'); // set to 0 if null
+function getPersonalBest(): number {
+  const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST);
+  if (personalBest == null) {
+    localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0'); // set to 0 if null
     return 0;
   }
-  return Number(localStorage.getItem(SAVE_KEY_HIGH_SCORE));
+  return Number(localStorage.getItem(SAVE_KEY_PERSONAL_BEST));
 }
 
-function updateHighScore(currScore: number): void {
-  const highScore = getHighScore();
-  if (currScore > highScore) {
-    localStorage.setItem(SAVE_KEY_HIGH_SCORE, String(currScore));
+function updatePersonalBest(currScore: number): void {
+  const personalBest = getPersonalBest();
+  if (currScore > personalBest) {
+    localStorage.setItem(SAVE_KEY_PERSONAL_BEST, String(currScore));
   }
 }
 
-export { Point, getHighScore, updateHighScore };
+export { Point, getPersonalBest, updatePersonalBest };

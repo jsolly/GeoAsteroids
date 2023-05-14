@@ -26,6 +26,7 @@ import { moveLasers } from './lasers.js';
 import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
 import { drawLasers } from './lasersCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
+import { updatePersonalBest } from './utils.js';
 
 let ship: Ship;
 let currRoidBelt: roidBelt;
@@ -81,6 +82,7 @@ function gameOver(ship: Ship): void {
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
+  updatePersonalBest(currScore);
   if (currScore > nextLevel) {
     newLevel(ship, currRoidBelt);
     nextLevel += 1000;

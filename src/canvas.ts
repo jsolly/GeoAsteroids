@@ -8,7 +8,7 @@ import {
 } from './config.js';
 import { Point } from './utils.js';
 import { Ship } from './ship.js';
-import { getHighScore } from './utils.js';
+import { getPersonalBest } from './utils.js';
 let text: string;
 let textAlpha: number;
 
@@ -123,12 +123,12 @@ function drawScores(currScore: number): void {
   CTX.font = String(TEXT_SIZE) + 'px dejavu sans mono';
   CTX.fillText(String(currScore), CVS.width - 15, 30);
 
-  // draw the high score
+  // draw the personal best
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
   CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
-  CTX.fillText('BEST ' + String(getHighScore()), CVS.width / 2, 30);
+  CTX.fillText('BEST ' + String(getPersonalBest()), CVS.width / 2, 30);
 }
 
 /**
