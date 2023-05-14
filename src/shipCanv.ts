@@ -7,27 +7,23 @@ import { Ship } from './ship.js';
  */
 function drawThruster(ship: Ship): void {
   if (!ship.exploding && ship.blinkOn) {
+    const rearRight = {
+      x: CVS.width / 2 + (4 / 3) * ship.r * Math.cos(ship.a + 1.06),
+      y: CVS.height / 2 + (4 / 3) * ship.r * Math.sin(ship.a + 1.06),
+    };
+
     const rearLeft = {
       x:
         CVS.width / 2 +
-        ship.r * ((2 / 3) * Math.cos(ship.a) + 0.6 * Math.sin(ship.a)),
+        ship.r * ((-1 / 3) * Math.cos(ship.a + 1.06) + Math.sin(ship.a + 1.06)),
       y:
         CVS.height / 2 +
-        ship.r * ((2 / 3) * Math.sin(ship.a) - 0.6 * Math.cos(ship.a)),
+        ship.r * ((-1 / 3) * Math.sin(ship.a + 1.06) - Math.cos(ship.a + 1.06)),
     };
 
     const rearCenter = {
       x: CVS.width / 2 + ((ship.r * 6) / 3) * Math.cos(ship.a),
       y: CVS.height / 2 + ((ship.r * 6) / 3) * Math.sin(ship.a),
-    };
-
-    const rearRight = {
-      x:
-        CVS.width / 2 +
-        ship.r * ((2 / 3) * Math.cos(ship.a) - 0.6 * Math.sin(ship.a)),
-      y:
-        CVS.height / 2 +
-        ship.r * ((2 / 3) * Math.sin(ship.a) + 0.6 * Math.cos(ship.a)),
     };
 
     const gradient = CTX.createLinearGradient(
@@ -42,7 +38,7 @@ function drawThruster(ship: Ship): void {
 
     CTX.fillStyle = gradient;
     CTX.strokeStyle = 'yellow';
-    CTX.lineWidth = SHIP_SIZE / 10;
+    CTX.lineWidth = SHIP_SIZE / 20;
     CTX.beginPath();
     CTX.moveTo(rearLeft.x, rearLeft.y);
     CTX.lineTo(rearCenter.x, rearCenter.y);
