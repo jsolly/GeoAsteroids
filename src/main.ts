@@ -26,7 +26,7 @@ import { moveLasers } from './lasers.js';
 import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
 import { drawLasers } from './lasersCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
-import { updatePersonalBest } from './utils.js';
+import { updatePersonalBest, updateGlobalHighScores } from './utils.js';
 
 let ship: Ship;
 let currRoidBelt: roidBelt;
@@ -78,6 +78,20 @@ function gameOver(ship: Ship): void {
   music.tempo = 1.0;
 }
 
+function showGameOverMenu(): void {
+  const name = prompt('Enter your name for the high score list:');
+  if (name != null) {
+    updateGlobalHighScores(name, currScore);
+  }
+
+  newGame();
+  clearInterval(gameInterval);
+  startGameBtn.innerText = 'Play Again! 🚀';
+
+  toggleScreen('start-screen', true);
+  toggleScreen('gameArea', false);
+}
+
 /**
  * Runs the game. Called every frame to move the game forward.
  */
@@ -104,12 +118,7 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    newGame();
-    clearInterval(gameInterval);
-    startGameBtn.innerText = 'Play Again! 🚀';
-
-    toggleScreen('start-screen', true);
-    toggleScreen('gameArea', false);
+    showGameOverMenu();
   }
 
   // tick the music
