@@ -26,7 +26,7 @@ import { moveLasers } from './lasers.js';
 import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
 import { drawLasers } from './lasersCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
-import { updatePersonalBest, updateGlobalHighScores } from './utils.js';
+import { updatePersonalBest } from './utils.js';
 
 let ship: Ship;
 let currRoidBelt: roidBelt;
@@ -81,7 +81,7 @@ function gameOver(ship: Ship): void {
 function showGameOverMenu(): void {
   const name = prompt('Enter your name for the high score list:');
   if (name != null) {
-    updateGlobalHighScores(name, currScore);
+    // Call Serverside API to save score
   }
 
   newGame();

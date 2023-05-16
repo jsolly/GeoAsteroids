@@ -1,5 +1,4 @@
 import { SAVE_KEY_PERSONAL_BEST } from './config.js';
-import fs from 'fs';
 class Point {
   constructor(readonly x: number, readonly y: number) {}
 
@@ -39,44 +38,4 @@ function updatePersonalBest(currScore: number): void {
   }
 }
 
-// Server-side code
-const HIGH_SCORES_FILE = './highscores.json';
-
-interface HighScore {
-  name: string;
-  score: number;
-}
-
-function getGlobalHighScores(): HighScore[] {
-  function readHighScoresFile(): string {
-    return fs.readFileSync(HIGH_SCORES_FILE, 'utf-8');
-  }
-
-  function parseHighScores(data: string): HighScore[] {
-    return JSON.parse(data) as HighScore[];
-  }
-
-  const data = readHighScoresFile();
-  const highScores = parseHighScores(data);
-  return highScores;
-}
-
-function updateGlobalHighScores(name: string, newScore: number): void {
-  let highScores: HighScore[] = getGlobalHighScores();
-
-  // If there are less than 10 scores, or the new score is higher than the lowest score
-  if (
-    highScores.length < 10 ||
-    newScore > highScores[highScores.length - 1].score
-  ) {
-    highScores.push({ name, score: newScore });
-    highScores.sort((a, b) => b.score - a.score);
-    if (highScores.length > 10) {
-      highScores = highScores.slice(0, 10); // keep only the top 10 scores
-    }
-
-    fs.writeFileSync(HIGH_SCORES_FILE, JSON.stringify(highScores, null, 2));
-  }
-}
-
-export { Point, getPersonalBest, updatePersonalBest, updateGlobalHighScores };
+export { Point, getPersonalBest, updatePersonalBest };
