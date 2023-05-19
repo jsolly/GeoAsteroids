@@ -1,4 +1,8 @@
+import express, { Request, Response } from 'express';
 import { readFile, writeFile } from 'fs/promises';
+import path from 'path';
+
+const app = express();
 
 const HIGH_SCORES_FILE = './highscores.json';
 
@@ -31,14 +35,28 @@ async function updateHighScores(newScore: HighScore): Promise<void> {
   }
 }
 
-export async function get(): Promise<{ highScores: HighScore[] }> {
-  const highScores = await getHighScores();
-  return { highScores };
-}
+app.use(express.json()); // for parsing application/json
 
-export async function post(
-  newScore: HighScore,
-): Promise<{ newScore: HighScore }> {
-  await updateHighScores(newScore);
-  return { newScore };
-}
+app.get('/api/highscores', (_, res: Response) => {
+  void (async () => {
+    const highScores = await getHighScores();
+    res.json({ highScores });
+  })();
+});
+
+app.post('/api/highscores', (req: Request, res: Response) => {
+  void (async () => {
+    const newScore = req.body as HighScore;
+    await updateHighScores(newScore);
+    res.json({ newScore });
+  })();
+});
+
+// Serve static files from the Vite build
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Start the server
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
