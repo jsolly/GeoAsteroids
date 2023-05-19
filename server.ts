@@ -37,15 +37,15 @@ async function updateHighScores(newScore: HighScore): Promise<void> {
 
 app.use(express.json()); // for parsing application/json
 
-app.get('/api/highscores', (_, res: Response) => {
-  void (async () => {
+app.get('/api/highscores', (_, res: Response): void => {
+  void (async (): Promise<void> => {
     const highScores = await getHighScores();
     res.json({ highScores });
   })();
 });
 
-app.post('/api/highscores', (req: Request, res: Response) => {
-  void (async () => {
+app.post('/api/highscores', (req: Request, res: Response): void => {
+  void (async (): Promise<void> => {
     const newScore = req.body as HighScore;
     await updateHighScores(newScore);
     res.json({ newScore });
@@ -56,7 +56,7 @@ app.post('/api/highscores', (req: Request, res: Response) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Start the server
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+const port = process.env.PORT ?? 3000;
+app.listen(port, (): void => {
   console.log(`Server running at http://localhost:${port}`);
 });
