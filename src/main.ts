@@ -84,6 +84,7 @@ function gameOver(ship: Ship): void {
 }
 
 async function showGameOverMenu(): Promise<void> {
+  clearInterval(gameInterval); // Stop the game loop
   const name = prompt('Enter your name for the high score list:');
   if (name != null) {
     // Call Serverside API to save score
