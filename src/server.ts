@@ -1,6 +1,11 @@
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import express, { Request, Response } from 'express';
 import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 
@@ -53,10 +58,12 @@ app.post('/api/highscores', (req: Request, res: Response): void => {
 });
 
 // Serve static files from the Vite build
-app.use(express.static(path.join(__dirname, 'dist')));
+const currentDir = path.join(__dirname, 'dist');
+
+app.use(express.static(currentDir));
 
 // Start the server
-const port = process.env.PORT ?? 3000;
+const port = process.env.PORT ?? 3001;
 app.listen(port, (): void => {
   console.log(`Server running at http://localhost:${port}`);
 });

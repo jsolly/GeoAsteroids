@@ -1,9 +1,10 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    threads: false,
-    setupFiles: 'setup/viteSetup.ts',
+  server: {
+    port: 3000, // Or whichever port you want
+    proxy: {
+      '/api': 'http://localhost:3001', // Ensure this points to your Express server
+    },
   },
 });
