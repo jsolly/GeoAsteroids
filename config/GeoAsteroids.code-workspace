@@ -26,5 +26,6 @@
 		"editor.formatOnSave": true,
         "editor.guides.indentation": false,
 		"editor.guides.bracketPairs": false,
+		"testing.automaticallyOpenPeekView": "never",
 	}
 }
