@@ -17,14 +17,14 @@ interface HighScore {
 }
 
 async function getHighScores(): Promise<HighScore[]> {
-  const data = await readFile(HIGH_SCORES_FILE, 'utf-8');
-  if (data === '') {
-    // File is empty, return an empty array
-    return [];
-  } else {
+  try {
+    const data = await readFile(HIGH_SCORES_FILE, 'utf-8');
     // Try to parse the JSON data
     const highScores = JSON.parse(data) as HighScore[];
     return highScores;
+  } catch (error) {
+    // If the file does not exist or cannot be parsed, return an empty array
+    return [];
   }
 }
 
