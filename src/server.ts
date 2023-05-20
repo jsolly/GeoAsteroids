@@ -18,8 +18,14 @@ interface HighScore {
 
 async function getHighScores(): Promise<HighScore[]> {
   const data = await readFile(HIGH_SCORES_FILE, 'utf-8');
-  const highScores = JSON.parse(data) as HighScore[];
-  return highScores;
+  if (data === '') {
+    // File is empty, return an empty array
+    return [];
+  } else {
+    // Try to parse the JSON data
+    const highScores = JSON.parse(data) as HighScore[];
+    return highScores;
+  }
 }
 
 async function updateHighScores(newScore: HighScore): Promise<void> {

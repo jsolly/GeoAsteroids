@@ -25,6 +25,6 @@
 		"editor.formatOnPaste": true,
 		"editor.formatOnSave": true,
         "editor.guides.indentation": false,
-        "editor.guides.bracketPairs": false,
+		"editor.guides.bracketPairs": false,
 	}
 }
