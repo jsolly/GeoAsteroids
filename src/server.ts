@@ -31,6 +31,13 @@ async function getHighScores(): Promise<HighScore[]> {
 async function updateHighScores(newScore: HighScore): Promise<void> {
   let highScores = await getHighScores();
 
+  // If the high scores file does not exist or is empty, create it with the new score
+  if (highScores.length === 0) {
+    highScores = [newScore];
+    await writeFile(HIGH_SCORES_FILE, JSON.stringify(highScores, null, 2));
+    return;
+  }
+
   // If there are less than 10 scores, or the new score is higher than the lowest score
   if (
     highScores.length < 10 ||
