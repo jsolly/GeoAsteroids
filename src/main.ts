@@ -35,6 +35,11 @@ let gameInterval: NodeJS.Timer;
 let currScore = STARTING_SCORE;
 let currLevel = START_LEVEL;
 
+interface HighScore {
+  name: string;
+  currScore: number;
+}
+
 function startGame(): void {
   newGame();
   toggleScreen('start-screen', false);
@@ -78,10 +83,28 @@ function gameOver(ship: Ship): void {
   music.tempo = 1.0;
 }
 
-function showGameOverMenu(): void {
+async function showGameOverMenu(): Promise<void> {
   const name = prompt('Enter your name for the high score list:');
   if (name != null) {
     // Call Serverside API to save score
+    const highScore: HighScore = { name, currScore };
+    try {
+      const response = await fetch('/api/highscores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(highScore),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+    } catch (error) {
+      console.error(
+        'There has been a problem with your fetch operation:',
+        error,
+      );
+    }
   }
 
   newGame();
@@ -118,7 +141,9 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    showGameOverMenu();
+    showGameOverMenu().catch((error) =>
+      console.error('Error in showGameOverMenu:', error),
+    );
   }
 
   // tick the music
