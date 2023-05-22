@@ -9,6 +9,7 @@ import {
 } from '../src/asteroids';
 import { Ship } from '../src/ship';
 import { newLevel } from '../src/main';
+import { setDifficulty, Difficulty } from '../src/config.js';
 
 test.concurrent('Roid Creation', () => {
   const roidPoint = new Point(10, 20);
@@ -19,8 +20,10 @@ test.concurrent('Roid Creation', () => {
 
 test.concurrent('Roid Belt Creation', () => {
   const testShip = new Ship(3, false);
+  setDifficulty(Difficulty.easy); // This ensures roidNum is defined
   const newRoidBelt = new roidBelt(testShip);
   expect(newRoidBelt).toBeInstanceOf(roidBelt);
+  expect(newRoidBelt.roids.length).toEqual(5);
 });
 
 test.concurrent('Roid Belt Add Roid', () => {

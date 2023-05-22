@@ -45,9 +45,8 @@ class RoidBelt {
   roidNum = getRoidNum();
   roids: Roid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
-  private currentLevel = currLevel;
   constructor(ship: Ship) {
-    for (let i = 0; i < this.roidNum + this.currentLevel; i++) {
+    for (let i = 0; i < this.roidNum; i++) {
       this.addRoid(ship);
     }
   }
