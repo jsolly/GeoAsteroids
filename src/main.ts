@@ -170,7 +170,16 @@ function update(): void {
       }
     }
   } else {
+    // handle ship explosion
     drawShipExplosion(ship);
+    // reduce explode time
+    ship.explodeTime--;
+    if (ship.explodeTime == 0) {
+      ship.lives--;
+      if (ship.lives == 0) {
+        gameOver(ship);
+      }
+    }
   }
 
   drawLasers(ship);
