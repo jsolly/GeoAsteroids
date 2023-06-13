@@ -39,3 +39,23 @@ test.concurrent('Move Lasers', () => {
   moveLasers(testShip);
   expect(firstLaser.centroid.x).not.toEqual(firstLaserLocationY);
 });
+
+test.concurrent('Laser Distance Exceeded', () => {
+  const testShip = new Ship(3, false);
+  testShip.shoot();
+
+  const firstLaser = testShip.lasers[0];
+  firstLaser.distTraveled = 100000;
+  moveLasers(testShip);
+  expect(testShip.lasers.length).toEqual(0);
+});
+
+test.concurrent('Laser Removed After Exploded', () => {
+  const testShip = new Ship(3, false);
+  testShip.shoot();
+
+  const firstLaser = testShip.lasers[0];
+  firstLaser.explodeTime = 1; // Almost exploded
+  moveLasers(testShip);
+  expect(testShip.lasers.length).toEqual(0);
+});
