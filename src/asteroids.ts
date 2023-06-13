@@ -13,12 +13,14 @@ import {
 } from './config.js';
 import { Ship } from './ship.js';
 import { currLevel, updateCurrScore } from './main.js';
+import { Sound } from './soundsMusic.js';
 class Roid {
   readonly a: number;
   readonly offsets: number[] = [];
   readonly vertices: number;
   xv: number;
   yv: number;
+  static fxHit = new Sound('sounds/hit.m4a', 5);
 
   constructor(public centroid: Point, public r: number) {
     const lvlMult = 1 + 0.1 * currLevel;

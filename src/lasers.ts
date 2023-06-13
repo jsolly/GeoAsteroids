@@ -1,9 +1,12 @@
 import { FPS, LASER_SPEED, LASER_MAX, LASER_DIST, CVS } from './config.js';
 import { Ship } from './ship.js';
-import { fxLaser } from './soundsMusic.js';
+import { Sound } from './soundsMusic.js';
 import { Point } from './utils.js';
 
 class Laser {
+  static fxLaser = new Sound('sounds/laser.m4a', 5);
+  static fxHit = new Sound('sounds/hit.m4a', 5);
+
   constructor(
     public centroid: Point,
     public xv: number,
@@ -40,7 +43,7 @@ function shootLaser(ship: Ship): void {
 
     const laser = new Laser(laserStartPoint, xv, yv, 0, 0);
     ship.lasers.push(laser);
-    fxLaser.play();
+    Laser.fxLaser.play();
   }
 
   // prevent further shooting

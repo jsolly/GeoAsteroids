@@ -1,9 +1,31 @@
-import { expect, test } from 'vitest';
+import { expect, test, beforeEach, afterEach, vi } from 'vitest';
+
 import { Ship } from '../src/ship';
 import { roidBelt } from '../src/asteroids';
 import { Laser } from '../src/lasers';
 import { detectLaserHits, detectRoidHits } from '../src/collisions';
 import { Point } from '../src/utils';
+import { Sound } from '../src/soundsMusic';
+
+let fxHitInstance: Sound;
+let fxExplodeInstance: Sound;
+const mockPlay = vi.fn();
+
+beforeEach(() => {
+  // Create instances of the Sound class
+  fxHitInstance = new Sound('../public/sounds/hit.m4a', 5);
+  fxExplodeInstance = new Sound('../public/sounds/explode.m4a', 5);
+
+  // Replace the `play` method of `fxHit` and `fxExplode` with the mock function before running the test
+  fxHitInstance.play = mockPlay;
+  fxExplodeInstance.play = mockPlay;
+});
+
+afterEach(() => {
+  // Restore the original functions after each test
+  vi.restoreAllMocks();
+});
+
 test.concurrent('Detect Laser Hits asteroid', () => {
   const testShip = new Ship();
   const testRoidBelt = new roidBelt(testShip);

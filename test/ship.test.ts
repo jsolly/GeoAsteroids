@@ -1,5 +1,17 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { moveShip, Ship, thrustShip } from '../src/ship';
+
+const mockPlay = vi.fn();
+
+beforeEach(() => {
+  Ship.fxThrust.play = mockPlay;
+  Ship.fxExplode.play = mockPlay;
+});
+
+afterEach(() => {
+  // Restore the original functions after each test
+  vi.restoreAllMocks();
+});
 
 test.concurrent('Ship Creation', () => {
   const testShip = new Ship();

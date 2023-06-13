@@ -9,7 +9,7 @@ import {
   FRICTION,
   CVS,
 } from './config.js';
-import { fxExplode, fxThrust } from './soundsMusic.js';
+import { Sound } from './soundsMusic.js';
 import { Laser } from './lasers.js';
 import { Point } from './utils.js';
 import { drawThruster } from './shipCanv.js';
@@ -33,6 +33,8 @@ class Ship {
   explodeTime = 0;
   rot = 0;
   thrusting = false;
+  static fxThrust = new Sound('sounds/thrust.m4a', 5);
+  static fxExplode = new Sound('sounds/explode.m4a', 5);
   /**
    *
    * @param lives - Create a ship with a given number of lives
@@ -59,7 +61,7 @@ class Ship {
   explode(): void {
     this.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
     this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-    fxExplode.play();
+    Ship.fxExplode.play();
   }
   /**
    * As long as a ship has an explode time, it is exploding.
@@ -76,14 +78,14 @@ function thrustShip(ship: Ship): void {
   if (ship.thrusting && !ship.dead) {
     ship.xv -= (SHIP_THRUST * Math.cos(ship.a)) / FPS;
     ship.yv -= (SHIP_THRUST * Math.sin(ship.a)) / FPS;
-    fxThrust.play();
+    Ship.fxThrust.play();
 
     drawThruster(ship);
   } else {
     // apply friction when ship not thrusting
     ship.xv -= (FRICTION * ship.xv) / FPS;
     ship.yv -= (FRICTION * ship.yv) / FPS;
-    fxThrust.stop();
+    Ship.fxThrust.stop();
   }
 }
 /**

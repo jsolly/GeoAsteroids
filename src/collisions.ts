@@ -1,6 +1,5 @@
 import { Ship } from './ship.js';
 import { roidBelt, destroyRoid, Roid } from './asteroids.js';
-import { fxHit } from './soundsMusic.js';
 import { FPS, LASER_EXPLODE_DUR } from './config.js';
 
 import { Laser } from './lasers.js';
@@ -13,8 +12,8 @@ function detectLaserHits(ship: Ship, roidBelt: roidBelt): void {
       // detect hits
       if (isHit(ship.lasers[j], roids[i])) {
         // remove asteroid and activate laser explosion
+        Roid.fxHit.play();
         destroyRoid(i, roids);
-        fxHit.play();
         ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
       }
     }
@@ -33,8 +32,8 @@ function detectRoidHits(ship: Ship, roidBelt: roidBelt): void {
           ship.r + roids[i].r
         ) {
           ship.explode();
+          Roid.fxHit.play();
           destroyRoid(i, roids);
-          fxHit.play();
         }
       }
     }

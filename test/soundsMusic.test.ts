@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { Sound, Music, setMusic, setSound } from '../src/soundsMusic.js';
 import { soundIsOn, musicIsOn } from '../src/config.js';
 test.concurrent('Sound', () => {
-  const testSound = new Sound('sounds/thrust.m4a');
+  const testSound = new Sound('sounds/thrust.m4a', 1);
   expect(testSound).toBeInstanceOf(Sound);
   expect(testSound.streams.length).toBe(1);
 });
