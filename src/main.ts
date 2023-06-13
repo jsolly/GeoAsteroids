@@ -21,7 +21,7 @@ import {
   newLevelText,
 } from './canvas.js';
 import { music } from './soundsMusic.js';
-import { thrustShip, moveShip, Ship } from './ship.js';
+import { Ship } from './ship.js';
 import { moveLasers } from './lasers.js';
 import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
 import { drawLasers } from './lasersCanv.js';
@@ -186,9 +186,9 @@ function update(): void {
   detectLaserHits(ship, currRoidBelt);
   detectRoidHits(ship, currRoidBelt);
 
-  thrustShip(ship);
+  ship.thrust();
   if (!ship.exploding) {
-    moveShip(ship);
+    ship.move();
   }
   moveLasers(ship);
   moveRoids(roids);

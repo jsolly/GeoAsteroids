@@ -4,13 +4,14 @@ import {
   SHIP_INV_BLINK_DUR,
   SHIP_EXPLODE_DUR,
   SHIP_THRUST,
+  LASER_MAX,
   FPS,
   START_LIVES,
   FRICTION,
   CVS,
 } from './config.js';
 import { Sound } from './soundsMusic.js';
-import { Laser } from './lasers.js';
+import { Laser, generateLaser } from './lasers.js';
 import { Point } from './utils.js';
 import { drawThruster } from './shipCanv.js';
 
@@ -69,37 +70,51 @@ class Ship {
   setExploding(): void {
     this.exploding = this.explodeTime > 0;
   }
-}
 
-/**
- * Add/remove from ship's x and y velocity. Make sure the thruster is drawn.
- */
-function thrustShip(ship: Ship): void {
-  if (ship.thrusting && !ship.dead) {
-    ship.xv -= (SHIP_THRUST * Math.cos(ship.a)) / FPS;
-    ship.yv -= (SHIP_THRUST * Math.sin(ship.a)) / FPS;
-    Ship.fxThrust.play();
+  thrust(): void {
+    if (this.thrusting && !this.dead) {
+      this.xv -= (SHIP_THRUST * Math.cos(this.a)) / FPS;
+      this.yv -= (SHIP_THRUST * Math.sin(this.a)) / FPS;
+      Ship.fxThrust.play();
 
-    drawThruster(ship);
-  } else {
-    // apply friction when ship not thrusting
-    ship.xv -= (FRICTION * ship.xv) / FPS;
-    ship.yv -= (FRICTION * ship.yv) / FPS;
-    Ship.fxThrust.stop();
+      drawThruster(this);
+    } else {
+      // apply friction when ship not thrusting
+      this.xv -= (FRICTION * this.xv) / FPS;
+      this.yv -= (FRICTION * this.yv) / FPS;
+      Ship.fxThrust.stop();
+    }
+  }
+
+  move(): void {
+    // rotate ship
+    this.a += this.rot;
+
+    // move the ship
+    this.centroid = new Point(
+      this.centroid.x + this.xv,
+      this.centroid.y + this.yv,
+    );
+  }
+
+  shoot(): void {
+    function canShootAndBelowLaserMax(ship: Ship): boolean {
+      if (ship.canShoot && ship.lasers.length < LASER_MAX) {
+        return true;
+      }
+      return false;
+    }
+
+    // Create laser object
+    if (canShootAndBelowLaserMax(this)) {
+      const laser = generateLaser(this);
+      this.lasers.push(laser);
+      Laser.fxLaser.play();
+    }
+
+    // prevent further shooting
+    this.canShoot = false;
   }
 }
-/**
- * Move ship based on its x and y velocity
- */
-function moveShip(ship: Ship): void {
-  // rotate ship
-  ship.a += ship.rot;
 
-  // move the ship
-  ship.centroid = new Point(
-    ship.centroid.x + ship.xv,
-    ship.centroid.y + ship.yv,
-  );
-}
-
-export { thrustShip, moveShip, Ship };
+export { Ship };

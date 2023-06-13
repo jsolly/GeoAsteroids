@@ -1,5 +1,5 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { moveShip, Ship, thrustShip } from '../src/ship';
+import { Ship } from '../src/ship';
 
 const mockPlay = vi.fn();
 
@@ -37,7 +37,7 @@ test.concurrent('Ship setBlinkOn', () => {
 test.concurrent('Thrust Ship', () => {
   const testShip = new Ship();
   testShip.thrusting = true;
-  thrustShip(testShip);
+  testShip.thrust();
   expect(testShip.xv).toBeLessThan(0);
   expect(testShip.yv).toBeLessThan(0);
 });
@@ -45,11 +45,11 @@ test.concurrent('Thrust Ship', () => {
 test.concurrent('Move Ship', () => {
   const testShip = new Ship();
   testShip.rot = 1;
-  moveShip(testShip);
+  testShip.move();
   expect(testShip.a).toBeGreaterThan(0);
   testShip.xv = 1;
   testShip.yv = 1;
-  moveShip(testShip);
+  testShip.move();
   expect(testShip.centroid.x).toBeGreaterThan(0);
   expect(testShip.centroid.y).toBeGreaterThan(0);
 });

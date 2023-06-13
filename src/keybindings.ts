@@ -1,6 +1,4 @@
-import { shootLaser } from './lasers.js';
 import { ship } from './main.js';
-
 import { FPS, TURN_SPEED } from './config.js';
 
 /**
@@ -12,7 +10,7 @@ function keyDown(ev: KeyboardEvent): void {
   if (!ship.dead) {
     switch (ev.code) {
       case 'Space':
-        shootLaser(ship);
+        ship.shoot();
         break;
       case 'ArrowLeft': // left arrow (rotate ship left)
         ship.rot = ((-TURN_SPEED / 180) * Math.PI) / FPS;

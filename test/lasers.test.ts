@@ -1,6 +1,6 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Point } from '../src/utils';
-import { Laser, moveLasers, shootLaser } from '../src/lasers';
+import { Laser, moveLasers } from '../src/lasers';
 import { Ship } from '../src/ship';
 
 const mockPlay = vi.fn();
@@ -25,14 +25,14 @@ test.concurrent('Shoot Laser', () => {
   const testShip = new Ship(3, false);
 
   const currentLaserCount = testShip.lasers.length;
-  shootLaser(testShip);
+  testShip.shoot();
   expect(testShip.lasers.length).toEqual(currentLaserCount + 1);
   expect(mockPlay).toHaveBeenCalledTimes(1);
 });
 
 test.concurrent('Move Lasers', () => {
   const testShip = new Ship(3, false);
-  shootLaser(testShip);
+  testShip.shoot();
 
   const firstLaser = testShip.lasers[0];
   const firstLaserLocationY = firstLaser.centroid.y;
