@@ -202,4 +202,6 @@ export {
   currLevel,
   updateCurrScore,
   newLevel,
+  newGame,
+  showGameOverMenu,
 };

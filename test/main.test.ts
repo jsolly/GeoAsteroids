@@ -7,10 +7,14 @@ import {
   currLevel,
   updateCurrScore,
   newLevel,
+  newGame,
+  showGameOverMenu,
 } from '../src/main.js';
+import { STARTING_SCORE, START_LEVEL } from '../src/config.js';
 
 import { roidBelt } from '../src/asteroids.js';
 
+const safeNewGame = newGame as () => void;
 let testShip: Ship;
 let testRoidBelt: roidBelt;
 let mockFetch: (
@@ -55,4 +59,15 @@ test.concurrent('New Level', () => {
   const prevLevel = currLevel;
   newLevel(testShip, testRoidBelt);
   expect(currLevel).toBe(prevLevel + 1);
+});
+
+test.concurrent('New Game', () => {
+  safeNewGame();
+  expect(currScore).toBe(STARTING_SCORE);
+  expect(currLevel).toBe(START_LEVEL + 1);
+});
+
+test.concurrent('Show Game Over Menu', async () => {
+  // The function should not throw an error
+  await expect(showGameOverMenu()).resolves.not.toThrow();
 });
