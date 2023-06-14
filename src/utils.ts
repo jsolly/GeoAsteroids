@@ -2,9 +2,6 @@ import { SAVE_KEY_PERSONAL_BEST } from './config.js';
 class Point {
   constructor(readonly x: number, readonly y: number) {}
 
-  movePoint(x: number, y: number): Point {
-    return new Point(x, y);
-  }
   /**
    * Returns the euclidian distance from the Point instance to another Point instance.
    */
