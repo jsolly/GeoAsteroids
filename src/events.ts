@@ -50,4 +50,4 @@ function toggleScreen(id: string, toggle: boolean): void {
   }
 }
 
-export { toggleScreen, startGameBtn };
+export { toggleScreen, startGameBtn, Difficulty };
