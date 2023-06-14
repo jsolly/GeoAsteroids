@@ -1,12 +1,13 @@
-import { ship } from './main.js';
 import { FPS, TURN_SPEED } from './config.js';
+import { Ship } from './ship.js'; // Assuming this is the correct import for your Ship class
 
 /**
  *
  * @param ev - Event fired when key is pressed down
+ * @param ship - The ship object to be controlled
  * @returns False if ship is dead
  */
-function keyDown(ev: KeyboardEvent): void {
+function keyDown(ev: KeyboardEvent, ship: Ship): void {
   if (!ship.dead) {
     switch (ev.code) {
       case 'Space':
@@ -27,9 +28,10 @@ function keyDown(ev: KeyboardEvent): void {
 /**
  *
  * @param ev - Event fired when key is released
+ * @param ship - The ship object to be controlled
  * @returns False if ship is dead
  */
-function keyUp(ev: KeyboardEvent): void {
+function keyUp(ev: KeyboardEvent, ship: Ship): void {
   if (!ship.dead) {
     switch (ev.code) {
       case 'Space': // Allow shooting

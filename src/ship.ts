@@ -97,24 +97,25 @@ class Ship {
     );
   }
 
-  shoot(): void {
-    function canShootAndBelowLaserMax(ship: Ship): boolean {
-      if (ship.canShoot && ship.lasers.length < LASER_MAX) {
-        return true;
-      }
-      return false;
+  // if ship can shoot and there are less than LASER_MAX on the canvas
+  canShootAgain(): boolean {
+    if (this.canShoot && this.lasers.length < LASER_MAX) {
+      return true;
     }
-
-    // Create laser object
-    if (canShootAndBelowLaserMax(this)) {
-      const laser = generateLaser(this);
-      this.lasers.push(laser);
-      Laser.fxLaser.play();
-    }
-
-    // prevent further shooting
-    this.canShoot = false;
+    this.canShoot = false; // prevent further shooting
+    return false;
   }
+
+  shoot(): void {
+    if (this.canShootAgain()) {
+      this.fireLaser(); // Adds a laser to the lasers array
+    }
+  }
+  fireLaser = (): void => {
+    const laser = generateLaser(this);
+    this.lasers.push(laser);
+    Laser.fxLaser.play();
+  };
 }
 
 export { Ship };

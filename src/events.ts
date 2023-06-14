@@ -2,9 +2,10 @@ import { keyDown, keyUp } from './keybindings.js';
 import { setSound, setMusic } from './soundsMusic.js';
 import { setDifficulty, Difficulty } from './config.js';
 
-import { startGame } from './main.js';
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
+import { startGame, ship } from './main.js';
+document.addEventListener('keydown', (ev) => keyDown(ev, ship)); // pass ship to keyDown
+document.addEventListener('keyup', (ev) => keyUp(ev, ship)); // pass ship to keyUp
+
 const startGameBtn = document.getElementById('start-game') as HTMLButtonElement;
 const soundCheckBox = document.getElementById('soundPref') as HTMLInputElement;
 const musicCheckBox = document.getElementById('musicPref') as HTMLInputElement;
