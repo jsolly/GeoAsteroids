@@ -8,7 +8,6 @@ import {
   START_LEVEL,
 } from './config.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
-import { toggleScreen, startGameBtn } from './events.js';
 import { moveRoids, spawnRoids, roidBelt } from './asteroids.js';
 import {
   drawGameText,
@@ -27,26 +26,13 @@ import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
 import { drawLasers } from './lasersCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
 import { updatePersonalBest } from './utils.js';
+import { showGameOverMenu } from './events.js';
 
 let ship: Ship;
 let currRoidBelt: roidBelt;
 let nextLevel = NEXT_LEVEL_POINTS;
-let gameInterval: NodeJS.Timer;
 let currScore = STARTING_SCORE;
 let currLevel = START_LEVEL;
-
-interface HighScore {
-  name: string;
-  currScore: number;
-}
-
-function startGame(): void {
-  newGame();
-  toggleScreen('start-screen', false);
-  toggleScreen('gameArea', true);
-  // Set up game loop
-  gameInterval = setInterval(update, 1000 / FPS);
-}
 
 /**
  * Resets score, ship, and level for a new game.
@@ -81,39 +67,6 @@ function gameOver(ship: Ship): void {
   ship.die();
   setTextProperties('Game Over', 1.0);
   music.tempo = 1.0;
-}
-
-async function showGameOverMenu(): Promise<void> {
-  clearInterval(gameInterval); // Stop the game loop
-  const name = prompt('Enter your name for the high score list:');
-  if (name != null) {
-    // Call Serverside API to save score
-    const highScore: HighScore = { name, currScore };
-    try {
-      const response = await fetch('/api/highscores', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(highScore),
-      });
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-    } catch (error) {
-      console.error(
-        'There has been a problem with your fetch operation:',
-        error,
-      );
-    }
-  }
-
-  newGame();
-  clearInterval(gameInterval);
-  startGameBtn.innerText = 'Play Again! 🚀';
-
-  toggleScreen('start-screen', true);
-  toggleScreen('gameArea', false);
 }
 
 /**
@@ -197,11 +150,10 @@ function update(): void {
 export {
   ship,
   gameOver,
-  startGame,
   currScore,
   currLevel,
   updateCurrScore,
   newLevel,
   newGame,
-  showGameOverMenu,
+  update,
 };
