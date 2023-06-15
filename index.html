@@ -49,9 +49,9 @@
     <div id="gameArea" style="display: none">
       <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
-    <div id="gameOverModal" style="display: none">
+    <div id="gameOverModal" class="modal" style="display: none">
       <p>Enter your name for the high score list:</p>
-      <input type="text" id="nameInput">
+      <input type="text" id="nameInput" maxlength="3" oninput="this.value = this.value.toUpperCase()">
       <button id="submitNameButton">Submit</button>
     </div>
   </div>
