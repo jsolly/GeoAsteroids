@@ -95,9 +95,7 @@ function update(): void {
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (ship.dead) {
-    showGameOverMenu().catch((error) =>
-      console.error('Error in showGameOverMenu:', error),
-    );
+    showGameOverMenu();
   }
 
   // tick the music

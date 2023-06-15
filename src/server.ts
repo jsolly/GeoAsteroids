@@ -19,7 +19,6 @@ interface HighScore {
 async function getHighScores(): Promise<HighScore[]> {
   try {
     const data = await readFile(HIGH_SCORES_FILE, 'utf-8');
-    // Try to parse the JSON data
     const highScores = JSON.parse(data) as HighScore[];
     return highScores;
   } catch (error) {

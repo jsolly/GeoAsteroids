@@ -9,6 +9,7 @@ npm-debug.log
 
 # Other
 .eslintcache
+highscores.json
 
 # Vite
 dist/*

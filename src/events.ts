@@ -10,7 +10,7 @@ let gameInterval: NodeJS.Timer;
 
 interface HighScore {
   name: string;
-  currScore: number;
+  score: number;
 }
 
 function startGame(): void {
