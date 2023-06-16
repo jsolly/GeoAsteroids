@@ -75,14 +75,12 @@ class Ship {
     if (this.thrusting && !this.dead) {
       this.xv -= (SHIP_THRUST * Math.cos(this.a)) / FPS;
       this.yv -= (SHIP_THRUST * Math.sin(this.a)) / FPS;
-      Ship.fxThrust.play();
 
       drawThruster(this);
     } else {
       // apply friction when ship not thrusting
       this.xv -= (FRICTION * this.xv) / FPS;
       this.yv -= (FRICTION * this.yv) / FPS;
-      Ship.fxThrust.stop();
     }
   }
 

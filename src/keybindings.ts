@@ -18,6 +18,9 @@ function keyDown(ev: KeyboardEvent, ship: Ship): void {
         break;
       case 'ArrowUp': // up arrow (thrust the ship forward)
         ship.thrusting = true;
+        if (!Ship.fxThrust.isPlaying()) {
+          Ship.fxThrust.play();
+        }
         break;
       case 'ArrowRight': // right arrow (rotate ship right)
         ship.rot = ((TURN_SPEED / 180) * Math.PI) / FPS;
@@ -42,6 +45,7 @@ function keyUp(ev: KeyboardEvent, ship: Ship): void {
         break;
       case 'ArrowUp': // Release up arrow. (stop thrusting the ship forward)
         ship.thrusting = false;
+        Ship.fxThrust.stop();
         break;
       case 'ArrowRight': // Release right arrow (stop rotating ship right)
         ship.rot = 0;

@@ -5,7 +5,11 @@ import { Ship } from '../src/ship.js';
 
 let mockShip: Ship;
 
+const mockPlay = vi.fn();
+
 beforeEach(() => {
+  Ship.fxThrust.play = mockPlay;
+  Ship.fxThrust.stop = mockPlay;
   mockShip = new Ship();
   mockShip.fireLaser = vi.fn(() => {
     console.log('Mock fireLaser called');
@@ -33,6 +37,7 @@ test.concurrent('keyDown - ArrowLeft', () => {
 test.concurrent('keyDown - ArrowUp', () => {
   keyDown(new KeyboardEvent('keydown', { code: 'ArrowUp' }), mockShip);
   expect(mockShip.thrusting).toBeTruthy();
+  expect(mockPlay).toHaveBeenCalled();
 });
 
 test.concurrent('keyDown - ArrowRight', () => {
@@ -53,6 +58,7 @@ test.concurrent('keyUp - ArrowLeft', () => {
 test.concurrent('keyUp - ArrowUp', () => {
   keyUp(new KeyboardEvent('keyup', { code: 'ArrowUp' }), mockShip);
   expect(mockShip.thrusting).toBeFalsy();
+  expect(mockPlay).toHaveBeenCalled();
 });
 
 test.concurrent('keyUp - ArrowRight', () => {

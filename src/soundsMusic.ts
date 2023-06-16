@@ -42,6 +42,9 @@ class Sound {
     this.streams[this.streamNum].pause();
     this.streams[this.streamNum].currentTime = 0;
   }
+  isPlaying(): boolean {
+    return !this.streams[this.streamNum].paused;
+  }
 }
 
 /**
