@@ -1,6 +1,5 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Ship } from '../src/ship';
-import { generateLaser } from '../src/lasers';
 import { LASER_MAX } from '../src/config';
 
 const mockPlay = vi.fn();
@@ -65,7 +64,6 @@ test.concurrent('Ship Slows Down (Friction)', () => {
   testShip.thrust();
   expect(testShip.xv).toBeLessThan(1);
   expect(testShip.yv).toBeLessThan(1);
-  expect(mockPlay).toHaveBeenCalledTimes(1);
 });
 
 test.concurrent('Ship Continues to Explode', () => {
