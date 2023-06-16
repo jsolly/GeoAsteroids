@@ -77,3 +77,10 @@ a {
   background-color: #007bff;
   border: none;
 }
+#highScoresList li {
+  font-family: 'Courier', monospace; /* Using a system monospaced font */
+  color: #ff0000;
+  text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2); /* Gives a bit of depth */
+  letter-spacing: 1.5px; /* Increases spacing between letters, giving it a more retro feel */
+  list-style: none; /* Removes the bullets */
+}

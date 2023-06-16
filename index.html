@@ -26,6 +26,12 @@
           </button>
         </li>
         <li class="nav-item">
+          <button id="showHighScoresButton" class="btn btn-lg btn-primary" data-bs-toggle="modal"
+            data-bs-target="#highScoresModal">
+            Show High Scores! 🏆
+          </button>
+        </li>
+        <li class="nav-item">
           <input class="form-check-input" type="checkbox" value="" id="soundPref" />
           <label class="form-check-label" for="soundPref"> Sound </label>
         </li>
@@ -49,16 +55,35 @@
     <div id="gameArea" style="display: none">
       <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
+    <!-- Game Over Modal -->
     <div id="gameOverModal" class="modal" style="display: none">
       <p>Enter your name for the high score list:</p>
       <input type="text" id="nameInput" maxlength="3" oninput="this.value = this.value.toUpperCase()">
       <button id="submitNameButton">Submit</button>
     </div>
+    <!-- High Scores Modal -->
+    <div id="highScoresModal" class="modal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">High Scores</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <ul id="highScoresList">
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="attribution">
+    <a href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search">Image
+      by kjpargeter on Freepik</a>
   </div>
 </body>
-<div id="attribution">
-  <a href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search">Image
-    by kjpargeter on Freepik</a>
-</div>
 
 </html>
