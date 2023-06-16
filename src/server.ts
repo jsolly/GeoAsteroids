@@ -1,72 +1,72 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import express, { Request, Response } from 'express';
-import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
+import { MongoClient, Document } from 'mongodb';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const app = express();
-
-const HIGH_SCORES_FILE = './highscores.json';
-
-interface HighScore {
+interface HighScore extends Document {
   name: string;
   score: number;
 }
 
+let db: MongoClient;
+
+const connectDB = async (): Promise<void> => {
+  const client = new MongoClient('mongodb://localhost:27017');
+  db = await client.connect();
+};
+
+connectDB().catch((error) => console.error(error));
+
 async function getHighScores(): Promise<HighScore[]> {
-  try {
-    const data = await readFile(HIGH_SCORES_FILE, 'utf-8');
-    const highScores = JSON.parse(data) as HighScore[];
-    return highScores;
-  } catch (error) {
-    // If the file does not exist or cannot be parsed, return an empty array
-    return [];
-  }
+  const collection = db.db('geoasteroids').collection<HighScore>('highscores');
+  const highScores = await collection
+    .find()
+    .sort({ score: -1 })
+    .limit(10)
+    .toArray();
+  return highScores;
 }
 
 async function updateHighScores(newScore: HighScore): Promise<void> {
-  let highScores = await getHighScores();
+  const collection = db.db('geoasteroids').collection('highscores');
 
-  // If the high scores file does not exist or is empty, create it with the new score
-  if (highScores.length === 0) {
-    highScores = [newScore];
-    await writeFile(HIGH_SCORES_FILE, JSON.stringify(highScores, null, 2));
-    return;
-  }
+  await collection.insertOne(newScore);
 
-  // If there are less than 10 scores, or the new score is higher than the lowest score
-  if (
-    highScores.length < 10 ||
-    newScore.score > highScores[highScores.length - 1].score
-  ) {
-    highScores.push(newScore);
-    highScores.sort((a, b) => b.score - a.score);
-    if (highScores.length > 10) {
-      highScores = highScores.slice(0, 10); // keep only the top 10 scores
-    }
-
-    await writeFile(HIGH_SCORES_FILE, JSON.stringify(highScores, null, 2));
-  }
+  // Remove scores that are not in the top 10
+  const scoresToKeep = await collection
+    .find()
+    .sort({ score: -1 })
+    .limit(10)
+    .toArray();
+  const idsToKeep = scoresToKeep.map((score) => score._id);
+  await collection.deleteMany({ _id: { $nin: idsToKeep } });
 }
+
+const app = express();
 
 app.use(express.json()); // for parsing application/json
 
-app.get('/api/highscores', (_, res: Response): void => {
-  void (async (): Promise<void> => {
-    const highScores = await getHighScores();
-    res.json({ highScores });
-  })();
+app.get('/api/highscores', (_, res) => {
+  getHighScores()
+    .then((highScores) => res.json({ highScores }))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send('An error occurred while getting high scores.');
+    });
 });
 
-app.post('/api/highscores', (req: Request, res: Response): void => {
-  void (async (): Promise<void> => {
-    const newScore = req.body as HighScore;
-    await updateHighScores(newScore);
-    res.json({ newScore });
-  })();
+app.post('/api/highscores', (req: Request, res: Response) => {
+  const newScore = req.body as HighScore;
+  updateHighScores(newScore)
+    .then(() => res.json({ newScore }))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send('An error occurred while updating high scores.');
+    });
 });
 
 // Serve static files from the Vite build
