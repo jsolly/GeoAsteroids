@@ -33,7 +33,7 @@ export async function getHighScores(): Promise<HighScore[]> {
       .find()
       .sort({ score: -1 })
       .limit(10)
-      .toArray();
+      .toArray(); // get the top 10 scores
     return highScores;
   } finally {
     await client.close();
