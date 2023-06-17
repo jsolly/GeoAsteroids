@@ -1,5 +1,5 @@
 import { CTX, CVS, SHIP_SIZE } from './config.js';
-import { Ship } from './objects.js';
+import { Ship } from './ship.js';
 
 /**
  * Draw the ship's thruster on the canvas

@@ -1,5 +1,5 @@
 import { FPS, TURN_SPEED } from './config.js';
-import { Ship } from './objects.js';
+import { Ship } from './ship.js';
 /**
  *
  * @param ev - Event fired when key is pressed down

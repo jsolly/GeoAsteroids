@@ -1,7 +1,8 @@
 import { expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { detectLaserHits, detectRoidHits } from '../src/collisions';
 import { Sound } from '../src/soundsMusic';
-import { Laser, Ship, Point } from '../src/objects';
+import { Laser, Ship } from '../src/ship';
+import { Point } from '../src/utils';
 import { RoidBelt } from '../src/asteroids';
 let fxHitInstance: Sound;
 let fxExplodeInstance: Sound;

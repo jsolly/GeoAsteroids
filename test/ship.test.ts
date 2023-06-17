@@ -1,6 +1,7 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { LASER_MAX } from '../src/config';
-import { Ship, Laser, Point } from '../src/objects';
+import { Ship, Laser } from '../src/ship';
+import { Point } from '../src/utils';
 
 const mockPlay = vi.fn();
 let mockShip: Ship;

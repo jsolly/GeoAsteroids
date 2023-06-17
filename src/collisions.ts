@@ -1,4 +1,4 @@
-import { Laser, Ship } from './objects.js';
+import { Laser, Ship } from './ship.js';
 import { Roid, RoidBelt } from './asteroids.js';
 
 function detectLaserHits(currRoidBelt: RoidBelt, currShip: Ship): number {

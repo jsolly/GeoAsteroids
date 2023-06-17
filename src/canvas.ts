@@ -6,7 +6,8 @@ import {
   CVS,
   CTX,
 } from './config.js';
-import { Point, Ship } from './objects.js';
+import { Ship } from './ship.js';
+import { Point } from './utils.js';
 import { getCurrentShip, getCurrentScore, getPersonalBest } from './main.js';
 
 let text: string;

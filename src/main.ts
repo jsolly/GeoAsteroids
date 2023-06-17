@@ -17,7 +17,7 @@ import {
 import { drawShipRelative, drawShipExplosion, drawLasers } from './shipCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
 import { showGameOverMenu } from './events.js';
-import { Ship } from './objects.js';
+import { Ship } from './ship.js';
 import { RoidBelt } from './asteroids.js';
 import { STARTING_SCORE, START_LEVEL } from './config';
 import { newLevelText, setTextProperties } from './canvas';
@@ -191,8 +191,8 @@ export {
   getPersonalBest,
   updatePersonalBest,
   updateCurrScore,
-  resetCurrScore,
   updateCurrLevel,
+  resetCurrScore,
   resetMusicTempo,
   tickMusic,
 };

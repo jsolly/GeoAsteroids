@@ -12,7 +12,7 @@ import {
 } from './config.js';
 import { Sound } from './soundsMusic.js';
 import { Point } from './utils.js';
-import { Ship } from './objects.js';
+import { Ship } from './ship.js';
 class Roid {
   readonly a: number;
   readonly offsets: number[] = [];

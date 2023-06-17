@@ -180,4 +180,4 @@ class Ship {
   }
 }
 
-export { Ship, Laser, Point };
+export { Ship, Laser };
