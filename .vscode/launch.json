@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Launch Server",
       "program": "${workspaceFolder}/src/server.ts",
-      "preLaunchTask": "npm: start", // This should match your server start script
+      "preLaunchTask": "npm: start",
       "sourceMaps": true,
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"

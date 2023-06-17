@@ -98,7 +98,6 @@ app.post('/api/highscores', (req: Request, res: Response) => {
       res.status(500).send('An error occurred while updating high scores.');
     });
 });
-
 // Serve static files from the Vite build
 const currentDir = path.join(__dirname, 'dist');
 
