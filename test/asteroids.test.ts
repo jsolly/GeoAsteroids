@@ -1,6 +1,7 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Difficulty, setDifficulty } from '../src/config';
-import { Ship, Point, Roid, RoidBelt } from '../src/objects';
+import { Ship, Point } from '../src/objects';
+import { Roid, RoidBelt } from '../src/asteroids';
 
 let mockShip: Ship;
 

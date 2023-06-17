@@ -1,4 +1,4 @@
-import { RoidBelt } from './objects.js';
+import { RoidBelt } from './asteroids.js';
 import { CTX, CVS, DEBUG } from './config.js';
 import { getCurrentShip } from './main.js';
 /**

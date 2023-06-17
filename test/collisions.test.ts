@@ -1,7 +1,8 @@
 import { expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { detectLaserHits, detectRoidHits } from '../src/collisions';
 import { Sound } from '../src/soundsMusic';
-import { Laser, Ship, RoidBelt, Point } from '../src/objects';
+import { Laser, Ship, Point } from '../src/objects';
+import { RoidBelt } from '../src/asteroids';
 let fxHitInstance: Sound;
 let fxExplodeInstance: Sound;
 const mockPlay = vi.fn();

@@ -8,13 +8,9 @@ import { SAVE_KEY_PERSONAL_BEST } from '../src/config';
 import { expect, test, afterEach, vi } from 'vitest';
 
 afterEach(() => {
-  // Restore the original functions after each test
   vi.restoreAllMocks();
 
-  // Clear local storage
   localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0');
-
-  // Reset currScore
   resetCurrScore();
 });
 

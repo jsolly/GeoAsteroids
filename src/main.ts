@@ -17,7 +17,8 @@ import {
 import { drawShipRelative, drawShipExplosion, drawLasers } from './shipCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
 import { showGameOverMenu } from './events.js';
-import { RoidBelt, Ship } from './objects.js';
+import { Ship } from './objects.js';
+import { RoidBelt } from './asteroids.js';
 import { STARTING_SCORE, START_LEVEL } from './config';
 import { newLevelText, setTextProperties } from './canvas';
 import { Music } from './soundsMusic';
