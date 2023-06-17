@@ -13,3 +13,4 @@ npm-debug.log
 # Vite
 dist/*
 coverage
+.vercel
