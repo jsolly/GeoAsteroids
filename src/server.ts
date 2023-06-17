@@ -3,6 +3,8 @@ import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,10 +23,14 @@ let db: MongoClient | null = null;
 async function getDb(): Promise<MongoClient> {
   if (db === null) {
     // use different database connection strings depending on the environment
+    console.log(process.env.NODE_ENV);
     const connectionString =
       process.env.NODE_ENV === 'production'
-        ? 'mongodb://production_database:27017'
-        : 'mongodb://localhost:27017';
+        ? process.env.MONGO_DB_CONNECTION_STRING
+        : 'mongodb://localhost:27017/';
+    if (!connectionString) {
+      throw new Error('MONGO_DB_CONNECTION_STRING is not defined in .env');
+    }
 
     const client = new MongoClient(connectionString);
     db = await client.connect();
