@@ -6,7 +6,7 @@ import {
   CVS,
   CTX,
 } from './config.js';
-import { Point } from './objects.js';
+import { Point, Ship } from './objects.js';
 import { getCurrentShip, getCurrentScore, getPersonalBest } from './main.js';
 
 let text: string;
@@ -55,8 +55,7 @@ function drawGameText(): void {
  * Draws the polygons that are used to detect collisions. Also shows you the
  * CENTER dot for the ship.
  */
-function drawDebugFeatures(): void {
-  const ship = getCurrentShip();
+function drawDebugFeatures(ship: Ship): void {
   const x = ship.centroid.x;
   const y = ship.centroid.y;
   // Draw Ship collision bounding box (if needed)

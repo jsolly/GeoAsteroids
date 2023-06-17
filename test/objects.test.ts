@@ -3,6 +3,7 @@ import { LASER_MAX, Difficulty, setDifficulty } from '../src/config';
 import { Ship, Laser, Point, Roid, RoidBelt } from '../src/objects';
 
 const mockPlay = vi.fn();
+let mockShip: Ship;
 
 beforeEach(() => {
   Ship.fxThrust.play = mockPlay;
@@ -10,6 +11,7 @@ beforeEach(() => {
   Ship.fxExplode.play = mockPlay;
   Laser.fxLaser.play = mockPlay;
   Laser.fxHit.play = mockPlay;
+  mockShip = new Ship();
 });
 
 afterEach(() => {
@@ -18,78 +20,69 @@ afterEach(() => {
 });
 
 test.concurrent('Ship Creation', () => {
-  const testShip = new Ship();
-  expect(testShip).toBeInstanceOf(Ship);
+  expect(mockShip).toBeInstanceOf(Ship);
 });
 
 test.concurrent('Ship Die', () => {
-  const testShip = new Ship();
-  expect(testShip.dead).toBeFalsy();
-  testShip.die();
-  expect(testShip.dead).toBeTruthy();
+  expect(mockShip.dead).toBeFalsy();
+  mockShip.die();
+  expect(mockShip.dead).toBeTruthy();
 });
 
 test.concurrent('Ship setBlinkOn', () => {
-  const testShip = new Ship();
-  testShip.setBlinkOn();
-  expect(testShip.blinkOn).toBeTruthy(); // All new ships blink
-  testShip.blinkCount = 1; // Simulate odd count (no blink)
-  testShip.setBlinkOn();
-  expect(testShip.blinkOn).toBeFalsy();
+  mockShip.setBlinkOn();
+  expect(mockShip.blinkOn).toBeTruthy(); // All new ships blink
+  mockShip.blinkCount = 1; // Simulate odd count (no blink)
+  mockShip.setBlinkOn();
+  expect(mockShip.blinkOn).toBeFalsy();
 });
 
 test.concurrent('Thrust Ship', () => {
-  const testShip = new Ship();
-  testShip.thrusting = true;
-  testShip.move();
-  expect(testShip.xv).toBeLessThan(0);
-  expect(testShip.yv).toBeLessThan(0);
+  mockShip.thrusting = true;
+  mockShip.move();
+  expect(mockShip.xv).toBeLessThan(0);
+  expect(mockShip.yv).toBeLessThan(0);
 });
 
 test.concurrent('Move Ship', () => {
-  const testShip = new Ship();
-  testShip.rot = 1;
-  testShip.move();
-  expect(testShip.a).toBeGreaterThan(0);
-  testShip.xv = 1;
-  testShip.yv = 1;
-  testShip.move();
-  expect(testShip.centroid.x).toBeGreaterThan(0);
-  expect(testShip.centroid.y).toBeGreaterThan(0);
+  mockShip.rot = 1;
+  mockShip.move();
+  expect(mockShip.a).toBeGreaterThan(0);
+  mockShip.xv = 1;
+  mockShip.yv = 1;
+  mockShip.move();
+  expect(mockShip.centroid.x).toBeGreaterThan(0);
+  expect(mockShip.centroid.y).toBeGreaterThan(0);
 });
 
 test.concurrent('Ship Slows Down (Friction)', () => {
-  const testShip = new Ship();
-  testShip.xv = 1;
-  testShip.yv = 1;
-  testShip.thrusting = false;
-  testShip.move();
-  expect(testShip.xv).toBeLessThan(1);
-  expect(testShip.yv).toBeLessThan(1);
+  mockShip.xv = 1;
+  mockShip.yv = 1;
+  mockShip.thrusting = false;
+  mockShip.move();
+  expect(mockShip.xv).toBeLessThan(1);
+  expect(mockShip.yv).toBeLessThan(1);
 });
 
 test.concurrent('Ship Continues to Explode', () => {
-  const testShip = new Ship();
-  testShip.explodeTime = 1;
-  testShip.setExploding();
-  expect(testShip.exploding).toBeTruthy();
+  mockShip.explodeTime = 1;
+  mockShip.setExploding();
+  expect(mockShip.exploding).toBeTruthy();
 });
 
 test.concurrent('Ship Not Exploding', () => {
-  const testShip = new Ship();
-  testShip.explodeTime = 0;
-  testShip.setExploding();
-  expect(testShip.exploding).toBeFalsy();
+  mockShip.explodeTime = 0;
+  mockShip.setExploding();
+  expect(mockShip.exploding).toBeFalsy();
 });
 
 test.concurrent('Ship Cannot Shoot When At Max Lasers', () => {
-  const testShip = new Ship();
-  expect(testShip.canShootAgain()).toBeTruthy();
+  expect(mockShip.canShootAgain()).toBeTruthy();
   // Shoot LASER_MAX times
   for (let i = 0; i <= LASER_MAX; i++) {
-    testShip.shoot();
+    mockShip.shoot();
   }
-  expect(testShip.canShootAgain()).toBeFalsy();
+  expect(mockShip.canShootAgain()).toBeFalsy();
 });
 
 test.concurrent('Laser Creation', () => {
@@ -99,41 +92,37 @@ test.concurrent('Laser Creation', () => {
 });
 
 test.concurrent('Shoot Laser', () => {
-  const testShip = new Ship();
-  const currentLaserCount = testShip.lasers.length;
-  testShip.shoot();
-  expect(testShip.lasers.length).toEqual(currentLaserCount + 1);
+  const currentLaserCount = mockShip.lasers.length;
+  mockShip.shoot();
+  expect(mockShip.lasers.length).toEqual(currentLaserCount + 1);
   expect(mockPlay).toHaveBeenCalledTimes(1);
 });
 
 test.concurrent('Move Lasers', () => {
-  const testShip = new Ship();
-  testShip.shoot();
+  mockShip.shoot();
 
-  const firstLaser = testShip.lasers[0];
+  const firstLaser = mockShip.lasers[0];
   const firstLaserLocationY = firstLaser.centroid.y;
-  testShip.moveLasers();
+  mockShip.moveLasers();
   expect(firstLaser.centroid.x).not.toEqual(firstLaserLocationY);
 });
 
 test.concurrent('Laser Distance Exceeded', () => {
-  const testShip = new Ship();
-  testShip.shoot();
+  mockShip.shoot();
 
-  const firstLaser = testShip.lasers[0];
+  const firstLaser = mockShip.lasers[0];
   firstLaser.distTraveled = 100000;
-  testShip.moveLasers();
-  expect(testShip.lasers.length).toEqual(0);
+  mockShip.moveLasers();
+  expect(mockShip.lasers.length).toEqual(0);
 });
 
 test.concurrent('Laser Removed After Exploded', () => {
-  const testShip = new Ship();
-  testShip.shoot();
+  mockShip.shoot();
 
-  const firstLaser = testShip.lasers[0];
+  const firstLaser = mockShip.lasers[0];
   firstLaser.explodeTime = 1; // Almost exploded
-  testShip.moveLasers();
-  expect(testShip.lasers.length).toEqual(0);
+  mockShip.moveLasers();
+  expect(mockShip.lasers.length).toEqual(0);
 });
 
 test.concurrent('Point Creation', () => {
@@ -167,37 +156,37 @@ test.concurrent('Roid Creation', () => {
 
 test.concurrent('Roid Belt Creation', () => {
   setDifficulty(Difficulty.easy); // This ensures roidNum is defined
-  const testRoidBelt = new RoidBelt();
+  const testRoidBelt = new RoidBelt(mockShip);
   expect(testRoidBelt).toBeInstanceOf(RoidBelt);
   expect(testRoidBelt.roids.length).toEqual(5);
 });
 
 test.concurrent('Roid Belt Add Roid', () => {
-  const testRoidBelt = new RoidBelt();
+  const testRoidBelt = new RoidBelt(mockShip);
   const roidCount = testRoidBelt.roids.length;
-  testRoidBelt.addRoid();
+  testRoidBelt.addRoid(mockShip);
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1);
 });
 
 test.concurrent('Roid Belt Spawn Roids', () => {
-  const testRoidBelt = new RoidBelt();
+  const testRoidBelt = new RoidBelt(mockShip);
   testRoidBelt.spawnTime = 0; // so we don't have to wait a second for the spawn time to hit
   const roidCount = testRoidBelt.roids.length;
-  testRoidBelt.spawnRoids();
+  testRoidBelt.spawnRoids(mockShip);
   expect(testRoidBelt.roids.length).toEqual(roidCount + 4);
 });
 
 test.concurrent('Destory Roid', () => {
-  const testRoidBelt = new RoidBelt();
-  testRoidBelt.addRoid();
+  const testRoidBelt = new RoidBelt(mockShip);
+  testRoidBelt.addRoid(mockShip);
   const roidCount = testRoidBelt.roids.length;
   testRoidBelt.destroyRoid(0);
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Roid splits in two
 });
 
 test.concurrent('Move Roids', () => {
-  const testRoidBelt = new RoidBelt();
-  testRoidBelt.addRoid();
+  const testRoidBelt = new RoidBelt(mockShip);
+  testRoidBelt.addRoid(mockShip);
   const firstRoid = testRoidBelt.roids[0];
   const firstRoidLocationY = firstRoid.centroid.y;
   testRoidBelt.moveRoids();

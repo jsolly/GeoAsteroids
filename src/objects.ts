@@ -1,5 +1,3 @@
-// import { updatePersonalBest } from './utils.js';
-// import { updateCurrScore } from './main.js';
 import {
   ROID_SIZE,
   ROID_SPEED,
@@ -61,19 +59,18 @@ class RoidBelt {
   roidNum = getRoidNum();
   roids: Roid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
-  constructor() {
+  constructor(ship: Ship) {
     for (let i = 0; i < this.roidNum; i++) {
-      this.addRoid();
+      this.addRoid(ship);
     }
   }
-  addRoid(): void {
-    const testShip = new Ship();
+  addRoid(ship: Ship): void {
     const x =
-      testShip.centroid.x +
-      (ROID_SIZE * 4 + testShip.r) * (Math.random() < 0.5 ? 1 : -1); // 50% chance of True or False
+      ship.centroid.x +
+      (ROID_SIZE * 4 + ship.r) * (Math.random() < 0.5 ? 1 : -1); // 50% chance of True or False
     const y =
-      testShip.centroid.y +
-      (ROID_SIZE * 4 + testShip.r) * (Math.random() < 0.5 ? 1 : -1);
+      ship.centroid.y +
+      (ROID_SIZE * 4 + ship.r) * (Math.random() < 0.5 ? 1 : -1);
     const astroidCentroid = new Point(x, y);
     this.roids.push(new Roid(astroidCentroid, Math.ceil(ROID_SIZE / 2)));
   }
@@ -115,10 +112,10 @@ class RoidBelt {
       );
     }
   }
-  spawnRoids(): void {
+  spawnRoids(ship: Ship): void {
     if (this.spawnTime == 0) {
       for (let i = 0; i < 4; i++) {
-        this.addRoid();
+        this.addRoid(ship);
         this.spawnTime = ROID_SPAWN_TIME * FPS;
       }
     }

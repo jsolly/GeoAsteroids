@@ -25,7 +25,7 @@ import { keyDown, keyUp } from './keybindings';
 
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 const currShip = new Ship();
-const currRoidBelt = new RoidBelt();
+const currRoidBelt = new RoidBelt(currShip);
 let currScore = STARTING_SCORE;
 let currLevel = START_LEVEL;
 
@@ -67,7 +67,7 @@ function tickMusic(): void {
 function updateCurrLevel(): void {
   currLevel += 1;
   newLevelText(currLevel);
-  currRoidBelt.addRoid();
+  currRoidBelt.addRoid(currShip);
   music.setMusicTempo(currLevel);
 }
 
@@ -115,10 +115,10 @@ function gameOver(): void {
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
-  currRoidBelt.spawnRoids();
+  currRoidBelt.spawnRoids(currShip);
 
   if (DEBUG) {
-    drawDebugFeatures();
+    drawDebugFeatures(currShip);
   }
 
   currShip.setBlinkOn();
