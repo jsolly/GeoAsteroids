@@ -2,53 +2,78 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { MongoClient } from 'mongodb';
 
-import { MongoClient, Document } from 'mongodb';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-interface HighScore extends Document {
-  name: string;
-  score: number;
-}
-
-let db: MongoClient;
-
-const connectDB = async (): Promise<void> => {
-  const client = new MongoClient('mongodb://localhost:27017');
-  db = await client.connect();
-};
-
-connectDB().catch((error) => console.error(error));
-
-async function getHighScores(): Promise<HighScore[]> {
-  const collection = db.db('geoasteroids').collection<HighScore>('highscores');
-  const highScores = await collection
-    .find()
-    .sort({ score: -1 })
-    .limit(10)
-    .toArray();
-  return highScores;
-}
-
-async function updateHighScores(newScore: HighScore): Promise<void> {
-  const collection = db.db('geoasteroids').collection('highscores');
-
-  await collection.insertOne(newScore);
-
-  // Remove scores that are not in the top 10
-  const scoresToKeep = await collection
-    .find()
-    .sort({ score: -1 })
-    .limit(10)
-    .toArray();
-  const idsToKeep = scoresToKeep.map((score) => score._id);
-  await collection.deleteMany({ _id: { $nin: idsToKeep } });
-}
 
 const app = express();
 
 app.use(express.json()); // for parsing application/json
+
+interface HighScore {
+  name: string;
+  score: number;
+}
+
+let db: MongoClient | null = null;
+
+async function getDb(): Promise<MongoClient> {
+  if (db === null) {
+    // use different database connection strings depending on the environment
+    const connectionString =
+      process.env.NODE_ENV === 'production'
+        ? 'mongodb://production_database:27017'
+        : 'mongodb://localhost:27017';
+
+    const client = new MongoClient(connectionString);
+    db = await client.connect();
+  }
+  return db;
+}
+
+async function getHighScores(): Promise<HighScore[]> {
+  try {
+    const db = await getDb();
+    const collection = db
+      .db('geoasteroids')
+      .collection<HighScore>('highscores');
+    const highScores = await collection
+      .find()
+      .sort({ score: -1 })
+      .limit(10)
+      .toArray();
+    return highScores;
+  } catch (error) {
+    console.error('Error executing query', error);
+    // If there's an error, set db to null to force reconnection next time
+    db = null;
+    throw error;
+  }
+}
+
+async function updateHighScores(newScore: HighScore): Promise<void> {
+  try {
+    const db = await getDb();
+    const collection = db.db('geoasteroids').collection('highscores');
+
+    await collection.insertOne(newScore);
+
+    // Remove scores that are not in the top 10
+    const scoresToKeep = await collection
+      .find()
+      .sort({ score: -1 })
+      .limit(10)
+      .toArray();
+    const idsToKeep = scoresToKeep.map((score) => score._id);
+    await collection.deleteMany({ _id: { $nin: idsToKeep } });
+  } catch (error) {
+    console.error('Error executing query', error);
+    // If there's an error, set db to null to force reconnection next time
+    db = null;
+    throw error;
+  }
+}
 
 app.get('/api/highscores', (_, res) => {
   getHighScores()
