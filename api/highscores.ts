@@ -12,7 +12,7 @@ async function getDb(): Promise<MongoClient> {
   const connectionString =
     process.env.NODE_ENV === 'production'
       ? process.env.MONGODB_URI
-      : 'mongodb://localhost:27017/';
+      : 'mongodb://127.0.0.1:27017';
   if (!connectionString) {
     throw new Error('MONGODB_URI is not defined in .env');
   }
