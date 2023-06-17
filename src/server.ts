@@ -23,13 +23,12 @@ let db: MongoClient | null = null;
 async function getDb(): Promise<MongoClient> {
   if (db === null) {
     // use different database connection strings depending on the environment
-    console.log(process.env.NODE_ENV);
     const connectionString =
       process.env.NODE_ENV === 'production'
-        ? process.env.MONGO_DB_CONNECTION_STRING
+        ? process.env.MONGODB_URI
         : 'mongodb://localhost:27017/';
     if (!connectionString) {
-      throw new Error('MONGO_DB_CONNECTION_STRING is not defined in .env');
+      throw new Error('MONGODB_URI is not defined in .env');
     }
 
     const client = new MongoClient(connectionString);
