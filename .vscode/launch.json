@@ -4,22 +4,22 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch via NPM",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["start"],
+      "name": "Launch via Vercel", 
+      "runtimeExecutable": "vercel",
+      "runtimeArgs": ["dev"],
     },
     {
       "type": "chrome",
       "request": "launch",
       "name": "Launch Chrome",
-      "url": "http://localhost:5173",
+      "url": "http://localhost:3000",
       "webRoot": "${workspaceFolder}"
     }
   ],
   "compounds": [
     {
-      "name": "NPM Start/Client",
-      "configurations": ["Launch via NPM", "Launch Chrome"]
+      "name": "Vercel Start/Client",
+      "configurations": ["Launch via Vercel", "Launch Chrome"]
     }
   ]
 }

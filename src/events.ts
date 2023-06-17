@@ -157,9 +157,6 @@ async function submitName(): Promise<void> {
   toggleScreen('start-screen', true);
   toggleScreen('gameArea', false);
 }
-interface HighScoresResponse {
-  highScores: HighScore[];
-}
 
 async function fetchHighScores(): Promise<void> {
   try {
@@ -167,14 +164,14 @@ async function fetchHighScores(): Promise<void> {
     if (!response.ok) {
       throw new Error('Network response was not ok');
     }
-    const data = (await response.json()) as HighScoresResponse;
+    const data = (await response.json()) as HighScore[]; // changed this line
 
     if (highScoresList) {
       // Clear any existing scores
       highScoresList.innerHTML = '';
 
-      // Add new scores
-      data.highScores.forEach((score) => {
+      // Add new scores to the DOM
+      data.forEach((score) => {
         const li = document.createElement('li');
         li.textContent = `${score.name}: ${score.score}`;
         highScoresList.appendChild(li);
