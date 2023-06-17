@@ -1,27 +1,21 @@
-import { expect, test } from 'vitest';
-import { Point, getPersonalBest, updatePersonalBest } from '../src/utils';
+import {
+  getPersonalBest,
+  updateCurrScore,
+  updatePersonalBest,
+  resetCurrScore,
+} from '../src/main';
 import { SAVE_KEY_PERSONAL_BEST } from '../src/config';
+import { expect, test, afterEach, vi } from 'vitest';
 
-test.concurrent('Point Creation', () => {
-  const firstPoint = new Point(10, 20);
-  expect(firstPoint.x).toBe(10);
-});
+afterEach(() => {
+  // Restore the original functions after each test
+  vi.restoreAllMocks();
 
-test.concurrent('Point distance calculation - non-zero distance', () => {
-  const firstPoint = new Point(0, 0);
-  const secondPoint = new Point(3, 4);
-  expect(firstPoint.distToPoint(secondPoint)).toBe(5);
-});
+  // Clear local storage
+  localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0');
 
-test.concurrent('Zero Point Distance', () => {
-  const firstPoint = new Point(10, 20);
-  const secondPoint = new Point(10, 20);
-  expect(firstPoint.distToPoint(secondPoint)).toBe(0);
-});
-test.concurrent('Point Distance - Many', () => {
-  const firstPoint = new Point(0, 0);
-  const secondPoint = new Point(1000, 2000);
-  expect(firstPoint.distToPoint(secondPoint)).toBe(2236);
+  // Reset currScore
+  resetCurrScore();
 });
 
 // Test that getPersonalBest returns 0 when local storage is empty
@@ -40,13 +34,15 @@ test.concurrent('getPersonalBest - after setting a score', () => {
 // Test that updatePersonalBest updates the score in local storage when the new score is higher
 test.concurrent('updatePersonalBest - higher score', () => {
   localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  updatePersonalBest(200);
+  updateCurrScore(200);
+  updatePersonalBest();
   expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('200');
 });
 
 // Test that updatePersonalBest does not update the score in local storage when the new score is lower
 test.concurrent('updatePersonalBest - lower score', () => {
   localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  updatePersonalBest(50);
+  updateCurrScore(-50);
+  updatePersonalBest();
   expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('100');
 });

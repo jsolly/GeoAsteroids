@@ -1,7 +1,6 @@
-import { keyDown, keyUp } from './keybindings.js';
 import { setSound, setMusic } from './soundsMusic.js';
 import { setDifficulty, Difficulty, FPS } from './config.js';
-import { ship, newGame, update, currScore } from './main.js';
+import { newGame, update, getCurrentScore } from './main.js';
 
 const startGameBtn = getElementById<HTMLButtonElement>('start-game');
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
@@ -17,9 +16,6 @@ const difficultyButtonMap: Record<string, Difficulty> = {
   medium: Difficulty.medium,
   hard: Difficulty.hard,
 };
-
-document.addEventListener('keydown', (ev) => keyDown(ev, ship)); // pass ship to keyDown
-document.addEventListener('keyup', (ev) => keyUp(ev, ship)); // pass ship to keyUp
 
 attachEventListener(highScoresButton, 'click', fetchHighScores);
 attachEventListener(startGameBtn, 'click', startGame);
@@ -136,7 +132,7 @@ async function submitName(): Promise<void> {
 
   validateInput(nameInput);
   const name = nameInput.value;
-  const score = currScore;
+  const score = getCurrentScore();
 
   // Call Serverside API to save score
   const highScore: HighScore = { name, score };

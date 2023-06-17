@@ -6,9 +6,9 @@ import {
   CVS,
   CTX,
 } from './config.js';
-import { Point } from './utils.js';
-import { Ship } from './ship.js';
-import { getPersonalBest } from './utils.js';
+import { Point } from './objects.js';
+import { getCurrentShip, getCurrentScore, getPersonalBest } from './main.js';
+
 let text: string;
 let textAlpha: number;
 
@@ -55,7 +55,8 @@ function drawGameText(): void {
  * Draws the polygons that are used to detect collisions. Also shows you the
  * CENTER dot for the ship.
  */
-function drawDebugFeatures(ship: Ship): void {
+function drawDebugFeatures(): void {
+  const ship = getCurrentShip();
   const x = ship.centroid.x;
   const y = ship.centroid.y;
   // Draw Ship collision bounding box (if needed)
@@ -99,23 +100,27 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
 /**
  * Draw number of lives left on canvas
  */
-function drawLives(ship: Ship): void {
+function drawLives(): void {
+  const ship = getCurrentShip();
   let lifeColor;
   for (let i = 0; i < ship.lives; i++) {
-    lifeColor = getLifeColor(ship, i);
+    lifeColor = getLifeColor();
     const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
     drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
   }
 }
 
-function getLifeColor(ship: Ship, currLives: number): string {
+function getLifeColor(): string {
+  const ship = getCurrentShip();
+  const currLives = ship.lives;
   return ship.exploding && currLives == ship.lives - 1 ? 'red' : 'white';
 }
 
 /**
  * Draw current score and high score on canvas
  */
-function drawScores(currScore: number): void {
+function drawScores(): void {
+  const currScore = getCurrentScore();
   // draw the score
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';

@@ -1,7 +1,7 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { keyDown, keyUp } from '../src/keybindings.js';
 import { TURN_SPEED, FPS } from '../src/config.js';
-import { Ship } from '../src/ship.js';
+import { Ship } from '../src/objects.js';
 
 let mockShip: Ship;
 

@@ -111,8 +111,6 @@ class Music {
   }
 }
 
-const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
-
 function setMusic(pref: boolean): void {
   localStorage.setItem(LOCAL_STORAGE_KEYS.musicOn, String(pref));
 }
@@ -121,4 +119,4 @@ function setSound(pref: boolean): void {
   localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, String(pref));
 }
 
-export { Sound, Music, setMusic, setSound, music };
+export { Sound, Music, setMusic, setSound };

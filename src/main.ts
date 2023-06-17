@@ -2,156 +2,196 @@ import {
   SHIP_INV_BLINK_DUR,
   FPS,
   DEBUG,
-  NEXT_LEVEL_POINTS,
   musicIsOn,
-  STARTING_SCORE,
-  START_LEVEL,
+  SAVE_KEY_PERSONAL_BEST,
 } from './config.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
-import { moveRoids, spawnRoids, roidBelt } from './asteroids.js';
 import {
   drawGameText,
   getTextAlpha,
   drawSpace,
   drawDebugFeatures,
-  setTextProperties,
   drawScores,
   drawLives,
-  newLevelText,
 } from './canvas.js';
-import { music } from './soundsMusic.js';
-import { Ship } from './ship.js';
-import { moveLasers } from './lasers.js';
-import { drawShipRelative, drawShipExplosion } from './shipCanv.js';
-import { drawLasers } from './lasersCanv.js';
+import { drawShipRelative, drawShipExplosion, drawLasers } from './shipCanv.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
-import { updatePersonalBest } from './utils.js';
 import { showGameOverMenu } from './events.js';
+import { RoidBelt, Ship } from './objects.js';
+import { STARTING_SCORE, START_LEVEL } from './config';
+import { newLevelText, setTextProperties } from './canvas';
+import { Music } from './soundsMusic';
+import { keyDown, keyUp } from './keybindings';
 
-let ship: Ship;
-let currRoidBelt: roidBelt;
-let nextLevel = NEXT_LEVEL_POINTS;
+const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
+const currShip = new Ship();
+const currRoidBelt = new RoidBelt();
 let currScore = STARTING_SCORE;
 let currLevel = START_LEVEL;
 
-/**
- * Resets score, ship, and level for a new game.
- */
-function newGame(): void {
-  ship = new Ship();
-  currRoidBelt = new roidBelt(ship);
-  currScore = STARTING_SCORE;
-  currLevel = START_LEVEL;
-  newLevel(ship, currRoidBelt);
+document.addEventListener('keydown', (ev) => keyDown(ev, currShip));
+document.addEventListener('keyup', (ev) => keyUp(ev, currShip));
+
+function getCurrentShip(): Ship {
+  return currShip;
 }
 
-/**
- * Start a new level. This is called on game start and when the player
- * levels up
- */
-function newLevel(ship: Ship, currRoidBelt: roidBelt): void {
-  currLevel += 1;
-  newLevelText(currLevel);
-  currRoidBelt.addRoid(ship);
-  music.setMusicTempo(currLevel);
+function getCurrentRoidBelt(): RoidBelt {
+  return currRoidBelt;
+}
+
+function getCurrentScore(): number {
+  return currScore;
+}
+
+function getCurrentLevel(): number {
+  return currLevel;
 }
 
 function updateCurrScore(valtoAdd: number): void {
   currScore += valtoAdd;
 }
 
+function resetMusicTempo(): void {
+  music.setMusicTempo(1.0);
+}
+
+function tickMusic(): void {
+  music.tick();
+}
+
+/**
+ * Start a new level. This is called on game start and when the player
+ * levels up
+ */
+function updateCurrLevel(): void {
+  currLevel += 1;
+  newLevelText(currLevel);
+  currRoidBelt.addRoid();
+  music.setMusicTempo(currLevel);
+}
+
+/**
+ * Resets score, ship, and level for a new game.
+ */
+function newGame(): void {
+  updateCurrLevel();
+}
+
+/**
+ *
+ * @returns - The current personal best score from local storage.
+ */
+function getPersonalBest(): number {
+  const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST);
+  if (personalBest == null) {
+    localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0'); // set to 0 if null
+    return 0;
+  }
+  return Number(localStorage.getItem(SAVE_KEY_PERSONAL_BEST));
+}
+
+function updatePersonalBest(): void {
+  const personalBest = getPersonalBest();
+  if (currScore > personalBest) {
+    localStorage.setItem(SAVE_KEY_PERSONAL_BEST, String(currScore));
+  }
+}
+
+function resetCurrScore(): void {
+  currScore = STARTING_SCORE;
+}
 /**
  * Called when ship lives = 0. Calls functions to end the game.
  */
-function gameOver(ship: Ship): void {
-  ship.die();
+function gameOver(): void {
+  const currShip = getCurrentShip();
+  currShip.die();
   setTextProperties('Game Over', 1.0);
-  music.tempo = 1.0;
+  resetMusicTempo();
 }
 
 /**
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
-  updatePersonalBest(currScore);
-  if (currScore > nextLevel) {
-    newLevel(ship, currRoidBelt);
-    nextLevel += 1000;
-  }
-  const roids = currRoidBelt.roids;
-  spawnRoids(currRoidBelt, ship);
+  currRoidBelt.spawnRoids();
 
   if (DEBUG) {
-    drawDebugFeatures(ship);
+    drawDebugFeatures();
   }
 
-  ship.setBlinkOn();
-  ship.setExploding();
+  currShip.setBlinkOn();
+  currShip.setExploding();
   drawSpace();
-  drawRoidsRelative(ship, roids);
-  drawScores(currScore);
-  drawLives(ship);
+  drawRoidsRelative(currRoidBelt);
+  drawScores();
+  drawLives();
 
   if (getTextAlpha() >= 0) {
     drawGameText();
-  } else if (ship.dead) {
+  } else if (currShip.dead) {
     showGameOverMenu();
   }
 
   // tick the music
   if (musicIsOn()) {
-    music.tick();
+    tickMusic();
   }
 
-  // draw triangular ship
-  if (!ship.exploding) {
-    if (ship.blinkOn && !ship.dead) {
-      drawShipRelative(ship);
+  // draw ship
+  if (!currShip.exploding) {
+    if (currShip.blinkOn && !currShip.dead) {
+      drawShipRelative(currShip);
     }
 
     // handle blinking
-    if (ship.blinkCount > 0) {
-      // reduce blink time
-      ship.blinkTime--;
+    if (currShip.blinkCount > 0) {
+      currShip.blinkTime--;
 
-      // reduce blink count
-      if (ship.blinkTime == 0) {
-        ship.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-        ship.blinkCount--;
+      // reduce blink count if blinking
+      if (currShip.blinkTime == 0) {
+        currShip.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+        currShip.blinkCount--;
       }
     }
   } else {
     // handle ship explosion
-    drawShipExplosion(ship);
-    // reduce explode time
-    ship.explodeTime--;
-    if (ship.explodeTime == 0) {
-      ship.lives--;
-      if (ship.lives == 0) {
-        gameOver(ship);
+    drawShipExplosion(currShip);
+    // reduce explode time if exploding
+    currShip.explodeTime--;
+    if (currShip.explodeTime == 0) {
+      currShip.lives--;
+      if (currShip.lives == 0) {
+        gameOver();
       }
     }
   }
 
-  drawLasers(ship);
-  detectLaserHits(ship, currRoidBelt);
-  detectRoidHits(ship, currRoidBelt);
+  drawLasers(currShip);
+  currScore += detectLaserHits(currRoidBelt, currShip);
+  currScore += detectRoidHits(currShip, currRoidBelt);
+  updatePersonalBest();
 
-  ship.thrust();
-  if (!ship.exploding) {
-    ship.move();
+  if (!currShip.exploding) {
+    currShip.move();
   }
-  moveLasers(ship);
-  moveRoids(roids);
+  currShip.moveLasers();
+  currRoidBelt.moveRoids();
 }
 
 export {
-  ship,
-  gameOver,
-  currScore,
-  currLevel,
-  updateCurrScore,
-  newLevel,
   newGame,
   update,
+  getCurrentShip,
+  getCurrentRoidBelt,
+  getCurrentScore,
+  getCurrentLevel,
+  getPersonalBest,
+  updatePersonalBest,
+  updateCurrScore,
+  resetCurrScore,
+  updateCurrLevel,
+  resetMusicTempo,
+  tickMusic,
 };

@@ -1,43 +1,42 @@
-import { Ship } from './ship.js';
-import { roidBelt, destroyRoid, Roid } from './asteroids.js';
-import { FPS, LASER_EXPLODE_DUR } from './config.js';
+import { Roid, RoidBelt, Laser, Ship } from './objects.js';
 
-import { Laser } from './lasers.js';
-
-function detectLaserHits(ship: Ship, roidBelt: roidBelt): void {
-  const roids = roidBelt.roids;
+function detectLaserHits(currRoidBelt: RoidBelt, currShip: Ship): number {
+  const roids = currRoidBelt.roids;
+  let score = 0;
   // detect laser hits
-  for (let j = ship.lasers.length - 1; j >= 0; j--) {
+  for (let j = currShip.lasers.length - 1; j >= 0; j--) {
     for (let i = roids.length - 1; i >= 0; i--) {
       // detect hits
-      if (isHit(ship.lasers[j], roids[i])) {
+      if (isHit(currShip.lasers[j], roids[i])) {
         // remove asteroid and activate laser explosion
         Roid.fxHit.play();
-        destroyRoid(i, roids);
-        ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+        score = currRoidBelt.destroyRoid(i);
+        currShip.updateLaserExplodeTime(j);
       }
     }
   }
+  return score;
 }
 
-function detectRoidHits(ship: Ship, roidBelt: roidBelt): void {
-  const roids = roidBelt.roids;
+function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
+  let score = 0;
   // check for asteroid collisions (when not exploding)
-  if (!ship.exploding) {
+  if (!currShip.exploding) {
     // only check when not blinking
-    if (ship.blinkCount == 0 && !ship.dead) {
-      for (let i = 0; i < roids.length; i++) {
+    if (currShip.blinkCount == 0 && !currShip.dead) {
+      for (let i = 0; i < currRoidBelt.roids.length; i++) {
         if (
-          ship.centroid.distToPoint(roids[i].centroid) <
-          ship.r + roids[i].r
+          currShip.centroid.distToPoint(currRoidBelt.roids[i].centroid) <
+          currShip.r + currRoidBelt.roids[i].r
         ) {
-          ship.explode();
+          currShip.explode();
           Roid.fxHit.play();
-          destroyRoid(i, roids);
+          score = currRoidBelt.destroyRoid(i);
         }
       }
     }
   }
+  return score;
 }
 
 function isHit(laser: Laser, roid: Roid): boolean {

@@ -1,10 +1,11 @@
-import { Roid } from './asteroids.js';
+import { RoidBelt } from './objects.js';
 import { CTX, CVS, DEBUG } from './config.js';
-import { Ship } from './ship.js';
+import { getCurrentShip } from './main.js';
 /**
  * Draws astroids on the canvas from an array of Asteroids
  */
-function drawRoids(roids: Roid[]): void {
+function drawRoids(currRoidBelt: RoidBelt): void {
+  const roids = currRoidBelt.roids;
   for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
@@ -43,7 +44,9 @@ function drawRoids(roids: Roid[]): void {
  *
  * @param ship - A Ship object
  */
-function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
+function drawRoidsRelative(currRoidBelt: RoidBelt): void {
+  const ship = getCurrentShip();
+  const roids = currRoidBelt.roids;
   for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;
