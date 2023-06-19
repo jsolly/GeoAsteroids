@@ -47,6 +47,7 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 - TypeScript under 'strict' mode with no errors or warnings.
 - JS bundling with vite
 - Serverless functions for API calls
+- MongoDB database for high scores
 
 ## Coverage, Tests, Linting
 
