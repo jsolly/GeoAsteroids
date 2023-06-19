@@ -32,8 +32,17 @@ test.concurrent('Music Off', () => {
   localStorage.setItem('musicOn', 'false');
   expect(musicIsOn()).toBe(false);
 });
-test.concurrent('Set Difficulty', () => {
+test.concurrent('Set Difficulty to Easy', () => {
   expect(getRoidNum()).toBe(undefined);
   setDifficulty(Difficulty.easy);
   expect(getRoidNum()).toBe(5);
+});
+test.concurrent('Set Difficulty to Medium', () => {
+  setDifficulty(Difficulty.medium);
+  expect(getRoidNum()).toBe(10);
+});
+
+test.concurrent('Set Difficulty to Hard', () => {
+  setDifficulty(Difficulty.hard);
+  expect(getRoidNum()).toBe(50);
 });

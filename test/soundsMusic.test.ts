@@ -1,14 +1,43 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Sound, Music, setMusic, setSound } from '../src/soundsMusic.js';
-import { soundIsOn, musicIsOn } from '../src/config.js';
+import { soundIsOn, musicIsOn, LOCAL_STORAGE_KEYS } from '../src/config.js';
+
+let testMusic: Music;
+let testSound: Sound;
+const mockPlay = vi.fn();
+
+beforeEach(() => {
+  localStorage.setItem(LOCAL_STORAGE_KEYS.musicOn, 'true');
+  localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
+
+  testMusic = new Music(
+    '../public/sounds/music-low.m4a',
+    '../public/sounds/music-high.m4a',
+  );
+  testMusic.soundLow.play = mockPlay;
+  testMusic.soundHigh.play = mockPlay;
+  testMusic.soundLow.pause = mockPlay;
+  testMusic.soundHigh.pause = mockPlay;
+
+  testSound = new Sound('../public/sounds/thrust.m4a', 1);
+  testSound.streams[0].play = mockPlay;
+  testSound.streams[0].pause = mockPlay;
+});
+
+afterEach(() => {
+  // Restore the original functions after each test
+  vi.restoreAllMocks();
+
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.musicOn);
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.soundOn);
+});
+
 test.concurrent('Sound', () => {
-  const testSound = new Sound('sounds/thrust.m4a');
   expect(testSound).toBeInstanceOf(Sound);
   expect(testSound.streams.length).toBe(1);
 });
 
 test.concurrent('Music', () => {
-  const testMusic = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
   expect(testMusic).toBeInstanceOf(Music);
   expect(testMusic.soundLow).toBeInstanceOf(Audio);
   expect(testMusic.soundHigh).toBeInstanceOf(Audio);
@@ -24,4 +53,16 @@ test.concurrent('Set Sound', () => {
   const currSoundOn = soundIsOn();
   setSound(!currSoundOn);
   expect(soundIsOn()).toBe(!currSoundOn);
+});
+
+test.concurrent('Set Music and Sound - local storage', () => {
+  setMusic(true);
+  expect(localStorage.getItem(LOCAL_STORAGE_KEYS.musicOn)).toBe('true');
+  setMusic(false);
+  expect(localStorage.getItem(LOCAL_STORAGE_KEYS.musicOn)).toBe('false');
+
+  setSound(true);
+  expect(localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn)).toBe('true');
+  setSound(false);
+  expect(localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn)).toBe('false');
 });

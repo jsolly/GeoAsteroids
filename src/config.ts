@@ -67,7 +67,7 @@ export const ROID_SPAWN_TIME = 1; // One asteroid every three seconds
 /* Game Settings Constants*/
 export const STARTING_SCORE = 0;
 export const DEBUG = false; // Show ship collision boundary and ship center dot
-export const SAVE_KEY_HIGH_SCORE = 'highscore'; // localstorage of high score.
+export const SAVE_KEY_PERSONAL_BEST = 'personal_best'; // localstorage of the user's personal best score.
 export const NEXT_LEVEL_POINTS = 1000;
 
 /* Drawing Constants*/

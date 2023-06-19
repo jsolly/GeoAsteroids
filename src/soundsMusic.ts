@@ -19,7 +19,7 @@ class Sound {
    * @param maxStreams - Set how many simultaneous sounds can occur
    * @param vol - Set the loudness of the sound
    */
-  constructor(src: string, maxStreams = 1, vol = 0.05) {
+  constructor(src: string, maxStreams: number, vol = 0.05) {
     for (let i = 0; i < maxStreams; i++) {
       this.streams.push(new Audio(src));
       this.streams[i].volume = vol;
@@ -41,6 +41,9 @@ class Sound {
   stop(): void {
     this.streams[this.streamNum].pause();
     this.streams[this.streamNum].currentTime = 0;
+  }
+  isPlaying(): boolean {
+    return !this.streams[this.streamNum].paused;
   }
 }
 
@@ -108,13 +111,6 @@ class Music {
   }
 }
 
-const fxThrust = new Sound('sounds/thrust.m4a');
-const maxStreams = 5;
-const fxLaser = new Sound('sounds/laser.m4a', maxStreams);
-const fxHit = new Sound('sounds/hit.m4a', maxStreams);
-const fxExplode = new Sound('sounds/explode.m4a');
-const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
-
 function setMusic(pref: boolean): void {
   localStorage.setItem(LOCAL_STORAGE_KEYS.musicOn, String(pref));
 }
@@ -123,14 +119,4 @@ function setSound(pref: boolean): void {
   localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, String(pref));
 }
 
-export {
-  Sound,
-  Music,
-  setMusic,
-  setSound,
-  music,
-  fxThrust,
-  fxExplode,
-  fxHit,
-  fxLaser,
-};
+export { Sound, Music, setMusic, setSound };

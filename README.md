@@ -4,8 +4,6 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 [![Build Status](http://img.shields.io/travis/badges/badgerbadgerbadger.svg?style=flat-square)](https://travis-ci.org/badges/badgerbadgerbadger) [![Coverage Status](http://img.shields.io/coveralls/badges/badgerbadgerbadger.svg?style=flat-square)](https://coveralls.io/r/badges/badgerbadgerbadger) [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
 
-
-
 ![GeoAsteroids_playthrough (3)](https://user-images.githubusercontent.com/9572232/179308016-71265497-1d05-4750-bfd5-0f336cf7ae77.gif)
 
 ---
@@ -26,20 +24,21 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
     $ git clone git@github.com:jsolly/GeoAsteroids.git
     $ cd GeoAsteroids
     $ npm install
-    $ npm run dev
+    $ vercel dev
 ```
 
 ---
 
 ## Features
 
-#### Functional Features
+#### Functional
 
 - Moving asteroids with variable jaggedness and size
 - Points, lives and levels
 - Spaceship with laser and thruster
+- Global high score board
 
-#### Non-Functional Features
+#### Non-Functional
 
 - Asteroid collisions using circular bounding box
 - Static code analysis using CodeQL
@@ -47,9 +46,10 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 - 100% linted with Eslint + additional rules.
 - TypeScript under 'strict' mode with no errors or warnings.
 - JS bundling with vite
+- Serverless functions for API calls
+- MongoDB database for high scores
 
 ## Coverage, Tests, Linting
-
 
 #### Coverage
 
@@ -60,6 +60,7 @@ $ npm run coverage
 $ npm run test
 
 #### Linting (with ESlint)
+
 $ npm run lint
 
 ---
@@ -115,7 +116,9 @@ Reach out to me at one of the following places!
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
 
 - **[MIT license](http://opensource.org/licenses/mit-license.php)**
+
 ---
 
 ## UML Diagram
+
 <img src="config/geoAsteroidsUML.png" alt="GeoAsteroids UML diagram"></img>

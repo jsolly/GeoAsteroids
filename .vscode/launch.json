@@ -2,12 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch_Chrome",
+      "type": "node",
       "request": "launch",
+      "name": "Launch via Vercel", 
+      "runtimeExecutable": "vercel",
+      "runtimeArgs": ["dev"],
+    },
+    {
       "type": "chrome",
-      "runtimeArgs": ["--incognito"],
-      "url": "http://127.0.0.1:5173",
-      "webRoot": "${workspaceFolder}/src"
+      "request": "launch",
+      "name": "Launch Chrome",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Vercel Start/Client",
+      "configurations": ["Launch via Vercel", "Launch Chrome"]
     }
   ]
 }

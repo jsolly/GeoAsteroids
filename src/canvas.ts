@@ -6,9 +6,10 @@ import {
   CVS,
   CTX,
 } from './config.js';
-import { Point } from './utils.js';
 import { Ship } from './ship.js';
-import { getHighScore } from './utils.js';
+import { Point } from './utils.js';
+import { getCurrentShip, getCurrentScore, getPersonalBest } from './main.js';
+
 let text: string;
 let textAlpha: number;
 
@@ -99,23 +100,27 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
 /**
  * Draw number of lives left on canvas
  */
-function drawLives(ship: Ship): void {
+function drawLives(): void {
+  const ship = getCurrentShip();
   let lifeColor;
   for (let i = 0; i < ship.lives; i++) {
-    lifeColor = getLifeColor(ship, i);
+    lifeColor = getLifeColor();
     const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
     drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
   }
 }
 
-function getLifeColor(ship: Ship, currLives: number): string {
+function getLifeColor(): string {
+  const ship = getCurrentShip();
+  const currLives = ship.lives;
   return ship.exploding && currLives == ship.lives - 1 ? 'red' : 'white';
 }
 
 /**
  * Draw current score and high score on canvas
  */
-function drawScores(currScore: number): void {
+function drawScores(): void {
+  const currScore = getCurrentScore();
   // draw the score
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';
@@ -123,12 +128,12 @@ function drawScores(currScore: number): void {
   CTX.font = String(TEXT_SIZE) + 'px dejavu sans mono';
   CTX.fillText(String(currScore), CVS.width - 15, 30);
 
-  // draw the high score
+  // draw the personal best
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
   CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
-  CTX.fillText('BEST ' + String(getHighScore()), CVS.width / 2, 30);
+  CTX.fillText('BEST ' + String(getPersonalBest()), CVS.width / 2, 30);
 }
 
 /**

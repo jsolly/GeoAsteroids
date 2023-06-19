@@ -45,3 +45,42 @@ a {
   margin-left: -125px;
   text-align: center;
 }
+
+.modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%; /* Or whatever width you prefer */
+  padding: 20px;
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.8
+  ); /* Or any other background color, here it's semi-transparent black */
+  border-radius: 10px;
+  text-align: center;
+}
+
+#nameInput {
+  width: 100px;
+}
+
+#gameOverModal input[type='text'] {
+  color: black;
+  background-color: white;
+}
+
+#gameOverModal button {
+  color: white;
+  background-color: #007bff;
+  border: none;
+}
+#highScoresList li {
+  font-family: 'Courier', monospace; /* Using a system monospaced font */
+  color: #ff0000;
+  text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2); /* Gives a bit of depth */
+  letter-spacing: 1.5px; /* Increases spacing between letters, giving it a more retro feel */
+  list-style: none; /* Removes the bullets */
+}
