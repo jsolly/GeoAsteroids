@@ -27,6 +27,26 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
     $ vercel dev
 ```
 
+### Install MongoDB and create highscores collection
+
+```
+    $ brew tap mongodb/brew
+    $ brew install mongodb-community@x.x
+    $ brew services start mongodb-community@x.x
+    # Create database called geoasteroids and a collection called highscores
+    $ mongo
+    $ use geoasteroids
+    $ db.createCollection("highscores")
+```
+
+### How to Run
+
+```shell
+    # Start MongoDB
+    $ brew services start mongodb-community@x.x # Or if running from a directory, $ mongod --dbpath=./data/db
+    $ vercel dev
+```
+
 ---
 
 ## Features
