@@ -1,19 +1,8 @@
-import { expect, test, vi, beforeEach, afterEach } from 'vitest';
+import { expect, test } from 'vitest';
 import { Difficulty, setDifficulty } from '../src/config';
 import { Ship } from '../src/ship';
 import { Point } from '../src/utils';
 import { Roid, RoidBelt } from '../src/asteroids';
-
-let mockShip: Ship;
-
-beforeEach(() => {
-  mockShip = new Ship();
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  mockShip = new Ship();
-});
 
 test.concurrent('Roid Creation', () => {
   const roidPoint = new Point(10, 20);
@@ -23,6 +12,7 @@ test.concurrent('Roid Creation', () => {
 });
 
 test.concurrent('Roid Belt Creation', () => {
+  const mockShip = new Ship();
   setDifficulty(Difficulty.easy); // This ensures roidNum is defined
   const testRoidBelt = new RoidBelt(mockShip);
   expect(testRoidBelt).toBeInstanceOf(RoidBelt);
@@ -30,6 +20,7 @@ test.concurrent('Roid Belt Creation', () => {
 });
 
 test.concurrent('Roid Belt Add Roid', () => {
+  const mockShip = new Ship();
   const testRoidBelt = new RoidBelt(mockShip);
   const roidCount = testRoidBelt.roids.length;
   testRoidBelt.addRoid(mockShip);
@@ -37,6 +28,7 @@ test.concurrent('Roid Belt Add Roid', () => {
 });
 
 test.concurrent('Roid Belt Spawn Roids', () => {
+  const mockShip = new Ship();
   const testRoidBelt = new RoidBelt(mockShip);
   testRoidBelt.spawnTime = 0; // so we don't have to wait a second for the spawn time to hit
   const roidCount = testRoidBelt.roids.length;
@@ -45,6 +37,7 @@ test.concurrent('Roid Belt Spawn Roids', () => {
 });
 
 test.concurrent('Destory Roid', () => {
+  const mockShip = new Ship();
   const testRoidBelt = new RoidBelt(mockShip);
   testRoidBelt.addRoid(mockShip);
   const roidCount = testRoidBelt.roids.length;
@@ -53,6 +46,7 @@ test.concurrent('Destory Roid', () => {
 });
 
 test.concurrent('Move Roids', () => {
+  const mockShip = new Ship();
   const testRoidBelt = new RoidBelt(mockShip);
   testRoidBelt.addRoid(mockShip);
   const firstRoid = testRoidBelt.roids[0];
