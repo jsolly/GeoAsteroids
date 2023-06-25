@@ -12,6 +12,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  mockShip = new Ship();
 });
 
 test.concurrent('Roid Creation', () => {

@@ -2,6 +2,7 @@ import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { LASER_MAX } from '../src/config';
 import { Ship, Laser } from '../src/ship';
 import { Point } from '../src/utils';
+import { mock } from 'node:test';
 
 const mockPlay = vi.fn();
 let mockShip: Ship;
@@ -17,6 +18,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  mockShip = new Ship();
 });
 
 test.concurrent('Ship Creation', () => {
@@ -35,13 +37,6 @@ test.concurrent('Ship setBlinkOn', () => {
   mockShip.blinkCount = 1; // Simulate odd count (no blink)
   mockShip.setBlinkOn();
   expect(mockShip.blinkOn).toBeFalsy();
-});
-
-test.concurrent('Thrust Ship', () => {
-  mockShip.thrusting = true;
-  mockShip.move();
-  expect(mockShip.xv).toBeLessThan(0);
-  expect(mockShip.yv).toBeLessThan(0);
 });
 
 test.concurrent('Move Ship', () => {

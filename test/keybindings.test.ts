@@ -22,6 +22,7 @@ beforeEach(() => {
 afterEach(() => {
   // Restore the original functions after each test
   vi.restoreAllMocks();
+  mockShip = new Ship();
 });
 
 test.concurrent('keyDown - Space', () => {
