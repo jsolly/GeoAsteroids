@@ -48,6 +48,8 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 - JS bundling with vite
 - Serverless functions for API calls
 - MongoDB database for high scores
+- Custom logging library for fine grained control of logging levels
+- Over 90% test coverage
 
 ## Coverage, Tests, Linting
 

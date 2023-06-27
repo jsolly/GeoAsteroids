@@ -1,6 +1,7 @@
 import { setSound, setMusic } from './soundsMusic.js';
 import { setDifficulty, Difficulty, FPS } from './config.js';
 import { newGame, update, getCurrentScore } from './main.js';
+import { logger } from './logger.js';
 
 const startGameBtn = getElementById<HTMLButtonElement>('start-game');
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
@@ -44,7 +45,7 @@ interface HighScore {
 function getElementById<T extends HTMLElement>(id: string): T | null {
   const element = document.getElementById(id);
   if (!element) {
-    console.error(`Element with id '${id}' not found`);
+    logger.error(`Element with id '${id}' not found`);
   }
   return element as T | null;
 }
@@ -60,11 +61,11 @@ function attachEventListener<T extends HTMLElement>(
     element.addEventListener(eventType, (ev) => {
       const result = callback(ev);
       if (result instanceof Promise) {
-        result.catch((error) => console.error(error));
+        result.catch((error) => logger.error(String(error)));
       }
     });
   } else {
-    console.error(`Unable to attach event listener, element not found`);
+    logger.error(`Unable to attach event listener, element not found`);
   }
 }
 
@@ -110,7 +111,7 @@ async function postHighScore(highScore: HighScore): Promise<void> {
       throw new Error('Network response was not ok');
     }
   } catch (error) {
-    console.error('There has been a problem with your fetch operation:', error);
+    logger.logError(error);
   }
 }
 
@@ -178,7 +179,7 @@ async function fetchHighScores(): Promise<void> {
       });
     }
   } catch (error) {
-    console.error('There has been a problem with your fetch operation:', error);
+    logger.logError(error);
   }
 }
 
