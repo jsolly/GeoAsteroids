@@ -25,8 +25,8 @@ import { Music } from './soundsMusic';
 import { keyDown, keyUp } from './keybindings';
 
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
-const currShip = new Ship();
-const currRoidBelt = new RoidBelt(currShip);
+let currShip = new Ship();
+let currRoidBelt = new RoidBelt(currShip);
 let currScore = STARTING_SCORE;
 let currLevel = START_LEVEL;
 
@@ -65,18 +65,19 @@ function tickMusic(): void {
  * Start a new level. This is called on game start and when the player
  * levels up
  */
-function updateCurrLevel(): void {
+function levelUp(): void {
   currLevel += 1;
   newLevelText(currLevel);
-  currRoidBelt.addRoid(currShip);
-  music.setMusicTempo(currLevel);
+  currRoidBelt.addRoid(currShip); // add a new asteroid for each new level
 }
 
-/**
- * Resets score, ship, and level for a new game.
- */
 function newGame(): void {
-  updateCurrLevel();
+  currScore = STARTING_SCORE;
+  currLevel = START_LEVEL;
+  newLevelText(currLevel);
+  currShip = new Ship();
+  currRoidBelt = new RoidBelt(currShip);
+  music.setMusicTempo(1.0);
 }
 
 /**
@@ -116,24 +117,23 @@ function gameOver(): void {
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
+  drawSpace();
   currRoidBelt.spawnRoids(currShip);
-
   if (DEBUG) {
     drawDebugFeatures(currShip);
   }
-
-  currShip.setBlinkOn();
-  currShip.setExploding();
-  drawSpace();
   drawRoidsRelative(currRoidBelt);
+  drawLasers(currShip);
   drawScores();
   drawLives();
-
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (currShip.dead) {
     showGameOverMenu();
   }
+
+  currShip.setBlinkOn();
+  currShip.setExploding();
 
   // tick the music
   if (musicIsOn()) {
@@ -169,7 +169,6 @@ function update(): void {
     }
   }
 
-  drawLasers(currShip);
   currScore += detectLaserHits(currRoidBelt, currShip);
   currScore += detectRoidHits(currShip, currRoidBelt);
   updatePersonalBest();
@@ -191,7 +190,7 @@ export {
   getPersonalBest,
   updatePersonalBest,
   updateCurrScore,
-  updateCurrLevel,
+  levelUp,
   resetCurrScore,
   resetMusicTempo,
   tickMusic,

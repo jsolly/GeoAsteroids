@@ -2,6 +2,7 @@ import { setSound, setMusic } from './soundsMusic.js';
 import { setDifficulty, Difficulty, FPS } from './config.js';
 import { newGame, update, getCurrentScore } from './main.js';
 import { logger } from './logger.js';
+import { drawSpace } from './canvas.js';
 
 const startGameBtn = getElementById<HTMLButtonElement>('start-game');
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
@@ -17,6 +18,8 @@ const difficultyButtonMap: Record<string, Difficulty> = {
   medium: Difficulty.medium,
   hard: Difficulty.hard,
 };
+let lastTimestamp: number;
+let isGameRunning: boolean;
 
 attachEventListener(highScoresButton, 'click', fetchHighScores);
 attachEventListener(startGameBtn, 'click', startGame);
@@ -34,8 +37,6 @@ if (nameInput && submitNameButton) {
   attachEventListener(nameInput, 'input', () => validateInput(nameInput));
   attachEventListener(submitNameButton, 'click', submitName);
 }
-
-let gameInterval: NodeJS.Timer;
 
 interface HighScore {
   name: string;
@@ -87,8 +88,24 @@ function startGame(): void {
   newGame();
   toggleScreen('start-screen', false);
   toggleScreen('gameArea', true);
+
   // Set up game loop
-  gameInterval = setInterval(update, 1000 / FPS);
+  lastTimestamp = performance.now();
+  isGameRunning = true;
+  window.requestAnimationFrame(gameLoop);
+}
+
+function gameLoop(timestamp: number): void {
+  if (!isGameRunning) return;
+
+  const elapsedSeconds = (timestamp - lastTimestamp) / 1000; // Convert ms to seconds
+  // Update at the specified FPS (1 second / FPS)
+  if (elapsedSeconds > 1 / FPS) {
+    update();
+    lastTimestamp = timestamp;
+  }
+
+  window.requestAnimationFrame(gameLoop);
 }
 
 function toggleScreen(id: string, toggle: boolean): void {
@@ -116,7 +133,7 @@ async function postHighScore(highScore: HighScore): Promise<void> {
 }
 
 function showGameOverMenu(): void {
-  clearInterval(gameInterval); // Stop the game loop
+  isGameRunning = false; // Stop the game loop
 
   // Show the game over modal
   const gameOverModal = getElementById<HTMLElement>('gameOverModal');
@@ -148,14 +165,13 @@ async function submitName(): Promise<void> {
   // Clear the input field for the next game
   nameInput.value = '';
 
-  newGame();
-  clearInterval(gameInterval);
   const startGameBtn = getElementById<HTMLButtonElement>('start-game');
   if (startGameBtn) {
     startGameBtn.innerText = 'Play Again! 🚀';
   }
 
   toggleScreen('start-screen', true);
+  drawSpace(); // Clear the canvas after the score is submitted
   toggleScreen('gameArea', false);
 }
 
