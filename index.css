@@ -51,7 +51,7 @@ a {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 80%; /* Or whatever width you prefer */
+  width: 100%;
   padding: 20px;
   background-color: rgba(
     0,
