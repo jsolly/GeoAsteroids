@@ -18,13 +18,24 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 - [Support](#support)
 - [License](#license)
 
-## Installation (Install <a href="https://nodejs.org/en/" rel="noopener noreferrer">Node.js</a> first if you don't have it already!)
+## Installation first if you don't have it already!)
+
+1 - (Install <a href="https://nodejs.org/en/" rel="noopener noreferrer">Node.js</a>
+2 - (Install <a href="https://www.mongodb.com/try/download/community" rel="noopener noreferrer">MongoDB</a>) (Or use a cloud service like <a href="https://www.mongodb.com/cloud/atlas" rel="noopener noreferrer">MongoDB Atlas</a>)
 
 ```shell
     $ git clone git@github.com:jsolly/GeoAsteroids.git
     $ cd GeoAsteroids
     $ npm install
-    $ vercel dev
+```
+
+## Run app
+
+```shell
+  # Start MongoDB locally (or use a cloud service like MongoDB Atlas)
+  # Check src/database.ts for connection string
+  $ <mongoDB_install_dir>/bin/mongod --dbpath <path to data directory>
+  $ vercel dev # Allows us to mock serverless functions locally
 ```
 
 ---
