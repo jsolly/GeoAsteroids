@@ -34,7 +34,8 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 ```shell
   # Start MongoDB locally (or use a cloud service like MongoDB Atlas)
   # Check src/database.ts for connection string
-  $ <mongoDB_install_dir>/bin/mongod --dbpath <path to data directory>
+  $ cd <mongoDB_install_dir>/bin
+  $ ./mongod --dbpath <path to data directory>
   $ vercel dev # Allows us to mock serverless functions locally
 ```
 
