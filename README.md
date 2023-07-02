@@ -29,13 +29,16 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
     $ npm install
 ```
 
-## Run app
+## Setup
 
 ```shell
-  # Start MongoDB locally (or use a cloud service like MongoDB Atlas)
-  # Check src/database.ts for connection string
   $ cd <mongoDB_install_dir>/bin
+  # Start MongoDB Server Locally (Or use a cloud service like MongoDB Atlas)
   $ ./mongod --dbpath <path to data directory>
+  $ mongo # Or use a GUI like MongoDB Compass
+  $ use geoasteroids
+  $ db.createCollection("highscores")
+  # Check src/database.ts for connection string
   $ vercel dev # Allows us to mock serverless functions locally
 ```
 
@@ -65,15 +68,19 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 ## Coverage, Tests, Linting
 
-#### Coverage
+### Coverage
 
+```shell
 $ npm run coverage
+```
 
-#### Test
+### Test
 
+```shell
 $ npm run test
+```
 
-#### Linting (with ESlint)
+### Linting (with ESlint)
 
 $ npm run lint
 
@@ -81,7 +88,7 @@ $ npm run lint
 
 ## Contributing
 
-Want to work on this with me? DM me <a href="https://twitter.com/_jsolly" target="_blank">`@_jsolly`</a>
+Want to work on this with me? DM me on Twiiter <a href="https://twitter.com/_jsolly" target="_blank">`@_jsolly`</a>
 
 ### Step 1
 
@@ -90,7 +97,7 @@ Want to work on this with me? DM me <a href="https://twitter.com/_jsolly" target
   - 🍴 Fork this repo!
 
 - **Option 2**
-  - 👯 Clone to your local machine using `https://github.com/jsolly/blogthedata.git`
+  - 👯 Clone to your local machine using `git@github.com:jsolly/GeoAsteroids.git`
 
 ### Step 2
 
