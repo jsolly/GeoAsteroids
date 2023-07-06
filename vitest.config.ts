@@ -4,12 +4,15 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'c8',
-      reporter: ['lcov', 'text'],
+      reporter: ['lcov', ['text', { skipFull: true }]],
       exclude: [
         'src/asteroidsCanv.ts',
         'src/lasersCanv.ts',
         'src/shipCanv.ts',
         'src/canvas.ts',
+        'src/events.ts',
+        'src/config.ts',
+        'src/logger.ts',
         'test/**',
       ],
     },
