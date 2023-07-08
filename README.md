@@ -48,23 +48,23 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 #### Functional
 
-- Moving asteroids with variable jaggedness and size
-- Points, lives and levels
-- Spaceship with laser and thruster
-- Global high score board
+- Moving asteroids with variable jaggedness and size. Woah
+- Points, lives and levels just like you'd expect
+- Spaceship with laser and thruster. Pew Pew 
+- Global high scoreboard so you can compete with anyone in the world!
 
 #### Non-Functional
 
-- Asteroid collisions using circular bounding box
-- Static code analysis using CodeQL
-- NPM Dependency checking via Dependabot
-- 100% linted with Eslint + additional rules.
-- TypeScript under 'strict' mode with no errors or warnings.
-- JS bundling with vite
-- Serverless functions for API calls
-- MongoDB database for high scores
-- Custom logging library for fine grained control of logging levels
-- Over 90% test coverage
+- Asteroid collisions detection, so you die when you're supposed to
+- Static code analysis using CodeQL so the code is less likely to have security vulnerabilities
+- NPM Dependency checking via Dependabot so you don't have to think about it
+- 100% linted with Eslint + additional rules for a more maintainable and consistent codebase
+- TypeScript under 'strict' mode with no errors so you know we're following TS best practicies
+- JS bundling with vite for a super fast front-end
+- Serverless functions for API calls so you don't have to worry too much about handling the backend
+- MongoDB database for high scores cause who wants to deal with flat files?
+- Custom logging library for fine-grained control of logging levels so you don't have to scratch your head about errors in production
+- Over 90% test coverage so you can refactor and add features with peace of mind
 
 ## Coverage, Tests, Linting
 
