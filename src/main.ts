@@ -4,6 +4,7 @@ import {
   DEBUG,
   musicIsOn,
   SAVE_KEY_PERSONAL_BEST,
+  NEXT_LEVEL_POINTS,
 } from './config.js';
 import { detectLaserHits, detectRoidHits } from './collisions.js';
 import {
@@ -29,6 +30,7 @@ let currShip = new Ship();
 let currRoidBelt = new RoidBelt(currShip);
 let currScore = STARTING_SCORE;
 let currLevel = START_LEVEL;
+let nextLevel = NEXT_LEVEL_POINTS;
 
 document.addEventListener('keydown', (ev) => keyDown(ev, currShip));
 document.addEventListener('keyup', (ev) => keyUp(ev, currShip));
@@ -67,8 +69,10 @@ function tickMusic(): void {
  */
 function levelUp(): void {
   currLevel += 1;
+  nextLevel += NEXT_LEVEL_POINTS;
   newLevelText(currLevel);
   currRoidBelt.addRoid(currShip); // add a new asteroid for each new level
+  music.setMusicTempo(1.0 + currLevel / 10);
 }
 
 function newGame(): void {
@@ -117,6 +121,10 @@ function gameOver(): void {
  * Runs the game. Called every frame to move the game forward.
  */
 function update(): void {
+  if (currScore > nextLevel) {
+    levelUp();
+  }
+
   drawSpace();
   currRoidBelt.spawnRoids(currShip);
   if (DEBUG) {
