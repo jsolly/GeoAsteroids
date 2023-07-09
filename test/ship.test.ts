@@ -109,7 +109,7 @@ test.concurrent('Laser Distance Exceeded', () => {
   firstLaser.xv = 0.5;
   firstLaser.yv = 0.5;
   firstLaser.distTraveled =
-    LASER_DIST + CVS.width - Math.sqrt(0.5 ** 2 + 0.5 ** 2);
+    LASER_DIST + CVS.width + Math.sqrt(0.5 ** 2 + 0.5 ** 2);
 
   mockShip.moveLasers();
   expect(mockShip.lasers.length).toEqual(0);
