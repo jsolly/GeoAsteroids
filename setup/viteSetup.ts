@@ -70,6 +70,10 @@ const dom = new JSDOM(
       </div>
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <input type="text" id="nameInput"/>
+        <button id="submitNameButton">Submit</button>
+        <button id="showHighScoresButton">Show High Scores</button>
+        <ol id="highScoresList"></ol>
       </div>
     </div>
   </body>
