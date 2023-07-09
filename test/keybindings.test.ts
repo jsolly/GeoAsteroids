@@ -25,73 +25,70 @@ afterEach(() => {
   mockShip = new Ship();
 });
 
+const pressKey = (code: string): void =>
+  keyDown(new KeyboardEvent('keydown', { code }), mockShip);
+const releaseKey = (code: string): void =>
+  keyUp(new KeyboardEvent('keyup', { code }), mockShip);
+
 test.concurrent('keyDown - Space', () => {
-  keyDown(new KeyboardEvent('keydown', { code: 'Space' }), mockShip);
+  pressKey('Space');
   expect(mockShip.fireLaser).toHaveBeenCalled();
 });
 
 test.concurrent('keyDown - ArrowLeft', () => {
-  keyDown(new KeyboardEvent('keydown', { code: 'ArrowLeft' }), mockShip);
+  pressKey('ArrowLeft');
   expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyDown - ArrowUp', () => {
-  keyDown(new KeyboardEvent('keydown', { code: 'ArrowUp' }), mockShip);
+  pressKey('ArrowUp');
   expect(mockShip.thrusting).toBeTruthy();
   expect(mockPlay).toHaveBeenCalled();
 });
 
 test.concurrent('keyDown - ArrowRight', () => {
-  keyDown(new KeyboardEvent('keydown', { code: 'ArrowRight' }), mockShip);
+  pressKey('ArrowRight');
   expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyUp - Space', () => {
-  keyUp(new KeyboardEvent('keyup', { code: 'Space' }), mockShip);
+  releaseKey('Space');
   expect(mockShip.fireLaser).not.toHaveBeenCalled();
 });
 
 test.concurrent('keyUp - ArrowLeft', () => {
-  keyUp(new KeyboardEvent('keyup', { code: 'ArrowLeft' }), mockShip);
+  releaseKey('ArrowLeft');
   expect(mockShip.rot).toEqual(0);
 });
 
 test.concurrent('keyUp - ArrowUp', () => {
-  keyUp(new KeyboardEvent('keyup', { code: 'ArrowUp' }), mockShip);
+  releaseKey('ArrowUp');
   expect(mockShip.thrusting).toBeFalsy();
   expect(mockPlay).toHaveBeenCalled();
 });
 
 test.concurrent('keyUp - ArrowRight', () => {
-  keyUp(new KeyboardEvent('keyup', { code: 'ArrowRight' }), mockShip);
+  releaseKey('ArrowRight');
   expect(mockShip.rot).toEqual(0);
 });
 
 test.concurrent('keyUp - ArrowLeft with ArrowRight still down', () => {
-  // Simulate ArrowRight key being down
-  keyDown(new KeyboardEvent('keydown', { code: 'ArrowRight' }), mockShip);
-
-  // Then simulate releasing ArrowLeft
-  keyUp(new KeyboardEvent('keyup', { code: 'ArrowLeft' }), mockShip);
-
-  expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS); // rotation should continue
+  pressKey('ArrowRight');
+  releaseKey('ArrowLeft');
+  expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyUp - ArrowRight with ArrowLeft still down', () => {
-  // Simulate ArrowLeft key being down
-  keyDown(new KeyboardEvent('keydown', { code: 'ArrowLeft' }), mockShip);
-
-  // Then simulate releasing ArrowRight
-  keyUp(new KeyboardEvent('keyup', { code: 'ArrowRight' }), mockShip);
-
-  expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS); // rotation should continue
+  pressKey('ArrowLeft');
+  releaseKey('ArrowRight');
+  expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyDown - non-specified key', () => {
   const initialRot = mockShip.rot;
   const initialThrusting = mockShip.thrusting;
 
-  keyDown(new KeyboardEvent('keydown', { code: 'KeyA' }), mockShip);
+  pressKey('KeyA');
 
   expect(mockShip.rot).toEqual(initialRot);
   expect(mockShip.thrusting).toEqual(initialThrusting);
@@ -102,7 +99,7 @@ test.concurrent('keyUp - non-specified key', () => {
   const initialRot = mockShip.rot;
   const initialThrusting = mockShip.thrusting;
 
-  keyUp(new KeyboardEvent('keyup', { code: 'KeyA' }), mockShip);
+  releaseKey('KeyA');
 
   expect(mockShip.rot).toEqual(initialRot);
   expect(mockShip.thrusting).toEqual(initialThrusting);
