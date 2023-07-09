@@ -132,12 +132,6 @@ class Ship {
     for (let i = this.lasers.length - 1; i >= 0; i--) {
       const laser = this.lasers[i];
 
-      // check laser distance
-      if (laser.distTraveled > LASER_DIST * CVS.width) {
-        this.lasers.splice(i, 1);
-        continue;
-      }
-
       // handle the explosion
       if (laser.explodeTime > 0) {
         laser.explodeTime--;
@@ -152,8 +146,13 @@ class Ship {
           laser.centroid.y + laser.yv,
         );
 
-        // calculate distance traveled
-        laser.distTraveled += 0.5;
+        laser.distTraveled += Math.sqrt(laser.xv ** 2 + laser.yv ** 2);
+      }
+
+      // check laser distance after moving
+      if (laser.distTraveled >= LASER_DIST + CVS.width) {
+        this.lasers.splice(i, 1);
+        continue;
       }
     }
   }

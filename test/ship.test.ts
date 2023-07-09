@@ -2,6 +2,7 @@ import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { LASER_MAX } from '../src/config';
 import { Ship, Laser } from '../src/ship';
 import { Point } from '../src/utils';
+import { LASER_DIST, CVS } from '../src/config';
 
 const mockPlay = vi.fn();
 let mockShip: Ship;
@@ -105,7 +106,11 @@ test.concurrent('Laser Distance Exceeded', () => {
   mockShip.shoot();
 
   const firstLaser = mockShip.lasers[0];
-  firstLaser.distTraveled = 100000;
+  firstLaser.xv = 0.5;
+  firstLaser.yv = 0.5;
+  firstLaser.distTraveled =
+    LASER_DIST + CVS.width - Math.sqrt(0.5 ** 2 + 0.5 ** 2);
+
   mockShip.moveLasers();
   expect(mockShip.lasers.length).toEqual(0);
 });
