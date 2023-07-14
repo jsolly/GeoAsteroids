@@ -35,7 +35,7 @@
     "@vercel/node": "^2.15.3",
     "@vitest/coverage-c8": "^0.32.2",
     "canvas": "^2.11.2",
-    "eslint": "^8.28.0",
+    "eslint": "^8.45.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-extra-rules": "^0.0.0-development",
     "eslint-plugin-prettier": "^4.2.1",
