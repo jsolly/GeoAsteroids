@@ -19,7 +19,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Restore the original functions after each test
   vi.restoreAllMocks();
 });
 

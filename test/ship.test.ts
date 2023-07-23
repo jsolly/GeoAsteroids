@@ -1,7 +1,7 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Ship, Laser } from '../src/ship';
 import { Point } from '../src/utils';
-import { LASER_DIST, CVS, LASER_MAX } from '../src/constants';
+import { LASER_MAX, CVS, LASER_DIST } from '../src/constants';
 
 const mockPlay = vi.fn();
 let mockShip: Ship;
@@ -17,7 +17,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  mockShip = new Ship();
 });
 
 test.concurrent('Ship Creation', () => {
@@ -101,19 +100,18 @@ test.concurrent('Move Lasers', () => {
   expect(firstLaser.centroid.x).not.toEqual(firstLaserLocationY);
 });
 
-// This is a flaky test
-// test.concurrent('Laser Distance Exceeded', () => {
-//   mockShip.shoot();
+test.concurrent('Laser Distance Exceeded', () => {
+  mockShip.shoot();
 
-//   const firstLaser = mockShip.lasers[0];
-//   firstLaser.xv = 0.5;
-//   firstLaser.yv = 0.5;
-//   firstLaser.distTraveled =
-//     LASER_DIST + CVS.width + Math.sqrt(0.5 ** 2 + 0.5 ** 2);
+  const firstLaser = mockShip.lasers[0];
+  firstLaser.xv = 0.5;
+  firstLaser.yv = 0.5;
+  firstLaser.distTraveled =
+    LASER_DIST + CVS.width + Math.sqrt(0.5 ** 2 + 0.5 ** 2);
 
-//   mockShip.moveLasers();
-//   expect(mockShip.lasers.length).toEqual(0);
-// });
+  mockShip.moveLasers();
+  expect(mockShip.lasers.length).toEqual(0);
+});
 
 test.concurrent('Laser Removed After Exploded', () => {
   mockShip.shoot();
