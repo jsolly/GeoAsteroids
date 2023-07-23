@@ -24,6 +24,7 @@ import {
 } from './runtimeVars';
 
 let isGameRunning: boolean;
+let lastTimestamp: number;
 
 function gameLoop(timestamp: number): void {
   if (!isGameRunning) return;
@@ -31,7 +32,7 @@ function gameLoop(timestamp: number): void {
   const elapsedSeconds = updateTimestamp(timestamp);
 
   if (elapsedSeconds > 1 / FPS) {
-    update();
+    updateGame();
   }
 
   window.requestAnimationFrame(gameLoop);
@@ -47,74 +48,93 @@ function setIsGameRunning(value: boolean): void {
   isGameRunning = value;
 }
 
-let lastTimestamp: number;
+function updateGame(): void {
+  handleLevelUp();
 
-function update(): void {
+  drawGameCanvas();
+
+  handleMusic();
+
+  handleShipState();
+
+  handleCollision();
+
+  if (!currShip.exploding) currShip.move();
+
+  currShip.moveLasers();
+  currRoidBelt.moveRoids();
+}
+
+function handleLevelUp(): void {
   if (currScore > nextLevel) {
     levelUp();
   }
+}
 
+function drawGameCanvas(): void {
   drawSpace();
   currRoidBelt.spawnRoids(currShip);
+
   if (DEBUG) {
     drawDebugFeatures(currShip);
   }
+
   drawRoidsRelative(currRoidBelt);
   drawLasers(currShip);
   drawScores();
   drawLives();
+
   if (getTextAlpha() >= 0) {
     drawGameText();
   } else if (currShip.dead) {
     showGameOverMenu();
   }
+}
 
-  currShip.setBlinkOn();
-  currShip.setExploding();
-
-  // tick the music
+function handleMusic(): void {
   if (musicIsOn()) {
     tickMusic();
   }
+}
 
-  // draw ship
+function handleShipState(): void {
+  currShip.setBlinkOn();
+  currShip.setExploding();
+
   if (!currShip.exploding) {
     if (currShip.blinkOn && !currShip.dead) {
       drawShipRelative(currShip);
     }
 
-    // handle blinking
     if (currShip.blinkCount > 0) {
       currShip.blinkTime--;
 
-      // reduce blink count if blinking
       if (currShip.blinkTime == 0) {
         currShip.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
         currShip.blinkCount--;
       }
     }
   } else {
-    // handle ship explosion
-    drawShipExplosion(currShip);
-    // reduce explode time if exploding
-    currShip.explodeTime--;
-    if (currShip.explodeTime == 0) {
-      currShip.lives--;
-      if (currShip.lives == 0) {
-        gameOver();
-      }
+    handleShipExplosion();
+  }
+}
+
+function handleShipExplosion(): void {
+  drawShipExplosion(currShip);
+  currShip.explodeTime--;
+
+  if (currShip.explodeTime == 0) {
+    currShip.lives--;
+    if (currShip.lives == 0) {
+      gameOver();
     }
   }
+}
 
+function handleCollision(): void {
   setCurrentScore(detectLaserHits(currRoidBelt, currShip));
   setCurrentScore(detectRoidHits(currShip, currRoidBelt));
   updatePersonalBest();
-
-  if (!currShip.exploding) {
-    currShip.move();
-  }
-  currShip.moveLasers();
-  currRoidBelt.moveRoids();
 }
 
 export { setIsGameRunning, gameLoop };

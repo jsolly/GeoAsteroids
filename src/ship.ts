@@ -17,9 +17,49 @@ import { Sound } from './soundsMusic.js';
 import { drawThruster } from './shipCanv.js';
 import { Point } from './utils.js';
 
-class Laser {
-  static fxLaser = new Sound('sounds/laser.m4a', 5);
-  static fxHit = new Sound('sounds/hit.m4a', 5);
+interface ILaser {
+  centroid: Point;
+  xv: number;
+  yv: number;
+  distTraveled: number;
+  explodeTime: number;
+}
+
+interface IShip {
+  lives: number;
+  blinkOn: boolean;
+  centroid: Point;
+  t: number;
+  xv: number;
+  yv: number;
+  r: number;
+  a: number;
+  blinkCount: number;
+  blinkTime: number;
+  canShoot: boolean;
+  dead: boolean;
+  exploding: boolean;
+  lasers: Laser[];
+  explodeTime: number;
+  rot: number;
+  thrusting: boolean;
+  die(): void;
+  setBlinkOn(): void;
+  explode(): void;
+  setExploding(): void;
+  applyVelocity(): void;
+  move(): void;
+  canShootAgain(): boolean;
+  shoot(): void;
+  fireLaser(): void;
+  moveLasers(): void;
+  updateLaserExplodeTime(i: number): void;
+  generateLaser(): Laser;
+}
+
+class Laser implements ILaser {
+  static fxLaser: Sound = new Sound('sounds/laser.m4a', 5);
+  static fxHit: Sound = new Sound('sounds/hit.m4a', 5);
 
   constructor(
     public centroid: Point,
@@ -30,7 +70,7 @@ class Laser {
   ) {}
 }
 
-class Ship {
+class Ship implements IShip {
   centroid = new Point(CVS.width / 2, CVS.height / 2);
   t = 0;
   xv = 0;
@@ -123,11 +163,12 @@ class Ship {
       this.fireLaser(); // Adds a laser to the lasers array
     }
   }
-  fireLaser = (): void => {
-    const laser = this.generateLaser();
+  fireLaser(): void {
+    const laser: Laser = this.generateLaser();
     this.lasers.push(laser);
     Laser.fxLaser.play();
-  };
+  }
+
   moveLasers(): void {
     for (let i = this.lasers.length - 1; i >= 0; i--) {
       const laser = this.lasers[i];

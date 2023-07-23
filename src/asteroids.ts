@@ -10,10 +10,20 @@ import {
   ROID_SPAWN_TIME,
   getRoidNum,
 } from './config.js';
-import { Sound } from './soundsMusic.js';
-import { Point } from './utils.js';
-import { Ship } from './ship.js';
-class Roid {
+import { Sound } from './soundsMusic';
+import { Point } from './utils';
+import { Ship } from './ship';
+
+interface IRoid {
+  readonly a: number;
+  readonly offsets: number[];
+  readonly vertices: number;
+  xv: number;
+  yv: number;
+  centroid: Point;
+  r: number;
+}
+class Roid implements IRoid {
   readonly a: number;
   readonly offsets: number[] = [];
   readonly vertices: number;
@@ -43,7 +53,13 @@ class Roid {
   }
 }
 
-class RoidBelt {
+interface IRoidBelt {
+  roidNum: number;
+  roids: Roid[];
+  spawnTime: number;
+}
+
+class RoidBelt implements IRoidBelt {
   roidNum = getRoidNum();
   roids: Roid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
