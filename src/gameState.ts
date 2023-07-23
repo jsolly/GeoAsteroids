@@ -11,8 +11,9 @@ interface IGameState {
   updateNextLevel(): void;
   updateCurrentLevel(): void;
   updatePersonalBest(): void;
-  updatetextProperties(text: string, alpha: number): void;
+  updateTextProperties(text: string, alpha: number): void;
   updateTextAlpha(alpha: number): void;
+  toggleIsGameRunning(): void;
   updateText(text: string): void;
   resetCurrentScore(): void;
   resetCurrentLevel(): void;
@@ -21,6 +22,7 @@ interface IGameState {
   getPersonalBest(): number;
   getTextAlpha(): number;
   getText(): string;
+  getIsGameRunning(): boolean;
 }
 
 class GameState implements IGameState {
@@ -30,6 +32,7 @@ class GameState implements IGameState {
   private nextLevel = NEXT_LEVEL_POINTS;
   private textAlpha = 1;
   private text = 'Level 1';
+  private isGameRunning = false;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
@@ -75,14 +78,20 @@ class GameState implements IGameState {
   getText(): string {
     return this.text;
   }
-
+  getIsGameRunning(): boolean {
+    return this.isGameRunning;
+  }
   updateNextLevel(): void {
     this.nextLevel += NEXT_LEVEL_POINTS;
   }
 
-  updatetextProperties(text: string, alpha: number): void {
+  updateTextProperties(text: string, alpha: number): void {
     this.text = text;
     this.textAlpha = alpha;
+  }
+
+  toggleIsGameRunning(): void {
+    this.isGameRunning = !this.isGameRunning;
   }
 
   getPersonalBest(): number {
@@ -102,10 +111,6 @@ class GameState implements IGameState {
         String(this.getCurrentScore()),
       );
     }
-  }
-  updateTextProperties(text: string, alpha: number): void {
-    this.text = text;
-    this.textAlpha = alpha;
   }
   updateTextAlpha(alpha: number): void {
     this.textAlpha = alpha;

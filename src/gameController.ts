@@ -3,7 +3,21 @@ import { Music } from './soundsMusic';
 import { Ship } from './ship';
 import { RoidBelt } from './asteroids';
 import { toggleScreen } from './mainMenu';
-import { setIsGameRunning, gameLoop } from './eventLoop';
+import { keyDown, keyUp } from './keybindings';
+
+function initializeListeners(isGameRunning: () => boolean): void {
+  document.addEventListener('keydown', (ev) => {
+    if (isGameRunning()) {
+      keyDown(ev, GameController.getInstance().getCurrShip());
+    }
+  });
+
+  document.addEventListener('keyup', (ev) => {
+    if (isGameRunning()) {
+      keyUp(ev, GameController.getInstance().getCurrShip());
+    }
+  });
+}
 
 interface IGameController {
   levelUp(): void;
@@ -18,6 +32,8 @@ interface IGameController {
   updateTextProperties(text: string, alpha: number): void;
   getNextLevel(): number;
   getCurrScore(): number;
+  getIsGameRunning(): boolean;
+  toggleIsGameRunning(): void;
 }
 
 class GameController implements IGameController {
@@ -64,8 +80,9 @@ class GameController implements IGameController {
     this.newGame();
     toggleScreen('start-screen', false);
     toggleScreen('gameArea', true);
-    setIsGameRunning(true);
-    window.requestAnimationFrame(gameLoop);
+    this.toggleIsGameRunning();
+    initializeListeners(() => this.getIsGameRunning());
+    window.dispatchEvent(new CustomEvent('gameStart'));
   }
 
   gameOver(): void {
@@ -110,6 +127,12 @@ class GameController implements IGameController {
   }
   getText(): string {
     return this.gameState.getText();
+  }
+  getIsGameRunning(): boolean {
+    return this.gameState.getIsGameRunning();
+  }
+  toggleIsGameRunning(): void {
+    this.gameState.toggleIsGameRunning();
   }
 }
 

@@ -1,5 +1,4 @@
 import { getElementById, attachEventListener } from './utils';
-import { setIsGameRunning } from './eventLoop';
 import {
   validateInput,
   submitName,
@@ -62,7 +61,7 @@ function toggleScreen(id: string, toggle: boolean): void {
 }
 
 function showGameOverMenu(): void {
-  setIsGameRunning(false);
+  gameController.toggleIsGameRunning();
 
   // Show the game over modal
   const gameOverModal = getElementById<HTMLElement>('gameOverModal');

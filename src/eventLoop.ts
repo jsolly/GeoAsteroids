@@ -4,40 +4,26 @@ import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import { GameController } from './gameController';
 import { Ship } from './ship';
-import { keyDown, keyUp } from './keybindings';
+
 const gameController = GameController.getInstance();
 
-document.addEventListener('keydown', (ev) =>
-  keyDown(ev, GameController.getInstance().getCurrShip()),
-);
-document.addEventListener('keyup', (ev) =>
-  keyUp(ev, GameController.getInstance().getCurrShip()),
-);
+window.addEventListener('gameStart', () => {
+  let lastTimestamp = 0;
 
-let isGameRunning: boolean;
-let lastTimestamp: number;
+  function gameLoop(timestamp: number): void {
+    if (!gameController.getIsGameRunning()) return;
+    const elapsedSeconds = (timestamp - lastTimestamp) / 1000; // convert from ms to s
 
-function gameLoop(timestamp: number): void {
-  if (!isGameRunning) return;
+    if (elapsedSeconds > 1 / FPS) {
+      updateGame();
+    }
 
-  const elapsedSeconds = updateTimestamp(timestamp);
-
-  if (elapsedSeconds > 1 / FPS) {
-    updateGame();
+    lastTimestamp = timestamp;
+    window.requestAnimationFrame(gameLoop);
   }
 
   window.requestAnimationFrame(gameLoop);
-}
-
-function updateTimestamp(timestamp: number): number {
-  const elapsedSeconds = (timestamp - lastTimestamp) / 1000; // Convert ms to seconds
-  lastTimestamp = timestamp;
-  return elapsedSeconds;
-}
-
-function setIsGameRunning(value: boolean): void {
-  isGameRunning = value;
-}
+});
 
 function updateGame(): void {
   const currShip = gameController.getCurrShip();
@@ -119,5 +105,3 @@ function handleCollision(ship: Ship): void {
   gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
   gameController.updatePersonalBest();
 }
-
-export { setIsGameRunning, gameLoop };
