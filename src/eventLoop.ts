@@ -1,16 +1,7 @@
-import { FPS, DEBUG, SHIP_INV_BLINK_DUR, musicIsOn } from './config';
+import { FPS, SHIP_INV_BLINK_DUR, musicIsOn } from './config';
 import { detectLaserHits, detectRoidHits } from './collisions';
-import {
-  drawGameText,
-  getTextAlpha,
-  drawSpace,
-  drawDebugFeatures,
-  drawScores,
-  drawLives,
-} from './canvas.js';
-import { drawShipRelative, drawShipExplosion, drawLasers } from './shipCanv';
-import { drawRoidsRelative } from './asteroidsCanv';
-import { showGameOverMenu } from './mainMenu';
+import { drawGameCanvas } from './canvas';
+import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import {
   nextLevel,
   currScore,
@@ -68,26 +59,6 @@ function updateGame(): void {
 function handleLevelUp(): void {
   if (currScore > nextLevel) {
     levelUp();
-  }
-}
-
-function drawGameCanvas(): void {
-  drawSpace();
-  currRoidBelt.spawnRoids(currShip);
-
-  if (DEBUG) {
-    drawDebugFeatures(currShip);
-  }
-
-  drawRoidsRelative(currRoidBelt);
-  drawLasers(currShip);
-  drawScores();
-  drawLives();
-
-  if (getTextAlpha() >= 0) {
-    drawGameText();
-  } else if (currShip.dead) {
-    showGameOverMenu();
   }
 }
 

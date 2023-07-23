@@ -5,6 +5,7 @@ import {
   SHIP_SIZE,
   CVS,
   CTX,
+  DEBUG,
 } from './config.js';
 import { Ship } from './ship.js';
 import { Point } from './utils.js';
@@ -12,7 +13,12 @@ import {
   getCurrentShip,
   getCurrentScore,
   getPersonalBest,
+  currShip,
+  currRoidBelt,
 } from './runtimeVars.js';
+import { drawRoidsRelative } from './asteroidsCanv.js';
+import { drawLasers } from './shipCanv.js';
+import { showGameOverMenu } from './mainMenu.js';
 
 let text: string;
 let textAlpha: number;
@@ -150,6 +156,26 @@ function newLevelText(currentLevel: number): void {
   setTextProperties(text, textAlpha);
 }
 
+function drawGameCanvas(): void {
+  drawSpace();
+  currRoidBelt.spawnRoids(currShip);
+
+  if (DEBUG) {
+    drawDebugFeatures(currShip);
+  }
+
+  drawRoidsRelative(currRoidBelt);
+  drawLasers(currShip);
+  drawScores();
+  drawLives();
+
+  if (getTextAlpha() >= 0) {
+    drawGameText();
+  } else if (currShip.dead) {
+    showGameOverMenu();
+  }
+}
+
 export {
   drawSpace,
   drawGameText,
@@ -160,4 +186,5 @@ export {
   newLevelText,
   getTextAlpha,
   setTextProperties,
+  drawGameCanvas,
 };
