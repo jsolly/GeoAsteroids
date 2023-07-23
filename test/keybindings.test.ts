@@ -2,40 +2,42 @@ import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { keyDown, keyUp } from '../src/keybindings';
 import { TURN_SPEED, FPS } from '../src/constants';
 import { Ship } from '../src/ship';
-import { GameController } from '../src/gameController';
 
 let mockShip: Ship;
-const gameController = GameController.getInstance();
-
 const mockPlay = vi.fn();
+
+const pressKey = (code: string): void => {
+  const keyboardEvent = new KeyboardEvent('keydown', { code });
+  keyDown(keyboardEvent, mockShip);
+};
+
+const releaseKey = (code: string): void => {
+  const keyboardEvent = new KeyboardEvent('keyup', { code });
+  keyUp(keyboardEvent, mockShip);
+};
 
 beforeEach(() => {
   Ship.fxThrust.play = mockPlay;
   Ship.fxThrust.stop = mockPlay;
-  mockShip = gameController.getCurrShip();
-  mockShip.fireLaser = vi.fn();
 
-  mockShip.rot = 0;
-  mockShip.thrusting = false;
+  mockShip = new Ship();
+  mockShip.fireLaser = vi.fn(() => {
+    console.log('Mock fireLaser called');
+  });
 });
 
 afterEach(() => {
-  // Restore the original functions after each test
-  vi.restoreAllMocks();
-  gameController.newGame();
+  vi.resetAllMocks();
 });
 
-const pressKey = (code: string): void =>
-  keyDown(new KeyboardEvent('keydown', { code }), mockShip);
-const releaseKey = (code: string): void =>
-  keyUp(new KeyboardEvent('keyup', { code }), mockShip);
+test('dummy test', () => {
+  expect(1).toBe(1);
+});
 
 test.concurrent('keyDown - Space', () => {
   pressKey('Space');
-  expect(mockShip.fireLaser.bind(mockShip)).toHaveBeenCalled();
+  expect(mockShip.fireLaser).toHaveBeenCalled();
 });
-
-// Rest of the tests stay the same
 
 test.concurrent('keyDown - ArrowLeft', () => {
   pressKey('ArrowLeft');
@@ -51,11 +53,12 @@ test.concurrent('keyDown - ArrowUp', () => {
 test.concurrent('keyDown - ArrowRight', () => {
   pressKey('ArrowRight');
   expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
+  releaseKey('ArrowRight'); // For some reason, keyDown is persisting across tests
 });
 
 test.concurrent('keyDown - Space', () => {
   pressKey('Space');
-  expect(mockShip.fireLaser.bind(mockShip)).toHaveBeenCalled();
+  expect(mockShip.fireLaser).toHaveBeenCalled();
 });
 
 test.concurrent('keyUp - ArrowLeft', () => {

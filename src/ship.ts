@@ -163,11 +163,11 @@ class Ship implements IShip {
       this.fireLaser(); // Adds a laser to the lasers array
     }
   }
-  fireLaser(): void {
-    const laser: Laser = this.generateLaser();
+  fireLaser = (): void => {
+    const laser = this.generateLaser();
     this.lasers.push(laser);
     Laser.fxLaser.play();
-  }
+  };
 
   moveLasers(): void {
     for (let i = this.lasers.length - 1; i >= 0; i--) {

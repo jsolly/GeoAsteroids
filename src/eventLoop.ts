@@ -4,7 +4,15 @@ import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import { GameController } from './gameController';
 import { Ship } from './ship';
+import { keyDown, keyUp } from './keybindings';
 const gameController = GameController.getInstance();
+
+document.addEventListener('keydown', (ev) =>
+  keyDown(ev, GameController.getInstance().getCurrShip()),
+);
+document.addEventListener('keyup', (ev) =>
+  keyUp(ev, GameController.getInstance().getCurrShip()),
+);
 
 let isGameRunning: boolean;
 let lastTimestamp: number;

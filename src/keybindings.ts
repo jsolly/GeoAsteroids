@@ -1,12 +1,5 @@
 import { FPS, TURN_SPEED } from './constants';
 import { Ship } from './ship';
-import { GameController } from './gameController';
-document.addEventListener('keydown', (ev) =>
-  keyDown(ev, GameController.getInstance().getCurrShip()),
-);
-document.addEventListener('keyup', (ev) =>
-  keyUp(ev, GameController.getInstance().getCurrShip()),
-);
 
 interface KeyStates {
   ArrowLeft: boolean;
