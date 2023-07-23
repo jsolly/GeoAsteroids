@@ -11,7 +11,6 @@ import { Ship } from './ship.js';
 import { Point } from './utils.js';
 import {
   getCurrentShip,
-  getCurrentScore,
   getPersonalBest,
   currShip,
   currRoidBelt,
@@ -19,7 +18,8 @@ import {
 import { drawRoidsRelative } from './asteroidsCanv.js';
 import { drawLasers } from './shipCanv.js';
 import { showGameOverMenu } from './mainMenu.js';
-
+import { GameState } from './gameState.js';
+const gameState = GameState.getInstance();
 let text: string;
 let textAlpha: number;
 
@@ -130,7 +130,7 @@ function getLifeColor(): string {
  * Draw current score and high score on canvas
  */
 function drawScores(): void {
-  const currScore = getCurrentScore();
+  const currScore = gameState.getCurrentScore();
   // draw the score
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';

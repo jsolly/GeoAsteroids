@@ -1,8 +1,9 @@
 import { getElementById } from './utils';
 import { drawSpace } from './canvas';
 import { toggleScreen } from './mainMenu';
-import { getCurrentScore } from './runtimeVars';
 import { logger } from './logger';
+import { GameState } from './gameState';
+const gameState = GameState.getInstance();
 const highScoresList = getElementById<HTMLOListElement>('highScoresList');
 
 interface HighScore {
@@ -18,7 +19,7 @@ async function submitName(): Promise<void> {
 
   validateInput(nameInput);
   const name = nameInput.value;
-  const score = getCurrentScore();
+  const score = gameState.getCurrentScore();
 
   // Call Serverside API to save score
   const highScore: HighScore = { name, score };

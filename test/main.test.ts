@@ -1,11 +1,8 @@
-import {
-  getPersonalBest,
-  updateCurrScore,
-  updatePersonalBest,
-  resetCurrScore,
-} from '../src/runtimeVars';
+import { getPersonalBest, updatePersonalBest } from '../src/runtimeVars';
 import { SAVE_KEY_PERSONAL_BEST } from '../src/config';
 import { expect, test } from 'vitest';
+import { GameState } from '../src/gameState';
+const gameState = GameState.getInstance();
 
 // Test that getPersonalBest returns 0 when local storage is empty
 test.concurrent('getPersonalBest - initial', () => {
@@ -23,17 +20,17 @@ test.concurrent('getPersonalBest - after setting a score', () => {
 // Test that updatePersonalBest updates the score in local storage when the new score is higher
 test.concurrent('updatePersonalBest - higher score', () => {
   localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  updateCurrScore(200);
+  gameState.updateCurrentScore(200);
   updatePersonalBest();
   expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('200');
 });
 
 // Test that updatePersonalBest does not update the score in local storage when the new score is lower
 test.concurrent('updatePersonalBest - lower score', () => {
-  resetCurrScore();
+  gameState.resetCurrentScore();
 
   localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  updateCurrScore(-50);
+  gameState.updateCurrentScore(-50);
   updatePersonalBest();
   expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('100');
 });

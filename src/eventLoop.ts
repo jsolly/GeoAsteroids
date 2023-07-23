@@ -4,15 +4,15 @@ import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import {
   nextLevel,
-  currScore,
   currShip,
   currRoidBelt,
-  setCurrentScore,
   updatePersonalBest,
   levelUp,
   gameOver,
   tickMusic,
 } from './runtimeVars';
+import { GameState } from './gameState';
+const gameState = GameState.getInstance();
 
 let isGameRunning: boolean;
 let lastTimestamp: number;
@@ -57,7 +57,7 @@ function updateGame(): void {
 }
 
 function handleLevelUp(): void {
-  if (currScore > nextLevel) {
+  if (gameState.getCurrentScore() > nextLevel) {
     levelUp();
   }
 }
@@ -103,8 +103,8 @@ function handleShipExplosion(): void {
 }
 
 function handleCollision(): void {
-  setCurrentScore(detectLaserHits(currRoidBelt, currShip));
-  setCurrentScore(detectRoidHits(currShip, currRoidBelt));
+  gameState.updateCurrentScore(detectLaserHits(currRoidBelt, currShip));
+  gameState.updateCurrentScore(detectRoidHits(currShip, currRoidBelt));
   updatePersonalBest();
 }
 
