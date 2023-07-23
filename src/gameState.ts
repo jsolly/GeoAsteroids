@@ -1,4 +1,9 @@
-import { STARTING_SCORE, START_LEVEL, NEXT_LEVEL_POINTS } from './config';
+import {
+  STARTING_SCORE,
+  START_LEVEL,
+  NEXT_LEVEL_POINTS,
+  SAVE_KEY_PERSONAL_BEST,
+} from './config';
 
 interface IGameState {
   getCurrentScore(): number;
@@ -9,6 +14,8 @@ interface IGameState {
   updateCurrentLevel(): void;
   getNextLevel(): void;
   updateNextLevel(): void;
+  getPersonalBest(): number;
+  updatePersonalBest(): void;
 }
 
 class GameState implements IGameState {
@@ -55,6 +62,23 @@ class GameState implements IGameState {
   }
   updateNextLevel(): void {
     this.nextLevel += NEXT_LEVEL_POINTS;
+  }
+  getPersonalBest(): number {
+    const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST); // Import SAVE_KEY_PERSONAL_BEST from './config'
+    if (personalBest == null) {
+      localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0');
+      return 0;
+    }
+    return Number(personalBest);
+  }
+  updatePersonalBest(): void {
+    const personalBest = this.getPersonalBest();
+    if (this.getCurrentScore() > personalBest) {
+      localStorage.setItem(
+        SAVE_KEY_PERSONAL_BEST,
+        String(this.getCurrentScore()),
+      );
+    }
   }
 }
 

@@ -5,7 +5,6 @@ import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import {
   currShip,
   currRoidBelt,
-  updatePersonalBest,
   levelUp,
   gameOver,
   tickMusic,
@@ -104,7 +103,7 @@ function handleShipExplosion(): void {
 function handleCollision(): void {
   gameState.updateCurrentScore(detectLaserHits(currRoidBelt, currShip));
   gameState.updateCurrentScore(detectRoidHits(currShip, currRoidBelt));
-  updatePersonalBest();
+  gameState.updatePersonalBest();
 }
 
 export { setIsGameRunning, gameLoop };

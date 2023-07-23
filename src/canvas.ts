@@ -9,12 +9,7 @@ import {
 } from './config.js';
 import { Ship } from './ship.js';
 import { Point } from './utils.js';
-import {
-  getCurrentShip,
-  getPersonalBest,
-  currShip,
-  currRoidBelt,
-} from './runtimeVars.js';
+import { getCurrentShip, currShip, currRoidBelt } from './runtimeVars.js';
 import { drawRoidsRelative } from './asteroidsCanv.js';
 import { drawLasers } from './shipCanv.js';
 import { showGameOverMenu } from './mainMenu.js';
@@ -143,7 +138,11 @@ function drawScores(): void {
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
   CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
-  CTX.fillText('BEST ' + String(getPersonalBest()), CVS.width / 2, 30);
+  CTX.fillText(
+    'BEST ' + String(gameState.getPersonalBest()),
+    CVS.width / 2,
+    30,
+  );
 }
 
 /**

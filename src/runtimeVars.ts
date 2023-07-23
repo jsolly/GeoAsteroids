@@ -1,5 +1,3 @@
-import { SAVE_KEY_PERSONAL_BEST } from './config';
-
 import { toggleScreen } from './mainMenu';
 import { Ship } from './ship.js';
 import { RoidBelt } from './asteroids.js';
@@ -60,29 +58,6 @@ function startGame(): void {
 }
 
 /**
- *
- * @returns - The current personal best score from local storage.
- */
-function getPersonalBest(): number {
-  const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST);
-  if (personalBest == null) {
-    localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0'); // set to 0 if null
-    return 0;
-  }
-  return Number(localStorage.getItem(SAVE_KEY_PERSONAL_BEST));
-}
-
-function updatePersonalBest(): void {
-  const personalBest = getPersonalBest();
-  if (gameState.getCurrentScore() > personalBest) {
-    localStorage.setItem(
-      SAVE_KEY_PERSONAL_BEST,
-      String(gameState.getCurrentScore()),
-    );
-  }
-}
-
-/**
  * Called when ship lives = 0. Calls functions to end the game.
  */
 function gameOver(): void {
@@ -98,8 +73,6 @@ function gameOver(): void {
 
 export {
   getCurrentShip,
-  getPersonalBest,
-  updatePersonalBest,
   levelUp,
   tickMusic,
   startGame,
