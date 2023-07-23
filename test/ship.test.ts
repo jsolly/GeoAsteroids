@@ -101,6 +101,7 @@ test.concurrent('Move Lasers', () => {
 });
 
 test.concurrent('Laser Distance Exceeded', () => {
+  mockShip.lasers = [];
   mockShip.shoot();
 
   const firstLaser = mockShip.lasers[0];
@@ -114,6 +115,7 @@ test.concurrent('Laser Distance Exceeded', () => {
 });
 
 test.concurrent('Laser Removed After Exploded', () => {
+  mockShip.lasers = [];
   mockShip.shoot();
 
   const firstLaser = mockShip.lasers[0];
