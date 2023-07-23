@@ -12,6 +12,8 @@ interface IGameState {
   updateCurrentLevel(): void;
   updatePersonalBest(): void;
   updatetextProperties(text: string, alpha: number): void;
+  updateTextAlpha(alpha: number): void;
+  updateText(text: string): void;
   resetCurrentScore(): void;
   resetCurrentLevel(): void;
   getCurrentLevel(): number;
@@ -26,8 +28,8 @@ class GameState implements IGameState {
   private currentScore = STARTING_SCORE;
   private currentLevel = START_LEVEL;
   private nextLevel = NEXT_LEVEL_POINTS;
-  private textAlpha = 1.0;
-  private text = '';
+  private textAlpha = 1;
+  private text = 'Level 1';
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
@@ -104,6 +106,12 @@ class GameState implements IGameState {
   updateTextProperties(text: string, alpha: number): void {
     this.text = text;
     this.textAlpha = alpha;
+  }
+  updateTextAlpha(alpha: number): void {
+    this.textAlpha = alpha;
+  }
+  updateText(text: string): void {
+    this.text = text;
   }
 }
 

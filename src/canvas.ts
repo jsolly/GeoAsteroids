@@ -13,6 +13,8 @@ import { drawRoidsRelative } from './asteroidsCanv';
 import { drawLasers } from './shipCanv';
 import { showGameOverMenu } from './mainMenu';
 import { RoidBelt } from './asteroids';
+import { GameController } from './gameController';
+const gameController = GameController.getInstance();
 
 /**
  * Draws the background
@@ -32,7 +34,9 @@ function drawGameText(textAlpha: number, text: string): void {
   CTX.fillStyle = 'rgba(255,255,255, ' + String(textAlpha) + ')';
   CTX.font = 'small-caps ' + String(TEXT_SIZE) + 'px dejavu sans mono';
   CTX.fillText(text, CVS.width / 2, (CVS.height * 3) / 4);
+
   textAlpha -= 1.0 / TEXT_FADE_TIME / FPS;
+  gameController.updateTextAlpha(textAlpha);
 }
 
 /**

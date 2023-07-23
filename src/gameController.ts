@@ -55,10 +55,6 @@ class GameController implements IGameController {
   newGame(): void {
     this.gameState.resetCurrentScore();
     this.gameState.resetCurrentLevel();
-    const currLevel = this.gameState.getCurrentLevel();
-    const textAlpha = 1.0;
-    const text = 'Level ' + String(currLevel);
-    this.updateTextProperties(text, textAlpha);
     this.currShip = new Ship();
     this.currRoidBelt = new RoidBelt(this.currShip);
     this.music.setMusicTempo(1.0);
@@ -105,6 +101,9 @@ class GameController implements IGameController {
   }
   updateTextProperties(text: string, alpha: number): void {
     this.gameState.updateTextProperties(text, alpha);
+  }
+  updateTextAlpha(alpha: number): void {
+    this.gameState.updateTextAlpha(alpha);
   }
   getTextAlpha(): number {
     return this.gameState.getTextAlpha();
