@@ -1,6 +1,6 @@
 import { RoidBelt } from './asteroids.js';
 import { CTX, CVS, DEBUG } from './config.js';
-import { getCurrentShip } from './main.js';
+import { getCurrentShip } from './runtimeVars.js';
 /**
  * Draws astroids on the canvas from an array of Asteroids
  */

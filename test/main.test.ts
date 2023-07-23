@@ -3,7 +3,7 @@ import {
   updateCurrScore,
   updatePersonalBest,
   resetCurrScore,
-} from '../src/main';
+} from '../src/runtimeVars';
 import { SAVE_KEY_PERSONAL_BEST } from '../src/config';
 import { expect, test } from 'vitest';
 

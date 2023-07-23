@@ -8,7 +8,11 @@ import {
 } from './config.js';
 import { Ship } from './ship.js';
 import { Point } from './utils.js';
-import { getCurrentShip, getCurrentScore, getPersonalBest } from './main.js';
+import {
+  getCurrentShip,
+  getCurrentScore,
+  getPersonalBest,
+} from './runtimeVars.js';
 
 let text: string;
 let textAlpha: number;

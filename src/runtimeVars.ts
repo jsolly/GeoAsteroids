@@ -1,29 +1,13 @@
-import {
-  SHIP_INV_BLINK_DUR,
-  FPS,
-  DEBUG,
-  musicIsOn,
-  SAVE_KEY_PERSONAL_BEST,
-  NEXT_LEVEL_POINTS,
-} from './config.js';
-import { detectLaserHits, detectRoidHits } from './collisions.js';
-import {
-  drawGameText,
-  getTextAlpha,
-  drawSpace,
-  drawDebugFeatures,
-  drawScores,
-  drawLives,
-} from './canvas.js';
-import { drawShipRelative, drawShipExplosion, drawLasers } from './shipCanv.js';
-import { drawRoidsRelative } from './asteroidsCanv.js';
-import { showGameOverMenu } from './events.js';
+import { SAVE_KEY_PERSONAL_BEST, NEXT_LEVEL_POINTS } from './config';
+
+import { toggleScreen } from './mainMenu';
 import { Ship } from './ship.js';
 import { RoidBelt } from './asteroids.js';
 import { STARTING_SCORE, START_LEVEL } from './config';
 import { newLevelText, setTextProperties } from './canvas';
 import { Music } from './soundsMusic';
 import { keyDown, keyUp } from './keybindings';
+import { setIsGameRunning, gameLoop } from './eventLoop';
 
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 let currShip = new Ship();
@@ -45,6 +29,10 @@ function getCurrentRoidBelt(): RoidBelt {
 
 function getCurrentScore(): number {
   return currScore;
+}
+
+function setCurrentScore(val: number): void {
+  currScore = val;
 }
 
 function getCurrentLevel(): number {
@@ -84,6 +72,15 @@ function newGame(): void {
   music.setMusicTempo(1.0);
 }
 
+function startGame(): void {
+  newGame();
+  toggleScreen('start-screen', false);
+  toggleScreen('gameArea', true);
+
+  setIsGameRunning(true);
+  window.requestAnimationFrame(gameLoop);
+}
+
 /**
  *
  * @returns - The current personal best score from local storage.
@@ -120,86 +117,25 @@ function gameOver(): void {
 /**
  * Runs the game. Called every frame to move the game forward.
  */
-function update(): void {
-  if (currScore > nextLevel) {
-    levelUp();
-  }
-
-  drawSpace();
-  currRoidBelt.spawnRoids(currShip);
-  if (DEBUG) {
-    drawDebugFeatures(currShip);
-  }
-  drawRoidsRelative(currRoidBelt);
-  drawLasers(currShip);
-  drawScores();
-  drawLives();
-  if (getTextAlpha() >= 0) {
-    drawGameText();
-  } else if (currShip.dead) {
-    showGameOverMenu();
-  }
-
-  currShip.setBlinkOn();
-  currShip.setExploding();
-
-  // tick the music
-  if (musicIsOn()) {
-    tickMusic();
-  }
-
-  // draw ship
-  if (!currShip.exploding) {
-    if (currShip.blinkOn && !currShip.dead) {
-      drawShipRelative(currShip);
-    }
-
-    // handle blinking
-    if (currShip.blinkCount > 0) {
-      currShip.blinkTime--;
-
-      // reduce blink count if blinking
-      if (currShip.blinkTime == 0) {
-        currShip.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-        currShip.blinkCount--;
-      }
-    }
-  } else {
-    // handle ship explosion
-    drawShipExplosion(currShip);
-    // reduce explode time if exploding
-    currShip.explodeTime--;
-    if (currShip.explodeTime == 0) {
-      currShip.lives--;
-      if (currShip.lives == 0) {
-        gameOver();
-      }
-    }
-  }
-
-  currScore += detectLaserHits(currRoidBelt, currShip);
-  currScore += detectRoidHits(currShip, currRoidBelt);
-  updatePersonalBest();
-
-  if (!currShip.exploding) {
-    currShip.move();
-  }
-  currShip.moveLasers();
-  currRoidBelt.moveRoids();
-}
 
 export {
   newGame,
-  update,
   getCurrentShip,
   getCurrentRoidBelt,
   getCurrentScore,
   getCurrentLevel,
   getPersonalBest,
+  setCurrentScore,
   updatePersonalBest,
   updateCurrScore,
   levelUp,
   resetCurrScore,
   resetMusicTempo,
   tickMusic,
+  startGame,
+  gameOver,
+  nextLevel,
+  currScore,
+  currShip,
+  currRoidBelt,
 };

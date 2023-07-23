@@ -10,7 +10,7 @@ export default defineConfig({
         'src/lasersCanv.ts',
         'src/shipCanv.ts',
         'src/canvas.ts',
-        'src/events.ts',
+        'src/eventLoop.ts',
         'src/config.ts',
         'src/logger.ts',
         'test/**',
