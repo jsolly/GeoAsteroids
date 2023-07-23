@@ -5,6 +5,7 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "prune": "ts-prune",
     "dev": "vite",
     "build": "tsc && vite build",
     "start": "vite",
@@ -45,6 +46,7 @@
     "lint-staged": "^13.2.3",
     "prettier": "^2.8.8",
     "ts-node": "^10.9.1",
+    "ts-prune": "^0.10.3",
     "typescript": "^5.1.6",
     "vite": "^4.3.9",
     "vitest": "^0.32.2"

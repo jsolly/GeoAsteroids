@@ -176,15 +176,4 @@ function drawGameCanvas(): void {
   }
 }
 
-export {
-  drawSpace,
-  drawGameText,
-  drawDebugFeatures,
-  drawTriangle,
-  drawLives,
-  drawScores,
-  newLevelText,
-  getTextAlpha,
-  setTextProperties,
-  drawGameCanvas,
-};
+export { drawSpace, newLevelText, setTextProperties, drawGameCanvas };

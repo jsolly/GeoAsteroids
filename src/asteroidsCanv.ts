@@ -81,4 +81,4 @@ function drawRoidsRelative(currRoidBelt: RoidBelt): void {
     }
   }
 }
-export { drawRoids, drawRoidsRelative };
+export { drawRoidsRelative };

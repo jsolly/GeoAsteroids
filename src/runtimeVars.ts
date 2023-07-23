@@ -119,18 +119,14 @@ function gameOver(): void {
  */
 
 export {
-  newGame,
   getCurrentShip,
-  getCurrentRoidBelt,
   getCurrentScore,
-  getCurrentLevel,
+  updateCurrScore,
+  resetCurrScore,
   getPersonalBest,
   setCurrentScore,
   updatePersonalBest,
-  updateCurrScore,
   levelUp,
-  resetCurrScore,
-  resetMusicTempo,
   tickMusic,
   startGame,
   gameOver,
