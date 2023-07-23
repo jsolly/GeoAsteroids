@@ -1,10 +1,10 @@
-import { RoidBelt } from './asteroids.js';
-import { CTX, CVS, DEBUG } from './config.js';
-import { getCurrentShip } from './runtimeVars.js';
+import { CTX, CVS, DEBUG } from './config';
+import { GameController } from './gameController';
+const gameController = GameController.getInstance();
 
-function drawRoidsRelative(currRoidBelt: RoidBelt): void {
-  const ship = getCurrentShip();
-  const roids = currRoidBelt.roids;
+function drawRoidsRelative(): void {
+  const ship = gameController.getCurrShip();
+  const roids = gameController.getCurrRoidBelt().getRoids();
   for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;

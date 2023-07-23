@@ -6,15 +6,18 @@ import {
   CVS,
   CTX,
   DEBUG,
-} from './config.js';
-import { Ship } from './ship.js';
-import { Point } from './utils.js';
-import { getCurrentShip, currShip, currRoidBelt } from './runtimeVars.js';
-import { drawRoidsRelative } from './asteroidsCanv.js';
-import { drawLasers } from './shipCanv.js';
-import { showGameOverMenu } from './mainMenu.js';
-import { GameState } from './gameState.js';
-const gameState = GameState.getInstance();
+} from './config';
+import { Ship } from './ship';
+import { Point } from './utils';
+import { drawRoidsRelative } from './asteroidsCanv';
+import { drawLasers } from './shipCanv';
+import { showGameOverMenu } from './mainMenu';
+import { GameController } from './gameController';
+const gameController = GameController.getInstance();
+
+const currShip = gameController.getCurrShip();
+const currRoidBelt = gameController.getCurrRoidBelt();
+
 let text: string;
 let textAlpha: number;
 
@@ -106,9 +109,8 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
  * Draw number of lives left on canvas
  */
 function drawLives(): void {
-  const ship = getCurrentShip();
   let lifeColor;
-  for (let i = 0; i < ship.lives; i++) {
+  for (let i = 0; i < currShip.lives; i++) {
     lifeColor = getLifeColor();
     const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
     drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
@@ -116,16 +118,17 @@ function drawLives(): void {
 }
 
 function getLifeColor(): string {
-  const ship = getCurrentShip();
-  const currLives = ship.lives;
-  return ship.exploding && currLives == ship.lives - 1 ? 'red' : 'white';
+  const currLives = currShip.lives;
+  return currShip.exploding && currLives == currShip.lives - 1
+    ? 'red'
+    : 'white';
 }
 
 /**
  * Draw current score and high score on canvas
  */
 function drawScores(): void {
-  const currScore = gameState.getCurrentScore();
+  const currScore = gameController.getCurrScore();
   // draw the score
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';
@@ -139,7 +142,7 @@ function drawScores(): void {
   CTX.fillStyle = 'white';
   CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
   CTX.fillText(
-    'BEST ' + String(gameState.getPersonalBest()),
+    'BEST ' + String(gameController.getPersonalBest()),
     CVS.width / 2,
     30,
   );
@@ -163,7 +166,7 @@ function drawGameCanvas(): void {
     drawDebugFeatures(currShip);
   }
 
-  drawRoidsRelative(currRoidBelt);
+  drawRoidsRelative();
   drawLasers(currShip);
   drawScores();
   drawLives();

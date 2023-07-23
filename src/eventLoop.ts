@@ -2,15 +2,8 @@ import { FPS, SHIP_INV_BLINK_DUR, musicIsOn } from './config';
 import { detectLaserHits, detectRoidHits } from './collisions';
 import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
-import {
-  currShip,
-  currRoidBelt,
-  levelUp,
-  gameOver,
-  tickMusic,
-} from './runtimeVars';
-import { GameState } from './gameState';
-const gameState = GameState.getInstance();
+import { GameController } from './gameController';
+const gameController = GameController.getInstance();
 
 let isGameRunning: boolean;
 let lastTimestamp: number;
@@ -38,6 +31,8 @@ function setIsGameRunning(value: boolean): void {
 }
 
 function updateGame(): void {
+  const currShip = gameController.getCurrShip();
+  const currRoidBelt = gameController.getCurrRoidBelt();
   handleLevelUp();
 
   drawGameCanvas();
@@ -55,18 +50,19 @@ function updateGame(): void {
 }
 
 function handleLevelUp(): void {
-  if (gameState.getCurrentScore() > gameState.getNextLevel()) {
-    levelUp();
+  if (gameController.getCurrScore() > gameController.getNextLevel()) {
+    gameController.levelUp();
   }
 }
 
 function handleMusic(): void {
   if (musicIsOn()) {
-    tickMusic();
+    gameController.tickMusic();
   }
 }
 
 function handleShipState(): void {
+  const currShip = gameController.getCurrShip();
   currShip.setBlinkOn();
   currShip.setExploding();
 
@@ -89,21 +85,24 @@ function handleShipState(): void {
 }
 
 function handleShipExplosion(): void {
+  const currShip = gameController.getCurrShip();
   drawShipExplosion(currShip);
   currShip.explodeTime--;
 
   if (currShip.explodeTime == 0) {
     currShip.lives--;
     if (currShip.lives == 0) {
-      gameOver();
+      gameController.gameOver();
     }
   }
 }
 
 function handleCollision(): void {
-  gameState.updateCurrentScore(detectLaserHits(currRoidBelt, currShip));
-  gameState.updateCurrentScore(detectRoidHits(currShip, currRoidBelt));
-  gameState.updatePersonalBest();
+  const currShip = gameController.getCurrShip();
+  const currRoidBelt = gameController.getCurrRoidBelt();
+  gameController.updateCurrScore(detectLaserHits(currRoidBelt, currShip));
+  gameController.updateCurrScore(detectRoidHits(currShip, currRoidBelt));
+  gameController.updatePersonalBest();
 }
 
 export { setIsGameRunning, gameLoop };

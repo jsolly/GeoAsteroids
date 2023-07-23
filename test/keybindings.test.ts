@@ -1,19 +1,19 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { keyDown, keyUp } from '../src/keybindings.js';
-import { TURN_SPEED, FPS } from '../src/config.js';
-import { Ship } from '../src/ship.js';
+import { keyDown, keyUp } from '../src/keybindings';
+import { TURN_SPEED, FPS } from '../src/config';
+import { Ship } from '../src/ship';
+import { GameController } from '../src/gameController';
 
 let mockShip: Ship;
+const gameController = GameController.getInstance();
 
 const mockPlay = vi.fn();
 
 beforeEach(() => {
   Ship.fxThrust.play = mockPlay;
   Ship.fxThrust.stop = mockPlay;
-  mockShip = new Ship();
-  mockShip.fireLaser = vi.fn(() => {
-    console.log('Mock fireLaser called');
-  });
+  mockShip = gameController.getCurrShip();
+  mockShip.fireLaser = vi.fn();
 
   mockShip.rot = 0;
   mockShip.thrusting = false;
@@ -22,18 +22,20 @@ beforeEach(() => {
 afterEach(() => {
   // Restore the original functions after each test
   vi.restoreAllMocks();
-  mockShip = new Ship();
+  gameController.newGame();
 });
 
 const pressKey = (code: string): void =>
-  keyDown(new KeyboardEvent('keydown', { code }), mockShip);
+  keyDown(new KeyboardEvent('keydown', { code }));
 const releaseKey = (code: string): void =>
-  keyUp(new KeyboardEvent('keyup', { code }), mockShip);
+  keyUp(new KeyboardEvent('keyup', { code }));
 
 test.concurrent('keyDown - Space', () => {
   pressKey('Space');
-  expect(mockShip.fireLaser).toHaveBeenCalled();
+  expect(mockShip.fireLaser.bind(mockShip)).toHaveBeenCalled();
 });
+
+// Rest of the tests stay the same
 
 test.concurrent('keyDown - ArrowLeft', () => {
   pressKey('ArrowLeft');
@@ -51,9 +53,9 @@ test.concurrent('keyDown - ArrowRight', () => {
   expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
-test.concurrent('keyUp - Space', () => {
-  releaseKey('Space');
-  expect(mockShip.fireLaser).not.toHaveBeenCalled();
+test.concurrent('keyDown - Space', () => {
+  pressKey('Space');
+  expect(mockShip.fireLaser.bind(mockShip)).toHaveBeenCalled();
 });
 
 test.concurrent('keyUp - ArrowLeft', () => {

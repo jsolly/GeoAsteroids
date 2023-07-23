@@ -1,5 +1,4 @@
 import { getElementById, attachEventListener } from './utils';
-import { startGame } from './runtimeVars';
 import { setIsGameRunning } from './eventLoop';
 import {
   validateInput,
@@ -8,6 +7,9 @@ import {
 } from './highScoreFetchGet';
 import { setSound, setMusic } from './soundsMusic';
 import { setDifficulty, Difficulty } from './config';
+import { GameController } from './gameController';
+const gameController = GameController.getInstance();
+const startGame = gameController.startGame.bind(gameController);
 
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
 const musicCheckBox = getElementById<HTMLInputElement>('musicPref');

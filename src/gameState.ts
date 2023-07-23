@@ -12,7 +12,7 @@ interface IGameState {
   resetCurrentLevel(): void;
   getCurrentLevel(): number;
   updateCurrentLevel(): void;
-  getNextLevel(): void;
+  getNextLevel(): number;
   updateNextLevel(): void;
   getPersonalBest(): number;
   updatePersonalBest(): void;
@@ -57,20 +57,24 @@ class GameState implements IGameState {
   updateCurrentLevel(): void {
     this.currentLevel++;
   }
+
   getNextLevel(): number {
     return this.nextLevel;
   }
+
   updateNextLevel(): void {
     this.nextLevel += NEXT_LEVEL_POINTS;
   }
+
   getPersonalBest(): number {
-    const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST); // Import SAVE_KEY_PERSONAL_BEST from './config'
+    const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST);
     if (personalBest == null) {
       localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0');
       return 0;
     }
     return Number(personalBest);
   }
+
   updatePersonalBest(): void {
     const personalBest = this.getPersonalBest();
     if (this.getCurrentScore() > personalBest) {

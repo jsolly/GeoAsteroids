@@ -1,5 +1,7 @@
-import { CTX, CVS, SHIP_SIZE } from './config.js';
-import { Ship } from './ship.js';
+import { CTX, CVS, SHIP_SIZE } from './config';
+import { Ship } from './ship';
+//import { GameController } from './gameController';
+//const gameController = GameController.getInstance();
 
 /**
  * Draw the ship's thruster on the canvas

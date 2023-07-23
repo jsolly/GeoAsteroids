@@ -102,6 +102,9 @@ class RoidBelt implements IRoidBelt {
     roids.splice(i, 1);
     return score;
   }
+  getRoids(): Roid[] {
+    return this.roids;
+  }
 
   /**
    * Move all asteroids in an array using their x and y velocity
