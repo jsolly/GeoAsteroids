@@ -1,9 +1,12 @@
 import { FPS, TURN_SPEED } from './config';
 import { Ship } from './ship';
 import { GameController } from './gameController';
-const gameController = GameController.getInstance();
-document.addEventListener('keydown', (ev) => keyDown(ev));
-document.addEventListener('keyup', (ev) => keyUp(ev));
+document.addEventListener('keydown', (ev) =>
+  keyDown(ev, GameController.getInstance().getCurrShip()),
+);
+document.addEventListener('keyup', (ev) =>
+  keyUp(ev, GameController.getInstance().getCurrShip()),
+);
 
 interface KeyStates {
   ArrowLeft: boolean;
@@ -16,8 +19,7 @@ const keys: KeyStates = {
   ArrowRight: false,
 };
 
-function keyDown(ev: KeyboardEvent): void {
-  const ship = gameController.getCurrShip();
+function keyDown(ev: KeyboardEvent, ship: Ship): void {
   if (!ship.dead) {
     if (ev.code in keys) {
       keys[ev.code] = true;
@@ -42,8 +44,7 @@ function keyDown(ev: KeyboardEvent): void {
   }
 }
 
-function keyUp(ev: KeyboardEvent): void {
-  const ship = gameController.getCurrShip();
+function keyUp(ev: KeyboardEvent, ship: Ship): void {
   if (!ship.dead) {
     if (ev.code in keys) {
       keys[ev.code] = false;
