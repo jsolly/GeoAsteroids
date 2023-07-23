@@ -15,9 +15,6 @@ import { showGameOverMenu } from './mainMenu';
 import { GameController } from './gameController';
 const gameController = GameController.getInstance();
 
-const currShip = gameController.getCurrShip();
-const currRoidBelt = gameController.getCurrRoidBelt();
-
 let text: string;
 let textAlpha: number;
 
@@ -109,6 +106,7 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
  * Draw number of lives left on canvas
  */
 function drawLives(): void {
+  const currShip = gameController.getCurrShip();
   let lifeColor;
   for (let i = 0; i < currShip.lives; i++) {
     lifeColor = getLifeColor();
@@ -118,6 +116,7 @@ function drawLives(): void {
 }
 
 function getLifeColor(): string {
+  const currShip = gameController.getCurrShip();
   const currLives = currShip.lives;
   return currShip.exploding && currLives == currShip.lives - 1
     ? 'red'
@@ -159,6 +158,8 @@ function newLevelText(currentLevel: number): void {
 }
 
 function drawGameCanvas(): void {
+  const currShip = gameController.getCurrShip();
+  const currRoidBelt = gameController.getCurrRoidBelt();
   drawSpace();
   currRoidBelt.spawnRoids(currShip);
 
