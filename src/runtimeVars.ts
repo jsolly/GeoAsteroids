@@ -1,4 +1,4 @@
-import { SAVE_KEY_PERSONAL_BEST, NEXT_LEVEL_POINTS } from './config';
+import { SAVE_KEY_PERSONAL_BEST } from './config';
 
 import { toggleScreen } from './mainMenu';
 import { Ship } from './ship.js';
@@ -13,7 +13,6 @@ const gameState = GameState.getInstance();
 const music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
 let currShip = new Ship();
 let currRoidBelt = new RoidBelt(currShip);
-let nextLevel = NEXT_LEVEL_POINTS;
 
 document.addEventListener('keydown', (ev) => keyDown(ev, currShip));
 document.addEventListener('keyup', (ev) => keyUp(ev, currShip));
@@ -36,7 +35,7 @@ function tickMusic(): void {
  */
 function levelUp(): void {
   gameState.updateCurrentLevel();
-  nextLevel += NEXT_LEVEL_POINTS;
+  gameState.updateNextLevel();
   newLevelText(gameState.getCurrentLevel());
   currRoidBelt.addRoid(currShip); // add a new asteroid for each new level
   music.setMusicTempo(1.0 + gameState.getCurrentLevel() / 10);
@@ -105,7 +104,6 @@ export {
   tickMusic,
   startGame,
   gameOver,
-  nextLevel,
   currShip,
   currRoidBelt,
 };

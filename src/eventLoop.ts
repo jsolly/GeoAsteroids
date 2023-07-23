@@ -3,7 +3,6 @@ import { detectLaserHits, detectRoidHits } from './collisions';
 import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import {
-  nextLevel,
   currShip,
   currRoidBelt,
   updatePersonalBest,
@@ -57,7 +56,7 @@ function updateGame(): void {
 }
 
 function handleLevelUp(): void {
-  if (gameState.getCurrentScore() > nextLevel) {
+  if (gameState.getCurrentScore() > gameState.getNextLevel()) {
     levelUp();
   }
 }
