@@ -23,20 +23,12 @@ function getCurrentShip(): Ship {
   return currShip;
 }
 
-function getCurrentRoidBelt(): RoidBelt {
-  return currRoidBelt;
-}
-
 function getCurrentScore(): number {
   return currScore;
 }
 
 function setCurrentScore(val: number): void {
   currScore = val;
-}
-
-function getCurrentLevel(): number {
-  return currLevel;
 }
 
 function updateCurrScore(valtoAdd: number): void {
