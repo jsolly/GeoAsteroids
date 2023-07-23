@@ -3,6 +3,7 @@ import { detectLaserHits, detectRoidHits } from './collisions';
 import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
 import { GameController } from './gameController';
+import { Ship } from './ship';
 const gameController = GameController.getInstance();
 
 let isGameRunning: boolean;
@@ -35,15 +36,22 @@ function updateGame(): void {
   const currRoidBelt = gameController.getCurrRoidBelt();
   const currScore = gameController.getCurrScore();
   const personalBest = gameController.getPersonalBest();
+  const textAlpha = gameController.getTextAlpha();
+  const text = gameController.getText();
   handleLevelUp();
 
-  drawGameCanvas(currShip, currRoidBelt, currScore, personalBest);
+  drawGameCanvas(
+    currShip,
+    currRoidBelt,
+    currScore,
+    personalBest,
+    textAlpha,
+    text,
+  );
 
   handleMusic();
-
-  handleShipState();
-
-  handleCollision();
+  handleShipState(currShip);
+  handleCollision(currShip);
 
   if (!currShip.exploding) currShip.move();
 
@@ -63,47 +71,44 @@ function handleMusic(): void {
   }
 }
 
-function handleShipState(): void {
-  const currShip = gameController.getCurrShip();
-  currShip.setBlinkOn();
-  currShip.setExploding();
+function handleShipState(ship: Ship): void {
+  ship.setBlinkOn();
+  ship.setExploding();
 
-  if (!currShip.exploding) {
-    if (currShip.blinkOn && !currShip.dead) {
-      drawShipRelative(currShip);
+  if (!ship.exploding) {
+    if (ship.blinkOn && !ship.dead) {
+      drawShipRelative(ship);
     }
 
-    if (currShip.blinkCount > 0) {
-      currShip.blinkTime--;
+    if (ship.blinkCount > 0) {
+      ship.blinkTime--;
 
-      if (currShip.blinkTime == 0) {
-        currShip.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-        currShip.blinkCount--;
+      if (ship.blinkTime == 0) {
+        ship.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+        ship.blinkCount--;
       }
     }
   } else {
-    handleShipExplosion();
+    handleShipExplosion(ship);
   }
 }
 
-function handleShipExplosion(): void {
-  const currShip = gameController.getCurrShip();
-  drawShipExplosion(currShip);
-  currShip.explodeTime--;
+function handleShipExplosion(ship: Ship): void {
+  drawShipExplosion(ship);
+  ship.explodeTime--;
 
-  if (currShip.explodeTime == 0) {
-    currShip.lives--;
-    if (currShip.lives == 0) {
+  if (ship.explodeTime == 0) {
+    ship.lives--;
+    if (ship.lives == 0) {
       gameController.gameOver();
     }
   }
 }
 
-function handleCollision(): void {
-  const currShip = gameController.getCurrShip();
+function handleCollision(ship: Ship): void {
   const currRoidBelt = gameController.getCurrRoidBelt();
-  gameController.updateCurrScore(detectLaserHits(currRoidBelt, currShip));
-  gameController.updateCurrScore(detectRoidHits(currShip, currRoidBelt));
+  gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship));
+  gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
   gameController.updatePersonalBest();
 }
 

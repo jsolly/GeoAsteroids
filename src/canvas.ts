@@ -14,27 +14,6 @@ import { drawLasers } from './shipCanv';
 import { showGameOverMenu } from './mainMenu';
 import { RoidBelt } from './asteroids';
 
-let text: string;
-let textAlpha: number;
-
-/**
- *
- * @param CurrenText - Text to be displayed on canvas
- * @param CurrenTextAlpha - Opacity (0-1) of text to be displayed.
- */
-function setTextProperties(CurrenText: string, CurrenTextAlpha: number): void {
-  text = CurrenText;
-  textAlpha = CurrenTextAlpha;
-}
-
-/**
- *
- * @returns
- */
-function getTextAlpha(): number {
-  return textAlpha;
-}
-
 /**
  * Draws the background
  */
@@ -47,7 +26,7 @@ function drawSpace(): void {
  * Draws text such as "Game Over", "Level 1." Text usually has an Alpha + fade
  * value so the text eventually disappears.
  */
-function drawGameText(): void {
+function drawGameText(textAlpha: number, text: string): void {
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'rgba(255,255,255, ' + String(textAlpha) + ')';
@@ -137,21 +116,13 @@ function drawScores(score: number, personalBest: number): void {
   CTX.fillText('BEST ' + String(personalBest), CVS.width / 2, 30);
 }
 
-/**
- * Start a new level. This is called on game start and when the player
- * levels up
- */
-function newLevelText(currentLevel: number): void {
-  text = 'Level ' + String(currentLevel);
-  textAlpha = 1.0;
-  setTextProperties(text, textAlpha);
-}
-
 function drawGameCanvas(
   ship: Ship,
   roidBelt: RoidBelt,
   currScore: number,
   personalBest: number,
+  textAlpha: number,
+  text: string,
 ): void {
   drawSpace();
   roidBelt.spawnRoids(ship);
@@ -165,11 +136,11 @@ function drawGameCanvas(
   drawScores(currScore, personalBest);
   drawLives(ship);
 
-  if (getTextAlpha() >= 0) {
-    drawGameText();
+  if (textAlpha >= 0) {
+    drawGameText(textAlpha, text);
   } else if (ship.dead) {
     showGameOverMenu();
   }
 }
 
-export { drawSpace, newLevelText, setTextProperties, drawGameCanvas };
+export { drawSpace, drawGameCanvas };

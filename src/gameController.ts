@@ -2,7 +2,6 @@ import { GameState } from './gameState';
 import { Music } from './soundsMusic';
 import { Ship } from './ship';
 import { RoidBelt } from './asteroids';
-import { newLevelText, setTextProperties } from './canvas';
 import { toggleScreen } from './mainMenu';
 import { setIsGameRunning, gameLoop } from './eventLoop';
 
@@ -16,6 +15,7 @@ interface IGameController {
   getCurrRoidBelt(): RoidBelt;
   updateCurrScore(points: number): void;
   updatePersonalBest(): void;
+  updateTextProperties(text: string, alpha: number): void;
   getNextLevel(): number;
   getCurrScore(): number;
 }
@@ -44,7 +44,10 @@ class GameController implements IGameController {
   levelUp(): void {
     this.gameState.updateCurrentLevel();
     this.gameState.updateNextLevel();
-    newLevelText(this.gameState.getCurrentLevel());
+    const currLevel = this.gameState.getCurrentLevel();
+    const text = 'Level ' + String(currLevel);
+    const textAlpha = 1.0;
+    this.updateTextProperties(text, textAlpha);
     this.currRoidBelt.addRoid(this.currShip);
     this.music.setMusicTempo(1.0 + this.gameState.getCurrentLevel() / 10);
   }
@@ -52,7 +55,10 @@ class GameController implements IGameController {
   newGame(): void {
     this.gameState.resetCurrentScore();
     this.gameState.resetCurrentLevel();
-    newLevelText(this.gameState.getCurrentLevel());
+    const currLevel = this.gameState.getCurrentLevel();
+    const textAlpha = 1.0;
+    const text = 'Level ' + String(currLevel);
+    this.updateTextProperties(text, textAlpha);
     this.currShip = new Ship();
     this.currRoidBelt = new RoidBelt(this.currShip);
     this.music.setMusicTempo(1.0);
@@ -68,7 +74,7 @@ class GameController implements IGameController {
 
   gameOver(): void {
     this.currShip.die();
-    setTextProperties('Game Over', 1.0);
+    this.updateTextProperties('Game Over', 1.0);
     this.music.setMusicTempo(1.0);
   }
 
@@ -90,11 +96,21 @@ class GameController implements IGameController {
   getPersonalBest(): number {
     return this.gameState.getPersonalBest();
   }
+
   getNextLevel(): number {
     return this.gameState.getNextLevel();
   }
   getCurrScore(): number {
     return this.gameState.getCurrentScore();
+  }
+  updateTextProperties(text: string, alpha: number): void {
+    this.gameState.updateTextProperties(text, alpha);
+  }
+  getTextAlpha(): number {
+    return this.gameState.getTextAlpha();
+  }
+  getText(): string {
+    return this.gameState.getText();
   }
 }
 
