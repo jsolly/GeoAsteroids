@@ -3,7 +3,7 @@ import {
   START_LEVEL,
   NEXT_LEVEL_POINTS,
   SAVE_KEY_PERSONAL_BEST,
-} from './config';
+} from './constants';
 
 interface IGameState {
   getCurrentScore(): number;

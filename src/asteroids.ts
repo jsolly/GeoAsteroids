@@ -9,7 +9,7 @@ import {
   ROID_POINTS_SML,
   ROID_SPAWN_TIME,
   getRoidNum,
-} from './config.js';
+} from './constants.js';
 import { Sound } from './soundsMusic';
 import { Point } from './utils';
 import { Ship } from './ship';

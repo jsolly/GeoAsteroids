@@ -6,14 +6,13 @@ import {
   CVS,
   CTX,
   DEBUG,
-} from './config';
+} from './constants';
 import { Ship } from './ship';
 import { Point } from './utils';
 import { drawRoidsRelative } from './asteroidsCanv';
 import { drawLasers } from './shipCanv';
 import { showGameOverMenu } from './mainMenu';
-import { GameController } from './gameController';
-const gameController = GameController.getInstance();
+import { RoidBelt } from './asteroids';
 
 let text: string;
 let textAlpha: number;
@@ -105,46 +104,37 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
 /**
  * Draw number of lives left on canvas
  */
-function drawLives(): void {
-  const currShip = gameController.getCurrShip();
+function drawLives(ship: Ship): void {
   let lifeColor;
-  for (let i = 0; i < currShip.lives; i++) {
-    lifeColor = getLifeColor();
+  for (let i = 0; i < ship.lives; i++) {
+    lifeColor = getLifeColor(ship);
     const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
     drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
   }
 }
 
-function getLifeColor(): string {
-  const currShip = gameController.getCurrShip();
-  const currLives = currShip.lives;
-  return currShip.exploding && currLives == currShip.lives - 1
-    ? 'red'
-    : 'white';
+function getLifeColor(ship: Ship): string {
+  const currLives = ship.lives;
+  return ship.exploding && currLives == ship.lives - 1 ? 'red' : 'white';
 }
 
 /**
  * Draw current score and high score on canvas
  */
-function drawScores(): void {
-  const currScore = gameController.getCurrScore();
+function drawScores(score: number, personalBest: number): void {
   // draw the score
   CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
   CTX.font = String(TEXT_SIZE) + 'px dejavu sans mono';
-  CTX.fillText(String(currScore), CVS.width - 15, 30);
+  CTX.fillText(String(score), CVS.width - 15, 30);
 
   // draw the personal best
   CTX.textAlign = 'center';
   CTX.textBaseline = 'middle';
   CTX.fillStyle = 'white';
   CTX.font = String(TEXT_SIZE * 0.75) + 'px dejavu sans mono';
-  CTX.fillText(
-    'BEST ' + String(gameController.getPersonalBest()),
-    CVS.width / 2,
-    30,
-  );
+  CTX.fillText('BEST ' + String(personalBest), CVS.width / 2, 30);
 }
 
 /**
@@ -157,24 +147,27 @@ function newLevelText(currentLevel: number): void {
   setTextProperties(text, textAlpha);
 }
 
-function drawGameCanvas(): void {
-  const currShip = gameController.getCurrShip();
-  const currRoidBelt = gameController.getCurrRoidBelt();
+function drawGameCanvas(
+  ship: Ship,
+  roidBelt: RoidBelt,
+  currScore: number,
+  personalBest: number,
+): void {
   drawSpace();
-  currRoidBelt.spawnRoids(currShip);
+  roidBelt.spawnRoids(ship);
 
   if (DEBUG) {
-    drawDebugFeatures(currShip);
+    drawDebugFeatures(ship);
   }
 
-  drawRoidsRelative();
-  drawLasers(currShip);
-  drawScores();
-  drawLives();
+  drawRoidsRelative(ship, roidBelt.roids);
+  drawLasers(ship);
+  drawScores(currScore, personalBest);
+  drawLives(ship);
 
   if (getTextAlpha() >= 0) {
     drawGameText();
-  } else if (currShip.dead) {
+  } else if (ship.dead) {
     showGameOverMenu();
   }
 }

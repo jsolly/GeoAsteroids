@@ -1,4 +1,4 @@
-import { FPS, SHIP_INV_BLINK_DUR, musicIsOn } from './config';
+import { FPS, SHIP_INV_BLINK_DUR, musicIsOn } from './constants';
 import { detectLaserHits, detectRoidHits } from './collisions';
 import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion } from './shipCanv';
@@ -33,9 +33,11 @@ function setIsGameRunning(value: boolean): void {
 function updateGame(): void {
   const currShip = gameController.getCurrShip();
   const currRoidBelt = gameController.getCurrRoidBelt();
+  const currScore = gameController.getCurrScore();
+  const personalBest = gameController.getPersonalBest();
   handleLevelUp();
 
-  drawGameCanvas();
+  drawGameCanvas(currShip, currRoidBelt, currScore, personalBest);
 
   handleMusic();
 

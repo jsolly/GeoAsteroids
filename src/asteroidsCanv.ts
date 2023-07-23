@@ -1,10 +1,8 @@
-import { CTX, CVS, DEBUG } from './config';
-import { GameController } from './gameController';
-const gameController = GameController.getInstance();
+import { CTX, CVS, DEBUG } from './constants';
+import { Ship } from './ship';
+import { Roid } from './asteroids';
 
-function drawRoidsRelative(): void {
-  const ship = gameController.getCurrShip();
-  const roids = gameController.getCurrRoidBelt().getRoids();
+function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   for (const roid of roids) {
     CTX.strokeStyle = 'slategrey';
     CTX.lineWidth = 1.5;

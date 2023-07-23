@@ -12,7 +12,7 @@ import {
   LASER_SPEED,
   LASER_MAX,
   FRICTION,
-} from './config.js';
+} from './constants.js';
 import { Sound } from './soundsMusic.js';
 import { drawThruster } from './shipCanv.js';
 import { Point } from './utils.js';

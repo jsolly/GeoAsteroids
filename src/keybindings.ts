@@ -1,4 +1,4 @@
-import { FPS, TURN_SPEED } from './config';
+import { FPS, TURN_SPEED } from './constants';
 import { Ship } from './ship';
 import { GameController } from './gameController';
 document.addEventListener('keydown', (ev) =>

@@ -1,4 +1,4 @@
-import { CTX, CVS, SHIP_SIZE } from './config';
+import { CTX, CVS, SHIP_SIZE } from './constants';
 import { Ship } from './ship';
 
 /**

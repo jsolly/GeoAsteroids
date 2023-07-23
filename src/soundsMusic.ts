@@ -1,4 +1,4 @@
-import { FPS, LOCAL_STORAGE_KEYS, soundIsOn } from './config.js';
+import { FPS, LOCAL_STORAGE_KEYS, soundIsOn } from './constants.js';
 /**
  * Plays and stops sounds
  * @param src - Path to sound file

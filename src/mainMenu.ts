@@ -6,7 +6,7 @@ import {
   fetchHighScores,
 } from './highScoreFetchGet';
 import { setSound, setMusic } from './soundsMusic';
-import { setDifficulty, Difficulty } from './config';
+import { setDifficulty, Difficulty } from './constants';
 import { GameController } from './gameController';
 const gameController = GameController.getInstance();
 const startGame = gameController.startGame.bind(gameController);
