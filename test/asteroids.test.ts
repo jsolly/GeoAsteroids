@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { Difficulty, setDifficulty } from '../src/config';
+import { Difficulty, setDifficulty } from '../src/constants';
 import { Ship } from '../src/ship';
 import { Point } from '../src/utils';
 import { Roid, RoidBelt } from '../src/asteroids';

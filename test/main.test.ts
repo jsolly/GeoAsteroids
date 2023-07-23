@@ -1,4 +1,4 @@
-import { SAVE_KEY_PERSONAL_BEST } from '../src/config';
+import { SAVE_KEY_PERSONAL_BEST } from '../src/constants';
 import { expect, test } from 'vitest';
 import { GameState } from '../src/gameState';
 const gameState = GameState.getInstance();

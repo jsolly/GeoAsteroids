@@ -1,6 +1,6 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { Sound, Music, setMusic, setSound } from '../src/soundsMusic.js';
-import { soundIsOn, musicIsOn, LOCAL_STORAGE_KEYS } from '../src/config.js';
+import { Sound, Music, setMusic, setSound } from '../src/soundsMusic';
+import { soundIsOn, musicIsOn, LOCAL_STORAGE_KEYS } from '../src/constants';
 
 let testMusic: Music;
 let testSound: Sound;

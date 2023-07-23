@@ -1,6 +1,6 @@
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { keyDown, keyUp } from '../src/keybindings';
-import { TURN_SPEED, FPS } from '../src/config';
+import { TURN_SPEED, FPS } from '../src/constants';
 import { Ship } from '../src/ship';
 import { GameController } from '../src/gameController';
 
@@ -26,9 +26,9 @@ afterEach(() => {
 });
 
 const pressKey = (code: string): void =>
-  keyDown(new KeyboardEvent('keydown', { code }));
+  keyDown(new KeyboardEvent('keydown', { code }), mockShip);
 const releaseKey = (code: string): void =>
-  keyUp(new KeyboardEvent('keyup', { code }));
+  keyUp(new KeyboardEvent('keyup', { code }), mockShip);
 
 test.concurrent('keyDown - Space', () => {
   pressKey('Space');

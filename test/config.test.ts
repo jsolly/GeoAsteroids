@@ -6,7 +6,7 @@ import {
   getRoidNum,
   setDifficulty,
   Difficulty,
-} from '../src/config';
+} from '../src/constants';
 
 test.concurrent('Local Storage Keys', () => {
   expect(LOCAL_STORAGE_KEYS.soundOn).toBe('soundOn');
