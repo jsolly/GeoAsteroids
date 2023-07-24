@@ -28,12 +28,14 @@ export class Logger {
     this.output(LogLevel.ERROR, 'ERROR', message);
   }
 
-  logError(error: any): void {
+  logError(error: unknown): void {
     let errorMessage: string;
     if (error instanceof Error) {
       errorMessage = `${error.name}: ${error.message}`;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
     } else {
-      errorMessage = String(error);
+      errorMessage = 'An unknown error occurred';
     }
     this.error(errorMessage);
   }

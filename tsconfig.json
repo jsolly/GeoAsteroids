@@ -16,5 +16,12 @@
     "noImplicitReturns": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "api",
+    "test",
+    "vitest.config.ts",
+    "tsconfig.json",
+    "setup"
+  ]
 }
