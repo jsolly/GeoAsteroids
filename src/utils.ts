@@ -1,7 +1,10 @@
 import { logger } from './logger.js';
 
 class Point {
-  constructor(readonly x: number, readonly y: number) {}
+  constructor(
+    readonly x: number,
+    readonly y: number,
+  ) {}
 
   /**
    * Returns the euclidian distance from the Point instance to another Point instance.

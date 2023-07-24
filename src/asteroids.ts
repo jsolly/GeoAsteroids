@@ -31,7 +31,10 @@ class Roid implements IRoid {
   yv: number;
   static fxHit = new Sound('sounds/hit.m4a', 5);
 
-  constructor(public centroid: Point, public r: number) {
+  constructor(
+    public centroid: Point,
+    public r: number,
+  ) {
     const currLevel = 0;
     const lvlMult = 1 + 0.1 * currLevel;
     this.a = Math.random() * Math.PI * 2; // in radians
