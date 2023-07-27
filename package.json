@@ -19,9 +19,8 @@
   },
   "lint-staged": {
     "*": [
-      "prettier . --write",
-      "eslint .",
-      "git add ."
+      "prettier --write",
+      "eslint"
     ]
   },
   "repository": {
