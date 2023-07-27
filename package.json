@@ -18,6 +18,12 @@
     "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "prepare": "husky install"
   },
+  "lint-staged": {
+    "*.ts": [
+      "eslint",
+      "prettier --write"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jsolly/GeoAsteroids.git"
@@ -49,12 +55,6 @@
     "typescript": "^5.1.6",
     "vite": "^4.4.7",
     "vitest": "^0.33.0"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "eslint",
-      "prettier --write"
-    ]
   },
   "dependencies": {
     "@types/jsdom": "^21.1.1",
