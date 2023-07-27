@@ -83,9 +83,9 @@ $ npm run test
 ```
 
 ### Linting (with ESlint)
-
+```shell
 $ npm run lint
-
+```
 ---
 
 ## Contributing
