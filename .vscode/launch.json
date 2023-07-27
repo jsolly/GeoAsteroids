@@ -4,9 +4,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch via Vercel", 
+      "name": "Launch via Vercel",
       "runtimeExecutable": "vercel",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": ["dev"]
     },
     {
       "type": "chrome",

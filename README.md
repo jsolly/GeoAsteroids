@@ -52,7 +52,7 @@ A 2D spaceship game, <a href="Geoasteroids.com">Geoasteroids.com</a>
 
 - Moving asteroids with variable jaggedness and size. Woah
 - Points, lives and levels just like you'd expect
-- Spaceship with laser and thruster. Pew Pew 
+- Spaceship with laser and thruster. Pew Pew
 - Global high scoreboard so you can compete with anyone in the world!
 
 #### Non-Functional
@@ -83,9 +83,11 @@ $ npm run test
 ```
 
 ### Linting (with ESlint)
+
 ```shell
 $ npm run lint
 ```
+
 ---
 
 ## Contributing
