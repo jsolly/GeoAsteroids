@@ -13,15 +13,15 @@
     "preview": "vite preview",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "lint": "eslint . --ext .ts",
-    "lint-fix": "eslint . --ext .ts --fix",
-    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
+    "lint": "eslint .",
+    "prettier-format": "prettier . --write",
     "prepare": "husky install"
   },
   "lint-staged": {
     "*.ts": [
-      "eslint",
-      "prettier --write"
+      "prettier . --write",
+      "eslint .",
+      "git add"
     ]
   },
   "repository": {
