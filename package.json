@@ -14,11 +14,11 @@
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "lint": "eslint .",
-    "prettier-format": "prettier . --write",
+    "format": "prettier . --write",
     "prepare": "husky install"
   },
   "lint-staged": {
-    "*": [
+    "*.{js,ts,css,html,json,yml,yaml,md}": [
       "prettier --write",
       "eslint"
     ]
