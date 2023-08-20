@@ -8,17 +8,11 @@ import { Ship } from './ship';
 const gameController = GameController.getInstance();
 
 window.addEventListener('gameStart', () => {
-  let lastTimestamp = 0;
-
-  function gameLoop(timestamp: number): void {
+  function gameLoop(): void {
     if (!gameController.getIsGameRunning()) return;
-    const elapsedSeconds = (timestamp - lastTimestamp) / 1000; // convert from ms to s
 
-    if (elapsedSeconds > 1 / FPS) {
-      updateGame();
-    }
+    updateGame();
 
-    lastTimestamp = timestamp;
     window.requestAnimationFrame(gameLoop);
   }
 

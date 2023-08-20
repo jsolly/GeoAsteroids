@@ -37,7 +37,7 @@ export const SPEED_OF_LIGHT = 30; // pixels per second
 export const FRICTION = 0.6; // Friction coefficient from 0 (none) to 1 (a lot)
 
 /* Ship Constants*/
-export const TURN_SPEED = 240; // turn speed in degrees per second
+export const TURN_SPEED = 450; // turn speed in degrees per second
 export const START_LEVEL = 1;
 export const START_LIVES = 3;
 export const SHIP_THRUST = 5; // Thrust in pixels per second per second (Acceleration)
