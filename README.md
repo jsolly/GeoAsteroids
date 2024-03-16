@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/jsolly/GeoAsteroids/badge.svg?branch=main)](https://coveralls.io/github/jsolly/GeoAsteroids?branch=main)
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
 
-A 2D spaceship game, <a href="https://geoasteroids.com">Geoasteroids.com</a>
+A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoasteroids.com</a>
 
 ![GeoAsteroids_playthrough (3)](https://user-images.githubusercontent.com/9572232/179308016-71265497-1d05-4750-bfd5-0f336cf7ae77.gif)
 
