@@ -110,22 +110,6 @@ Want to work on this with me? DM me on Twiiter <a href="https://twitter.com/_jso
 
 ---
 
-### Top Contributors
-
-| John Solly |
-| :---:
-| [![jsolly](https://avatars1.githubusercontent.com/u/9572232?v=3&s=200)](https://github.com/jsolly)
-| <a href="https://github.com/jsolly" target="_blank">`github.com/jsolly`</a> |
-
----
-
-## Support
-
-Reach out to me at one of the following places!
-
-- Twitter at <a href="https://twitter.com/_jsolly" target="_blank">`@_jsolly`</a>
-
----
 
 ## UML Diagram
 
