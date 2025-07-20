@@ -17,7 +17,6 @@ export default defineConfig({
       ],
     },
     environment: 'jsdom',
-    threads: false,
     setupFiles: 'setup/viteSetup.ts',
   },
 });

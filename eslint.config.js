@@ -92,6 +92,8 @@ export default [
       'build/**',
       '*.html',
       'eslint.config.js',
+      'node_modules',
+      'coverage',
     ],
   },
 ];
