@@ -34,7 +34,6 @@ class GameState implements IGameState {
   private text = 'Level 1';
   private isGameRunning = false;
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   public static getInstance(): GameState {

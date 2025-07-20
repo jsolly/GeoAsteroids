@@ -1,4 +1,5 @@
 # GeoAsteroids
+
 [![GeoAsteroidsTest](https://github.com/jsolly/GeoAsteroids/actions/workflows/GeoAsteroidsTest.yml/badge.svg)](https://github.com/jsolly/GeoAsteroids/actions/workflows/GeoAsteroidsTest.yml)
 [![Coverage Status](https://coveralls.io/repos/github/jsolly/GeoAsteroids/badge.svg?branch=main)](https://coveralls.io/github/jsolly/GeoAsteroids?branch=main)
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
@@ -85,6 +86,10 @@ npm run test
 npm run lint
 ```
 
+- ESLint is now configured using the new `eslint.config.js` flat config format (required for ESLint v9+).
+- The old `.eslintrc.cjs` and `.eslintignore` files have been removed; ignores are now set in `eslint.config.js`.
+- To update rules or ignores, edit `eslint.config.js`.
+
 ---
 
 ## Contributing
@@ -94,7 +99,6 @@ Want to work on this with me? DM me on Twiiter <a href="https://twitter.com/_jso
 ### Step 1
 
 - **Option 1**
-
   - 🍴 Fork this repo!
 
 - **Option 2**
@@ -109,7 +113,6 @@ Want to work on this with me? DM me on Twiiter <a href="https://twitter.com/_jso
 - 🔃 Create a new pull request using <a href="https://github.com/jsolly/GeoAsteroids/compare" target="_blank">`https://github.com/jsolly/GeoAsteroids/compare`</a>.
 
 ---
-
 
 ## UML Diagram
 
