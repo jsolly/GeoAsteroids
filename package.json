@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
   "devDependencies": {
-    "@types/node": "^24.0.15",
+    "@types/node": "^24.2.0",
     "@typescript-eslint/eslint-plugin": "^8.37.0",
     "@typescript-eslint/parser": "^8.37.0",
     "@vercel/node": "^5.3.6",
