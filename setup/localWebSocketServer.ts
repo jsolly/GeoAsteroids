@@ -6,8 +6,8 @@ import type {
   PlayerShoot,
   PlayerUpdate,
   ServerMessage,
-} from '../src/multiplayer/types.js';
-import { logger } from './serverLogger.js';
+} from '../src/multiplayer/types';
+import { logger } from './serverLogger';
 
 // Server-compatible Vector class (no browser dependencies)
 class Vector {

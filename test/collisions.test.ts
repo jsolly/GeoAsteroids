@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Player } from '../src/entities/player/types.js';
-import { Laser, Ship } from '../src/entities/ship/Ship.js';
+import type { Player } from '../src/entities/player/types';
+import { Laser, Ship } from '../src/entities/ship/Ship';
 import {
   detectLaserPlayerCollisions,
   detectPlayerLaserShipCollisions,
-} from '../src/physics/collisions.js';
-import { Vector } from '../src/physics/Vector.js';
+} from '../src/physics/collisions';
+import { Vector } from '../src/physics/Vector';
 
 // Mock the constants
-vi.mock('../src/constants.js', () => ({
+vi.mock('../src/constants', () => ({
   DEBUG: false,
   DRAW_ASTEROIDS: true,
   LASER_EXPLODE_DUR: 0.1,
@@ -27,10 +27,14 @@ vi.mock('../src/constants.js', () => ({
   EMP_PULSE_DURATION: 0.5,
   SHIP_HEALTH_REGEN_RATE: 1,
   SHIP_HEALTH_REGEN_DELAY: 5,
+  NEXT_LEVEL_POINTS: 1000,
+  START_LEVEL: 1,
+  STARTING_SCORE: 0,
+  soundIsOn: () => true,
 }));
 
 // Mock the sound effects
-vi.mock('../src/asteroids.js', () => ({
+vi.mock('../src/asteroids', () => ({
   Roid: {
     fxHit: {
       play: vi.fn(),
@@ -39,7 +43,7 @@ vi.mock('../src/asteroids.js', () => ({
 }));
 
 // Mock the bot manager
-vi.mock('../src/botManager.js', () => ({
+vi.mock('../src/botManager', () => ({
   BotManager: {
     getInstance: vi.fn(() => ({
       getBotLasers: vi.fn(() => new Map()),
@@ -49,7 +53,7 @@ vi.mock('../src/botManager.js', () => ({
 }));
 
 // Mock the game controller
-vi.mock('../src/gameController.js', () => ({
+vi.mock('../src/gameController', () => ({
   GameController: {
     getInstance: vi.fn(() => ({
       getMultiplayerManager: vi.fn(() => ({

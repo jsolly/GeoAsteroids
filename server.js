@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
-import { logger } from './setup/serverLogger.js';
+import { logger } from './setup/serverLogger';
 
 // Production configuration
 const PORT = process.env.PORT || 3001;

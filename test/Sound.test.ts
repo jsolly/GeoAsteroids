@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { Sound, setSound } from '../src/audio/Sound.js';
+import { Sound, setSound } from '../src/audio/Sound';
 import { LOCAL_STORAGE_KEYS } from '../src/constants';
 
 let testSound: Sound;
