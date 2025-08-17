@@ -4,7 +4,7 @@ import { RoidBelt } from './asteroids.js';
 import { Music } from './soundsMusic.js';
 import { MultiplayerManager } from './multiplayerManager.js';
 import { IBotPlayer, IBotShoot, IBotBullet } from './types/multiplayer.js';
-import { logInfo } from './logger.js';
+// Console methods now respect VITE_LOG_LEVEL automatically
 import { toggleScreen } from './mainMenu';
 import { keyDown, keyUp } from './keybindings';
 import { EMP_PULSE_RADIUS } from './constants.js';
@@ -66,7 +66,7 @@ class GameController implements IGameController {
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
       (window as { gameController?: GameController }).gameController = this;
-      logInfo(
+      console.info(
         'GAME_CONTROLLER',
         'Game controller exposed globally for testing',
       );
@@ -260,9 +260,9 @@ class GameController implements IGameController {
   enableBots(count: number = 3): void {
     if (this.gameState.isMultiplayerEnabled()) {
       this.multiplayerManager.enableBots(count);
-      logInfo('GAME_CONTROLLER', 'Bots enabled', { count });
+      console.info('GAME_CONTROLLER', 'Bots enabled', { count });
     } else {
-      logInfo(
+      console.info(
         'GAME_CONTROLLER',
         'Cannot enable bots - multiplayer not enabled',
       );
@@ -272,7 +272,7 @@ class GameController implements IGameController {
   disableBots(): void {
     if (this.gameState.isMultiplayerEnabled()) {
       this.multiplayerManager.disableBots();
-      logInfo('GAME_CONTROLLER', 'Bots disabled');
+      console.info('GAME_CONTROLLER', 'Bots disabled');
     }
   }
 
@@ -312,11 +312,11 @@ class GameController implements IGameController {
     };
 
     window.addEventListener('botShoot', this.botShootHandler as EventListener);
-    logInfo('GAME_CONTROLLER', 'Bot shoot handler set up');
+    console.info('GAME_CONTROLLER', 'Bot shoot handler set up');
   }
 
   private handleBotShoot(botShoot: IBotShoot): void {
-    logInfo('BOT_SHOOT', 'Bot shoot event received', {
+    console.info('BOT_SHOOT', 'Bot shoot event received', {
       botId: botShoot.botId,
       shipLives: this.currShip.lives,
       shipDead: this.currShip.dead,
@@ -330,9 +330,9 @@ class GameController implements IGameController {
       const isDevelopment =
         (import.meta.env?.DEV === true ||
           import.meta.env?.MODE === 'development') &&
-        import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
+        import.meta.env?.VITE_INVINCIBLE === 'true';
       if (isDevelopment) {
-        logInfo(
+        console.info(
           'BOT_DEBUG_INVINCIBILITY',
           'DEBUG MODE: Bot laser hit but ship is invincible to bot damage',
           {
@@ -346,7 +346,7 @@ class GameController implements IGameController {
 
       // Check if ship is invincible (blinking)
       if (this.currShip.blinkCount > 0 || this.currShip.exploding) {
-        logInfo(
+        console.info(
           'BOT_INVINCIBILITY',
           'Bot laser hit but ship is invincible - no damage taken',
           {
@@ -358,7 +358,7 @@ class GameController implements IGameController {
         return; // No damage taken
       }
 
-      logInfo('BOT_HIT', 'Bot laser hit player!', {
+      console.info('BOT_HIT', 'Bot laser hit player!', {
         botId: botShoot.botId,
         playerLives: this.currShip.lives,
         shipPos: { x: this.currShip.position.x, y: this.currShip.position.y },
@@ -368,21 +368,24 @@ class GameController implements IGameController {
 
       // Damage the player
       this.currShip.lives--;
-      logInfo('BOT_DAMAGE', 'Player life lost, remaining lives', {
+      console.info('BOT_DAMAGE', 'Player life lost, remaining lives', {
         remainingLives: this.currShip.lives,
       });
 
       if (this.currShip.lives <= 0) {
-        logInfo('BOT_GAME_OVER', 'Player out of lives - game over');
+        console.info('BOT_GAME_OVER', 'Player out of lives - game over');
         this.currShip.die();
         this.gameOver();
       } else {
-        logInfo('BOT_EXPLODE', 'Player hit but still has lives - exploding');
+        console.info(
+          'BOT_EXPLODE',
+          'Player hit but still has lives - exploding',
+        );
         // Make ship invincible temporarily
         this.currShip.explode();
       }
     } else {
-      logInfo('BOT_MISS', 'Bot laser missed player');
+      console.info('BOT_MISS', 'Bot laser missed player');
     }
   }
 
@@ -411,7 +414,7 @@ class GameController implements IGameController {
     // Debug collision detection
     if (distance <= shipRadius * 2) {
       // Check within 2x radius for debugging
-      logInfo('BOT_COLLISION_CHECK', 'Bot laser collision check', {
+      console.info('BOT_COLLISION_CHECK', 'Bot laser collision check', {
         distance,
         shipRadius,
         threshold: shipRadius,
@@ -441,7 +444,7 @@ class GameController implements IGameController {
       }>;
       this.handleEmpPulse(empEvent.detail);
     });
-    logInfo('GAME_CONTROLLER', 'EMP pulse handler set up');
+    console.info('GAME_CONTROLLER', 'EMP pulse handler set up');
   }
 
   private handleEmpPulse(detail: {
@@ -451,7 +454,7 @@ class GameController implements IGameController {
   }): void {
     const { shipPosition, shipRadius, debugMode } = detail;
 
-    logInfo('EMP_PULSE', 'EMP pulse activated', {
+    console.info('EMP_PULSE', 'EMP pulse activated', {
       shipPosition,
       shipRadius,
       empRadius: EMP_PULSE_RADIUS,
@@ -466,10 +469,13 @@ class GameController implements IGameController {
 
     // Add score for destroyed objects (in debug mode, unlimited points)
     if (debugMode) {
-      logInfo('EMP_DEBUG', 'DEBUG MODE: EMP pulse completed - unlimited usage');
+      console.info(
+        'EMP_DEBUG',
+        'DEBUG MODE: EMP pulse completed - unlimited usage',
+      );
     } else {
       // In normal mode, could add cooldown or limited usage here
-      logInfo('EMP_NORMAL', 'Normal mode: EMP pulse completed');
+      console.info('EMP_NORMAL', 'Normal mode: EMP pulse completed');
     }
   }
 
@@ -496,7 +502,7 @@ class GameController implements IGameController {
         roids.splice(i, 1);
         destroyedCount++;
 
-        logInfo('EMP_ASTEROID', 'Asteroid destroyed by EMP', {
+        console.info('EMP_ASTEROID', 'Asteroid destroyed by EMP', {
           position: roid.position,
           radius: roid.r,
           score,
@@ -506,7 +512,7 @@ class GameController implements IGameController {
     }
 
     if (destroyedCount > 0) {
-      logInfo('EMP_SUMMARY', 'EMP destroyed asteroids', {
+      console.info('EMP_SUMMARY', 'EMP destroyed asteroids', {
         count: destroyedCount,
       });
     }
@@ -521,7 +527,7 @@ class GameController implements IGameController {
     const bots = this.multiplayerManager.getBots();
     let destroyedCount = 0;
 
-    logInfo('EMP_BOT_DETECTION', 'Starting bot detection for EMP pulse', {
+    console.info('EMP_BOT_DETECTION', 'Starting bot detection for EMP pulse', {
       center,
       radius,
       totalBots: bots.size,
@@ -538,7 +544,7 @@ class GameController implements IGameController {
           Math.pow(bot.position.y - center.y, 2),
       );
 
-      logInfo('EMP_BOT_CHECK', 'Checking bot for EMP destruction', {
+      console.info('EMP_BOT_CHECK', 'Checking bot for EMP destruction', {
         botId,
         botPosition: bot.position,
         distance,
@@ -548,7 +554,7 @@ class GameController implements IGameController {
       if (distance <= radius) {
         botsToDestroy.push(botId);
 
-        logInfo('EMP_BOT_DETECTED', 'Bot detected for EMP destruction', {
+        console.info('EMP_BOT_DETECTED', 'Bot detected for EMP destruction', {
           botId,
           position: bot.position,
           distance,
@@ -556,7 +562,7 @@ class GameController implements IGameController {
       }
     }
 
-    logInfo('EMP_BOT_SUMMARY', 'Bot detection complete', {
+    console.info('EMP_BOT_SUMMARY', 'Bot detection complete', {
       botsToDestroy,
       count: botsToDestroy.length,
     });
@@ -569,14 +575,16 @@ class GameController implements IGameController {
       // Add points for destroying a bot with EMP (same as laser kill)
       this.updateCurrScore(200);
 
-      logInfo('EMP_BOT', 'Bot destroyed by EMP', {
+      console.info('EMP_BOT', 'Bot destroyed by EMP', {
         botId,
         scoreAwarded: 200,
       });
     }
 
     if (destroyedCount > 0) {
-      logInfo('EMP_SUMMARY', 'EMP destroyed bots', { count: destroyedCount });
+      console.info('EMP_SUMMARY', 'EMP destroyed bots', {
+        count: destroyedCount,
+      });
     }
   }
 

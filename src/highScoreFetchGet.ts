@@ -1,7 +1,6 @@
 import { getElementById } from './utils';
 import { drawSpace } from './canvas';
 import { toggleScreen } from './mainMenu';
-import { logger } from './logger';
 import { GameController } from './gameController';
 const gameController = GameController.getInstance();
 const highScoresList = getElementById<HTMLOListElement>('highScoresList');
@@ -70,9 +69,7 @@ async function postHighScore(highScore: HighScore): Promise<void> {
       throw new Error('Network response was not ok');
     }
   } catch (error) {
-    logger.error('HIGH_SCORE', 'Failed to post high score', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error('HIGH_SCORE', 'Failed to post high score', error);
   }
 }
 
@@ -96,9 +93,7 @@ async function fetchHighScores(): Promise<void> {
       });
     }
   } catch (error) {
-    logger.error('HIGH_SCORE', 'Failed to fetch high scores', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error('HIGH_SCORE', 'Failed to fetch high scores', error);
   }
 }
 

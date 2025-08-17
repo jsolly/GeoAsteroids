@@ -2,24 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
-      "request": "launch",
-      "name": "Launch via Vercel",
-      "runtimeExecutable": "vercel",
-      "runtimeArgs": ["dev"]
-    },
-    {
+      "name": "Debug GeoAsteroids",
       "type": "chrome",
       "request": "launch",
-      "name": "Launch Chrome",
-      "url": "http://localhost:3000",
-      "webRoot": "${workspaceFolder}"
-    }
-  ],
-  "compounds": [
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "trace": true,
+      "console": "integratedTerminal",
+      "userDataDir": false,
+      "runtimeArgs": [
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor"
+      ]
+    },
     {
-      "name": "Vercel Start/Client",
-      "configurations": ["Launch via Vercel", "Launch Chrome"]
+      "name": "Attach to Chrome",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true
     }
   ]
 }

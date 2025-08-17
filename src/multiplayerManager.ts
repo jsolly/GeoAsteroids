@@ -9,9 +9,9 @@ import {
   IBotPlayer,
   IBotShoot,
   IBotBullet,
+  IGameState,
 } from './types/multiplayer.js';
 import { Vector } from './vector.js';
-import { logInfo, logWarn, logError } from './logger.js';
 import { BotManager } from './botManager.js';
 
 export class MultiplayerManager {
@@ -69,7 +69,7 @@ export class MultiplayerManager {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      logError('MULTIPLAYER', 'Failed to connect to multiplayer server', {
+      console.error('MULTIPLAYER', 'Failed to connect to multiplayer server', {
         error: errorMessage,
       });
       this.handleConnectionError();
@@ -80,7 +80,7 @@ export class MultiplayerManager {
     if (!this.socket) return;
 
     this.socket.onopen = (): void => {
-      logInfo('MULTIPLAYER', 'Connected to multiplayer server');
+      console.info('MULTIPLAYER', 'Connected to multiplayer server');
       this.isConnected = true;
       this.reconnectAttempts = 0;
       this.joinGame();
@@ -98,20 +98,20 @@ export class MultiplayerManager {
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        logError('MULTIPLAYER', 'Failed to parse server message', {
+        console.error('MULTIPLAYER', 'Failed to parse server message', {
           error: errorMessage,
         });
       }
     };
 
     this.socket.onclose = (): void => {
-      logInfo('MULTIPLAYER', 'Disconnected from multiplayer server');
+      console.info('MULTIPLAYER', 'Disconnected from multiplayer server');
       this.isConnected = false;
       this.handleDisconnection();
     };
 
     this.socket.onerror = (error: Event): void => {
-      logError('MULTIPLAYER', 'WebSocket error', { error: error.type });
+      console.error('MULTIPLAYER', 'WebSocket error', { error: error.type });
       this.handleConnectionError();
     };
   }
@@ -134,7 +134,7 @@ export class MultiplayerManager {
         this.handleBotShoot(message.data as IBotShoot);
         break;
       case 'gameState':
-        this.handleGameState();
+        this.handleGameState(message.data as IGameState);
         break;
       case 'error':
         if (typeof message.data === 'string') {
@@ -160,14 +160,14 @@ export class MultiplayerManager {
         lastUpdate: Date.now(),
       };
       this.players.set(data.id, newPlayer);
-      console.log(`Player ${data.name} joined the game`);
+      // console.log(`Player ${data.name} joined the game`);
     }
   }
 
   private handlePlayerLeave(data: IPlayerLeave): void {
     const player = this.players.get(data.id);
     if (player) {
-      console.log(`Player ${player.name} left the game`);
+      // console.log(`Player ${player.name} left the game`);
       this.players.delete(data.id);
     }
   }
@@ -191,12 +191,46 @@ export class MultiplayerManager {
 
   private handlePlayerShoot(): void {
     // Handle other players shooting - will be implemented in Phase 2
-    console.log('Player shot a laser');
+    // console.log('Player shot a laser');
   }
 
-  private handleGameState(): void {
-    // Handle full game state updates - will be implemented in Phase 2
-    console.log('Received game state update');
+  private handleGameState(data: IGameState): void {
+    // Handle full game state updates
+    console.log(
+      'Received game state update with',
+      data.players.length,
+      'players',
+    );
+
+    // Clear existing players (except local player) and add all players from game state
+    for (const [id] of this.players.entries()) {
+      if (id !== this.localPlayerId) {
+        this.players.delete(id);
+      }
+    }
+
+    // Add all players from the game state (except local player)
+    for (const playerData of data.players) {
+      if (playerData.id !== this.localPlayerId) {
+        const newPlayer: IPlayer = {
+          id: playerData.id,
+          name: playerData.name,
+          position: playerData.position,
+          velocity: playerData.velocity,
+          r: playerData.r,
+          a: playerData.a,
+          lives: playerData.lives,
+          score: playerData.score,
+          dead: playerData.dead,
+          exploding: playerData.exploding,
+          lastUpdate: Date.now(),
+        };
+        this.players.set(playerData.id, newPlayer);
+        console.log(
+          `Added existing player ${playerData.name} (${playerData.id}) from game state`,
+        );
+      }
+    }
   }
 
   private joinGame(): void {
@@ -312,7 +346,7 @@ export class MultiplayerManager {
   }
 
   public enableBots(count: number = 3): void {
-    logInfo('MULTIPLAYER', 'Enabling bots', { count });
+    console.info('MULTIPLAYER', 'Enabling bots', { count });
     this.botManager.activate();
     this.botManager.createBots(count);
   }
@@ -320,7 +354,7 @@ export class MultiplayerManager {
   public disableBots(): void {
     this.botManager.deactivate();
     this.botManager.clearBotBullets(); // Clear any active bot bullets
-    logInfo('MULTIPLAYER', 'Bots disabled and bullets cleared');
+    console.info('MULTIPLAYER', 'Bots disabled and bullets cleared');
   }
 
   public getBots(): Map<string, IBotPlayer> {
@@ -353,7 +387,7 @@ export class MultiplayerManager {
 
   private handleBotShoot(botShoot: IBotShoot): void {
     // Handle bot shooting - this will be processed by the game controller
-    logInfo('MULTIPLAYER', 'Bot shot detected', {
+    console.info('MULTIPLAYER', 'Bot shot detected', {
       botId: botShoot.botId,
       targetPlayerId: botShoot.targetPlayerId,
       laserStart: botShoot.laserStart,
@@ -373,11 +407,14 @@ export class MultiplayerManager {
     // Mock players are disabled by default
     // Only create if explicitly enabled for testing
     if (import.meta.env.VITE_ENABLE_MOCK_PLAYERS !== 'true') {
-      logInfo('MULTIPLAYER', 'Mock players disabled by default');
+      console.info('MULTIPLAYER', 'Mock players disabled by default');
       return;
     }
 
-    logInfo('MULTIPLAYER', 'Creating test players for demonstration purposes');
+    console.info(
+      'MULTIPLAYER',
+      'Creating test players for demonstration purposes',
+    );
 
     // Clear any existing mock players first
     for (const [id] of this.players.entries()) {
@@ -391,7 +428,7 @@ export class MultiplayerManager {
 
     // Force a state update to ensure players are visible
     setTimeout(() => {
-      logInfo('MULTIPLAYER', 'Current players after creation', {
+      console.info('MULTIPLAYER', 'Current players after creation', {
         players: Array.from(this.players.values()).map((p) => ({
           id: p.id,
           name: p.name,
@@ -402,7 +439,7 @@ export class MultiplayerManager {
 
   // Debug method to show current state
   public debugState(): void {
-    logInfo('MULTIPLAYER', 'Multiplayer Debug State', {
+    console.info('MULTIPLAYER', 'Multiplayer Debug State', {
       connected: this.isConnected,
       localPlayerId: this.localPlayerId,
       localPlayerName: this.localPlayerName,
@@ -464,7 +501,7 @@ export class MultiplayerManager {
 
   // Make the local ship invincible for testing
   public makeInvincible(): void {
-    logInfo('MULTIPLAYER', 'Making ship invincible for testing');
+    console.info('MULTIPLAYER', 'Making ship invincible for testing');
 
     // Get the game controller and make the ship invincible
     const gameController = (
@@ -486,10 +523,12 @@ export class MultiplayerManager {
         ship.dead = false;
         ship.exploding = false;
         ship.explodeTime = 0;
-        logInfo('MULTIPLAYER', 'Ship is now invincible', { lives: ship.lives });
+        console.info('MULTIPLAYER', 'Ship is now invincible', {
+          lives: ship.lives,
+        });
       }
     } else {
-      logWarn(
+      console.warn(
         'MULTIPLAYER',
         'Could not access game controller. Try refreshing the page.',
       );
@@ -500,11 +539,11 @@ export class MultiplayerManager {
     // Mock players are disabled by default
     // Only create if explicitly enabled for testing
     if (import.meta.env.VITE_ENABLE_MOCK_PLAYERS !== 'true') {
-      logInfo('MULTIPLAYER', 'Mock players disabled by default');
+      console.info('MULTIPLAYER', 'Mock players disabled by default');
       return;
     }
 
-    logInfo('MULTIPLAYER', 'Creating mock players for local testing', {
+    console.info('MULTIPLAYER', 'Creating mock players for local testing', {
       reason: 'WebSocket connection failed or testing mode',
     });
 
@@ -540,7 +579,7 @@ export class MultiplayerManager {
     this.players.set(mockPlayer1.id, mockPlayer1);
     this.players.set(mockPlayer2.id, mockPlayer2);
 
-    logInfo('MULTIPLAYER', 'Mock players created successfully', {
+    console.info('MULTIPLAYER', 'Mock players created successfully', {
       player1: { name: mockPlayer1.name, position: mockPlayer1.position },
       player2: { name: mockPlayer2.name, position: mockPlayer2.position },
     });
@@ -551,7 +590,7 @@ export class MultiplayerManager {
     // Wait a bit before starting movement to avoid initial flashing
     setTimeout(() => {
       this.startMockPlayerMovement();
-      logInfo('MULTIPLAYER', 'Mock players are now moving');
+      console.info('MULTIPLAYER', 'Mock players are now moving');
     }, 1000);
   }
 

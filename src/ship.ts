@@ -16,7 +16,6 @@ import {
 } from './constants.js';
 import { Sound } from './soundsMusic.js';
 import { drawThruster } from './shipCanv.js';
-import { logInfo } from './logger.js';
 import { Vector } from './vector.js';
 
 interface ILaser {
@@ -105,7 +104,7 @@ class Ship implements IShip {
   }
 
   die(): void {
-    logInfo('SHIP_DEATH', 'Ship died!', {
+    console.info('SHIP_DEATH', 'Ship died!', {
       lives: this.lives,
       position: { x: this.position.x, y: this.position.y },
       velocity: { x: this.velocity.x, y: this.velocity.y },
@@ -118,9 +117,9 @@ class Ship implements IShip {
     const isDevelopment =
       (import.meta.env?.DEV === true ||
         import.meta.env?.MODE === 'development') &&
-      import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
+      import.meta.env?.VITE_INVINCIBLE === 'true';
     if (this.lives > 0 && isDevelopment) {
-      logInfo(
+      console.info(
         'SHIP_SAFETY',
         'DEBUG MODE: Preventing ship death - still has lives',
       );
@@ -140,12 +139,12 @@ class Ship implements IShip {
    * Set ship explode time. It will explode for SHIP_EXPLODE_DUR
    */
   explode(): void {
-    console.log('💥 Ship exploding!', {
-      lives: this.lives,
-      position: { x: this.position.x, y: this.position.y },
-      explodeTime: this.explodeTime,
-      blinkCount: this.blinkCount,
-    });
+    // console.log('💥 Ship exploding!', {
+    //   lives: this.lives,
+    //   position: { x: this.position.x, y: this.position.y },
+    //   explodeTime: this.explodeTime,
+    //   blinkCount: this.blinkCount,
+    // });
     this.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
     this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
     Ship.fxExplode.play();
@@ -178,17 +177,17 @@ class Ship implements IShip {
     // move the ship
     const newPosition = this.position.add(this.velocity);
 
-    // Debug logging for movement
-    if (this.velocity.magnitude() > 0.1) {
-      console.log('🚀 Ship moving:', {
-        oldPos: { x: this.position.x, y: this.position.y },
-        newPos: { x: newPosition.x, y: newPosition.y },
-        velocity: { x: this.velocity.x, y: this.velocity.y },
-        thrusting: this.thrusting,
-        dead: this.dead,
-        exploding: this.exploding,
-      });
-    }
+    // Debug logging for movement (disabled to prevent spam)
+    // if (this.velocity.magnitude() > 0.1) {
+    //   console.log('🚀 Ship moving:', {
+    //     oldPos: { x: this.position.x, y: this.position.y },
+    //     newPos: { x: newPosition.x, y: newPosition.y },
+    //     velocity: { x: this.velocity.x, y: this.velocity.y },
+    //     thrusting: this.thrusting,
+    //     dead: this.dead,
+    //     exploding: this.exploding,
+    //   });
+    // }
 
     this.position = newPosition;
   }
@@ -306,7 +305,7 @@ class Ship implements IShip {
   empPulse(): void {
     // Check if we can use EMP (not dead, not exploding)
     if (this.dead || this.exploding) {
-      logInfo('EMP', '🚫 EMP blocked - ship is dead or exploding', {
+      console.info('EMP', '🚫 EMP blocked - ship is dead or exploding', {
         shipDead: this.dead,
         shipExploding: this.exploding,
       });
@@ -317,9 +316,9 @@ class Ship implements IShip {
     const isDevelopment =
       (import.meta.env?.DEV === true ||
         import.meta.env?.MODE === 'development') &&
-      import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
+      import.meta.env?.VITE_INVINCIBLE === 'true';
 
-    logInfo('EMP', '⚡ EMP Pulse activated!', {
+    console.info('EMP', '⚡ EMP Pulse activated!', {
       position: { x: this.position.x, y: this.position.y },
       debugMode: isDevelopment,
       lives: this.lives,

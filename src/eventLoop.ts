@@ -17,7 +17,6 @@ import { drawShipRelative, drawShipExplosion, drawEmpPulse } from './shipCanv';
 import { GameController } from './gameController';
 import { Ship } from './ship';
 import { PlayerNetwork } from './playerNetwork.js';
-import { logError } from './logger.js';
 import { Vector } from './vector.js';
 
 const gameController = GameController.getInstance();
@@ -37,7 +36,7 @@ window.addEventListener('gameStart', () => {
     try {
       updateGame();
     } catch (error) {
-      logError('GAME_LOOP', 'Error in game loop', {
+      console.error('GAME_LOOP', 'Error in game loop', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -57,25 +56,25 @@ function updateGame(): void {
   const textAlpha = gameController.getTextAlpha();
   const text = gameController.getText();
 
-  // Enhanced ship state logging
-  if (currShip.dead || currShip.exploding) {
-    console.log('🚨 SHIP IN DANGER:', {
-      frame: Date.now(),
-      score: currScore,
-      level: gameController.getGameState().getCurrentLevel(),
-      shipPos: { x: currShip.position.x, y: currShip.position.y },
-      shipDead: currShip.dead,
-      shipExploding: currShip.exploding,
-      shipLives: currShip.lives,
-      shipBlinkCount: currShip.blinkCount,
-      textAlpha,
-      text,
-      multiplayerEnabled: gameController.isMultiplayerEnabled(),
-    });
-  }
+  // Enhanced ship state logging (disabled to prevent spam)
+  // if (currShip.dead || currShip.exploding) {
+  //   console.log('🚨 SHIP IN DANGER:', {
+  //     frame: Date.now(),
+  //     score: currScore,
+  //     level: gameController.getGameState().getCurrentLevel(),
+  //     shipPos: { x: currShip.position.x, y: currShip.position.y },
+  //     shipDead: currShip.dead,
+  //     shipExploding: currShip.exploding,
+  //     shipLives: currShip.lives,
+  //     shipBlinkCount: currShip.blinkCount,
+  //     textAlpha,
+  //     text,
+  //     multiplayerEnabled: gameController.isMultiplayerEnabled(),
+  //   });
+  // }
 
   // Log game state for debugging
-  // logDebug('GAME_LOOP', 'Game update', {
+  // console.debug('GAME_LOOP', 'Game update', {
   //   score: currScore,
   //   level: gameController.getGameState().getCurrentLevel(),
   //   shipPos: { x: currShip.centroid.x, y: currShip.centroid.y },
@@ -98,7 +97,7 @@ function updateGame(): void {
     // Log bot information for debugging
     const bots = gameController.getBots();
     if (bots.size > 0) {
-      // logDebug('GAME_LOOP', 'Bot update', {
+      // console.debug('GAME_LOOP', 'Bot update', {
       //   botCount: bots.size,
       //   bots: Array.from(bots.values()).map(bot => ({
       //     id: bot.id,
@@ -127,12 +126,12 @@ function updateGame(): void {
   if (!currShip.exploding && !currShip.dead) {
     currShip.move();
   } else {
-    console.log('🚫 Ship movement blocked:', {
-      exploding: currShip.exploding,
-      dead: currShip.dead,
-      lives: currShip.lives,
-      blinkCount: currShip.blinkCount,
-    });
+    // console.log('🚫 Ship movement blocked:', {
+    //   exploding: currShip.exploding,
+    //   dead: currShip.dead,
+    //   lives: currShip.lives,
+    //   blinkCount: currShip.blinkCount,
+    // });
   }
 
   currShip.moveLasers();
@@ -158,7 +157,7 @@ function handleShipState(ship: Ship): void {
     ship.updateEmpPulse(); // Update EMP pulse state
 
     // Log ship state for debugging
-    // logDebug('SHIP_STATE', 'Ship state update', {
+    // console.debug('SHIP_STATE', 'Ship state update', {
     //   blinkOn: ship.blinkOn,
     //   dead: ship.dead,
     //   exploding: ship.exploding,
@@ -170,7 +169,7 @@ function handleShipState(ship: Ship): void {
 
     if (!ship.exploding) {
       if (ship.blinkOn && !ship.dead) {
-        // logDebug('SHIP_STATE', 'Drawing ship', {
+        // console.debug('SHIP_STATE', 'Drawing ship', {
         //   pos: { x: ship.position.x, y: ship.position.y },
         //   angle: ship.a
         // });
@@ -181,7 +180,7 @@ function handleShipState(ship: Ship): void {
       if (ship.empPulseActive) {
         const empAlpha = ship.empPulseTime / (EMP_PULSE_DURATION * FPS); // Fade out over duration
         drawEmpPulse(ship, EMP_PULSE_RADIUS, empAlpha);
-        // logDebug('EMP_PULSE', 'Drawing EMP pulse effect', {
+        // console.debug('EMP_PULSE', 'Drawing EMP pulse effect', {
         //   alpha: empAlpha,
         //   timeRemaining: ship.empPulseTime
         // });
@@ -193,15 +192,15 @@ function handleShipState(ship: Ship): void {
         if (ship.blinkTime == 0) {
           ship.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
           ship.blinkCount--;
-          // logDebug('SHIP_STATE', 'Blink count decremented', { newBlinkCount: ship.blinkCount });
+          // console.debug('SHIP_STATE', 'Blink count decremented', { newBlinkCount: ship.blinkCount });
         }
       }
     } else {
-      // logDebug('SHIP_STATE', 'Handling ship explosion');
+      // console.debug('SHIP_STATE', 'Handling ship explosion');
       handleShipExplosion(ship);
     }
   } catch (error: unknown) {
-    logError('SHIP_STATE', 'Error in handleShipState', {
+    console.error('SHIP_STATE', 'Error in handleShipState', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       shipPos: { x: ship.position.x, y: ship.position.y },
@@ -210,30 +209,30 @@ function handleShipState(ship: Ship): void {
 }
 
 function handleShipExplosion(ship: Ship): void {
-  console.log('💥 Ship explosion handling START:', {
-    explodeTime: ship.explodeTime,
-    lives: ship.lives,
-    dead: ship.dead,
-    exploding: ship.exploding,
-    blinkCount: ship.blinkCount,
-  });
+  // console.log('💥 Ship explosion handling START:', {
+  //   explodeTime: ship.explodeTime,
+  //   lives: ship.lives,
+  //   dead: ship.dead,
+  //   exploding: ship.exploding,
+  //   blinkCount: ship.blinkCount,
+  // });
 
   drawShipExplosion(ship);
   ship.explodeTime--;
 
-  console.log('💥 Ship explosion handling:', {
-    explodeTime: ship.explodeTime,
-    lives: ship.lives,
-    dead: ship.dead,
-    exploding: ship.exploding,
-  });
+  // console.log('💥 Ship explosion handling:', {
+  //   explodeTime: ship.explodeTime,
+  //   lives: ship.lives,
+  //   dead: ship.dead,
+  //   exploding: ship.exploding,
+  // });
 
   if (ship.explodeTime == 0) {
-    console.log('⏰ Explosion time finished, checking respawn...');
+    // console.log('⏰ Explosion time finished, checking respawn...');
 
     // Check if ship has lives remaining
     if (ship.lives > 0) {
-      console.log('🔄 Respawning ship with', ship.lives, 'lives remaining');
+      // console.log('🔄 Respawning ship with', ship.lives, 'lives remaining');
 
       // Respawn the ship
       ship.dead = false;
@@ -247,22 +246,22 @@ function handleShipExplosion(ship: Ship): void {
       ship.velocity = new Vector(0, 0);
       ship.a = (90 / 180) * Math.PI; // Reset to upward direction
 
-      console.log('✅ Ship respawned successfully:', {
-        dead: ship.dead,
-        exploding: ship.exploding,
-        blinkCount: ship.blinkCount,
-        position: { x: ship.position.x, y: ship.position.y },
-      });
+      // console.log('✅ Ship respawned successfully:', {
+      //   dead: ship.dead,
+      //   exploding: ship.exploding,
+      //   blinkCount: ship.blinkCount,
+      //   position: { x: ship.position.x, y: ship.position.y },
+      // });
     } else {
-      console.log('💀 No lives remaining - game over');
+      // console.log('💀 No lives remaining - game over');
       // No lives remaining - game over
       gameController.gameOver();
     }
   } else {
-    console.log(
-      '⏳ Explosion still in progress, time remaining:',
-      ship.explodeTime,
-    );
+    // console.log(
+    //   '⏳ Explosion still in progress, time remaining:',
+    //   ship.explodeTime,
+    // );
   }
 }
 
@@ -293,7 +292,7 @@ function handleCollision(ship: Ship): void {
 
     gameController.updatePersonalBest();
   } catch (error) {
-    logError('COLLISION', 'Error in handleCollision', {
+    console.error('COLLISION', 'Error in handleCollision', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       shipPos: { x: ship.position.x, y: ship.position.y },

@@ -18,7 +18,6 @@ import { RoidBelt } from './asteroids';
 import { GameController } from './gameController';
 import { PlayerNetwork } from './playerNetwork.js';
 import { IPlayer, IBotPlayer, IBotBullet } from './types/multiplayer.js';
-import { logError } from './logger.js';
 import { worldToScreen } from './utils';
 import { drawGenericThruster } from './shipCanv';
 
@@ -708,7 +707,7 @@ function drawGameCanvas(
       showGameOverMenu();
     }
   } catch (error) {
-    logError('CANVAS', 'Error in drawGameCanvas', {
+    console.error('CANVAS', 'Error in drawGameCanvas', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       shipPos: { x: ship.position.x, y: ship.position.y },

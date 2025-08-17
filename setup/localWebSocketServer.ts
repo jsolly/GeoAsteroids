@@ -83,10 +83,10 @@ class LocalMultiplayerServer {
   private gameLoop(): void {
     this.gameTime++;
 
-    // Clean up stale players (haven't updated in 5 seconds)
+    // Clean up stale players (haven't updated in 30 seconds)
     const now = Date.now();
     for (const [id, player] of this.players.entries()) {
-      if (now - player.lastUpdate > 5000) {
+      if (now - player.lastUpdate > 30000) {
         console.log(`🧹 Cleaning up stale player ${player.name} (${id})`);
         this.removePlayer(id);
       }
@@ -152,6 +152,9 @@ class LocalMultiplayerServer {
     };
     ws.send(JSON.stringify(joinMessage));
 
+    // Send current game state to the new player
+    this.sendGameState(player.id);
+
     // Broadcast to all other players
     this.broadcastToOthers(ws, joinMessage);
   }
@@ -202,6 +205,43 @@ class LocalMultiplayerServer {
     const shooter = this.players.get(data.id);
     if (shooter) {
       this.broadcastToOthers(shooter.ws, shootMessage);
+    }
+  }
+
+  private sendGameState(playerId: string): void {
+    const player = this.players.get(playerId);
+    if (!player) return;
+
+    const gameState: IServerMessage = {
+      type: 'gameState',
+      data: {
+        players: Array.from(this.players.values()).map((p) => ({
+          id: p.id,
+          name: p.name,
+          position: p.position,
+          velocity: p.velocity,
+          r: p.r,
+          a: p.a,
+          lives: p.lives,
+          score: p.score,
+          dead: p.dead,
+          exploding: p.exploding,
+        })),
+        asteroids: [], // Will be implemented in Phase 2
+        gameTime: this.gameTime,
+      },
+      timestamp: Date.now(),
+    };
+
+    try {
+      player.ws.send(JSON.stringify(gameState));
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `Failed to send game state to player ${playerId}:`,
+        errorMessage,
+      );
     }
   }
 

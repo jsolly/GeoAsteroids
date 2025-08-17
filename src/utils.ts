@@ -1,4 +1,3 @@
-import { logger } from './logger.js';
 import { getCVS } from './constants.js';
 import { Vector } from './vector.js';
 import { Point } from './point.js';
@@ -14,18 +13,21 @@ function attachEventListener<T extends HTMLElement>(
     element.addEventListener(eventType, (ev) => {
       const result = callback(ev);
       if (result instanceof Promise) {
-        result.catch((error) => logger.error('UTILS', String(error)));
+        result.catch((error) => console.error('UTILS', String(error)));
       }
     });
   } else {
-    logger.error('UTILS', `Unable to attach event listener, element not found`);
+    console.error(
+      'UTILS',
+      `Unable to attach event listener, element not found`,
+    );
   }
 }
 
 function getElementById<T extends HTMLElement>(id: string): T | null {
   const element = document.getElementById(id);
   if (!element) {
-    logger.error('UTILS', `Element with id '${id}' not found`);
+    console.error('UTILS', `Element with id '${id}' not found`);
   }
   return element as T | null;
 }

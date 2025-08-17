@@ -1,7 +1,6 @@
 import { DEBUG } from './constants.js';
 import { IBotPlayer, IBotBullet } from './types/multiplayer.js';
 import { RoidBelt, Roid } from './asteroids.js';
-import { logInfo } from './logger.js';
 import { Ship, Laser } from './ship.js';
 
 // Test DEBUG constant at import time
@@ -34,7 +33,7 @@ function detectLaserHits(
     for (const [bulletId, bullet] of botBullets.entries()) {
       for (let i = roids.length - 1; i >= 0; i--) {
         if (isBotBulletHit(bullet, roids[i])) {
-          logInfo('BOT_BULLET_COLLISION', 'Bot bullet hit asteroid!', {
+          console.info('BOT_BULLET_COLLISION', 'Bot bullet hit asteroid!', {
             bulletId,
             botId: bullet.botId,
             asteroidIndex: i,
@@ -51,7 +50,7 @@ function detectLaserHits(
           // Remove the bullet that hit the asteroid
           botBullets.delete(bulletId);
 
-          logInfo(
+          console.info(
             'BOT_BULLET_COLLISION_SUCCESS',
             'Asteroid destroyed by bot bullet',
             {
@@ -87,7 +86,7 @@ function detectLaserHits(
         }
 
         if (isLaserHitBot(laser, bot)) {
-          logInfo('BOT_COLLISION', 'Bot hit by laser!', {
+          console.info('BOT_COLLISION', 'Bot hit by laser!', {
             botId,
             botType: bot.botType,
             laserPos: { x: laser.position.x, y: laser.position.y },
@@ -115,7 +114,7 @@ function detectLaserHits(
             }),
           );
 
-          logInfo('BOT_COLLISION_SUCCESS', 'Bot destroyed successfully', {
+          console.info('BOT_COLLISION_SUCCESS', 'Bot destroyed successfully', {
             botId,
             botType: bot.botType,
             newScore: score,
@@ -134,7 +133,7 @@ function detectLaserHits(
 
   // detect bot bullet hits on other bots (bot-on-bot combat)
   if (botBullets && botBullets.size > 0 && bots && bots.size > 0) {
-    // logInfo('BOT_VS_BOT_COLLISION_DEBUG', 'Checking bot bullet hits on other bots', {
+    // console.info('BOT_VS_BOT_COLLISION_DEBUG', 'Checking bot bullet hits on other bots', {
     //   bulletCount: botBullets.size,
     //   botCount: bots.size,
     //   bullets: Array.from(botBullets.values()).map(bullet => ({
@@ -162,7 +161,7 @@ function detectLaserHits(
         }
 
         if (isBotBulletHitBot(bullet, targetBot)) {
-          logInfo('BOT_VS_BOT_COLLISION', 'Bot hit by another bot!', {
+          console.info('BOT_VS_BOT_COLLISION', 'Bot hit by another bot!', {
             bulletId,
             shootingBotId: bullet.botId,
             shootingBotName: shootingBot.name,
@@ -182,7 +181,7 @@ function detectLaserHits(
           // Remove the bullet that hit the bot
           botBullets.delete(bulletId);
 
-          logInfo(
+          console.info(
             'BOT_VS_BOT_COLLISION_SUCCESS',
             'Bot destroyed by another bot',
             {
@@ -212,14 +211,14 @@ function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
     import.meta.env.MODE === 'development' &&
     import.meta.env.VITE_DISABLE_INVINCIBILITY !== 'true';
 
-  // logInfo('COLLISION_DEBUG', 'DEBUG constant value', { value: DEBUG, type: typeof DEBUG });
-  // logInfo('COLLISION_DEBUG', 'Development mode check', { isDevelopment });
+  // console.info('COLLISION_DEBUG', 'DEBUG constant value', { value: DEBUG, type: typeof DEBUG });
+  // console.info('COLLISION_DEBUG', 'Development mode check', { isDevelopment });
 
   if (DEBUG || isDevelopment) {
-    // logInfo('COLLISION_DEBUG', 'DEBUG/DEV MODE: Ship is invincible to asteroid collisions');
+    // console.info('COLLISION_DEBUG', 'DEBUG/DEV MODE: Ship is invincible to asteroid collisions');
     return 0; // Ship is invincible in debug mode
   } else {
-    // logInfo('COLLISION_DEBUG', 'Asteroid collision detection is ENABLED!', {
+    // console.info('COLLISION_DEBUG', 'Asteroid collision detection is ENABLED!', {
     //   shipPos: { x: ship.position.x, y: ship.position.y },
     //   shipRadius: ship.r,
     //   asteroidCount: roids.length
@@ -235,19 +234,19 @@ function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
           currShip.position.distance(currRoidBelt.roids[i].position) <
           currShip.r + currRoidBelt.roids[i].r
         ) {
-          console.log('💥 COLLISION DETECTED: Ship hit asteroid!', {
-            shipPos: { x: currShip.position.x, y: currShip.position.y },
-            asteroidPos: {
-              x: currRoidBelt.roids[i].position.x,
-              y: currRoidBelt.roids[i].position.y,
-            },
-            shipRadius: currShip.r,
-            asteroidRadius: currRoidBelt.roids[i].r,
-            distance: currShip.position.distance(
-              currRoidBelt.roids[i].position,
-            ),
-            threshold: currShip.r + currRoidBelt.roids[i].r,
-          });
+          // console.log('💥 COLLISION DETECTED: Ship hit asteroid!', {
+          //   shipPos: { x: currShip.position.x, y: currShip.position.y },
+          //   asteroidPos: {
+          //     x: currRoidBelt.roids[i].position.x,
+          //     y: currRoidBelt.roids[i].position.y,
+          //   },
+          //   shipRadius: currShip.r,
+          //   asteroidRadius: currRoidBelt.roids[i].r,
+          //   distance: currShip.position.distance(
+          //     currRoidBelt.roids[i].position,
+          //   ),
+          //   threshold: currShip.r + currRoidBelt.roids[i].r,
+          // };
 
           // Decrement lives when ship hits asteroid
           currShip.lives--;
@@ -270,7 +269,7 @@ function detectBotAsteroidCollisions(
   const roids = currRoidBelt.roids;
   if (roids.length === 0) return;
 
-  // logInfo('BOT_ASTEROID_COLLISION_DEBUG', 'Checking bot-asteroid collisions', {
+  // console.info('BOT_ASTEROID_COLLISION_DEBUG', 'Checking bot-asteroid collisions', {
   //   botCount: bots.size,
   //   asteroidCount: roids.length,
   //   bots: Array.from(bots.values()).map(bot => ({
@@ -295,7 +294,7 @@ function detectBotAsteroidCollisions(
       const collisionThreshold = bot.r + roids[i].r;
 
       if (distance < collisionThreshold) {
-        logInfo('BOT_ASTEROID_COLLISION', 'Bot hit asteroid!', {
+        console.info('BOT_ASTEROID_COLLISION', 'Bot hit asteroid!', {
           botId,
           botType: bot.botType,
           botPos: { x: bot.position.x, y: bot.position.y },
@@ -325,7 +324,7 @@ function detectBotAsteroidCollisions(
           }),
         );
 
-        logInfo(
+        console.info(
           'BOT_ASTEROID_COLLISION_SUCCESS',
           'Bot destroyed by asteroid collision',
           {
@@ -368,7 +367,7 @@ function isLaserHitBot(laser: Laser, bot: IBotPlayer): boolean {
   // Log collision detection details for debugging
   if (distance < hitRadius + 10) {
     // Log when close to hitting
-    logInfo('BOT_COLLISION_CHECK', 'Bot collision check details', {
+    console.info('BOT_COLLISION_CHECK', 'Bot collision check details', {
       botId: bot.id,
       botName: bot.name,
       botType: bot.botType,
@@ -404,7 +403,7 @@ function isBotBulletHitBot(bullet: IBotBullet, bot: IBotPlayer): boolean {
   // Log collision detection details for debugging
   if (distance < hitRadius + 10) {
     // Log when close to hitting
-    logInfo(
+    console.info(
       'BOT_VS_BOT_COLLISION_CHECK',
       'Bot bullet collision check details',
       {
@@ -448,7 +447,7 @@ function detectShipToShipCollisions(
     const collisionThreshold = currShip.r + bot.r;
 
     if (distance < collisionThreshold) {
-      logInfo('SHIP_VS_SHIP_COLLISION', 'Ship collision detected!', {
+      console.info('SHIP_VS_SHIP_COLLISION', 'Ship collision detected!', {
         shipPos: { x: currShip.position.x, y: currShip.position.y },
         botPos: { x: bot.position.x, y: bot.position.y },
         distance,
@@ -463,11 +462,11 @@ function detectShipToShipCollisions(
       const isDevelopment =
         (import.meta.env?.DEV === true ||
           import.meta.env?.MODE === 'development') &&
-        import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
+        import.meta.env?.VITE_INVINCIBLE === 'true';
 
       if (DEBUG || isDevelopment) {
         // DEBUG MODE: Player is invincible, only bot is destroyed
-        logInfo(
+        console.info(
           'SHIP_VS_SHIP_COLLISION',
           'DEBUG MODE: Player ship is invincible, destroying bot',
           {
@@ -494,7 +493,7 @@ function detectShipToShipCollisions(
           }),
         );
 
-        logInfo(
+        console.info(
           'SHIP_VS_SHIP_COLLISION_SUCCESS',
           'Bot destroyed by ship collision in debug mode',
           {
@@ -505,7 +504,7 @@ function detectShipToShipCollisions(
         );
       } else {
         // REGULAR MODE: Both ships are destroyed
-        logInfo(
+        console.info(
           'SHIP_VS_SHIP_COLLISION',
           'REGULAR MODE: Both ships destroyed in collision',
           {
@@ -533,7 +532,7 @@ function detectShipToShipCollisions(
           }),
         );
 
-        logInfo(
+        console.info(
           'SHIP_VS_SHIP_COLLISION_SUCCESS',
           'Both ships destroyed in collision',
           {

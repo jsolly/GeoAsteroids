@@ -1,6 +1,5 @@
 import { IBotPlayer, IBotShoot, IBotBullet } from './types/multiplayer.js';
 import { Vector } from './vector.js';
-import { logInfo } from './logger.js';
 import { v4 as uuidv4 } from 'uuid';
 import { SHIP_THRUST, FRICTION, FPS } from './constants.js';
 
@@ -60,7 +59,7 @@ export class BotManager {
     if (this.isActive) return;
 
     this.isActive = true;
-    logInfo('BOT_MANAGER', 'Bot manager activated');
+    console.info('BOT_MANAGER', 'Bot manager activated');
 
     // Start bot behavior updates
     this.startBotBehaviorLoop();
@@ -68,7 +67,7 @@ export class BotManager {
 
   public deactivate(): void {
     this.isActive = false;
-    logInfo('BOT_MANAGER', 'Bot manager deactivated');
+    console.info('BOT_MANAGER', 'Bot manager deactivated');
   }
 
   public createBots(count: number = 3): void {
@@ -133,7 +132,7 @@ export class BotManager {
       this.bots.set(botId, bot);
       this.botSteering.set(botId, steering);
 
-      logInfo('BOT_STEERING', 'Steering data created for bot', {
+      console.info('BOT_STEERING', 'Steering data created for bot', {
         botId,
         name: bot.name,
         botType,
@@ -141,7 +140,7 @@ export class BotManager {
         maxForce: steering.maxForce,
       });
 
-      logInfo('BOT_MANAGER', `Created ${botType} bot`, {
+      console.info('BOT_MANAGER', `Created ${botType} bot`, {
         botId,
         name: bot.name,
         position: { x: position.x, y: position.y },
@@ -175,7 +174,7 @@ export class BotManager {
 
     this.botBullets.set(bulletId, bullet);
 
-    logInfo('BOT_BULLET', 'Bot bullet created', {
+    console.info('BOT_BULLET', 'Bot bullet created', {
       bulletId,
       botId: botShoot.botId,
       startPos: { x: bullet.position.x, y: bullet.position.y },
@@ -198,7 +197,7 @@ export class BotManager {
 
       // Remove bullet if it goes off-screen or exceeds max distance
       if (this.shouldRemoveBullet(bullet)) {
-        logInfo('BOT_BULLET', 'Removing bot bullet', {
+        console.info('BOT_BULLET', 'Removing bot bullet', {
           bulletId,
           botId: bullet.botId,
           reason: 'off-screen or max distance',
@@ -237,7 +236,7 @@ export class BotManager {
   public removeBot(botId: string): void {
     const bot = this.bots.get(botId);
     if (bot) {
-      logInfo('BOT_MANAGER', 'Removing bot', { botId, name: bot.name });
+      console.info('BOT_MANAGER', 'Removing bot', { botId, name: bot.name });
       this.bots.delete(botId);
     }
   }
@@ -245,12 +244,12 @@ export class BotManager {
   public clearBots(): void {
     this.bots.clear();
     this.botBullets.clear(); // Also clear any active bullets
-    logInfo('BOT_MANAGER', 'All bots and bullets cleared');
+    console.info('BOT_MANAGER', 'All bots and bullets cleared');
   }
 
   public clearBotBullets(): void {
     this.botBullets.clear();
-    logInfo('BOT_MANAGER', 'All bot bullets cleared');
+    console.info('BOT_MANAGER', 'All bot bullets cleared');
   }
 
   private getBotStartingPosition(index: number): Vector {
@@ -315,7 +314,7 @@ export class BotManager {
   private startBotBehaviorLoop(): void {
     // Note: Bot updates are now integrated into the main game loop
     // This ensures bots update at the same framerate as the player ship
-    logInfo(
+    console.info(
       'BOT_MANAGER',
       'Bot behavior loop started - integrated with main game loop',
     );
@@ -344,7 +343,7 @@ export class BotManager {
     // Log that behavior loop is running (but not every frame to avoid spam)
     if (this.bots.size > 0 && now % 1000 < 100) {
       // Log roughly once per second
-      // logDebug('BOT_BEHAVIOR_LOOP', 'Bot behavior loop running', {
+      // console.debug('BOT_BEHAVIOR_LOOP', 'Bot behavior loop running', {
       //   activeBots: this.bots.size,
       //   timestamp: now
       // });
@@ -361,7 +360,7 @@ export class BotManager {
     // This prevents them from randomly switching to patrolling and wandering away
 
     bot.lastBehaviorChange = now;
-    // logDebug('BOT_MANAGER', 'Bot behavior state changed', {
+    // console.debug('BOT_MANAGER', 'Bot behavior state changed', {
     //   botId: bot.id,
     //   name: bot.name,
     //   newState: bot.behaviorState
@@ -385,7 +384,7 @@ export class BotManager {
   private moveBot(bot: IBotPlayer): void {
     const steering = this.botSteering.get(bot.id);
     if (!steering) {
-      logInfo(
+      console.info(
         'BOT_MOVEMENT',
         'No steering data for bot, using fallback movement',
         {
@@ -397,7 +396,7 @@ export class BotManager {
       return;
     }
 
-    const originalPosition = new Vector(bot.position.x, bot.position.y);
+    // const originalPosition = new Vector(bot.position.x, bot.position.y);
 
     // Determine if bot should thrust based on behavior
     let shouldThrust = false;
@@ -446,7 +445,7 @@ export class BotManager {
       bot.thrusterActive = true;
 
       // Log thrust application
-      logInfo('BOT_THRUST', 'Bot applied thrust in facing direction', {
+      console.info('BOT_THRUST', 'Bot applied thrust in facing direction', {
         botId: bot.id,
         name: bot.name,
         behaviorState: bot.behaviorState,
@@ -479,33 +478,33 @@ export class BotManager {
     }
     bot.lastPosition = new Vector(bot.position.x, bot.position.y);
 
-    // Log movement for debugging
-    const newPosition = bot.position;
-    const movementDistance = newPosition.distance(originalPosition);
+    // Log movement for debugging (disabled to prevent spam)
+    // const newPosition = bot.position;
+    // const movementDistance = newPosition.distance(originalPosition);
 
-    if (movementDistance > 0.1) {
-      logInfo('BOT_MOVEMENT', 'Bot moved like ship', {
-        botId: bot.id,
-        name: bot.name,
-        botType: bot.botType,
-        behaviorState: bot.behaviorState,
-        from: {
-          x: Math.round(originalPosition.x * 100) / 100,
-          y: Math.round(originalPosition.y * 100) / 100,
-        },
-        to: {
-          x: Math.round(newPosition.x * 100) / 100,
-          y: Math.round(newPosition.y * 100) / 100,
-        },
-        movementDistance: Math.round(movementDistance * 100) / 100,
-        velocity: {
-          x: Math.round(bot.velocity.x * 100) / 100,
-          y: Math.round(bot.velocity.y * 100) / 100,
-        },
-        thrusting: shouldThrust && angleOk,
-        thrustDirection: Math.round((thrustDirection * 180) / Math.PI),
-      });
-    }
+    // if (movementDistance > 0.1) {
+    //   console.info('BOT_MOVEMENT', 'Bot moved like ship', {
+    //     botId: bot.id,
+    //     name: bot.name,
+    //     botType: bot.botType,
+    //     behaviorState: bot.behaviorState,
+    //     from: {
+    //       x: Math.round(originalPosition.x * 100) / 100,
+    //       y: Math.round(originalPosition.y * 100) / 100,
+    //     },
+    //     to: {
+    //       x: Math.round(newPosition.x * 100) / 100,
+    //       y: Math.round(newPosition.y * 100) / 100,
+    //     },
+    //     movementDistance: Math.round(movementDistance * 100) / 100,
+    //     velocity: {
+    //       x: Math.round(bot.velocity.x * 100) / 100,
+    //       y: Math.round(bot.velocity.y * 100) / 100,
+    //     },
+    //     thrusting: shouldThrust && angleOk,
+    //     thrustDirection: Math.round((thrustDirection * 180) / Math.PI),
+    //   });
+    // }
   }
 
   /**
@@ -588,7 +587,7 @@ export class BotManager {
     // Log that shooting update is running (occasionally)
     if (Math.random() < 0.01) {
       // 1% chance per frame
-      logInfo('BOT_SHOOTING_UPDATE', 'Bot shooting update running', {
+      console.info('BOT_SHOOTING_UPDATE', 'Bot shooting update running', {
         botCount: this.bots.size,
         activeBots: Array.from(this.bots.values()).filter(
           (bot) => !bot.dead && !bot.exploding,
@@ -609,7 +608,7 @@ export class BotManager {
           // 5% chance per frame
           const timeSinceLastShot = now - bot.lastShotTime;
           const cooldownRemaining = bot.shotCooldown - timeSinceLastShot;
-          logInfo('BOT_SHOOTING_DEBUG', 'Bot on cooldown', {
+          console.info('BOT_SHOOTING_DEBUG', 'Bot on cooldown', {
             botId: bot.id,
             name: bot.name,
             timeSinceLastShot: Math.round(timeSinceLastShot),
@@ -626,7 +625,7 @@ export class BotManager {
         bot.lastShotTime = now;
 
         // Log successful shot
-        logInfo('BOT_SHOOTING', 'Bot successfully shot at player', {
+        console.info('BOT_SHOOTING', 'Bot successfully shot at player', {
           botId: bot.id,
           name: bot.name,
           botType: bot.botType,
@@ -656,7 +655,7 @@ export class BotManager {
             Math.PI * 2 - angleDiff,
           );
 
-          logInfo('BOT_SHOOTING', 'Bot cannot shoot at player', {
+          console.info('BOT_SHOOTING', 'Bot cannot shoot at player', {
             botId: bot.id,
             name: bot.name,
             botType: bot.botType,
@@ -681,7 +680,7 @@ export class BotManager {
       // Log why bot can't shoot (distance)
       if (Math.random() < 0.05) {
         // 5% chance per frame to avoid spam
-        logInfo('BOT_SHOOTING_DEBUG', 'Bot too far to shoot', {
+        console.info('BOT_SHOOTING_DEBUG', 'Bot too far to shoot', {
           botId: bot.id,
           name: bot.name,
           distance: Math.round(distance),
@@ -707,7 +706,7 @@ export class BotManager {
     // Log shooting conditions (occasionally to avoid spam)
     if (Math.random() < 0.05) {
       // 5% chance per frame
-      logInfo('BOT_SHOOTING_DEBUG', 'Bot shooting conditions check', {
+      console.info('BOT_SHOOTING_DEBUG', 'Bot shooting conditions check', {
         botId: bot.id,
         name: bot.name,
         distance: Math.round(distance),
@@ -768,7 +767,7 @@ export class BotManager {
       targetPlayerId: this.localPlayerId,
     };
 
-    // logDebug('BOT_MANAGER', 'Bot shooting', {
+    // console.debug('BOT_MANAGER', 'Bot shooting', {
     //   botId: bot.id,
     //   name: bot.name,
     //   botType: bot.botType,
@@ -809,7 +808,7 @@ export class BotManager {
     // Log position updates (occasionally to avoid spam)
     if (Math.random() < 0.05) {
       // 5% chance per frame
-      logInfo('BOT_MANAGER', 'Local player position updated', {
+      console.info('BOT_MANAGER', 'Local player position updated', {
         position: { x: Math.round(position.x), y: Math.round(position.y) },
         alive,
         botCount: this.bots.size,
@@ -829,7 +828,7 @@ export class BotManager {
     bot.exploding = true;
     bot.explodeTime = 60; // 1 second at 60 FPS
 
-    logInfo('BOT_MANAGER', 'Bot explosion started', {
+    console.info('BOT_MANAGER', 'Bot explosion started', {
       botId,
       name: bot.name,
       botType: bot.botType,
@@ -842,7 +841,7 @@ export class BotManager {
       if (bot.exploding && bot.explodeTime > 0) {
         bot.explodeTime--;
 
-        // logDebug('BOT_EXPLOSION', 'Bot explosion in progress', {
+        // console.debug('BOT_EXPLOSION', 'Bot explosion in progress', {
         //   botId,
         //   name: bot.name,
         //   botType: bot.botType,
@@ -851,7 +850,7 @@ export class BotManager {
 
         // When explosion finishes, start respawn timer instead of removing bot
         if (bot.explodeTime === 0) {
-          logInfo(
+          console.info(
             'BOT_EXPLOSION_COMPLETE',
             'Bot explosion finished, starting respawn timer',
             {
@@ -885,7 +884,7 @@ export class BotManager {
 
   // Debug method to show bot state
   public debugBotState(): void {
-    // logInfo('BOT_MANAGER', 'Bot Debug State', {
+    // console.info('BOT_MANAGER', 'Bot Debug State', {
     //   active: this.isActive,
     //   botCount: this.bots.size,
     //   bots: Array.from(this.bots.values()).map(bot => ({
@@ -904,11 +903,11 @@ export class BotManager {
   public debugDestroyBot(botId: string): void {
     const bot = this.bots.get(botId);
     if (!bot) {
-      logInfo('BOT_DEBUG', 'Bot not found for destruction', { botId });
+      console.info('BOT_DEBUG', 'Bot not found for destruction', { botId });
       return;
     }
 
-    logInfo('BOT_DEBUG', 'Manually destroying bot for testing', {
+    console.info('BOT_DEBUG', 'Manually destroying bot for testing', {
       botId,
       name: bot.name,
       botType: bot.botType,
@@ -925,22 +924,26 @@ export class BotManager {
       }
     }
 
-    logInfo('BOT_DEBUG', 'Bot immediately removed', { botId });
+    console.info('BOT_DEBUG', 'Bot immediately removed', { botId });
   }
 
   // Method for EMP destruction that triggers respawn system
   public empDestroyBot(botId: string): void {
     const bot = this.bots.get(botId);
     if (!bot) {
-      logInfo('BOT_EMP', 'Bot not found for EMP destruction', { botId });
+      console.info('BOT_EMP', 'Bot not found for EMP destruction', { botId });
       return;
     }
 
-    logInfo('BOT_EMP', 'Bot destroyed by EMP, starting explosion and respawn', {
-      botId,
-      name: bot.name,
-      botType: bot.botType,
-    });
+    console.info(
+      'BOT_EMP',
+      'Bot destroyed by EMP, starting explosion and respawn',
+      {
+        botId,
+        name: bot.name,
+        botType: bot.botType,
+      },
+    );
 
     // Start explosion sequence (same as laser hit)
     bot.dead = true;
@@ -954,14 +957,16 @@ export class BotManager {
       }
     }
 
-    logInfo('BOT_EMP', 'Bot explosion started for EMP destruction', { botId });
+    console.info('BOT_EMP', 'Bot explosion started for EMP destruction', {
+      botId,
+    });
   }
 
   private respawnBot(botId: string): void {
     const bot = this.bots.get(botId);
     if (!bot || !bot.respawnPosition) return;
 
-    logInfo('BOT_MANAGER', 'Respawn timer finished, respawning bot', {
+    console.info('BOT_MANAGER', 'Respawn timer finished, respawning bot', {
       botId,
       name: bot.name,
       botType: bot.botType,
@@ -993,7 +998,7 @@ export class BotManager {
       steering.targetRotation = Math.random() * Math.PI * 2;
     }
 
-    logInfo('BOT_MANAGER', 'Bot respawned', {
+    console.info('BOT_MANAGER', 'Bot respawned', {
       botId,
       name: bot.name,
       botType: bot.botType,
@@ -1042,26 +1047,30 @@ export class BotManager {
       const activeBots = Array.from(this.bots.values()).filter(
         (bot) => !bot.dead && !bot.exploding,
       );
-      logInfo('BOT_FRAMERATE', 'Bot update synchronized with main game loop', {
-        botCount: this.bots.size,
-        activeBots: activeBots.length,
-        localPlayerAlive: this.localPlayerAlive,
-        localPlayerPosition: this.localPlayerAlive
-          ? {
-              x: Math.round(this.localPlayerPosition.x),
-              y: Math.round(this.localPlayerPosition.y),
-            }
-          : 'unknown',
-        botStates: activeBots.map((bot) => ({
-          id: bot.id,
-          name: bot.name,
-          behavior: bot.behaviorState,
-          position: {
-            x: Math.round(bot.position.x),
-            y: Math.round(bot.position.y),
-          },
-        })),
-      });
+      console.info(
+        'BOT_FRAMERATE',
+        'Bot update synchronized with main game loop',
+        {
+          botCount: this.bots.size,
+          activeBots: activeBots.length,
+          localPlayerAlive: this.localPlayerAlive,
+          localPlayerPosition: this.localPlayerAlive
+            ? {
+                x: Math.round(this.localPlayerPosition.x),
+                y: Math.round(this.localPlayerPosition.y),
+              }
+            : 'unknown',
+          botStates: activeBots.map((bot) => ({
+            id: bot.id,
+            name: bot.name,
+            behavior: bot.behaviorState,
+            position: {
+              x: Math.round(bot.position.x),
+              y: Math.round(bot.position.y),
+            },
+          })),
+        },
+      );
     }
   }
 }
