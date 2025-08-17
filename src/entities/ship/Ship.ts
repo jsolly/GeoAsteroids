@@ -1,4 +1,4 @@
-import { Sound } from '../../audio/Sound.js';
+import { Sound } from '../../audio/Sound';
 import {
   EMP_PULSE_DURATION,
   FPS,
@@ -18,7 +18,7 @@ import {
 } from '../../constants';
 import { Vector } from '../../physics/Vector';
 
-import { drawThruster } from './shipRenderer.js';
+import { drawThruster } from './shipRenderer';
 
 import {
   calculateHealthAfterDamage,
@@ -29,7 +29,7 @@ import {
   canTakeCollisionDamage,
   isDebugMode,
   shouldStartHealthRegeneration,
-} from './shipUtils.js';
+} from './shipUtils';
 
 interface LaserData {
   position: Vector;
