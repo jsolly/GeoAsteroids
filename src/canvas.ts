@@ -620,6 +620,11 @@ function drawMultiplayerStatus(): void {
     yOffset += lineHeight;
   }
 
+  // Draw mini-map showing all players
+  const currentShip = getGameController().getCurrShip();
+  drawMiniMap(currentShip, otherPlayers, bots, xPos, yOffset);
+  yOffset += 120; // Add space for mini-map
+
   // Show additional debug info if multiplayer debug is enabled
   if (MULTIPLAYER_DEBUG) {
     ctx.fillStyle = '#00ffff'; // Cyan for debug info
@@ -676,6 +681,110 @@ function drawMultiplayerStatus(): void {
       }
     }
   }
+}
+
+/**
+ * Draw a mini-map showing all players and bots
+ */
+function drawMiniMap(
+  localShip: Ship,
+  otherPlayers: IPlayer[],
+  bots: Map<string, IBotPlayer>,
+  xPos: number,
+  yPos: number,
+): void {
+  const ctx = getCTX();
+  if (!ctx) return;
+
+  const mapSize = 100; // 100x100 pixel mini-map
+  const mapRadius = mapSize / 2;
+  const mapCenterX = xPos + mapRadius;
+  const mapCenterY = yPos + mapRadius;
+
+  // Draw mini-map background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(xPos, yPos, mapSize, mapSize);
+  ctx.strokeStyle = '#00ff00';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(xPos, yPos, mapSize, mapSize);
+
+  // Draw mini-map title
+  ctx.fillStyle = '#00ff00';
+  ctx.font = '10px dejavu sans mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('Mini-Map', mapCenterX, yPos + 12);
+
+  // Calculate world bounds for scaling (adjust these values based on your game world)
+  const worldRadius = 2000; // Adjust based on your game world size
+  const scale = mapRadius / worldRadius;
+
+  // Draw local player (you) at center
+  ctx.fillStyle = '#00ff00'; // Green for local player
+  ctx.fillRect(mapCenterX - 2, mapCenterY - 2, 4, 4);
+
+  // Draw other players
+  for (const player of otherPlayers) {
+    if (player.dead || player.exploding) continue;
+
+    // Calculate relative position from local ship
+    const relativeX = (player.position.x - localShip.position.x) * scale;
+    const relativeY = (player.position.y - localShip.position.y) * scale;
+
+    // Check if player is within mini-map bounds
+    if (Math.abs(relativeX) <= mapRadius && Math.abs(relativeY) <= mapRadius) {
+      const mapX = mapCenterX + relativeX;
+      const mapY = mapCenterY + relativeY;
+
+      // Draw player dot
+      ctx.fillStyle = '#ffff00'; // Yellow for other players
+      ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
+
+      // Draw player name (small)
+      ctx.fillStyle = '#ffff00';
+      ctx.font = '8px dejavu sans mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(player.name, mapX, mapY - 6);
+    }
+  }
+
+  // Draw bots
+  for (const [, bot] of bots.entries()) {
+    if (bot.dead || bot.exploding) continue;
+
+    // Calculate relative position from local ship
+    const relativeX = (bot.position.x - localShip.position.x) * scale;
+    const relativeY = (bot.position.y - localShip.position.y) * scale;
+
+    // Check if bot is within mini-map bounds
+    if (Math.abs(relativeX) <= mapRadius && Math.abs(relativeY) <= mapRadius) {
+      const mapX = mapCenterX + relativeX;
+      const mapY = mapCenterY + relativeY;
+
+      // Draw bot dot with different color based on type
+      let botColor = '#ff4444'; // Default red
+      if (bot.botType === 'defensive') botColor = '#4444ff'; // Blue
+      if (bot.botType === 'patrol') botColor = '#ff8844'; // Orange
+
+      ctx.fillStyle = botColor;
+      ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
+
+      // Draw bot name (small)
+      ctx.fillStyle = botColor;
+      ctx.font = '8px dejavu sans mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(bot.name, mapX, mapY + 8);
+    }
+  }
+
+  // Draw direction indicator (North)
+  ctx.strokeStyle = '#00ff00';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mapCenterX, yPos + 15);
+  ctx.lineTo(mapCenterX, yPos + 25);
+  ctx.stroke();
+  ctx.fillStyle = '#00ff00';
+  ctx.fillText('N', mapCenterX, yPos + 30);
 }
 
 function drawGameCanvas(
