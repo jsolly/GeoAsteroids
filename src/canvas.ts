@@ -569,9 +569,16 @@ function drawMultiplayerStatus(): void {
   ctx.fillText(`MP: ${statusText}`, xPos, yOffset);
   yOffset += lineHeight;
 
-  // Draw player count
+  // Get other players early so we can use them in the player count display
+  const otherPlayers = getPlayerNetwork().getOtherPlayers();
+
+  // Draw player count (show both server and local counts)
   ctx.fillStyle = '#00ff00';
-  ctx.fillText(`Players: ${status.playerCount}`, xPos, yOffset);
+  ctx.fillText(
+    `Players: ${status.playerCount} (Server) / ${otherPlayers.length + 1} (Local)`,
+    xPos,
+    yOffset,
+  );
   yOffset += lineHeight;
 
   // Draw bot count and status
@@ -606,7 +613,6 @@ function drawMultiplayerStatus(): void {
   yOffset += lineHeight;
 
   // Show mock mode indicator if using mock players
-  const otherPlayers = getPlayerNetwork().getOtherPlayers();
   const hasMockPlayers = otherPlayers.some((p) => p.id.startsWith('mock-'));
   if (hasMockPlayers) {
     ctx.fillStyle = '#ffff00'; // Yellow for mock mode
