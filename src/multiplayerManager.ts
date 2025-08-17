@@ -51,7 +51,7 @@ export class MultiplayerManager {
       const host =
         window.location.hostname === 'localhost'
           ? 'localhost:3001'
-          : window.location.host;
+          : 'geoasteroids-production.up.railway.app';
       const wsUrl = `${protocol}//${host}/ws`;
 
       this.socket = new WebSocket(wsUrl);
