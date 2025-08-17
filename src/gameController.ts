@@ -106,6 +106,9 @@ class GameController implements IGameController {
     this.toggleIsGameRunning();
     initializeListeners(() => this.getIsGameRunning());
 
+    // Reset button text to default state
+    this.resetButtonText();
+
     // Connect to multiplayer if enabled
     if (this.gameState.isMultiplayerEnabled()) {
       this.multiplayerManager.connect();
@@ -179,6 +182,21 @@ class GameController implements IGameController {
   }
   toggleIsGameRunning(): void {
     this.gameState.toggleIsGameRunning();
+  }
+
+  // Reset button text to default state
+  private resetButtonText(): void {
+    const startGameBtn = document.getElementById(
+      'start-single-player',
+    ) as HTMLButtonElement;
+    const multiplayerBtn = document.getElementById(
+      'start-multiplayer',
+    ) as HTMLButtonElement;
+
+    if (startGameBtn && multiplayerBtn) {
+      startGameBtn.innerText = '🎮 Single Player';
+      multiplayerBtn.innerText = '🌐 Multiplayer';
+    }
   }
 
   // Multiplayer methods
@@ -310,8 +328,9 @@ class GameController implements IGameController {
     if (this.checkBotLaserHit(botShoot)) {
       // In debug mode, make ship completely invincible to bot lasers
       const isDevelopment =
-        import.meta.env?.DEV === true ||
-        import.meta.env?.MODE === 'development';
+        (import.meta.env?.DEV === true ||
+          import.meta.env?.MODE === 'development') &&
+        import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
       if (isDevelopment) {
         logInfo(
           'BOT_DEBUG_INVINCIBILITY',

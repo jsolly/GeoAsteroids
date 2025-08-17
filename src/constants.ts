@@ -67,8 +67,9 @@ export const ROID_SPAWN_TIME = 1; // One asteroid every three seconds
 /* Game Settings Constants*/
 export const STARTING_SCORE = 0;
 export const DEBUG =
-  import.meta.env.VITE_DEBUG === 'true' ||
-  import.meta.env.MODE === 'development';
+  (import.meta.env.VITE_DEBUG === 'true' ||
+    import.meta.env.MODE === 'development') &&
+  import.meta.env.VITE_DISABLE_INVINCIBILITY !== 'true';
 export const SHOW_COLLISION_CIRCLES = false; // Set to false to hide collision circles while keeping debug mode
 export const MULTIPLAYER_DEBUG =
   import.meta.env.VITE_MULTIPLAYER_DEBUG === 'true' || DEBUG; // Show multiplayer debug info

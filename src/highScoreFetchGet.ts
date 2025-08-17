@@ -35,8 +35,17 @@ async function submitName(): Promise<void> {
   nameInput.value = '';
 
   const startGameBtn = getElementById<HTMLButtonElement>('start-single-player');
-  if (startGameBtn) {
-    startGameBtn.innerText = 'Play Again! 🚀';
+  const multiplayerBtn = getElementById<HTMLButtonElement>('start-multiplayer');
+
+  // Update button text based on current game mode
+  if (startGameBtn && multiplayerBtn) {
+    if (gameController.isMultiplayerEnabled()) {
+      multiplayerBtn.innerText = 'Play Again! 🌐';
+      startGameBtn.innerText = '🎮 Single Player';
+    } else {
+      startGameBtn.innerText = 'Play Again! 🎮';
+      multiplayerBtn.innerText = '🌐 Multiplayer';
+    }
   }
 
   toggleScreen('start-screen', true);

@@ -58,11 +58,14 @@ export class MultiplayerManager {
       this.setupWebSocketHandlers();
 
       // For local testing, create some mock players if connection fails
-      setTimeout(() => {
-        if (!this.isConnected) {
-          this.createMockPlayers();
-        }
-      }, 2000);
+      // Only create mock players if not explicitly disabled
+      if (import.meta.env.VITE_DISABLE_MOCK_PLAYERS !== 'true') {
+        setTimeout(() => {
+          if (!this.isConnected) {
+            this.createMockPlayers();
+          }
+        }, 2000);
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -367,6 +370,12 @@ export class MultiplayerManager {
 
   // Public method to create mock players for testing (even when connected)
   public createTestPlayers(): void {
+    // Don't create mock players if explicitly disabled
+    if (import.meta.env.VITE_DISABLE_MOCK_PLAYERS === 'true') {
+      logInfo('MULTIPLAYER', 'Mock players disabled by environment setting');
+      return;
+    }
+
     logInfo('MULTIPLAYER', 'Creating test players for demonstration purposes');
 
     // Clear any existing mock players first
@@ -487,6 +496,12 @@ export class MultiplayerManager {
   }
 
   private createMockPlayers(): void {
+    // Don't create mock players if explicitly disabled
+    if (import.meta.env.VITE_DISABLE_MOCK_PLAYERS === 'true') {
+      logInfo('MULTIPLAYER', 'Mock players disabled by environment setting');
+      return;
+    }
+
     logInfo('MULTIPLAYER', 'Creating mock players for local testing', {
       reason: 'WebSocket connection failed or testing mode',
     });

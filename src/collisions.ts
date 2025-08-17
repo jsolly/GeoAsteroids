@@ -208,7 +208,9 @@ function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
   let score = 0;
 
   // Check if we're in debug mode or development mode
-  const isDevelopment = import.meta.env.MODE === 'development';
+  const isDevelopment =
+    import.meta.env.MODE === 'development' &&
+    import.meta.env.VITE_DISABLE_INVINCIBILITY !== 'true';
 
   // logInfo('COLLISION_DEBUG', 'DEBUG constant value', { value: DEBUG, type: typeof DEBUG });
   // logInfo('COLLISION_DEBUG', 'Development mode check', { isDevelopment });
@@ -459,8 +461,9 @@ function detectShipToShipCollisions(
 
       // Check if we're in debug mode
       const isDevelopment =
-        import.meta.env?.DEV === true ||
-        import.meta.env?.MODE === 'development';
+        (import.meta.env?.DEV === true ||
+          import.meta.env?.MODE === 'development') &&
+        import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
 
       if (DEBUG || isDevelopment) {
         // DEBUG MODE: Player is invincible, only bot is destroyed

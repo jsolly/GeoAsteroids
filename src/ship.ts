@@ -116,7 +116,9 @@ class Ship implements IShip {
 
     // Safety check: don't mark as dead if we have lives and are in debug mode
     const isDevelopment =
-      import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
+      (import.meta.env?.DEV === true ||
+        import.meta.env?.MODE === 'development') &&
+      import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
     if (this.lives > 0 && isDevelopment) {
       logInfo(
         'SHIP_SAFETY',
@@ -313,7 +315,9 @@ class Ship implements IShip {
 
     // In debug mode, unlimited EMP usage
     const isDevelopment =
-      import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
+      (import.meta.env?.DEV === true ||
+        import.meta.env?.MODE === 'development') &&
+      import.meta.env?.VITE_DISABLE_INVINCIBILITY !== 'true';
 
     logInfo('EMP', '⚡ EMP Pulse activated!', {
       position: { x: this.position.x, y: this.position.y },
