@@ -123,8 +123,8 @@ export class BotManager {
         lastPosition: position, // Initialize last position for smoothing
         lastRotation: 0, // Initialize last rotation to match facing angle for smoothing
         blinkOn: true, // Initialize blinking state for invincibility
-        blinkCount: 0, // Initialize blink count for invincibility
-        blinkTime: 0, // Initialize blink timer for invincibility
+        blinkCount: Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR), // Initialize blink count for invincibility
+        blinkTime: Math.ceil(SHIP_INV_BLINK_DUR * FPS), // Initialize blink timer for invincibility
         // Health system properties (same as player ship)
         health: BOT_MAX_HEALTH,
         maxHealth: BOT_MAX_HEALTH,
@@ -1100,6 +1100,7 @@ export class BotManager {
 
         // Start respawn timer
         bot.respawnTimer = 300; // 5 seconds at 60 FPS
+        // Store respawn position (same as original position for now)
         bot.respawnPosition = new Vector(bot.position.x, bot.position.y);
       }
     }

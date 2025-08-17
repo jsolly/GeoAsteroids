@@ -91,7 +91,7 @@ a {
   max-width: 650px;
   width: 90%;
   max-height: 90vh;
-  overflow-y: hidden; /* Remove scrollbar */
+  overflow-y: auto; /* Enable scrolling when needed */
   padding: 40px;
   background-color: rgba(
     20,
@@ -107,11 +107,74 @@ a {
   backdrop-filter: blur(10px); /* Add subtle blur effect */
 }
 
+/* Custom scrollbar styling */
+.screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+.screen::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.screen::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.screen::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  text-align: center;
+  margin-top: 1em;
+  padding: 0.5em;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-indicator:hover {
+  opacity: 1;
+}
+
+.scroll-text {
+  display: block;
+  font-size: 0.8em;
+  color: #b0bec5;
+  margin-bottom: 0.3em;
+  font-weight: 500;
+}
+
+.scroll-arrow {
+  font-size: 1.2em;
+  color: #4fc3f7;
+  animation: scrollBounce 2s infinite;
+}
+
+@keyframes scrollBounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-5px);
+  }
+  60% {
+    transform: translateY(-3px);
+  }
+}
+
 /* Enhanced title with better contrast */
 .screen h1 {
   font-size: 3.2em;
   font-weight: bold;
-  margin-bottom: 1.2em;
+  margin-bottom: 1em; /* Reduced margin */
   text-shadow:
     0 0 20px rgba(255, 255, 255, 0.4),
     0 0 40px rgba(255, 255, 255, 0.2);
@@ -139,7 +202,7 @@ a {
 
 /* Game modes section */
 .game-modes {
-  margin-bottom: 2em; /* Reduced margin */
+  margin-bottom: 1.5em; /* Further reduced margin */
 }
 
 .game-modes .nav {
@@ -193,9 +256,74 @@ a {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
+/* Player count section */
+.player-count-section {
+  margin-bottom: 1.5em;
+  margin-top: 0.5em; /* Reduced top margin to be closer to title */
+  text-align: center;
+  padding: 1em;
+  background-color: rgba(
+    79,
+    195,
+    247,
+    0.08
+  ); /* Slightly more prominent background */
+  border-radius: 12px;
+  border: 1px solid rgba(79, 195, 247, 0.2); /* Enhanced border with blue tint */
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(79, 195, 247, 0.15); /* Subtle blue glow */
+  animation: playerCountFadeIn 0.8s ease-out;
+}
+
+@keyframes playerCountFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.player-count-section h4 {
+  color: #4fc3f7;
+  font-size: 1.2em;
+  margin-bottom: 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(79, 195, 247, 0.4);
+}
+
+.player-count-section h4 span {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: #00bcd4;
+  text-shadow: 0 0 15px rgba(0, 188, 212, 0.6);
+  margin: 0 0.2em;
+  transition: all 0.3s ease;
+}
+
+.player-count-section h4 span.updated {
+  animation: playerCountPulse 0.6s ease-in-out;
+}
+
+@keyframes playerCountPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+    color: #4fc3f7;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* Settings section */
 .settings {
-  margin-bottom: 2em; /* Reduced margin */
+  margin-bottom: 1.5em; /* Further reduced margin */
   text-align: left;
 }
 
@@ -270,7 +398,7 @@ a {
 
 /* Difficulty section */
 .difficulty-section {
-  margin-bottom: 0.5em; /* Reduced margin */
+  margin-bottom: 1em; /* Slightly increased margin for better spacing */
 }
 
 .btn-group {

@@ -249,6 +249,8 @@ function handleShipExplosion(ship: Ship): void {
       ship.explodeTime = 0;
       // Give ship temporary invincibility (blinking effect)
       ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+      ship.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+      ship.blinkOn = true;
 
       // Reset ship health to full
       ship.health = ship.maxHealth;
@@ -288,6 +290,8 @@ function handleShipLifeLoss(ship: Ship): void {
 
   // Give ship temporary invincibility (blinking effect)
   ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+  ship.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+  ship.blinkOn = true;
 
   // Reset ship health to full
   ship.health = ship.maxHealth;

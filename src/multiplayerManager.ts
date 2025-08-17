@@ -483,6 +483,8 @@ export class MultiplayerManager {
           MultiplayerManager.getInstance().getLocalPlayerName(),
         getPlayerCount: (): number =>
           MultiplayerManager.getInstance().getPlayerCount(),
+        createTestPlayers: (): void =>
+          MultiplayerManager.getInstance().createTestPlayers(),
         debugDestroyBot: (botId: string): void =>
           MultiplayerManager.getInstance().debugDestroyBot(botId),
       };
@@ -503,6 +505,9 @@ export class MultiplayerManager {
       console.log('multiplayer.getLocalPlayerId() - Get local player ID');
       console.log('multiplayer.getLocalPlayerName() - Get local player name');
       console.log('multiplayer.getPlayerCount() - Get player count');
+      console.log(
+        'multiplayer.createTestPlayers() - Create mock players for testing',
+      );
       console.log(
         'multiplayer.debugDestroyBot(botId) - Manually destroy a bot for testing',
       );

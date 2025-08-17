@@ -69,6 +69,41 @@ const startSinglePlayerBtn = getElementById<HTMLButtonElement>(
 );
 const startMultiplayerBtn =
   getElementById<HTMLButtonElement>('start-multiplayer');
+const playerCountElement = getElementById<HTMLElement>('playerCount');
+
+// Function to update player count display
+function updatePlayerCount(): void {
+  if (playerCountElement) {
+    const currentCount = parseInt(playerCountElement.textContent || '1');
+    const playerCount = gameController.getPlayerCount();
+
+    // Only update if the count actually changed
+    if (currentCount !== playerCount) {
+      playerCountElement.textContent = playerCount.toString();
+
+      // Add animation class
+      playerCountElement.classList.add('updated');
+
+      // Remove animation class after animation completes
+      setTimeout(() => {
+        playerCountElement.classList.remove('updated');
+      }, 600);
+
+      // Update the heading text to be grammatically correct
+      const heading = playerCountElement.closest('h4');
+      if (heading) {
+        heading.innerHTML = `🌐 <span id="playerCount">${playerCount}</span> ${playerCount === 1 ? 'Player' : 'Players'} Online`;
+      }
+    }
+  }
+}
+
+// Expose updatePlayerCount to window for testing
+if (typeof window !== 'undefined') {
+  (
+    window as { updatePlayerCount?: typeof updatePlayerCount }
+  ).updatePlayerCount = updatePlayerCount;
+}
 
 // Set up single player button - ensures multiplayer is disabled
 attachEventListener(startSinglePlayerBtn, 'click', () => {
@@ -76,6 +111,8 @@ attachEventListener(startSinglePlayerBtn, 'click', () => {
   // Update button states
   startSinglePlayerBtn?.classList.add('active-mode');
   startMultiplayerBtn?.classList.remove('active-mode');
+  // Update player count immediately
+  updatePlayerCount();
   startGame();
 });
 
@@ -85,6 +122,8 @@ attachEventListener(startMultiplayerBtn, 'click', () => {
   // Update button states
   startMultiplayerBtn?.classList.add('active-mode');
   startSinglePlayerBtn?.classList.remove('active-mode');
+  // Update player count immediately
+  updatePlayerCount();
   startGame();
 });
 
@@ -92,6 +131,30 @@ attachEventListener(startMultiplayerBtn, 'click', () => {
 if (startSinglePlayerBtn && startMultiplayerBtn) {
   startSinglePlayerBtn.classList.add('active-mode');
 }
+
+// Update player count display initially and set up periodic updates
+updatePlayerCount();
+
+// Set up periodic player count updates (every 2 seconds)
+setInterval(updatePlayerCount, 2000);
+
+// Function to check if scrolling is needed and show/hide scroll indicator
+function updateScrollIndicator(): void {
+  const screenElement = document.getElementById('start-screen');
+  const scrollIndicator = document.querySelector(
+    '.scroll-indicator',
+  ) as HTMLElement;
+
+  if (screenElement && scrollIndicator) {
+    const isScrollable =
+      screenElement.scrollHeight > screenElement.clientHeight;
+    scrollIndicator.style.display = isScrollable ? 'block' : 'none';
+  }
+}
+
+// Check scroll indicator on load and resize
+updateScrollIndicator();
+window.addEventListener('resize', updateScrollIndicator);
 
 const difficultyButtonMap: Record<string, Difficulty> = {
   easy: Difficulty.easy,
