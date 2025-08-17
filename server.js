@@ -9,6 +9,18 @@ console.log(`🚀 Starting ${NODE_ENV} multiplayer server on port ${PORT}`);
 
 // Create HTTP server for health checks
 const httpServer = createServer((req, res) => {
+  // Add CORS headers for production
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
@@ -38,6 +50,15 @@ const wss = new WebSocketServer({
   path: '/ws', // Add specific path for WebSocket connections
 });
 
+// Add error handling for WebSocket server
+wss.on('error', (error) => {
+  console.error('❌ WebSocket server error:', error);
+});
+
+wss.on('headers', (headers) => {
+  console.log('📋 WebSocket upgrade headers:', headers);
+});
+
 // Player management
 const players = new Map();
 let gameTime = 0;
@@ -57,8 +78,13 @@ setInterval(() => {
 }, 100);
 
 // WebSocket connection handling
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   console.log('🔌 New player connected');
+  console.log('📍 Connection details:', {
+    url: req.url,
+    headers: req.headers,
+    remoteAddress: req.socket.remoteAddress,
+  });
 
   ws.on('message', (data) => {
     try {
