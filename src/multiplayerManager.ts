@@ -57,9 +57,9 @@ export class MultiplayerManager {
       this.socket = new WebSocket(wsUrl);
       this.setupWebSocketHandlers();
 
-      // For local testing, create some mock players if connection fails
-      // Only create mock players if not explicitly disabled
-      if (import.meta.env.VITE_DISABLE_MOCK_PLAYERS !== 'true') {
+      // Mock players are disabled by default
+      // Only create mock players if explicitly enabled for testing
+      if (import.meta.env.VITE_ENABLE_MOCK_PLAYERS === 'true') {
         setTimeout(() => {
           if (!this.isConnected) {
             this.createMockPlayers();
@@ -370,9 +370,10 @@ export class MultiplayerManager {
 
   // Public method to create mock players for testing (even when connected)
   public createTestPlayers(): void {
-    // Don't create mock players if explicitly disabled
-    if (import.meta.env.VITE_DISABLE_MOCK_PLAYERS === 'true') {
-      logInfo('MULTIPLAYER', 'Mock players disabled by environment setting');
+    // Mock players are disabled by default
+    // Only create if explicitly enabled for testing
+    if (import.meta.env.VITE_ENABLE_MOCK_PLAYERS !== 'true') {
+      logInfo('MULTIPLAYER', 'Mock players disabled by default');
       return;
     }
 
@@ -496,9 +497,10 @@ export class MultiplayerManager {
   }
 
   private createMockPlayers(): void {
-    // Don't create mock players if explicitly disabled
-    if (import.meta.env.VITE_DISABLE_MOCK_PLAYERS === 'true') {
-      logInfo('MULTIPLAYER', 'Mock players disabled by environment setting');
+    // Mock players are disabled by default
+    // Only create if explicitly enabled for testing
+    if (import.meta.env.VITE_ENABLE_MOCK_PLAYERS !== 'true') {
+      logInfo('MULTIPLAYER', 'Mock players disabled by default');
       return;
     }
 
