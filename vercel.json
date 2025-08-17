@@ -10,10 +10,5 @@
       "source": "/api/multiplayer",
       "destination": "/api/multiplayer.ts"
     }
-  ],
-  "websocket": {
-    "api/multiplayer": {
-      "runtime": "@vercel/node"
-    }
-  }
+  ]
 }
