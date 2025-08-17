@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/multiplayer.ts": {
-      "runtime": "@vercel/node@22"
+      "runtime": "@vercel/node"
     }
   },
   "rewrites": [
