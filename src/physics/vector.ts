@@ -1,6 +1,6 @@
 import { Point } from './Point';
 
-class Vector extends Point {
+export class Vector extends Point {
   constructor(x: number, y: number) {
     super(x, y);
   }
@@ -54,5 +54,3 @@ class Vector extends Point {
 
   // Intentionally no in-place mutation helpers to preserve immutability
 }
-
-export { Vector };
