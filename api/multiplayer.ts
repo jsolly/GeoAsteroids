@@ -1,13 +1,13 @@
-import {
-  IPlayerUpdate,
-  IPlayerJoin,
-  IPlayerLeave,
-  IPlayerShoot,
-  IBotShoot,
-  IServerMessage,
-  IClientMessage,
-} from '../src/types/multiplayer.js';
-import { Vector } from '../src/vector.js';
+import type { BotShoot } from '../src/entities/bot/types.js';
+import type {
+  ClientMessage,
+  PlayerJoin,
+  PlayerLeave,
+  PlayerShoot,
+  PlayerUpdate,
+  ServerMessage,
+} from '../src/multiplayer/types.js';
+import { Vector } from '../src/physics/Vector.js';
 
 type WebSocketWithEvents = WebSocket & {
   on(event: string, listener: (...args: unknown[]) => void): void;
@@ -62,15 +62,11 @@ class MultiplayerServer {
   public handleConnection(
     ws: WebSocket & {
       on(event: string, listener: (...args: unknown[]) => void): void;
-    },
+    }
   ): void {
-    console.log('New player connected');
-
     ws.on('message', (data: unknown) => {
       try {
-        const message: IClientMessage = JSON.parse(
-          String(data),
-        ) as IClientMessage;
+        const message: ClientMessage = JSON.parse(String(data)) as ClientMessage;
         this.handleClientMessage(message, ws);
       } catch (error) {
         console.error('Failed to parse client message:', error);
@@ -89,10 +85,7 @@ class MultiplayerServer {
     });
   }
 
-  private handleClientMessage(
-    message: IClientMessage,
-    ws: WebSocketWithEvents,
-  ): void {
+  private handleClientMessage(message: ClientMessage, ws: WebSocketWithEvents): void {
     switch (message.type) {
       case 'join':
         if (this.isPlayerJoinData(message.data)) {
@@ -125,34 +118,32 @@ class MultiplayerServer {
   }
 
   private isPlayerJoinData(
-    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
-  ): data is IPlayerJoin {
+    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
+  ): data is PlayerJoin {
     return 'name' in data && 'position' in data;
   }
 
   private isPlayerLeaveData(
-    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
-  ): data is IPlayerLeave {
+    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
+  ): data is PlayerLeave {
     return 'id' in data && Object.keys(data).length === 1;
   }
 
   private isPlayerUpdateData(
-    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
-  ): data is IPlayerUpdate {
-    return (
-      'position' in data && 'velocity' in data && 'r' in data && 'a' in data
-    );
+    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
+  ): data is PlayerUpdate {
+    return 'position' in data && 'velocity' in data && 'r' in data && 'a' in data;
   }
 
   private isPlayerShootData(
-    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
-  ): data is IPlayerShoot {
+    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
+  ): data is PlayerShoot {
     return 'laserStart' in data && 'laserDirection' in data && 'id' in data;
   }
 
   private isBotShootData(
-    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
-  ): data is IBotShoot {
+    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
+  ): data is BotShoot {
     return (
       'laserStart' in data &&
       'laserDirection' in data &&
@@ -161,7 +152,7 @@ class MultiplayerServer {
     );
   }
 
-  private handlePlayerJoin(data: IPlayerJoin, ws: WebSocketWithEvents): void {
+  private handlePlayerJoin(data: PlayerJoin, ws: WebSocketWithEvents): void {
     const player: ConnectedPlayer = {
       ...data,
       velocity: new Vector(0, 0),
@@ -190,17 +181,13 @@ class MultiplayerServer {
 
     // Send current game state to the new player
     this.sendGameState(data.id);
-
-    console.log(
-      `Player ${data.name} joined the game. Total players: ${this.players.size}`,
-    );
   }
 
-  private handlePlayerLeave(data: IPlayerLeave): void {
+  private handlePlayerLeave(data: PlayerLeave): void {
     this.removePlayer(data.id);
   }
 
-  private handlePlayerUpdate(data: IPlayerUpdate): void {
+  private handlePlayerUpdate(data: PlayerUpdate): void {
     const player = this.players.get(data.id);
     if (player) {
       Object.assign(player, data);
@@ -215,7 +202,7 @@ class MultiplayerServer {
     }
   }
 
-  private handlePlayerShoot(data: IPlayerShoot): void {
+  private handlePlayerShoot(data: PlayerShoot): void {
     // Broadcast shooting to other players
     this.broadcastToOthers(data.id, {
       type: 'playerShoot',
@@ -224,15 +211,13 @@ class MultiplayerServer {
     });
   }
 
-  private handleBotShoot(data: IBotShoot): void {
+  private handleBotShoot(data: BotShoot): void {
     // Handle bot shooting - broadcast to other players
     this.broadcastToOthers(data.targetPlayerId, {
       type: 'botShoot',
       data,
       timestamp: Date.now(),
     });
-
-    console.log(`Bot ${data.botId} shot at player ${data.targetPlayerId}`);
   }
 
   private removePlayer(id: string): void {
@@ -253,13 +238,10 @@ class MultiplayerServer {
       }
 
       this.players.delete(id);
-      console.log(
-        `Player ${player.name} left the game. Total players: ${this.players.size}`,
-      );
     }
   }
 
-  private broadcastToOthers(excludeId: string, message: IServerMessage): void {
+  private broadcastToOthers(excludeId: string, message: ServerMessage): void {
     for (const [id, player] of this.players.entries()) {
       if (id !== excludeId) {
         try {
@@ -275,9 +257,11 @@ class MultiplayerServer {
 
   private sendGameState(playerId: string): void {
     const player = this.players.get(playerId);
-    if (!player) return;
+    if (!player) {
+      return;
+    }
 
-    const gameState: IServerMessage = {
+    const gameState: ServerMessage = {
       type: 'gameState',
       data: {
         players: Array.from(this.players.values()).map((p) => ({
@@ -312,7 +296,7 @@ class MultiplayerServer {
           type: 'error',
           data: message,
           timestamp: Date.now(),
-        }),
+        })
       );
     } catch (error) {
       console.error('Failed to send error message:', error);

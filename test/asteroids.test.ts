@@ -1,54 +1,48 @@
 import { expect, test } from 'vitest';
 import { Difficulty, setDifficulty } from '../src/constants';
-import { Ship } from '../src/ship';
-import { Vector } from '../src/vector';
-import { Roid, RoidBelt } from '../src/asteroids';
+import { Asteroid, AsteroidBelt } from '../src/entities/asteroid/Asteroid';
+import { Vector } from '../src/physics/Vector';
 
-test.concurrent('Roid Creation', () => {
+test.concurrent('Asteroid Creation', () => {
   const roidPoint = new Vector(10, 20);
   const roidRadius = 10;
-  const newRoid = new Roid(roidPoint, roidRadius);
-  expect(newRoid).toBeInstanceOf(Roid);
+  const newRoid = new Asteroid(roidPoint, roidRadius);
+  expect(newRoid).toBeInstanceOf(Asteroid);
 });
 
-test.concurrent('Roid Belt Creation', () => {
-  const mockShip = new Ship();
+test.concurrent('Asteroid Belt Creation', () => {
   setDifficulty(Difficulty.easy); // This ensures roidNum is defined
-  const testRoidBelt = new RoidBelt(mockShip);
-  expect(testRoidBelt).toBeInstanceOf(RoidBelt);
+  const testRoidBelt = new AsteroidBelt();
+  expect(testRoidBelt).toBeInstanceOf(AsteroidBelt);
   expect(testRoidBelt.roids.length).toEqual(5);
 });
 
-test.concurrent('Roid Belt Add Roid', () => {
-  const mockShip = new Ship();
-  const testRoidBelt = new RoidBelt(mockShip);
+test.concurrent('Asteroid Belt Add Asteroid', () => {
+  const testRoidBelt = new AsteroidBelt();
   const roidCount = testRoidBelt.roids.length;
-  testRoidBelt.addRoid(mockShip);
+  testRoidBelt.addRoid();
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1);
 });
 
-test.concurrent('Roid Belt Spawn Roids', () => {
-  const mockShip = new Ship();
-  const testRoidBelt = new RoidBelt(mockShip);
+test.concurrent('Asteroid Belt Spawn Asteroids', () => {
+  const testRoidBelt = new AsteroidBelt();
   testRoidBelt.spawnTime = 0; // so we don't have to wait a second for the spawn time to hit
   const roidCount = testRoidBelt.roids.length;
-  testRoidBelt.spawnRoids(mockShip);
+  testRoidBelt.spawnRoids();
   expect(testRoidBelt.roids.length).toEqual(roidCount + 4);
 });
 
-test.concurrent('Destory Roid', () => {
-  const mockShip = new Ship();
-  const testRoidBelt = new RoidBelt(mockShip);
-  testRoidBelt.addRoid(mockShip);
+test.concurrent('Destroy Asteroid', () => {
+  const testRoidBelt = new AsteroidBelt();
+  testRoidBelt.addRoid();
   const roidCount = testRoidBelt.roids.length;
   testRoidBelt.destroyRoid(0);
-  expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Roid splits in two
+  expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Asteroid splits in two
 });
 
-test.concurrent('Move Roids', () => {
-  const mockShip = new Ship();
-  const testRoidBelt = new RoidBelt(mockShip);
-  testRoidBelt.addRoid(mockShip);
+test.concurrent('Move Asteroids', () => {
+  const testRoidBelt = new AsteroidBelt();
+  testRoidBelt.addRoid();
   const firstRoid = testRoidBelt.roids[0];
   const firstRoidLocationY = firstRoid.position.y;
   testRoidBelt.moveRoids();

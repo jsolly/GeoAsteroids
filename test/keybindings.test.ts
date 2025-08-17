@@ -1,7 +1,7 @@
-import { expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { keyDown, keyUp } from '../src/keybindings';
-import { TURN_SPEED, FPS } from '../src/constants';
-import { Ship } from '../src/ship';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { FPS, TURN_SPEED } from '../src/constants';
+import { Ship } from '../src/entities/ship/Ship';
+import { keyDown, keyUp } from '../src/input/keybindings';
 
 let mockShip: Ship;
 const mockPlay = vi.fn();
@@ -21,9 +21,7 @@ beforeEach(() => {
   Ship.fxThrust.stop = mockPlay;
 
   mockShip = new Ship();
-  mockShip.fireLaser = vi.fn(() => {
-    console.log('Mock fireLaser called');
-  });
+  mockShip.fireLaser = vi.fn(() => {});
 });
 
 afterEach(() => {
@@ -41,7 +39,7 @@ test.concurrent('keyDown - Space', () => {
 
 test.concurrent('keyDown - ArrowLeft', () => {
   pressKey('ArrowLeft');
-  expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
+  expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyDown - ArrowUp', () => {
@@ -52,7 +50,7 @@ test.concurrent('keyDown - ArrowUp', () => {
 
 test.concurrent('keyDown - ArrowRight', () => {
   pressKey('ArrowRight');
-  expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
+  expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
   releaseKey('ArrowRight'); // For some reason, keyDown is persisting across tests
 });
 
@@ -80,13 +78,13 @@ test.concurrent('keyUp - ArrowRight', () => {
 test.concurrent('keyUp - ArrowLeft with ArrowRight still down', () => {
   pressKey('ArrowRight');
   releaseKey('ArrowLeft');
-  expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
+  expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyUp - ArrowRight with ArrowLeft still down', () => {
   pressKey('ArrowLeft');
   releaseKey('ArrowRight');
-  expect(mockShip.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
+  expect(mockShip.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
 test.concurrent('keyDown - non-specified key', () => {

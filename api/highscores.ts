@@ -1,7 +1,5 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { MongoClient } from 'mongodb';
-import dotenv from 'dotenv';
-dotenv.config();
 
 interface HighScore {
   name: string;
@@ -10,9 +8,7 @@ interface HighScore {
 
 async function getDb(): Promise<MongoClient> {
   const connectionString =
-    process.env.NODE_ENV === 'production'
-      ? process.env.MONGODB_URI
-      : 'mongodb://127.0.0.1:27017';
+    process.env.NODE_ENV === 'production' ? process.env.MONGODB_URI : 'mongodb://127.0.0.1:27017';
   if (!connectionString) {
     throw new Error('MONGODB_URI is not defined in .env');
   }
@@ -26,14 +22,8 @@ async function getDb(): Promise<MongoClient> {
 async function getHighScores(): Promise<HighScore[]> {
   const client = await getDb();
   try {
-    const collection = client
-      .db('geoasteroids')
-      .collection<HighScore>('highscores');
-    const highScores = await collection
-      .find()
-      .sort({ score: -1 })
-      .limit(10)
-      .toArray();
+    const collection = client.db('geoasteroids').collection<HighScore>('highscores');
+    const highScores = await collection.find().sort({ score: -1 }).limit(10).toArray();
     return highScores;
   } finally {
     await client.close();
@@ -46,11 +36,7 @@ async function updateHighScores(newScore: HighScore): Promise<void> {
     const collection = client.db('geoasteroids').collection('highscores');
     await collection.insertOne(newScore);
 
-    const scoresToKeep = await collection
-      .find()
-      .sort({ score: -1 })
-      .limit(10)
-      .toArray();
+    const scoresToKeep = await collection.find().sort({ score: -1 }).limit(10).toArray();
     const idsToKeep = scoresToKeep.map((score) => score._id);
     await collection.deleteMany({ _id: { $nin: idsToKeep } });
   } finally {
@@ -58,10 +44,7 @@ async function updateHighScores(newScore: HighScore): Promise<void> {
   }
 }
 
-export default async (
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> => {
+export default async (req: VercelRequest, res: VercelResponse): Promise<void> => {
   if (req.method === 'GET') {
     const highScores = await getHighScores();
     res.json(highScores);

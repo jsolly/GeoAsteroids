@@ -17,6 +17,9 @@ export default defineConfig({
       ],
     },
     environment: 'jsdom',
-    setupFiles: 'setup/viteSetup.ts',
+    setupFiles: 'test/setup/viteSetup.ts',
+  },
+  resolve: {
+    extensions: ['.ts', '.js', '.tsx', '.jsx'],
   },
 });

@@ -1,0 +1,26 @@
+type EventCallback = ((ev: Event) => void) | ((ev: Event) => Promise<void>);
+
+export function attachEventListener<T extends HTMLElement>(
+  element: T | null,
+  eventType: string,
+  callback: EventCallback
+): void {
+  if (element) {
+    element.addEventListener(eventType, (ev) => {
+      const result = callback(ev);
+      if (result instanceof Promise) {
+        result.catch((error) => console.error('UTILS', String(error)));
+      }
+    });
+  } else {
+    console.error('UTILS', `Unable to attach event listener, element not found`);
+  }
+}
+
+export function getElementById<T extends HTMLElement>(id: string): T | null {
+  const element = document.getElementById(id);
+  if (!element) {
+    console.error('UTILS', `Element with id '${id}' not found`);
+  }
+  return element as T | null;
+}

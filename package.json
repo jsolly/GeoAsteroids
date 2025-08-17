@@ -7,9 +7,8 @@
   "scripts": {
     "prune": "ts-prune",
     "dev": "vite",
-    "dev:multiplayer": "tsx setup/localWebSocketServer.ts",
-    "dev:log": "tsx setup/logServer.ts",
-    "dev:full": "concurrently --kill-others --prefix-colors \"blue.bold,green.bold,yellow.bold\" --prefix \"[{name}]\" --names \"vite,multiplayer,log\" \"npm run dev\" \"npm run dev:multiplayer\" \"npm run dev:log\"",
+    "dev:multiplayer": "tsx --env-file=.env setup/localWebSocketServer.ts",
+    "dev:full": "concurrently --kill-others --prefix-colors \"blue.bold,green.bold\" --prefix \"[{name}]\" --names \"vite,multiplayer\" \"npm run dev\" \"npm run dev:multiplayer\"",
     "build": "tsc && vite build",
     "start": "vite",
     "watch": "vite build --watch",
@@ -17,16 +16,17 @@
     "test": "vitest --run",
     "coverage": "vitest run --coverage",
     "check:ts": "tsc --noEmit",
-    "check:lint": "eslint .",
-    "check:fix": "eslint . --fix",
-    "fix": "npm run check:fix && npm run check:ts",
-    "lint": "eslint .",
-    "format": "prettier --write",
+    "check:lint": "biome check .",
+    "check:fix": "biome check --write .",
+    "fix": "biome check --write . && npm run check:ts && npm run test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
     "prepare": "husky install"
   },
   "lint-staged": {
-    "./**/*.{js,cjs,ts,css,html,json,geojson,yml,yaml,md}": "prettier --write",
-    "./**/*.{js,cjs,ts}": "eslint"
+    "*.{ts,tsx,js,jsx,json,css,md,yml,yaml}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "repository": {
     "type": "git",
@@ -39,23 +39,17 @@
   },
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
   "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
     "@types/node": "^24.0.15",
-    "@typescript-eslint/eslint-plugin": "^8.37.0",
-    "@typescript-eslint/parser": "^8.37.0",
-    "@vercel/node": "^5.3.6",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
+    "@vercel/node": "^5.3.6",
     "@vitest/coverage-v8": "^3.2.4",
     "canvas": "^3.1.2",
     "concurrently": "^9.1.0",
-    "eslint": "^9.31.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.0.0",
-    "eslint-plugin-tsdoc": "^0.4.0",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.2",
-    "prettier": "^3.0.0",
     "ts-node": "^10.9.1",
     "ts-prune": "^0.10.3",
     "tsx": "^4.19.2",
@@ -67,7 +61,6 @@
   },
   "dependencies": {
     "@types/jsdom": "^21.1.1",
-    "dotenv": "^17.2.0",
     "mongodb": "^6.17.0",
     "socket.io-client": "^4.8.1",
     "uuid": "^11.0.0"

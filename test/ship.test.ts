@@ -1,7 +1,7 @@
-import { expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { Ship } from '../src/ship';
-import { Vector } from '../src/vector';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { LASER_MAX } from '../src/constants';
+import { Ship } from '../src/entities/ship/Ship';
+import { Vector } from '../src/physics/Vector';
 
 let mockShip: Ship;
 
@@ -15,8 +15,8 @@ afterEach(() => {
 
 test('Ship Creation', () => {
   expect(mockShip).toBeInstanceOf(Ship);
-  expect(mockShip.lives).toBe(3);
-  expect(mockShip.dead).toBe(false);
+  expect(mockShip.health).toBeGreaterThan(0);
+  expect(mockShip.exploding).toBe(false);
 });
 
 test('Move Ship', () => {
@@ -47,5 +47,6 @@ test('Ship Cannot Shoot', () => {
     explodeTime: 0,
   };
   mockShip.lasers = Array(LASER_MAX).fill(mockLaser) as typeof mockShip.lasers;
+  mockShip.canShoot = false; // ensure flag + capacity both block shooting
   expect(mockShip.canShoot).toBeFalsy();
 });

@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest';
 import {
-  LOCAL_STORAGE_KEYS,
-  soundIsOn,
-  musicIsOn,
-  getRoidNum,
-  setDifficulty,
   Difficulty,
+  getRoidNum,
+  LOCAL_STORAGE_KEYS,
+  musicIsOn,
+  setDifficulty,
+  soundIsOn,
 } from '../src/constants';
 
 test.concurrent('Local Storage Keys', () => {

@@ -1,11 +1,12 @@
+import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
-import { createServer } from 'http';
+import { logger } from './setup/serverLogger.js';
 
 // Production configuration
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'production';
 
-console.log(`🚀 Starting ${NODE_ENV} multiplayer server on port ${PORT}`);
+logger.info(`🚀 Starting ${NODE_ENV} multiplayer server on port ${PORT}`);
 
 // Create HTTP server for health checks
 const httpServer = createServer((req, res) => {
@@ -29,7 +30,7 @@ const httpServer = createServer((req, res) => {
         timestamp: new Date().toISOString(),
         players: getPlayerCount(),
         uptime: process.uptime(),
-      }),
+      })
     );
   } else if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -52,11 +53,11 @@ const wss = new WebSocketServer({
 
 // Add error handling for WebSocket server
 wss.on('error', (error) => {
-  console.error('❌ WebSocket server error:', error);
+  logger.error('❌ WebSocket server error:', error);
 });
 
 wss.on('headers', (headers) => {
-  console.log('📋 WebSocket upgrade headers:', headers);
+  logger.debug('📋 WebSocket upgrade headers:', headers);
 });
 
 // Player management
@@ -71,7 +72,7 @@ setInterval(() => {
   const now = Date.now();
   for (const [id, player] of players.entries()) {
     if (now - player.lastUpdate > 30000) {
-      console.log(`🧹 Cleaning up stale player ${player.name} (${id})`);
+      logger.debug(`🧹 Cleaning up stale player ${player.name} (${id})`);
       removePlayer(id);
     }
   }
@@ -79,8 +80,8 @@ setInterval(() => {
 
 // WebSocket connection handling
 wss.on('connection', (ws, req) => {
-  console.log('🔌 New player connected');
-  console.log('📍 Connection details:', {
+  logger.info('🔌 New player connected');
+  logger.debug('📍 Connection details:', {
     url: req.url,
     headers: req.headers,
     remoteAddress: req.socket.remoteAddress,
@@ -91,7 +92,7 @@ wss.on('connection', (ws, req) => {
       const message = JSON.parse(String(data));
       handleClientMessage(message, ws);
     } catch (error) {
-      console.error('Failed to parse client message:', error.message);
+      logger.error('Failed to parse client message:', error.message);
       sendError(ws, 'Invalid message format');
     }
   });
@@ -100,7 +101,7 @@ wss.on('connection', (ws, req) => {
     // Find and remove the player
     for (const [id, player] of players.entries()) {
       if (player.ws === ws) {
-        console.log(`👋 Player ${player.name} (${id}) disconnected`);
+        logger.info(`👋 Player ${player.name} (${id}) disconnected`);
         removePlayer(id);
         break;
       }
@@ -108,7 +109,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('error', (error) => {
-    console.error('❌ WebSocket error:', error.message);
+    logger.error('❌ WebSocket error:', error.message);
   });
 });
 
@@ -153,7 +154,7 @@ function handlePlayerJoin(data, ws) {
   };
 
   players.set(player.id, player);
-  console.log(`🎮 Player ${player.name} (${player.id}) joined the game`);
+  logger.info(`🎮 Player ${player.name} (${player.id}) joined the game`);
 
   // Send confirmation to the joining player
   const joinMessage = {
@@ -161,7 +162,7 @@ function handlePlayerJoin(data, ws) {
     data: {
       id: player.id,
       name: player.name,
-      position: player.position,
+      position: player.ship.position,
     },
     timestamp: Date.now(),
   };
@@ -192,14 +193,14 @@ function handlePlayerUpdate(data) {
       type: 'playerUpdate',
       data: {
         id: player.id,
-        position: player.position,
-        velocity: player.velocity,
-        r: player.r,
-        a: player.a,
+        position: player.ship.position,
+        velocity: player.ship.velocity,
+        r: player.ship.r,
+        a: player.ship.a,
         lives: player.lives,
         score: player.score,
         dead: player.dead,
-        exploding: player.exploding,
+        exploding: player.ship.exploding,
       },
       timestamp: Date.now(),
     };
@@ -229,7 +230,9 @@ function handlePlayerShoot(data) {
 // Send game state to a specific player
 function sendGameState(playerId) {
   const player = players.get(playerId);
-  if (!player) return;
+  if (!player) {
+    return;
+  }
 
   const gameState = {
     type: 'gameState',
@@ -255,10 +258,7 @@ function sendGameState(playerId) {
   try {
     player.ws.send(JSON.stringify(gameState));
   } catch (error) {
-    console.error(
-      `Failed to send game state to player ${playerId}:`,
-      error.message,
-    );
+    logger.error(`Failed to send game state to player ${playerId}:`, error.message);
   }
 }
 
@@ -270,7 +270,7 @@ function removePlayer(id) {
     try {
       player.ws.close();
     } catch (error) {
-      console.error('Error closing WebSocket:', error.message);
+      logger.error('Error closing WebSocket:', error.message);
     }
 
     // Remove from players map
@@ -284,9 +284,7 @@ function removePlayer(id) {
     };
     broadcastToAll(leaveMessage);
 
-    console.log(
-      `👋 Player ${player.name} (${id}) removed. Total players: ${players.size}`,
-    );
+    logger.info(`👋 Player ${player.name} (${id}) removed. Total players: ${players.size}`);
   }
 }
 
@@ -300,7 +298,7 @@ function broadcastToAll(message) {
         player.ws.send(messageStr);
       }
     } catch (error) {
-      console.error('Error broadcasting message:', error.message);
+      logger.error('Error broadcasting message:', error.message);
     }
   }
 }
@@ -314,7 +312,7 @@ function broadcastToOthers(excludeWs, message) {
       try {
         player.ws.send(messageStr);
       } catch (error) {
-        console.error('Error broadcasting message:', error.message);
+        logger.error('Error broadcasting message:', error.message);
       }
     }
   }
@@ -325,7 +323,7 @@ function sendError(ws, message) {
   try {
     ws.send(JSON.stringify({ type: 'error', message }));
   } catch (error) {
-    console.error('Error sending error message:', error.message);
+    logger.error('Error sending error message:', error.message);
   }
 }
 
@@ -336,28 +334,26 @@ function getPlayerCount() {
 
 // Log stats every 30 seconds
 setInterval(() => {
-  console.log(
-    `📊 Server Stats - Players: ${getPlayerCount()}, Game Time: ${gameTime}`,
-  );
+  logger.info(`📊 Server Stats - Players: ${getPlayerCount()}, Game Time: ${gameTime}`);
 }, 30000);
 
 // Start the server
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Multiplayer server running on port ${PORT}`);
-  console.log(`🔌 WebSocket endpoint: ws://localhost:${PORT}/ws`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-  console.log(`📱 Root endpoint: http://localhost:${PORT}/`);
+  logger.info(`🚀 Multiplayer server running on port ${PORT}`);
+  logger.info(`🔌 WebSocket endpoint: ws://localhost:${PORT}/ws`);
+  logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+  logger.info(`📱 Root endpoint: http://localhost:${PORT}/`);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down multiplayer server...');
+  logger.info('\n🛑 Shutting down multiplayer server...');
   httpServer.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Shutting down multiplayer server...');
+  logger.info('\n🛑 Shutting down multiplayer server...');
   httpServer.close();
   process.exit(0);
 });

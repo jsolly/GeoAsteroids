@@ -8,7 +8,7 @@ npm-debug.log
 /.env
 
 # Other
-.eslintcache
+
 
 # Vite
 dist/*

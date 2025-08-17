@@ -1,6 +1,0 @@
----
-alwaysApply: true
----
-Do not run npm run dev, it is already running.
-
-Do not use npm run log:show, instead tail the logs or use something that doesn't overwhelm the terminal.

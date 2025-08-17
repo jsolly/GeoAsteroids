@@ -1,6 +1,7 @@
-import { SAVE_KEY_PERSONAL_BEST } from '../src/constants';
 import { expect, test } from 'vitest';
-import { GameState } from '../src/gameState';
+import { SAVE_KEY_PERSONAL_BEST } from '../src/constants';
+import { GameState } from '../src/core/gameState';
+
 const gameState = GameState.getInstance();
 
 // Test that getPersonalBest returns 0 when local storage is empty

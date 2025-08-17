@@ -49,34 +49,32 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 For local multiplayer development, use the following commands:
 
 ```shell
-# Run all development servers (Vite + WebSocket + Log Server)
+# Run all development servers (Vite + WebSocket)
 npm run dev:full
 
 # Run individual servers
 npm run dev              # Vite dev server (port 5173)
 npm run dev:multiplayer  # WebSocket server (port 3001)
-npm run log:watch        # Log server (port 3002)
-
-# Log management
-npm run log:show         # View current logs
-npm run log:clear        # Clear all logs
 ```
 
 ### Logging System
 
 GeoAsteroids includes a comprehensive logging system that automatically captures all game events, multiplayer interactions, and debug information.
 
-#### Log Files
+#### Console Logging
 
-- **Primary Log File**: `logs/debug-logs.txt` (logs directory)
-- **Log Server**: HTTP server on port 3002
-- **WebSocket Server**: Real-time multiplayer server on port 3001
+All logs are output directly to the browser console with proper formatting:
+- **Timestamp**: ISO format for precise timing
+- **Level**: DEBUG, INFO, WARN, ERROR
+- **Category**: SHIP_STATE, COLLISION, MULTIPLAYER, etc.
+- **Message**: Human-readable description
+- **Data**: Optional structured data in JSON format
 
 #### What Gets Logged
 
 - **Game Events**: Ship movements, asteroid collisions, scoring
 - **Multiplayer**: Player connections, disconnections, state updates
-- **Debug Info**: Viewport calculations, player rendering, mock player creation
+- **Debug Info**: Viewport calculations, player rendering, test player creation
 - **System**: Logger initialization, environment variables, error handling
 
 #### Log Levels
@@ -92,55 +90,34 @@ enum LogLevel {
 
 #### Environment Variables
 
-Create a `.env.local` file in your project root:
+Control logging verbosity with the `VITE_LOG_LEVEL` environment variable:
 
 ```bash
-# Enable debug mode
-VITE_DEBUG=true
-
-# Enable multiplayer debug info
-VITE_MULTIPLAYER_DEBUG=true
+# .env file
+VITE_LOG_LEVEL=debug    # Show all logs (default)
+VITE_LOG_LEVEL=info     # Show info, warn, error only
+VITE_LOG_LEVEL=warn     # Show warn and error only
+VITE_LOG_LEVEL=error    # Show errors only
 ```
 
-#### Log Server Endpoints
+#### Browser Console Access
 
-```bash
-# Write a log entry
-POST http://localhost:3002/log
-{
-  "level": "INFO",
-  "category": "MULTIPLAYER",
-  "message": "Player connected",
-  "data": { "playerId": "123", "name": "Player1" }
-}
-
-# View all logs
-GET http://localhost:3002/logs
-
-# Clear all logs
-DELETE http://localhost:3002/logs
-```
-
-#### Browser Console Commands
-
-When the game is running, these commands are available in the browser console:
-
+The logger is available globally in the browser console:
 ```javascript
-// Download all logs as a file
-logger.downloadLogs();
+// View all logs
+logger.getLogs()
 
-// View recent logs
-logger.getRecentLogs(50);
+// Download logs as file
+downloadLogs()
 
-// View all stored logs
-logger.getAllLogs();
+// Clear log buffer
+clearLogs()
 
-// Clear all logs
-logger.clearLogs();
-
-// Set log level (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
-logger.setLogLevel(0);
+// Search logs
+searchLogs('ship')
 ```
+
+
 
 #### Multiplayer Testing Commands
 
@@ -163,6 +140,43 @@ multiplayer.makeInvincible();
 
 ---
 
+## Production Configuration
+
+### Environment Variables
+
+For production deployments, ensure these settings are configured:
+
+```bash
+# Production Settings (.env)
+VITE_LOG_LEVEL=info
+VITE_INVINCIBLE=false
+VITE_ENABLE_MOCK_PLAYERS=false  # CRITICAL: Must be false in production
+VITE_WEBSOCKET_ENABLED=true
+VITE_WEBSOCKET_URL=ws://your-production-server.com:3001
+VITE_DEBUG=false
+VITE_MULTIPLAYER_DEBUG=false
+```
+
+### Test Players Security
+
+**Test players are development/testing only and should NEVER exist in production:**
+
+- Test players are only created when `VITE_ENABLE_MOCK_PLAYERS=true`
+- This environment variable defaults to `false` if not set
+- Test players are completely disabled in production builds
+- All test player creation is gated behind environment checks
+
+### Development vs Production
+
+| Feature | Development | Production |
+|---------|-------------|------------|
+| Test Players | `VITE_ENABLE_MOCK_PLAYERS=true` | `VITE_ENABLE_MOCK_PLAYERS=false` |
+| Debug Mode | `VITE_DEBUG=true` | `VITE_DEBUG=false` |
+| Log Level | `VITE_LOG_LEVEL=debug` | `VITE_LOG_LEVEL=info` |
+| Invincibility | `VITE_INVINCIBLE=true` | `VITE_INVINCIBLE=false` |
+
+---
+
 ## Features
 
 #### Functional
@@ -174,7 +188,7 @@ multiplayer.makeInvincible();
 - Global high scoreboard so you can compete with anyone in the world!
 - **Multiplayer support** with real-time player synchronization
 - **Local WebSocket server** for development and testing
-- **Mock player system** for testing multiplayer functionality
+- **Test player system** for testing multiplayer functionality
 
 #### Controls
 
@@ -188,7 +202,7 @@ multiplayer.makeInvincible();
 - Asteroid collisions detection, so you die when you're supposed to
 - Static code analysis using CodeQL so the code is less likely to have security vulnerabilities
 - NPM Dependency checking via Dependabot so you don't have to think about it
-- 100% linted with Eslint + additional rules for a more maintainable and consistent codebase
+- 100% linted with Biome for a more maintainable and consistent codebase
 - TypeScript under 'strict' mode with no errors, so you know we're following TS best practices
 - JS bundling with Vite for a super fast front-end
 - Serverless functions for API calls, so you don't have to worry too much about handling the backend
@@ -212,15 +226,15 @@ npm run coverage
 npm run test
 ```
 
-### Linting (with ESlint)
+### Linting (with Biome)
 
 ```shell
 npm run lint
 ```
 
-- ESLint is now configured using the new `eslint.config.js` flat config format (required for ESLint v9+).
-- The old `.eslintrc.cjs` and `.eslintignore` files have been removed; ignores are now set in `eslint.config.js`.
-- To update rules or ignores, edit `eslint.config.js`.
+- Biome is now configured using `biome.jsonc` for fast, reliable linting and formatting.
+- The old ESLint configuration has been removed in favor of Biome's unified approach.
+- To update rules or configuration, edit `biome.jsonc`.
 
 ---
 

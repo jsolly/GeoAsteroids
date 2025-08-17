@@ -1,4 +1,19 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env bash
+set -e
 
+error_handler() {
+  printf '\n\033[0;31m✗ Commit aborted: One or more checks failed.\033[0m\n'
+  printf 'Check the output above for details. Fix the issues, then try committing again.\n'
+}
+trap error_handler ERR
+
+echo "Ensuring staged files are linted/formatted..."
 npx lint-staged
+
+echo "Running TypeScript type check..."
+npm run check:ts
+
+echo "Running unit tests..."
+npm run test
+
+exit 0
