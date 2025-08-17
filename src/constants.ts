@@ -40,6 +40,11 @@ export const FRICTION = 0.6; // Friction coefficient from 0 (none) to 1 (a lot)
 export const TURN_SPEED = 450; // turn speed in degrees per second
 export const START_LEVEL = 1;
 export const START_LIVES = 3;
+export const SHIP_MAX_HEALTH = 100; // Maximum health points for ship
+export const SHIP_ASTEROID_DAMAGE = 25; // Damage from asteroid collision
+export const SHIP_BOT_DAMAGE = 15; // Damage from bot collision
+export const SHIP_HEALTH_REGEN_RATE = 1; // Health regeneration per second when not taking damage
+export const SHIP_HEALTH_REGEN_DELAY = 5; // Seconds to wait before health regeneration starts
 export const SHIP_THRUST = 5; // Thrust in pixels per second per second (Acceleration)
 export const SHIP_SIZE = 30; // ship height in pixels
 export const SHIP_EXPLODE_DUR = 0.3; // Ship explode time in seconds
@@ -73,6 +78,10 @@ export const DEBUG =
 export const SHOW_COLLISION_CIRCLES = false; // Set to false to hide collision circles while keeping debug mode
 export const MULTIPLAYER_DEBUG =
   import.meta.env.VITE_MULTIPLAYER_DEBUG === 'true' || DEBUG; // Show multiplayer debug info
+export const MULTIPLAYER_ENABLED =
+  import.meta.env.VITE_MULTIPLAYER_ENABLED !== 'false'; // Enable multiplayer by default, can be disabled with VITE_MULTIPLAYER_ENABLED=false
+export const WEBSOCKET_ENABLED =
+  import.meta.env.VITE_WEBSOCKET_ENABLED !== 'false'; // Enable WebSocket by default, can be disabled with VITE_WEBSOCKET_ENABLED=false
 export const SAVE_KEY_PERSONAL_BEST = 'personal_best'; // localstorage of the user's personal best score.
 export const NEXT_LEVEL_POINTS = 1000;
 
@@ -199,3 +208,11 @@ export function setDifficulty(newDifficulty: Difficulty): void {
 export function getRoidNum(): number {
   return ROID_NUM_BY_DIFFICULTY[difficulty];
 }
+
+// Bot health system constants (same as player ship)
+export const BOT_MAX_HEALTH = 100; // Maximum health points for bots
+export const BOT_ASTEROID_DAMAGE = 25; // Damage from asteroid collision
+export const BOT_LASER_DAMAGE = 20; // Damage from player laser hits
+export const BOT_BOT_DAMAGE = 15; // Damage from other bot collisions
+export const BOT_HEALTH_REGEN_RATE = 1; // Health regeneration per second when not taking damage
+export const BOT_HEALTH_REGEN_DELAY = 5; // Seconds to wait before health regeneration starts

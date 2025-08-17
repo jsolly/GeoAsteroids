@@ -1,7 +1,16 @@
 import { IBotPlayer, IBotShoot, IBotBullet } from './types/multiplayer.js';
 import { Vector } from './vector.js';
 import { v4 as uuidv4 } from 'uuid';
-import { SHIP_THRUST, FRICTION, FPS } from './constants.js';
+import {
+  SHIP_THRUST,
+  FRICTION,
+  FPS,
+  SHIP_INV_DUR,
+  SHIP_INV_BLINK_DUR,
+  BOT_MAX_HEALTH,
+  BOT_HEALTH_REGEN_RATE,
+  BOT_HEALTH_REGEN_DELAY,
+} from './constants.js';
 
 // Enhanced bot movement with steering behaviors
 interface BotSteering {
@@ -113,6 +122,14 @@ export class BotManager {
         respawnTimer: undefined as number | undefined, // Initialize respawn timer
         lastPosition: position, // Initialize last position for smoothing
         lastRotation: 0, // Initialize last rotation to match facing angle for smoothing
+        blinkOn: true, // Initialize blinking state for invincibility
+        blinkCount: 0, // Initialize blink count for invincibility
+        blinkTime: 0, // Initialize blink timer for invincibility
+        // Health system properties (same as player ship)
+        health: BOT_MAX_HEALTH,
+        maxHealth: BOT_MAX_HEALTH,
+        lastDamageTime: 0,
+        healthRegenTimer: 0,
       };
 
       // Initialize steering behavior for this bot
@@ -987,6 +1004,14 @@ export class BotManager {
     bot.lastShotTime = 0; // Reset last shot time
     bot.a = 0; // Reset rotation to face right (consistent convention)
     bot.velocity = new Vector(0, 0);
+    bot.blinkOn = true;
+    bot.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+    bot.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+
+    // Reset health to full (same as player ship)
+    bot.health = BOT_MAX_HEALTH;
+    bot.lastDamageTime = 0;
+    bot.healthRegenTimer = 0;
 
     // Reset steering behavior
     const steering = this.botSteering.get(botId);
@@ -1023,6 +1048,117 @@ export class BotManager {
   }
 
   /**
+   * Bot takes damage (same as player ship)
+   */
+  public botTakeDamage(bot: IBotPlayer, amount: number): void {
+    if (bot.dead || bot.exploding) {
+      return;
+    }
+
+    bot.health -= amount;
+    bot.lastDamageTime = FPS;
+    bot.healthRegenTimer = Math.ceil(BOT_HEALTH_REGEN_DELAY * FPS);
+
+    console.info('BOT_DAMAGE', 'Bot took damage!', {
+      botId: bot.id,
+      botName: bot.name,
+      botType: bot.botType,
+      damage: amount,
+      remainingHealth: bot.health,
+      lives: bot.lives,
+      position: { x: bot.position.x, y: bot.position.y },
+    });
+
+    if (bot.health <= 0) {
+      bot.health = 0;
+
+      // Bot lost all health, lose a life
+      bot.lives--;
+
+      if (bot.lives <= 0) {
+        // Bot is dead, mark as dead and explode
+        bot.dead = true;
+        bot.exploding = true;
+        bot.explodeTime = 60; // 1 second explosion duration
+
+        console.info('BOT_DEATH_FINAL', 'Bot died - no lives remaining', {
+          botId: bot.id,
+          botName: bot.name,
+          botType: bot.botType,
+        });
+      } else {
+        // Bot still has lives, start explosion and respawn sequence
+        bot.exploding = true;
+        bot.explodeTime = 30; // 0.5 second explosion duration
+
+        console.info('BOT_LIFE_LOST', 'Bot lost a life!', {
+          botId: bot.id,
+          botName: bot.name,
+          botType: bot.botType,
+          remainingLives: bot.lives,
+        });
+
+        // Start respawn timer
+        bot.respawnTimer = 300; // 5 seconds at 60 FPS
+        bot.respawnPosition = new Vector(bot.position.x, bot.position.y);
+      }
+    }
+  }
+
+  /**
+   * Update bot health regeneration
+   */
+  private updateBotHealth(bot: IBotPlayer): void {
+    if (bot.dead || bot.exploding) {
+      return;
+    }
+
+    // Update health regeneration timer
+    if (bot.lastDamageTime > 0) {
+      bot.lastDamageTime--;
+    }
+
+    // Start health regeneration after delay
+    if (bot.lastDamageTime <= 0 && bot.health < bot.maxHealth) {
+      if (bot.healthRegenTimer <= 0) {
+        // Heal the bot
+        const oldHealth = bot.health;
+        bot.health = Math.min(
+          bot.health + BOT_HEALTH_REGEN_RATE / FPS,
+          bot.maxHealth,
+        );
+
+        if (bot.health > oldHealth) {
+          console.info('BOT_HEAL', 'Bot healed!', {
+            botId: bot.id,
+            botName: bot.name,
+            healAmount: bot.health - oldHealth,
+            newHealth: bot.health,
+            maxHealth: bot.maxHealth,
+          });
+        }
+      } else {
+        bot.healthRegenTimer--;
+      }
+    }
+  }
+
+  /**
+   * Update bot invincibility and blinking effects
+   */
+  private updateBotInvincibility(bot: IBotPlayer): void {
+    if (bot.blinkCount > 0) {
+      // Bot is invincible, update blinking
+      bot.blinkTime--;
+      if (bot.blinkTime <= 0) {
+        bot.blinkCount--;
+        bot.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+        bot.blinkOn = !bot.blinkOn; // Toggle blinking state
+      }
+    }
+  }
+
+  /**
    * Update all bot systems at the same framerate as the main game loop
    * This ensures bots move smoothly without framerate mismatches
    */
@@ -1040,6 +1176,14 @@ export class BotManager {
 
     // Update bot bullets
     this.updateBotBullets();
+
+    // Update bot invincibility and blinking effects
+    for (const bot of this.bots.values()) {
+      if (!bot.dead && !bot.exploding) {
+        this.updateBotInvincibility(bot);
+        this.updateBotHealth(bot); // Update health regeneration
+      }
+    }
 
     // Log framerate synchronization and bot status (occasionally)
     if (Math.random() < 0.01) {

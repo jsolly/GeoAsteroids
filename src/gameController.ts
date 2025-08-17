@@ -9,6 +9,7 @@ import { toggleScreen } from './mainMenu';
 import { keyDown, keyUp } from './keybindings';
 import { EMP_PULSE_RADIUS } from './constants.js';
 import { Vector } from './vector.js';
+import { WEBSOCKET_ENABLED } from './constants.js';
 
 function initializeListeners(isGameRunning: () => boolean): void {
   document.addEventListener('keydown', (ev) => {
@@ -110,7 +111,7 @@ class GameController implements IGameController {
     this.resetButtonText();
 
     // Connect to multiplayer if enabled
-    if (this.gameState.isMultiplayerEnabled()) {
+    if (this.gameState.isMultiplayerEnabled() && WEBSOCKET_ENABLED) {
       this.multiplayerManager.connect();
 
       // Adjust asteroid count for multiplayer after a short delay
@@ -118,6 +119,11 @@ class GameController implements IGameController {
       setTimeout(() => {
         this.currRoidBelt.adjustForMultiplayer();
       }, 100);
+    } else if (this.gameState.isMultiplayerEnabled() && !WEBSOCKET_ENABLED) {
+      console.info(
+        'GAME_CONTROLLER',
+        'Multiplayer enabled but WebSocket connections disabled by VITE_WEBSOCKET_ENABLED=false',
+      );
     }
 
     window.dispatchEvent(new CustomEvent('gameStart'));
@@ -203,15 +209,24 @@ class GameController implements IGameController {
   enableMultiplayer(): void {
     this.gameState.setMultiplayerEnabled(true);
 
-    // Adjust asteroids for multiplayer
-    setTimeout(() => {
-      this.currRoidBelt.adjustForMultiplayer();
-    }, 100);
-
-    // Automatically enable bots for multiplayer mode
+    // Always enable bots for multiplayer mode, regardless of websocket status
+    // Bots work independently of websocket connections
     setTimeout(() => {
       this.enableBots(3); // Add 3 bots by default
     }, 2000); // Wait 2 seconds after connection to ensure everything is set up
+
+    // Only connect to WebSocket if enabled
+    if (WEBSOCKET_ENABLED) {
+      // Adjust asteroids for multiplayer
+      setTimeout(() => {
+        this.currRoidBelt.adjustForMultiplayer();
+      }, 100);
+    } else {
+      console.info(
+        'GAME_CONTROLLER',
+        'Multiplayer enabled but WebSocket connections disabled by VITE_WEBSOCKET_ENABLED=false',
+      );
+    }
   }
 
   disableMultiplayer(): void {
@@ -358,32 +373,21 @@ class GameController implements IGameController {
         return; // No damage taken
       }
 
-      console.info('BOT_HIT', 'Bot laser hit player!', {
+      console.info('BOT_HIT', 'Bot laser hit player - using damage system!', {
         botId: botShoot.botId,
         playerLives: this.currShip.lives,
+        shipHealth: this.currShip.health,
         shipPos: { x: this.currShip.position.x, y: this.currShip.position.y },
         laserStart: botShoot.laserStart,
         laserDirection: botShoot.laserDirection,
+        damage: 15,
       });
 
-      // Damage the player
-      this.currShip.lives--;
-      console.info('BOT_DAMAGE', 'Player life lost, remaining lives', {
-        remainingLives: this.currShip.lives,
-      });
+      // Damage the player using the damage system instead of bypassing it
+      this.currShip.takeDamage(15); // Bot laser damage
 
-      if (this.currShip.lives <= 0) {
-        console.info('BOT_GAME_OVER', 'Player out of lives - game over');
-        this.currShip.die();
-        this.gameOver();
-      } else {
-        console.info(
-          'BOT_EXPLODE',
-          'Player hit but still has lives - exploding',
-        );
-        // Make ship invincible temporarily
-        this.currShip.explode();
-      }
+      // The takeDamage method will handle life loss and respawn
+      // We don't need to manually manage lives or call die() here
     } else {
       console.info('BOT_MISS', 'Bot laser missed player');
     }

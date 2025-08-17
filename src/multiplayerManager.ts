@@ -11,6 +11,7 @@ import {
   IBotBullet,
   IGameState,
 } from './types/multiplayer.js';
+import { WEBSOCKET_ENABLED } from './constants.js';
 import { Vector } from './vector.js';
 import { BotManager } from './botManager.js';
 
@@ -46,6 +47,15 @@ export class MultiplayerManager {
 
   public connect(): void {
     try {
+      // Check if WebSocket connections are enabled
+      if (!WEBSOCKET_ENABLED) {
+        console.info(
+          'MULTIPLAYER',
+          'WebSocket connections disabled by environment variable VITE_WEBSOCKET_ENABLED=false',
+        );
+        return;
+      }
+
       // Use WebSocket for Vercel deployment, fallback to Socket.io for local development
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host =

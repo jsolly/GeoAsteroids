@@ -177,6 +177,9 @@ function drawShipRelative(ship: Ship): void {
   ctx.beginPath();
   ctx.arc(triangleCenterX, triangleCenterY, 1.5, 0, Math.PI * 2, false);
   ctx.fill();
+
+  // Draw health bar above ship
+  drawHealthBar(ship);
 }
 
 /**
@@ -224,17 +227,17 @@ function drawLasers(ship: Ship): void {
     if (laser.explodeTime == 0) {
       ctx.fillStyle = 'salmon';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 15, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 3, 0, Math.PI * 2, false);
       ctx.fill();
     } else {
       // draw explosion
       ctx.fillStyle = 'orangered';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, ship.r * 0.75, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 2, 0, Math.PI * 2, false);
       ctx.fill();
       ctx.fillStyle = 'salmon';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, ship.r * 0.5, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 3, 0, Math.PI * 2, false);
       ctx.fill();
     }
   }
@@ -303,3 +306,59 @@ function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): void {
 }
 
 export { drawEmpPulse };
+
+/**
+ * Draw a health bar above the ship
+ * @param ship - The current Ship
+ */
+function drawHealthBar(ship: Ship): void {
+  const ctx = getCTX();
+  if (!ctx) return;
+
+  // Convert ship world position to screen position
+  const screenPos = worldToScreen(ship.position, ship.position);
+
+  // Health bar dimensions
+  const barWidth = ship.r * 2.5;
+  const barHeight = 6;
+  const barY = screenPos.y - ship.r - 15; // Position above ship
+
+  // Background (empty health bar)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(screenPos.x - barWidth / 2, barY, barWidth, barHeight);
+
+  // Health percentage
+  const healthPercent = ship.health / ship.maxHealth;
+  const currentWidth = barWidth * healthPercent;
+
+  // Health bar color based on health level
+  let healthColor: string;
+  if (healthPercent > 0.6) {
+    healthColor = '#00ff00'; // Green for high health
+  } else if (healthPercent > 0.3) {
+    healthColor = '#ffff00'; // Yellow for medium health
+  } else {
+    healthColor = '#ff0000'; // Red for low health
+  }
+
+  // Current health
+  ctx.fillStyle = healthColor;
+  ctx.fillRect(screenPos.x - barWidth / 2, barY, currentWidth, barHeight);
+
+  // Border
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(screenPos.x - barWidth / 2, barY, barWidth, barHeight);
+
+  // Health text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(
+    `${Math.ceil(ship.health)}/${ship.maxHealth}`,
+    screenPos.x,
+    barY - 12,
+  );
+}
+
+export { drawHealthBar };

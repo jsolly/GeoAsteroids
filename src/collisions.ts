@@ -2,6 +2,15 @@ import { DEBUG } from './constants.js';
 import { IBotPlayer, IBotBullet } from './types/multiplayer.js';
 import { RoidBelt, Roid } from './asteroids.js';
 import { Ship, Laser } from './ship.js';
+import {
+  SHIP_ASTEROID_DAMAGE,
+  SHIP_BOT_DAMAGE,
+  BOT_LASER_DAMAGE,
+  FPS,
+  BOT_HEALTH_REGEN_DELAY,
+  BOT_ASTEROID_DAMAGE,
+} from './constants.js';
+import { Vector } from './vector.js';
 
 // Test DEBUG constant at import time
 // console.log('🔍 COLLISIONS: DEBUG constant imported as:', DEBUG, 'Type:', typeof DEBUG);
@@ -85,6 +94,11 @@ function detectLaserHits(
           continue;
         }
 
+        // Skip invincible bots (blinking)
+        if (bot.blinkCount > 0) {
+          continue;
+        }
+
         if (isLaserHitBot(laser, bot)) {
           console.info('BOT_COLLISION', 'Bot hit by laser!', {
             botId,
@@ -93,12 +107,37 @@ function detectLaserHits(
             botPos: { x: bot.position.x, y: bot.position.y },
             distance: bot.position.distance(laser.position),
             botRadius: bot.r,
+            botHealth: bot.health,
+            damage: BOT_LASER_DAMAGE,
           });
 
-          // Bot hit by laser - mark as dead and explode
-          bot.dead = true;
-          bot.exploding = true;
-          bot.explodeTime = 60; // 1 second explosion duration
+          // Deal damage to bot instead of instant death
+          // The bot will handle its own damage and life loss
+          bot.health -= BOT_LASER_DAMAGE;
+          bot.lastDamageTime = FPS;
+          bot.healthRegenTimer = Math.ceil(BOT_HEALTH_REGEN_DELAY * FPS);
+
+          // Check if bot should lose a life
+          if (bot.health <= 0) {
+            bot.health = 0;
+            bot.lives--;
+
+            if (bot.lives <= 0) {
+              // Bot is dead, mark as dead and explode
+              bot.dead = true;
+              bot.exploding = true;
+              bot.explodeTime = 60; // 1 second explosion duration
+            } else {
+              // Bot still has lives, start explosion and respawn sequence
+              bot.exploding = true;
+              bot.explodeTime = 30; // 0.5 second explosion duration
+
+              // Start respawn timer
+              bot.respawnTimer = 300; // 5 seconds at 60 FPS
+              bot.respawnPosition = new Vector(bot.position.x, bot.position.y);
+            }
+          }
+
           currShip.updateLaserExplodeTime(j);
 
           // Add points for destroying a bot
@@ -160,6 +199,11 @@ function detectLaserHits(
           continue;
         }
 
+        // Skip invincible bots (blinking)
+        if (targetBot.blinkCount > 0) {
+          continue;
+        }
+
         if (isBotBulletHitBot(bullet, targetBot)) {
           console.info('BOT_VS_BOT_COLLISION', 'Bot hit by another bot!', {
             bulletId,
@@ -214,16 +258,8 @@ function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
   // console.info('COLLISION_DEBUG', 'DEBUG constant value', { value: DEBUG, type: typeof DEBUG });
   // console.info('COLLISION_DEBUG', 'Development mode check', { isDevelopment });
 
-  if (DEBUG || isDevelopment) {
-    // console.info('COLLISION_DEBUG', 'DEBUG/DEV MODE: Ship is invincible to asteroid collisions');
-    return 0; // Ship is invincible in debug mode
-  } else {
-    // console.info('COLLISION_DEBUG', 'Asteroid collision detection is ENABLED!', {
-    //   shipPos: { x: ship.position.x, y: ship.position.y },
-    //   shipRadius: ship.r,
-    //   asteroidCount: roids.length
-    // });
-  }
+  // In debug mode, collisions are detected and damage is dealt, but ship doesn't die
+  const isDebugMode = DEBUG || isDevelopment;
 
   // check for asteroid collisions (when not exploding)
   if (!currShip.exploding) {
@@ -234,23 +270,29 @@ function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
           currShip.position.distance(currRoidBelt.roids[i].position) <
           currShip.r + currRoidBelt.roids[i].r
         ) {
-          // console.log('💥 COLLISION DETECTED: Ship hit asteroid!', {
-          //   shipPos: { x: currShip.position.x, y: currShip.position.y },
-          //   asteroidPos: {
-          //     x: currRoidBelt.roids[i].position.x,
-          //     y: currRoidBelt.roids[i].position.y,
-          //   },
-          //   shipRadius: currShip.r,
-          //   asteroidRadius: currRoidBelt.roids[i].r,
-          //   distance: currShip.position.distance(
-          //     currRoidBelt.roids[i].position,
-          //   ),
-          //   threshold: currShip.r + currRoidBelt.roids[i].r,
-          // };
+          console.info('💥 ASTEROID_COLLISION', 'Ship hit asteroid!', {
+            shipPos: { x: currShip.position.x, y: currShip.position.y },
+            asteroidPos: {
+              x: currRoidBelt.roids[i].position.x,
+              y: currRoidBelt.roids[i].position.y,
+            },
+            shipRadius: currShip.r,
+            asteroidRadius: currRoidBelt.roids[i].r,
+            distance: currShip.position.distance(
+              currRoidBelt.roids[i].position,
+            ),
+            threshold: currShip.r + currRoidBelt.roids[i].r,
+            shipHealth: currShip.health,
+            damage: SHIP_ASTEROID_DAMAGE,
+            debugMode: isDebugMode,
+          });
 
-          // Decrement lives when ship hits asteroid
-          currShip.lives--;
-          currShip.explode();
+          // Deal damage instead of instant death
+          currShip.takeDamage(SHIP_ASTEROID_DAMAGE);
+
+          // Never explode the ship here - let takeDamage handle life loss and respawn
+          // The ship will only explode when it's actually dead (no lives remaining)
+
           Roid.fxHit.play();
           score = currRoidBelt.destroyRoid(i);
         }
@@ -294,6 +336,11 @@ function detectBotAsteroidCollisions(
       const collisionThreshold = bot.r + roids[i].r;
 
       if (distance < collisionThreshold) {
+        // Skip invincible bots (blinking)
+        if (bot.blinkCount > 0) {
+          continue;
+        }
+
         console.info('BOT_ASTEROID_COLLISION', 'Bot hit asteroid!', {
           botId,
           botType: bot.botType,
@@ -303,12 +350,35 @@ function detectBotAsteroidCollisions(
           collisionThreshold,
           botRadius: bot.r,
           asteroidRadius: roids[i].r,
+          botHealth: bot.health,
+          damage: BOT_ASTEROID_DAMAGE,
         });
 
-        // Bot hit asteroid - mark as dead and explode
-        bot.dead = true;
-        bot.exploding = true;
-        bot.explodeTime = 60; // 1 second explosion duration
+        // Deal damage to bot instead of instant death
+        bot.health -= BOT_ASTEROID_DAMAGE;
+        bot.lastDamageTime = FPS;
+        bot.healthRegenTimer = Math.ceil(BOT_HEALTH_REGEN_DELAY * FPS);
+
+        // Check if bot should lose a life
+        if (bot.health <= 0) {
+          bot.health = 0;
+          bot.lives--;
+
+          if (bot.lives <= 0) {
+            // Bot is dead, mark as dead and explode
+            bot.dead = true;
+            bot.exploding = true;
+            bot.explodeTime = 60; // 1 second explosion duration
+          } else {
+            // Bot still has lives, start explosion and respawn sequence
+            bot.exploding = true;
+            bot.explodeTime = 30; // 0.5 second explosion duration
+
+            // Start respawn timer
+            bot.respawnTimer = 300; // 5 seconds at 60 FPS
+            bot.respawnPosition = new Vector(bot.position.x, bot.position.y);
+          }
+        }
 
         // Play hit sound
         Roid.fxHit.play();
@@ -447,6 +517,11 @@ function detectShipToShipCollisions(
     const collisionThreshold = currShip.r + bot.r;
 
     if (distance < collisionThreshold) {
+      // Skip invincible bots (blinking)
+      if (bot.blinkCount > 0) {
+        continue;
+      }
+
       console.info('SHIP_VS_SHIP_COLLISION', 'Ship collision detected!', {
         shipPos: { x: currShip.position.x, y: currShip.position.y },
         botPos: { x: bot.position.x, y: bot.position.y },
@@ -519,8 +594,10 @@ function detectShipToShipCollisions(
         bot.explodeTime = 60; // 1 second explosion duration
 
         // Destroy the player ship
-        currShip.lives--;
-        currShip.explode();
+        currShip.takeDamage(SHIP_BOT_DAMAGE);
+
+        // Never explode the ship here - let takeDamage handle life loss and respawn
+        // The ship will only explode when it's actually dead (no lives remaining)
 
         // Play hit sound
         Roid.fxHit.play();
@@ -551,9 +628,88 @@ function detectShipToShipCollisions(
   return score;
 }
 
+function detectBotShipCollisions(
+  currShip: Ship,
+  bots: Map<string, IBotPlayer>,
+): void {
+  if (!bots || bots.size === 0) return;
+  if (currShip.dead || currShip.exploding) return;
+
+  // Check each bot for ship collisions
+  for (const [botId, bot] of bots.entries()) {
+    // Skip dead or exploding bots
+    if (bot.dead || bot.exploding) {
+      continue;
+    }
+
+    // Check collision with ship
+    const distance = bot.position.distance(currShip.position);
+    const collisionThreshold = bot.r + currShip.r;
+
+    if (distance < collisionThreshold) {
+      // Skip invincible bots (blinking)
+      if (bot.blinkCount > 0) {
+        continue;
+      }
+
+      console.info('🤖 BOT_SHIP_COLLISION', 'Ship hit by bot!', {
+        botId,
+        botType: bot.botType,
+        botPos: { x: bot.position.x, y: bot.position.y },
+        shipPos: { x: currShip.position.x, y: currShip.position.y },
+        distance,
+        collisionThreshold,
+        botRadius: bot.r,
+        shipRadius: currShip.r,
+        shipHealth: currShip.health,
+        damage: SHIP_BOT_DAMAGE,
+      });
+
+      // Deal damage to ship
+      currShip.takeDamage(SHIP_BOT_DAMAGE);
+
+      // Never explode the ship here - let takeDamage handle life loss and respawn
+      // The ship will only explode when it's actually dead (no lives remaining)
+
+      // Mark bot as dead and explode
+      bot.dead = true;
+      bot.exploding = true;
+      bot.explodeTime = 60; // 1 second explosion duration
+
+      // Play hit sound
+      Roid.fxHit.play();
+
+      // Dispatch event to notify bot destruction
+      window.dispatchEvent(
+        new CustomEvent('botDestroyed', {
+          detail: {
+            botId,
+            botType: bot.botType,
+            killedBy: 'ship_collision',
+          },
+        }),
+      );
+
+      console.info(
+        'BOT_SHIP_COLLISION_SUCCESS',
+        'Bot destroyed by ship collision',
+        {
+          botId,
+          botType: bot.botType,
+          shipHealth: currShip.health,
+        },
+      );
+
+      // Only handle one collision per frame to avoid multiple simultaneous destructions
+      break;
+    }
+  }
+}
+
 export {
   detectLaserHits,
   detectRoidHits,
   detectShipToShipCollisions,
   detectBotAsteroidCollisions,
+  detectBotShipCollisions,
 };

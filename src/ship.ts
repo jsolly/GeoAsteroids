@@ -13,6 +13,9 @@ import {
   LASER_MAX,
   FRICTION,
   EMP_PULSE_DURATION,
+  SHIP_MAX_HEALTH,
+  SHIP_HEALTH_REGEN_RATE,
+  SHIP_HEALTH_REGEN_DELAY,
 } from './constants.js';
 import { Sound } from './soundsMusic.js';
 import { drawThruster } from './shipCanv.js';
@@ -27,6 +30,8 @@ interface ILaser {
 
 interface IShip {
   lives: number;
+  health: number;
+  maxHealth: number;
   blinkOn: boolean;
   position: Vector;
   velocity: Vector;
@@ -43,6 +48,11 @@ interface IShip {
   thrusting: boolean;
   empPulseActive: boolean;
   empPulseTime: number;
+  lastDamageTime: number;
+  healthRegenTimer: number;
+  takeDamage(amount: number): void;
+  heal(amount: number): void;
+  updateHealth(): void;
   die(): void;
   setBlinkOn(): void;
   explode(): void;
@@ -87,6 +97,10 @@ class Ship implements IShip {
   thrusting = false;
   empPulseActive = false;
   empPulseTime = 0;
+  health: number = SHIP_MAX_HEALTH;
+  maxHealth: number = SHIP_MAX_HEALTH;
+  lastDamageTime: number = 0;
+  healthRegenTimer: number = 0;
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
   /**
@@ -100,7 +114,13 @@ class Ship implements IShip {
   ) {
     // In debug mode, use normal lives but collisions are disabled
     // Note: We can't import logger here due to circular dependency, so we'll keep console.log for now
-    console.log('🚀 Ship created with', this.lives, 'lives');
+    console.log(
+      '🚀 Ship created with',
+      this.lives,
+      'lives and',
+      this.health,
+      'health',
+    );
   }
 
   die(): void {
@@ -113,20 +133,22 @@ class Ship implements IShip {
       stack: new Error().stack,
     });
 
-    // Safety check: don't mark as dead if we have lives and are in debug mode
-    const isDevelopment =
-      (import.meta.env?.DEV === true ||
-        import.meta.env?.MODE === 'development') &&
-      import.meta.env?.VITE_INVINCIBLE === 'true';
-    if (this.lives > 0 && isDevelopment) {
+    // Only mark as dead if no lives remaining
+    if (this.lives <= 0) {
+      this.dead = true;
       console.info(
-        'SHIP_SAFETY',
-        'DEBUG MODE: Preventing ship death - still has lives',
+        'SHIP_DEATH_FINAL',
+        'Ship marked as dead - no lives remaining',
       );
-      return;
+    } else {
+      console.info(
+        'SHIP_DEATH_PREVENTED',
+        'Ship death prevented - still has lives',
+        {
+          remainingLives: this.lives,
+        },
+      );
     }
-
-    this.dead = true;
   }
 
   /**
@@ -190,6 +212,20 @@ class Ship implements IShip {
     // }
 
     this.position = newPosition;
+
+    // Update health regeneration timer
+    if (this.lastDamageTime > 0) {
+      this.lastDamageTime--;
+    }
+
+    // Start health regeneration after delay
+    if (this.lastDamageTime <= 0 && this.health < this.maxHealth) {
+      if (this.healthRegenTimer <= 0) {
+        this.heal(SHIP_HEALTH_REGEN_RATE / FPS);
+      } else {
+        this.healthRegenTimer--;
+      }
+    }
   }
 
   // if ship can shoot and there are less than LASER_MAX on the canvas
@@ -349,6 +385,116 @@ class Ship implements IShip {
       if (this.empPulseTime <= 0) {
         this.empPulseActive = false;
         this.empPulseTime = 0;
+      }
+    }
+  }
+
+  takeDamage(amount: number): void {
+    if (this.dead || this.exploding) {
+      return;
+    }
+
+    // Check if we're in debug mode
+    const isDebugMode =
+      (import.meta.env?.DEV === true ||
+        import.meta.env?.MODE === 'development') &&
+      import.meta.env?.VITE_INVINCIBLE === 'true';
+
+    this.health -= amount;
+    this.lastDamageTime = FPS;
+    this.healthRegenTimer = Math.ceil(SHIP_HEALTH_REGEN_DELAY * FPS);
+
+    console.info('SHIP_DAMAGE', 'Ship took damage!', {
+      damage: amount,
+      remainingHealth: this.health,
+      lives: this.lives,
+      debugMode: isDebugMode,
+      position: { x: this.position.x, y: this.position.y },
+    });
+
+    if (this.health <= 0) {
+      this.health = 0;
+
+      if (isDebugMode) {
+        // In debug mode, just reset health to full without losing lives
+        this.health = this.maxHealth;
+        this.lastDamageTime = 0;
+        this.healthRegenTimer = 0;
+
+        console.info(
+          'SHIP_DEBUG_MODE',
+          'Debug mode: Ship health reset to full',
+          {
+            health: this.health,
+            lives: this.lives,
+          },
+        );
+      } else {
+        // In normal mode, lose a life and reset health
+        this.lives--;
+        this.health = this.maxHealth;
+        this.lastDamageTime = 0;
+        this.healthRegenTimer = 0;
+
+        console.info('SHIP_LIFE_LOST', 'Ship lost a life!', {
+          remainingLives: this.lives,
+          healthReset: this.health,
+          position: { x: this.position.x, y: this.position.y },
+        });
+
+        // Only die and explode if no lives remaining
+        if (this.lives <= 0) {
+          this.die();
+          // Ship is now dead, so explode it
+          this.explode();
+        } else {
+          // Ship still has lives, dispatch event for respawn handling
+          window.dispatchEvent(
+            new CustomEvent('shipLifeLost', {
+              detail: {
+                remainingLives: this.lives,
+                position: { x: this.position.x, y: this.position.y },
+              },
+            }),
+          );
+        }
+      }
+    }
+  }
+
+  heal(amount: number): void {
+    if (this.dead || this.exploding) {
+      return;
+    }
+
+    const oldHealth = this.health;
+    this.health = Math.min(this.health + amount, this.maxHealth);
+
+    if (this.health > oldHealth) {
+      console.info('SHIP_HEAL', 'Ship healed!', {
+        healAmount: this.health - oldHealth,
+        newHealth: this.health,
+        maxHealth: this.maxHealth,
+      });
+    }
+  }
+
+  updateHealth(): void {
+    if (this.dead || this.exploding) {
+      return;
+    }
+
+    // Update health regeneration timer
+    if (this.lastDamageTime > 0) {
+      this.lastDamageTime--;
+    }
+
+    // Start health regeneration after delay
+    if (this.lastDamageTime <= 0 && this.health < this.maxHealth) {
+      if (this.healthRegenTimer <= 0) {
+        this.heal(SHIP_HEALTH_REGEN_RATE / FPS);
+      } else {
+        this.healthRegenTimer--;
       }
     }
   }

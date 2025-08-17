@@ -77,6 +77,15 @@ export interface IBotPlayer extends IPlayer {
   respawnPosition?: Vector; // Position where bot will respawn
   lastPosition?: Vector; // Previous position for smoothing
   lastRotation?: number; // Previous rotation for smoothing
+  // Invincibility properties (same as player ship)
+  blinkOn: boolean; // Whether bot is currently blinking (invulnerable)
+  blinkCount: number; // Number of blinks remaining for invincibility
+  blinkTime: number; // Time between blinks for invincibility effect
+  // Health system properties (same as player ship)
+  health: number; // Current health points
+  maxHealth: number; // Maximum health points
+  lastDamageTime: number; // Timer for health regeneration delay
+  healthRegenTimer: number; // Timer for health regeneration
 }
 
 export interface IBotShoot {

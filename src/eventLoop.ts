@@ -11,7 +11,8 @@ import {
   detectRoidHits,
   detectShipToShipCollisions,
   detectBotAsteroidCollisions,
-} from './collisions';
+  detectBotShipCollisions,
+} from './collisions.js';
 import { drawGameCanvas } from './canvas';
 import { drawShipRelative, drawShipExplosion, drawEmpPulse } from './shipCanv';
 import { GameController } from './gameController';
@@ -46,6 +47,14 @@ window.addEventListener('gameStart', () => {
   }
 
   window.requestAnimationFrame(gameLoop);
+});
+
+// Add event listener for ship life loss
+window.addEventListener('shipLifeLost', () => {
+  const ship = gameController.getCurrShip();
+  if (ship) {
+    handleShipLifeLoss(ship);
+  }
 });
 
 function updateGame(): void {
@@ -104,8 +113,8 @@ function updateGame(): void {
       //     name: bot.name,
       //     position: { x: bot.centroid.x, y: bot.centroid.y },
       //     behavior: bot.behaviorState
-      //   }))
-      // });
+      //     }))
+      //   });
     }
   }
 
@@ -241,6 +250,11 @@ function handleShipExplosion(ship: Ship): void {
       // Give ship temporary invincibility (blinking effect)
       ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
 
+      // Reset ship health to full
+      ship.health = ship.maxHealth;
+      ship.lastDamageTime = 0;
+      ship.healthRegenTimer = 0;
+
       // Reset ship position to center
       ship.position = new Vector(0, 0); // Use world origin instead of canvas center
       ship.velocity = new Vector(0, 0);
@@ -263,6 +277,38 @@ function handleShipExplosion(ship: Ship): void {
     //   ship.explodeTime,
     // );
   }
+}
+
+function handleShipLifeLoss(ship: Ship): void {
+  // Ship lost a life but still has lives remaining
+  // Give temporary invincibility and reset position
+  ship.dead = false;
+  ship.exploding = false;
+  ship.explodeTime = 0;
+
+  // Give ship temporary invincibility (blinking effect)
+  ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+
+  // Reset ship health to full
+  ship.health = ship.maxHealth;
+  ship.lastDamageTime = 0;
+  ship.healthRegenTimer = 0;
+
+  // Reset ship position to center
+  ship.position = new Vector(0, 0);
+  ship.velocity = new Vector(0, 0);
+  ship.a = (90 / 180) * Math.PI; // Reset to upward direction
+
+  console.info(
+    'SHIP_LIFE_LOST_HANDLED',
+    'Ship life lost, respawning with invincibility',
+    {
+      remainingLives: ship.lives,
+      health: ship.health,
+      blinkCount: ship.blinkCount,
+      position: { x: ship.position.x, y: ship.position.y },
+    },
+  );
 }
 
 function handleCollision(ship: Ship): void {
@@ -288,6 +334,9 @@ function handleCollision(ship: Ship): void {
 
       // Add bot-asteroid collision detection
       detectBotAsteroidCollisions(bots, currRoidBelt);
+
+      // Add bot-ship collision detection
+      detectBotShipCollisions(ship, bots);
     }
 
     gameController.updatePersonalBest();
