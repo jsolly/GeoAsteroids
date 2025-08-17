@@ -1,39 +1,48 @@
-import { CTX, CVS, DEBUG } from './constants';
+import { getCTX, SHOW_COLLISION_CIRCLES } from './constants';
 import { Ship } from './ship';
 import { Roid } from './asteroids';
+import { worldToScreen } from './utils';
 
 function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
+  const ctx = getCTX();
+  if (!ctx) return;
+
   for (const roid of roids) {
-    CTX.strokeStyle = 'slategrey';
-    CTX.lineWidth = 1.5;
-    // get asteroid properties
-    const x = CVS.width / 2 - ship.centroid.x + roid.centroid.x;
-    const y = CVS.height / 2 - ship.centroid.y + roid.centroid.y;
+    ctx.strokeStyle = 'slategrey';
+    ctx.lineWidth = 1.5;
+
+    // Convert asteroid world position to screen position using viewport transformation
+    const screenPos = worldToScreen(roid.position, ship.position);
+
     const r = roid.r;
     const a = roid.a;
     const vertices = roid.vertices;
     const offsets = roid.offsets;
+
     // draw a path
-    CTX.beginPath();
-    CTX.moveTo(
-      x + r * offsets[0] * Math.cos(a),
-      y + r * offsets[0] * Math.sin(a),
+    ctx.beginPath();
+    ctx.moveTo(
+      screenPos.x + r * offsets[0] * Math.cos(a),
+      screenPos.y + r * offsets[0] * Math.sin(a),
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
-      CTX.lineTo(
-        x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-        y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
+      ctx.lineTo(
+        screenPos.x +
+          r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
+        screenPos.y +
+          r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices),
       );
     }
-    CTX.closePath();
-    CTX.stroke();
+    ctx.closePath();
+    ctx.stroke();
+
     // show asteroid's collision circle
-    if (DEBUG) {
-      CTX.strokeStyle = 'lime';
-      CTX.beginPath();
-      CTX.arc(x, y, r, 0, Math.PI * 2, false);
-      CTX.stroke();
+    if (SHOW_COLLISION_CIRCLES) {
+      ctx.strokeStyle = 'lime';
+      ctx.beginPath();
+      ctx.arc(screenPos.x, screenPos.y, r, 0, Math.PI * 2, false);
+      ctx.stroke();
     }
   }
 }

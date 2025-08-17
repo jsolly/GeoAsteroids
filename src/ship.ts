@@ -2,7 +2,7 @@ import {
   FPS,
   LASER_EXPLODE_DUR,
   LASER_DIST,
-  CVS,
+  getCVS,
   SHIP_EXPLODE_DUR,
   SHIP_INV_DUR,
   SHIP_SIZE,
@@ -12,15 +12,16 @@ import {
   LASER_SPEED,
   LASER_MAX,
   FRICTION,
+  EMP_PULSE_DURATION,
 } from './constants.js';
 import { Sound } from './soundsMusic.js';
 import { drawThruster } from './shipCanv.js';
-import { Point } from './utils.js';
+import { logInfo } from './logger.js';
+import { Vector } from './vector.js';
 
 interface ILaser {
-  centroid: Point;
-  xv: number;
-  yv: number;
+  position: Vector;
+  velocity: Vector;
   distTraveled: number;
   explodeTime: number;
 }
@@ -28,10 +29,8 @@ interface ILaser {
 interface IShip {
   lives: number;
   blinkOn: boolean;
-  centroid: Point;
-  t: number;
-  xv: number;
-  yv: number;
+  position: Vector;
+  velocity: Vector;
   r: number;
   a: number;
   blinkCount: number;
@@ -43,6 +42,8 @@ interface IShip {
   explodeTime: number;
   rot: number;
   thrusting: boolean;
+  empPulseActive: boolean;
+  empPulseTime: number;
   die(): void;
   setBlinkOn(): void;
   explode(): void;
@@ -55,6 +56,8 @@ interface IShip {
   moveLasers(): void;
   updateLaserExplodeTime(i: number): void;
   generateLaser(): Laser;
+  empPulse(): void;
+  updateEmpPulse(): void;
 }
 
 class Laser implements ILaser {
@@ -62,20 +65,17 @@ class Laser implements ILaser {
   static fxHit: Sound = new Sound('sounds/hit.m4a', 5);
 
   constructor(
-    public centroid: Point,
-    public xv: number,
-    public yv: number,
+    public position: Vector,
+    public velocity: Vector,
     public distTraveled: number,
     public explodeTime: number,
   ) {}
 }
 
 class Ship implements IShip {
-  centroid = new Point(CVS.width / 2, CVS.height / 2);
-  t = 0;
-  xv = 0;
-  yv = 0;
-  readonly r: number = SHIP_SIZE / 2;
+  position = new Vector(0, 0); // Start at world origin
+  velocity = new Vector(0, 0);
+  r: number = SHIP_SIZE / 2;
   a: number = (90 / 180) * Math.PI; // convert to radians;
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   blinkTime: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
@@ -86,6 +86,8 @@ class Ship implements IShip {
   explodeTime = 0;
   rot = 0;
   thrusting = false;
+  empPulseActive = false;
+  empPulseTime = 0;
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
   /**
@@ -96,9 +98,33 @@ class Ship implements IShip {
   constructor(
     public lives: number = START_LIVES,
     public blinkOn: boolean = false,
-  ) {}
+  ) {
+    // In debug mode, use normal lives but collisions are disabled
+    // Note: We can't import logger here due to circular dependency, so we'll keep console.log for now
+    console.log('🚀 Ship created with', this.lives, 'lives');
+  }
 
   die(): void {
+    logInfo('SHIP_DEATH', 'Ship died!', {
+      lives: this.lives,
+      position: { x: this.position.x, y: this.position.y },
+      velocity: { x: this.velocity.x, y: this.velocity.y },
+      exploding: this.exploding,
+      blinkCount: this.blinkCount,
+      stack: new Error().stack,
+    });
+
+    // Safety check: don't mark as dead if we have lives and are in debug mode
+    const isDevelopment =
+      import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
+    if (this.lives > 0 && isDevelopment) {
+      logInfo(
+        'SHIP_SAFETY',
+        'DEBUG MODE: Preventing ship death - still has lives',
+      );
+      return;
+    }
+
     this.dead = true;
   }
 
@@ -112,6 +138,12 @@ class Ship implements IShip {
    * Set ship explode time. It will explode for SHIP_EXPLODE_DUR
    */
   explode(): void {
+    console.log('💥 Ship exploding!', {
+      lives: this.lives,
+      position: { x: this.position.x, y: this.position.y },
+      explodeTime: this.explodeTime,
+      blinkCount: this.blinkCount,
+    });
     this.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
     this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
     Ship.fxExplode.play();
@@ -124,14 +156,13 @@ class Ship implements IShip {
   }
   applyVelocity(): void {
     if (this.thrusting && !this.dead) {
-      this.xv -= (SHIP_THRUST * Math.cos(this.a)) / FPS;
-      this.yv -= (SHIP_THRUST * Math.sin(this.a)) / FPS;
+      const thrust = Vector.fromAngle(this.a).multiply(SHIP_THRUST / FPS);
+      this.velocity = this.velocity.add(thrust);
 
       drawThruster(this);
     } else {
       // apply friction when ship not thrusting
-      this.xv -= (FRICTION * this.xv) / FPS;
-      this.yv -= (FRICTION * this.yv) / FPS;
+      this.velocity = this.velocity.multiply(1 - FRICTION / FPS);
     }
   }
 
@@ -143,10 +174,21 @@ class Ship implements IShip {
     this.applyVelocity();
 
     // move the ship
-    this.centroid = new Point(
-      this.centroid.x + this.xv,
-      this.centroid.y + this.yv,
-    );
+    const newPosition = this.position.add(this.velocity);
+
+    // Debug logging for movement
+    if (this.velocity.magnitude() > 0.1) {
+      console.log('🚀 Ship moving:', {
+        oldPos: { x: this.position.x, y: this.position.y },
+        newPos: { x: newPosition.x, y: newPosition.y },
+        velocity: { x: this.velocity.x, y: this.velocity.y },
+        thrusting: this.thrusting,
+        dead: this.dead,
+        exploding: this.exploding,
+      });
+    }
+
+    this.position = newPosition;
   }
 
   // if ship can shoot and there are less than LASER_MAX on the canvas
@@ -182,16 +224,14 @@ class Ship implements IShip {
           continue;
         }
       } else {
-        laser.centroid = new Point(
-          laser.centroid.x + laser.xv,
-          laser.centroid.y + laser.yv,
-        );
+        laser.position = laser.position.add(laser.velocity);
 
-        laser.distTraveled += Math.sqrt(laser.xv ** 2 + laser.yv ** 2);
+        laser.distTraveled += laser.velocity.magnitude();
       }
 
       // check laser distance after moving
-      if (laser.distTraveled >= LASER_DIST + CVS.width) {
+      const cvs = getCVS();
+      if (cvs && laser.distTraveled >= LASER_DIST + cvs.width) {
         this.lasers.splice(i, 1);
         continue;
       }
@@ -203,20 +243,111 @@ class Ship implements IShip {
   }
 
   generateLaser(): Laser {
-    const xv: number = (-LASER_SPEED * Math.cos(-this.a)) / FPS + this.xv;
-    const yv: number = (LASER_SPEED * Math.sin(-this.a)) / FPS + this.yv;
+    const laserVelocity = Vector.fromAngle(this.a)
+      .multiply(LASER_SPEED / FPS)
+      .add(this.velocity);
 
-    const noseX =
-      this.centroid.x +
-      this.r * ((-1 / 3) * Math.cos(this.a + 1.06) - Math.sin(this.a + 1.06));
-    const noseY =
-      this.centroid.y +
-      this.r * ((-1 / 3) * Math.sin(this.a + 1.06) + Math.cos(this.a + 1.06));
+    const noseOffset = Vector.fromAngle(this.a).multiply((4 / 3) * this.r);
+    const laserStartPosition = this.position.add(noseOffset);
 
-    const laserStartPoint = new Point(noseX, noseY);
-
-    const laser = new Laser(laserStartPoint, xv, yv, 0, 0);
+    const laser = new Laser(laserStartPosition, laserVelocity, 0, 0);
     return laser;
+  }
+
+  // Multiplayer synchronization methods
+  updateFromNetwork(data: {
+    position?: Vector;
+    velocity?: Vector;
+    r?: number;
+    a?: number;
+    lives?: number;
+    dead?: boolean;
+    exploding?: boolean;
+  }): void {
+    if (data.position) {
+      this.position = new Vector(data.position.x, data.position.y);
+    }
+    if (data.velocity) {
+      this.velocity = new Vector(data.velocity.x, data.velocity.y);
+    }
+    if (data.r !== undefined) this.r = data.r;
+    if (data.a !== undefined) this.a = data.a;
+    if (data.lives !== undefined) this.lives = data.lives;
+    if (data.dead !== undefined) this.dead = data.dead;
+    if (data.exploding !== undefined) this.exploding = data.exploding;
+  }
+
+  getNetworkData(): {
+    position: Vector;
+    velocity: Vector;
+    r: number;
+    a: number;
+    lives: number;
+    dead: boolean;
+    exploding: boolean;
+  } {
+    return {
+      position: this.position,
+      velocity: this.velocity,
+      r: this.r,
+      a: this.a,
+      lives: this.lives,
+      dead: this.dead,
+      exploding: this.exploding,
+    };
+  }
+
+  /**
+   * EMP Pulse - destroys all asteroids and bots within radius
+   * In debug mode, can be used unlimited times
+   */
+  empPulse(): void {
+    // Check if we can use EMP (not dead, not exploding)
+    if (this.dead || this.exploding) {
+      logInfo('EMP', '🚫 EMP blocked - ship is dead or exploding', {
+        shipDead: this.dead,
+        shipExploding: this.exploding,
+      });
+      return;
+    }
+
+    // In debug mode, unlimited EMP usage
+    const isDevelopment =
+      import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
+
+    logInfo('EMP', '⚡ EMP Pulse activated!', {
+      position: { x: this.position.x, y: this.position.y },
+      debugMode: isDevelopment,
+      lives: this.lives,
+    });
+
+    // Activate EMP pulse visual effect
+    this.empPulseActive = true;
+    this.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
+
+    // Play EMP sound effect
+    Ship.fxExplode.play();
+
+    // Dispatch custom event for game controller to handle
+    const empEvent = new CustomEvent('empPulse', {
+      detail: {
+        shipPosition: this.position,
+        shipRadius: this.r,
+        debugMode: isDevelopment,
+      },
+    });
+
+    window.dispatchEvent(empEvent);
+  }
+
+  updateEmpPulse(): void {
+    if (this.empPulseActive) {
+      this.empPulseTime--;
+      if (this.empPulseTime <= 0) {
+        this.empPulseActive = false;
+        this.empPulseTime = 0;
+      }
+    }
   }
 }
 

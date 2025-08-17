@@ -2,7 +2,7 @@ import { expect, test, beforeEach, afterEach, vi } from 'vitest';
 import { detectLaserHits, detectRoidHits } from '../src/collisions';
 import { Sound } from '../src/soundsMusic';
 import { Laser, Ship } from '../src/ship';
-import { Point } from '../src/utils';
+import { Vector } from '../src/vector';
 import { RoidBelt } from '../src/asteroids';
 let fxHitInstance: Sound;
 let fxExplodeInstance: Sound;
@@ -26,8 +26,8 @@ test.concurrent('Detect Laser Hits asteroid', () => {
   const testShip = new Ship();
   const testRoidBelt = new RoidBelt(testShip);
   testRoidBelt.addRoid(testShip);
-  const laserLocation = testRoidBelt.roids[0].centroid; // Laser location is the centroid of the roid, so it automatically hits.
-  const testLaser = new Laser(laserLocation, 0, 0, 0, 0);
+  const laserLocation = testRoidBelt.roids[0].position; // Laser location is the centroid of the roid, so it automatically hits.
+  const testLaser = new Laser(laserLocation, new Vector(0, 0), 0, 0);
   testShip.lasers.push(testLaser);
   detectLaserHits(testRoidBelt, testShip);
   expect(testRoidBelt.roids.length).toEqual(2);
@@ -39,8 +39,8 @@ test.concurrent('Detect Laser Does Not Hit asteroid', () => {
   testRoidBelt.addRoid(testShip);
   const testRoidBeltLength = testRoidBelt.roids.length;
   // set laser location to be outside of any roid
-  const laserLocation = new Point(1000, 1000);
-  const testLaser = new Laser(laserLocation, 0, 0, 0, 0);
+  const laserLocation = new Vector(1000, 1000);
+  const testLaser = new Laser(laserLocation, new Vector(0, 0), 0, 0);
   testShip.lasers.push(testLaser);
   const tesShiptLaserLength = testShip.lasers.length;
   detectLaserHits(testRoidBelt, testShip);
@@ -56,8 +56,8 @@ test.concurrent('Detect ship hits asteroid', () => {
   const testRoidBelt = new RoidBelt(testShip);
   testRoidBelt.addRoid(testShip);
   const testRoidBeltLength = testRoidBelt.roids.length;
-  const newShipLocation = testRoidBelt.roids[0].centroid;
-  testShip.centroid = newShipLocation; // Ship location is the centroid of the roid, so it automatically hits.
+  const newShipLocation = testRoidBelt.roids[0].position;
+  testShip.position = newShipLocation; // Ship location is the centroid of the roid, so it automatically hits.
   detectRoidHits(testShip, testRoidBelt);
   expect(testRoidBelt.roids.length).toEqual(testRoidBeltLength + 1); // Expect i++ for roid belt as this is the first roid destroyed and it split into two
   expect(testShip.explodeTime).toBeGreaterThan(0); // Expect that ship is exploding
@@ -70,8 +70,8 @@ test.concurrent(
     const testRoidBelt = new RoidBelt(testShip);
     testShip.explodeTime = 0; // Make this explicit
     testRoidBelt.addRoid(testShip);
-    const newShipLocation = testRoidBelt.roids[0].centroid;
-    testShip.centroid = newShipLocation; // Ship location is the centroid of the roid
+    const newShipLocation = testRoidBelt.roids[0].position;
+    testShip.position = newShipLocation; // Ship location is the centroid of the roid
     detectRoidHits(testShip, testRoidBelt);
     expect(testShip.explodeTime).toEqual(0); // Expect that ship is not exploding
   },
@@ -84,7 +84,7 @@ test.concurrent('Roids Do Not Hit Exploding Ship', () => {
   testShip.explodeTime = 10;
 
   testRoidBelt.addRoid(testShip);
-  const newShipLocation = testRoidBelt.roids[0].centroid;
-  testShip.centroid = newShipLocation; // Ship location is the centroid of the roid, so it automatically hits.
+  const newShipLocation = testRoidBelt.roids[0].position;
+  testShip.position = newShipLocation; // Ship location is the centroid of the roid, so it automatically hits.
   detectRoidHits(testShip, testRoidBelt);
 });

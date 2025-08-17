@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { Point } from '../src/utils';
+import { Point } from '../src/point';
 
 test.concurrent('Point Creation', () => {
   const firstPoint = new Point(10, 20);
@@ -9,16 +9,16 @@ test.concurrent('Point Creation', () => {
 test.concurrent('Point distance calculation - non-zero distance', () => {
   const firstPoint = new Point(0, 0);
   const secondPoint = new Point(3, 4);
-  expect(firstPoint.distToPoint(secondPoint)).toBe(5);
+  expect(firstPoint.distance(secondPoint)).toBe(5);
 });
 
 test.concurrent('Zero Point Distance', () => {
   const firstPoint = new Point(10, 20);
   const secondPoint = new Point(10, 20);
-  expect(firstPoint.distToPoint(secondPoint)).toBe(0);
+  expect(firstPoint.distance(secondPoint)).toBe(0);
 });
 test.concurrent('Point Distance - Many', () => {
   const firstPoint = new Point(0, 0);
   const secondPoint = new Point(1000, 2000);
-  expect(firstPoint.distToPoint(secondPoint)).toBe(2236);
+  expect(firstPoint.distance(secondPoint)).toBe(2236);
 });

@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "functions": {
+    "api/multiplayer.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/multiplayer",
+      "destination": "/api/multiplayer.ts"
+    }
+  ],
+  "websocket": {
+    "api/multiplayer": {
+      "runtime": "@vercel/node"
+    }
+  }
+}

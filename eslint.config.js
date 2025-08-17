@@ -8,7 +8,7 @@ import tsdoc from 'eslint-plugin-tsdoc';
 export default [
   js.configs.recommended,
   {
-    files: ['**/*.{js,ts}'],
+    files: ['**/*.ts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -39,6 +39,13 @@ export default [
     },
   },
   {
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+    },
+  },
+  {
     files: ['src/**/*.{js,ts}'],
     languageOptions: {
       globals: {
@@ -48,6 +55,12 @@ export default [
         Audio: 'readonly',
         fetch: 'readonly',
         console: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        alert: 'readonly',
+        navigator: 'readonly',
       },
     },
   },
@@ -56,6 +69,18 @@ export default [
     languageOptions: {
       globals: {
         process: 'readonly',
+        console: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        Buffer: 'readonly',
+        global: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
       },
     },
   },
@@ -63,6 +88,8 @@ export default [
     files: ['test/**/*.{js,ts}'],
     languageOptions: {
       globals: {
+        window: 'readonly',
+        document: 'readonly',
         localStorage: 'readonly',
         Audio: 'readonly',
         console: 'readonly',
@@ -80,6 +107,18 @@ export default [
     languageOptions: {
       globals: {
         global: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
       },
     },
   },

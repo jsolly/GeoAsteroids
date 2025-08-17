@@ -24,97 +24,119 @@
   <body>
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
-        <h1 class="text-center fs-1">GeoAsteroids</h1>
-        <ul class="nav flex-column">
-          <li class="nav-item">
-            <button id="start-game" class="btn btn-lg btn-primary">
-              Start Game! 🚀
-            </button>
-          </li>
-          <li class="nav-item">
-            <button
-              id="showHighScoresButton"
-              class="btn btn-lg btn-primary"
-              data-bs-toggle="modal"
-              data-bs-target="#highScoresModal"
-            >
-              Show High Scores! 🏆
-            </button>
-          </li>
-          <li class="nav-item">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              value=""
-              id="soundPref"
-            />
-            <label class="form-check-label" for="soundPref"> Sound </label>
-          </li>
-          <li class="nav-item">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              value=""
-              id="musicPref"
-            />
-            <label class="form-check-label" for="musicPref"> Music </label>
-          </li>
-        </ul>
-        <h2>Difficulty</h2>
-        <div
-          class="btn-group"
-          role="group"
-          aria-label="Basic radio toggle button group"
-        >
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="easy"
-            autocomplete="off"
-            checked
-          />
-          <label class="btn btn-outline-success" for="easy">Easy</label>
+        <h1 class="text-center">GeoAsteroids</h1>
 
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="medium"
-            autocomplete="off"
-          />
-          <label class="btn btn-outline-warning" for="medium">Medium</label>
+        <!-- Game Mode Selection -->
+        <div class="game-modes">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <button id="start-single-player" class="btn btn-lg btn-success">
+                🎮 Single Player
+              </button>
+            </li>
+            <li class="nav-item">
+              <button id="start-multiplayer" class="btn btn-lg btn-info">
+                🌐 Multiplayer
+              </button>
+            </li>
+            <li class="nav-item">
+              <button
+                id="showHighScoresButton"
+                class="btn btn-lg btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#highScoresModal"
+              >
+                🏆 High Scores
+              </button>
+            </li>
+          </ul>
+        </div>
 
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="hard"
-            autocomplete="off"
-          />
-          <label class="btn btn-outline-danger" for="hard">Hard</label>
+        <!-- Settings -->
+        <div class="settings">
+          <h3>Settings</h3>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                value=""
+                id="soundPref"
+                checked
+              />
+              <label class="form-check-label" for="soundPref">Sound</label>
+            </li>
+            <li class="nav-item">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                value=""
+                id="musicPref"
+              />
+              <label class="form-check-label" for="musicPref">Music</label>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Difficulty Selection -->
+        <div class="difficulty-section">
+          <h2>Difficulty</h2>
+          <div class="btn-group" role="group" aria-label="Difficulty selection">
+            <input
+              type="radio"
+              class="btn-check"
+              name="btnradio"
+              id="easy"
+              autocomplete="off"
+            />
+            <label class="btn btn-outline-success" for="easy">Easy</label>
+
+            <input
+              type="radio"
+              class="btn-check"
+              name="btnradio"
+              id="medium"
+              autocomplete="off"
+              checked
+            />
+            <label class="btn btn-outline-warning" for="medium">Medium</label>
+
+            <input
+              type="radio"
+              class="btn-check"
+              name="btnradio"
+              id="hard"
+              autocomplete="off"
+            />
+            <label class="btn btn-outline-danger" for="hard">Hard</label>
+          </div>
         </div>
       </div>
+
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
       </div>
+
       <!-- Game Over Modal -->
       <div id="gameOverModal" class="modal" style="display: none">
+        <h3>Game Over!</h3>
         <p>Enter your name for the high score list:</p>
         <input
           type="text"
           id="nameInput"
           maxlength="3"
+          placeholder="AAA"
           oninput="this.value = this.value.toUpperCase()"
         />
-        <button id="submitNameButton">Submit</button>
+        <button id="submitNameButton">Submit Score</button>
       </div>
+
       <!-- High Scores Modal -->
       <div id="highScoresModal" class="modal" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">High Scores</h5>
+              <h5 class="modal-title">🏆 High Scores</h5>
               <button
                 type="button"
                 class="btn-close"
@@ -138,6 +160,7 @@
         </div>
       </div>
     </div>
+
     <div id="attribution">
       <a
         href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search"

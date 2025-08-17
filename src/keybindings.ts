@@ -21,8 +21,11 @@ function keyDown(ev: KeyboardEvent, ship: Ship): void {
       case 'Space':
         ship.shoot();
         break;
+      case 'KeyE':
+        ship.empPulse();
+        break;
       case 'ArrowLeft':
-        ship.rot = ((-TURN_SPEED / 180) * Math.PI) / FPS;
+        ship.rot = ((TURN_SPEED / 180) * Math.PI) / FPS;
         break;
       case 'ArrowUp':
         ship.thrusting = true;
@@ -31,7 +34,7 @@ function keyDown(ev: KeyboardEvent, ship: Ship): void {
         }
         break;
       case 'ArrowRight':
-        ship.rot = ((TURN_SPEED / 180) * Math.PI) / FPS;
+        ship.rot = ((-TURN_SPEED / 180) * Math.PI) / FPS;
         break;
     }
   }

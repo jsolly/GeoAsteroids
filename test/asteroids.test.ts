@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest';
 import { Difficulty, setDifficulty } from '../src/constants';
 import { Ship } from '../src/ship';
-import { Point } from '../src/utils';
+import { Vector } from '../src/vector';
 import { Roid, RoidBelt } from '../src/asteroids';
 
 test.concurrent('Roid Creation', () => {
-  const roidPoint = new Point(10, 20);
+  const roidPoint = new Vector(10, 20);
   const roidRadius = 10;
   const newRoid = new Roid(roidPoint, roidRadius);
   expect(newRoid).toBeInstanceOf(Roid);
@@ -50,7 +50,7 @@ test.concurrent('Move Roids', () => {
   const testRoidBelt = new RoidBelt(mockShip);
   testRoidBelt.addRoid(mockShip);
   const firstRoid = testRoidBelt.roids[0];
-  const firstRoidLocationY = firstRoid.centroid.y;
+  const firstRoidLocationY = firstRoid.position.y;
   testRoidBelt.moveRoids();
-  expect(firstRoid.centroid.x).not.equal(firstRoidLocationY);
+  expect(firstRoid.position.x).not.equal(firstRoidLocationY);
 });

@@ -34,7 +34,7 @@ async function submitName(): Promise<void> {
   // Clear the input field for the next game
   nameInput.value = '';
 
-  const startGameBtn = getElementById<HTMLButtonElement>('start-game');
+  const startGameBtn = getElementById<HTMLButtonElement>('start-single-player');
   if (startGameBtn) {
     startGameBtn.innerText = 'Play Again! 🚀';
   }
@@ -61,7 +61,9 @@ async function postHighScore(highScore: HighScore): Promise<void> {
       throw new Error('Network response was not ok');
     }
   } catch (error) {
-    logger.logError(error);
+    logger.error('HIGH_SCORE', 'Failed to post high score', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -85,7 +87,9 @@ async function fetchHighScores(): Promise<void> {
       });
     }
   } catch (error) {
-    logger.logError(error);
+    logger.error('HIGH_SCORE', 'Failed to fetch high scores', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

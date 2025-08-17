@@ -42,6 +42,125 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
   $ vercel dev # Allows us to mock serverless functions locally
 ```
 
+## Development
+
+### Multiplayer Development Setup
+
+For local multiplayer development, use the following commands:
+
+```shell
+# Run all development servers (Vite + WebSocket + Log Server)
+npm run dev:full
+
+# Run individual servers
+npm run dev              # Vite dev server (port 5173)
+npm run dev:multiplayer  # WebSocket server (port 3001)
+npm run log:watch        # Log server (port 3002)
+
+# Log management
+npm run log:show         # View current logs
+npm run log:clear        # Clear all logs
+```
+
+### Logging System
+
+GeoAsteroids includes a comprehensive logging system that automatically captures all game events, multiplayer interactions, and debug information.
+
+#### Log Files
+
+- **Primary Log File**: `logs/debug-logs.txt` (logs directory)
+- **Log Server**: HTTP server on port 3002
+- **WebSocket Server**: Real-time multiplayer server on port 3001
+
+#### What Gets Logged
+
+- **Game Events**: Ship movements, asteroid collisions, scoring
+- **Multiplayer**: Player connections, disconnections, state updates
+- **Debug Info**: Viewport calculations, player rendering, mock player creation
+- **System**: Logger initialization, environment variables, error handling
+
+#### Log Levels
+
+```typescript
+enum LogLevel {
+  DEBUG = 0, // Detailed debug information
+  INFO = 1, // General information
+  WARN = 2, // Warning messages
+  ERROR = 3, // Error messages
+}
+```
+
+#### Environment Variables
+
+Create a `.env.local` file in your project root:
+
+```bash
+# Enable debug mode
+VITE_DEBUG=true
+
+# Enable multiplayer debug info
+VITE_MULTIPLAYER_DEBUG=true
+```
+
+#### Log Server Endpoints
+
+```bash
+# Write a log entry
+POST http://localhost:3002/log
+{
+  "level": "INFO",
+  "category": "MULTIPLAYER",
+  "message": "Player connected",
+  "data": { "playerId": "123", "name": "Player1" }
+}
+
+# View all logs
+GET http://localhost:3002/logs
+
+# Clear all logs
+DELETE http://localhost:3002/logs
+```
+
+#### Browser Console Commands
+
+When the game is running, these commands are available in the browser console:
+
+```javascript
+// Download all logs as a file
+logger.downloadLogs();
+
+// View recent logs
+logger.getRecentLogs(50);
+
+// View all stored logs
+logger.getAllLogs();
+
+// Clear all logs
+logger.clearLogs();
+
+// Set log level (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
+logger.setLogLevel(0);
+```
+
+#### Multiplayer Testing Commands
+
+```javascript
+// Create test players for demonstration
+multiplayer.createTestPlayers();
+
+// Show current multiplayer state
+multiplayer.debugState();
+
+// Get all connected players
+multiplayer.getPlayers();
+
+// Get player count
+multiplayer.getPlayerCount();
+
+// Make ship invincible for testing
+multiplayer.makeInvincible();
+```
+
 ---
 
 ## Features
@@ -51,7 +170,18 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 - Moving asteroids with variable jaggedness and size. Woah
 - Points, lives, and levels just like you'd expect
 - Spaceship with laser and thruster. Pew Pew
+- **EMP Pulse ability** - Press 'E' to destroy all asteroids and bots within radius! ⚡
 - Global high scoreboard so you can compete with anyone in the world!
+- **Multiplayer support** with real-time player synchronization
+- **Local WebSocket server** for development and testing
+- **Mock player system** for testing multiplayer functionality
+
+#### Controls
+
+- **Arrow Keys**: Move and rotate the ship
+- **Space**: Shoot laser
+- **E**: Activate EMP Pulse (destroys all nearby asteroids and bots)
+- **Mouse**: Navigate menus
 
 #### Non-Functional
 
@@ -63,7 +193,9 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 - JS bundling with Vite for a super fast front-end
 - Serverless functions for API calls, so you don't have to worry too much about handling the backend
 - MongoDB database for high scores cause who wants to deal with flat files?
-- Custom logging library for fine-grained control of logging levels so you don't have to scratch your head about errors in production
+- **Comprehensive logging system** with automatic file output and HTTP endpoints
+- **Real-time multiplayer debugging** with structured logs and player state tracking
+- **Environment-based configuration** for debug modes and multiplayer features
 - Over 90% test coverage so you can refactor and add features with peace of mind
 
 ## Coverage, Tests, Linting

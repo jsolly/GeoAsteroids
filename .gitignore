@@ -14,3 +14,9 @@ npm-debug.log
 dist/*
 coverage
 .vercel
+
+# Logs
+/logs
+
+# Environment Variables
+.env*

@@ -1,38 +1,81 @@
-#gameWrapper {
-  padding: 0;
-  margin: auto;
-  display: block;
-  width: 800px;
-  height: 600px;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: black;
-}
-
+/* Global styles */
 * {
   font-size: 1.1em;
   color: white;
 }
 
-:is(li, h1) {
-  margin-bottom: 1em;
-}
-
-h2 {
-  margin-bottom: 0.5em;
-}
+html,
 body {
-  background-color: black;
-  background-image: url('/spaceBackground.jpg');
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Prevent any scrollbars */
 }
 
-#attribution {
+body {
+  background-color: #000011; /* Dark blue-black fallback */
+  background-image: url('/spaceBackground.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* Ensure background stays fixed */
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Ensure the game wrapper doesn't create black areas */
+#gameWrapper {
+  padding: 0;
+  margin: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
   position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent; /* Remove any background color */
+  overflow: hidden;
+}
+
+/* Game area styling */
+#gameArea {
+  display: none; /* Hidden by default */
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
+
+#gameCanvas {
+  background: transparent;
+  display: block;
+  /* Fill the full screen */
+  width: 100vw;
+  height: 100vh;
+  /* Maintain aspect ratio and prevent blurriness */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  /* Alternative crisp rendering */
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Attribution positioning */
+#attribution {
+  position: fixed;
   bottom: 10px;
+  left: 10px;
   font-size: 0.5em;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 5px 10px;
+  border-radius: 5px;
 }
 
 a {
@@ -42,29 +85,381 @@ a {
 .screen {
   position: fixed;
   left: 50%;
-  margin-left: -125px;
+  top: 50%;
+  transform: translate(-50%, -50%);
   text-align: center;
+  max-width: 650px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: hidden; /* Remove scrollbar */
+  padding: 40px;
+  background-color: rgba(
+    20,
+    20,
+    30,
+    0.95
+  ); /* Lighter, more visible background */
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.25); /* More visible border */
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.1); /* Enhanced shadow and inner glow */
+  backdrop-filter: blur(10px); /* Add subtle blur effect */
 }
 
-.modal {
+/* Enhanced title with better contrast */
+.screen h1 {
+  font-size: 3.2em;
+  font-weight: bold;
+  margin-bottom: 1.2em;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.4),
+    0 0 40px rgba(255, 255, 255, 0.2);
+  letter-spacing: 2px;
+  color: #ffffff;
+  position: relative;
+}
+
+.screen h1::after {
+  content: '';
   position: absolute;
-  top: 50%;
+  bottom: -10px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  border-radius: 2px;
+}
+
+/* Game modes section */
+.game-modes {
+  margin-bottom: 2em; /* Reduced margin */
+}
+
+.game-modes .nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em; /* Reduced gap */
+  align-items: center;
+}
+
+.game-modes .nav-item {
   width: 100%;
-  padding: 20px;
-  background-color: rgba(
-    0,
-    0,
-    0,
-    0.8
-  ); /* Or any other background color, here it's semi-transparent black */
-  border-radius: 10px;
+  max-width: 280px;
+}
+
+/* Enhanced button styling */
+.game-modes .btn {
+  width: 100%;
+  padding: 0.8em 1.2em;
+  font-size: 1.1em;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-modes .btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.game-modes .btn:hover::before {
+  left: 100%;
+}
+
+.game-modes .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Settings section */
+.settings {
+  margin-bottom: 2em; /* Reduced margin */
+  text-align: left;
+}
+
+/* Improved section headings */
+.settings h3,
+.difficulty-section h2 {
+  color: #f0f0f0;
+  font-size: 1.1em;
+  margin-bottom: 1em;
   text-align: center;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.settings .nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em; /* Reduced gap */
+  align-items: center;
+}
+
+/* Enhanced settings containers */
+.settings .nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8em;
+  padding: 0.4em 0.8em;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  min-width: 200px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.settings .nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced button text contrast */
+.game-modes .btn,
+.btn-group .btn {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+}
+
+/* Better checkbox contrast */
+.settings .form-check-label {
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  margin: 0;
+  color: #f0f0f0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced form check input */
+.settings .form-check-input {
+  width: 1.3em;
+  height: 1.3em;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #007bff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Difficulty section */
+.difficulty-section {
+  margin-bottom: 0.5em; /* Reduced margin */
+}
+
+.btn-group {
+  display: flex;
+  justify-content: center;
+  gap: 0.8em;
+  flex-wrap: wrap;
+}
+
+/* Enhanced difficulty buttons */
+.btn-group .btn {
+  min-width: 100px;
+  padding: 0.7em 1em;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid;
+  transition: all 0.3s ease;
+  background-color: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-group .btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.btn-group .btn:hover::before {
+  left: 100%;
+}
+
+.btn-group .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Button states */
+.btn-outline-success {
+  border-color: #198754;
+  color: #198754;
+}
+
+.btn-outline-success:hover,
+.btn-outline-success:checked + label {
+  background-color: #198754;
+  border-color: #198754;
+  color: white;
+}
+
+.btn-outline-warning {
+  border-color: #ffc107;
+  color: #ffc107;
+}
+
+.btn-outline-warning:hover,
+.btn-outline-warning:checked + label {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: black;
+}
+
+.btn-outline-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger:checked + label {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+/* Active button states for game mode selection */
+.btn.active-mode {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  border-width: 3px;
+}
+
+#start-single-player.active-mode {
+  background-color: #198754 !important;
+  border-color: #fff !important;
+  box-shadow: 0 0 25px rgba(25, 135, 84, 0.6);
+}
+
+#start-multiplayer.active-mode {
+  background-color: #0dcaf0 !important;
+  border-color: #fff !important;
+  box-shadow: 0 0 25px rgba(13, 202, 240, 0.6);
+}
+
+/* Responsive adjustments */
+@media (max-height: 700px) {
+  .screen {
+    max-height: 95vh;
+    padding: 30px;
+  }
+
+  .screen h1 {
+    font-size: 2.8em;
+    margin-bottom: 1em;
+  }
+
+  .game-modes {
+    margin-bottom: 1.5em;
+  }
+
+  .settings {
+    margin-bottom: 1.5em;
+  }
+
+  .difficulty-section {
+    margin-bottom: 0.3em;
+  }
+
+  .game-modes .btn {
+    padding: 0.6em 1em;
+  }
+
+  .btn-group .btn {
+    padding: 0.5em 0.8em;
+  }
+}
+
+@media (max-width: 700px) {
+  .screen {
+    max-width: 95%;
+    width: 95%;
+    padding: 25px;
+  }
+
+  .screen h1 {
+    font-size: 2.2em;
+  }
+
+  .game-modes .btn {
+    font-size: 1em;
+    padding: 0.7em 1em;
+  }
+
+  .btn-group .btn {
+    min-width: 80px;
+    padding: 0.5em 0.8em;
+    font-size: 0.9em;
+  }
+
+  .settings .nav-item {
+    min-width: 180px;
+    padding: 0.3em 0.6em;
+  }
+}
+
+@media (min-width: 800px) {
+  .screen {
+    max-width: 700px;
+    padding: 50px;
+  }
+
+  .game-modes .btn {
+    max-width: 320px;
+  }
+}
+
+/* Modal styling */
+.modal {
+  background-color: rgba(0, 0, 0, 0.9);
+  border-radius: 15px;
+  text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 #nameInput {
-  width: 100px;
+  width: 120px;
+  padding: 0.5em;
+  margin: 1em;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
 
 #gameOverModal input[type='text'] {
@@ -76,11 +471,58 @@ a {
   color: white;
   background-color: #007bff;
   border: none;
+  padding: 0.5em 1em;
+  border-radius: 6px;
+  cursor: pointer;
 }
+
+#gameOverModal button:hover {
+  background-color: #0056b3;
+}
+
+/* High scores list styling */
 #highScoresList li {
-  font-family: 'Courier', monospace; /* Using a system monospaced font */
+  font-family: 'Courier', monospace;
   color: #ff0000;
-  text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2); /* Gives a bit of depth */
-  letter-spacing: 1.5px; /* Increases spacing between letters, giving it a more retro feel */
-  list-style: none; /* Removes the bullets */
+  text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2);
+  letter-spacing: 1.5px;
+  list-style: none;
+  margin-bottom: 0.5em;
+}
+
+/* Custom scrollbar styling (in case it's ever needed) */
+.screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+.screen::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.screen::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.screen::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Additional visual enhancements */
+.screen::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
+  border-radius: 22px;
+  z-index: -1;
+  opacity: 0.6;
 }

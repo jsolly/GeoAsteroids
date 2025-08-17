@@ -1,0 +1,116 @@
+---
+alwaysApply: true
+---
+
+## Logging and Debugging
+
+### Reading Logs in `/logs`
+
+GeoAsteroids includes a comprehensive logging system that automatically captures all game events, multiplayer interactions, and debug information. When debugging issues, always check the logs first.
+
+#### Log Files Location
+- **Primary Log File**: `logs/debug-logs.txt` (main project directory)
+- **Error Log File**: `logs/error-logs.txt` (warnings and errors only)
+
+#### How to Read Logs
+
+1. **Real-time Log Monitoring**:
+   ```bash
+   npm run log:watch        # Start log server (port 3002)
+   npm run log:show         # View current logs
+   ```
+
+2. **Manual Log Inspection**:
+   - Open `logs/debug-logs.txt` in your text editor
+   - Use `tail -f logs/debug-logs.txt` to follow logs in real-time
+   - Search for specific categories or timestamps
+
+3. **Log Format**:
+   ```
+   [2024-01-15T10:30:45.123Z] [DEBUG] [SHIP_STATE] Ship state update {"blinkOn":true,"dead":false,"exploding":false}
+   [2024-01-15T10:30:45.124Z] [INFO] [COLLISION] Asteroid destroyed {"score":20,"position":{"x":150,"y":200}}
+   ```
+
+#### Log Categories to Monitor
+
+- **`SHIP_STATE`**: Ship movement, death, explosion, invincibility
+- **`COLLISION`**: Asteroid hits, bot hits, laser collisions
+- **`GAME_LOOP`**: Game state updates, score changes
+- **`MULTIPLAYER`**: Bot behavior, player connections
+- **`BOT_*`**: Bot-specific actions and state changes
+- **`ERROR`**: Any errors or exceptions
+
+#### Debugging Common Issues
+
+1. **Ship Dying Unexpectedly**:
+   - Search for `�� Ship died!` or `💥 Ship exploding!`
+   - Check `SHIP_STATE` logs for state changes
+   - Look for `COLLISION` logs showing unexpected hits
+
+2. **Movement Issues**:
+   - Search for `�� Ship moving:` logs
+   - Check `🚫 Ship movement blocked:` for blocked movement
+   - Look for velocity and position changes
+
+3. **Bot Collisions**:
+   - Search for `�� Bot hit by laser:` logs
+   - Check bot state changes in `MULTIPLAYER` category
+
+#### Log Commands
+
+```bash
+# View logs in real-time
+tail -f logs/debug-logs.txt
+
+# Search for specific events
+grep "Ship died" logs/debug-logs.txt
+grep "COLLISION" logs/debug-logs.txt
+grep "ERROR" logs/debug-logs.txt
+
+# View recent logs (last 100 lines)
+tail -100 logs/debug-logs.txt
+
+# Search for specific timestamps
+grep "2024-01-15T10:30" logs/debug-logs.txt
+```
+
+#### When Adding Debug Logs
+
+- Use descriptive emojis: 🚀 (movement), 💀 (death), �� (explosion), 🎯 (hits)
+- Include relevant data: positions, velocities, state flags
+- Use consistent category names: `SHIP_STATE`, `COLLISION`, `MULTIPLAYER`
+- Log both the event and the context that caused it
+
+#### Log Server Endpoints
+
+- **POST** `http://localhost:3002/log` - Write a log entry
+- **GET** `http://localhost:3002/logs` - View all logs
+- **DELETE** `http://localhost:3002/logs` - Clear all logs
+
+#### Best Practices
+
+1. **Always check logs first** when debugging issues
+2. **Add debug logs** before and after critical state changes
+3. **Use consistent formatting** for easy searching
+4. **Include relevant context** in log data
+5. **Monitor error logs** for unexpected failures
+6. **Use log categories** to filter relevant information
+
+#### Example Debug Session
+
+```bash
+# Start log monitoring
+npm run log:watch
+
+# In another terminal, reproduce the issue
+# Then check logs for:
+grep "Ship died" logs/debug-logs.txt
+grep "COLLISION" logs/debug-logs.txt
+grep "ERROR" logs/debug-logs.txt
+
+# Look for the sequence of events leading to the issue
+tail -200 logs/debug-logs.txt | grep -A5 -B5 "Ship died"
+```
+```
+
+This rule provides comprehensive guidance on how to use the logging system effectively for debugging, which should help you and other developers quickly identify and resolve issues like the ship dying unexpectedly.

@@ -10,8 +10,13 @@ const dom = new JSDOM(
         <h1 class="text-center fs-1">GeoAsteroids</h1>
         <ul class="nav flex-column">
           <li class="nav-item">
-            <button id="start-game" class="btn btn-lg btn-primary">
-              Start Game! 🚀
+            <button id="start-single-player" class="btn btn-lg btn-success">
+              Single Player 🎮
+            </button>
+          </li>
+          <li class="nav-item">
+            <button id="start-multiplayer" class="btn btn-lg btn-info">
+              Multiplayer 🌐
             </button>
           </li>
           <li class="nav-item">
@@ -86,3 +91,27 @@ const dom = new JSDOM(
 </html>`,
 );
 global.document = dom.window.document;
+global.window = global.document.defaultView as unknown as Window &
+  typeof globalThis;
+
+// Mock Audio for tests
+if (typeof global.window.Audio === 'undefined') {
+  global.window.Audio = class {
+    constructor(src?: string) {
+      if (src) {
+        this.src = src;
+      }
+    }
+    src: string = '';
+    play(): Promise<void> {
+      console.log(`Playing audio from ${this.src}`);
+      return Promise.resolve();
+    }
+    pause(): void {
+      console.log(`Pausing audio from ${this.src}`);
+    }
+    load(): void {
+      console.log(`Loading audio from ${this.src}`);
+    }
+  } as typeof HTMLAudioElement;
+}

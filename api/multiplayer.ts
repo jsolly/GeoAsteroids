@@ -1,0 +1,343 @@
+import {
+  IPlayerUpdate,
+  IPlayerJoin,
+  IPlayerLeave,
+  IPlayerShoot,
+  IBotShoot,
+  IServerMessage,
+  IClientMessage,
+} from '../src/types/multiplayer.js';
+import { Vector } from '../src/vector.js';
+
+type WebSocketWithEvents = WebSocket & {
+  on(event: string, listener: (...args: unknown[]) => void): void;
+};
+
+interface ConnectedPlayer {
+  id: string;
+  name: string;
+  position: Vector;
+  velocity: Vector;
+  r: number;
+  a: number;
+  lives: number;
+  score: number;
+  dead: boolean;
+  exploding: boolean;
+  lastUpdate: number;
+  ws: WebSocketWithEvents;
+}
+
+interface VercelRequest {
+  method: string;
+  socket: unknown;
+  head: unknown;
+}
+
+interface VercelResponse {
+  status(code: number): { json(data: unknown): void };
+}
+
+class MultiplayerServer {
+  private players: Map<string, ConnectedPlayer> = new Map();
+  private gameTime: number = 0;
+
+  constructor() {
+    // Start game loop for cleanup
+    setInterval(() => this.gameLoop(), 1000 / 10); // 10 FPS for cleanup
+  }
+
+  private gameLoop(): void {
+    this.gameTime++;
+
+    // Clean up stale players (haven't updated in 5 seconds)
+    const now = Date.now();
+    for (const [id, player] of this.players.entries()) {
+      if (now - player.lastUpdate > 5000) {
+        this.removePlayer(id);
+      }
+    }
+  }
+
+  public handleConnection(
+    ws: WebSocket & {
+      on(event: string, listener: (...args: unknown[]) => void): void;
+    },
+  ): void {
+    console.log('New player connected');
+
+    ws.on('message', (data: unknown) => {
+      try {
+        const message: IClientMessage = JSON.parse(
+          String(data),
+        ) as IClientMessage;
+        this.handleClientMessage(message, ws);
+      } catch (error) {
+        console.error('Failed to parse client message:', error);
+        this.sendError(ws, 'Invalid message format');
+      }
+    });
+
+    ws.on('close', () => {
+      // Find and remove the player
+      for (const [id, player] of this.players.entries()) {
+        if (player.ws === ws) {
+          this.removePlayer(id);
+          break;
+        }
+      }
+    });
+  }
+
+  private handleClientMessage(
+    message: IClientMessage,
+    ws: WebSocketWithEvents,
+  ): void {
+    switch (message.type) {
+      case 'join':
+        if (this.isPlayerJoinData(message.data)) {
+          this.handlePlayerJoin(message.data, ws);
+        }
+        break;
+      case 'leave':
+        if (this.isPlayerLeaveData(message.data)) {
+          this.handlePlayerLeave(message.data);
+        }
+        break;
+      case 'update':
+        if (this.isPlayerUpdateData(message.data)) {
+          this.handlePlayerUpdate(message.data);
+        }
+        break;
+      case 'shoot':
+        if (this.isPlayerShootData(message.data)) {
+          this.handlePlayerShoot(message.data);
+        }
+        break;
+      case 'botShoot':
+        if (this.isBotShootData(message.data)) {
+          this.handleBotShoot(message.data);
+        }
+        break;
+      default:
+        this.sendError(ws, 'Unknown message type');
+    }
+  }
+
+  private isPlayerJoinData(
+    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
+  ): data is IPlayerJoin {
+    return 'name' in data && 'position' in data;
+  }
+
+  private isPlayerLeaveData(
+    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
+  ): data is IPlayerLeave {
+    return 'id' in data && Object.keys(data).length === 1;
+  }
+
+  private isPlayerUpdateData(
+    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
+  ): data is IPlayerUpdate {
+    return (
+      'position' in data && 'velocity' in data && 'r' in data && 'a' in data
+    );
+  }
+
+  private isPlayerShootData(
+    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
+  ): data is IPlayerShoot {
+    return 'laserStart' in data && 'laserDirection' in data && 'id' in data;
+  }
+
+  private isBotShootData(
+    data: IPlayerJoin | IPlayerLeave | IPlayerUpdate | IPlayerShoot | IBotShoot,
+  ): data is IBotShoot {
+    return (
+      'laserStart' in data &&
+      'laserDirection' in data &&
+      'botId' in data &&
+      'targetPlayerId' in data
+    );
+  }
+
+  private handlePlayerJoin(data: IPlayerJoin, ws: WebSocketWithEvents): void {
+    const player: ConnectedPlayer = {
+      ...data,
+      velocity: new Vector(0, 0),
+      r: 0,
+      a: 0,
+      lives: 3,
+      score: 0,
+      dead: false,
+      exploding: false,
+      lastUpdate: Date.now(),
+      ws,
+    };
+
+    this.players.set(data.id, player);
+
+    // Notify all other players about the new player
+    this.broadcastToOthers(data.id, {
+      type: 'playerJoin',
+      data: {
+        id: data.id,
+        name: data.name,
+        position: data.position,
+      },
+      timestamp: Date.now(),
+    });
+
+    // Send current game state to the new player
+    this.sendGameState(data.id);
+
+    console.log(
+      `Player ${data.name} joined the game. Total players: ${this.players.size}`,
+    );
+  }
+
+  private handlePlayerLeave(data: IPlayerLeave): void {
+    this.removePlayer(data.id);
+  }
+
+  private handlePlayerUpdate(data: IPlayerUpdate): void {
+    const player = this.players.get(data.id);
+    if (player) {
+      Object.assign(player, data);
+      player.lastUpdate = Date.now();
+
+      // Broadcast update to other players
+      this.broadcastToOthers(data.id, {
+        type: 'playerUpdate',
+        data,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  private handlePlayerShoot(data: IPlayerShoot): void {
+    // Broadcast shooting to other players
+    this.broadcastToOthers(data.id, {
+      type: 'playerShoot',
+      data,
+      timestamp: Date.now(),
+    });
+  }
+
+  private handleBotShoot(data: IBotShoot): void {
+    // Handle bot shooting - broadcast to other players
+    this.broadcastToOthers(data.targetPlayerId, {
+      type: 'botShoot',
+      data,
+      timestamp: Date.now(),
+    });
+
+    console.log(`Bot ${data.botId} shot at player ${data.targetPlayerId}`);
+  }
+
+  private removePlayer(id: string): void {
+    const player = this.players.get(id);
+    if (player) {
+      // Notify other players about the departure
+      this.broadcastToOthers(id, {
+        type: 'playerLeave',
+        data: { id },
+        timestamp: Date.now(),
+      });
+
+      // Close the WebSocket connection
+      try {
+        player.ws.close();
+      } catch (error) {
+        console.error('Error closing WebSocket:', error);
+      }
+
+      this.players.delete(id);
+      console.log(
+        `Player ${player.name} left the game. Total players: ${this.players.size}`,
+      );
+    }
+  }
+
+  private broadcastToOthers(excludeId: string, message: IServerMessage): void {
+    for (const [id, player] of this.players.entries()) {
+      if (id !== excludeId) {
+        try {
+          player.ws.send(JSON.stringify(message));
+        } catch (error) {
+          console.error(`Failed to send message to player ${id}:`, error);
+          // Remove player if we can't send to them
+          this.removePlayer(id);
+        }
+      }
+    }
+  }
+
+  private sendGameState(playerId: string): void {
+    const player = this.players.get(playerId);
+    if (!player) return;
+
+    const gameState: IServerMessage = {
+      type: 'gameState',
+      data: {
+        players: Array.from(this.players.values()).map((p) => ({
+          id: p.id,
+          name: p.name,
+          position: p.position,
+          velocity: p.velocity,
+          r: p.r,
+          a: p.a,
+          lives: p.lives,
+          score: p.score,
+          dead: p.dead,
+          exploding: p.exploding,
+        })),
+        asteroids: [], // Will be implemented in Phase 2
+        gameTime: this.gameTime,
+      },
+      timestamp: Date.now(),
+    };
+
+    try {
+      player.ws.send(JSON.stringify(gameState));
+    } catch (error) {
+      console.error(`Failed to send game state to player ${playerId}:`, error);
+    }
+  }
+
+  private sendError(ws: WebSocketWithEvents, message: string): void {
+    try {
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          data: message,
+          timestamp: Date.now(),
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to send error message:', error);
+    }
+  }
+
+  public getPlayerCount(): number {
+    return this.players.size;
+  }
+}
+
+// Create server instance
+const server = new MultiplayerServer();
+
+// Export the WebSocket handler
+export default function handler(req: VercelRequest, res: VercelResponse): void {
+  if (req.method === 'GET') {
+    // For now, return a message that WebSocket is ready
+    // In a real Vercel deployment, this would handle WebSocket upgrade
+    res.status(200).json({
+      message: 'WebSocket endpoint ready',
+      playerCount: server.getPlayerCount(),
+      note: 'WebSocket upgrade not yet implemented for Vercel',
+    });
+  } else {
+    res.status(405).json({ error: 'Method not allowed' });
+  }
+}
