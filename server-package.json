@@ -1,0 +1,21 @@
+{
+  "name": "geoasteroids-multiplayer-server",
+  "version": "1.0.0",
+  "description": "Multiplayer server for GeoAsteroids game",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": ["multiplayer", "game", "websocket", "asteroids"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
