@@ -1,16 +1,20 @@
 import { IBotPlayer, IBotShoot, IBotBullet } from './types/multiplayer.js';
 import { Vector } from './vector.js';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from './simpleLogger.js';
 import {
   SHIP_THRUST,
   FRICTION,
   FPS,
   SHIP_INV_DUR,
   SHIP_INV_BLINK_DUR,
+  SHIP_EXPLODE_DUR,
   BOT_MAX_HEALTH,
   BOT_HEALTH_REGEN_RATE,
   BOT_HEALTH_REGEN_DELAY,
 } from './constants.js';
+import { Laser } from './ship.js';
+import { LASER_SPEED, LASER_DIST, getCVS } from './constants.js';
 
 // Enhanced bot movement with steering behaviors
 interface BotSteering {
@@ -30,6 +34,7 @@ export class BotManager {
   private static instance: BotManager;
   private bots: Map<string, IBotPlayer> = new Map();
   private botBullets: Map<string, IBotBullet> = new Map();
+  private botLasers: Map<string, Laser[]> = new Map();
   private localPlayerId: string;
   private localPlayerPosition: Vector = new Vector(0, 0);
   private localPlayerAlive: boolean = true;
@@ -68,7 +73,7 @@ export class BotManager {
     if (this.isActive) return;
 
     this.isActive = true;
-    console.info('BOT_MANAGER', 'Bot manager activated');
+    logger.bot('MANAGER', 'Bot manager activated');
 
     // Start bot behavior updates
     this.startBotBehaviorLoop();
@@ -76,11 +81,16 @@ export class BotManager {
 
   public deactivate(): void {
     this.isActive = false;
-    console.info('BOT_MANAGER', 'Bot manager deactivated');
+    logger.bot('MANAGER', 'Bot manager deactivated');
   }
 
   public createBots(count: number = 3): void {
     if (!this.isActive) return;
+
+    console.info('BOT_MANAGER', 'Creating bots', {
+      count,
+      isActive: this.isActive,
+    });
 
     // Clear existing bots
     this.bots.clear();
@@ -125,6 +135,7 @@ export class BotManager {
         blinkOn: true, // Initialize blinking state for invincibility
         blinkCount: Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR), // Initialize blink count for invincibility
         blinkTime: Math.ceil(SHIP_INV_BLINK_DUR * FPS), // Initialize blink timer for invincibility
+        spawnProtectedUntil: Date.now() + SHIP_INV_DUR * 1000, // Wall-clock based invincibility window
         // Health system properties (same as player ship)
         health: BOT_MAX_HEALTH,
         maxHealth: BOT_MAX_HEALTH,
@@ -149,7 +160,52 @@ export class BotManager {
       this.bots.set(botId, bot);
       this.botSteering.set(botId, steering);
 
-      console.info('BOT_STEERING', 'Steering data created for bot', {
+      // Add detailed debug logging for bot creation
+      console.info('BOT_MANAGER', `Created ${botType} bot with invincibility`, {
+        botId,
+        name: bot.name,
+        position: { x: position.x, y: position.y },
+        blinkCount: bot.blinkCount,
+        blinkTime: bot.blinkTime,
+        spawnProtectedUntil: bot.spawnProtectedUntil,
+        currentTime: Date.now(),
+        invincibleUntil: Date.now() + SHIP_INV_DUR * 1000,
+        health: bot.health,
+        lives: bot.lives,
+        dead: bot.dead,
+        exploding: bot.exploding,
+      });
+
+      // Verify invincibility is properly set
+      const isInvincible =
+        bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now();
+      if (!isInvincible) {
+        console.error(
+          'BOT_INVINCIBILITY_ERROR',
+          'Bot created without invincibility!',
+          {
+            botId,
+            name: bot.name,
+            blinkCount: bot.blinkCount,
+            spawnProtectedUntil: bot.spawnProtectedUntil,
+            currentTime: Date.now(),
+          },
+        );
+      } else {
+        console.info(
+          'BOT_INVINCIBILITY_OK',
+          'Bot invincibility properly initialized',
+          {
+            botId,
+            name: bot.name,
+            isInvincible,
+            blinkCount: bot.blinkCount,
+            spawnProtectedUntil: bot.spawnProtectedUntil,
+          },
+        );
+      }
+
+      logger.bot('STEERING', 'Steering data created for bot', {
         botId,
         name: bot.name,
         botType,
@@ -157,12 +213,17 @@ export class BotManager {
         maxForce: steering.maxForce,
       });
 
-      console.info('BOT_MANAGER', `Created ${botType} bot`, {
+      logger.bot('MANAGER', `Created ${botType} bot`, {
         botId,
         name: bot.name,
         position: { x: position.x, y: position.y },
       });
     }
+
+    console.info('BOT_MANAGER', 'Finished creating bots', {
+      totalBots: this.bots.size,
+      botIds: Array.from(this.bots.keys()),
+    });
   }
 
   public getBots(): Map<string, IBotPlayer> {
@@ -173,6 +234,11 @@ export class BotManager {
     return this.botBullets;
   }
 
+  public getBotLasers(): Map<string, Laser[]> {
+    return this.botLasers;
+  }
+
+  // Compatibility shim for legacy tests and tooling
   public createBotBullet(botShoot: IBotShoot): void {
     const bulletId = `bullet-${uuidv4()}`;
     const bullet: IBotBullet = {
@@ -183,72 +249,86 @@ export class BotManager {
         botShoot.laserDirection.x,
         botShoot.laserDirection.y,
       ),
-      speed: 8, // Bot bullets move at 8 pixels per frame
+      speed: 8,
       distanceTraveled: 0,
-      maxDistance: 800, // Maximum distance before bullet disappears
+      maxDistance: 800,
       createdAt: Date.now(),
     };
 
     this.botBullets.set(bulletId, bullet);
-
-    console.info('BOT_BULLET', 'Bot bullet created', {
+    console.info('BOT_BULLET', 'Bot bullet created (compat shim)', {
       bulletId,
       botId: botShoot.botId,
-      startPos: { x: bullet.position.x, y: bullet.position.y },
-      direction: { x: bullet.direction.x, y: bullet.direction.y },
       totalBullets: this.botBullets.size,
     });
   }
 
+  public createBotLaser(botShoot: IBotShoot): void {
+    const shooter = this.bots.get(botShoot.botId);
+    const start = new Vector(botShoot.laserStart.x, botShoot.laserStart.y);
+    const direction = new Vector(
+      botShoot.laserDirection.x,
+      botShoot.laserDirection.y,
+    );
+
+    // Match player laser physics: velocity = facing direction * LASER_SPEED/FPS + current velocity
+    const baseVelocity = direction.multiply(LASER_SPEED / FPS);
+    const addedVelocity = shooter ? shooter.velocity : new Vector(0, 0);
+    const velocity = baseVelocity.add(addedVelocity);
+
+    const laser = new Laser(start, velocity, 0, 0);
+    const lasers = this.botLasers.get(botShoot.botId) || [];
+    lasers.push(laser);
+    this.botLasers.set(botShoot.botId, lasers);
+
+    console.info('BOT_LASER', 'Bot laser created', {
+      botId: botShoot.botId,
+      startPos: { x: start.x, y: start.y },
+      velocity: { x: velocity.x, y: velocity.y },
+      lasersForBot: lasers.length,
+    });
+  }
+
   public updateBotBullets(): void {
-    if (this.botBullets.size === 0) return;
+    // Legacy no-op retained for compatibility; lasers are now the projectile system
+    this.updateBotLasers();
+  }
 
-    for (const [bulletId, bullet] of this.botBullets.entries()) {
-      // Move bullet
-      const move = bullet.direction.multiply(bullet.speed);
+  public updateBotLasers(): void {
+    if (this.botLasers.size === 0) return;
 
-      bullet.position = bullet.position.add(move);
+    const cvs = getCVS();
+    for (const [botId, lasers] of this.botLasers.entries()) {
+      for (let i = lasers.length - 1; i >= 0; i--) {
+        const laser = lasers[i];
 
-      // Update distance traveled
-      bullet.distanceTraveled += move.magnitude();
+        if (laser.explodeTime > 0) {
+          laser.explodeTime--;
+          if (laser.explodeTime === 0) {
+            lasers.splice(i, 1);
+            continue;
+          }
+        } else {
+          laser.position = laser.position.add(laser.velocity);
+          laser.distTraveled += laser.velocity.magnitude();
+        }
 
-      // Remove bullet if it goes off-screen or exceeds max distance
-      if (this.shouldRemoveBullet(bullet)) {
-        console.info('BOT_BULLET', 'Removing bot bullet', {
-          bulletId,
-          botId: bullet.botId,
-          reason: 'off-screen or max distance',
-          distanceTraveled: bullet.distanceTraveled,
-          maxDistance: bullet.maxDistance,
-          position: { x: bullet.position.x, y: bullet.position.y },
-          totalBullets: this.botBullets.size - 1,
-        });
+        // Match player removal logic using LASER_DIST and canvas width if available
+        if (cvs && laser.distTraveled >= LASER_DIST + cvs.width) {
+          lasers.splice(i, 1);
+          continue;
+        }
+      }
 
-        this.botBullets.delete(bulletId);
+      if (lasers.length === 0) {
+        this.botLasers.delete(botId);
+      } else {
+        this.botLasers.set(botId, lasers);
       }
     }
   }
 
-  private shouldRemoveBullet(bullet: IBotBullet): boolean {
-    // Check if bullet is too far from world origin (where ship starts)
-    // This is more appropriate for a world coordinate system
-    const worldMargin = 1000; // Large world margin
-    if (
-      bullet.position.x < -worldMargin ||
-      bullet.position.x > worldMargin ||
-      bullet.position.y < -worldMargin ||
-      bullet.position.y > worldMargin
-    ) {
-      return true;
-    }
-
-    // Check if bullet exceeded max distance
-    if (bullet.distanceTraveled >= bullet.maxDistance) {
-      return true;
-    }
-
-    return false;
-  }
+  // Legacy bullet helper removed (lasers are now used)
 
   public removeBot(botId: string): void {
     const bot = this.bots.get(botId);
@@ -261,12 +341,18 @@ export class BotManager {
   public clearBots(): void {
     this.bots.clear();
     this.botBullets.clear(); // Also clear any active bullets
+    this.botLasers.clear();
     console.info('BOT_MANAGER', 'All bots and bullets cleared');
   }
 
   public clearBotBullets(): void {
     this.botBullets.clear();
     console.info('BOT_MANAGER', 'All bot bullets cleared');
+  }
+
+  public clearBotLasers(): void {
+    this.botLasers.clear();
+    console.info('BOT_MANAGER', 'All bot lasers cleared');
   }
 
   private getBotStartingPosition(index: number): Vector {
@@ -793,8 +879,8 @@ export class BotManager {
     //   personalityFactor
     // });
 
-    // Create a visual bullet for this shot
-    this.createBotBullet(botShoot);
+    // Create a visual laser for this shot (unified with player laser)
+    this.createBotLaser(botShoot);
 
     // Call the callback to handle the shot logic
     this.botShootCallback(botShoot);
@@ -916,34 +1002,6 @@ export class BotManager {
     // });
   }
 
-  // Debug method to manually destroy a bot for testing
-  public debugDestroyBot(botId: string): void {
-    const bot = this.bots.get(botId);
-    if (!bot) {
-      console.info('BOT_DEBUG', 'Bot not found for destruction', { botId });
-      return;
-    }
-
-    console.info('BOT_DEBUG', 'Manually destroying bot for testing', {
-      botId,
-      name: bot.name,
-      botType: bot.botType,
-    });
-
-    // Immediately remove the bot instead of setting it to exploding
-    // This ensures the EMP pulse can destroy multiple bots properly
-    this.bots.delete(botId);
-
-    // Also clear any bullets from this bot
-    for (const [bulletId, bullet] of this.botBullets.entries()) {
-      if (bullet.botId === botId) {
-        this.botBullets.delete(bulletId);
-      }
-    }
-
-    console.info('BOT_DEBUG', 'Bot immediately removed', { botId });
-  }
-
   // Method for EMP destruction that triggers respawn system
   public empDestroyBot(botId: string): void {
     const bot = this.bots.get(botId);
@@ -1007,6 +1065,8 @@ export class BotManager {
     bot.blinkOn = true;
     bot.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
     bot.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+    // Extend protection window after respawn
+    bot.spawnProtectedUntil = Date.now() + SHIP_INV_DUR * 1000;
 
     // Reset health to full (same as player ship)
     bot.health = BOT_MAX_HEALTH;
@@ -1052,8 +1112,32 @@ export class BotManager {
    */
   public botTakeDamage(bot: IBotPlayer, amount: number): void {
     if (bot.dead || bot.exploding) {
+      console.debug(
+        'BOT_DAMAGE_SKIP',
+        'Bot damage skipped - already dead or exploding',
+        {
+          botId: bot.id,
+          botName: bot.name,
+          dead: bot.dead,
+          exploding: bot.exploding,
+        },
+      );
       return;
     }
+
+    // Log the damage event
+    console.info('BOT_DAMAGE', 'Bot took damage!', {
+      botId: bot.id,
+      botName: bot.name,
+      botType: bot.botType,
+      damage: amount,
+      previousHealth: bot.health,
+      lives: bot.lives,
+      position: { x: bot.position.x, y: bot.position.y },
+      blinkCount: bot.blinkCount,
+      spawnProtectedUntil: bot.spawnProtectedUntil,
+      isInvincible: bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+    });
 
     bot.health -= amount;
     bot.lastDamageTime = FPS;
@@ -1075,21 +1159,45 @@ export class BotManager {
       // Bot lost all health, lose a life
       bot.lives--;
 
+      console.info(
+        'BOT_LIFE_LOST',
+        'Bot lost a life due to health reaching 0!',
+        {
+          botId: bot.id,
+          botName: bot.name,
+          botType: bot.botType,
+          previousLives: bot.lives + 1,
+          remainingLives: bot.lives,
+          position: { x: bot.position.x, y: bot.position.y },
+          blinkCount: bot.blinkCount,
+          spawnProtectedUntil: bot.spawnProtectedUntil,
+          isInvincible:
+            bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+        },
+      );
+
       if (bot.lives <= 0) {
         // Bot is dead, mark as dead and explode
         bot.dead = true;
         bot.exploding = true;
-        bot.explodeTime = 60; // 1 second explosion duration
+        bot.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+        bot.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
 
-        console.info('BOT_DEATH_FINAL', 'Bot died - no lives remaining', {
+        console.error('BOT_DEATH_FINAL', 'Bot died - no lives remaining', {
           botId: bot.id,
           botName: bot.name,
           botType: bot.botType,
+          position: { x: bot.position.x, y: bot.position.y },
+          blinkCount: bot.blinkCount,
+          spawnProtectedUntil: bot.spawnProtectedUntil,
+          isInvincible:
+            bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
         });
       } else {
         // Bot still has lives, start explosion and respawn sequence
         bot.exploding = true;
-        bot.explodeTime = 30; // 0.5 second explosion duration
+        bot.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+        bot.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
 
         console.info('BOT_LIFE_LOST', 'Bot lost a life!', {
           botId: bot.id,
@@ -1156,6 +1264,44 @@ export class BotManager {
         bot.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
         bot.blinkOn = !bot.blinkOn; // Toggle blinking state
       }
+
+      // Debug logging for invincibility state
+      if (Math.random() < 0.1) {
+        // 10% chance per frame to avoid spam
+        console.debug('BOT_INVINCIBILITY', 'Bot invincibility update', {
+          botId: bot.id,
+          botName: bot.name,
+          blinkCount: bot.blinkCount,
+          blinkTime: bot.blinkTime,
+          blinkOn: bot.blinkOn,
+          spawnProtectedUntil: bot.spawnProtectedUntil,
+          currentTime: Date.now(),
+          isInvincible:
+            bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+        });
+      }
+    }
+
+    // Ensure invincibility lasts at least until spawnProtectedUntil
+    if (
+      typeof bot.spawnProtectedUntil === 'number' &&
+      Date.now() < bot.spawnProtectedUntil
+    ) {
+      // Keep blinkCount non-zero so collision checks that rely on it continue to skip
+      if (bot.blinkCount <= 0) {
+        bot.blinkCount = 1;
+        bot.blinkTime = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+        bot.blinkOn = true; // Start visible
+        console.debug('BOT_INVINCIBILITY', 'Extended bot invincibility', {
+          botId: bot.id,
+          botName: bot.name,
+          blinkCount: bot.blinkCount,
+          blinkTime: bot.blinkTime,
+          spawnProtectedUntil: bot.spawnProtectedUntil,
+          currentTime: Date.now(),
+        });
+      }
+      // Don't override blinkOn here - let the blinking system work naturally
     }
   }
 
@@ -1176,7 +1322,7 @@ export class BotManager {
     this.updateBotExplosions();
 
     // Update bot bullets
-    this.updateBotBullets();
+    this.updateBotLasers();
 
     // Update bot invincibility and blinking effects
     for (const bot of this.bots.values()) {

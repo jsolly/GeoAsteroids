@@ -81,6 +81,8 @@ export interface IBotPlayer extends IPlayer {
   blinkOn: boolean; // Whether bot is currently blinking (invulnerable)
   blinkCount: number; // Number of blinks remaining for invincibility
   blinkTime: number; // Time between blinks for invincibility effect
+  // Additional spawn protection using wall-clock time to avoid edge cases
+  spawnProtectedUntil: number; // Timestamp (ms) until which the bot is invincible
   // Health system properties (same as player ship)
   health: number; // Current health points
   maxHealth: number; // Maximum health points

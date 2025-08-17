@@ -9,6 +9,7 @@ import {
   ROID_POINTS_SML,
   ROID_SPAWN_TIME,
   getRoidNum,
+  DISABLE_ASTEROIDS,
 } from './constants.js';
 import { Sound } from './soundsMusic';
 import { Ship } from './ship';
@@ -69,11 +70,14 @@ class RoidBelt implements IRoidBelt {
     // Don't check multiplayer mode during construction to avoid circular dependency
     // The asteroid count will be adjusted later when the game starts
 
-    for (let i = 0; i < this.roidNum; i++) {
-      this.addRoid(ship);
+    if (!DISABLE_ASTEROIDS) {
+      for (let i = 0; i < this.roidNum; i++) {
+        this.addRoid(ship);
+      }
     }
   }
   addRoid(ship: Ship): void {
+    if (DISABLE_ASTEROIDS) return;
     // Get the current canvas dimensions for full-screen spawning
     const canvasWidth = window.innerWidth;
     const canvasHeight = window.innerHeight;
@@ -144,6 +148,7 @@ class RoidBelt implements IRoidBelt {
    * Move all asteroids in an array using their x and y velocity
    */
   moveRoids(): void {
+    if (DISABLE_ASTEROIDS) return;
     for (const roid of this.roids) {
       // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
       // let dt = 1/Math.sqrt(1-beta_squared)
@@ -151,6 +156,7 @@ class RoidBelt implements IRoidBelt {
     }
   }
   spawnRoids(ship: Ship): void {
+    if (DISABLE_ASTEROIDS) return;
     if (this.spawnTime == 0) {
       // Spawn more asteroids since we have full-screen space
       const spawnCount = Math.min(6, Math.floor(window.innerWidth / 200)); // Scale with screen width

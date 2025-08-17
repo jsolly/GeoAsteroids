@@ -8,16 +8,19 @@ import {
   DEBUG,
   MULTIPLAYER_DEBUG,
   SHOW_COLLISION_CIRCLES,
+  DRAW_ASTEROIDS,
 } from './constants';
 import { Ship } from './ship';
 import { Point } from './point';
+import { Vector } from './vector';
 import { drawRoidsRelative } from './asteroidsCanv';
 import { drawLasers } from './shipCanv';
 import { showGameOverMenu } from './mainMenu';
 import { RoidBelt } from './asteroids';
 import { GameController } from './gameController';
 import { PlayerNetwork } from './playerNetwork.js';
-import { IPlayer, IBotPlayer, IBotBullet } from './types/multiplayer.js';
+import { IPlayer, IBotPlayer } from './types/multiplayer.js';
+import { BotManager } from './botManager.js';
 import { worldToScreen } from './utils';
 import { drawGenericThruster } from './shipCanv';
 
@@ -201,8 +204,8 @@ function drawOtherPlayers(localShip: Ship): void {
 
   // Draw bot players
   for (const [, bot] of bots.entries()) {
-    // Don't draw if bot is dead or exploding
-    if (bot.dead || bot.exploding) {
+    // Don't draw if bot is dead and not exploding
+    if (bot.dead && !bot.exploding) {
       continue;
     }
 
@@ -287,6 +290,12 @@ function drawBotShip(bot: IBotPlayer): void {
   // If bot is exploding, draw explosion effect
   if (bot.exploding && bot.explodeTime > 0) {
     drawBotExplosion(bot);
+    return;
+  }
+
+  // Implement blinking effect for invincible bots
+  if (bot.blinkCount > 0 && !bot.blinkOn) {
+    // Bot is invincible but currently in "off" blink state - don't render
     return;
   }
 
@@ -464,77 +473,54 @@ function drawBotBullets(): void {
     return;
   }
 
-  const botBullets = getGameController().getBotBullets();
-  if (botBullets.size === 0) {
-    return;
-  }
+  const botLasersMap = BotManager.getInstance().getBotLasers();
+  if (botLasersMap.size === 0) return;
 
-  // Draw each bot bullet
-  for (const [, bullet] of botBullets.entries()) {
-    drawBotBullet(bullet);
+  for (const [botId, lasers] of botLasersMap.entries()) {
+    const bots = getGameController().getBots();
+    const bot = bots.get(botId);
+    for (const laser of lasers) {
+      drawBotLaser(laser.position.x, laser.position.y, bot?.botType);
+    }
   }
 }
 
 /**
  * Draw a single bot bullet
  */
-function drawBotBullet(bullet: IBotBullet): void {
-  // Get the local ship position for viewport transformation
+function drawBotLaser(
+  worldX: number,
+  worldY: number,
+  botType?: IBotPlayer['botType'],
+): void {
   const localShip = getGameController().getCurrShip();
-  const screenPos = worldToScreen(bullet.position, localShip.position);
+  const screenPos = worldToScreen(
+    new Vector(worldX, worldY),
+    localShip.position,
+  );
 
-  // Get the bot that fired this bullet to determine color
-  const bots = getGameController().getBots();
-  const bot = bots.get(bullet.botId);
-
-  // Set bullet color based on bot type (or default to red)
-  let bulletColor: string;
-  if (bot) {
-    switch (bot.botType) {
-      case 'aggressive':
-        bulletColor = '#ff4444'; // Red for aggressive bots
-        break;
-      case 'defensive':
-        bulletColor = '#4444ff'; // Blue for defensive bots
-        break;
-      case 'patrol':
-        bulletColor = '#ff8844'; // Orange for patrol bots
-        break;
-      default:
-        bulletColor = '#ff4444';
-    }
-  } else {
-    bulletColor = '#ff4444'; // Default red if bot not found
+  let color: string;
+  switch (botType) {
+    case 'defensive':
+      color = '#4444ff';
+      break;
+    case 'patrol':
+      color = '#ff8844';
+      break;
+    case 'aggressive':
+    default:
+      color = '#ff4444';
   }
 
-  // Draw the bullet as a small circle
   const ctx = getCTX();
   const cvs = getCVS();
   if (!ctx || !cvs) return;
 
   ctx.save();
-  ctx.fillStyle = bulletColor;
-  ctx.strokeStyle = '#ffffff'; // White outline
-  ctx.lineWidth = 1;
-
-  // Draw bullet body
+  ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(screenPos.x, screenPos.y, 3, 0, Math.PI * 2);
+  ctx.arc(screenPos.x, screenPos.y, 2.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
-
-  // Draw bullet trail (small line in direction of movement)
-  const trailLength = 8;
-  const trailEndX = screenPos.x - bullet.direction.x * trailLength;
-  const trailEndY = screenPos.y - bullet.direction.y * trailLength;
-
-  ctx.strokeStyle = bulletColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(screenPos.x, screenPos.y);
-  ctx.lineTo(trailEndX, trailEndY);
-  ctx.stroke();
-
   ctx.restore();
 }
 
@@ -708,12 +694,6 @@ function drawMiniMap(
   ctx.lineWidth = 1;
   ctx.strokeRect(xPos, yPos, mapSize, mapSize);
 
-  // Draw mini-map title
-  ctx.fillStyle = '#00ff00';
-  ctx.font = '10px dejavu sans mono';
-  ctx.textAlign = 'center';
-  ctx.fillText('Mini-Map', mapCenterX, yPos + 12);
-
   // Calculate world bounds for scaling (adjust these values based on your game world)
   const worldRadius = 2000; // Adjust based on your game world size
   const scale = mapRadius / worldRadius;
@@ -751,40 +731,17 @@ function drawMiniMap(
   for (const [, bot] of bots.entries()) {
     if (bot.dead || bot.exploding) continue;
 
-    // Calculate relative position from local ship
     const relativeX = (bot.position.x - localShip.position.x) * scale;
     const relativeY = (bot.position.y - localShip.position.y) * scale;
 
-    // Check if bot is within mini-map bounds
     if (Math.abs(relativeX) <= mapRadius && Math.abs(relativeY) <= mapRadius) {
       const mapX = mapCenterX + relativeX;
       const mapY = mapCenterY + relativeY;
 
-      // Draw bot dot with different color based on type
-      let botColor = '#ff4444'; // Default red
-      if (bot.botType === 'defensive') botColor = '#4444ff'; // Blue
-      if (bot.botType === 'patrol') botColor = '#ff8844'; // Orange
-
-      ctx.fillStyle = botColor;
+      ctx.fillStyle = '#ff4444';
       ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
-
-      // Draw bot name (small)
-      ctx.fillStyle = botColor;
-      ctx.font = '8px dejavu sans mono';
-      ctx.textAlign = 'center';
-      ctx.fillText(bot.name, mapX, mapY + 8);
     }
   }
-
-  // Draw direction indicator (North)
-  ctx.strokeStyle = '#00ff00';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(mapCenterX, yPos + 15);
-  ctx.lineTo(mapCenterX, yPos + 25);
-  ctx.stroke();
-  ctx.fillStyle = '#00ff00';
-  ctx.fillText('N', mapCenterX, yPos + 30);
 }
 
 function drawGameCanvas(
@@ -804,7 +761,9 @@ function drawGameCanvas(
       drawDebugFeatures(ship);
     }
 
-    drawRoidsRelative(ship, roidBelt.roids);
+    if (DRAW_ASTEROIDS) {
+      drawRoidsRelative(ship, roidBelt.roids);
+    }
     drawLasers(ship);
 
     // Draw other players if multiplayer is enabled

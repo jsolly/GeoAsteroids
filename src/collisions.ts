@@ -1,7 +1,9 @@
-import { DEBUG } from './constants.js';
-import { IBotPlayer, IBotBullet } from './types/multiplayer.js';
+import { DEBUG, DISABLE_ASTEROIDS } from './constants.js';
+import { IBotPlayer } from './types/multiplayer.js';
 import { RoidBelt, Roid } from './asteroids.js';
 import { Ship, Laser } from './ship.js';
+import { logger } from './simpleLogger.js';
+import { BotManager } from './botManager.js';
 import {
   SHIP_ASTEROID_DAMAGE,
   SHIP_BOT_DAMAGE,
@@ -9,69 +11,52 @@ import {
   FPS,
   BOT_HEALTH_REGEN_DELAY,
   BOT_ASTEROID_DAMAGE,
+  LASER_EXPLODE_DUR,
 } from './constants.js';
 import { Vector } from './vector.js';
 
 // Test DEBUG constant at import time
 // console.log('🔍 COLLISIONS: DEBUG constant imported as:', DEBUG, 'Type:', typeof DEBUG);
 
+// botManager will be retrieved lazily inside functions to avoid circular issues
+
 function detectLaserHits(
   currRoidBelt: RoidBelt,
   currShip: Ship,
   bots?: Map<string, IBotPlayer>,
-  botBullets?: Map<string, IBotBullet>,
 ): number {
   const roids = currRoidBelt.roids;
   let score = 0;
 
   // detect laser hits on asteroids
-  for (let j = currShip.lasers.length - 1; j >= 0; j--) {
-    for (let i = roids.length - 1; i >= 0; i--) {
-      // detect hits
-      if (isHit(currShip.lasers[j], roids[i])) {
-        // remove asteroid and activate laser explosion
-        Roid.fxHit.play();
-        score = currRoidBelt.destroyRoid(i);
-        currShip.updateLaserExplodeTime(j);
+  if (!DISABLE_ASTEROIDS) {
+    for (let j = currShip.lasers.length - 1; j >= 0; j--) {
+      for (let i = roids.length - 1; i >= 0; i--) {
+        // detect hits
+        if (isHit(currShip.lasers[j], roids[i])) {
+          // remove asteroid and activate laser explosion
+          Roid.fxHit.play();
+          score = currRoidBelt.destroyRoid(i);
+          currShip.updateLaserExplodeTime(j);
+        }
       }
     }
   }
 
-  // detect bot bullet hits on asteroids (if bot bullets are provided)
-  if (botBullets && botBullets.size > 0) {
-    for (const [bulletId, bullet] of botBullets.entries()) {
-      for (let i = roids.length - 1; i >= 0; i--) {
-        if (isBotBulletHit(bullet, roids[i])) {
-          console.info('BOT_BULLET_COLLISION', 'Bot bullet hit asteroid!', {
-            bulletId,
-            botId: bullet.botId,
-            asteroidIndex: i,
-            bulletPos: { x: bullet.position.x, y: bullet.position.y },
-            asteroidPos: { x: roids[i].position.x, y: roids[i].position.y },
-            distance: roids[i].position.distance(bullet.position),
-            asteroidRadius: roids[i].r,
-          });
-
-          // remove asteroid and play hit sound
-          Roid.fxHit.play();
-          score = currRoidBelt.destroyRoid(i);
-
-          // Remove the bullet that hit the asteroid
-          botBullets.delete(bulletId);
-
-          console.info(
-            'BOT_BULLET_COLLISION_SUCCESS',
-            'Asteroid destroyed by bot bullet',
-            {
-              bulletId,
-              botId: bullet.botId,
-              asteroidIndex: i,
-              newScore: score,
-              remainingBullets: botBullets.size,
-            },
-          );
-
-          break; // This bullet is now destroyed, move to next bullet
+  // detect bot laser hits on asteroids (bots now use Laser)
+  const botManager = BotManager.getInstance();
+  const botLasersMap = botManager.getBotLasers();
+  if (!DISABLE_ASTEROIDS && botLasersMap && botLasersMap.size > 0) {
+    for (const [, lasers] of botLasersMap.entries()) {
+      for (let j = lasers.length - 1; j >= 0; j--) {
+        for (let i = roids.length - 1; i >= 0; i--) {
+          if (isHit(lasers[j], roids[i])) {
+            Roid.fxHit.play();
+            score = currRoidBelt.destroyRoid(i);
+            // trigger laser explode like player
+            lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+            break;
+          }
         }
       }
     }
@@ -94,10 +79,34 @@ function detectLaserHits(
           continue;
         }
 
-        // Skip invincible bots (blinking)
-        if (bot.blinkCount > 0) {
+        // Skip invincible bots (blinking or time-based spawn protection)
+        if (bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now()) {
+          console.debug('BOT_COLLISION_SKIP', 'Skipping invincible bot', {
+            botId,
+            botType: bot.botType,
+            blinkCount: bot.blinkCount,
+            spawnProtectedUntil: bot.spawnProtectedUntil,
+            currentTime: Date.now(),
+            isInvincible:
+              bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+          });
           continue;
         }
+
+        // Add debug logging for non-invincible bots
+        console.debug(
+          'BOT_COLLISION_CHECK',
+          'Checking collision with non-invincible bot',
+          {
+            botId,
+            botType: bot.botType,
+            blinkCount: bot.blinkCount,
+            spawnProtectedUntil: bot.spawnProtectedUntil,
+            currentTime: Date.now(),
+            health: bot.health,
+            lives: bot.lives,
+          },
+        );
 
         if (isLaserHitBot(laser, bot)) {
           console.info('BOT_COLLISION', 'Bot hit by laser!', {
@@ -111,58 +120,42 @@ function detectLaserHits(
             damage: BOT_LASER_DAMAGE,
           });
 
-          // Deal damage to bot instead of instant death
-          // The bot will handle its own damage and life loss
-          bot.health -= BOT_LASER_DAMAGE;
-          bot.lastDamageTime = FPS;
-          bot.healthRegenTimer = Math.ceil(BOT_HEALTH_REGEN_DELAY * FPS);
-
-          // Check if bot should lose a life
-          if (bot.health <= 0) {
-            bot.health = 0;
-            bot.lives--;
-
-            if (bot.lives <= 0) {
-              // Bot is dead, mark as dead and explode
-              bot.dead = true;
-              bot.exploding = true;
-              bot.explodeTime = 60; // 1 second explosion duration
-            } else {
-              // Bot still has lives, start explosion and respawn sequence
-              bot.exploding = true;
-              bot.explodeTime = 30; // 0.5 second explosion duration
-
-              // Start respawn timer
-              bot.respawnTimer = 300; // 5 seconds at 60 FPS
-              bot.respawnPosition = new Vector(bot.position.x, bot.position.y);
-            }
-          }
+          // Deal damage to bot (same logic as botTakeDamage method)
+          botManager.botTakeDamage(bot, BOT_LASER_DAMAGE);
 
           currShip.updateLaserExplodeTime(j);
 
-          // Add points for destroying a bot
-          score += 200;
+          // Add points for destroying a bot (only if bot is actually destroyed)
+          if (bot.dead) {
+            score += 200;
+          }
 
           // Play hit sound
           Roid.fxHit.play();
 
-          // Dispatch event to notify bot destruction
-          window.dispatchEvent(
-            new CustomEvent('botDestroyed', {
-              detail: { botId, botType: bot.botType },
-            }),
-          );
+          // Only dispatch event if bot is actually destroyed
+          if (bot.dead) {
+            window.dispatchEvent(
+              new CustomEvent('botDestroyed', {
+                detail: { botId, botType: bot.botType },
+              }),
+            );
 
-          console.info('BOT_COLLISION_SUCCESS', 'Bot destroyed successfully', {
-            botId,
-            botType: bot.botType,
-            newScore: score,
-            botState: {
-              dead: bot.dead,
-              exploding: bot.exploding,
-              explodeTime: bot.explodeTime,
-            },
-          });
+            console.info(
+              'BOT_COLLISION_SUCCESS',
+              'Bot destroyed successfully',
+              {
+                botId,
+                botType: bot.botType,
+                newScore: score,
+                botState: {
+                  dead: bot.dead,
+                  exploding: bot.exploding,
+                  explodeTime: bot.explodeTime,
+                },
+              },
+            );
+          }
 
           break; // This laser is now exploded, move to next
         }
@@ -170,75 +163,69 @@ function detectLaserHits(
     }
   }
 
-  // detect bot bullet hits on other bots (bot-on-bot combat)
-  if (botBullets && botBullets.size > 0 && bots && bots.size > 0) {
-    // console.info('BOT_VS_BOT_COLLISION_DEBUG', 'Checking bot bullet hits on other bots', {
-    //   bulletCount: botBullets.size,
-    //   botCount: bots.size,
-    //   bullets: Array.from(botBullets.values()).map(bullet => ({
-    //     id: bullet.id,
-    //     botId: bullet.botId,
-    //     position: { x: bullet.position.x, y: bullet.position.y }
-    //   }))
-    // });
+  // detect bot laser hits on other bots (bot-on-bot combat)
+  if (bots && bots.size > 0 && botLasersMap && botLasersMap.size > 0) {
+    for (const [shootingBotId, lasers] of botLasersMap.entries()) {
+      const shootingBot = bots.get(shootingBotId);
+      if (!shootingBot || shootingBot.dead || shootingBot.exploding) continue;
 
-    for (const [bulletId, bullet] of botBullets.entries()) {
-      // Skip bullets from bots that are no longer alive
-      const shootingBot = bots.get(bullet.botId);
-      if (!shootingBot || shootingBot.dead || shootingBot.exploding) {
-        continue;
-      }
+      for (let j = lasers.length - 1; j >= 0; j--) {
+        const laser = lasers[j];
+        if (laser.explodeTime > 0) continue;
 
-      for (const [targetBotId, targetBot] of bots.entries()) {
-        // Skip the bot that fired the bullet and dead/exploding bots
-        if (
-          targetBotId === bullet.botId ||
-          targetBot.dead ||
-          targetBot.exploding
-        ) {
-          continue;
-        }
+        for (const [targetBotId, targetBot] of bots.entries()) {
+          if (
+            targetBotId === shootingBotId ||
+            targetBot.dead ||
+            targetBot.exploding
+          ) {
+            continue;
+          }
 
-        // Skip invincible bots (blinking)
-        if (targetBot.blinkCount > 0) {
-          continue;
-        }
+          if (
+            targetBot.blinkCount > 0 ||
+            targetBot.spawnProtectedUntil > Date.now()
+          ) {
+            continue;
+          }
 
-        if (isBotBulletHitBot(bullet, targetBot)) {
-          console.info('BOT_VS_BOT_COLLISION', 'Bot hit by another bot!', {
-            bulletId,
-            shootingBotId: bullet.botId,
-            shootingBotName: shootingBot.name,
-            targetBotId,
-            targetBotName: targetBot.name,
-            bulletPos: { x: bullet.position.x, y: bullet.position.y },
-            targetBotPos: { x: targetBot.position.x, y: targetBot.position.y },
-            distance: targetBot.position.distance(bullet.position),
-            targetBotRadius: targetBot.r,
-          });
+          if (isLaserHitBot(laser, targetBot)) {
+            console.info(
+              'BOT_VS_BOT_COLLISION',
+              'Bot hit by another bot laser!',
+              {
+                shootingBotId,
+                shootingBotName: shootingBot.name,
+                targetBotId,
+                targetBotName: targetBot.name,
+                laserPos: { x: laser.position.x, y: laser.position.y },
+                targetBotPos: {
+                  x: targetBot.position.x,
+                  y: targetBot.position.y,
+                },
+                distance: targetBot.position.distance(laser.position),
+                targetBotRadius: targetBot.r,
+                damage: BOT_LASER_DAMAGE,
+              },
+            );
 
-          // Destroy the target bot
-          targetBot.dead = true;
-          targetBot.exploding = true;
-          targetBot.explodeTime = 30; // 0.5 seconds at 60 FPS
+            botManager.botTakeDamage(targetBot, BOT_LASER_DAMAGE);
+            laser.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
 
-          // Remove the bullet that hit the bot
-          botBullets.delete(bulletId);
+            if (targetBot.dead) {
+              window.dispatchEvent(
+                new CustomEvent('botDestroyed', {
+                  detail: {
+                    botId: targetBotId,
+                    botType: targetBot.botType,
+                    killedBy: 'bot_laser',
+                  },
+                }),
+              );
+            }
 
-          console.info(
-            'BOT_VS_BOT_COLLISION_SUCCESS',
-            'Bot destroyed by another bot',
-            {
-              bulletId,
-              shootingBotId: bullet.botId,
-              shootingBotName: shootingBot.name,
-              targetBotId,
-              targetBotName: targetBot.name,
-              remainingBullets: botBullets.size,
-            },
-          );
-
-          break; // This bullet is now destroyed, move to next bullet
+            break;
+          }
         }
       }
     }
@@ -262,7 +249,7 @@ function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
   const isDebugMode = DEBUG || isDevelopment;
 
   // check for asteroid collisions (when not exploding)
-  if (!currShip.exploding) {
+  if (!DISABLE_ASTEROIDS && !currShip.exploding) {
     // only check when not blinking
     if (currShip.blinkCount == 0 && !currShip.dead) {
       for (let i = 0; i < currRoidBelt.roids.length; i++) {
@@ -330,14 +317,47 @@ function detectBotAsteroidCollisions(
       continue;
     }
 
+    // Skip invincible bots (blinking or time-based spawn protection)
+    if (bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now()) {
+      console.debug(
+        'BOT_ASTEROID_COLLISION_SKIP',
+        'Skipping invincible bot for asteroid collision',
+        {
+          botId,
+          botType: bot.botType,
+          blinkCount: bot.blinkCount,
+          spawnProtectedUntil: bot.spawnProtectedUntil,
+          currentTime: Date.now(),
+          isInvincible:
+            bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+        },
+      );
+      continue;
+    }
+
+    // Add debug logging for non-invincible bots
+    console.debug(
+      'BOT_ASTEROID_COLLISION_CHECK',
+      'Checking asteroid collision with non-invincible bot',
+      {
+        botId,
+        botType: bot.botType,
+        blinkCount: bot.blinkCount,
+        spawnProtectedUntil: bot.spawnProtectedUntil,
+        currentTime: Date.now(),
+        health: bot.health,
+        lives: bot.lives,
+      },
+    );
+
     // Check collision with each asteroid
     for (let i = 0; i < roids.length; i++) {
       const distance = bot.position.distance(roids[i].position);
       const collisionThreshold = bot.r + roids[i].r;
 
       if (distance < collisionThreshold) {
-        // Skip invincible bots (blinking)
-        if (bot.blinkCount > 0) {
+        // Skip invincible bots (blinking or time-based spawn protection)
+        if (bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now()) {
           continue;
         }
 
@@ -454,45 +474,7 @@ function isLaserHitBot(laser: Laser, bot: IBotPlayer): boolean {
   return distance < hitRadius;
 }
 
-function isBotBulletHit(bullet: IBotBullet, roid: Roid): boolean {
-  // Calculate distance between bullet and asteroid center
-  const distance = roid.position.distance(bullet.position);
-
-  // Check if bullet is within asteroid radius
-  return distance < roid.r;
-}
-
-function isBotBulletHitBot(bullet: IBotBullet, bot: IBotPlayer): boolean {
-  // Calculate distance between bullet and bot center
-  const distance = bot.position.distance(bullet.position);
-
-  // Make collision detection more forgiving - use a larger hit area
-  // This accounts for the fact that bullets are moving and bots are small
-  const hitRadius = bot.r + 5; // Add 5 pixels of tolerance
-
-  // Log collision detection details for debugging
-  if (distance < hitRadius + 10) {
-    // Log when close to hitting
-    console.info(
-      'BOT_VS_BOT_COLLISION_CHECK',
-      'Bot bullet collision check details',
-      {
-        bulletId: bullet.id,
-        shooterBotId: bullet.botId,
-        targetBotId: bot.id,
-        targetBotType: bot.botType,
-        bulletPos: { x: bullet.position.x, y: bullet.position.y },
-        botPos: { x: bot.position.x, y: bot.position.y },
-        distance,
-        botRadius: bot.r,
-        hitRadius,
-        hit: distance < hitRadius,
-      },
-    );
-  }
-
-  return distance < hitRadius;
-}
+// Legacy bot bullet helpers removed in favor of Laser usage
 
 function detectShipToShipCollisions(
   currShip: Ship,
@@ -517,8 +499,21 @@ function detectShipToShipCollisions(
     const collisionThreshold = currShip.r + bot.r;
 
     if (distance < collisionThreshold) {
-      // Skip invincible bots (blinking)
-      if (bot.blinkCount > 0) {
+      // Skip invincible bots (blinking or time-based spawn protection)
+      if (bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now()) {
+        logger.collision(
+          'BOT_SHIP',
+          'Bot collision skipped - bot is invincible',
+          {
+            botId,
+            botType: bot.botType,
+            blinkCount: bot.blinkCount,
+            spawnProtectedUntil: bot.spawnProtectedUntil,
+            currentTime: Date.now(),
+            isProtected:
+              bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+          },
+        );
         continue;
       }
 
@@ -647,8 +642,21 @@ function detectBotShipCollisions(
     const collisionThreshold = bot.r + currShip.r;
 
     if (distance < collisionThreshold) {
-      // Skip invincible bots (blinking)
-      if (bot.blinkCount > 0) {
+      // Skip invincible bots (blinking or time-based spawn protection)
+      if (bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now()) {
+        logger.collision(
+          'BOT_SHIP',
+          'Bot collision skipped - bot is invincible',
+          {
+            botId,
+            botType: bot.botType,
+            blinkCount: bot.blinkCount,
+            spawnProtectedUntil: bot.spawnProtectedUntil,
+            currentTime: Date.now(),
+            isProtected:
+              bot.blinkCount > 0 || bot.spawnProtectedUntil > Date.now(),
+          },
+        );
         continue;
       }
 

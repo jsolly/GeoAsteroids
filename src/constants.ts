@@ -82,6 +82,10 @@ export const MULTIPLAYER_ENABLED =
   import.meta.env.VITE_MULTIPLAYER_ENABLED !== 'false'; // Enable multiplayer by default, can be disabled with VITE_MULTIPLAYER_ENABLED=false
 export const WEBSOCKET_ENABLED =
   import.meta.env.VITE_WEBSOCKET_ENABLED !== 'false'; // Enable WebSocket by default, can be disabled with VITE_WEBSOCKET_ENABLED=false
+// Feature flags
+export const DISABLE_ASTEROIDS =
+  import.meta.env.VITE_DISABLE_ASTEROIDS === 'true';
+export const DRAW_ASTEROIDS = import.meta.env.VITE_DRAW_ASTEROIDS !== 'false';
 export const SAVE_KEY_PERSONAL_BEST = 'personal_best'; // localstorage of the user's personal best score.
 export const NEXT_LEVEL_POINTS = 1000;
 
@@ -216,3 +220,5 @@ export const BOT_LASER_DAMAGE = 20; // Damage from player laser hits
 export const BOT_BOT_DAMAGE = 15; // Damage from other bot collisions
 export const BOT_HEALTH_REGEN_RATE = 1; // Health regeneration per second when not taking damage
 export const BOT_HEALTH_REGEN_DELAY = 5; // Seconds to wait before health regeneration starts
+// Damage from bot bullet hits (bot vs bot)
+export const BOT_BULLET_DAMAGE = 15;

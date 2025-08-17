@@ -1,5 +1,6 @@
 import './logLevel'; // Import early to set up console overrides
 import { getElementById, attachEventListener } from './utils';
+import { logger } from './simpleLogger.js';
 import {
   validateInput,
   submitName,
@@ -56,6 +57,8 @@ if (document.readyState === 'loading') {
 
 // Test logging to verify it's working
 console.info('MAIN_MENU', 'Main menu script loaded successfully');
+logger.info('MAIN_MENU', 'SimpleLogger initialized successfully');
+logger.separator('GAME STARTED');
 
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
 const musicCheckBox = getElementById<HTMLInputElement>('musicPref');

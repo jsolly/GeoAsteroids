@@ -8,7 +8,6 @@ import {
   IClientMessage,
   IBotPlayer,
   IBotShoot,
-  IBotBullet,
   IGameState,
 } from './types/multiplayer.js';
 import { WEBSOCKET_ENABLED } from './constants.js';
@@ -363,28 +362,23 @@ export class MultiplayerManager {
 
   public disableBots(): void {
     this.botManager.deactivate();
-    this.botManager.clearBotBullets(); // Clear any active bot bullets
-    console.info('MULTIPLAYER', 'Bots disabled and bullets cleared');
+    this.botManager.clearBotBullets();
+    this.botManager.clearBotLasers();
+    console.info('MULTIPLAYER', 'Bots disabled and projectiles cleared');
   }
 
   public getBots(): Map<string, IBotPlayer> {
     return this.botManager.getBots();
   }
 
-  public getBotBullets(): Map<string, IBotBullet> {
-    return this.botManager.getBotBullets();
-  }
-
-  public updateBotBullets(): void {
-    this.botManager.updateBotBullets();
-  }
+  // Legacy bot bullet accessors are removed in favor of lasers
 
   public updateBotsInGameLoop(): void {
     this.botManager.updateBotsInGameLoop();
   }
 
   public debugDestroyBot(botId: string): void {
-    this.botManager.debugDestroyBot(botId);
+    this.botManager.empDestroyBot(botId);
   }
 
   public empDestroyBot(botId: string): void {
@@ -473,8 +467,7 @@ export class MultiplayerManager {
         disableBots: (): void => MultiplayerManager.getInstance().disableBots(),
         getBots: (): Map<string, IBotPlayer> =>
           MultiplayerManager.getInstance().getBots(),
-        getBotBullets: (): Map<string, IBotBullet> =>
-          MultiplayerManager.getInstance().getBotBullets(),
+        // getBotBullets removed in favor of lasers
         getPlayers: (): Map<string, IPlayer> =>
           MultiplayerManager.getInstance().getPlayers(),
         getLocalPlayerId: (): string =>

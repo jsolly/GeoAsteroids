@@ -3,7 +3,7 @@ import { Ship } from './ship.js';
 import { RoidBelt } from './asteroids.js';
 import { Music } from './soundsMusic.js';
 import { MultiplayerManager } from './multiplayerManager.js';
-import { IBotPlayer, IBotShoot, IBotBullet } from './types/multiplayer.js';
+import { IBotPlayer, IBotShoot } from './types/multiplayer.js';
 // Console methods now respect VITE_LOG_LEVEL automatically
 import { toggleScreen } from './mainMenu';
 import { keyDown, keyUp } from './keybindings';
@@ -211,9 +211,7 @@ class GameController implements IGameController {
 
     // Always enable bots for multiplayer mode, regardless of websocket status
     // Bots work independently of websocket connections
-    setTimeout(() => {
-      this.enableBots(3); // Add 3 bots by default
-    }, 2000); // Wait 2 seconds after connection to ensure everything is set up
+    this.enableBots(3); // Add 3 bots immediately at game start
 
     // Only connect to WebSocket if enabled
     if (WEBSOCKET_ENABLED) {
@@ -298,18 +296,7 @@ class GameController implements IGameController {
     return new Map();
   }
 
-  getBotBullets(): Map<string, IBotBullet> {
-    if (this.gameState.isMultiplayerEnabled()) {
-      return this.multiplayerManager.getBotBullets();
-    }
-    return new Map();
-  }
-
-  updateBotBullets(): void {
-    if (this.gameState.isMultiplayerEnabled()) {
-      this.multiplayerManager.updateBotBullets();
-    }
-  }
+  // Bot lasers now replace legacy bot bullets. Keep methods for compatibility if needed.
 
   updateBotsInGameLoop(): void {
     if (this.gameState.isMultiplayerEnabled()) {
@@ -487,6 +474,7 @@ class GameController implements IGameController {
     center: { x: number; y: number },
     radius: number,
   ): void {
+    if (import.meta.env.VITE_DISABLE_ASTEROIDS === 'true') return;
     const roids = this.currRoidBelt.roids;
     let destroyedCount = 0;
 

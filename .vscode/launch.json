@@ -8,12 +8,12 @@
       "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}",
       "sourceMaps": true,
-      "trace": true,
+      "port": 9222,
       "console": "integratedTerminal",
-      "userDataDir": false,
       "runtimeArgs": [
         "--disable-web-security",
-        "--disable-features=VizDisplayCompositor"
+        "--disable-features=VizDisplayCompositor",
+        "--remote-debugging-port=9222"
       ]
     },
     {

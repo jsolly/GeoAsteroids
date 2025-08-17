@@ -5,6 +5,7 @@ import {
   musicIsOn,
   EMP_PULSE_RADIUS,
   EMP_PULSE_DURATION,
+  DISABLE_ASTEROIDS,
 } from './constants';
 import {
   detectLaserHits,
@@ -323,14 +324,12 @@ function handleCollision(ship: Ship): void {
     const bots = gameController.isMultiplayerEnabled()
       ? gameController.getBots()
       : undefined;
-    const botBullets = gameController.isMultiplayerEnabled()
-      ? gameController.getBotBullets()
-      : undefined;
+    // Legacy bot bullets removed – collisions read bot lasers directly from manager
 
-    gameController.updateCurrScore(
-      detectLaserHits(currRoidBelt, ship, bots, botBullets),
-    );
-    gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
+    gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, bots));
+    if (!DISABLE_ASTEROIDS) {
+      gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
+    }
 
     // Add ship-to-ship collision detection
     if (bots && bots.size > 0) {
