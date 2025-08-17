@@ -52,7 +52,7 @@ export class MultiplayerManager {
         window.location.hostname === 'localhost'
           ? 'localhost:3001'
           : window.location.host;
-      const wsUrl = `${protocol}//${host}/api/multiplayer`;
+      const wsUrl = `${protocol}//${host}/ws`;
 
       this.socket = new WebSocket(wsUrl);
       this.setupWebSocketHandlers();
