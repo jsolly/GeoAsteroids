@@ -1,10 +1,6 @@
 import { Point } from './Point.ts';
 
 class Vector extends Point {
-  constructor(x: number, y: number) {
-    super(x, y);
-  }
-
   static fromAngle(angle: number): Vector {
     return new Vector(Math.cos(angle), -Math.sin(angle));
   }
