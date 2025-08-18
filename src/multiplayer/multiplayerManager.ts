@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { BotPlayer, BotShoot } from '../entities/bot/types';
-import type { Player } from '../entities/player/types';
-import { Ship } from '../entities/ship/Ship';
-import { Vector } from '../physics/Vector';
-import { BotIntegrationManager } from './botIntegrationManager';
+import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
+import type { Player } from '../entities/player/types.ts';
+import { Ship } from '../entities/ship/Ship.ts';
+import { Vector } from '../physics/Vector.ts';
+import { BotIntegrationManager } from './botIntegrationManager.ts';
 import type {
   ClientMessage,
   GameState,
@@ -11,7 +11,7 @@ import type {
   PlayerLeave,
   PlayerUpdate,
   ServerMessage,
-} from './types';
+} from './types.ts';
 
 export class MultiplayerManager {
   private static instance: MultiplayerManager;

@@ -1,2 +1,2 @@
 export { Point } from './Point';
-export { Vector } from './Vector';
+export { Vector } from './Vector.ts';

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { FPS, TURN_SPEED } from '../src/constants';
-import { Ship } from '../src/entities/ship/Ship';
-import { keyDown, keyUp } from '../src/input/keybindings';
+import { Ship } from '../src/entities/ship/Ship.ts';
+import { keyDown, keyUp } from '../src/input/keybindings.ts';
 
 let mockShip: Ship;
 const mockPlay = vi.fn();

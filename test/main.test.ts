@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { SAVE_KEY_PERSONAL_BEST } from '../src/constants';
-import { GameState } from '../src/core/gameState';
+import { GameState } from '../src/core/gameState.ts';
 
 const gameState = GameState.getInstance();
 

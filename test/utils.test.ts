@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { Point } from '../src/physics/Point';
+import { Point } from '../src/physics/Point.ts';
 
 test.concurrent('Point Creation', () => {
   const firstPoint = new Point(10, 20);

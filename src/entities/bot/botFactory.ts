@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FPS, SHIP_INV_BLINK_DUR, SHIP_INV_DUR } from '../../constants';
-import { Vector } from '../../physics/Vector';
-import { BotPlayer } from './BotPlayer';
+import { Vector } from '../../physics/Vector.ts';
+import { BotPlayer } from './BotPlayer.ts';
 
 export class BotFactory {
   public createBots(count: number = 3): Map<string, BotPlayer> {

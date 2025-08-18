@@ -1,5 +1,5 @@
 import { getCVS, ROID_SIZE } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import { Vector } from '../../physics/Vector.ts';
 
 export function spawnAsteroidFromEdge(): Vector {
   // Get the current canvas dimensions for full-screen spawning

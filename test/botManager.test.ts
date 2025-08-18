@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { BOT_LASER_DAMAGE, BOT_MAX_HEALTH, SHIP_INV_DUR } from '../src/constants';
-import { BotManager } from '../src/entities/bot/botManager';
-import { Vector } from '../src/physics/Vector';
+import { BotManager } from '../src/entities/bot/botManager.ts';
+import { Vector } from '../src/physics/Vector.ts';
 
 describe('BotManager', () => {
   let botManager: BotManager;

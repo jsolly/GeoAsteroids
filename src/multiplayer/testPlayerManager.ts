@@ -1,6 +1,6 @@
-import { Ship } from '../entities/ship/Ship';
-import { Vector } from '../physics/Vector';
-import type { Player } from './types';
+import { Ship } from '../entities/ship/Ship.ts';
+import { Vector } from '../physics/Vector.ts';
+import type { Player } from './types.ts';
 
 export class TestPlayerManager {
   private players: Map<string, Player> = new Map();

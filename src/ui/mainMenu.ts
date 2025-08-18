@@ -1,15 +1,15 @@
-import { setupConsoleOverride } from '../utils/logLevel'; // Import early to set up console overrides
+import { setupConsoleOverride } from '../utils/logLevel.ts'; // Import early to set up console overrides
 
 // Set up console overrides immediately
 setupConsoleOverride();
 
 // Simple logging - removed complex logger dependency
-import { setMusic } from '../audio/Music';
-import { setSound } from '../audio/Sound';
+import { setMusic } from '../audio/Music.ts';
+import { setSound } from '../audio/Sound.ts';
 import { Difficulty, initializeCanvas, setDifficulty } from '../constants';
-import { GameController } from '../core/gameController';
-import { fetchHighScores, submitName, validateInput } from '../services/highScoreService';
-import { attachEventListener, getElementById } from '../utils/dom';
+import { GameController } from '../core/gameController.ts';
+import { fetchHighScores, submitName, validateInput } from '../services/highScoreService.ts';
+import { attachEventListener, getElementById } from '../utils/dom.ts';
 
 // toggleScreen lives in uiUtils; mainMenu imports it via highScoreService when needed
 

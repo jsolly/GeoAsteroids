@@ -1,6 +1,6 @@
 import { getCTX, getCVS, SHIP_SIZE } from '../../constants';
-import { Point } from '../../physics/Point';
-import { worldToScreen } from '../../rendering/viewport';
+import { Point } from '../../physics/Point.ts';
+import { worldToScreen } from '../../rendering/viewport.ts';
 import type { Ship } from './Ship';
 
 export function drawGenericThruster(

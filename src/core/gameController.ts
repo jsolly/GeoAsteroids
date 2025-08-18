@@ -1,14 +1,14 @@
-import { Music } from '../audio/Music';
+import { Music } from '../audio/Music.ts';
 import { DRAW_ASTEROIDS, EMP_PULSE_RADIUS, WEBSOCKET_ENABLED } from '../constants';
-import { AsteroidBelt } from '../entities/asteroid/Asteroid';
-import type { BotPlayer, BotShoot } from '../entities/bot/types';
-import { Player } from '../entities/player';
-import type { Ship } from '../entities/ship/Ship';
-import { keyDown, keyUp } from '../input/keybindings';
-import { MultiplayerManager } from '../multiplayer/multiplayerManager';
-import { Vector } from '../physics/Vector';
-import { toggleScreen } from '../ui/uiUtils';
-import { GameState } from './gameState';
+import { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
+import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
+import { Player } from '../entities/player/index.ts';
+import type { Ship } from '../entities/ship/Ship.ts';
+import { keyDown, keyUp } from '../input/keybindings.ts';
+import { MultiplayerManager } from '../multiplayer/multiplayerManager.ts';
+import { Vector } from '../physics/Vector.ts';
+import { toggleScreen } from '../ui/uiUtils.ts';
+import { GameState } from './gameState.ts';
 
 function initializeListeners(isGameRunning: () => boolean): void {
   document.addEventListener('keydown', (ev) => {

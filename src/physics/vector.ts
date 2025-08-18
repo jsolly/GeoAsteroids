@@ -1,6 +1,6 @@
-import { Point } from './Point';
+import { Point } from './Point.ts';
 
-export class Vector extends Point {
+class Vector extends Point {
   constructor(x: number, y: number) {
     super(x, y);
   }
@@ -51,6 +51,6 @@ export class Vector extends Point {
     }
     return new Vector(this.x / scalar, this.y / scalar);
   }
-
-  // Intentionally no in-place mutation helpers to preserve immutability
 }
+
+export { Vector };

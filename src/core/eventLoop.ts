@@ -7,10 +7,14 @@ import {
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
 } from '../constants';
-import type { Player } from '../entities/player';
-import { PlayerNetwork } from '../entities/player/playerNetwork';
-import type { Ship } from '../entities/ship/Ship';
-import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/ship/shipRenderer';
+import type { Player } from '../entities/player/index.ts';
+import { PlayerNetwork } from '../entities/player/playerNetwork.ts';
+import type { Ship } from '../entities/ship/Ship.ts';
+import {
+  drawEmpPulse,
+  drawShipExplosion,
+  drawShipRelative,
+} from '../entities/ship/shipRenderer.ts';
 import {
   detectAllPlayerBotCollisions,
   detectBotAsteroidCollisions,
@@ -23,10 +27,10 @@ import {
   detectShipToShipCollisions,
   detectTestPlayerAsteroidCollisions,
   detectTestPlayerCollisions,
-} from '../physics/collisions';
-import { Vector } from '../physics/Vector';
-import { drawGameCanvas } from '../rendering/canvas';
-import { GameController } from './gameController';
+} from '../physics/collisions.ts';
+import { Vector } from '../physics/Vector.ts';
+import { drawGameCanvas } from '../rendering/canvas.ts';
+import { GameController } from './gameController.ts';
 
 const gameController = GameController.getInstance();
 const playerNetwork = PlayerNetwork.getInstance();

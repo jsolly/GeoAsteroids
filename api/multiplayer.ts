@@ -1,4 +1,4 @@
-import type { BotShoot } from '../src/entities/bot/types';
+import type { BotShoot } from '../src/entities/bot/types.ts';
 import type {
   ClientMessage,
   PlayerJoin,
@@ -6,8 +6,8 @@ import type {
   PlayerShoot,
   PlayerUpdate,
   ServerMessage,
-} from '../src/multiplayer/types';
-import { Vector } from '../src/physics/Vector';
+} from '../src/multiplayer/types.ts';
+import { Vector } from '../src/physics/Vector.ts';
 
 type WebSocketWithEvents = WebSocket & {
   on(event: string, listener: (...args: unknown[]) => void): void;

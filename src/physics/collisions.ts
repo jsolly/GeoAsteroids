@@ -11,14 +11,14 @@ import {
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
 } from '../constants';
-import { GameController } from '../core/gameController';
-import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid';
-import { BotManager } from '../entities/bot/botManager';
+import { GameController } from '../core/gameController.ts';
+import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
+import { BotManager } from '../entities/bot/botManager.ts';
 // Simple logging - removed complex logger dependency
-import type { BotPlayer } from '../entities/bot/types';
-import type { Player } from '../entities/player/types';
-import type { Laser, Ship } from '../entities/ship/Ship';
-import { Vector } from './Vector';
+import type { BotPlayer } from '../entities/bot/types.ts';
+import type { Player } from '../entities/player/types.ts';
+import type { Laser, Ship } from '../entities/ship/Ship.ts';
+import { Vector } from './Vector.ts';
 
 // Test DEBUG constant at import time
 // console.log('🔍 COLLISIONS: DEBUG constant imported as:', DEBUG, 'Type:', typeof DEBUG);

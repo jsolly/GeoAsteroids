@@ -1,7 +1,7 @@
-import { GameController } from '../../core/gameController';
-import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
-import type { Vector } from '../../physics/Vector';
-import type { Player } from './types';
+import { GameController } from '../../core/gameController.ts';
+import { MultiplayerManager } from '../../multiplayer/multiplayerManager.ts';
+import type { Vector } from '../../physics/Vector.ts';
+import type { Player } from './types.ts';
 
 export class PlayerNetwork {
   private static instance: PlayerNetwork;

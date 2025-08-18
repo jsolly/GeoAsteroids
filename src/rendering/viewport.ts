@@ -1,6 +1,6 @@
 import { getCVS } from '../constants';
-import { Point } from '../physics/Point';
-import { Vector } from '../physics/Vector';
+import { Point } from '../physics/Point.ts';
+import { Vector } from '../physics/Vector.ts';
 
 export function worldToScreen(worldPos: Vector, shipPos: Vector): Point {
   const cvs = getCVS();

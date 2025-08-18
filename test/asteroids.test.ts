@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { Difficulty, setDifficulty } from '../src/constants';
-import { Asteroid, AsteroidBelt } from '../src/entities/asteroid/Asteroid';
-import { Vector } from '../src/physics/Vector';
+import { Asteroid, AsteroidBelt } from '../src/entities/asteroid/Asteroid.ts';
+import { Vector } from '../src/physics/Vector.ts';
 
 test.concurrent('Asteroid Creation', () => {
   const roidPoint = new Vector(10, 20);

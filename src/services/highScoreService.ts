@@ -1,7 +1,7 @@
-import { GameController } from '../core/gameController';
-import { drawSpace } from '../rendering/canvas';
-import { toggleScreen } from '../ui/uiUtils';
-import { getElementById } from '../utils/dom';
+import { GameController } from '../core/gameController.ts';
+import { drawSpace } from '../rendering/canvas.ts';
+import { toggleScreen } from '../ui/uiUtils.ts';
+import { getElementById } from '../utils/dom.ts';
 
 const gameController = GameController.getInstance();
 const highScoresList = getElementById<HTMLOListElement>('highScoresList');

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Player } from '../src/entities/player/types';
-import { Laser, Ship } from '../src/entities/ship/Ship';
+import type { Player } from '../src/entities/player/types.ts';
+import { Laser, Ship } from '../src/entities/ship/Ship.ts';
 import {
   detectLaserPlayerCollisions,
   detectPlayerLaserShipCollisions,
-} from '../src/physics/collisions';
-import { Vector } from '../src/physics/Vector';
+} from '../src/physics/collisions.ts';
+import { Vector } from '../src/physics/Vector.ts';
 
 // Mock the constants
 vi.mock('../src/constants', () => ({

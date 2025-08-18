@@ -7,7 +7,7 @@ import {
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
 } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import { Vector } from '../../physics/Vector.ts';
 import type { BotPlayer } from './types';
 
 export class BotState {

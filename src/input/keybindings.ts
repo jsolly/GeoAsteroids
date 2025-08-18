@@ -1,5 +1,5 @@
 import { FPS, TURN_SPEED } from '../constants';
-import { Ship } from '../entities/ship/Ship';
+import { Ship } from '../entities/ship/Ship.ts';
 
 interface KeyStates {
   ArrowLeft: boolean;

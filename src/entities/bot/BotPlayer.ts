@@ -1,4 +1,4 @@
-import { Player } from '../player/Player';
+import { Player } from '../player/Player.ts';
 import type { BotPlayer as BotPlayerInterface } from './types';
 
 export class BotPlayer extends Player implements BotPlayerInterface {

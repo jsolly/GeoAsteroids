@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Vector } from '../../physics/Vector';
-import type { Laser } from '../ship/Ship';
-import { BotCombat } from './botCombat';
-import { BotFactory } from './botFactory';
-import { BotMovement } from './botMovement';
-import { BotState } from './botState';
-import type { BotBullet, BotPlayer, BotShoot } from './types';
+import { Vector } from '../../physics/Vector.ts';
+import type { Laser } from '../ship/Ship.ts';
+import { BotCombat } from './botCombat.ts';
+import { BotFactory } from './botFactory.ts';
+import { BotMovement } from './botMovement.ts';
+import { BotState } from './botState.ts';
+import type { BotBullet, BotPlayer, BotShoot } from './types.ts';
 
 export class BotManager {
   private static instance: BotManager;
