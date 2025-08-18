@@ -5,24 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Immediate console override to ensure logging filtering is active from the start -->
     <script>
-      // Set up basic console filtering immediately before any modules load
-      const logLevel = 'warn'; // This should match VITE_CLIENT_LOG_LEVEL
+      // Set up temporary console filtering until the proper module system loads
+      // This provides immediate protection while modules are loading
       const originalConsole = { debug: console.debug, info: console.info, warn: console.warn, error: console.error };
       
-      console.debug = (...args) => {
-        if (logLevel === 'debug') originalConsole.debug(...args);
-      };
-      console.info = (...args) => {
-        if (['debug', 'info'].includes(logLevel)) originalConsole.info(...args);
-      };
-      console.warn = (...args) => {
-        if (['debug', 'info', 'warn'].includes(logLevel)) originalConsole.warn(...args);
-      };
-      console.error = (...args) => {
-        if (['debug', 'info', 'warn', 'error'].includes(logLevel)) originalConsole.error(...args);
-      };
+      // Block debug logs immediately (most common issue)
+      console.debug = () => {}; // Silent no-op
       
-      console.info('INLINE_OVERRIDE', 'Console override applied immediately');
+      // Allow info/warn/error for now - the module system will take over
+      console.info('INLINE_OVERRIDE', 'Temporary console override applied - debug logs blocked');
     </script>
     <script defer type="module" src="/src/utils/consoleOverride.ts"></script>
     <script defer type="module" src="/src/ui/mainMenu.ts"></script>
