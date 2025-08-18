@@ -55,24 +55,40 @@ export function setupConsoleOverride(): void {
   }
 
   console.debug = (...args: unknown[]) => {
+    // Ensure override is applied (defensive programming)
+    if (!(console as ExtendedConsole)._logLevelOverridden) {
+      setupConsoleOverride();
+    }
     if (shouldLog(LogLevel.DEBUG)) {
       originalConsole.debug(...args);
     }
   };
 
   console.info = (...args: unknown[]) => {
+    // Ensure override is applied (defensive programming)
+    if (!(console as ExtendedConsole)._logLevelOverridden) {
+      setupConsoleOverride();
+    }
     if (shouldLog(LogLevel.INFO)) {
       originalConsole.info(...args);
     }
   };
 
   console.warn = (...args: unknown[]) => {
+    // Ensure override is applied (defensive programming)
+    if (!(console as ExtendedConsole)._logLevelOverridden) {
+      setupConsoleOverride();
+    }
     if (shouldLog(LogLevel.WARN)) {
       originalConsole.warn(...args);
     }
   };
 
   console.error = (...args: unknown[]) => {
+    // Ensure override is applied (defensive programming)
+    if (!(console as ExtendedConsole)._logLevelOverridden) {
+      setupConsoleOverride();
+    }
     if (shouldLog(LogLevel.ERROR)) {
       originalConsole.error(...args);
     }
@@ -81,6 +97,10 @@ export function setupConsoleOverride(): void {
   // Mark as overridden
   (console as ExtendedConsole)._logLevelOverridden = true;
 }
+
+// Auto-setup console override when this module is imported
+// This ensures the override is applied as soon as possible
+setupConsoleOverride();
 
 // Export the current log level for external use
 export const currentLogLevel = getCurrentLogLevel();

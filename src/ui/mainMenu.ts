@@ -1,7 +1,4 @@
-import { setupConsoleOverride } from '../utils/logLevel.ts'; // Import early to set up console overrides
-
-// Set up console overrides immediately
-setupConsoleOverride();
+// Console overrides are now handled by consoleOverride.ts which loads first
 
 // Simple logging - removed complex logger dependency
 import { setMusic } from '../audio/Music.ts';
