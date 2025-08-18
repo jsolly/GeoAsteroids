@@ -182,12 +182,7 @@ function broadcastToAll(message: any, excludeId?: string) {
   }
 }
 
-function sendToPlayer(id: string, message: any) {
-  const player = players.get(id);
-  if (player && player.ws.readyState === WebSocket.OPEN) {
-    player.ws.send(JSON.stringify(message));
-  }
-}
+
 
 function sendError(ws: WebSocket, message: string) {
   sendToWebSocket(ws, { type: 'error', message });

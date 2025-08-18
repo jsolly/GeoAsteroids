@@ -6,6 +6,7 @@
     "lib": ["ESNext", "DOM"],
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
     "strict": true,
     "sourceMap": true,
     "resolveJsonModule": true,
@@ -15,7 +16,18 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
   },
-  "include": ["src", "api", "test", "vitest.config.ts", "tsconfig.json", "package.json", "setup"]
+  "include": [
+    "src",
+    "api",
+    "test",
+    "vitest.config.ts",
+    "tsconfig.json",
+    "package.json",
+    "setup",
+    "server.ts"
+  ]
 }
