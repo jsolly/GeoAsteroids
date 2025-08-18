@@ -44,13 +44,6 @@ export class MultiplayerManager {
       return;
     }
 
-    // If WebSocket is disabled, create test players immediately
-    if (import.meta.env.VITE_WEBSOCKET_ENABLED === 'false') {
-      console.info('MULTIPLAYER', 'WebSocket disabled, creating test players immediately');
-      this.createTestPlayers();
-      return;
-    }
-
     try {
       const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001';
       console.info('MULTIPLAYER', 'Connecting to multiplayer server', { wsUrl });

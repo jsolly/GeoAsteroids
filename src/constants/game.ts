@@ -10,7 +10,6 @@ export const DEBUG =
 export const SHOW_COLLISION_CIRCLES = false; // Set to false to hide collision circles while keeping debug mode
 
 export const MULTIPLAYER_ENABLED = import.meta.env.VITE_MULTIPLAYER_ENABLED !== 'false'; // Enable multiplayer by default, can be disabled with VITE_MULTIPLAYER_ENABLED=false
-export const WEBSOCKET_ENABLED = import.meta.env.VITE_WEBSOCKET_ENABLED !== 'false'; // Enable WebSocket by default, can be disabled with VITE_WEBSOCKET_ENABLED=false
 
 // Feature flags
 export const DRAW_ASTEROIDS = import.meta.env.VITE_DRAW_ASTEROIDS !== 'false';

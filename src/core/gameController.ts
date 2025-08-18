@@ -1,5 +1,5 @@
 import { Music } from '../audio/Music.ts';
-import { DRAW_ASTEROIDS, EMP_PULSE_RADIUS, WEBSOCKET_ENABLED } from '../constants';
+import { DRAW_ASTEROIDS, EMP_PULSE_RADIUS } from '../constants';
 import { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
 import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
 import { Player } from '../entities/player/index.ts';
@@ -209,18 +209,10 @@ class GameController implements GameControllerData {
     // Bots work independently of websocket connections
     this.enableBots(3); // Add 3 bots immediately at game start
 
-    // Only connect to WebSocket if enabled
-    if (WEBSOCKET_ENABLED) {
-      // Adjust asteroids for multiplayer
-      setTimeout(() => {
-        this.currRoidBelt.adjustForMultiplayer();
-      }, 100);
-    } else {
-      console.info(
-        'GAME_CONTROLLER',
-        'Multiplayer enabled but WebSocket connections disabled by VITE_WEBSOCKET_ENABLED=false'
-      );
-    }
+    // Adjust asteroids for multiplayer
+    setTimeout(() => {
+      this.currRoidBelt.adjustForMultiplayer();
+    }, 100);
   }
 
   disableMultiplayer(): void {

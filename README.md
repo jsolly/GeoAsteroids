@@ -151,7 +151,6 @@ For production deployments, ensure these settings are configured:
 VITE_LOG_LEVEL=info
 VITE_INVINCIBLE=false
 VITE_ENABLE_MOCK_PLAYERS=false  # CRITICAL: Must be false in production
-VITE_WEBSOCKET_ENABLED=true
 VITE_WEBSOCKET_URL=ws://your-production-server.com:3001
 VITE_DEBUG=false
 VITE_MULTIPLAYER_DEBUG=false

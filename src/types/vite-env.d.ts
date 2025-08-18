@@ -4,7 +4,6 @@ interface ImportMetaEnv {
   readonly VITE_DEBUG: string;
   readonly VITE_INVINCIBLE: string;
   readonly VITE_MULTIPLAYER_ENABLED: string;
-  readonly VITE_WEBSOCKET_ENABLED: string;
   readonly VITE_WEBSOCKET_URL: string;
   readonly VITE_ENABLE_TEST_PLAYERS: string;
   readonly VITE_DRAW_ASTEROIDS: string;
