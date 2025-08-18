@@ -2,18 +2,29 @@
   "name": "geoasteroids-multiplayer-server",
   "version": "1.0.0",
   "description": "Multiplayer server for GeoAsteroids game",
-  "main": "server.js",
+  "main": "server.ts",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
+    "start": "tsx server.ts",
+    "dev": "tsx --watch server.ts",
+    "build": "tsc server.ts --outDir dist --target es2022 --module esnext --moduleResolution node",
     "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": ["multiplayer", "game", "websocket", "asteroids"],
+  "keywords": [
+    "multiplayer",
+    "game",
+    "websocket",
+    "asteroids"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "@types/ws": "^8.5.10"
   },
   "engines": {
     "node": ">=18.0.0"
