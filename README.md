@@ -58,13 +58,7 @@ npm run dev:multiplayer  # WebSocket server (port 3001)
 ```
 
 
-## Coverage, Tests, Linting
-
-### Coverage
-
-```shell
-npm run coverage
-```
+## Tests, Linting
 
 ### Test
 

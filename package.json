@@ -14,7 +14,6 @@
     "watch": "vite build --watch",
     "preview": "vite preview",
     "test": "vitest --run",
-    "coverage": "vitest run --coverage",
     "check:ts": "tsc --noEmit",
     "check:lint": "biome check .",
     "check:fix": "biome check --write .",
@@ -38,13 +37,19 @@
     "url": "https://github.com/jsolly/GeoAsteroids/issues"
   },
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
+  "dependencies": {
+    "mongodb": "^6.17.0",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^11.0.0",
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "@biomejs/biome": "https://pkg.pr.new/@biomejs/biome@7248dda",
+    "@types/jsdom": "^21.1.1",
     "@types/node": "^24.0.15",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
     "@vercel/node": "^5.3.6",
-    "@vitest/coverage-v8": "^3.2.4",
     "canvas": "^3.1.2",
     "concurrently": "^9.1.0",
     "husky": "^9.1.7",
@@ -56,13 +61,6 @@
     "typescript": "^5.9.2",
     "vercel": "^46.0.1",
     "vite": "^7.0.5",
-    "vitest": "^3.2.4",
-    "ws": "^8.18.0"
-  },
-  "dependencies": {
-    "@types/jsdom": "^21.1.1",
-    "mongodb": "^6.17.0",
-    "socket.io-client": "^4.8.1",
-    "uuid": "^11.0.0"
+    "vitest": "^3.2.4"
   }
 }
