@@ -38,6 +38,12 @@ export class MultiplayerManager {
     return MultiplayerManager.instance;
   }
 
+  // Method to set the local player name
+  public setLocalPlayerName(name: string): void {
+    this.localPlayerName = name;
+    console.info('MULTIPLAYER', 'Local player name set', { name });
+  }
+
   public connect(): void {
     if (this.isConnected || this.socket) {
       console.info('MULTIPLAYER', 'Already connected or connecting');
@@ -50,16 +56,6 @@ export class MultiplayerManager {
 
       this.socket = new WebSocket(wsUrl);
       this.setupWebSocketHandlers();
-
-      // Test players are disabled by default
-      // Only create test players if explicitly enabled for testing
-      if (import.meta.env.VITE_ENABLE_TEST_PLAYERS === 'true') {
-        setTimeout(() => {
-          if (!this.isConnected) {
-            this.createTestPlayers();
-          }
-        }, 2000);
-      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('MULTIPLAYER', 'Failed to connect to multiplayer server', {
@@ -141,7 +137,8 @@ export class MultiplayerManager {
   private handlePlayerJoin(data: PlayerJoin): void {
     if (data.id !== this.localPlayerId) {
       const ship = new Ship();
-      ship.position = data.position;
+      // Convert plain object to Vector instance
+      ship.position = new Vector(data.position.x, data.position.y);
 
       const newPlayer: Player = {
         id: data.id,
@@ -172,10 +169,12 @@ export class MultiplayerManager {
       const player = this.players.get(data.id);
       if (player) {
         if (data.position) {
-          player.ship.position = data.position;
+          // Convert plain object to Vector instance
+          player.ship.position = new Vector(data.position.x, data.position.y);
         }
         if (data.velocity) {
-          player.ship.velocity = data.velocity;
+          // Convert plain object to Vector instance
+          player.ship.velocity = new Vector(data.velocity.x, data.velocity.y);
         }
         if (data.r !== undefined) {
           player.ship.r = data.r;
@@ -215,8 +214,9 @@ export class MultiplayerManager {
     for (const playerData of data.players) {
       if (playerData.id !== this.localPlayerId) {
         const ship = new Ship();
-        ship.position = playerData.position;
-        ship.velocity = playerData.velocity;
+        // Convert plain objects to Vector instances
+        ship.position = new Vector(playerData.position.x, playerData.position.y);
+        ship.velocity = new Vector(playerData.velocity.x, playerData.velocity.y);
         ship.r = playerData.r;
         ship.a = playerData.a;
         ship.exploding = playerData.exploding;
@@ -429,7 +429,6 @@ export class MultiplayerManager {
         getLocalPlayerId: (): string => MultiplayerManager.getInstance().localPlayerId,
         getLocalPlayerName: (): string => MultiplayerManager.getInstance().localPlayerName,
         getPlayerCount: (): number => MultiplayerManager.getInstance().players.size,
-        createTestPlayers: (): void => MultiplayerManager.getInstance().createTestPlayers(),
         debugDestroyBot: (botId: string): void =>
           MultiplayerManager.getInstance().debugDestroyBot(botId),
       };
@@ -469,77 +468,5 @@ export class MultiplayerManager {
     } else {
       console.warn('MULTIPLAYER', 'Could not access game controller. Try refreshing the page.');
     }
-  }
-
-  private createTestPlayers(): void {
-    // Test players are disabled by default
-    // Only create if explicitly enabled for testing
-    if (import.meta.env.VITE_ENABLE_TEST_PLAYERS !== 'true') {
-      console.info('MULTIPLAYER', 'Test players disabled by default');
-      return;
-    }
-
-    console.info('MULTIPLAYER', 'Creating test players for local testing', {
-      reason: 'WebSocket connection failed or testing mode',
-    });
-
-    // Test player configurations
-    const testPlayerConfigs = [
-      {
-        id: 'test-player-1',
-        name: 'TestPlayer1',
-        position: new Vector(200, 200),
-        rotation: Math.PI / 4,
-        score: 1500,
-      },
-      {
-        id: 'test-player-2',
-        name: 'TestPlayer2',
-        position: new Vector(-200, -200),
-        rotation: -Math.PI / 3,
-        score: 2300,
-      },
-      {
-        id: 'test-player-3',
-        name: 'TestPlayer3',
-        position: new Vector(300, -150),
-        rotation: Math.PI / 2,
-        score: 1800,
-      },
-      {
-        id: 'test-player-4',
-        name: 'TestPlayer4',
-        position: new Vector(-150, 300),
-        rotation: -Math.PI / 6,
-        score: 2100,
-      },
-    ];
-
-    for (const config of testPlayerConfigs) {
-      const ship = new Ship(3, true, {
-        position: config.position,
-        rotation: config.rotation,
-      });
-
-      const testPlayer: Player = {
-        id: config.id,
-        name: config.name,
-        ship,
-        score: config.score,
-        lastUpdate: Date.now(),
-        isBot: false,
-        lives: 3,
-        spawnProtectedUntil: Date.now() + 3000, // 3 seconds spawn protection
-        respawn: () => {},
-        onShipExploded: () => {},
-      };
-
-      this.players.set(testPlayer.id, testPlayer);
-    }
-
-    console.info('MULTIPLAYER', 'Test players created successfully', {
-      count: testPlayerConfigs.length,
-      playerIds: testPlayerConfigs.map((c) => c.id),
-    });
   }
 }

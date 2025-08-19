@@ -7,8 +7,8 @@ import {
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
 } from '../constants';
-import type { Player } from '../entities/player/index.ts';
 import { PlayerNetwork } from '../entities/player/playerNetwork.ts';
+import type { Player } from '../entities/player/types.ts';
 import type { Ship } from '../entities/ship/Ship.ts';
 import {
   drawEmpPulse,
@@ -25,8 +25,6 @@ import {
   detectPlayerLaserShipCollisions,
   detectRoidHits,
   detectShipToShipCollisions,
-  detectTestPlayerAsteroidCollisions,
-  detectTestPlayerCollisions,
 } from '../physics/collisions.ts';
 import { Vector } from '../physics/Vector.ts';
 import { drawGameCanvas } from '../rendering/canvas.ts';
@@ -113,8 +111,6 @@ function updateGame(): void {
   handleLevelUp();
 
   // Always update player network state (invincibility/blink timers, explosions, regen)
-  // This must run even if multiplayer is disabled so test players aren't permanently invincible
-  // Test players start with blinkCount > 0 and need their timers decremented each frame
   playerNetwork.updatePlayerState();
 
   // Update bot systems only when multiplayer is enabled
@@ -137,10 +133,6 @@ function updateGame(): void {
     }
   }
 
-  // Update test player movement and state in the main game loop
-  // This ensures test players are processed at the same framerate as the main game
-  updateTestPlayersInGameLoop();
-
   drawGameCanvas(currShip, currRoidBelt, currScore, personalBest, textAlpha, text);
 
   handleMusic();
@@ -148,7 +140,7 @@ function updateGame(): void {
   handleCollision(currShip);
 
   // Only move ship if it's not exploding and not dead
-  if (!currShip.exploding && !currPlayer.isDead) {
+  if (!currShip.exploding && !currPlayer.ship.exploding) {
     currShip.move();
   } else {
     // console.log('🚫 Ship movement blocked:', {
@@ -193,7 +185,7 @@ function handleShipState(ship: Ship, player: Player): void {
     // });
 
     if (!ship.exploding) {
-      if (ship.blinkOn && !player.isDead) {
+      if (ship.blinkOn && !player.ship.exploding) {
         // console.debug('SHIP_STATE', 'Drawing ship', {
         //   pos: { x: ship.position.x, y: ship.position.y },
         //   angle: ship.a
@@ -352,7 +344,7 @@ function handleCollision(ship: Ship): void {
     }
 
     // Add laser-to-player collision detection for any non-bot players present
-    // Run this regardless of the multiplayer flag so test players can be damaged
+    // Run this regardless of the multiplayer flag
     const otherPlayers = playerNetwork.getOtherPlayers();
 
     // Filter out bot players since they're handled by detectLaserHits
@@ -374,15 +366,6 @@ function handleCollision(ship: Ship): void {
         // Add bot laser collision detection on other players
         detectBotLaserPlayerCollisions(realPlayers, bots);
       }
-
-      // Add test player asteroid collision detection
-      if (DRAW_ASTEROIDS) {
-        detectTestPlayerAsteroidCollisions(realPlayers, currRoidBelt);
-      }
-
-      // Add comprehensive test player collision detection
-      // This ensures test players participate in all collision types, not just asteroids
-      detectTestPlayerCollisions(ship, realPlayers, currRoidBelt, bots);
     } else {
       console.debug('COLLISION_DEBUG', 'No real players found for collision detection');
     }
@@ -394,87 +377,5 @@ function handleCollision(ship: Ship): void {
       stack: error instanceof Error ? error.stack : undefined,
       shipPos: { x: ship.position.x, y: ship.position.y },
     });
-  }
-}
-
-/**
- * Update test players in the main game loop to ensure consistent framerate
- * and proper integration with the collision system
- */
-function updateTestPlayersInGameLoop(): void {
-  const otherPlayers = playerNetwork.getOtherPlayers();
-  const testPlayers = otherPlayers.filter((player) => player.id.startsWith('test-'));
-
-  if (testPlayers.length === 0) {
-    return;
-  }
-
-  // Update test player movement and state at game loop framerate
-  for (const player of testPlayers) {
-    // Skip exploding players
-    if (player.ship.exploding) {
-      continue;
-    }
-
-    // Update test player movement (simple AI-like behavior)
-    updateTestPlayerMovement(player);
-
-    // Update test player lasers if they have any
-    if (player.ship.lasers && player.ship.lasers.length > 0) {
-      player.ship.moveLasers();
-    }
-  }
-
-  console.debug('GAME_LOOP', 'Test players updated in game loop', {
-    testPlayerCount: testPlayers.length,
-    testPlayers: testPlayers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      position: { x: p.ship.position.x, y: p.ship.position.y },
-      exploding: p.ship.exploding,
-      blinkCount: p.ship.blinkCount,
-    })),
-  });
-}
-
-/**
- * Simple movement AI for test players to make them more interactive
- * We use a union type to handle both Player class instances and Player interface objects
- */
-function updateTestPlayerMovement(
-  player: Player | { ship: { position: Vector; a: number } }
-): void {
-  // Simple wandering behavior - move in current direction with occasional direction changes
-  if (Math.random() < 0.01) {
-    // 1% chance per frame to change direction
-    player.ship.a += (Math.random() - 0.5) * 0.5; // Small random rotation
-  }
-
-  // Apply small forward movement
-  const moveSpeed = 0.5; // Slower than player ship
-  const velocity = new Vector(
-    Math.cos(player.ship.a) * moveSpeed,
-    Math.sin(player.ship.a) * moveSpeed
-  );
-
-  // Create new position instead of modifying existing one
-  const newPosition = new Vector(
-    player.ship.position.x + velocity.x,
-    player.ship.position.y + velocity.y
-  );
-  player.ship.position = newPosition;
-
-  // Keep test players within reasonable bounds
-  const maxDistance = 800;
-  const distance = Math.sqrt(player.ship.position.x ** 2 + player.ship.position.y ** 2);
-
-  if (distance > maxDistance) {
-    // Move back towards center
-    const angle = Math.atan2(player.ship.position.y, player.ship.position.x);
-    const newBoundedPosition = new Vector(
-      Math.cos(angle) * (maxDistance * 0.8),
-      Math.sin(angle) * (maxDistance * 0.8)
-    );
-    player.ship.position = newBoundedPosition;
   }
 }

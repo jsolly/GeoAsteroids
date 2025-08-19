@@ -65,6 +65,12 @@ const startSinglePlayerBtn = getElementById<HTMLButtonElement>('start-single-pla
 const startMultiplayerBtn = getElementById<HTMLButtonElement>('start-multiplayer');
 const playerCountElement = getElementById<HTMLElement>('playerCount');
 
+// Multiplayer name input elements
+const multiplayerNameModal = getElementById<HTMLElement>('multiplayerNameModal');
+const multiplayerNameInput = getElementById<HTMLInputElement>('multiplayerNameInput');
+const confirmNameButton = getElementById<HTMLButtonElement>('confirmNameButton');
+const cancelNameButton = getElementById<HTMLButtonElement>('cancelNameButton');
+
 // Function to update player count display
 function updatePlayerCount(): void {
   if (playerCountElement) {
@@ -111,13 +117,7 @@ attachEventListener(startSinglePlayerBtn, 'click', () => {
 
 // Set up multiplayer button - ensures multiplayer is enabled
 attachEventListener(startMultiplayerBtn, 'click', () => {
-  gameController.enableMultiplayer();
-  // Update button states
-  startMultiplayerBtn?.classList.add('active-mode');
-  startSinglePlayerBtn?.classList.remove('active-mode');
-  // Update player count immediately
-  updatePlayerCount();
-  startGame();
+  showMultiplayerNameModal();
 });
 
 // Set initial active button state - default to single player
@@ -140,6 +140,70 @@ function updateScrollIndicator(): void {
     const isScrollable = screenElement.scrollHeight > screenElement.clientHeight;
     scrollIndicator.style.display = isScrollable ? 'block' : 'none';
   }
+}
+
+// Function to show multiplayer name input modal
+function showMultiplayerNameModal(): void {
+  if (multiplayerNameModal && multiplayerNameInput) {
+    multiplayerNameModal.style.display = 'block';
+    multiplayerNameInput.focus();
+    multiplayerNameInput.value = '';
+  }
+}
+
+// Function to hide multiplayer name input modal
+function hideMultiplayerNameModal(): void {
+  if (multiplayerNameModal) {
+    multiplayerNameModal.style.display = 'none';
+  }
+}
+
+// Function to start multiplayer with the entered name
+function startMultiplayerWithName(): void {
+  if (multiplayerNameInput?.value.trim()) {
+    const playerName = multiplayerNameInput.value.trim();
+
+    // Set the player name in the game controller
+    gameController.setPlayerName(playerName);
+
+    // Hide the modal
+    hideMultiplayerNameModal();
+
+    // Enable multiplayer and start the game
+    gameController.enableMultiplayer();
+
+    // Update button states
+    startMultiplayerBtn?.classList.add('active-mode');
+    startSinglePlayerBtn?.classList.remove('active-mode');
+
+    // Update player count immediately
+    updatePlayerCount();
+
+    // Start the game
+    startGame();
+  } else {
+    // Show error or focus the input
+    multiplayerNameInput?.focus();
+  }
+}
+
+// Set up confirm name button in multiplayer modal
+if (confirmNameButton) {
+  attachEventListener(confirmNameButton, 'click', startMultiplayerWithName);
+}
+
+// Set up cancel name button in multiplayer modal
+if (cancelNameButton) {
+  attachEventListener(cancelNameButton, 'click', hideMultiplayerNameModal);
+}
+
+// Set up multiplayer name input in multiplayer modal
+if (multiplayerNameInput) {
+  attachEventListener(multiplayerNameInput, 'keypress', (ev) => {
+    if ((ev as KeyboardEvent).key === 'Enter') {
+      startMultiplayerWithName();
+    }
+  });
 }
 
 // Check scroll indicator on load and resize

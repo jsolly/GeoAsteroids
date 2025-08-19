@@ -166,34 +166,12 @@ function drawOtherPlayers(localShip: Ship): void {
   const otherPlayers = getPlayerNetwork().getOtherPlayers();
   const bots = getGameController().getBots();
 
-  // Always draw test players if they exist, regardless of multiplayer state
-  // Test players are created independently of multiplayer enabled state
-  const hasTestPlayers = otherPlayers.some((player) => player.id.startsWith('test-'));
-
-  // Debug logging for test players
-  if (hasTestPlayers) {
-    console.debug('RENDERING_DEBUG', 'Test players found in drawOtherPlayers', {
-      totalPlayers: otherPlayers.length,
-      testPlayers: otherPlayers
-        .filter((p) => p.id.startsWith('test-'))
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          exploding: p.ship.exploding,
-          blinkCount: p.ship.blinkCount,
-          blinkOn: p.ship.blinkOn,
-          position: { x: p.ship.position.x, y: p.ship.position.y },
-          nearby: getPlayerNetwork().isPlayerNearby(p, localShip),
-        })),
-    });
-  }
-
-  // Only check multiplayer enabled for non-test players
-  if (!getGameController().isMultiplayerEnabled() && !hasTestPlayers) {
+  // Only draw players when multiplayer is enabled
+  if (!getGameController().isMultiplayerEnabled()) {
     return;
   }
 
-  // Draw human players (including test players)
+  // Draw human players
   for (const player of otherPlayers) {
     // Only draw players that are nearby (within viewport)
     if (getPlayerNetwork().isPlayerNearby(player, localShip)) {
@@ -203,26 +181,13 @@ function drawOtherPlayers(localShip: Ship): void {
       }
 
       // Don't draw if player hasn't updated recently (stale data)
-      // But always draw test players since they're updated in the game loop
       const now = Date.now();
-      if (!player.id.startsWith('test-') && now - player.lastUpdate > 1000) {
+      if (now - player.lastUpdate > 1000) {
         continue;
       }
 
       // Draw the other player's ship
       drawOtherPlayerShip(player);
-    } else if (player.id.startsWith('test-')) {
-      // Debug logging for test players that are not nearby
-      console.debug('RENDERING_DEBUG', 'Test player not nearby', {
-        playerId: player.id,
-        playerName: player.name,
-        playerPos: { x: player.ship.position.x, y: player.ship.position.y },
-        shipPos: { x: localShip.position.x, y: localShip.position.y },
-        distance: Math.sqrt(
-          (player.ship.position.x - localShip.position.x) ** 2 +
-            (player.ship.position.y - localShip.position.y) ** 2
-        ),
-      });
     }
   }
 
@@ -749,14 +714,6 @@ function drawMultiplayerStatus(): void {
   const asteroidCount = getGameController().getCurrAsteroidCount();
   ctx.fillText(`Asteroids: ${asteroidCount} (MP Mode)`, xPos, yOffset);
   yOffset += lineHeight;
-
-  // Show test mode indicator if using test players
-  const hasTestPlayers = realPlayers.some((p) => p.id.startsWith('test-'));
-  if (hasTestPlayers) {
-    ctx.fillStyle = '#ffff00'; // Yellow for test mode
-    ctx.fillText(`TEST MODE - Demo Players`, xPos, yOffset);
-    yOffset += lineHeight;
-  }
 
   // Draw mini-map showing only real players (no bots)
   const currentShip = getGameController().getCurrShip();

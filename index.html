@@ -155,6 +155,25 @@
         <button id="submitNameButton">Submit Score</button>
       </div>
 
+      <!-- Multiplayer Name Input Modal -->
+      <div id="multiplayerNameModal" class="modal" style="display: none">
+        <div class="modal-content">
+          <h3>🌐 Enter Your Name</h3>
+          <p>Choose a name to display to other players:</p>
+          <input
+            type="text"
+            id="multiplayerNameInput"
+            maxlength="15"
+            placeholder="Enter your name (max 15 characters)"
+            class="form-control"
+          />
+          <div class="modal-buttons">
+            <button id="confirmNameButton" class="btn btn-primary">Start Multiplayer</button>
+            <button id="cancelNameButton" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <!-- High Scores Modal -->
       <div id="highScoresModal" class="modal" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">

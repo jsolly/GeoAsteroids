@@ -9,7 +9,7 @@ describe('BotManager', () => {
   beforeEach(() => {
     botManager = BotManager.getInstance();
     botManager.clearBots();
-    botManager.setLocalPlayerInfo('test-player', new Vector(0, 0), true);
+    botManager.setLocalPlayerInfo('player-1', new Vector(0, 0), true);
     botManager.activate();
   });
 
@@ -336,7 +336,7 @@ describe('BotManager', () => {
 
       // Set player position away from bot
       const playerPosition = new Vector(100, 100);
-      botManager.setLocalPlayerInfo('test-player', playerPosition, true);
+      botManager.setLocalPlayerInfo('player-1', playerPosition, true);
 
       // Record initial position
       const initialPosition = new Vector(bot.ship.position.x, bot.ship.position.y);

@@ -112,17 +112,8 @@ class GameController implements GameControllerData {
     // Reset button text to default state
     this.resetButtonText();
 
-    // Always connect to multiplayer manager when test players are enabled
-    // This ensures test players are created even if multiplayer is disabled
-    if (
-      this.gameState.isMultiplayerEnabled() ||
-      import.meta.env.VITE_ENABLE_TEST_PLAYERS === 'true'
-    ) {
-      // Always connect to multiplayer manager (it will handle WebSocket vs test players)
+    if (this.gameState.isMultiplayerEnabled()) {
       this.multiplayerManager.connect();
-
-      // Adjust asteroid count for multiplayer after a short delay
-      // to ensure everything is initialized
       setTimeout(() => {
         this.currRoidBelt.adjustForMultiplayer();
       }, 100);
@@ -215,6 +206,12 @@ class GameController implements GameControllerData {
     }, 100);
   }
 
+  // Method to set player name for multiplayer
+  setPlayerName(name: string): void {
+    this.multiplayerManager.setLocalPlayerName(name);
+    console.info('GAME_CONTROLLER', 'Player name set', { name });
+  }
+
   disableMultiplayer(): void {
     this.gameState.setMultiplayerEnabled(false);
     this.multiplayerManager.disconnect();
@@ -246,7 +243,10 @@ class GameController implements GameControllerData {
       });
 
       // Update bot manager with local player position
-      this.multiplayerManager.updateLocalPlayerForBots(this.currShip.position, !this.player.isDead);
+      this.multiplayerManager.updateLocalPlayerForBots(
+        this.currShip.position,
+        !this.player.ship.exploding
+      );
     }
   }
 
@@ -305,7 +305,7 @@ class GameController implements GameControllerData {
     console.info('BOT_SHOOT', 'Bot shoot event received', {
       botId: botShoot.botId,
       shipLives: this.player.lives,
-      shipDead: this.player.isDead,
+      shipDead: this.player.ship.exploding,
       shipExploding: this.currShip.exploding,
       shipBlinkCount: this.currShip.blinkCount,
     });

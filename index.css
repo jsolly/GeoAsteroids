@@ -582,6 +582,96 @@ a {
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Multiplayer Name Modal specific styling */
+#multiplayerNameModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  padding: 2em;
+  min-width: 400px;
+}
+
+#multiplayerNameModal .modal-content {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 15px;
+  padding: 2em;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#multiplayerNameModal h3 {
+  color: #4fc3f7;
+  margin-bottom: 1em;
+  font-size: 1.5em;
+}
+
+#multiplayerNameModal p {
+  color: #ffffff;
+  margin-bottom: 1.5em;
+  font-size: 1.1em;
+}
+
+#multiplayerNameInput {
+  width: 100%;
+  padding: 0.8em;
+  margin-bottom: 1.5em;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1.1em;
+  transition: border-color 0.3s ease;
+}
+
+#multiplayerNameInput:focus {
+  outline: none;
+  border-color: #4fc3f7;
+  box-shadow: 0 0 10px rgba(79, 195, 247, 0.3);
+}
+
+#multiplayerNameInput::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+}
+
+.modal-buttons .btn {
+  padding: 0.8em 1.5em;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-buttons .btn-primary {
+  background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+  color: white;
+}
+
+.modal-buttons .btn-primary:hover {
+  background: linear-gradient(135deg, #29b6f6, #0288d1);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(79, 195, 247, 0.4);
+}
+
+.modal-buttons .btn-secondary {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: white;
+}
+
+.modal-buttons .btn-secondary:hover {
+  background: linear-gradient(135deg, #5a6268, #495057);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+}
+
 #nameInput {
   width: 120px;
   padding: 0.5em;
