@@ -1,7 +1,6 @@
 # GeoAsteroids
 
-[![GeoAsteroids](https://github.com/jsolly/GeoAsteroids/actions/workflows/GeoAsteroidsTest.yml/badge.svg)](https://github.com/jsolly/GeoAsteroids/actions/workflows/GeoAsteroidsTest.yml)
-[![Coverage Status](https://coveralls.io/repos/github/jsolly/GeoAsteroids/badge.svg?branch=main)](https://coveralls.io/github/jsolly/GeoAsteroids?branch=main)
+[![GeoAsteroids](https://github.com/jsolly/GeoAsteroids/actions/workflows/onMain.yml/badge.svg)](https://github.com/jsolly/GeoAsteroids/actions/workflows/onMain.yml)
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
 
 A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoasteroids.com</a>
