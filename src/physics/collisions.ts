@@ -8,6 +8,8 @@ import {
   LASER_EXPLODE_DUR,
   SHIP_ASTEROID_DAMAGE,
   SHIP_BOT_DAMAGE,
+  SHIP_EXPLODE_DUR_FRAMES,
+  SHIP_RESPAWN_DELAY_FRAMES,
 } from '../constants';
 import { GameController } from '../core/gameController.ts';
 import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
@@ -474,7 +476,7 @@ export function detectAllPlayerBotCollisions(
 
           // Mark bot as exploding
           bot.ship.exploding = true;
-          bot.ship.explodeTime = 60; // 1 second explosion duration
+          bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
           // Play hit sound
           Asteroid.fxHit.play();
@@ -688,14 +690,14 @@ export function detectBotAsteroidCollisions(
           if (bot.lives <= 0) {
             // Bot is dead, mark as exploding
             bot.ship.exploding = true;
-            bot.ship.explodeTime = 60; // 1 second explosion duration
+            bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
           } else {
             // Bot still has lives, start explosion and respawn sequence
             bot.ship.exploding = true;
-            bot.ship.explodeTime = 30; // 0.5 second explosion duration
+            bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
             // Start respawn timer
-            bot.respawnTimer = 300; // 5 seconds at 60 FPS
+            bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
             bot.respawnPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
           }
         }
@@ -827,7 +829,7 @@ export function detectShipToShipCollisions(
 
         // Destroy the bot
         bot.ship.exploding = true;
-        bot.ship.explodeTime = 60; // 1 second explosion duration
+        bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
         // Add points for destroying a bot
         score += 200;
@@ -860,7 +862,7 @@ export function detectShipToShipCollisions(
 
         // Destroy the bot
         bot.ship.exploding = true;
-        bot.ship.explodeTime = 60; // 1 second explosion duration
+        bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
         // Check collision cooldown before applying damage to player ship
         if (currShip.canTakeCollisionDamage()) {
@@ -1073,7 +1075,7 @@ export function detectBotShipCollisions(currShip: Ship, bots: Map<string, BotPla
 
       // Mark bot as exploding
       bot.ship.exploding = true;
-      bot.ship.explodeTime = 60; // 1 second explosion duration
+      bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
       // Play hit sound
       Asteroid.fxHit.play();

@@ -1,5 +1,11 @@
 import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { BOT_LASER_DAMAGE, BOT_MAX_HEALTH, SHIP_INV_DUR } from '../src/constants';
+import {
+  BOT_LASER_DAMAGE,
+  BOT_MAX_HEALTH,
+  SHIP_EXPLODE_DUR_FRAMES,
+  SHIP_INV_DUR,
+  SHIP_RESPAWN_DELAY_FRAMES,
+} from '../src/constants';
 import { BotManager } from '../src/entities/bot/botManager.ts';
 import { Vector } from '../src/physics/Vector.ts';
 
@@ -106,13 +112,14 @@ describe('BotManager', () => {
 
       // Fast-forward time but keep within spawn protection window
       const futureTime = Date.now() + (SHIP_INV_DUR - 1) * 1000; // Just before protection expires
+      vi.useFakeTimers();
       vi.setSystemTime(futureTime);
 
       // Bot should still be invincible during spawn protection
       const isInvincible = bot.ship.blinkCount > 0 || bot.spawnProtectedUntil > Date.now();
       expect(isInvincible).toBe(true);
 
-      // Restore system time
+      // Restore timers/time
       vi.useRealTimers();
     });
 
@@ -167,7 +174,6 @@ describe('BotManager', () => {
           // Should lose health but not life yet
           expect(bot.ship.health).toBeLessThan(previousHealth);
           expect(bot.lives).toBe(previousLives);
-          expect(bot.ship.exploding).toBe(false);
           expect(bot.ship.exploding).toBe(false);
         } else {
           // Final hit should cause life loss
@@ -245,8 +251,8 @@ describe('BotManager', () => {
         // Wait for explosion to complete and respawn if not the final death
         if (i < 2) {
           // Fast-forward through explosion and respawn timer
-          const explosionDuration = 60; // 1 second at 60 FPS
-          const respawnDelay = 300; // 5 seconds at 60 FPS
+          const explosionDuration = SHIP_EXPLODE_DUR_FRAMES;
+          const respawnDelay = SHIP_RESPAWN_DELAY_FRAMES;
           const totalFrames = explosionDuration + respawnDelay;
 
           for (let j = 0; j < totalFrames; j++) {
@@ -290,7 +296,7 @@ describe('BotManager', () => {
       // Start explosion
       botManager.handleBotExplosion(bot.id);
       expect(bot.ship.exploding).toBe(true);
-      expect(bot.ship.explodeTime).toBe(60);
+      expect(bot.ship.explodeTime).toBe(SHIP_EXPLODE_DUR_FRAMES);
 
       // Simulate explosion progress
       const initialExplodeTime = bot.ship.explodeTime;
@@ -310,8 +316,8 @@ describe('BotManager', () => {
       expect(bot.ship.exploding).toBe(true);
 
       // Fast-forward through explosion and respawn timer
-      const explosionDuration = 60; // 1 second at 60 FPS
-      const respawnDelay = 300; // 5 seconds at 60 FPS
+      const explosionDuration = SHIP_EXPLODE_DUR_FRAMES;
+      const respawnDelay = SHIP_RESPAWN_DELAY_FRAMES;
       const totalFrames = explosionDuration + respawnDelay;
 
       for (let i = 0; i < totalFrames; i++) {
@@ -434,7 +440,7 @@ describe('BotManager', () => {
       // Bot should be dead and exploding
 
       expect(bot.ship.exploding).toBe(true);
-      expect(bot.ship.explodeTime).toBe(60);
+      expect(bot.ship.explodeTime).toBe(SHIP_EXPLODE_DUR_FRAMES);
     });
   });
 

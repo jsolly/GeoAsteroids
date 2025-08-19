@@ -588,7 +588,7 @@ a {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 1000;
+  /* z-index: 1000; */
   padding: 2em;
   min-width: 400px;
 }
@@ -708,25 +708,6 @@ a {
   margin-bottom: 0.5em;
 }
 
-/* Custom scrollbar styling (in case it's ever needed) */
-.screen::-webkit-scrollbar {
-  width: 8px;
-}
-
-.screen::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.screen::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
-
-.screen::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
 /* Additional visual enhancements */
 .screen::before {
   content: '';
@@ -741,6 +722,6 @@ a {
     rgba(255, 255, 255, 0.05)
   );
   border-radius: 22px;
-  z-index: -1;
+  /* z-index: -1; */
   opacity: 0.6;
 }

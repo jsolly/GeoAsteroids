@@ -27,14 +27,14 @@ vi.mock('../src/constants', () => ({
   NEXT_LEVEL_POINTS: 1000,
   START_LEVEL: 1,
   STARTING_SCORE: 0,
-  SHIP_EXPLODE_DUR: 0.5,
+  SHIP_EXPLODE_DUR_FRAMES: 18,
   getCVS: () => ({}),
   soundIsOn: () => true,
 }));
 
 // Mock the sound effects
-vi.mock('../src/asteroids', () => ({
-  Roid: {
+vi.mock('../src/entities/asteroid/Asteroid.ts', () => ({
+  Asteroid: {
     fxHit: {
       play: vi.fn(),
     },
@@ -42,7 +42,7 @@ vi.mock('../src/asteroids', () => ({
 }));
 
 // Mock the bot manager
-vi.mock('../src/botManager', () => ({
+vi.mock('../src/entities/bot/botManager.ts', () => ({
   BotManager: {
     getInstance: vi.fn(() => ({
       getBotLasers: vi.fn(() => new Map()),
@@ -52,7 +52,7 @@ vi.mock('../src/botManager', () => ({
 }));
 
 // Mock the game controller
-vi.mock('../src/gameController', () => ({
+vi.mock('../src/core/gameController.ts', () => ({
   GameController: {
     getInstance: vi.fn(() => ({
       getMultiplayerManager: vi.fn(() => ({

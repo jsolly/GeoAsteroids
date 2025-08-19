@@ -3,9 +3,10 @@ import {
   BOT_HEALTH_REGEN_RATE,
   BOT_MAX_HEALTH,
   FPS,
-  SHIP_EXPLODE_DUR,
+  SHIP_EXPLODE_DUR_FRAMES,
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
+  SHIP_RESPAWN_DELAY_FRAMES,
 } from '../../constants';
 import { Vector } from '../../physics/Vector.ts';
 import type { BotPlayer } from './types';
@@ -151,7 +152,7 @@ export class BotState {
 
     // Set explosion state
     bot.ship.exploding = true;
-    bot.ship.explodeTime = 60; // 1 second at 60 FPS
+    bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
     console.info('BOT_STATE', 'Bot explosion started', {
       botId,
@@ -175,7 +176,7 @@ export class BotState {
 
     // Start explosion sequence (same as laser hit)
     bot.ship.exploding = true;
-    bot.ship.explodeTime = 60; // 1 second explosion duration
+    bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
     console.info('BOT_EMP', 'Bot explosion started for EMP destruction', {
       botId,
@@ -241,7 +242,7 @@ export class BotState {
       if (bot.lives <= 0) {
         // Bot is dead, mark as exploding and explode
         bot.ship.exploding = true;
-        bot.ship.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+        bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
         bot.ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
 
         console.info('BOT_DEATH_FINAL', 'Bot died - no lives remaining', {
@@ -256,7 +257,7 @@ export class BotState {
       } else {
         // Bot still has lives, start explosion and respawn sequence
         bot.ship.exploding = true;
-        bot.ship.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+        bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
         bot.ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
 
         console.info('BOT_LIFE_LOST', 'Bot lost a life!', {
@@ -267,7 +268,7 @@ export class BotState {
         });
 
         // Start respawn timer
-        bot.respawnTimer = 300; // 5 seconds at 60 FPS
+        bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
         // Store respawn position (same as original position for now)
         bot.respawnPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
       }

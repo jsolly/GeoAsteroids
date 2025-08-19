@@ -5,8 +5,6 @@
 
 A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoasteroids.com</a>
 
-![GeoAsteroids_playthrough (3)](https://user-images.githubusercontent.com/9572232/179308016-71265497-1d05-4750-bfd5-0f336cf7ae77.gif)
-
 ---
 
 ## Table of Contents
@@ -19,8 +17,8 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 
 ## Installation
 
-1 - (Install <a href="https://nodejs.org/en/" rel="noopener noreferrer">Node.js</a>
-2 - (Install <a href="https://www.mongodb.com/try/download/community" rel="noopener noreferrer">MongoDB</a>) (Or use a cloud service like <a href="https://www.mongodb.com/cloud/atlas" rel="noopener noreferrer">MongoDB Atlas</a>)
+1. (Install <a href="https://nodejs.org/en/" rel="noopener noreferrer">Node.js</a>)
+2. (Install <a href="https://www.mongodb.com/try/download/community" rel="noopener noreferrer">MongoDB</a>) (Or use a cloud service like <a href="https://www.mongodb.com/cloud/atlas" rel="noopener noreferrer">MongoDB Atlas</a>)
 
 ```shell
     $ git clone git@github.com:jsolly/GeoAsteroids.git
@@ -79,7 +77,7 @@ npm run lint
 
 ## Contributing
 
-Want to work on this with me? DM me on Twiiter <a href="https://twitter.com/_jsolly" target="_blank">`@_jsolly`</a>
+Want to work on this with me? DM me on X <a href="https://x.com/_jsolly" target="_blank">`@_jsolly`</a>
 
 ### Step 1
 

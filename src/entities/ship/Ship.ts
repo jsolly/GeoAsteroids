@@ -8,7 +8,7 @@ import {
   LASER_EXPLODE_DUR,
   LASER_MAX,
   LASER_SPEED,
-  SHIP_EXPLODE_DUR,
+  SHIP_EXPLODE_DUR_FRAMES,
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
   SHIP_MAX_HEALTH,
@@ -151,7 +151,7 @@ class Ship {
   }
 
   explode(): void {
-    this.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
+    this.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
     this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
     Ship.fxExplode.play();
   }
