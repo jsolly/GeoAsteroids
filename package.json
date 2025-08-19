@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
   "devDependencies": {
-    "@biomejs/biome": "^2.2.0",
+    "@biomejs/biome": "https://pkg.pr.new/@biomejs/biome@7248dda",
     "@types/node": "^24.0.15",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",

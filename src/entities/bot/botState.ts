@@ -244,7 +244,7 @@ export class BotState {
         bot.ship.explodeTime = Math.ceil(SHIP_EXPLODE_DUR * FPS);
         bot.ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
 
-        console.error('BOT_DEATH_FINAL', 'Bot died - no lives remaining', {
+        console.info('BOT_DEATH_FINAL', 'Bot died - no lives remaining', {
           botId: bot.id,
           botName: bot.name,
           botType: bot.botType,

@@ -18,6 +18,9 @@ export default defineConfig({
     },
     environment: 'jsdom',
     setupFiles: 'test/setup/viteSetup.ts',
+    env: {
+      VITE_CLIENT_LOG_LEVEL: 'error',
+    },
   },
   resolve: {
     extensions: ['.ts', '.js', '.tsx', '.jsx'],

@@ -2,6 +2,10 @@ import jsdom from 'jsdom';
 
 const { JSDOM } = jsdom;
 
+process.env.VITE_CLIENT_LOG_LEVEL = 'warn';
+
+import '../../src/utils/logLevel.ts';
+
 const dom = new JSDOM(
   `<!DOCTYPE html>
 <html lang="en">
@@ -93,6 +97,52 @@ const dom = new JSDOM(
 );
 global.document = dom.window.document;
 global.window = global.document.defaultView as unknown as Window & typeof globalThis;
+
+// Silence jsdom "Not implemented: HTMLMediaElement.prototype.play" by stubbing media methods
+type MediaProto = {
+  play: () => Promise<void>;
+  pause: () => void;
+  load: () => void;
+};
+
+const maybePatchMediaProto = (proto: unknown) => {
+  if (!proto || typeof proto !== 'object') {
+    return;
+  }
+  const p = proto as MediaProto;
+  Object.defineProperty(p, 'play', {
+    configurable: true,
+    writable: true,
+    value: () => Promise.resolve(),
+  });
+  Object.defineProperty(p, 'pause', {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+  Object.defineProperty(p, 'load', {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+};
+
+maybePatchMediaProto(
+  (globalThis as unknown as { HTMLMediaElement?: { prototype?: unknown } }).HTMLMediaElement
+    ?.prototype
+);
+maybePatchMediaProto(
+  (global.window as unknown as { HTMLMediaElement?: { prototype?: unknown } }).HTMLMediaElement
+    ?.prototype
+);
+maybePatchMediaProto(
+  (globalThis as unknown as { HTMLAudioElement?: { prototype?: unknown } }).HTMLAudioElement
+    ?.prototype
+);
+maybePatchMediaProto(
+  (global.window as unknown as { HTMLAudioElement?: { prototype?: unknown } }).HTMLAudioElement
+    ?.prototype
+);
 
 // Mock Audio for tests
 if (typeof global.window.Audio === 'undefined') {
