@@ -33,62 +33,62 @@ test('dummy test', () => {
   expect(1).toBe(1);
 });
 
-test.concurrent('keyDown - Space', () => {
+test('keyDown - Space', () => {
   pressKey('Space');
   expect(mockPlayer.ship.fireLaser).toHaveBeenCalled();
 });
 
-test.concurrent('keyDown - ArrowLeft', () => {
+test('keyDown - ArrowLeft', () => {
   pressKey('ArrowLeft');
   expect(mockPlayer.ship.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
-test.concurrent('keyDown - ArrowUp', () => {
+test('keyDown - ArrowUp', () => {
   pressKey('ArrowUp');
   expect(mockPlayer.ship.thrusting).toBeTruthy();
   expect(mockPlay).toHaveBeenCalled();
 });
 
-test.concurrent('keyDown - ArrowRight', () => {
+test('keyDown - ArrowRight', () => {
   pressKey('ArrowRight');
   expect(mockPlayer.ship.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
   releaseKey('ArrowRight'); // For some reason, keyDown is persisting across tests
 });
 
-test.concurrent('keyDown - Space', () => {
+test('keyDown - Space', () => {
   pressKey('Space');
   expect(mockPlayer.ship.fireLaser).toHaveBeenCalled();
 });
 
-test.concurrent('keyUp - ArrowLeft', () => {
+test('keyUp - ArrowLeft', () => {
   releaseKey('ArrowLeft');
   expect(mockPlayer.ship.rot).toEqual(0);
 });
 
-test.concurrent('keyUp - ArrowUp', () => {
+test('keyUp - ArrowUp', () => {
   releaseKey('ArrowUp');
   expect(mockPlayer.ship.thrusting).toBeFalsy();
   expect(mockPlay).toHaveBeenCalled();
 });
 
-test.concurrent('keyUp - ArrowRight', () => {
+test('keyUp - ArrowRight', () => {
   releaseKey('ArrowRight');
   expect(mockPlayer.ship.rot).toEqual(0);
 });
 
-test.concurrent('keyUp - ArrowLeft with ArrowRight still down', () => {
+test('keyUp - ArrowLeft with ArrowRight still down', () => {
   pressKey('ArrowRight');
   releaseKey('ArrowLeft');
   expect(mockPlayer.ship.rot).toEqual(((-TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
-test.concurrent('keyUp - ArrowRight with ArrowLeft still down', () => {
+test('keyUp - ArrowRight with ArrowLeft still down', () => {
   pressKey('ArrowLeft');
   releaseKey('ArrowRight');
   expect(mockPlayer.ship.rot).toEqual(((TURN_SPEED / 180) * Math.PI) / FPS);
 });
 
-test.concurrent('keyDown - non-specified key', () => {
+test('keyDown - non-specified key', () => {
   const initialRot = mockPlayer.ship.rot;
   const initialThrusting = mockPlayer.ship.thrusting;
 
@@ -99,7 +99,7 @@ test.concurrent('keyDown - non-specified key', () => {
   expect(mockPlay).not.toHaveBeenCalled();
 });
 
-test.concurrent('keyDown - blocked when player is dead', () => {
+test('keyDown - blocked when player is dead', () => {
   // Set player to have no lives (dead)
   mockPlayer.lives = 0;
 
@@ -117,7 +117,7 @@ test.concurrent('keyDown - blocked when player is dead', () => {
   expect(mockPlay).not.toHaveBeenCalled();
 });
 
-test.concurrent('keyUp - non-specified key', () => {
+test('keyUp - non-specified key', () => {
   const initialRot = mockPlayer.ship.rot;
   const initialThrusting = mockPlayer.ship.thrusting;
 

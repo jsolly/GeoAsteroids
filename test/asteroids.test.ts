@@ -3,28 +3,28 @@ import { Difficulty, setDifficulty } from '../src/constants';
 import { Asteroid, AsteroidBelt } from '../src/entities/asteroid/Asteroid.ts';
 import { Vector } from '../src/physics/Vector.ts';
 
-test.concurrent('Asteroid Creation', () => {
+test('Asteroid Creation', () => {
   const roidPoint = new Vector(10, 20);
   const roidRadius = 10;
   const newRoid = new Asteroid(roidPoint, roidRadius);
   expect(newRoid).toBeInstanceOf(Asteroid);
 });
 
-test.concurrent('Asteroid Belt Creation', () => {
+test('Asteroid Belt Creation', () => {
   setDifficulty(Difficulty.easy); // This ensures roidNum is defined
   const testRoidBelt = new AsteroidBelt();
   expect(testRoidBelt).toBeInstanceOf(AsteroidBelt);
   expect(testRoidBelt.roids.length).toEqual(5);
 });
 
-test.concurrent('Asteroid Belt Add Asteroid', () => {
+test('Asteroid Belt Add Asteroid', () => {
   const testRoidBelt = new AsteroidBelt();
   const roidCount = testRoidBelt.roids.length;
   testRoidBelt.addRoid();
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1);
 });
 
-test.concurrent('Asteroid Belt Spawn Asteroids', () => {
+test('Asteroid Belt Spawn Asteroids', () => {
   const testRoidBelt = new AsteroidBelt();
   testRoidBelt.spawnTime = 0; // so we don't have to wait a second for the spawn time to hit
   const roidCount = testRoidBelt.roids.length;
@@ -32,7 +32,7 @@ test.concurrent('Asteroid Belt Spawn Asteroids', () => {
   expect(testRoidBelt.roids.length).toEqual(roidCount + 4);
 });
 
-test.concurrent('Destroy Asteroid', () => {
+test('Destroy Asteroid', () => {
   const testRoidBelt = new AsteroidBelt();
   testRoidBelt.addRoid();
   const roidCount = testRoidBelt.roids.length;
@@ -40,7 +40,7 @@ test.concurrent('Destroy Asteroid', () => {
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Asteroid splits in two
 });
 
-test.concurrent('Move Asteroids', () => {
+test('Move Asteroids', () => {
   const testRoidBelt = new AsteroidBelt();
   testRoidBelt.addRoid();
   const firstRoid = testRoidBelt.roids[0];

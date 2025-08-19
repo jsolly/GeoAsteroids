@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Player } from '../src/entities/player/types.ts';
 import { Laser, Ship } from '../src/entities/ship/Ship.ts';
 import { detectLaserPlayerCollisions } from '../src/physics/collisions.ts';
@@ -27,6 +27,8 @@ vi.mock('../src/constants', () => ({
   NEXT_LEVEL_POINTS: 1000,
   START_LEVEL: 1,
   STARTING_SCORE: 0,
+  SHIP_EXPLODE_DUR: 0.5,
+  getCVS: () => ({}),
   soundIsOn: () => true,
 }));
 
@@ -61,13 +63,10 @@ vi.mock('../src/gameController', () => ({
 }));
 
 describe('Collision Detection System', () => {
-  let ship: Ship;
-  let laser: Laser;
-  let otherPlayer: Player;
-
-  beforeEach(() => {
+  // Helper function to create fresh test objects for each test
+  function createTestObjects() {
     // Create a test ship
-    ship = new Ship();
+    const ship = new Ship();
     ship.position = new Vector(0, 0);
     ship.lasers = [];
 
@@ -76,26 +75,29 @@ describe('Collision Detection System', () => {
     ship.blinkOn = false;
 
     // Create a test laser
-    laser = new Laser(new Vector(100, 0), new Vector(1, 0), 0, 0);
+    const laser = new Laser(new Vector(100, 0), new Vector(1, 0), 0, 0);
     laser.explodeTime = 0; // Not exploding
 
-    // Create a non-bot other player
-    const mockShip = new Ship();
-    mockShip.position = new Vector(100, 0); // Same position as laser
-    mockShip.velocity = new Vector(0, 0);
-    mockShip.r = 15; // Player radius
-    mockShip.a = 0;
-    mockShip.exploding = false;
-    mockShip.explodeTime = 0;
-    mockShip.blinkCount = 0; // No invincibility
-    mockShip.spawnProtectionTimer = 0;
-    mockShip.blinkOn = false;
-    mockShip.health = 100;
-    mockShip.maxHealth = 100;
-    mockShip.lastDamageTime = 0;
-    mockShip.healthRegenTimer = 0;
+    // Create a non-bot other player with minimal mock
+    const mockShip = {
+      position: new Vector(100, 0), // Same position as laser
+      velocity: new Vector(0, 0),
+      r: 15, // Player radius
+      a: 0,
+      exploding: false,
+      explodeTime: 0,
+      blinkCount: 0, // No invincibility
+      spawnProtectionTimer: 0,
+      blinkOn: false,
+      health: 100,
+      maxHealth: 100,
+      lastDamageTime: 0,
+      healthRegenTimer: 0,
+      lastShotTime: 0,
+      shotCooldown: 2000,
+    } as unknown as Ship;
 
-    otherPlayer = {
+    const otherPlayer = {
       id: 'player-1',
       name: 'Player1',
       ship: mockShip,
@@ -107,16 +109,17 @@ describe('Collision Detection System', () => {
       respawn: () => {},
       onShipExploded: () => {},
     };
-    // Set ship-specific properties
-    mockShip.lastShotTime = 0;
-    mockShip.shotCooldown = 2000;
 
     // Add laser to ship
     ship.lasers = [laser];
-  });
+
+    return { ship, laser, otherPlayer };
+  }
 
   describe('detectLaserPlayerCollisions', () => {
     it('should detect collision when laser hits other player', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
+
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
 
       expect(score).toBe(50); // Should award 50 points for player hit
@@ -125,6 +128,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should not detect collision when player is exploding', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       otherPlayer.ship.exploding = true;
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
@@ -134,17 +138,8 @@ describe('Collision Detection System', () => {
       expect(otherPlayer.ship.health).toBe(100); // Health should not change
     });
 
-    it('should not detect collision when player is exploding', () => {
-      otherPlayer.ship.exploding = true;
-
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
-
-      expect(score).toBe(0);
-      expect(laser.explodeTime).toBe(0);
-      expect(otherPlayer.ship.health).toBe(100);
-    });
-
     it('should not detect collision when player is invincible (blinking)', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       otherPlayer.ship.blinkCount = 10;
       otherPlayer.ship.blinkOn = true;
 
@@ -156,6 +151,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should not detect collision when laser is already exploding', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       laser.explodeTime = 10; // Laser is already exploding
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
@@ -165,20 +161,23 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle multiple players correctly', () => {
-      const mockShip2 = new Ship();
-      mockShip2.position = new Vector(200, 0); // Further away
-      mockShip2.velocity = new Vector(0, 0);
-      mockShip2.r = 15;
-      mockShip2.a = 0;
-      mockShip2.exploding = false;
-      mockShip2.explodeTime = 0;
-      mockShip2.blinkCount = 0;
-      mockShip2.spawnProtectionTimer = 0;
-      mockShip2.blinkOn = false;
-      mockShip2.health = 100;
-      mockShip2.maxHealth = 100;
-      mockShip2.lastDamageTime = 0;
-      mockShip2.healthRegenTimer = 0;
+      const { ship, laser, otherPlayer } = createTestObjects();
+
+      const mockShip2 = {
+        position: new Vector(200, 0), // Further away
+        velocity: new Vector(0, 0),
+        r: 15,
+        a: 0,
+        exploding: false,
+        explodeTime: 0,
+        blinkCount: 0,
+        spawnProtectionTimer: 0,
+        blinkOn: false,
+        health: 100,
+        maxHealth: 100,
+        lastDamageTime: 0,
+        healthRegenTimer: 0,
+      } as unknown as Ship;
 
       const otherPlayer2 = {
         ...otherPlayer,
@@ -197,6 +196,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle player death when health reaches 0', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       otherPlayer.ship.health = 10; // Low health
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
@@ -209,6 +209,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle player permanent death when no lives remaining', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       otherPlayer.ship.health = 10;
       otherPlayer.lives = 0; // No lives remaining
 
@@ -219,10 +220,10 @@ describe('Collision Detection System', () => {
       expect(otherPlayer.ship.health).toBe(0);
       expect(otherPlayer.lives).toBe(0);
       expect(otherPlayer.ship.exploding).toBe(true); // Should be exploding
-      expect(otherPlayer.ship.exploding).toBe(true);
     });
 
     it('should skip bot players', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       otherPlayer.isBot = true;
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
@@ -233,6 +234,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle collision threshold correctly', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       // Position laser just outside collision threshold
       laser.position = new Vector(120, 0); // 100 + 15 (player radius) + 2 (laser radius) + 3 (extra buffer) = 120
       otherPlayer.ship.position = new Vector(100, 0);
@@ -245,6 +247,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle collision threshold correctly when laser is inside', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       // Position laser inside collision threshold
       laser.position = new Vector(110, 0); // 100 + 10 (inside player radius)
       otherPlayer.ship.position = new Vector(100, 0);
@@ -259,6 +262,8 @@ describe('Collision Detection System', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty players array', () => {
+      const { ship, laser } = createTestObjects();
+
       const score = detectLaserPlayerCollisions(ship, []);
 
       expect(score).toBe(0);
@@ -266,6 +271,8 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle undefined players array', () => {
+      const { ship, laser } = createTestObjects();
+
       const score = detectLaserPlayerCollisions(ship, undefined as unknown as Player[]);
 
       expect(score).toBe(0);
@@ -273,6 +280,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle ship with no lasers', () => {
+      const { ship, otherPlayer } = createTestObjects();
       ship.lasers = [];
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
@@ -282,6 +290,7 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle multiple lasers hitting same player', () => {
+      const { ship, laser, otherPlayer } = createTestObjects();
       const laser2 = new Laser(new Vector(100, 0), new Vector(1, 0), 0, 0);
       laser2.explodeTime = 0;
 

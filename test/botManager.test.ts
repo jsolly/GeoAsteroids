@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { BOT_LASER_DAMAGE, BOT_MAX_HEALTH, SHIP_INV_DUR } from '../src/constants';
 import { BotManager } from '../src/entities/bot/botManager.ts';
 import { Vector } from '../src/physics/Vector.ts';
@@ -6,15 +6,18 @@ import { Vector } from '../src/physics/Vector.ts';
 describe('BotManager', () => {
   let botManager: BotManager;
 
-  beforeEach(() => {
+  beforeAll(() => {
     botManager = BotManager.getInstance();
+  });
+
+  beforeEach(() => {
     botManager.clearBots();
     botManager.setLocalPlayerInfo('player-1', new Vector(0, 0), true);
     botManager.activate();
   });
 
   describe('Bot Creation and Management', () => {
-    test('creates bots with correct properties', () => {
+    test('creates bots with correct properties and types', () => {
       botManager.createBots(3);
       const bots = botManager.getBots();
 
@@ -28,20 +31,15 @@ describe('BotManager', () => {
         expect(bot.ship.r).toBe(25);
         expect(bot.lives).toBe(3);
         expect(bot.ship.exploding).toBe(false);
-        expect(bot.ship.exploding).toBe(false);
         expect(bot.isBot).toBe(true);
         expect(['aggressive', 'defensive', 'patrol']).toContain(bot.botType);
         expect(bot.behaviorState).toBe('hunting');
         expect(bot.ship.health).toBe(BOT_MAX_HEALTH);
         expect(bot.ship.maxHealth).toBe(BOT_MAX_HEALTH);
       }
-    });
 
-    test('creates different bot types', () => {
-      botManager.createBots(3);
-      const bots = botManager.getBots();
+      // Test bot types
       const botTypes = Array.from(bots.values()).map((bot) => bot.botType);
-
       expect(botTypes).toContain('aggressive');
       expect(botTypes).toContain('defensive');
       expect(botTypes).toContain('patrol');
@@ -472,19 +470,14 @@ describe('BotManager', () => {
   });
 
   describe('Bot Factory Integration', () => {
-    test('factory creates bots with correct types', () => {
-      botManager.createBots(3);
+    test('factory creates and positions bots correctly', () => {
+      botManager.createBots(8);
       const bots = botManager.getBots();
 
       const botTypes = Array.from(bots.values()).map((bot) => bot.botType);
       expect(botTypes).toContain('aggressive');
       expect(botTypes).toContain('defensive');
       expect(botTypes).toContain('patrol');
-    });
-
-    test('factory positions bots correctly', () => {
-      botManager.createBots(8);
-      const bots = botManager.getBots();
 
       // All bots should be positioned around the center
       for (const [, bot] of bots.entries()) {

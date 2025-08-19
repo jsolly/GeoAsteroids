@@ -1,9 +1,6 @@
 import jsdom from 'jsdom';
 
 const { JSDOM } = jsdom;
-
-process.env.VITE_CLIENT_LOG_LEVEL = 'warn';
-
 import '../../src/utils/logLevel.ts';
 
 const dom = new JSDOM(

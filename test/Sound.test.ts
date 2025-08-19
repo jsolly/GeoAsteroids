@@ -21,19 +21,19 @@ afterEach(() => {
   localStorage.removeItem(LOCAL_STORAGE_KEYS.soundOn);
 });
 
-test.concurrent('Sound', () => {
+test('Sound', () => {
   expect(testSound).toBeInstanceOf(Sound);
   expect(testSound.streams.length).toBe(1);
 });
 
-test.concurrent('Set Sound', () => {
+test('Set Sound', () => {
   setSound(true);
   expect(localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn)).toBe('true');
   setSound(false);
   expect(localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn)).toBe('false');
 });
 
-test.concurrent('Sound play functionality', () => {
+test('Sound play functionality', () => {
   // Since HTMLMediaElement.play is not implemented in jsdom,
   // we test that the streamNum is updated correctly
   const initialStreamNum = testSound.streamNum;
@@ -41,12 +41,12 @@ test.concurrent('Sound play functionality', () => {
   expect(testSound.streamNum).toBe((initialStreamNum + 1) % testSound.streams.length);
 });
 
-test.concurrent('Sound stop functionality', () => {
+test('Sound stop functionality', () => {
   testSound.stop();
   expect(mockPause).toHaveBeenCalled();
 });
 
-test.concurrent('Sound isPlaying check', () => {
+test('Sound isPlaying check', () => {
   // Mock the paused property
   Object.defineProperty(testSound.streams[0], 'paused', {
     value: false,
@@ -63,7 +63,7 @@ test.concurrent('Sound isPlaying check', () => {
   expect(testSound.isPlaying()).toBe(false);
 });
 
-test.concurrent('Sound with multiple streams', () => {
+test('Sound with multiple streams', () => {
   const multiSound = new Sound('../public/sounds/thrust.m4a', 3);
   expect(multiSound.streams.length).toBe(3);
   expect(multiSound.streamNum).toBe(0);
