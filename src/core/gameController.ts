@@ -13,13 +13,13 @@ import { GameState } from './gameState.ts';
 function initializeListeners(isGameRunning: () => boolean): void {
   document.addEventListener('keydown', (ev) => {
     if (isGameRunning()) {
-      keyDown(ev, GameController.getInstance().getCurrShip());
+      keyDown(ev, GameController.getInstance().getCurrPlayer());
     }
   });
 
   document.addEventListener('keyup', (ev) => {
     if (isGameRunning()) {
-      keyUp(ev, GameController.getInstance().getCurrShip());
+      keyUp(ev, GameController.getInstance().getCurrPlayer());
     }
   });
 }
@@ -243,10 +243,7 @@ class GameController implements GameControllerData {
       });
 
       // Update bot manager with local player position
-      this.multiplayerManager.updateLocalPlayerForBots(
-        this.currShip.position,
-        !this.player.ship.exploding
-      );
+      this.multiplayerManager.updateLocalPlayerForBots(this.currShip.position, !this.player.isDead);
     }
   }
 
@@ -305,7 +302,7 @@ class GameController implements GameControllerData {
     console.info('BOT_SHOOT', 'Bot shoot event received', {
       botId: botShoot.botId,
       shipLives: this.player.lives,
-      shipDead: this.player.ship.exploding,
+      shipDead: this.player.isDead,
       shipExploding: this.currShip.exploding,
       shipBlinkCount: this.currShip.blinkCount,
     });

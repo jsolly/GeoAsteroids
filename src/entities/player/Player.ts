@@ -60,9 +60,9 @@ export class Player implements PlayerInterface {
     // This could include resetting ship position, health, etc.
   }
 
-  // Getter to check if player is dead (when ship is exploding)
+  // Getter to check if player is dead (when no lives remaining)
   get isDead(): boolean {
-    return this.ship.exploding;
+    return this.lives <= 0;
   }
 
   respawn(): void {
