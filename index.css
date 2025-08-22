@@ -687,3 +687,18 @@ a {
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* Build info styling */
+.build-info {
+  display: inline-block;
+  margin-left: 1em;
+  font-size: 0.75em;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', monospace;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.build-info:hover {
+  opacity: 1;
+}

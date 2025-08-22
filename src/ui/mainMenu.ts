@@ -5,7 +5,7 @@ import { setMusic } from '../audio/Music';
 import { setSound } from '../audio/Sound';
 
 import { GameController } from '../core/gameController';
-
+import { getBuildInfoString } from '../utils/buildInfo';
 import { attachEventListener, getElementById } from '../utils/dom';
 import { toggleScreen } from './uiUtils';
 
@@ -228,3 +228,14 @@ export function setupMainMenuUpdates(): void {
   // Set up periodic player count updates (every 2 seconds)
   setInterval(updatePlayerCount, 2000);
 }
+
+// Display build info
+function displayBuildInfo(): void {
+  const buildInfoElement = getElementById<HTMLElement>('buildInfo');
+  if (buildInfoElement) {
+    buildInfoElement.textContent = getBuildInfoString();
+  }
+}
+
+// Initialize build info display
+displayBuildInfo();

@@ -58,7 +58,7 @@ export class MultiplayerManager {
       }
 
       try {
-        const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001';
+        const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
 
         this.socket = new WebSocket(wsUrl);
 

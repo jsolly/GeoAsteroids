@@ -1,6 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from './setup/serverLogger';
+import { WebSocketCore } from './server/core';
 
 // Production configuration
 const PORT = process.env.PORT || 3001;
@@ -28,7 +29,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
       JSON.stringify({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        players: getPlayerCount(),
+        players: wsCore.getPlayerCount(),
         uptime: process.uptime(),
       })
     );
@@ -61,22 +62,8 @@ wss.on('headers', (headers) => {
 });
 
 // Player management
-const players = new Map<string, any>();
-let gameTime = 0;
-
-// Game loop for cleanup (10 FPS)
-setInterval(() => {
-  gameTime++;
-
-  // Clean up stale players (haven't updated in 30 seconds)
-  const now = Date.now();
-  for (const [id, player] of players.entries()) {
-    if (now - player.lastUpdate > 30000) {
-      logger.debug(`🧹 Cleaning up stale player ${player.name} (${id})`);
-      removePlayer(id);
-    }
-  }
-}, 100);
+const wsCore = new WebSocketCore();
+wsCore.startPeriodicGameStateBroadcast();
 
 // WebSocket connection handling
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
@@ -90,19 +77,19 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(String(data));
-      handleClientMessage(message, ws);
+      wsCore.handleClientMessage(message, ws);
     } catch (error) {
       logger.error('Failed to parse client message:', error instanceof Error ? error.message : 'Unknown error');
-      sendError(ws, 'Invalid message format');
+      wsCore.sendError(ws, 'Invalid message format');
     }
   });
 
   ws.on('close', () => {
     logger.info('🔌 Player disconnected');
     // Find and remove the player
-    for (const [id, player] of players.entries()) {
+    for (const player of wsCore.getAllPlayers()) {
       if (player.ws === ws) {
-        removePlayer(id);
+        wsCore.removePlayer(player.id);
         break;
       }
     }
@@ -136,132 +123,3 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
-
-// Player management functions
-function addPlayer(id: string, name: string, ws: WebSocket) {
-  players.set(id, {
-    id,
-    name,
-    ws,
-    lastUpdate: Date.now(),
-    position: { x: 0, y: 0 },
-    velocity: { x: 0, y: 0 },
-    rotation: 0,
-    health: 100,
-    score: 0,
-  });
-  logger.info(`👤 Player ${name} (${id}) added`);
-}
-
-function removePlayer(id: string) {
-  const player = players.get(id);
-  if (player) {
-    logger.info(`👋 Player ${player.name} (${id}) removed`);
-    players.delete(id);
-  }
-}
-
-function updatePlayer(id: string, data: any) {
-  const player = players.get(id);
-  if (player) {
-    Object.assign(player, data);
-    player.lastUpdate = Date.now();
-  }
-}
-
-function getPlayerCount(): number {
-  return players.size;
-}
-
-function broadcastToAll(message: any, excludeId?: string) {
-  const messageStr = JSON.stringify(message);
-  for (const [id, player] of players.entries()) {
-    if (id !== excludeId && player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(messageStr);
-    }
-  }
-}
-
-
-
-function sendError(ws: WebSocket, message: string) {
-  sendToWebSocket(ws, { type: 'error', message });
-}
-
-function sendToWebSocket(ws: WebSocket, message: any) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
-  }
-}
-
-// Message handling
-function handleClientMessage(message: any, ws: WebSocket) {
-  const { type, id, name, ...data } = message;
-
-  switch (type) {
-    case 'join':
-      if (!id || !name) {
-        sendError(ws, 'Missing player ID or name');
-        return;
-      }
-      addPlayer(id, name, ws);
-      sendToWebSocket(ws, { type: 'joined', id, name });
-      broadcastToAll({ type: 'playerJoin', id, name }, id);
-      broadcastGameState();
-      break;
-
-    case 'update':
-      if (!id) {
-        sendError(ws, 'Missing player ID');
-        return;
-      }
-      updatePlayer(id, data);
-      broadcastToAll({ type: 'playerUpdate', id, ...data }, id);
-      break;
-
-    case 'chat':
-      if (!id || !data.message) {
-        sendError(ws, 'Missing player ID or message');
-        return;
-      }
-      const player = players.get(id);
-      if (player) {
-        broadcastToAll({ type: 'chat', id, name: player.name, message: data.message });
-      }
-      break;
-
-    case 'ping':
-      sendToWebSocket(ws, { type: 'pong', timestamp: Date.now() });
-      break;
-
-    default:
-      logger.warn(`Unknown message type: ${type}`);
-      sendError(ws, `Unknown message type: ${type}`);
-  }
-}
-
-function broadcastGameState() {
-  const gameState = {
-    type: 'gameState',
-    players: Array.from(players.values()).map(({ id, name, position, velocity, rotation, health, score }) => ({
-      id,
-      name,
-      position,
-      velocity: velocity || { x: 0, y: 0 },
-      r: rotation || 0,
-      a: 0, // angular velocity, default to 0
-      lives: health || 3,
-      score,
-      exploding: false, // default to false
-    })),
-    gameTime,
-  };
-  broadcastToAll(gameState);
-}
-
-// Periodic game state broadcast (5 FPS)
-setInterval(() => {
-  if (players.size > 0) {
-    broadcastGameState();
-  }
-}, 200);

@@ -7,7 +7,7 @@
   "scripts": {
     "prune": "ts-prune",
     "dev": "vite",
-    "dev:multiplayer": "tsx --env-file=.env setup/localWebSocketServer.ts",
+    "dev:multiplayer": "tsx --env-file=.env server.ts",
     "dev:full": "concurrently --kill-others --prefix-colors \"blue.bold,green.bold\" --prefix \"[{name}]\" --names \"vite,multiplayer\" \"npm run dev\" \"npm run dev:multiplayer\"",
     "build": "tsc && vite build",
     "start": "vite",
