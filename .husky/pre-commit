@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# Skip if running in CI environment
+if [ -n "$CI" ]; then
+  echo "Skipping Husky hooks in CI environment"
+  exit 0
+fi
+
 error_handler() {
   printf '\n\033[0;31m✗ Commit aborted: One or more checks failed.\033[0m\n'
   printf 'Check the output above for details. Fix the issues, then try committing again.\n'
