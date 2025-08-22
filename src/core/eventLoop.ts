@@ -46,6 +46,12 @@ window.addEventListener('gameStart', () => {
       return;
     }
 
+    // Add debug logging to verify console override is working
+    console.debug('GAME_LOOP_DEBUG', 'Game loop iteration', {
+      timestamp: Date.now(),
+      frame: performance.now(),
+    });
+
     try {
       updateGame();
     } catch (error) {
@@ -61,12 +67,14 @@ window.addEventListener('gameStart', () => {
   window.requestAnimationFrame(gameLoop);
 });
 
-// Add event listener for ship life loss
-window.addEventListener('shipLifeLost', () => {
+// Add event listener for ship explosion
+window.addEventListener('shipExploded', () => {
   const ship = gameController.getCurrShip();
   const player = gameController.getCurrPlayer();
   if (ship && player) {
-    handleShipLifeLoss(ship, player);
+    // Ship has exploded, just decrement player lives
+    // The explosion animation will be handled by the normal game loop
+    player.lives--;
   }
 });
 
@@ -79,35 +87,6 @@ function updateGame(): void {
   const textAlpha = gameController.getTextAlpha();
   const text = gameController.getText();
 
-  // Enhanced ship state logging (disabled to prevent spam)
-  // if (currShip.dead || currShip.exploding) {
-  //   console.log('🚨 SHIP IN DANGER:', {
-  //     frame: Date.now(),
-  //     score: currScore,
-  //     level: gameController.getGameState().getCurrentLevel(),
-  //     shipPos: { x: currShip.position.x, y: currShip.position.y },
-  //     shipDead: currShip.dead,
-  //     shipExploding: currShip.exploding,
-  //     shipLives: ship.lives,
-  //     shipBlinkCount: ship.blinkCount,
-  //     textAlpha,
-  //     text,
-  //     multiplayerEnabled: gameController.isMultiplayerEnabled(),
-  //   });
-  // }
-
-  // Log game state for debugging
-  // console.debug('GAME_LOOP', 'Game update', {
-  //   score: currScore,
-  //   level: gameController.getGameState().getCurrentLevel(),
-  //   shipPos: { x: currShip.centroid.x, y: currShip.centroid.y },
-  //   shipDead: currShip.dead,
-  //   shipExploding: currShip.exploding,
-  //   textAlpha,
-  //   text,
-  //   multiplayerEnabled: gameController.isMultiplayerEnabled()
-  // });
-
   handleLevelUp();
 
   // Always update player network state (invincibility/blink timers, explosions, regen)
@@ -117,20 +96,6 @@ function updateGame(): void {
   if (gameController.isMultiplayerEnabled()) {
     // Update all bot systems at the same framerate as the main game loop
     gameController.updateBotsInGameLoop();
-
-    // Log bot information for debugging
-    const bots = gameController.getBots();
-    if (bots.size > 0) {
-      // console.debug('GAME_LOOP', 'Bot update', {
-      //   botCount: bots.size,
-      //   bots: Array.from(bots.values()).map(bot => ({
-      //     id: bot.id,
-      //     name: bot.name,
-      //     position: { x: bot.centroid.x, y: bot.centroid.y },
-      //     behavior: bot.behaviorState
-      //     }))
-      //   });
-    }
   }
 
   drawGameCanvas(currShip, currRoidBelt, currScore, personalBest, textAlpha, text);
@@ -139,16 +104,9 @@ function updateGame(): void {
   handleShipState(currShip, currPlayer);
   handleCollision(currShip);
 
-  // Only move ship if it's not exploding and not dead
-  if (!currShip.exploding && !currPlayer.ship.exploding) {
+  // Only move ship if it's not exploding and player has lives remaining
+  if (!currShip.exploding && currPlayer.lives > 0) {
     currShip.move();
-  } else {
-    // console.log('🚫 Ship movement blocked:', {
-    //   exploding: currShip.exploding,
-    //   dead: currPlayer.isDead,
-    //   lives: currPlayer.lives,
-    //   blinkCount: currShip.blinkCount,
-    // });
   }
 
   currShip.moveLasers();
@@ -173,24 +131,9 @@ function handleShipState(ship: Ship, player: Player): void {
     ship.setExploding();
     ship.updateEmpPulse(); // Update EMP pulse state
 
-    // Log ship state for debugging
-    // console.debug('SHIP_STATE', 'Ship state update', {
-    //   blinkOn: ship.blinkOn,
-    //   dead: ship.dead,
-    //   exploding: ship.exploding,
-    //   blinkCount: ship.blinkCount,
-    //   spawnProtectionTimer: ship.spawnProtectionTimer,
-    //   empPulseActive: ship.empPulseActive,
-    //   empPulseTime: ship.empPulseTime
-    // });
-
     if (!ship.exploding) {
-      if (ship.blinkOn && !player.ship.exploding) {
-        // console.debug('SHIP_STATE', 'Drawing ship', {
-        //   pos: { x: ship.position.x, y: ship.position.y },
-        //   angle: ship.a
-        // });
-        drawShipRelative(ship);
+      if (player.lives > 0 && ship.blinkOn) {
+        drawShipRelative(ship, player.color);
       }
 
       // Draw EMP pulse effect if active
@@ -213,7 +156,6 @@ function handleShipState(ship: Ship, player: Player): void {
         }
       }
     } else {
-      // console.debug('SHIP_STATE', 'Handling ship explosion');
       handleShipExplosion(ship, player);
     }
   } catch (error: unknown) {
@@ -226,33 +168,16 @@ function handleShipState(ship: Ship, player: Player): void {
 }
 
 function handleShipExplosion(ship: Ship, player: Player): void {
-  // console.log('💥 Ship explosion handling START:', {
-  //   explodeTime: ship.explodeTime,
-  //   lives: ship.lives,
-  //   dead: ship.dead,
-  //   exploding: ship.exploding,
-  //   blinkCount: ship.blinkCount,
-  // });
-
-  drawShipExplosion(ship);
-  ship.explodeTime--;
-
-  // console.log('💥 Ship explosion handling:', {
-  //   explodeTime: ship.explodeTime,
-  //   lives: ship.lives,
-  //   dead: ship.dead,
-  //   exploding: ship.exploding,
-  // });
+  // Only draw explosion if it's still in progress
+  if (ship.explodeTime > 0) {
+    drawShipExplosion(ship, player.color);
+    ship.explodeTime--;
+  }
 
   if (ship.explodeTime === 0) {
-    // console.log('⏰ Explosion time finished, checking respawn...');
-
-    // Check if ship has lives remaining
+    // Explosion finished, check if player has lives remaining
     if (player.lives > 0) {
-      // console.log('🔄 Respawning ship with', player.lives, 'lives remaining');
-
-      // Respawn the ship
-      // Note: ship.exploding will be set to false by the ship's updateExplosion method
+      // Player still has lives - respawn the ship
       ship.exploding = false;
       ship.explodeTime = 0;
       // Give ship temporary invincibility (blinking effect)
@@ -269,54 +194,13 @@ function handleShipExplosion(ship: Ship, player: Player): void {
       ship.position = new Vector(0, 0); // Use world origin instead of canvas center
       ship.velocity = new Vector(0, 0);
       ship.a = (90 / 180) * Math.PI; // Reset to upward direction
-
-      // console.log('✅ Ship respawned successfully:', {
-      //   dead: ship.dead,
-      //   exploding: ship.exploding,
-      //   blinkCount: ship.blinkCount,
-      //   position: { x: ship.position.x, y: ship.position.y },
-      // });
     } else {
-      // console.log('💀 No lives remaining - game over');
       // No lives remaining - game over
+      // Don't respawn the ship, just call gameOver
+      // The ship will remain exploded and won't be drawn
       gameController.gameOver();
     }
-  } else {
-    // console.log(
-    //   '⏳ Explosion still in progress, time remaining:',
-    //   ship.explodeTime,
-    // );
   }
-}
-
-function handleShipLifeLoss(ship: Ship, player: Player): void {
-  // Ship lost a life but still has lives remaining
-  // Give temporary invincibility and reset position
-  // Note: ship.exploding will be set to false by the ship's updateExplosion method
-  ship.exploding = false;
-  ship.explodeTime = 0;
-
-  // Give ship temporary invincibility (blinking effect)
-  ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-  ship.spawnProtectionTimer = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-  ship.blinkOn = true;
-
-  // Reset ship health to full
-  ship.health = ship.maxHealth;
-  ship.lastDamageTime = 0;
-  ship.healthRegenTimer = 0;
-
-  // Reset ship position to center
-  ship.position = new Vector(0, 0);
-  ship.velocity = new Vector(0, 0);
-  ship.a = (90 / 180) * Math.PI; // Reset to upward direction
-
-  console.info('SHIP_LIFE_LOST_HANDLED', 'Ship life lost, respawning with invincibility', {
-    remainingLives: player.lives,
-    health: ship.health,
-    blinkCount: ship.blinkCount,
-    position: { x: ship.position.x, y: ship.position.y },
-  });
 }
 
 function handleCollision(ship: Ship): void {
@@ -337,6 +221,10 @@ function handleCollision(ship: Ship): void {
       gameController.updateCurrScore(detectShipToShipCollisions(ship, bots));
 
       // Add bot-asteroid collision detection
+      console.debug('COLLISION_DEBUG', 'Calling detectBotAsteroidCollisions', {
+        botCount: bots.size,
+        asteroidCount: currRoidBelt.roids.length,
+      });
       detectBotAsteroidCollisions(bots, currRoidBelt);
 
       // Add bot-ship collision detection

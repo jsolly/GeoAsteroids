@@ -2,10 +2,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { FPS, getCVS, LASER_DIST, LASER_SPEED } from '../../constants';
 import { Vector } from '../../physics/Vector.ts';
 import { Laser } from '../ship/Ship.ts';
-import type { BotBullet, BotPlayer, BotShoot } from './types.ts';
+import type { BotPlayer, BotShoot } from './types.ts';
 
 export class BotCombat {
-  private botBullets: Map<string, BotBullet> = new Map();
   private botLasers: Map<string, Laser[]> = new Map();
   private localPlayerId: string;
   private localPlayerPosition: Vector = new Vector(0, 0);
@@ -26,33 +25,8 @@ export class BotCombat {
     this.botShootCallback = callback;
   }
 
-  public getBotBullets(): Map<string, BotBullet> {
-    return this.botBullets;
-  }
-
   public getBotLasers(): Map<string, Laser[]> {
     return this.botLasers;
-  }
-
-  public createBotBullet(botShoot: BotShoot): void {
-    const bulletId = `bullet-${uuidv4()}`;
-    const bullet: BotBullet = {
-      id: bulletId,
-      botId: botShoot.botId,
-      position: new Vector(botShoot.laserStart.x, botShoot.laserStart.y),
-      direction: new Vector(botShoot.laserDirection.x, botShoot.laserDirection.y),
-      speed: 8,
-      distanceTraveled: 0,
-      maxDistance: 800,
-      createdAt: Date.now(),
-    };
-
-    this.botBullets.set(bulletId, bullet);
-    console.info('BOT_BULLET', 'Bot bullet created (compat shim)', {
-      bulletId,
-      botId: botShoot.botId,
-      totalBullets: this.botBullets.size,
-    });
   }
 
   public createBotLaser(botShoot: BotShoot): void {
@@ -67,18 +41,6 @@ export class BotCombat {
     const lasers = this.botLasers.get(botShoot.botId) || [];
     lasers.push(laser);
     this.botLasers.set(botShoot.botId, lasers);
-
-    console.info('BOT_LASER', 'Bot laser created', {
-      botId: botShoot.botId,
-      startPos: { x: start.x, y: start.y },
-      velocity: { x: velocity.x, y: velocity.y },
-      lasersForBot: lasers.length,
-    });
-  }
-
-  public updateBotBullets(): void {
-    // Legacy no-op retained for compatibility; lasers are now the projectile system
-    this.updateBotLasers();
   }
 
   public updateBotLasers(): void {
@@ -117,30 +79,17 @@ export class BotCombat {
     }
   }
 
-  public clearBotBullets(): void {
-    this.botBullets.clear();
-    console.info('BOT_COMBAT', 'All bot bullets cleared');
-  }
-
   public clearBotLasers(): void {
     this.botLasers.clear();
-    console.info('BOT_COMBAT', 'All bot lasers cleared');
   }
 
   public updateBotShooting(bots: Map<string, BotPlayer>): void {
     const now = Date.now();
 
-    // Log that shooting update is running (occasionally)
-    if (Math.random() < 0.01) {
-      console.info('BOT_SHOOTING_UPDATE', 'Bot shooting update running', {
-        botCount: bots.size,
-        activeBots: Array.from(bots.values()).filter((bot) => !bot.ship.exploding).length,
-        localPlayerAlive: this.localPlayerAlive,
-      });
-    }
+    // Bot shooting update running
 
     for (const [, bot] of bots.entries()) {
-      // Skip dead bots and bots that are exploding
+      // Skip bots that are exploding
       if (bot.ship.exploding) {
         continue;
       }
@@ -157,22 +106,6 @@ export class BotCombat {
       if (this.canBotShootAtPlayer(bot)) {
         this.botShoot(bot);
         bot.ship.lastShotTime = now;
-
-        console.info('BOT_SHOOTING', 'Bot successfully shot at player', {
-          botId: bot.id,
-          name: bot.name,
-          botType: bot.botType,
-          distance: this.getDistanceToPlayer(bot.ship.position),
-          botFacing: Math.round((bot.ship.a * 180) / Math.PI),
-          angleToPlayer: Math.round(
-            (Math.atan2(
-              -(this.localPlayerPosition.y - bot.ship.position.y),
-              this.localPlayerPosition.x - bot.ship.position.x
-            ) *
-              180) /
-              Math.PI
-          ),
-        });
       }
     }
   }

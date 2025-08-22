@@ -1,12 +1,9 @@
-import { expect, test } from 'vitest';
-import {
-  Difficulty,
-  getRoidNum,
-  LOCAL_STORAGE_KEYS,
-  musicIsOn,
-  setDifficulty,
-  soundIsOn,
-} from '../src/constants';
+import { beforeEach, expect, test } from 'vitest';
+import { LOCAL_STORAGE_KEYS, musicIsOn, ROID_NUM, soundIsOn } from '../src/constants';
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 test('Local Storage Keys', () => {
   expect(LOCAL_STORAGE_KEYS.soundOn).toBe('soundOn');
@@ -32,17 +29,6 @@ test('Music Off', () => {
   localStorage.setItem('musicOn', 'false');
   expect(musicIsOn()).toBe(false);
 });
-test('Set Difficulty to Easy', () => {
-  expect(getRoidNum()).toBe(undefined);
-  setDifficulty(Difficulty.easy);
-  expect(getRoidNum()).toBe(5);
-});
-test('Set Difficulty to Medium', () => {
-  setDifficulty(Difficulty.medium);
-  expect(getRoidNum()).toBe(10);
-});
-
-test('Set Difficulty to Hard', () => {
-  setDifficulty(Difficulty.hard);
-  expect(getRoidNum()).toBe(50);
+test('ROID_NUM constant', () => {
+  expect(ROID_NUM).toBe(10);
 });

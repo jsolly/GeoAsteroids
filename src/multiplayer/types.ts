@@ -1,4 +1,4 @@
-import type { BotBullet, BotPlayer, BotShoot } from '../entities/bot/index.ts';
+import type { BotPlayerInterface, BotShoot } from '../entities/bot/index.ts';
 import type {
   PlayerInterface as Player,
   PlayerJoin,
@@ -49,4 +49,4 @@ export interface ClientMessage {
 
 // Re-export player and bot types for convenience
 export type { Player, PlayerUpdate, PlayerJoin, PlayerLeave, PlayerShoot };
-export type { BotPlayer, BotShoot, BotBullet };
+export type { BotPlayerInterface as BotPlayer, BotShoot };

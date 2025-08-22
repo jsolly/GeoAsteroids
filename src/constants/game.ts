@@ -4,14 +4,16 @@ export const STARTING_SCORE = 0;
 export const NEXT_LEVEL_POINTS = 1000;
 
 export const DEBUG =
-  (import.meta.env.VITE_DEBUG === 'true' || import.meta.env.MODE === 'development') &&
-  import.meta.env.VITE_INVINCIBLE === 'true';
+  import.meta.env.VITE_DEBUG === 'true' || import.meta.env.MODE === 'development';
 
 export const SHOW_COLLISION_CIRCLES = false; // Set to false to hide collision circles while keeping debug mode
 
 export const MULTIPLAYER_ENABLED = import.meta.env.VITE_MULTIPLAYER_ENABLED !== 'false'; // Enable multiplayer by default, can be disabled with VITE_MULTIPLAYER_ENABLED=false
 
-// Feature flags
+// Bot configuration
+export const DEFAULT_BOT_COUNT = 3; // Default number of bots in multiplayer mode
+
+// Feature flags - now controlled by debug config when in debug mode
 export const DRAW_ASTEROIDS = import.meta.env.VITE_DRAW_ASTEROIDS !== 'false';
 
 export const SAVE_KEY_PERSONAL_BEST = 'personal_best'; // localstorage of the user's personal best score.
@@ -21,23 +23,5 @@ export const EMP_PULSE_RADIUS = 250; // EMP pulse radius in pixels (focused size
 export const EMP_PULSE_DURATION = 0.5; // EMP pulse visual duration in seconds
 export const EMP_PULSE_COOLDOWN = 3.0; // EMP pulse cooldown in seconds (normal mode)
 
-export enum Difficulty {
-  easy,
-  medium,
-  hard,
-}
-
-const ROID_NUM_BY_DIFFICULTY: Record<Difficulty, number> = {
-  [Difficulty.easy]: 5,
-  [Difficulty.medium]: 10,
-  [Difficulty.hard]: 50,
-};
-
-let difficulty: Difficulty;
-export function setDifficulty(newDifficulty: Difficulty): void {
-  difficulty = newDifficulty;
-}
-
-export function getRoidNum(): number {
-  return ROID_NUM_BY_DIFFICULTY[difficulty];
-}
+// Asteroid configuration - simplified to use constant value
+export const ROID_NUM = 10; // Number of asteroids to spawn

@@ -20,6 +20,7 @@ export class BotMovement {
   private botSteering: Map<string, BotSteering> = new Map();
   private localPlayerPosition: Vector = new Vector(0, 0);
   private localPlayerAlive: boolean = true;
+  public debugMovementDisabled: boolean = false;
 
   public setLocalPlayerInfo(position: Vector, alive: boolean): void {
     this.localPlayerPosition = position;
@@ -52,13 +53,13 @@ export class BotMovement {
   }
 
   public moveBot(bot: BotPlayer): void {
+    // Check if bot movement is disabled in debug mode
+    if (this.debugMovementDisabled) {
+      return; // Don't move bots in debug mode
+    }
+
     const steering = this.botSteering.get(bot.id);
     if (!steering) {
-      console.info('BOT_MOVEMENT', 'No steering data for bot, using fallback movement', {
-        botId: bot.id,
-        name: bot.name,
-        botType: bot.botType,
-      });
       return;
     }
 
@@ -97,18 +98,6 @@ export class BotMovement {
       const thrust = Vector.fromAngle(bot.ship.a).multiply(SHIP_THRUST / FPS);
       bot.ship.velocity = bot.ship.velocity.add(thrust);
       bot.ship.thrusterActive = true;
-
-      console.info('BOT_THRUST', 'Bot applied thrust in facing direction', {
-        botId: bot.id,
-        name: bot.name,
-        behaviorState: bot.behaviorState,
-        botFacingAngle: Math.round((bot.ship.a * 180) / Math.PI),
-        desiredDirection: Math.round((thrustDirection * 180) / Math.PI),
-        thrustForce: {
-          x: Math.round(thrust.x * 1000) / 1000,
-          y: Math.round(thrust.y * 1000) / 1000,
-        },
-      });
     } else {
       bot.ship.thrusterActive = false;
 

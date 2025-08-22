@@ -21,6 +21,7 @@ export interface Player extends PlayerData {
   respawnTimer?: number; // Timer for respawning after death (in frames)
   respawnPosition?: Vector; // Position where player will respawn
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
+  color: string; // Player's unique color for lasers and other visual elements
   respawn(): void;
   onShipExploded(): void;
 }

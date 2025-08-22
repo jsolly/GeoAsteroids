@@ -42,10 +42,13 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
 }
 
 export function keyUp(ev: KeyboardEvent, player: Player): void {
+  // Always update keys state first
+  if (ev.code in keys) {
+    keys[ev.code] = false;
+  }
+
+  // Then check if player can respond to key events
   if (!player.isDead && !player.ship.exploding) {
-    if (ev.code in keys) {
-      keys[ev.code] = false;
-    }
     switch (ev.code) {
       case 'Space':
         player.ship.canShoot = true;

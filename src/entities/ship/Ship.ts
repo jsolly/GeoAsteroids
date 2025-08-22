@@ -14,7 +14,6 @@ import {
   SHIP_MAX_HEALTH,
   SHIP_SIZE,
   SHIP_THRUST,
-  START_LIVES,
 } from '../../constants';
 import { Vector } from '../../physics/Vector.ts';
 
@@ -58,7 +57,6 @@ class Ship {
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   spawnProtectionTimer: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
   canShoot = true;
-  dead = false;
   exploding = false;
   lasers: Laser[] = [];
   explodeTime = 0;
@@ -71,8 +69,7 @@ class Ship {
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
-  lives: number = START_LIVES;
-  blinkOn: boolean = false;
+  blinkOn: boolean = true; // Start blinking when invincible
   lastShotTime: number = 0;
   shotCooldown: number = 2000;
   thrusterActive: boolean = false;
@@ -82,67 +79,16 @@ class Ship {
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
 
-  constructor(
-    lives: number = START_LIVES,
-    blinkOn: boolean = false,
-    options?: {
-      position?: Vector;
-      velocity?: Vector;
-      rotation?: number;
-      health?: number;
-      maxHealth?: number;
-      exploding?: boolean;
-      explodeTime?: number;
-      canShoot?: boolean;
-      shotCooldown?: number;
-      blinkCount?: number;
-      spawnProtectionTimer?: number;
-      lastDamageTime?: number;
-      healthRegenTimer?: number;
-    }
-  ) {
-    this.lives = lives;
-    this.blinkOn = blinkOn;
-
-    // Apply optional overrides
+  constructor(options?: {
+    position?: Vector;
+    shotCooldown?: number;
+  }) {
+    // Apply optional overrides for bot-specific configuration
     if (options?.position) {
       this.position = options.position;
     }
-    if (options?.velocity) {
-      this.velocity = options.velocity;
-    }
-    if (options?.rotation !== undefined) {
-      this.a = options.rotation;
-    }
-    if (options?.health !== undefined) {
-      this.health = options.health;
-    }
-    if (options?.maxHealth !== undefined) {
-      this.maxHealth = options.maxHealth;
-    }
-    if (options?.exploding !== undefined) {
-      this.exploding = options.exploding;
-    }
-    if (options?.explodeTime !== undefined) {
-      this.explodeTime = options.explodeTime;
-    }
-    if (options?.canShoot !== undefined) {
-      this.canShoot = options.canShoot;
-    }
     if (options?.shotCooldown !== undefined) {
       this.shotCooldown = options.shotCooldown;
-    }
-    if (options?.blinkCount !== undefined) {
-      this.blinkCount = options.blinkCount;
-    }
-    if (options?.spawnProtectionTimer !== undefined) {
-      this.spawnProtectionTimer = options.spawnProtectionTimer;
-    }
-    if (options?.lastDamageTime !== undefined) {
-      this.lastDamageTime = options.lastDamageTime;
-    }
-    if (options?.healthRegenTimer !== undefined) {
-      this.healthRegenTimer = options.healthRegenTimer;
     }
   }
 
@@ -161,7 +107,7 @@ class Ship {
   }
 
   applyVelocity(): void {
-    if (this.thrusting && !this.dead) {
+    if (this.thrusting) {
       const thrust = Vector.fromAngle(this.a).multiply(SHIP_THRUST / FPS);
       this.velocity = this.velocity.add(thrust);
       drawThruster(this);
@@ -241,7 +187,6 @@ class Ship {
     r?: number;
     a?: number;
     lives?: number;
-    dead?: boolean;
     exploding?: boolean;
   }): void {
     if (data.position) {
@@ -256,12 +201,6 @@ class Ship {
     if (data.a !== undefined) {
       this.a = data.a;
     }
-    if (data.lives !== undefined) {
-      this.lives = data.lives;
-    }
-    if (data.dead !== undefined) {
-      this.dead = data.dead;
-    }
     if (data.exploding !== undefined) {
       this.exploding = data.exploding;
     }
@@ -272,8 +211,6 @@ class Ship {
     velocity: Vector;
     r: number;
     a: number;
-    lives: number;
-    dead: boolean;
     exploding: boolean;
   } {
     return {
@@ -281,28 +218,16 @@ class Ship {
       velocity: this.velocity,
       r: this.r,
       a: this.a,
-      lives: this.lives,
-      dead: this.dead,
       exploding: this.exploding,
     };
   }
 
   empPulse(): void {
-    if (this.dead || this.exploding) {
-      console.info('EMP', '🚫 EMP blocked - ship is dead or exploding', {
-        shipDead: this.dead,
-        shipExploding: this.exploding,
-      });
+    if (this.exploding) {
       return;
     }
 
     const isDevelopment = isDebugMode();
-
-    console.info('EMP', '⚡ EMP Pulse activated!', {
-      position: { x: this.position.x, y: this.position.y },
-      debugMode: isDevelopment,
-      lives: this.lives,
-    });
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
@@ -330,7 +255,7 @@ class Ship {
   }
 
   takeDamage(amount: number): void {
-    if (this.dead || this.exploding) {
+    if (this.exploding) {
       return;
     }
 
@@ -339,14 +264,6 @@ class Ship {
     this.lastDamageTime = FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
-    console.info('SHIP_DAMAGE', 'Ship took damage!', {
-      damage: amount,
-      remainingHealth: this.health,
-      lives: this.lives,
-      debugMode: isDebug,
-      position: { x: this.position.x, y: this.position.y },
-    });
-
     if (this.health <= 0) {
       this.health = 0;
 
@@ -354,36 +271,23 @@ class Ship {
         this.health = this.maxHealth;
         this.lastDamageTime = 0;
         this.healthRegenTimer = 0;
-
-        console.info('SHIP_DEBUG_MODE', 'Debug mode: Ship health reset to full', {
-          health: this.health,
-          lives: this.lives,
-        });
       } else {
-        this.lives--;
+        // Ship health reached 0, notify that a life should be lost
         this.health = this.maxHealth;
         this.lastDamageTime = 0;
         this.healthRegenTimer = 0;
 
-        console.info('SHIP_LIFE_LOST', 'Ship lost a life!', {
-          remainingLives: this.lives,
-          healthReset: this.health,
-          position: { x: this.position.x, y: this.position.y },
-        });
+        // Ship health reached 0, it should explode
+        this.explode();
 
-        if (this.lives <= 0) {
-          this.dead = true;
-          this.explode();
-        } else {
-          window.dispatchEvent(
-            new CustomEvent('shipLifeLost', {
-              detail: {
-                remainingLives: this.lives,
-                position: { x: this.position.x, y: this.position.y },
-              },
-            })
-          );
-        }
+        // Dispatch event to notify that ship has exploded
+        window.dispatchEvent(
+          new CustomEvent('shipExploded', {
+            detail: {
+              position: { x: this.position.x, y: this.position.y },
+            },
+          })
+        );
       }
     }
   }
@@ -393,24 +297,15 @@ class Ship {
   }
 
   heal(amount: number): void {
-    if (this.dead || this.exploding) {
+    if (this.exploding) {
       return;
     }
 
-    const oldHealth = this.health;
     this.health = calculateHealthAfterHeal(this.health, amount, this.maxHealth);
-
-    if (this.health > oldHealth) {
-      console.info('SHIP_HEAL', 'Ship healed!', {
-        healAmount: this.health - oldHealth,
-        newHealth: this.health,
-        maxHealth: this.maxHealth,
-      });
-    }
   }
 
   updateHealth(): void {
-    if (this.dead || this.exploding) {
+    if (this.exploding) {
       return;
     }
 
@@ -420,7 +315,20 @@ class Ship {
 
     if (shouldStartHealthRegeneration(this.lastDamageTime, this.health, this.maxHealth)) {
       if (this.healthRegenTimer <= 0) {
+        const healthBefore = this.health;
         this.heal(calculateHealthRegenPerFrame());
+        const healthAfter = this.health;
+
+        if (healthBefore !== healthAfter) {
+          console.debug('SHIP_HEALTH_DEBUG', 'Health regenerated', {
+            healthBefore,
+            healthAfter,
+            maxHealth: this.maxHealth,
+            regenAmount: calculateHealthRegenPerFrame(),
+            lastDamageTime: this.lastDamageTime,
+            healthRegenTimer: this.healthRegenTimer,
+          });
+        }
       } else {
         this.healthRegenTimer--;
       }
@@ -432,7 +340,6 @@ class Ship {
       this.explodeTime--;
       if (this.explodeTime <= 0) {
         this.exploding = false;
-        this.setExploding();
       }
     }
   }

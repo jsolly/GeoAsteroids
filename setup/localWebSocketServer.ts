@@ -73,7 +73,6 @@ interface ConnectedPlayer {
   a: number;
   lives: number;
   score: number;
-  dead: boolean;
   exploding: boolean;
   lastUpdate: number;
   ws: WebSocketWithEvents;
@@ -174,7 +173,6 @@ class LocalMultiplayerServer {
       a: 0,
       lives: 3,
       score: 0,
-      dead: false,
       exploding: false,
       lastUpdate: Date.now(),
       ws,

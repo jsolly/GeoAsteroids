@@ -2,8 +2,8 @@ import { Sound } from '../../audio/Sound.ts';
 import {
   DRAW_ASTEROIDS,
   FPS,
-  getRoidNum,
   ROID_JAGG,
+  ROID_NUM,
   ROID_POINTS_LRG,
   ROID_POINTS_MED,
   ROID_POINTS_SML,
@@ -14,12 +14,7 @@ import {
 } from '../../constants';
 import { GameController } from '../../core/gameController.ts';
 import { Vector } from '../../physics/Vector.ts';
-import {
-  calculateMultiplayerReductionFactor,
-  calculateSpawnCount,
-  calculateTargetAsteroidCount,
-  spawnAsteroidFromEdge,
-} from './asteroidUtils.ts';
+import { calculateSpawnCount, spawnAsteroidFromEdge } from './asteroidUtils.ts';
 
 class Asteroid {
   a: number;
@@ -50,10 +45,9 @@ class Asteroid {
 }
 
 class AsteroidBelt {
-  roidNum = getRoidNum();
+  roidNum = ROID_NUM;
   roids: Asteroid[] = [];
   spawnTime: number = Math.ceil(ROID_SPAWN_TIME * FPS);
-  private multiplayerAdjusted = false;
 
   constructor() {
     // Don't check multiplayer mode during construction to avoid circular dependency
@@ -136,31 +130,26 @@ class AsteroidBelt {
       const gameController = GameController.getInstance();
       const isMultiplayer = gameController.isMultiplayerEnabled();
 
-      // Only adjust if the state has changed
-      if (isMultiplayer !== this.multiplayerAdjusted) {
-        this.multiplayerAdjusted = isMultiplayer;
+      if (isMultiplayer) {
+        const playerCount = gameController.getPlayerCount();
 
-        if (isMultiplayer) {
-          const playerCount = gameController.getPlayerCount();
-          const currentAsteroidCount = this.roids.length;
+        // Guard against zero player count
+        const safePlayerCount = Math.max(1, playerCount);
 
-          // Scale asteroid reduction based on player count
-          // More players = fewer asteroids per player
-          const reductionFactor = calculateMultiplayerReductionFactor(playerCount);
-          const targetCount = calculateTargetAsteroidCount(currentAsteroidCount, reductionFactor);
+        // Use stable baseline instead of current count
+        const targetCount = Math.max(5, Math.floor(this.roidNum / safePlayerCount));
 
-          // Remove excess asteroids if we have too many
-          while (this.roids.length > targetCount) {
-            this.roids.pop();
-          }
-        } else {
-          // Reset to normal asteroid count
-          const normalCount = this.roidNum;
+        // Remove excess asteroids if we have too many
+        while (this.roids.length > targetCount) {
+          this.roids.pop();
+        }
+      } else {
+        // Reset to normal asteroid count
+        const normalCount = this.roidNum;
 
-          // Add more asteroids if we have too few
-          while (this.roids.length < normalCount) {
-            this.addRoid();
-          }
+        // Add more asteroids if we have too few
+        while (this.roids.length < normalCount) {
+          this.addRoid();
         }
       }
     } catch (error) {
@@ -171,3 +160,12 @@ class AsteroidBelt {
 }
 
 export { AsteroidBelt, Asteroid };
+
+/**
+ * Factory for creating asteroid belts
+ * Always creates regular asteroid belts
+ * Debug functionality is injected by the debug system when needed
+ */
+export function createAsteroidBelt(): AsteroidBelt {
+  return new AsteroidBelt();
+}

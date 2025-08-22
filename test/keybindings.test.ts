@@ -21,7 +21,7 @@ beforeEach(() => {
   Ship.fxThrust.play = mockPlay;
   Ship.fxThrust.stop = mockPlay;
 
-  mockPlayer = new Player('test-player', 'TestPlayer', 3, false);
+  mockPlayer = new Player({ id: 'test-player', name: 'TestPlayer', isBot: false });
   mockPlayer.ship.fireLaser = vi.fn(() => {});
 });
 

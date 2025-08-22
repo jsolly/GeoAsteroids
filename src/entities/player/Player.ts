@@ -1,5 +1,6 @@
 import { FPS, SHIP_INV_BLINK_DUR, SHIP_INV_DUR, START_LIVES } from '../../constants';
 import { Vector } from '../../physics/Vector.ts';
+import { generateRandomPlayerColor } from '../../utils/colorUtils.ts';
 import { Ship } from '../ship/Ship.ts';
 import type { Player as PlayerInterface } from './types.ts';
 
@@ -14,14 +15,18 @@ export class Player implements PlayerInterface {
   respawnTimer?: number; // Timer for respawning after death (in frames)
   respawnPosition?: Vector; // Position where player will respawn
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
+  color: string; // Player's unique color for lasers and other visual elements
 
-  constructor(id: string, name: string, lives: number = START_LIVES, isBot: boolean = false) {
-    this.id = id;
-    this.name = name;
+  constructor(params: { id: string; name: string; isBot?: boolean }) {
+    this.id = params.id;
+    this.name = params.name;
     this.ship = new Ship();
-    this.lives = lives;
-    this.isBot = isBot;
+    this.lives = START_LIVES;
+    this.isBot = params.isBot ?? false;
     this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
+
+    // Assign a random color for this player
+    this.color = generateRandomPlayerColor();
   }
 
   update(): void {
@@ -31,13 +36,6 @@ export class Player implements PlayerInterface {
 
   // Direct method called by Ship when it explodes
   onShipExploded(): void {
-    console.info('PLAYER_EXPLOSION', 'Player ship exploded!', {
-      playerId: this.id,
-      playerName: this.name,
-      lives: this.lives,
-      position: { x: this.ship.position.x, y: this.ship.position.y },
-    });
-
     // Decrement lives when ship explodes
     this.lives--;
 
@@ -49,15 +47,8 @@ export class Player implements PlayerInterface {
   }
 
   private handleLifeLost(): void {
-    console.info('PLAYER_LIFE_LOST', 'Player lost a life!', {
-      playerId: this.id,
-      playerName: this.name,
-      remainingLives: this.lives,
-      position: { x: this.ship.position.x, y: this.ship.position.y },
-    });
-
-    // Handle respawn logic here
-    // This could include resetting ship position, health, etc.
+    // After a life is lost, respawn the player
+    this.respawn();
   }
 
   // Getter to check if player is dead (when no lives remaining)

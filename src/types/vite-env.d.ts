@@ -9,6 +9,17 @@ interface ImportMetaEnv {
   readonly VITE_DRAW_ASTEROIDS: string;
   readonly VITE_DISABLE_INVINCIBILITY: string;
   readonly VITE_CLIENT_LOG_LEVEL: string;
+
+  // Debug configuration
+  readonly VITE_DEBUG_BOT_COUNT: string;
+  readonly VITE_DEBUG_DISABLE_MOVEMENT: string;
+  readonly VITE_DEBUG_DISABLE_BOT_MOVEMENT: string;
+  readonly VITE_DEBUG_DISABLE_BOT_GUNS: string;
+  readonly VITE_DEBUG_PLACE_ASTEROID_ON_BOT: string;
+  readonly VITE_DEBUG_ASTEROID_COUNT: string;
+  readonly VITE_DEBUG_INVINCIBLE: string;
+  readonly VITE_DEBUG_DRAW_ASTEROIDS: string;
+
   readonly MODE: string;
   readonly DEV: boolean;
 }

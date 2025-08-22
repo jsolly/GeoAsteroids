@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
+import { DEFAULT_BOT_COUNT } from '../constants';
 import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
 import type { Player } from '../entities/player/types.ts';
 import { Ship } from '../entities/ship/Ship.ts';
 import { Vector } from '../physics/Vector.ts';
+import { generateRandomPlayerColor } from '../utils/colorUtils.ts';
 import { BotIntegrationManager } from './botIntegrationManager.ts';
 import type {
   ClientMessage,
@@ -41,28 +43,49 @@ export class MultiplayerManager {
   // Method to set the local player name
   public setLocalPlayerName(name: string): void {
     this.localPlayerName = name;
-    console.info('MULTIPLAYER', 'Local player name set', { name });
   }
 
-  public connect(): void {
-    if (this.isConnected || this.socket) {
-      console.info('MULTIPLAYER', 'Already connected or connecting');
-      return;
-    }
+  // Method to get the local player name
+  public getLocalPlayerName(): string {
+    return this.localPlayerName;
+  }
 
-    try {
-      const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001';
-      console.info('MULTIPLAYER', 'Connecting to multiplayer server', { wsUrl });
+  public connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.isConnected || this.socket) {
+        resolve();
+        return;
+      }
 
-      this.socket = new WebSocket(wsUrl);
-      this.setupWebSocketHandlers();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('MULTIPLAYER', 'Failed to connect to multiplayer server', {
-        error: errorMessage,
-      });
-      this.handleConnectionError();
-    }
+      try {
+        const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001';
+
+        this.socket = new WebSocket(wsUrl);
+
+        // Set up connection promise handlers
+        this.socket.onopen = (): void => {
+          this.isConnected = true;
+          this.reconnectAttempts = 0;
+          this.joinGame();
+          resolve();
+        };
+
+        this.socket.onerror = (error: Event): void => {
+          console.error('MULTIPLAYER', 'WebSocket error', { error: error.type });
+          this.handleConnectionError();
+          reject(new Error('WebSocket connection failed'));
+        };
+
+        this.setupWebSocketHandlers();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('MULTIPLAYER', 'Failed to connect to multiplayer server', {
+          error: errorMessage,
+        });
+        this.handleConnectionError();
+        reject(new Error(errorMessage));
+      }
+    });
   }
 
   private setupWebSocketHandlers(): void {
@@ -70,12 +93,8 @@ export class MultiplayerManager {
       return;
     }
 
-    this.socket.onopen = (): void => {
-      console.info('MULTIPLAYER', 'Connected to multiplayer server');
-      this.isConnected = true;
-      this.reconnectAttempts = 0;
-      this.joinGame();
-    };
+    // Note: onopen and onerror are now handled in the connect() method
+    // Only set up message and close handlers here
 
     this.socket.onmessage = (event: MessageEvent): void => {
       try {
@@ -95,7 +114,6 @@ export class MultiplayerManager {
     };
 
     this.socket.onclose = (): void => {
-      console.info('MULTIPLAYER', 'Disconnected from multiplayer server');
       this.isConnected = false;
       this.handleDisconnection();
     };
@@ -148,6 +166,7 @@ export class MultiplayerManager {
         lastUpdate: Date.now(),
         lives: 3, // Default lives for new players
         spawnProtectedUntil: Date.now() + 3000, // 3 seconds spawn protection
+        color: generateRandomPlayerColor(), // Generate a random color for this player
         respawn: () => {},
         onShipExploded: () => {},
       };
@@ -229,6 +248,7 @@ export class MultiplayerManager {
           lastUpdate: Date.now(),
           lives: playerData.lives || 3, // Get lives from playerData or default to 3
           spawnProtectedUntil: Date.now() + 3000, // 3 seconds spawn protection
+          color: generateRandomPlayerColor(), // Generate a random color for this player
           respawn: () => {},
           onShipExploded: () => {},
         };
@@ -329,12 +349,6 @@ export class MultiplayerManager {
   public removePlayer(playerId: string): void {
     const player = this.players.get(playerId);
     if (player) {
-      console.info('🗑️ PLAYER_REMOVED', 'Removing player from game', {
-        playerId,
-        playerName: player.name,
-        reason: 'No lives remaining',
-      });
-
       this.players.delete(playerId);
 
       // Dispatch event to notify other systems
@@ -350,14 +364,12 @@ export class MultiplayerManager {
     }
   }
 
-  public enableBots(count: number = 3): void {
-    console.info('MULTIPLAYER', 'Enabling bots', { count });
+  public enableBots(count: number): void {
     this.botIntegration.enableBots(count);
   }
 
   public disableBots(): void {
     this.botIntegration.disableBots();
-    console.info('MULTIPLAYER', 'Bots disabled and projectiles cleared');
   }
 
   public getBots(): Map<string, BotPlayer> {
@@ -384,12 +396,6 @@ export class MultiplayerManager {
 
   private handleBotShoot(botShoot: BotShoot): void {
     // Handle bot shooting - this will be processed by the game controller
-    console.info('MULTIPLAYER', 'Bot shot detected', {
-      botId: botShoot.botId,
-      targetPlayerId: botShoot.targetPlayerId,
-      laserStart: botShoot.laserStart,
-      laserDirection: botShoot.laserDirection,
-    });
 
     // Emit a custom event that the game controller can listen to
     window.dispatchEvent(
@@ -401,26 +407,16 @@ export class MultiplayerManager {
 
   // Debug method to show current state
   public debugState(): void {
-    console.info('MULTIPLAYER', 'Multiplayer Debug State', {
-      connected: this.isConnected,
-      localPlayerId: this.localPlayerId,
-      localPlayerName: this.localPlayerName,
-      totalPlayers: this.players.size,
-      players: Array.from(this.players.values()).map((p) => ({
-        id: p.id,
-        name: p.name,
-        position: p.ship.position,
-      })),
-    });
+    // Debug method removed - console.info calls removed
   }
 
   // Expose multiplayer testing commands to browser console
   public static exposeToWindow(): void {
     if (typeof window !== 'undefined') {
       const multiplayer = {
-        connect: (): void => MultiplayerManager.getInstance().connect(),
+        connect: (): Promise<void> => MultiplayerManager.getInstance().connect(),
         disconnect: (): void => MultiplayerManager.getInstance().disconnect(),
-        enableBots: (count?: number): void =>
+        enableBots: (count: number = DEFAULT_BOT_COUNT): void =>
           void MultiplayerManager.getInstance().enableBots(count),
         disableBots: (): void => MultiplayerManager.getInstance().disableBots(),
         getBots: (): Map<string, BotPlayer> => MultiplayerManager.getInstance().getBots(),
@@ -439,15 +435,12 @@ export class MultiplayerManager {
 
   // Make the local ship invincible for testing
   public makeInvincible(): void {
-    console.info('MULTIPLAYER', 'Making ship invincible for testing');
-
     // Get the game controller and make the ship invincible
     const gameController = (
       window as {
         gameController?: {
           getCurrShip: () => {
             lives: number;
-            dead: boolean;
             exploding: boolean;
             explodeTime: number;
           };
@@ -458,12 +451,8 @@ export class MultiplayerManager {
       const ship = gameController.getCurrShip();
       if (ship) {
         ship.lives = 999; // Set to very high number
-        ship.dead = false;
         ship.exploding = false;
         ship.explodeTime = 0;
-        console.info('MULTIPLAYER', 'Ship is now invincible', {
-          lives: ship.lives,
-        });
       }
     } else {
       console.warn('MULTIPLAYER', 'Could not access game controller. Try refreshing the page.');

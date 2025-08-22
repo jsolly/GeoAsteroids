@@ -12,9 +12,7 @@ const dom = new JSDOM(
         <h1 class="text-center fs-1">GeoAsteroids</h1>
         <ul class="nav flex-column">
           <li class="nav-item">
-            <button id="start-single-player" class="btn btn-lg btn-success">
-              Single Player 🎮
-            </button>
+            
           </li>
           <li class="nav-item">
             <button id="start-multiplayer" class="btn btn-lg btn-info">
@@ -77,10 +75,7 @@ const dom = new JSDOM(
       </div>
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <input type="text" id="nameInput"/>
-        <button id="submitNameButton">Submit</button>
-        <button id="showHighScoresButton">Show High Scores</button>
-        <ol id="highScoresList"></ol>
+
       </div>
     </div>
   </body>

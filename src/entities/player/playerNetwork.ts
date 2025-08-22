@@ -71,22 +71,8 @@ export class PlayerNetwork {
   }
 
   private respawnPlayer(player: Player): void {
-    console.info('🔄 PLAYER_RESPAWN', 'Respawning player', {
-      playerId: player.id,
-      playerName: player.name,
-      remainingLives: player.lives,
-    });
-
     // Delegate respawn logic to the player
     player.respawn();
-
-    console.info('✅ PLAYER_RESPAWNED', 'Player respawned successfully', {
-      playerId: player.id,
-      playerName: player.name,
-      newPosition: { x: player.ship.position.x, y: player.ship.position.y },
-      blinkCount: player.ship.blinkCount,
-      health: player.ship.health,
-    });
   }
 
   public getOtherPlayers(): Player[] {

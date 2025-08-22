@@ -47,7 +47,7 @@
     "@biomejs/biome": "https://pkg.pr.new/@biomejs/biome@7248dda",
     "@types/jsdom": "^21.1.1",
     "@types/node": "^24.0.15",
-    "@types/uuid": "^10.0.0",
+
     "@types/ws": "^8.18.1",
     "@vercel/node": "^5.3.6",
     "canvas": "^3.1.2",

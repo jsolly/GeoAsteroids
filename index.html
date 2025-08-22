@@ -9,15 +9,24 @@
       // This provides immediate protection while modules are loading
       const originalConsole = { debug: console.debug, info: console.info, warn: console.warn, error: console.error };
       
-      // Block debug logs immediately (most common issue)
-      console.debug = () => {}; // Silent no-op
-      
-      // Allow info/warn/error for now - the module system will take over
-      console.info('INLINE_OVERRIDE', 'Temporary console override applied - debug logs blocked');
+      // Allow all logs to pass through - the module system will handle filtering
+      console.info('INLINE_OVERRIDE', 'Console override disabled - debug logs enabled for debugging');
     </script>
     <script defer type="module" src="/src/utils/consoleOverride.ts"></script>
-    <script defer type="module" src="/src/ui/mainMenu.ts"></script>
     <script defer type="module" src="/src/core/eventLoop.ts"></script>
+    <script defer type="module">
+      // Initialize the game after all modules are loaded
+      import { initializeGame, setupPeriodicUpdates } from '/src/core/gameInitializer.ts';
+      
+      // Wait for DOM to be ready before initializing
+      document.addEventListener('DOMContentLoaded', () => {
+        // Initialize game systems
+        initializeGame();
+        
+        // Set up periodic updates after initialization
+        setupPeriodicUpdates();
+      });
+    </script>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -48,23 +57,14 @@
         <div class="game-modes">
           <ul class="nav flex-column">
             <li class="nav-item">
-              <button id="start-single-player" class="btn btn-lg btn-success">
-                🎮 Single Player
+              <button id="start-multiplayer" class="btn btn-lg btn-success">
+                🎮 Play
               </button>
             </li>
-            <li class="nav-item">
-              <button id="start-multiplayer" class="btn btn-lg btn-info">
-                🌐 Multiplayer
-              </button>
-            </li>
-            <li class="nav-item">
-              <button
-                id="showHighScoresButton"
-                class="btn btn-lg btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#highScoresModal"
-              >
-                🏆 High Scores
+            <!-- Debug button - only shown in development mode -->
+            <li class="nav-item" id="debug-button-container" style="display: none;">
+              <button id="start-debug" class="btn btn-lg btn-warning">
+                🐛 Debug
               </button>
             </li>
           </ul>
@@ -96,39 +96,7 @@
           </ul>
         </div>
 
-        <!-- Difficulty Selection -->
-        <div class="difficulty-section">
-          <h2>Difficulty</h2>
-          <div class="btn-group" role="group" aria-label="Difficulty selection">
-            <input
-              type="radio"
-              class="btn-check"
-              name="btnradio"
-              id="easy"
-              autocomplete="off"
-            />
-            <label class="btn btn-outline-success" for="easy">Easy</label>
 
-            <input
-              type="radio"
-              class="btn-check"
-              name="btnradio"
-              id="medium"
-              autocomplete="off"
-              checked
-            />
-            <label class="btn btn-outline-warning" for="medium">Medium</label>
-
-            <input
-              type="radio"
-              class="btn-check"
-              name="btnradio"
-              id="hard"
-              autocomplete="off"
-            />
-            <label class="btn btn-outline-danger" for="hard">Hard</label>
-          </div>
-        </div>
 
         <!-- Scroll indicator -->
         <div class="scroll-indicator">
@@ -141,19 +109,7 @@
         <canvas id="gameCanvas" width="800" height="600"></canvas>
       </div>
 
-      <!-- Game Over Modal -->
-      <div id="gameOverModal" class="modal" style="display: none">
-        <h3>Game Over!</h3>
-        <p>Enter your name for the high score list:</p>
-        <input
-          type="text"
-          id="nameInput"
-          maxlength="3"
-          placeholder="AAA"
-          oninput="this.value = this.value.toUpperCase()"
-        />
-        <button id="submitNameButton">Submit Score</button>
-      </div>
+
 
       <!-- Multiplayer Name Input Modal -->
       <div id="multiplayerNameModal" class="modal" style="display: none">
@@ -174,34 +130,7 @@
         </div>
       </div>
 
-      <!-- High Scores Modal -->
-      <div id="highScoresModal" class="modal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">🏆 High Scores</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <ul id="highScoresList"></ul>
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+
     </div>
 
     <div id="attribution">
