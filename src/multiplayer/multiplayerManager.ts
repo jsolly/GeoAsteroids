@@ -125,6 +125,7 @@ export class MultiplayerManager {
   }
 
   private handleServerMessage(message: ServerMessage): void {
+    console.info('MULTIPLAYER', `Received server message: ${message.type}`, message);
     switch (message.type) {
       case 'playerJoin':
         this.handlePlayerJoin(message.data as PlayerJoin);
@@ -146,7 +147,7 @@ export class MultiplayerManager {
         break;
       case 'error':
         if (typeof message.data === 'string') {
-          console.error('Server error:', message.data);
+          console.error('MULTIPLAYER', 'Server error:', message.data);
         }
         break;
     }
@@ -171,14 +172,14 @@ export class MultiplayerManager {
         onShipExploded: () => {},
       };
       this.players.set(data.id, newPlayer);
-      // console.log(`Player ${data.name} joined the game`);
+      console.info('MULTIPLAYER', `Player ${data.name} joined the game`);
     }
   }
 
   private handlePlayerLeave(data: PlayerLeave): void {
     const player = this.players.get(data.id);
     if (player) {
-      // console.log(`Player ${player.name} left the game`);
+      console.info('MULTIPLAYER', `Player ${player.name} left the game`);
       this.players.delete(data.id);
     }
   }
@@ -222,6 +223,7 @@ export class MultiplayerManager {
   }
 
   private handleGameState(data: GameState): void {
+    console.info('MULTIPLAYER', `Received game state with ${data.players.length} players`);
     // Clear existing players (except local player) and add all players from game state
     for (const [id] of this.players.entries()) {
       if (id !== this.localPlayerId) {
@@ -253,6 +255,7 @@ export class MultiplayerManager {
           onShipExploded: () => {},
         };
         this.players.set(playerData.id, newPlayer);
+        console.info('MULTIPLAYER', `Added player ${playerData.name} from game state`);
       }
     }
   }

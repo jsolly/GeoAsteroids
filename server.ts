@@ -206,7 +206,7 @@ function handleClientMessage(message: any, ws: WebSocket) {
       }
       addPlayer(id, name, ws);
       sendToWebSocket(ws, { type: 'joined', id, name });
-      broadcastToAll({ type: 'playerJoined', id, name }, id);
+      broadcastToAll({ type: 'playerJoin', id, name }, id);
       broadcastGameState();
       break;
 
@@ -243,13 +243,16 @@ function handleClientMessage(message: any, ws: WebSocket) {
 function broadcastGameState() {
   const gameState = {
     type: 'gameState',
-    players: Array.from(players.values()).map(({ id, name, position, rotation, health, score }) => ({
+    players: Array.from(players.values()).map(({ id, name, position, velocity, rotation, health, score }) => ({
       id,
       name,
       position,
-      rotation,
-      health,
+      velocity: velocity || { x: 0, y: 0 },
+      r: rotation || 0,
+      a: 0, // angular velocity, default to 0
+      lives: health || 3,
       score,
+      exploding: false, // default to false
     })),
     gameTime,
   };
