@@ -23,7 +23,7 @@ import type { Player } from '../entities/player/types';
 import type { Ship } from '../entities/ship/Ship';
 import { drawGenericThruster } from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
-import { showGameOverMenu } from '../ui/mainMenu';
+// Dynamic import to avoid chunking conflicts with other dynamic imports
 import { worldToScreen } from './viewport';
 
 // Defer initialization to avoid circular dependency issues
@@ -661,7 +661,10 @@ export function drawGameCanvas(
       // Only show game over when explosion animation is finished
       const currentPlayer = getGameController().getCurrPlayer();
       if (currentPlayer && currentPlayer.lives <= 0) {
-        showGameOverMenu();
+        // Dynamic import to avoid chunking conflicts
+        import('../ui/mainMenu').then(({ showGameOverMenu }) => {
+          showGameOverMenu();
+        });
       }
     }
   } catch (error) {
