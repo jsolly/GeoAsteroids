@@ -6,9 +6,7 @@ export interface BotPlayer extends Player {
   botType: 'aggressive' | 'defensive' | 'patrol';
   behaviorState: 'patrolling' | 'hunting' | 'evading';
   lastBehaviorChange: number;
-  // Note: health, maxHealth, lastDamageTime, healthRegenTimer, blinkCount, spawnProtectionTimer, blinkOn, explodeTime,
-  // lastShotTime, shotCooldown, thrusterActive, lastPosition, lastRotation, respawnTimer, respawnPosition,
-  // spawnProtectedUntil are now handled by the base Player and Ship classes
+  takeDamage(amount: number): void;
 }
 
 export interface BotShoot {
@@ -16,15 +14,4 @@ export interface BotShoot {
   laserStart: Vector;
   laserDirection: Vector;
   targetPlayerId: string;
-}
-
-export interface BotBullet {
-  id: string;
-  botId: string;
-  position: Vector;
-  direction: Vector;
-  speed: number;
-  distanceTraveled: number;
-  maxDistance: number;
-  createdAt: number;
 }

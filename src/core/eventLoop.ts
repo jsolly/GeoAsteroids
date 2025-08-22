@@ -7,8 +7,8 @@ import {
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
 } from '../constants';
-import type { Player } from '../entities/player/index.ts';
 import { PlayerNetwork } from '../entities/player/playerNetwork.ts';
+import type { Player } from '../entities/player/types.ts';
 import type { Ship } from '../entities/ship/Ship.ts';
 import {
   drawEmpPulse,
@@ -25,8 +25,6 @@ import {
   detectPlayerLaserShipCollisions,
   detectRoidHits,
   detectShipToShipCollisions,
-  detectTestPlayerAsteroidCollisions,
-  detectTestPlayerCollisions,
 } from '../physics/collisions.ts';
 import { Vector } from '../physics/Vector.ts';
 import { drawGameCanvas } from '../rendering/canvas.ts';
@@ -48,6 +46,12 @@ window.addEventListener('gameStart', () => {
       return;
     }
 
+    // Add debug logging to verify console override is working
+    console.debug('GAME_LOOP_DEBUG', 'Game loop iteration', {
+      timestamp: Date.now(),
+      frame: performance.now(),
+    });
+
     try {
       updateGame();
     } catch (error) {
@@ -63,12 +67,14 @@ window.addEventListener('gameStart', () => {
   window.requestAnimationFrame(gameLoop);
 });
 
-// Add event listener for ship life loss
-window.addEventListener('shipLifeLost', () => {
+// Add event listener for ship explosion
+window.addEventListener('shipExploded', () => {
   const ship = gameController.getCurrShip();
   const player = gameController.getCurrPlayer();
   if (ship && player) {
-    handleShipLifeLoss(ship, player);
+    // Ship has exploded, just decrement player lives
+    // The explosion animation will be handled by the normal game loop
+    player.lives--;
   }
 });
 
@@ -81,65 +87,16 @@ function updateGame(): void {
   const textAlpha = gameController.getTextAlpha();
   const text = gameController.getText();
 
-  // Enhanced ship state logging (disabled to prevent spam)
-  // if (currShip.dead || currShip.exploding) {
-  //   console.log('🚨 SHIP IN DANGER:', {
-  //     frame: Date.now(),
-  //     score: currScore,
-  //     level: gameController.getGameState().getCurrentLevel(),
-  //     shipPos: { x: currShip.position.x, y: currShip.position.y },
-  //     shipDead: currShip.dead,
-  //     shipExploding: currShip.exploding,
-  //     shipLives: ship.lives,
-  //     shipBlinkCount: ship.blinkCount,
-  //     textAlpha,
-  //     text,
-  //     multiplayerEnabled: gameController.isMultiplayerEnabled(),
-  //   });
-  // }
-
-  // Log game state for debugging
-  // console.debug('GAME_LOOP', 'Game update', {
-  //   score: currScore,
-  //   level: gameController.getGameState().getCurrentLevel(),
-  //   shipPos: { x: currShip.centroid.x, y: currShip.centroid.y },
-  //   shipDead: currShip.dead,
-  //   shipExploding: currShip.exploding,
-  //   textAlpha,
-  //   text,
-  //   multiplayerEnabled: gameController.isMultiplayerEnabled()
-  // });
-
   handleLevelUp();
 
   // Always update player network state (invincibility/blink timers, explosions, regen)
-  // This must run even if multiplayer is disabled so test players aren't permanently invincible
-  // Test players start with blinkCount > 0 and need their timers decremented each frame
   playerNetwork.updatePlayerState();
 
   // Update bot systems only when multiplayer is enabled
   if (gameController.isMultiplayerEnabled()) {
     // Update all bot systems at the same framerate as the main game loop
     gameController.updateBotsInGameLoop();
-
-    // Log bot information for debugging
-    const bots = gameController.getBots();
-    if (bots.size > 0) {
-      // console.debug('GAME_LOOP', 'Bot update', {
-      //   botCount: bots.size,
-      //   bots: Array.from(bots.values()).map(bot => ({
-      //     id: bot.id,
-      //     name: bot.name,
-      //     position: { x: bot.centroid.x, y: bot.centroid.y },
-      //     behavior: bot.behaviorState
-      //     }))
-      //   });
-    }
   }
-
-  // Update test player movement and state in the main game loop
-  // This ensures test players are processed at the same framerate as the main game
-  updateTestPlayersInGameLoop();
 
   drawGameCanvas(currShip, currRoidBelt, currScore, personalBest, textAlpha, text);
 
@@ -147,16 +104,9 @@ function updateGame(): void {
   handleShipState(currShip, currPlayer);
   handleCollision(currShip);
 
-  // Only move ship if it's not exploding and not dead
-  if (!currShip.exploding && !currPlayer.isDead) {
+  // Only move ship if it's not exploding and player has lives remaining
+  if (!currShip.exploding && currPlayer.lives > 0) {
     currShip.move();
-  } else {
-    // console.log('🚫 Ship movement blocked:', {
-    //   exploding: currShip.exploding,
-    //   dead: currPlayer.isDead,
-    //   lives: currPlayer.lives,
-    //   blinkCount: currShip.blinkCount,
-    // });
   }
 
   currShip.moveLasers();
@@ -181,24 +131,9 @@ function handleShipState(ship: Ship, player: Player): void {
     ship.setExploding();
     ship.updateEmpPulse(); // Update EMP pulse state
 
-    // Log ship state for debugging
-    // console.debug('SHIP_STATE', 'Ship state update', {
-    //   blinkOn: ship.blinkOn,
-    //   dead: ship.dead,
-    //   exploding: ship.exploding,
-    //   blinkCount: ship.blinkCount,
-    //   spawnProtectionTimer: ship.spawnProtectionTimer,
-    //   empPulseActive: ship.empPulseActive,
-    //   empPulseTime: ship.empPulseTime
-    // });
-
     if (!ship.exploding) {
-      if (ship.blinkOn && !player.isDead) {
-        // console.debug('SHIP_STATE', 'Drawing ship', {
-        //   pos: { x: ship.position.x, y: ship.position.y },
-        //   angle: ship.a
-        // });
-        drawShipRelative(ship);
+      if (player.lives > 0 && ship.blinkOn) {
+        drawShipRelative(ship, player.color);
       }
 
       // Draw EMP pulse effect if active
@@ -221,7 +156,6 @@ function handleShipState(ship: Ship, player: Player): void {
         }
       }
     } else {
-      // console.debug('SHIP_STATE', 'Handling ship explosion');
       handleShipExplosion(ship, player);
     }
   } catch (error: unknown) {
@@ -234,33 +168,16 @@ function handleShipState(ship: Ship, player: Player): void {
 }
 
 function handleShipExplosion(ship: Ship, player: Player): void {
-  // console.log('💥 Ship explosion handling START:', {
-  //   explodeTime: ship.explodeTime,
-  //   lives: ship.lives,
-  //   dead: ship.dead,
-  //   exploding: ship.exploding,
-  //   blinkCount: ship.blinkCount,
-  // });
-
-  drawShipExplosion(ship);
-  ship.explodeTime--;
-
-  // console.log('💥 Ship explosion handling:', {
-  //   explodeTime: ship.explodeTime,
-  //   lives: ship.lives,
-  //   dead: ship.dead,
-  //   exploding: ship.exploding,
-  // });
+  // Only draw explosion if it's still in progress
+  if (ship.explodeTime > 0) {
+    drawShipExplosion(ship, player.color);
+    ship.explodeTime--;
+  }
 
   if (ship.explodeTime === 0) {
-    // console.log('⏰ Explosion time finished, checking respawn...');
-
-    // Check if ship has lives remaining
+    // Explosion finished, check if player has lives remaining
     if (player.lives > 0) {
-      // console.log('🔄 Respawning ship with', player.lives, 'lives remaining');
-
-      // Respawn the ship
-      // Note: ship.exploding will be set to false by the ship's updateExplosion method
+      // Player still has lives - respawn the ship
       ship.exploding = false;
       ship.explodeTime = 0;
       // Give ship temporary invincibility (blinking effect)
@@ -277,54 +194,13 @@ function handleShipExplosion(ship: Ship, player: Player): void {
       ship.position = new Vector(0, 0); // Use world origin instead of canvas center
       ship.velocity = new Vector(0, 0);
       ship.a = (90 / 180) * Math.PI; // Reset to upward direction
-
-      // console.log('✅ Ship respawned successfully:', {
-      //   dead: ship.dead,
-      //   exploding: ship.exploding,
-      //   blinkCount: ship.blinkCount,
-      //   position: { x: ship.position.x, y: ship.position.y },
-      // });
     } else {
-      // console.log('💀 No lives remaining - game over');
       // No lives remaining - game over
+      // Don't respawn the ship, just call gameOver
+      // The ship will remain exploded and won't be drawn
       gameController.gameOver();
     }
-  } else {
-    // console.log(
-    //   '⏳ Explosion still in progress, time remaining:',
-    //   ship.explodeTime,
-    // );
   }
-}
-
-function handleShipLifeLoss(ship: Ship, player: Player): void {
-  // Ship lost a life but still has lives remaining
-  // Give temporary invincibility and reset position
-  // Note: ship.exploding will be set to false by the ship's updateExplosion method
-  ship.exploding = false;
-  ship.explodeTime = 0;
-
-  // Give ship temporary invincibility (blinking effect)
-  ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-  ship.spawnProtectionTimer = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-  ship.blinkOn = true;
-
-  // Reset ship health to full
-  ship.health = ship.maxHealth;
-  ship.lastDamageTime = 0;
-  ship.healthRegenTimer = 0;
-
-  // Reset ship position to center
-  ship.position = new Vector(0, 0);
-  ship.velocity = new Vector(0, 0);
-  ship.a = (90 / 180) * Math.PI; // Reset to upward direction
-
-  console.info('SHIP_LIFE_LOST_HANDLED', 'Ship life lost, respawning with invincibility', {
-    remainingLives: player.lives,
-    health: ship.health,
-    blinkCount: ship.blinkCount,
-    position: { x: ship.position.x, y: ship.position.y },
-  });
 }
 
 function handleCollision(ship: Ship): void {
@@ -345,6 +221,10 @@ function handleCollision(ship: Ship): void {
       gameController.updateCurrScore(detectShipToShipCollisions(ship, bots));
 
       // Add bot-asteroid collision detection
+      console.debug('COLLISION_DEBUG', 'Calling detectBotAsteroidCollisions', {
+        botCount: bots.size,
+        asteroidCount: currRoidBelt.roids.length,
+      });
       detectBotAsteroidCollisions(bots, currRoidBelt);
 
       // Add bot-ship collision detection
@@ -352,7 +232,7 @@ function handleCollision(ship: Ship): void {
     }
 
     // Add laser-to-player collision detection for any non-bot players present
-    // Run this regardless of the multiplayer flag so test players can be damaged
+    // Run this regardless of the multiplayer flag
     const otherPlayers = playerNetwork.getOtherPlayers();
 
     // Filter out bot players since they're handled by detectLaserHits
@@ -374,15 +254,6 @@ function handleCollision(ship: Ship): void {
         // Add bot laser collision detection on other players
         detectBotLaserPlayerCollisions(realPlayers, bots);
       }
-
-      // Add test player asteroid collision detection
-      if (DRAW_ASTEROIDS) {
-        detectTestPlayerAsteroidCollisions(realPlayers, currRoidBelt);
-      }
-
-      // Add comprehensive test player collision detection
-      // This ensures test players participate in all collision types, not just asteroids
-      detectTestPlayerCollisions(ship, realPlayers, currRoidBelt, bots);
     } else {
       console.debug('COLLISION_DEBUG', 'No real players found for collision detection');
     }
@@ -394,87 +265,5 @@ function handleCollision(ship: Ship): void {
       stack: error instanceof Error ? error.stack : undefined,
       shipPos: { x: ship.position.x, y: ship.position.y },
     });
-  }
-}
-
-/**
- * Update test players in the main game loop to ensure consistent framerate
- * and proper integration with the collision system
- */
-function updateTestPlayersInGameLoop(): void {
-  const otherPlayers = playerNetwork.getOtherPlayers();
-  const testPlayers = otherPlayers.filter((player) => player.id.startsWith('test-'));
-
-  if (testPlayers.length === 0) {
-    return;
-  }
-
-  // Update test player movement and state at game loop framerate
-  for (const player of testPlayers) {
-    // Skip exploding players
-    if (player.ship.exploding) {
-      continue;
-    }
-
-    // Update test player movement (simple AI-like behavior)
-    updateTestPlayerMovement(player);
-
-    // Update test player lasers if they have any
-    if (player.ship.lasers && player.ship.lasers.length > 0) {
-      player.ship.moveLasers();
-    }
-  }
-
-  console.debug('GAME_LOOP', 'Test players updated in game loop', {
-    testPlayerCount: testPlayers.length,
-    testPlayers: testPlayers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      position: { x: p.ship.position.x, y: p.ship.position.y },
-      exploding: p.ship.exploding,
-      blinkCount: p.ship.blinkCount,
-    })),
-  });
-}
-
-/**
- * Simple movement AI for test players to make them more interactive
- * We use a union type to handle both Player class instances and Player interface objects
- */
-function updateTestPlayerMovement(
-  player: Player | { ship: { position: Vector; a: number } }
-): void {
-  // Simple wandering behavior - move in current direction with occasional direction changes
-  if (Math.random() < 0.01) {
-    // 1% chance per frame to change direction
-    player.ship.a += (Math.random() - 0.5) * 0.5; // Small random rotation
-  }
-
-  // Apply small forward movement
-  const moveSpeed = 0.5; // Slower than player ship
-  const velocity = new Vector(
-    Math.cos(player.ship.a) * moveSpeed,
-    Math.sin(player.ship.a) * moveSpeed
-  );
-
-  // Create new position instead of modifying existing one
-  const newPosition = new Vector(
-    player.ship.position.x + velocity.x,
-    player.ship.position.y + velocity.y
-  );
-  player.ship.position = newPosition;
-
-  // Keep test players within reasonable bounds
-  const maxDistance = 800;
-  const distance = Math.sqrt(player.ship.position.x ** 2 + player.ship.position.y ** 2);
-
-  if (distance > maxDistance) {
-    // Move back towards center
-    const angle = Math.atan2(player.ship.position.y, player.ship.position.x);
-    const newBoundedPosition = new Vector(
-      Math.cos(angle) * (maxDistance * 0.8),
-      Math.sin(angle) * (maxDistance * 0.8)
-    );
-    player.ship.position = newBoundedPosition;
   }
 }

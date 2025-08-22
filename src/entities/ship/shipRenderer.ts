@@ -3,6 +3,101 @@ import { Point } from '../../physics/Point.ts';
 import { worldToScreen } from '../../rendering/viewport.ts';
 import type { Ship } from './Ship';
 
+// Helper function to create complementary colors that work well with the laser color
+function createComplementaryColor(
+  baseColor: string,
+  lightnessAdjustment: number,
+  saturationAdjustment: number
+): string {
+  // Parse HSL color or convert hex to HSL
+  let hue: number, saturation: number, lightness: number;
+
+  if (baseColor.startsWith('hsl')) {
+    // Parse HSL color like "hsl(120, 50%, 60%)"
+    const matches = baseColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    if (matches) {
+      hue = parseInt(matches[1], 10);
+      saturation = parseInt(matches[2], 10);
+      lightness = parseInt(matches[3], 10);
+    } else {
+      // Fallback to red if parsing fails
+      hue = 0;
+      saturation = 100;
+      lightness = 50;
+    }
+  } else if (baseColor.startsWith('#')) {
+    // Convert hex to HSL
+    const hex = baseColor.slice(1).trim();
+
+    // Validate hex color format
+    if (hex.length !== 6 && hex.length !== 3) {
+      console.warn('Invalid hex color format, using fallback:', baseColor);
+      hue = 0;
+      saturation = 100;
+      lightness = 50;
+      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    // Handle 3-character hex shorthand
+    const normalizedHex =
+      hex.length === 3
+        ? hex
+            .split('')
+            .map((char) => char + char)
+            .join('')
+        : hex;
+
+    const r = parseInt(normalizedHex.substr(0, 2), 16) / 255;
+    const g = parseInt(normalizedHex.substr(2, 2), 16) / 255;
+    const b = parseInt(normalizedHex.substr(4, 2), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const diff = max - min;
+
+    // Calculate HSL
+    lightness = (max + min) / 2;
+
+    if (diff === 0) {
+      hue = saturation = 0;
+    } else {
+      saturation = lightness > 0.5 ? diff / (2 - max - min) : diff / (max + min);
+
+      switch (max) {
+        case r:
+          hue = ((g - b) / diff + (g < b ? 6 : 0)) / 6;
+          break;
+        case g:
+          hue = ((b - r) / diff + 2) / 6;
+          break;
+        case b:
+          hue = ((r - g) / diff + 4) / 6;
+          break;
+        default:
+          hue = 0;
+      }
+    }
+
+    hue = Math.round(hue * 360);
+    saturation = Math.round(saturation * 100);
+    lightness = Math.round(lightness * 100);
+  } else {
+    // Fallback for unknown color format
+    hue = 0;
+    saturation = 100;
+    lightness = 50;
+  }
+
+  // Create a complementary color by shifting hue by 180 degrees
+  const complementaryHue = (hue + 180) % 360;
+
+  // Adjust saturation and lightness for better visual harmony
+  const adjustedSaturation = Math.max(0, Math.min(100, saturation + saturationAdjustment * 100));
+  const adjustedLightness = Math.max(0, Math.min(100, lightness + lightnessAdjustment * 100));
+
+  return `hsl(${complementaryHue}, ${adjustedSaturation}%, ${adjustedLightness}%)`;
+}
+
 export function drawGenericThruster(
   x: number,
   y: number,
@@ -124,7 +219,7 @@ export function drawThruster(ship: Ship): void {
   }
 }
 
-export function drawShipRelative(ship: Ship): void {
+export function drawShipRelative(ship: Ship, color?: string): void {
   const ctx = getCTX();
   const cvs = getCVS();
   if (!ctx || !cvs) {
@@ -148,7 +243,7 @@ export function drawShipRelative(ship: Ship): void {
     y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(a) + Math.cos(a)),
   };
 
-  ctx.strokeStyle = 'white';
+  ctx.strokeStyle = color || 'white';
   ctx.lineWidth = SHIP_SIZE / 20;
   ctx.beginPath();
   ctx.moveTo(nose.x, nose.y);
@@ -157,20 +252,46 @@ export function drawShipRelative(ship: Ship): void {
   ctx.closePath();
   ctx.stroke();
 
-  // Draw red centering dot at the actual geometric center of the ship triangle
-  const triangleCenterX = (nose.x + rearLeft.x + rearRight.x) / 3;
-  const triangleCenterY = (nose.y + rearLeft.y + rearRight.y) / 3;
-
-  ctx.fillStyle = 'red';
-  ctx.beginPath();
-  ctx.arc(triangleCenterX, triangleCenterY, 1.5, 0, Math.PI * 2, false);
-  ctx.fill();
-
   // Draw health bar above ship
-  drawHealthBar(ship);
+  const barWidth = ship.r * 2.5;
+  const barHeight = 6;
+  const barY = screenCenter.y - ship.r - 15;
+
+  // Health percentage
+  const healthPercent = ship.health / ship.maxHealth;
+  const currentWidth = barWidth * healthPercent;
+
+  // Background (empty health bar)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(screenCenter.x - barWidth / 2, barY, barWidth, barHeight);
+
+  // Health bar color based on health level
+  let healthColor: string;
+  if (healthPercent > 0.6) {
+    healthColor = '#00ff00'; // Green for high health
+  } else if (healthPercent > 0.3) {
+    healthColor = '#ffff00'; // Yellow for medium health
+  } else {
+    healthColor = '#ff0000'; // Red for low health
+  }
+
+  // Current health
+  ctx.fillStyle = healthColor;
+  ctx.fillRect(screenCenter.x - barWidth / 2, barY, currentWidth, barHeight);
+
+  // Border
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(screenCenter.x - barWidth / 2, barY, barWidth, barHeight);
+
+  // Health text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenCenter.x, barY - 12);
 }
 
-export function drawShipExplosion(ship: Ship): void {
+export function drawShipExplosion(ship: Ship, color?: string): void {
   const ctx = getCTX();
   const cvs = getCVS();
   if (!ctx || !cvs) {
@@ -180,29 +301,38 @@ export function drawShipExplosion(ship: Ship): void {
   // Ship explosion is always drawn at screen center (viewport transformation)
   const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
 
-  ctx.fillStyle = 'darkred';
+  // Create explosion colors that complement the laser color
+  const baseColor = color || '#ff0000'; // Default to red if no color provided
+
+  // Generate complementary explosion colors that work well with the laser
+  const darkColor = createComplementaryColor(baseColor, -0.3, 0.1); // Darker complementary outer ring
+  const mediumColor = createComplementaryColor(baseColor, -0.1, 0.2); // Medium complementary ring
+  const lightColor = createComplementaryColor(baseColor, 0.1, 0.3); // Lighter complementary inner ring
+  const brightColor = createComplementaryColor(baseColor, 0.3, 0.4); // Bright complementary center
+
+  ctx.fillStyle = darkColor;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r * 1.7, 0, Math.PI * 2, false);
   ctx.fill();
-  ctx.fillStyle = 'red';
+  ctx.fillStyle = mediumColor;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r * 1.4, 0, Math.PI * 2, false);
   ctx.fill();
-  ctx.fillStyle = 'Orange';
+  ctx.fillStyle = baseColor;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r * 1.1, 0, Math.PI * 2, false);
   ctx.fill();
-  ctx.fillStyle = 'Yellow';
+  ctx.fillStyle = lightColor;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r * 0.8, 0, Math.PI * 2, false);
   ctx.fill();
-  ctx.fillStyle = 'White';
+  ctx.fillStyle = brightColor;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r * 0.5, 0, Math.PI * 2, false);
   ctx.fill();
 }
 
-export function drawLasers(ship: Ship): void {
+export function drawLasers(ship: Ship, color?: string): void {
   const ctx = getCTX();
   if (!ctx) {
     return;
@@ -213,7 +343,7 @@ export function drawLasers(ship: Ship): void {
     const screenPos = worldToScreen(laser.position, ship.position);
 
     if (laser.explodeTime === 0) {
-      ctx.fillStyle = 'salmon';
+      ctx.fillStyle = color || 'salmon';
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 3, 0, Math.PI * 2, false);
       ctx.fill();
@@ -223,7 +353,7 @@ export function drawLasers(ship: Ship): void {
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 2, 0, Math.PI * 2, false);
       ctx.fill();
-      ctx.fillStyle = 'salmon';
+      ctx.fillStyle = color || 'salmon';
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 3, 0, Math.PI * 2, false);
       ctx.fill();
@@ -272,52 +402,4 @@ export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): v
     ctx.lineTo(endX, endY);
     ctx.stroke();
   }
-}
-
-export function drawHealthBar(ship: Ship): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
-  }
-
-  // Convert ship world position to screen position
-  const screenPos = worldToScreen(ship.position, ship.position);
-
-  // Health bar dimensions
-  const barWidth = ship.r * 2.5;
-  const barHeight = 6;
-  const barY = screenPos.y - ship.r - 15; // Position above ship
-
-  // Background (empty health bar)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(screenPos.x - barWidth / 2, barY, barWidth, barHeight);
-
-  // Health percentage
-  const healthPercent = ship.health / ship.maxHealth;
-  const currentWidth = barWidth * healthPercent;
-
-  // Health bar color based on health level
-  let healthColor: string;
-  if (healthPercent > 0.6) {
-    healthColor = '#00ff00'; // Green for high health
-  } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00'; // Yellow for medium health
-  } else {
-    healthColor = '#ff0000'; // Red for low health
-  }
-
-  // Current health
-  ctx.fillStyle = healthColor;
-  ctx.fillRect(screenPos.x - barWidth / 2, barY, currentWidth, barHeight);
-
-  // Border
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(screenPos.x - barWidth / 2, barY, barWidth, barHeight);
-
-  // Health text
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '10px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenPos.x, barY - 12);
 }

@@ -1,10 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import { FPS, SHIP_INV_BLINK_DUR, SHIP_INV_DUR } from '../../constants';
 import { Vector } from '../../physics/Vector.ts';
 import { BotPlayer } from './BotPlayer.ts';
 
 export class BotFactory {
-  public createBots(count: number = 3): Map<string, BotPlayer> {
+  public createBots(count: number): Map<string, BotPlayer> {
     const bots = new Map<string, BotPlayer>();
     const botTypes: Array<'aggressive' | 'defensive' | 'patrol'> = [
       'aggressive',
@@ -22,41 +21,11 @@ export class BotFactory {
       const bot = new BotPlayer(botId, `Bot_${botType.charAt(0).toUpperCase()}_${i + 1}`, botType);
 
       // Configure the bot's ship after creation
-      bot.ship.position = position;
-      bot.ship.r = 25; // Increased from 15 to 25 for better hit detection
-      bot.ship.blinkCount = this.getBlinkCount();
-      bot.ship.spawnProtectionTimer = this.getBlinkTime();
-      bot.ship.blinkOn = true;
-      bot.lives = 3; // Set lives on the bot instance, not the ship
-      bot.score = Math.floor(Math.random() * 2000);
-      bot.lastUpdate = Date.now();
-      bot.ship.lastShotTime = 0;
+      bot.ship.position = position; // Override default (0,0) - bots spawn at specific world positions
       bot.ship.shotCooldown = this.getBotShotCooldown(botType);
-      bot.behaviorState = 'hunting'; // Start in hunting mode - bots only hunt, never evade
-      bot.lastBehaviorChange = Date.now();
-      bot.ship.thrusterActive = false;
-      bot.respawnTimer = undefined;
-      bot.ship.lastPosition = position;
-      bot.ship.lastRotation = 0;
-      bot.spawnProtectedUntil = Date.now() + this.getInvincibilityDuration() * 1000;
-      bot.respawnPosition = undefined;
-
+      bot.ship.lastPosition = new Vector(position.x, position.y); // Clone to avoid aliasing
       bots.set(botId, bot);
-
-      console.info('BOT_FACTORY', `Created ${botType} bot`, {
-        botId,
-        name: bot.name,
-        position: { x: bot.ship.position.x, y: bot.ship.position.y },
-        health: bot.ship.health,
-        blinkCount: bot.ship.blinkCount,
-        spawnProtectedUntil: bot.spawnProtectedUntil,
-      });
     }
-
-    console.info('BOT_FACTORY', 'Finished creating bots', {
-      totalBots: bots.size,
-      botIds: Array.from(bots.keys()),
-    });
 
     return bots;
   }
@@ -92,17 +61,5 @@ export class BotFactory {
       default:
         return 500;
     }
-  }
-
-  private getBlinkCount(): number {
-    return Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-  }
-
-  private getBlinkTime(): number {
-    return Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-  }
-
-  private getInvincibilityDuration(): number {
-    return SHIP_INV_DUR;
   }
 }

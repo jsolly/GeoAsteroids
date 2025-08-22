@@ -45,10 +45,7 @@ export function shouldStartHealthRegeneration(
 }
 
 export function isDebugMode(): boolean {
-  return (
-    (import.meta.env?.DEV === true || import.meta.env?.MODE === 'development') &&
-    import.meta.env?.VITE_INVINCIBLE === 'true'
-  );
+  return import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
 }
 
 export function calculateThrusterPosition(

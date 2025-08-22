@@ -9,17 +9,20 @@ import {
   TEXT_FADE_TIME,
   TEXT_SIZE,
 } from '../constants';
+
+// Consider tweaking if jitter causes flicker
+const REMOTE_PLAYER_STALE_MS = 1500;
+
 import { GameController } from '../core/gameController.ts';
 import type { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
 import { drawRoidsRelative } from '../entities/asteroid/asteroidRenderer.ts';
 import { BotManager } from '../entities/bot/botManager.ts';
-import type { BotPlayer } from '../entities/bot/types.ts';
+// import type { BotPlayer } from '../entities/bot/types.ts';
 import { PlayerNetwork } from '../entities/player/playerNetwork.ts';
 import type { Player } from '../entities/player/types.ts';
 import type { Ship } from '../entities/ship/Ship.ts';
-import { drawGenericThruster, drawLasers } from '../entities/ship/shipRenderer.ts';
+import { drawGenericThruster } from '../entities/ship/shipRenderer.ts';
 import { Point } from '../physics/Point.ts';
-import { Vector } from '../physics/Vector.ts';
 import { showGameOverMenu } from '../ui/mainMenu.ts';
 import { worldToScreen } from './viewport.ts';
 
@@ -166,34 +169,12 @@ function drawOtherPlayers(localShip: Ship): void {
   const otherPlayers = getPlayerNetwork().getOtherPlayers();
   const bots = getGameController().getBots();
 
-  // Always draw test players if they exist, regardless of multiplayer state
-  // Test players are created independently of multiplayer enabled state
-  const hasTestPlayers = otherPlayers.some((player) => player.id.startsWith('test-'));
-
-  // Debug logging for test players
-  if (hasTestPlayers) {
-    console.debug('RENDERING_DEBUG', 'Test players found in drawOtherPlayers', {
-      totalPlayers: otherPlayers.length,
-      testPlayers: otherPlayers
-        .filter((p) => p.id.startsWith('test-'))
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          exploding: p.ship.exploding,
-          blinkCount: p.ship.blinkCount,
-          blinkOn: p.ship.blinkOn,
-          position: { x: p.ship.position.x, y: p.ship.position.y },
-          nearby: getPlayerNetwork().isPlayerNearby(p, localShip),
-        })),
-    });
-  }
-
-  // Only check multiplayer enabled for non-test players
-  if (!getGameController().isMultiplayerEnabled() && !hasTestPlayers) {
+  // Only draw players when multiplayer is enabled
+  if (!getGameController().isMultiplayerEnabled()) {
     return;
   }
 
-  // Draw human players (including test players)
+  // Draw human players
   for (const player of otherPlayers) {
     // Only draw players that are nearby (within viewport)
     if (getPlayerNetwork().isPlayerNearby(player, localShip)) {
@@ -203,25 +184,27 @@ function drawOtherPlayers(localShip: Ship): void {
       }
 
       // Don't draw if player hasn't updated recently (stale data)
-      // But always draw test players since they're updated in the game loop
       const now = Date.now();
-      if (!player.id.startsWith('test-') && now - player.lastUpdate > 1000) {
+      if (now - player.lastUpdate > REMOTE_PLAYER_STALE_MS) {
         continue;
       }
 
+      // Implement blinking effect for invincible players
+      if (player.ship.blinkCount && player.ship.blinkCount > 0 && !player.ship.blinkOn) {
+        // Player is invincible but currently in "off" blink state - don't render
+        continue;
+      }
+
+      // Get the local ship position for viewport transformation
+      const localShip = getGameController().getCurrShip();
+      const screenPos = worldToScreen(player.ship.position, localShip.position);
+
       // Draw the other player's ship
-      drawOtherPlayerShip(player);
-    } else if (player.id.startsWith('test-')) {
-      // Debug logging for test players that are not nearby
-      console.debug('RENDERING_DEBUG', 'Test player not nearby', {
-        playerId: player.id,
-        playerName: player.name,
-        playerPos: { x: player.ship.position.x, y: player.ship.position.y },
-        shipPos: { x: localShip.position.x, y: localShip.position.y },
-        distance: Math.sqrt(
-          (player.ship.position.x - localShip.position.x) ** 2 +
-            (player.ship.position.y - localShip.position.y) ** 2
-        ),
+      drawShip(player.ship, screenPos, player.color, {
+        name: player.name,
+        score: player.score,
+        showThruster: player.ship.velocity.magnitude() > 0.1,
+        thrusterColor: 'default',
       });
     }
   }
@@ -234,182 +217,57 @@ function drawOtherPlayers(localShip: Ship): void {
         continue;
       }
 
+      // Implement blinking effect for invincible bots
+      if (bot.ship.blinkCount > 0 && !bot.ship.blinkOn) {
+        // Bot is invincible but currently in "off" blink state - don't render
+        continue;
+      }
+
+      // Get the local ship position for viewport transformation
+      const localShip = getGameController().getCurrShip();
+      const screenPos = worldToScreen(bot.ship.position, localShip.position);
+
       // Draw the bot ship
-      drawBotShip(bot);
+      drawShip(bot.ship, screenPos, bot.color, {
+        name: bot.name,
+        isBot: true,
+        botType: bot.botType,
+        behaviorState: bot.behaviorState,
+        showThruster: bot.ship.thrusterActive,
+        thrusterColor:
+          bot.botType === 'aggressive' ? 'red' : bot.botType === 'defensive' ? 'blue' : 'default',
+      });
     }
 
-    // Draw bot bullets
-    drawBotBullets();
+    // Draw bot lasers
+    drawAllLasers();
   }
 }
 
-function drawOtherPlayerShip(player: Player): void {
-  // Get the local ship position for viewport transformation
-  const localShip = getGameController().getCurrShip();
-  const screenPos = worldToScreen(player.ship.position, localShip.position);
-
-  const a = player.ship.a;
-  const r = player.ship.r;
-
-  // Skip rendering if player is exploding
-  if (player.ship.exploding) {
-    drawPlayerExplosion(player, screenPos);
-    return;
-  }
-
-  // Implement blinking effect for invincible players
-  if (player.ship.blinkCount && player.ship.blinkCount > 0 && !player.ship.blinkOn) {
-    // Player is invincible but currently in "off" blink state - don't render
-    return;
-  }
-
-  // Use a different color to distinguish other players
-  const otherPlayerColor = '#00ff00'; // Green color for other players
-
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  ctx.strokeStyle = otherPlayerColor;
-  ctx.lineWidth = SHIP_SIZE / 20;
-  ctx.beginPath();
-  ctx.moveTo(
-    // nose of ship
-    screenPos.x + (4 / 3) * r * Math.cos(a),
-    screenPos.y - (4 / 3) * r * Math.sin(a)
-  );
-  ctx.lineTo(
-    // rear left
-    screenPos.x - r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
-    screenPos.y + r * ((2 / 3) * Math.sin(a) - Math.cos(a))
-  );
-  ctx.lineTo(
-    // rear right
-    screenPos.x - r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
-    screenPos.y + r * ((2 / 3) * Math.sin(a) + Math.cos(a))
-  );
-  ctx.closePath();
-  ctx.stroke();
-
-  // Draw thruster effect for players when they're moving
-  if (player.ship.velocity.magnitude() > 0.1 && !player.ship.exploding) {
-    // Use default thruster color for moving players
-    drawGenericThruster(screenPos.x, screenPos.y, a, r, 'default');
-  }
-
-  // Draw player name above ship
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillStyle = otherPlayerColor;
-  ctx.font = '12px dejavu sans mono';
-  ctx.fillText(player.name, screenPos.x, screenPos.y - r - 10);
-
-  // Draw health bar above the name
-  drawPlayerHealthBar(player, screenPos);
-
-  // Draw player score below ship
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = otherPlayerColor;
-  ctx.font = '10px dejavu sans mono';
-  ctx.fillText(`Score: ${player.score}`, screenPos.x, screenPos.y + r + 5);
-}
-
-function drawPlayerHealthBar(player: Player, screenPos: Point): void {
+function drawShip(
+  ship: Ship,
+  screenPos: Point,
+  color: string,
+  options: {
+    name?: string;
+    isBot?: boolean;
+    botType?: string;
+    behaviorState?: string;
+    score?: number;
+    showThruster?: boolean;
+    thrusterColor?: string;
+  } = {}
+): void {
   const ctx = getCTX();
   if (!ctx) {
     return;
   }
 
-  const healthBarWidth = 40;
-  const healthBarHeight = 4;
-  const healthBarY = screenPos.y - player.ship.r - 25; // Above the name
+  const a = ship.a;
+  const r = ship.r;
 
-  // Get current health and max health
-  const currentHealth = player.ship.health || 100;
-  const maxHealth = player.ship.maxHealth || 100;
-  const healthPercent = Math.max(0, Math.min(1, currentHealth / maxHealth));
-
-  // Draw health bar background (dark)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(screenPos.x - healthBarWidth / 2, healthBarY, healthBarWidth, healthBarHeight);
-
-  // Draw health bar border
-  ctx.strokeStyle = '#00ff00';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(screenPos.x - healthBarWidth / 2, healthBarY, healthBarWidth, healthBarHeight);
-
-  // Draw health bar fill (green to red based on health)
-  let healthColor: string;
-  if (healthPercent > 0.6) {
-    healthColor = '#00ff00'; // Green for high health
-  } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00'; // Yellow for medium health
-  } else {
-    healthColor = '#ff0000'; // Red for low health
-  }
-
-  ctx.fillStyle = healthColor;
-  ctx.fillRect(
-    screenPos.x - healthBarWidth / 2,
-    healthBarY,
-    healthBarWidth * healthPercent,
-    healthBarHeight
-  );
-
-  // Draw health text above the bar
-  ctx.fillStyle = '#00ff00';
-  ctx.font = '8px dejavu sans mono';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText(`${Math.ceil(currentHealth)}/${maxHealth}`, screenPos.x, healthBarY - 2);
-}
-
-function drawBotShip(bot: BotPlayer): void {
-  // Get the local ship position for viewport transformation
-  const localShip = getGameController().getCurrShip();
-  const screenPos = worldToScreen(bot.ship.position, localShip.position);
-
-  const a = bot.ship.a;
-  const r = bot.ship.r;
-
-  // Skip rendering if bot is exploding
-  if (bot.ship.exploding && bot.ship.explodeTime > 0) {
-    drawBotExplosion(bot);
-    return;
-  }
-
-  // Implement blinking effect for invincible bots
-  if (bot.ship.blinkCount > 0 && !bot.ship.blinkOn) {
-    // Bot is invincible but currently in "off" blink state - don't render
-    return;
-  }
-
-  // Use different colors for different bot types
-  let botColor: string;
-  switch (bot.botType) {
-    case 'aggressive':
-      botColor = '#ff4444'; // Red for aggressive bots
-      break;
-    case 'defensive':
-      botColor = '#4444ff'; // Blue for defensive bots
-      break;
-    case 'patrol':
-      botColor = '#ff8844'; // Orange for patrol bots
-      break;
-    default:
-      botColor = '#ff4444';
-  }
-
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  ctx.strokeStyle = botColor;
+  // Draw ship triangle
+  ctx.strokeStyle = color;
   ctx.lineWidth = SHIP_SIZE / 20;
   ctx.beginPath();
   ctx.moveTo(
@@ -430,248 +288,90 @@ function drawBotShip(bot: BotPlayer): void {
   ctx.closePath();
   ctx.stroke();
 
-  // Draw red centering dot at the actual geometric center of the bot triangle
-  const botNose = {
-    x: screenPos.x + (4 / 3) * r * Math.cos(a),
-    y: screenPos.y - (4 / 3) * r * Math.sin(a),
-  };
-  const botRearLeft = {
-    x: screenPos.x - r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
-    y: screenPos.y + r * ((2 / 3) * Math.sin(a) - Math.cos(a)),
-  };
-  const botRearRight = {
-    x: screenPos.x - r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
-    y: screenPos.y + r * ((2 / 3) * Math.sin(a) + Math.cos(a)),
-  };
-
-  const botTriangleCenterX = (botNose.x + botRearLeft.x + botRearRight.x) / 3;
-  const botTriangleCenterY = (botNose.y + botRearLeft.y + botRearRight.y) / 3;
-
-  ctx.fillStyle = 'red';
-  ctx.beginPath();
-  ctx.arc(botTriangleCenterX, botTriangleCenterY, 1.5, 0, Math.PI * 2, false);
-  ctx.fill();
-
-  // Draw bot name above ship with [BOT] prefix
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillStyle = botColor;
-  ctx.font = '12px dejavu sans mono';
-  ctx.fillText(`[BOT] ${bot.name}`, screenPos.x, screenPos.y - r - 10);
-
-  // Draw bot health bar above the name
-  drawBotHealthBar(bot, screenPos);
-
-  // Draw bot type and behavior state below ship
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = botColor;
-  ctx.font = '10px dejavu sans mono';
-  ctx.fillText(`${bot.botType} - ${bot.behaviorState}`, screenPos.x, screenPos.y + r + 5);
-
-  // Draw thruster effect when bot is moving
-  if (bot.ship.thrusterActive && !bot.ship.exploding) {
-    let thrusterColor: string;
-    switch (bot.botType) {
-      case 'aggressive':
-        thrusterColor = 'red'; // Red thruster for aggressive bots
-        break;
-      case 'defensive':
-        thrusterColor = 'blue'; // Blue thruster for defensive bots
-        break;
-      case 'patrol':
-        thrusterColor = 'default'; // Default orange/red thruster for patrol bots
-        break;
-      default:
-        thrusterColor = 'default';
-    }
-
-    // Pass the bot's center position - the thruster function will draw it behind the ship
+  // Draw thruster effect if enabled
+  if (options.showThruster && !ship.exploding) {
+    const thrusterColor = options.thrusterColor || 'default';
     drawGenericThruster(screenPos.x, screenPos.y, a, r, thrusterColor);
   }
-}
 
-function drawBotExplosion(bot: BotPlayer): void {
-  // Get the local ship position for viewport transformation
-  const localShip = getGameController().getCurrShip();
-  const screenPos = worldToScreen(bot.ship.position, localShip.position);
-
-  const r = bot.ship.r;
-  const explosionProgress = 1 - bot.ship.explodeTime / 60; // 0 to 1 over 1 second
-
-  // Calculate explosion size and opacity
-  const explosionSize = r * (1 + explosionProgress * 3);
-  const opacity = 1 - explosionProgress;
-
-  // Set explosion color based on bot type
-  let explosionColor: string;
-  switch (bot.botType) {
-    case 'aggressive':
-      explosionColor = '#ff6666';
-      break;
-    case 'defensive':
-      explosionColor = '#6666ff';
-      break;
-    case 'patrol':
-      explosionColor = '#ffaa66';
-      break;
-    default:
-      explosionColor = '#ff6666';
+  // Draw name above ship
+  if (options.name) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = color;
+    ctx.font = '12px dejavu sans mono';
+    const displayName = options.isBot ? `[BOT] ${options.name}` : options.name;
+    ctx.fillText(displayName, screenPos.x, screenPos.y - r - 10);
   }
 
-  // Draw explosion particles
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
+  // Draw health bar above the name
+  drawUnifiedHealthBar(screenPos, ship.health || 100, ship.maxHealth || 100, r, {
+    width: 40,
+    height: 4,
+    borderColor: '#00ff00',
+    textColor: '#00ff00',
+    showText: true,
+    textAbove: true,
+  });
 
-  ctx.save();
-  ctx.globalAlpha = opacity;
-
-  // Draw expanding circle
-  ctx.strokeStyle = explosionColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(screenPos.x, screenPos.y, explosionSize, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Draw explosion particles
-  const particleCount = 8;
-  for (let i = 0; i < particleCount; i++) {
-    const angle = (i / particleCount) * Math.PI * 2;
-    const particleDistance = explosionSize * 0.8;
-    const particleX = screenPos.x + Math.cos(angle) * particleDistance;
-    const particleY = screenPos.y + Math.sin(angle) * particleDistance;
-
-    ctx.fillStyle = explosionColor;
-    ctx.beginPath();
-    ctx.arc(particleX, particleY, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawPlayerExplosion(player: Player, screenPos: Point): void {
-  const r = player.ship.r;
-  // Use explodeTime if available, otherwise use fixed duration
-  const explosionDuration = player.ship.explodeTime || 60; // 1 second at 60 FPS
-  const explosionProgress = 1 - explosionDuration / 60; // 0 to 1 over 1 second
-
-  // Calculate explosion size and opacity
-  const explosionSize = r * (1 + explosionProgress * 3);
-  const opacity = 1 - explosionProgress;
-
-  // Use green color for player explosions
-  const explosionColor = '#00ff00';
-
-  // Draw explosion particles
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  ctx.save();
-  ctx.globalAlpha = opacity;
-
-  // Draw expanding circle
-  ctx.strokeStyle = explosionColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(screenPos.x, screenPos.y, explosionSize, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Draw explosion particles
-  const particleCount = 8;
-  for (let i = 0; i < particleCount; i++) {
-    const angle = (i / particleCount) * Math.PI * 2;
-    const particleDistance = explosionSize * 0.8;
-    const particleX = screenPos.x + Math.cos(angle) * particleDistance;
-    const particleY = screenPos.y + Math.sin(angle) * particleDistance;
-
-    ctx.fillStyle = explosionColor;
-    ctx.beginPath();
-    ctx.arc(particleX, particleY, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawBotBullets(): void {
-  if (!getGameController().isMultiplayerEnabled()) {
-    return;
-  }
-
-  const botLasersMap = BotManager.getInstance().getBotLasers();
-  if (botLasersMap.size === 0) {
-    return;
-  }
-
-  for (const [botId, lasers] of botLasersMap.entries()) {
-    const bots = getGameController().getBots();
-    const bot = bots.get(botId);
-    for (const laser of lasers) {
-      drawBotLaser(laser.position.x, laser.position.y, bot?.botType);
-    }
+  // Draw info below ship
+  if (options.isBot && options.botType && options.behaviorState) {
+    // Bot info
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = color;
+    ctx.font = '10px dejavu sans mono';
+    ctx.fillText(`${options.botType} - ${options.behaviorState}`, screenPos.x, screenPos.y + r + 5);
+  } else if (options.score !== undefined) {
+    // Player score
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = color;
+    ctx.font = '10px dejavu sans mono';
+    ctx.fillText(`Score: ${options.score}`, screenPos.x, screenPos.y + r + 5);
   }
 }
 
-function drawBotLaser(worldX: number, worldY: number, botType?: BotPlayer['botType']): void {
-  const localShip = getGameController().getCurrShip();
-  const screenPos = worldToScreen(new Vector(worldX, worldY), localShip.position);
-
-  let color: string;
-  switch (botType) {
-    case 'defensive':
-      color = '#4444ff';
-      break;
-    case 'patrol':
-      color = '#ff8844';
-      break;
-    default:
-      color = '#ff4444';
-  }
-
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(screenPos.x, screenPos.y, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawBotHealthBar(bot: BotPlayer, screenPos: Point): void {
+function drawUnifiedHealthBar(
+  screenPos: Point,
+  currentHealth: number,
+  maxHealth: number,
+  radius: number,
+  options: {
+    width?: number;
+    height?: number;
+    borderColor?: string;
+    textColor?: string;
+    showText?: boolean;
+    textAbove?: boolean;
+  } = {}
+): void {
   const ctx = getCTX();
   if (!ctx) {
     return;
   }
 
-  const healthBarWidth = 40;
-  const healthBarHeight = 4;
-  const healthBarY = screenPos.y - bot.ship.r - 25; // Above the name
+  // Default options
+  const width = options.width || radius * 2.5;
+  const height = options.height || 6;
+  const borderColor = options.borderColor || '#00ff00';
+  const textColor = options.textColor || '#00ff00';
+  const showText = options.showText !== false;
+  const textAbove = options.textAbove || false;
 
-  // Get current health and max health
-  const currentHealth = bot.ship.health || 100;
-  const maxHealth = bot.ship.maxHealth || 100;
+  const healthBarY = screenPos.y - radius - (textAbove ? 25 : 15);
+
+  // Get health percentage
   const healthPercent = Math.max(0, Math.min(1, currentHealth / maxHealth));
 
   // Draw health bar background (dark)
   ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(screenPos.x - healthBarWidth / 2, healthBarY, healthBarWidth, healthBarHeight);
+  ctx.fillRect(screenPos.x - width / 2, healthBarY, width, height);
 
   // Draw health bar border
-  ctx.strokeStyle = '#00ff00';
+  ctx.strokeStyle = borderColor;
   ctx.lineWidth = 1;
-  ctx.strokeRect(screenPos.x - healthBarWidth / 2, healthBarY, healthBarWidth, healthBarHeight);
+  ctx.strokeRect(screenPos.x - width / 2, healthBarY, width, height);
 
   // Draw health bar fill (green to red based on health)
   let healthColor: string;
@@ -684,19 +384,84 @@ function drawBotHealthBar(bot: BotPlayer, screenPos: Point): void {
   }
 
   ctx.fillStyle = healthColor;
-  ctx.fillRect(
-    screenPos.x - healthBarWidth / 2,
-    healthBarY,
-    healthBarWidth * healthPercent,
-    healthBarHeight
-  );
+  ctx.fillRect(screenPos.x - width / 2, healthBarY, width * healthPercent, height);
 
-  // Draw health text above the bar
-  ctx.fillStyle = '#00ff00';
-  ctx.font = '8px dejavu sans mono';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText(`${Math.ceil(currentHealth)}/${maxHealth}`, screenPos.x, healthBarY - 2);
+  // Draw health text if enabled
+  if (showText) {
+    ctx.fillStyle = textColor;
+    ctx.font = '8px dejavu sans mono';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = textAbove ? 'bottom' : 'top';
+    const textY = textAbove ? healthBarY - 2 : healthBarY + height + 2;
+    ctx.fillText(`${Math.ceil(currentHealth)}/${maxHealth}`, screenPos.x, textY);
+  }
+}
+
+function drawAllLasers(): void {
+  const ctx = getCTX();
+  if (!ctx) {
+    return;
+  }
+
+  const localShip = getGameController().getCurrShip();
+
+  // Draw player lasers
+  const currentPlayer = getGameController().getCurrPlayer();
+  if (currentPlayer && localShip.lasers.length > 0) {
+    for (const laser of localShip.lasers) {
+      const screenPos = worldToScreen(laser.position, localShip.position);
+      drawLaser(screenPos, currentPlayer.color, laser.explodeTime);
+    }
+  }
+
+  // Draw bot lasers if multiplayer is enabled
+  if (getGameController().isMultiplayerEnabled()) {
+    const botLasersMap = BotManager.getInstance().getBotLasers();
+    for (const [botId, lasers] of botLasersMap.entries()) {
+      const bots = getGameController().getBots();
+      const bot = bots.get(botId);
+      if (bot) {
+        for (const laser of lasers) {
+          const screenPos = worldToScreen(laser.position, localShip.position);
+          drawLaser(screenPos, bot.color, laser.explodeTime);
+        }
+      }
+    }
+  }
+}
+
+// Helper function to draw a single laser
+function drawLaser(screenPos: Point, color: string, explodeTime: number): void {
+  const ctx = getCTX();
+  if (!ctx) {
+    return;
+  }
+
+  ctx.save();
+
+  if (explodeTime === 0) {
+    // Normal laser
+    ctx.fillStyle = color;
+    const laserRadius = SHIP_SIZE / 3;
+    ctx.beginPath();
+    ctx.arc(screenPos.x, screenPos.y, laserRadius, 0, Math.PI * 2, false);
+    ctx.fill();
+  } else {
+    // Exploding laser
+    ctx.fillStyle = 'orangered';
+    const explosionRadius = SHIP_SIZE / 2;
+    ctx.beginPath();
+    ctx.arc(screenPos.x, screenPos.y, explosionRadius, 0, Math.PI * 2, false);
+    ctx.fill();
+
+    ctx.fillStyle = color;
+    const laserRadius = SHIP_SIZE / 3;
+    ctx.beginPath();
+    ctx.arc(screenPos.x, screenPos.y, laserRadius, 0, Math.PI * 2, false);
+    ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 function drawMultiplayerStatus(): void {
@@ -749,14 +514,6 @@ function drawMultiplayerStatus(): void {
   const asteroidCount = getGameController().getCurrAsteroidCount();
   ctx.fillText(`Asteroids: ${asteroidCount} (MP Mode)`, xPos, yOffset);
   yOffset += lineHeight;
-
-  // Show test mode indicator if using test players
-  const hasTestPlayers = realPlayers.some((p) => p.id.startsWith('test-'));
-  if (hasTestPlayers) {
-    ctx.fillStyle = '#ffff00'; // Yellow for test mode
-    ctx.fillText(`TEST MODE - Demo Players`, xPos, yOffset);
-    yOffset += lineHeight;
-  }
 
   // Draw mini-map showing only real players (no bots)
   const currentShip = getGameController().getCurrShip();
@@ -886,7 +643,6 @@ export function drawGameCanvas(
     if (DRAW_ASTEROIDS) {
       drawRoidsRelative(ship, roidBelt.roids);
     }
-    drawLasers(ship);
 
     // Draw other players if multiplayer is enabled
     drawOtherPlayers(ship);
@@ -901,8 +657,12 @@ export function drawGameCanvas(
 
     if (textAlpha >= 0) {
       drawGameText(textAlpha, text);
-    } else if (ship.exploding) {
-      showGameOverMenu();
+    } else if (ship.exploding && ship.explodeTime === 0) {
+      // Only show game over when explosion animation is finished
+      const currentPlayer = getGameController().getCurrPlayer();
+      if (currentPlayer && currentPlayer.lives <= 0) {
+        showGameOverMenu();
+      }
     }
   } catch (error) {
     console.error('CANVAS', 'Error in drawGameCanvas', {

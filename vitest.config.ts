@@ -2,24 +2,12 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    coverage: {
-      provider: 'v8',
-      reporter: ['lcov', ['text', { skipFull: true }]],
-      exclude: [
-        'src/asteroidsCanv.ts',
-        'src/lasersCanv.ts',
-        'src/shipCanv.ts',
-        'src/canvas.ts',
-        'src/eventLoop.ts',
-        'src/config.ts',
-        'src/logger.ts',
-        'test/**',
-      ],
-    },
     environment: 'jsdom',
     setupFiles: 'test/setup/viteSetup.ts',
+    pool: 'threads',
+    sequence: { concurrent: true },
   },
   resolve: {
-    extensions: ['.ts', '.js', '.tsx', '.jsx'],
+    extensions: ['.ts'],
   },
 });

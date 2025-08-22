@@ -1,6 +1,7 @@
 import jsdom from 'jsdom';
 
 const { JSDOM } = jsdom;
+import '../../src/utils/logLevel.ts';
 
 const dom = new JSDOM(
   `<!DOCTYPE html>
@@ -11,9 +12,7 @@ const dom = new JSDOM(
         <h1 class="text-center fs-1">GeoAsteroids</h1>
         <ul class="nav flex-column">
           <li class="nav-item">
-            <button id="start-single-player" class="btn btn-lg btn-success">
-              Single Player 🎮
-            </button>
+            
           </li>
           <li class="nav-item">
             <button id="start-multiplayer" class="btn btn-lg btn-info">
@@ -76,10 +75,7 @@ const dom = new JSDOM(
       </div>
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <input type="text" id="nameInput"/>
-        <button id="submitNameButton">Submit</button>
-        <button id="showHighScoresButton">Show High Scores</button>
-        <ol id="highScoresList"></ol>
+
       </div>
     </div>
   </body>
@@ -93,6 +89,52 @@ const dom = new JSDOM(
 );
 global.document = dom.window.document;
 global.window = global.document.defaultView as unknown as Window & typeof globalThis;
+
+// Silence jsdom "Not implemented: HTMLMediaElement.prototype.play" by stubbing media methods
+type MediaProto = {
+  play: () => Promise<void>;
+  pause: () => void;
+  load: () => void;
+};
+
+const maybePatchMediaProto = (proto: unknown) => {
+  if (!proto || typeof proto !== 'object') {
+    return;
+  }
+  const p = proto as MediaProto;
+  Object.defineProperty(p, 'play', {
+    configurable: true,
+    writable: true,
+    value: () => Promise.resolve(),
+  });
+  Object.defineProperty(p, 'pause', {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+  Object.defineProperty(p, 'load', {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+};
+
+maybePatchMediaProto(
+  (globalThis as unknown as { HTMLMediaElement?: { prototype?: unknown } }).HTMLMediaElement
+    ?.prototype
+);
+maybePatchMediaProto(
+  (global.window as unknown as { HTMLMediaElement?: { prototype?: unknown } }).HTMLMediaElement
+    ?.prototype
+);
+maybePatchMediaProto(
+  (globalThis as unknown as { HTMLAudioElement?: { prototype?: unknown } }).HTMLAudioElement
+    ?.prototype
+);
+maybePatchMediaProto(
+  (global.window as unknown as { HTMLAudioElement?: { prototype?: unknown } }).HTMLAudioElement
+    ?.prototype
+);
 
 // Mock Audio for tests
 if (typeof global.window.Audio === 'undefined') {

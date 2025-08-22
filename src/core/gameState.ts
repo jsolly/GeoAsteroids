@@ -38,8 +38,8 @@ class GameState implements GameStateData {
   private textAlpha = 1;
   private text = 'Level 1';
   private isGameRunning = false;
-  // Multiplayer state
-  private multiplayerEnabled = false;
+  // Multiplayer state - always enabled
+  private multiplayerEnabled = true;
   private playerCount = 1;
 
   private constructor() {}

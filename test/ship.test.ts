@@ -50,3 +50,12 @@ test('Ship Cannot Shoot', () => {
   mockShip.canShoot = false; // ensure flag + capacity both block shooting
   expect(mockShip.canShoot).toBeFalsy();
 });
+
+test('ship starts with correct initial invincibility state', () => {
+  const ship = new Ship();
+
+  // Ship should start with invincibility
+  expect(ship.blinkCount).toBeGreaterThan(0);
+  expect(ship.spawnProtectionTimer).toBeGreaterThan(0);
+  expect(ship.blinkOn).toBe(true); // Should start blinking when invincible
+});

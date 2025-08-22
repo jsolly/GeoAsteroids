@@ -328,8 +328,7 @@ a {
 }
 
 /* Improved section headings */
-.settings h3,
-.difficulty-section h2 {
+.settings h3 {
   color: #f0f0f0;
   font-size: 1.1em;
   margin-bottom: 1em;
@@ -396,10 +395,7 @@ a {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
-/* Difficulty section */
-.difficulty-section {
-  margin-bottom: 1em; /* Slightly increased margin for better spacing */
-}
+
 
 .btn-group {
   display: flex;
@@ -490,11 +486,7 @@ a {
   border-width: 3px;
 }
 
-#start-single-player.active-mode {
-  background-color: #198754 !important;
-  border-color: #fff !important;
-  box-shadow: 0 0 25px rgba(25, 135, 84, 0.6);
-}
+
 
 #start-multiplayer.active-mode {
   background-color: #0dcaf0 !important;
@@ -522,9 +514,7 @@ a {
     margin-bottom: 1.5em;
   }
 
-  .difficulty-section {
-    margin-bottom: 0.3em;
-  }
+
 
   .game-modes .btn {
     padding: 0.6em 1em;
@@ -582,60 +572,102 @@ a {
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-#nameInput {
-  width: 120px;
-  padding: 0.5em;
-  margin: 1em;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+/* Multiplayer Name Modal specific styling */
+#multiplayerNameModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  padding: 2em;
+  width: min(400px, 90vw);
+  min-width: 280px;
 }
 
-#gameOverModal input[type='text'] {
-  color: black;
-  background-color: white;
+#multiplayerNameModal .modal-content {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 15px;
+  padding: 2em;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-#gameOverModal button {
+#multiplayerNameModal h3 {
+  color: #4fc3f7;
+  margin-bottom: 1em;
+  font-size: 1.5em;
+}
+
+#multiplayerNameModal p {
+  color: #ffffff;
+  margin-bottom: 1.5em;
+  font-size: 1.1em;
+}
+
+#multiplayerNameInput {
+  width: 100%;
+  padding: 0.8em;
+  margin-bottom: 1.5em;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
   color: white;
-  background-color: #007bff;
+  font-size: 1.1em;
+  transition: border-color 0.3s ease;
+}
+
+#multiplayerNameInput:focus {
+  outline: none;
+  border-color: #4fc3f7;
+  box-shadow: 0 0 10px rgba(79, 195, 247, 0.3);
+}
+
+#multiplayerNameInput::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+}
+
+.modal-buttons .btn {
+  padding: 0.8em 1.5em;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
   border: none;
-  padding: 0.5em 1em;
-  border-radius: 6px;
   cursor: pointer;
 }
 
-#gameOverModal button:hover {
-  background-color: #0056b3;
+.modal-buttons .btn-primary {
+  background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+  color: white;
 }
 
-/* High scores list styling */
-#highScoresList li {
-  font-family: 'Courier', monospace;
-  color: #ff0000;
-  text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2);
-  letter-spacing: 1.5px;
-  list-style: none;
-  margin-bottom: 0.5em;
+.modal-buttons .btn-primary:hover {
+  background: linear-gradient(135deg, #29b6f6, #0288d1);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(79, 195, 247, 0.4);
 }
 
-/* Custom scrollbar styling (in case it's ever needed) */
-.screen::-webkit-scrollbar {
-  width: 8px;
+.modal-buttons .btn-secondary {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: white;
 }
 
-.screen::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+.modal-buttons .btn-secondary:hover {
+  background: linear-gradient(135deg, #5a6268, #495057);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
 }
 
-.screen::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
 
-.screen::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
+
+
+
+
 
 /* Additional visual enhancements */
 .screen::before {
@@ -653,4 +685,5 @@ a {
   border-radius: 22px;
   z-index: -1;
   opacity: 0.6;
+  pointer-events: none;
 }

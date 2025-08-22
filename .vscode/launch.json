@@ -1,28 +1,40 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
     {
-      "name": "Debug GeoAsteroids",
-      "type": "chrome",
+      "type": "pwa-node",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
       "request": "launch",
-      "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}",
-      "sourceMaps": true,
-      "port": 9222,
+      "name": "Launch Development server",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
       "console": "integratedTerminal",
-      "runtimeArgs": [
-        "--disable-web-security",
-        "--disable-features=VizDisplayCompositor",
-        "--remote-debugging-port=9222"
-      ]
+      "outputCapture": "std",
+      "serverReadyAction": {
+        "pattern": "Local:.+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
     },
     {
-      "name": "Attach to Chrome",
       "type": "chrome",
-      "request": "attach",
-      "port": 9222,
+      "request": "launch",
+      "name": "Launch Chrome",
+      "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}",
-      "sourceMaps": true
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Dev Server + Chrome",
+      "configurations": ["Launch Development server", "Launch Chrome"],
+      "stopAll": true
     }
   ]
 }

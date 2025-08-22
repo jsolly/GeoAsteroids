@@ -22,26 +22,26 @@ afterEach(() => {
   localStorage.removeItem(LOCAL_STORAGE_KEYS.musicOn);
 });
 
-test.concurrent('Music', () => {
+test('Music', () => {
   expect(testMusic).toBeInstanceOf(Music);
   expect(testMusic.soundLow).toBeInstanceOf(Audio);
   expect(testMusic.soundHigh).toBeInstanceOf(Audio);
 });
 
-test.concurrent('Set Music', () => {
+test('Set Music', () => {
   const currMusicOn = musicIsOn();
   setMusic(!currMusicOn);
   expect(musicIsOn()).toBe(!currMusicOn);
 });
 
-test.concurrent('Set Music - local storage', () => {
+test('Set Music - local storage', () => {
   setMusic(true);
   expect(localStorage.getItem(LOCAL_STORAGE_KEYS.musicOn)).toBe('true');
   setMusic(false);
   expect(localStorage.getItem(LOCAL_STORAGE_KEYS.musicOn)).toBe('false');
 });
 
-test.concurrent('Music tempo control', () => {
+test('Music tempo control', () => {
   testMusic.setMusicTempo(1);
   expect(testMusic.tempo).toBe(3.75); // calculated tempo for level 1
 
@@ -53,7 +53,7 @@ test.concurrent('Music tempo control', () => {
   expect(testMusic.tempo).toBeLessThan(4.0);
 });
 
-test.concurrent('Music tick and play', () => {
+test('Music tick and play', () => {
   testMusic.tempo = 0.1; // Set a very fast tempo for testing
   testMusic.beatTime = 0;
 

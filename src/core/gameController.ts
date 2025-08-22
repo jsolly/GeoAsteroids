@@ -1,6 +1,6 @@
 import { Music } from '../audio/Music.ts';
-import { DRAW_ASTEROIDS, EMP_PULSE_RADIUS } from '../constants';
-import { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
+import { DEFAULT_BOT_COUNT, DRAW_ASTEROIDS, EMP_PULSE_RADIUS } from '../constants';
+import { type AsteroidBelt, createAsteroidBelt } from '../entities/asteroid/Asteroid.ts';
 import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
 import { Player } from '../entities/player/index.ts';
 import type { Ship } from '../entities/ship/Ship.ts';
@@ -13,13 +13,13 @@ import { GameState } from './gameState.ts';
 function initializeListeners(isGameRunning: () => boolean): void {
   document.addEventListener('keydown', (ev) => {
     if (isGameRunning()) {
-      keyDown(ev, GameController.getInstance().getCurrShip());
+      keyDown(ev, GameController.getInstance().getCurrPlayer());
     }
   });
 
   document.addEventListener('keyup', (ev) => {
     if (isGameRunning()) {
-      keyUp(ev, GameController.getInstance().getCurrShip());
+      keyUp(ev, GameController.getInstance().getCurrPlayer());
     }
   });
 }
@@ -56,9 +56,9 @@ class GameController implements GameControllerData {
     this.gameState = GameState.getInstance();
     this.music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
     // Create player (it will create its own ship)
-    this.player = new Player('local-player', 'LocalPlayer', 3, false);
+    this.player = new Player({ id: 'local-player', name: 'LocalPlayer', isBot: false });
     this.currShip = this.player.ship;
-    this.currRoidBelt = new AsteroidBelt();
+    this.currRoidBelt = createAsteroidBelt();
     this.multiplayerManager = MultiplayerManager.getInstance();
 
     // Expose multiplayer testing commands to browser console
@@ -70,7 +70,6 @@ class GameController implements GameControllerData {
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
       (window as { gameController?: GameController }).gameController = this;
-      console.info('GAME_CONTROLLER', 'Game controller exposed globally for testing');
     }
   }
 
@@ -96,9 +95,9 @@ class GameController implements GameControllerData {
     this.gameState.resetCurrentScore();
     this.gameState.resetCurrentLevel();
     // Create player (it will create its own ship)
-    this.player = new Player('local-player', 'LocalPlayer', 3, false);
+    this.player = new Player({ id: 'local-player', name: 'LocalPlayer', isBot: false });
     this.currShip = this.player.ship;
-    this.currRoidBelt = new AsteroidBelt();
+    this.currRoidBelt = createAsteroidBelt();
     this.music.setMusicTempo(1.0);
   }
 
@@ -112,29 +111,39 @@ class GameController implements GameControllerData {
     // Reset button text to default state
     this.resetButtonText();
 
-    // Always connect to multiplayer manager when test players are enabled
-    // This ensures test players are created even if multiplayer is disabled
-    if (
-      this.gameState.isMultiplayerEnabled() ||
-      import.meta.env.VITE_ENABLE_TEST_PLAYERS === 'true'
-    ) {
-      // Always connect to multiplayer manager (it will handle WebSocket vs test players)
-      this.multiplayerManager.connect();
+    // Always enable multiplayer mode
+    this.enableMultiplayer();
 
-      // Adjust asteroid count for multiplayer after a short delay
-      // to ensure everything is initialized
-      setTimeout(() => {
-        this.currRoidBelt.adjustForMultiplayer();
-      }, 100);
-    }
+    // Connect to multiplayer and adjust asteroids once connected
+    this.multiplayerManager
+      .connect()
+      .then(() => {
+        if (this.currRoidBelt) {
+          this.currRoidBelt.adjustForMultiplayer();
+        }
+      })
+      .catch((error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn('Failed to connect to multiplayer, continuing with local game:', errorMessage);
+      });
 
     window.dispatchEvent(new CustomEvent('gameStart'));
   }
 
   gameOver(): void {
-    this.currShip.explode();
     this.updateTextProperties('Game Over', 1.0);
     this.music.setMusicTempo(1.0);
+
+    // Don't stop the game loop yet - let the text render for a few seconds
+    // The text will fade out over TEXT_FADE_TIME (2.5 seconds)
+    // Then we'll return to main menu
+    setTimeout(() => {
+      // Stop the game loop and return to main menu
+      this.toggleIsGameRunning();
+      import('../ui/mainMenu.ts').then(({ showGameOverMenu }) => {
+        showGameOverMenu();
+      });
+    }, 2500); // Wait for text to fade out completely
   }
 
   tickMusic(): void {
@@ -192,12 +201,10 @@ class GameController implements GameControllerData {
 
   // Reset button text to default state
   private resetButtonText(): void {
-    const startGameBtn = document.getElementById('start-single-player') as HTMLButtonElement;
     const multiplayerBtn = document.getElementById('start-multiplayer') as HTMLButtonElement;
 
-    if (startGameBtn && multiplayerBtn) {
-      startGameBtn.innerText = '🎮 Single Player';
-      multiplayerBtn.innerText = '🌐 Multiplayer';
+    if (multiplayerBtn) {
+      multiplayerBtn.innerText = '🌐 Start Multiplayer Game';
     }
   }
 
@@ -207,22 +214,12 @@ class GameController implements GameControllerData {
 
     // Always enable bots for multiplayer mode, regardless of websocket status
     // Bots work independently of websocket connections
-    this.enableBots(3); // Add 3 bots immediately at game start
-
-    // Adjust asteroids for multiplayer
-    setTimeout(() => {
-      this.currRoidBelt.adjustForMultiplayer();
-    }, 100);
+    this.enableBots(DEFAULT_BOT_COUNT); // Add default bots immediately at game start
   }
 
-  disableMultiplayer(): void {
-    this.gameState.setMultiplayerEnabled(false);
-    this.multiplayerManager.disconnect();
-
-    // Reset asteroids to normal count
-    setTimeout(() => {
-      this.currRoidBelt.adjustForMultiplayer();
-    }, 100);
+  // Method to set player name for multiplayer
+  setPlayerName(name: string): void {
+    this.multiplayerManager.setLocalPlayerName(name);
   }
 
   isMultiplayerEnabled(): boolean {
@@ -251,19 +248,15 @@ class GameController implements GameControllerData {
   }
 
   // Bot management methods
-  enableBots(count: number = 3): void {
+  enableBots(count: number): void {
     if (this.gameState.isMultiplayerEnabled()) {
       this.multiplayerManager.enableBots(count);
-      console.info('GAME_CONTROLLER', 'Bots enabled', { count });
-    } else {
-      console.info('GAME_CONTROLLER', 'Cannot enable bots - multiplayer not enabled');
     }
   }
 
   disableBots(): void {
     if (this.gameState.isMultiplayerEnabled()) {
       this.multiplayerManager.disableBots();
-      console.info('GAME_CONTROLLER', 'Bots disabled');
     }
   }
 
@@ -298,68 +291,21 @@ class GameController implements GameControllerData {
     };
 
     window.addEventListener('botShoot', this.botShootHandler as EventListener);
-    console.info('GAME_CONTROLLER', 'Bot shoot handler set up');
   }
 
   private handleBotShoot(botShoot: BotShoot): void {
-    console.info('BOT_SHOOT', 'Bot shoot event received', {
-      botId: botShoot.botId,
-      shipLives: this.player.lives,
-      shipDead: this.player.isDead,
-      shipExploding: this.currShip.exploding,
-      shipBlinkCount: this.currShip.blinkCount,
-    });
-
     // Check if the bot shot hits the player
     if (this.checkBotLaserHit(botShoot)) {
-      // In debug mode, make ship completely invincible to bot lasers
-      const isDevelopment =
-        (import.meta.env?.DEV === true || import.meta.env?.MODE === 'development') &&
-        import.meta.env?.VITE_INVINCIBLE === 'true';
-      if (isDevelopment) {
-        console.info(
-          'BOT_DEBUG_INVINCIBILITY',
-          'DEBUG MODE: Bot laser hit but ship is invincible to bot damage',
-          {
-            botId: botShoot.botId,
-            blinkCount: this.currShip.blinkCount,
-            exploding: this.currShip.exploding,
-          }
-        );
-        return; // No damage taken in debug mode
-      }
-
       // Check if ship is invincible (blinking)
       if (this.currShip.blinkCount > 0 || this.currShip.exploding) {
-        console.info(
-          'BOT_INVINCIBILITY',
-          'Bot laser hit but ship is invincible - no damage taken',
-          {
-            botId: botShoot.botId,
-            blinkCount: this.currShip.blinkCount,
-            exploding: this.currShip.exploding,
-          }
-        );
         return; // No damage taken
       }
-
-      console.info('BOT_HIT', 'Bot laser hit player - using damage system!', {
-        botId: botShoot.botId,
-        playerLives: this.player.lives,
-        shipHealth: this.currShip.health,
-        shipPos: { x: this.currShip.position.x, y: this.currShip.position.y },
-        laserStart: botShoot.laserStart,
-        laserDirection: botShoot.laserDirection,
-        damage: 15,
-      });
 
       // Damage the player using the damage system instead of bypassing it
       this.currShip.takeDamage(15); // Bot laser damage
 
       // The takeDamage method will handle life loss and respawn
       // We don't need to manually manage lives or call die() here
-    } else {
-      console.info('BOT_MISS', 'Bot laser missed player');
     }
   }
 
@@ -382,18 +328,7 @@ class GameController implements GameControllerData {
     const distance = Math.abs(A * shipPos.x + B * shipPos.y + C) / Math.sqrt(A * A + B * B);
 
     // Debug collision detection
-    if (distance <= shipRadius * 2) {
-      // Check within 2x radius for debugging
-      console.info('BOT_COLLISION_CHECK', 'Bot laser collision check', {
-        distance,
-        shipRadius,
-        threshold: shipRadius,
-        hit: distance <= shipRadius,
-        shipPos,
-        laserStart,
-        laserDirection,
-      });
-    }
+    // Check if laser passes close enough to ship
 
     // Check if laser passes close enough to ship
     return distance <= shipRadius;
@@ -410,40 +345,22 @@ class GameController implements GameControllerData {
       const empEvent = event as CustomEvent<{
         shipPosition: { x: number; y: number };
         shipRadius: number;
-        debugMode: boolean;
       }>;
       this.handleEmpPulse(empEvent.detail);
     });
-    console.info('GAME_CONTROLLER', 'EMP pulse handler set up');
   }
 
   private handleEmpPulse(detail: {
     shipPosition: { x: number; y: number };
     shipRadius: number;
-    debugMode: boolean;
   }): void {
-    const { shipPosition, shipRadius, debugMode } = detail;
-
-    console.info('EMP_PULSE', 'EMP pulse activated', {
-      shipPosition,
-      shipRadius,
-      empRadius: EMP_PULSE_RADIUS,
-      debugMode,
-    });
+    const { shipPosition } = detail;
 
     // Destroy all asteroids within EMP radius
     this.destroyAsteroidsInRadius(shipPosition, EMP_PULSE_RADIUS);
 
     // Destroy all bots within EMP radius
     this.destroyBotsInRadius(shipPosition, EMP_PULSE_RADIUS);
-
-    // Add score for destroyed objects (in debug mode, unlimited points)
-    if (debugMode) {
-      console.info('EMP_DEBUG', 'DEBUG MODE: EMP pulse completed - unlimited usage');
-    } else {
-      // In normal mode, could add cooldown or limited usage here
-      console.info('EMP_NORMAL', 'Normal mode: EMP pulse completed');
-    }
   }
 
   private destroyAsteroidsInRadius(center: { x: number; y: number }, radius: number): void {
@@ -451,7 +368,6 @@ class GameController implements GameControllerData {
       return;
     }
     const roids = this.currRoidBelt.roids;
-    let destroyedCount = 0;
 
     for (let i = roids.length - 1; i >= 0; i--) {
       const roid = roids[i];
@@ -466,21 +382,7 @@ class GameController implements GameControllerData {
 
         // Remove asteroid
         roids.splice(i, 1);
-        destroyedCount++;
-
-        console.info('EMP_ASTEROID', 'Asteroid destroyed by EMP', {
-          position: roid.position,
-          radius: roid.r,
-          score,
-          distance,
-        });
       }
-    }
-
-    if (destroyedCount > 0) {
-      console.info('EMP_SUMMARY', 'EMP destroyed asteroids', {
-        count: destroyedCount,
-      });
     }
   }
 
@@ -490,14 +392,6 @@ class GameController implements GameControllerData {
     }
 
     const bots = this.multiplayerManager.getBots();
-    let destroyedCount = 0;
-
-    console.info('EMP_BOT_DETECTION', 'Starting bot detection for EMP pulse', {
-      center,
-      radius,
-      totalBots: bots.size,
-      botIds: Array.from(bots.keys()),
-    });
 
     // Collect bot IDs to destroy first, then destroy them
     // This avoids issues with modifying the Map during iteration
@@ -508,47 +402,17 @@ class GameController implements GameControllerData {
         (bot.ship.position.x - center.x) ** 2 + (bot.ship.position.y - center.y) ** 2
       );
 
-      console.info('EMP_BOT_CHECK', 'Checking bot for EMP destruction', {
-        botId,
-        botPosition: bot.ship.position,
-        distance,
-        withinRadius: distance <= radius,
-      });
-
       if (distance <= radius) {
         botsToDestroy.push(botId);
-
-        console.info('EMP_BOT_DETECTED', 'Bot detected for EMP destruction', {
-          botId,
-          position: bot.ship.position,
-          distance,
-        });
       }
     }
-
-    console.info('EMP_BOT_SUMMARY', 'Bot detection complete', {
-      botsToDestroy,
-      count: botsToDestroy.length,
-    });
 
     // Now destroy all detected bots
     for (const botId of botsToDestroy) {
       this.multiplayerManager.empDestroyBot(botId);
-      destroyedCount++;
 
       // Add points for destroying a bot with EMP (same as laser kill)
       this.updateCurrScore(200);
-
-      console.info('EMP_BOT', 'Bot destroyed by EMP', {
-        botId,
-        scoreAwarded: 200,
-      });
-    }
-
-    if (destroyedCount > 0) {
-      console.info('EMP_SUMMARY', 'EMP destroyed bots', {
-        count: destroyedCount,
-      });
     }
   }
 

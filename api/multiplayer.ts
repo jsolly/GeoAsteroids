@@ -22,7 +22,6 @@ interface ConnectedPlayer {
   a: number;
   lives: number;
   score: number;
-  dead: boolean;
   exploding: boolean;
   lastUpdate: number;
   ws: WebSocketWithEvents;
@@ -160,7 +159,6 @@ class MultiplayerServer {
       a: 0,
       lives: 3,
       score: 0,
-      dead: false,
       exploding: false,
       lastUpdate: Date.now(),
       ws,
@@ -273,7 +271,6 @@ class MultiplayerServer {
           a: p.a,
           lives: p.lives,
           score: p.score,
-          dead: p.dead,
           exploding: p.exploding,
         })),
         asteroids: [], // Will be implemented in Phase 2

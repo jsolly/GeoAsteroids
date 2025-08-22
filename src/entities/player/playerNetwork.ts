@@ -60,18 +60,6 @@ export class PlayerNetwork {
       if (!player.ship.exploding && player.lives > 0) {
         this.respawnPlayer(player);
       }
-
-      // Debug logging for test players to track invincibility state changes
-      if (player.id.startsWith('test-')) {
-        console.debug('🔄 TEST_PLAYER_INVINCIBILITY_UPDATE', 'Test player invincibility updated', {
-          playerId: player.id,
-          playerName: player.name,
-          newBlinkCount: player.ship.blinkCount,
-          newBlinkTime: player.ship.spawnProtectionTimer,
-          remainingInvincibility:
-            player.ship.blinkCount > 0 ? 'Still invincible' : 'Now vulnerable',
-        });
-      }
     }
 
     // Only update network state if connected
@@ -83,22 +71,8 @@ export class PlayerNetwork {
   }
 
   private respawnPlayer(player: Player): void {
-    console.info('🔄 PLAYER_RESPAWN', 'Respawning player', {
-      playerId: player.id,
-      playerName: player.name,
-      remainingLives: player.lives,
-    });
-
     // Delegate respawn logic to the player
     player.respawn();
-
-    console.info('✅ PLAYER_RESPAWNED', 'Player respawned successfully', {
-      playerId: player.id,
-      playerName: player.name,
-      newPosition: { x: player.ship.position.x, y: player.ship.position.y },
-      blinkCount: player.ship.blinkCount,
-      health: player.ship.health,
-    });
   }
 
   public getOtherPlayers(): Player[] {
