@@ -1,5 +1,5 @@
-import type { Vector } from '../../physics/Vector.ts';
-import type { Ship } from '../ship/Ship.ts';
+import type { Vector } from '../../physics/Vector';
+import type { Ship } from '../ship/Ship';
 
 // Player-specific properties that don't exist in Ship
 export interface PlayerData {

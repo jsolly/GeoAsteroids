@@ -1,4 +1,4 @@
-import { BotIntegrationManager } from '../multiplayer/botIntegrationManager.ts';
+import { BotIntegrationManager } from '../multiplayer/botIntegrationManager';
 
 export class DebugBotIntegrationManager extends BotIntegrationManager {
   private botMovementDisabled = false;

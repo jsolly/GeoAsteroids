@@ -1,6 +1,6 @@
 import { getCTX, SHOW_COLLISION_CIRCLES } from '../../constants';
-import type { Ship } from '../../entities/ship/Ship.ts';
-import { worldToScreen } from '../../rendering/viewport.ts';
+import type { Ship } from '../../entities/ship/Ship';
+import { worldToScreen } from '../../rendering/viewport';
 import type { Asteroid } from './Asteroid';
 
 export function drawRoidsRelative(ship: Ship, roids: Asteroid[]): void {

@@ -1,7 +1,7 @@
 // Console override script - loads before all other modules
 // This ensures logging filtering is active from the start
 
-import { clearLogBuffer, copyLogs, getLogsAsText, setupConsoleOverride } from './logLevel.ts';
+import { clearLogBuffer, copyLogs, getLogsAsText, setupConsoleOverride } from './logLevel';
 
 // Set up console overrides immediately when this script loads
 setupConsoleOverride();

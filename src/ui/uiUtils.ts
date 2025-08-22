@@ -1,4 +1,4 @@
-import { getElementById } from '../utils/dom.ts';
+import { getElementById } from '../utils/dom';
 
 export function toggleScreen(id: string, toggle: boolean): void {
   const element = getElementById<HTMLElement>(id);

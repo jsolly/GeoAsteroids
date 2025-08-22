@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FPS, getCVS, LASER_DIST, LASER_SPEED } from '../../constants';
-import { Vector } from '../../physics/Vector.ts';
-import { Laser } from '../ship/Ship.ts';
-import type { BotPlayer, BotShoot } from './types.ts';
+import { Vector } from '../../physics/Vector';
+import { Laser } from '../ship/Ship';
+import type { BotPlayer, BotShoot } from './types';
 
 export class BotCombat {
   private botLasers: Map<string, Laser[]> = new Map();

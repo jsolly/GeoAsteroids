@@ -1,5 +1,5 @@
 import { FPS, SHIP_EXPLODE_DUR_FRAMES, SHIP_HEALTH_REGEN_DELAY } from '../../constants';
-import { Player } from '../player/Player.ts';
+import { Player } from '../player/Player';
 import type { BotPlayer as BotPlayerInterface } from './types';
 
 export class BotPlayer extends Player implements BotPlayerInterface {

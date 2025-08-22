@@ -13,18 +13,18 @@ import {
 // Consider tweaking if jitter causes flicker
 const REMOTE_PLAYER_STALE_MS = 1500;
 
-import { GameController } from '../core/gameController.ts';
-import type { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
-import { drawRoidsRelative } from '../entities/asteroid/asteroidRenderer.ts';
-import { BotManager } from '../entities/bot/botManager.ts';
-// import type { BotPlayer } from '../entities/bot/types.ts';
-import { PlayerNetwork } from '../entities/player/playerNetwork.ts';
-import type { Player } from '../entities/player/types.ts';
-import type { Ship } from '../entities/ship/Ship.ts';
-import { drawGenericThruster } from '../entities/ship/shipRenderer.ts';
-import { Point } from '../physics/Point.ts';
-import { showGameOverMenu } from '../ui/mainMenu.ts';
-import { worldToScreen } from './viewport.ts';
+import { GameController } from '../core/gameController';
+import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
+import { drawRoidsRelative } from '../entities/asteroid/asteroidRenderer';
+import { BotManager } from '../entities/bot/botManager';
+// import type { BotPlayer } from '../entities/bot/types';
+import { PlayerNetwork } from '../entities/player/playerNetwork';
+import type { Player } from '../entities/player/types';
+import type { Ship } from '../entities/ship/Ship';
+import { drawGenericThruster } from '../entities/ship/shipRenderer';
+import { Point } from '../physics/Point';
+import { showGameOverMenu } from '../ui/mainMenu';
+import { worldToScreen } from './viewport';
 
 // Defer initialization to avoid circular dependency issues
 let gameController: GameController;

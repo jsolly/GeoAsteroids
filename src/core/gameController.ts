@@ -1,14 +1,14 @@
-import { Music } from '../audio/Music.ts';
+import { Music } from '../audio/Music';
 import { DEFAULT_BOT_COUNT, DRAW_ASTEROIDS, EMP_PULSE_RADIUS } from '../constants';
-import { type AsteroidBelt, createAsteroidBelt } from '../entities/asteroid/Asteroid.ts';
-import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
-import { Player } from '../entities/player/index.ts';
-import type { Ship } from '../entities/ship/Ship.ts';
-import { keyDown, keyUp } from '../input/keybindings.ts';
-import { MultiplayerManager } from '../multiplayer/multiplayerManager.ts';
-import { Vector } from '../physics/Vector.ts';
-import { toggleScreen } from '../ui/uiUtils.ts';
-import { GameState } from './gameState.ts';
+import { type AsteroidBelt, createAsteroidBelt } from '../entities/asteroid/Asteroid';
+import type { BotPlayer, BotShoot } from '../entities/bot/types';
+import { Player } from '../entities/player/index';
+import type { Ship } from '../entities/ship/Ship';
+import { keyDown, keyUp } from '../input/keybindings';
+import { MultiplayerManager } from '../multiplayer/multiplayerManager';
+import { Vector } from '../physics/Vector';
+import { toggleScreen } from '../ui/uiUtils';
+import { GameState } from './gameState';
 
 function initializeListeners(isGameRunning: () => boolean): void {
   document.addEventListener('keydown', (ev) => {
@@ -140,7 +140,7 @@ class GameController implements GameControllerData {
     setTimeout(() => {
       // Stop the game loop and return to main menu
       this.toggleIsGameRunning();
-      import('../ui/mainMenu.ts').then(({ showGameOverMenu }) => {
+      import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });
     }, 2500); // Wait for text to fade out completely

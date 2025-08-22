@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_BOT_COUNT } from '../constants';
-import type { BotPlayer, BotShoot } from '../entities/bot/types.ts';
-import type { Player } from '../entities/player/types.ts';
-import { Ship } from '../entities/ship/Ship.ts';
-import { Vector } from '../physics/Vector.ts';
-import { generateRandomPlayerColor } from '../utils/colorUtils.ts';
-import { BotIntegrationManager } from './botIntegrationManager.ts';
+import type { BotPlayer, BotShoot } from '../entities/bot/types';
+import type { Player } from '../entities/player/types';
+import { Ship } from '../entities/ship/Ship';
+import { Vector } from '../physics/Vector';
+import { generateRandomPlayerColor } from '../utils/colorUtils';
+import { BotIntegrationManager } from './botIntegrationManager';
 import type {
   ClientMessage,
   GameState,
@@ -13,7 +13,7 @@ import type {
   PlayerLeave,
   PlayerUpdate,
   ServerMessage,
-} from './types.ts';
+} from './types';
 
 export class MultiplayerManager {
   private static instance: MultiplayerManager;

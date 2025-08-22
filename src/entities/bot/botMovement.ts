@@ -1,6 +1,6 @@
 import { FPS, FRICTION, SHIP_THRUST } from '../../constants';
-import { Vector } from '../../physics/Vector.ts';
-import type { BotPlayer } from './types.ts';
+import { Vector } from '../../physics/Vector';
+import type { BotPlayer } from './types';
 
 // Enhanced bot movement with steering behaviors
 interface BotSteering {

@@ -9,15 +9,15 @@ import {
   SHIP_HEALTH_REGEN_DELAY,
   SHIP_RESPAWN_DELAY_FRAMES,
 } from '../constants';
-import { GameController } from '../core/gameController.ts';
-import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
-import { BotManager } from '../entities/bot/botManager.ts';
+import { GameController } from '../core/gameController';
+import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid';
+import { BotManager } from '../entities/bot/botManager';
 // Simple logging - removed complex logger dependency
-import type { BotPlayer } from '../entities/bot/types.ts';
-import type { Player } from '../entities/player/types.ts';
-import type { Laser, Ship } from '../entities/ship/Ship.ts';
-import { isDevelopmentMode } from '../utils/debugUtils.ts';
-import { Vector } from './Vector.ts';
+import type { BotPlayer } from '../entities/bot/types';
+import type { Player } from '../entities/player/types';
+import type { Laser, Ship } from '../entities/ship/Ship';
+import { isDevelopmentMode } from '../utils/debugUtils';
+import { Vector } from './Vector';
 
 // Test DEBUG constant at import time
 // console.log('🔍 COLLISIONS: DEBUG constant imported as:', DEBUG, 'Type:', typeof DEBUG);

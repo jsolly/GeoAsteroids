@@ -1,4 +1,4 @@
-import { Point } from './Point.ts';
+import { Point } from './Point';
 
 class Vector extends Point {
   static fromAngle(angle: number): Vector {

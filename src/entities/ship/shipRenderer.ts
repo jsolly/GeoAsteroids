@@ -1,6 +1,6 @@
 import { getCTX, getCVS, SHIP_SIZE } from '../../constants';
-import { Point } from '../../physics/Point.ts';
-import { worldToScreen } from '../../rendering/viewport.ts';
+import { Point } from '../../physics/Point';
+import { worldToScreen } from '../../rendering/viewport';
 import type { Ship } from './Ship';
 
 // Helper function to create complementary colors that work well with the laser color

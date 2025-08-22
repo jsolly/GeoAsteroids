@@ -1,6 +1,6 @@
-import type { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
-import type { BotPlayer } from '../entities/bot/types.ts';
-import { getDebugConfig } from './debugConfig.ts';
+import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
+import type { BotPlayer } from '../entities/bot/types';
+import { getDebugConfig } from './debugConfig';
 
 /**
  * Debug collision manager that provides debug-specific collision behavior

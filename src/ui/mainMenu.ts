@@ -1,13 +1,13 @@
 // Console overrides and error handling are now handled by logLevel.ts which loads first
 
 // Simple logging - removed complex logger dependency
-import { setMusic } from '../audio/Music.ts';
-import { setSound } from '../audio/Sound.ts';
+import { setMusic } from '../audio/Music';
+import { setSound } from '../audio/Sound';
 
-import { GameController } from '../core/gameController.ts';
+import { GameController } from '../core/gameController';
 
-import { attachEventListener, getElementById } from '../utils/dom.ts';
-import { toggleScreen } from './uiUtils.ts';
+import { attachEventListener, getElementById } from '../utils/dom';
+import { toggleScreen } from './uiUtils';
 
 // toggleScreen lives in uiUtils
 
@@ -123,7 +123,7 @@ function hideMultiplayerNameModal(): void {
 // Function to start debug mode
 function startDebugMode(): void {
   // Import and use the debug manager
-  import('../debug/index.ts').then(({ DebugManager }) => {
+  import('../debug/index').then(({ DebugManager }) => {
     const debugManager = DebugManager.getInstance();
 
     // Enable debug mode

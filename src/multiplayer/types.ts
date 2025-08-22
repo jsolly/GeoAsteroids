@@ -1,12 +1,12 @@
-import type { BotPlayerInterface, BotShoot } from '../entities/bot/index.ts';
+import type { BotPlayerInterface, BotShoot } from '../entities/bot/index';
 import type {
   PlayerInterface as Player,
   PlayerJoin,
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
-} from '../entities/player/index.ts';
-import type { Vector } from '../physics/Vector.ts';
+} from '../entities/player/index';
+import type { Vector } from '../physics/Vector';
 
 export interface GameState {
   players: Array<{

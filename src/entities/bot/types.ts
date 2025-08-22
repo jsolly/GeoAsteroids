@@ -1,5 +1,5 @@
-import type { Vector } from '../../physics/Vector.ts';
-import type { Player } from '../player/types.ts';
+import type { Vector } from '../../physics/Vector';
+import type { Player } from '../player/types';
 
 export interface BotPlayer extends Player {
   isBot: true;

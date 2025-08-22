@@ -1,5 +1,5 @@
 import { FPS, SHIP_HEALTH_REGEN_DELAY, SHIP_HEALTH_REGEN_RATE } from '../../constants';
-import { Vector } from '../../physics/Vector.ts';
+import { Vector } from '../../physics/Vector';
 
 export function canTakeCollisionDamage(
   lastCollisionTime: number,

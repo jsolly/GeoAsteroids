@@ -1,6 +1,6 @@
-import type { AsteroidBelt } from '../entities/asteroid/Asteroid.ts';
-import type { BotPlayer } from '../entities/bot/types.ts';
-import { DebugCollisionManager } from './debugCollisionManager.ts';
+import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
+import type { BotPlayer } from '../entities/bot/types';
+import { DebugCollisionManager } from './debugCollisionManager';
 
 /**
  * Debug collision wrapper that provides debug-enhanced collision detection

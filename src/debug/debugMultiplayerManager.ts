@@ -1,5 +1,5 @@
-import { MultiplayerManager } from '../multiplayer/multiplayerManager.ts';
-import { DebugBotIntegrationManager } from './debugBotIntegrationManager.ts';
+import { MultiplayerManager } from '../multiplayer/multiplayerManager';
+import { DebugBotIntegrationManager } from './debugBotIntegrationManager';
 
 export class DebugMultiplayerManager {
   private multiplayerManager: MultiplayerManager;

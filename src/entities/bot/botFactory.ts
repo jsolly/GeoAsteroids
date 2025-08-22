@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Vector } from '../../physics/Vector.ts';
-import { BotPlayer } from './BotPlayer.ts';
+import { Vector } from '../../physics/Vector';
+import { BotPlayer } from './BotPlayer';
 
 export class BotFactory {
   public createBots(count: number): Map<string, BotPlayer> {

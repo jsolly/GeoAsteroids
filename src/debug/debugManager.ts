@@ -1,5 +1,5 @@
-import { DebugGameController } from './debugGameController.ts';
-import { DebugGameState } from './debugGameState.ts';
+import { DebugGameController } from './debugGameController';
+import { DebugGameState } from './debugGameState';
 
 export class DebugManager {
   private static instance: DebugManager;

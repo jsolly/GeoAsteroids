@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { SHIP_RESPAWN_DELAY_FRAMES } from '../../constants';
-import { Vector } from '../../physics/Vector.ts';
-import type { Laser } from '../ship/Ship.ts';
-import { BotCombat } from './botCombat.ts';
-import { BotFactory } from './botFactory.ts';
-import { BotMovement } from './botMovement.ts';
-import type { BotPlayer, BotShoot } from './types.ts';
+import { Vector } from '../../physics/Vector';
+import type { Laser } from '../ship/Ship';
+import { BotCombat } from './botCombat';
+import { BotFactory } from './botFactory';
+import { BotMovement } from './botMovement';
+import type { BotPlayer, BotShoot } from './types';
 
 export class BotManager {
   private static instance: BotManager;

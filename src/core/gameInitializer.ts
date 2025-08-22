@@ -20,6 +20,6 @@ export function initializeGame(): void {
  */
 export async function setupPeriodicUpdates(): Promise<void> {
   // Import main menu updates after it's loaded
-  const { setupMainMenuUpdates } = await import('../ui/mainMenu.ts');
+  const { setupMainMenuUpdates } = await import('../ui/mainMenu');
   setupMainMenuUpdates();
 }

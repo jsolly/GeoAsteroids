@@ -1,4 +1,4 @@
-import { Sound } from '../../audio/Sound.ts';
+import { Sound } from '../../audio/Sound';
 import {
   EMP_PULSE_DURATION,
   FPS,
@@ -15,9 +15,9 @@ import {
   SHIP_SIZE,
   SHIP_THRUST,
 } from '../../constants';
-import { Vector } from '../../physics/Vector.ts';
+import { Vector } from '../../physics/Vector';
 
-import { drawThruster } from './shipRenderer.ts';
+import { drawThruster } from './shipRenderer';
 
 import {
   calculateHealthAfterDamage,
@@ -28,7 +28,7 @@ import {
   canTakeCollisionDamage,
   isDebugMode,
   shouldStartHealthRegeneration,
-} from './shipUtils.ts';
+} from './shipUtils';
 
 interface LaserData {
   position: Vector;

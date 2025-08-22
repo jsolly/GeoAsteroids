@@ -1,4 +1,4 @@
-import { GameState } from '../core/gameState.ts';
+import { GameState } from '../core/gameState';
 
 export class DebugGameState {
   private gameState: GameState;

@@ -1,4 +1,4 @@
-import { Sound } from '../../audio/Sound.ts';
+import { Sound } from '../../audio/Sound';
 import {
   DRAW_ASTEROIDS,
   FPS,
@@ -12,9 +12,9 @@ import {
   ROID_SPEED,
   ROID_VERTICES,
 } from '../../constants';
-import { GameController } from '../../core/gameController.ts';
-import { Vector } from '../../physics/Vector.ts';
-import { calculateSpawnCount, spawnAsteroidFromEdge } from './asteroidUtils.ts';
+import { GameController } from '../../core/gameController';
+import { Vector } from '../../physics/Vector';
+import { calculateSpawnCount, spawnAsteroidFromEdge } from './asteroidUtils';
 
 class Asteroid {
   a: number;

@@ -1,8 +1,8 @@
 import { FPS, SHIP_INV_BLINK_DUR, SHIP_INV_DUR, START_LIVES } from '../../constants';
-import { Vector } from '../../physics/Vector.ts';
-import { generateRandomPlayerColor } from '../../utils/colorUtils.ts';
-import { Ship } from '../ship/Ship.ts';
-import type { Player as PlayerInterface } from './types.ts';
+import { Vector } from '../../physics/Vector';
+import { generateRandomPlayerColor } from '../../utils/colorUtils';
+import { Ship } from '../ship/Ship';
+import type { Player as PlayerInterface } from './types';
 
 export class Player implements PlayerInterface {
   id: string;

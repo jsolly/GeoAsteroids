@@ -1,6 +1,6 @@
-import { BotManager } from '../entities/bot/botManager.ts';
-import type { BotShoot } from '../entities/bot/types.ts';
-import type { Vector } from '../physics/Vector.ts';
+import { BotManager } from '../entities/bot/botManager';
+import type { BotShoot } from '../entities/bot/types';
+import type { Vector } from '../physics/Vector';
 
 export class BotIntegrationManager {
   private botManager: BotManager;
