@@ -37,6 +37,9 @@
     "url": "https://github.com/jsolly/GeoAsteroids/issues"
   },
   "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "dependencies": {
     "mongodb": "^6.17.0",
     "socket.io-client": "^4.8.1",
