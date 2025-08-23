@@ -1,25 +1,13 @@
-import {
-  NEXT_LEVEL_POINTS,
-  SAVE_KEY_PERSONAL_BEST,
-  START_LEVEL,
-  STARTING_SCORE,
-} from '../constants/game';
+import { STARTING_SCORE } from '../constants/game';
 
 interface GameStateData {
   getCurrentScore(): number;
   updateCurrentScore(points: number): void;
-  updateNextLevel(): void;
-  updateCurrentLevel(): void;
-  updatePersonalBest(): void;
   updateTextProperties(text: string, alpha: number): void;
   updateTextAlpha(alpha: number): void;
   toggleIsGameRunning(): void;
   updateText(text: string): void;
   resetCurrentScore(): void;
-  resetCurrentLevel(): void;
-  getCurrentLevel(): number;
-  getNextLevel(): number;
-  getPersonalBest(): number;
   getTextAlpha(): number;
   getText(): string;
   getIsGameRunning(): boolean;
@@ -28,10 +16,8 @@ interface GameStateData {
 class GameState implements GameStateData {
   private static instance: GameState;
   private currentScore = STARTING_SCORE;
-  private currentLevel = START_LEVEL;
-  private nextLevel = NEXT_LEVEL_POINTS;
   private textAlpha = 1;
-  private text = 'Level 1';
+  private text = '';
   private isGameRunning = false;
   // Multiplayer state - always enabled
   public playerCount = 1;
@@ -57,22 +43,6 @@ class GameState implements GameStateData {
     this.currentScore = STARTING_SCORE;
   }
 
-  resetCurrentLevel(): void {
-    this.currentLevel = START_LEVEL;
-  }
-
-  getCurrentLevel(): number {
-    return this.currentLevel;
-  }
-
-  updateCurrentLevel(): void {
-    this.currentLevel++;
-  }
-
-  getNextLevel(): number {
-    return this.nextLevel;
-  }
-
   getTextAlpha(): number {
     return this.textAlpha;
   }
@@ -81,9 +51,6 @@ class GameState implements GameStateData {
   }
   getIsGameRunning(): boolean {
     return this.isGameRunning;
-  }
-  updateNextLevel(): void {
-    this.nextLevel += NEXT_LEVEL_POINTS;
   }
 
   updateTextProperties(text: string, alpha: number): void {
@@ -95,21 +62,6 @@ class GameState implements GameStateData {
     this.isGameRunning = !this.isGameRunning;
   }
 
-  getPersonalBest(): number {
-    const personalBest = localStorage.getItem(SAVE_KEY_PERSONAL_BEST);
-    if (personalBest == null) {
-      localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '0');
-      return 0;
-    }
-    return Number(personalBest);
-  }
-
-  updatePersonalBest(): void {
-    const personalBest = this.getPersonalBest();
-    if (this.getCurrentScore() > personalBest) {
-      localStorage.setItem(SAVE_KEY_PERSONAL_BEST, String(this.getCurrentScore()));
-    }
-  }
   updateTextAlpha(alpha: number): void {
     this.textAlpha = alpha;
   }

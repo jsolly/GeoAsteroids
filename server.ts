@@ -35,7 +35,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
     );
   } else if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('GeoAsteroids Multiplayer Server - Running');
+    res.end('GeoRoids Multiplayer Server - Running');
   } else if (req.url === '/ws') {
     // Handle WebSocket upgrade
     res.writeHead(426, { 'Content-Type': 'text/plain' });

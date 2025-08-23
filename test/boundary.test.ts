@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Ship } from '../src/entities/ship/Ship';
+import { getGameBoundary } from '../src/physics/boundary';
 import {
   getBoundaryCollisionSide,
-  getGameBoundary,
-  getRandomPositionWithinBoundary,
   isShipOutOfBounds,
-} from '../src/physics/boundary';
-import { detectBoundaryCollisions, detectPlayerBoundaryCollisions } from '../src/physics/collision';
+} from '../src/physics/collision/boundaryCollisions';
+import {
+  detectBoundaryCollisions,
+  detectPlayerBoundaryCollisions,
+} from '../src/rendering/boundaryRenderer';
+import { getRandomPositionWithinBoundary } from '../src/utils/positionUtils';
 
 describe('Boundary System', () => {
   it('should create a boundary with correct dimensions', () => {
@@ -86,11 +89,11 @@ describe('Boundary System', () => {
     });
 
     it('should set random respawn positions for bots hitting boundary', async () => {
-      // Import BotPlayer to create a test bot
-      const { BotPlayer } = await import('../src/entities/bot/BotPlayer');
+      // Import Player to create a test bot
+      const { Player } = await import('../src/entities/player/Player');
 
       // Create a mock bot
-      const bot = new BotPlayer({ id: 'test-bot', name: 'TestBot', botType: 'aggressive' });
+      const bot = new Player({ id: 'test-bot', name: 'TestBot', type: 'bot' });
 
       // Position bot outside the boundary
       bot.ship.position = { x: -1200, y: 0 };
@@ -109,17 +112,25 @@ describe('Boundary System', () => {
       expect(bot.ship.exploding).toBe(true);
       expect(bot.ship.health).toBe(0);
 
-      // Verify respawn timer and position are set
+      // Verify respawn timer is set
       expect(bot.respawnTimer).toBeDefined();
-      expect(bot.respawnPosition).toBeDefined();
 
-      // Verify respawn position is within the game boundary with margin
+      // Simulate the respawn process to verify the unified respawn system works
+      const originalPosition = { ...bot.ship.position };
+      bot.respawn();
+
+      // Verify the bot respawned at a different, safe position within the boundary
       const boundary = getGameBoundary();
-      const margin = 100;
-      expect(bot.respawnPosition?.x).toBeGreaterThanOrEqual(boundary.x + margin);
-      expect(bot.respawnPosition?.x).toBeLessThanOrEqual(boundary.x + boundary.width - margin);
-      expect(bot.respawnPosition?.y).toBeGreaterThanOrEqual(boundary.y + margin);
-      expect(bot.respawnPosition?.y).toBeLessThanOrEqual(boundary.y + boundary.height - margin);
+      const shipRadius = 15; // SHIP_SIZE / 2
+      expect(bot.ship.position.x - shipRadius).toBeGreaterThanOrEqual(boundary.x);
+      expect(bot.ship.position.x + shipRadius).toBeLessThanOrEqual(boundary.x + boundary.width);
+      expect(bot.ship.position.y - shipRadius).toBeGreaterThanOrEqual(boundary.y);
+      expect(bot.ship.position.y + shipRadius).toBeLessThanOrEqual(boundary.y + boundary.height);
+
+      // Verify it's a different position (very unlikely to be the same)
+      const positionChanged =
+        bot.ship.position.x !== originalPosition.x || bot.ship.position.y !== originalPosition.y;
+      expect(positionChanged).toBe(true);
     });
   });
 });

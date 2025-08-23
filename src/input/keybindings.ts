@@ -1,6 +1,6 @@
 import { TURN_SPEED } from '../constants/entities/ship';
-import { FPS } from '../constants/physics';
-import type { Player } from '../entities/player/types';
+import { FPS } from '../constants/game';
+import type { Player } from '../entities/player/Player';
 import { Ship } from '../entities/ship/Ship';
 
 interface KeyStates {

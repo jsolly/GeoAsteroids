@@ -1,4 +1,4 @@
-import type { Position, Velocity } from '../entities/player/types';
+import type { Position, Velocity } from '../../shared-types';
 
 // Utility functions to replace Vector operations
 export function addVectors(a: Velocity, b: Velocity): Velocity {

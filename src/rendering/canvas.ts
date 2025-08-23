@@ -1,718 +1,267 @@
-import { SHIP_MAX_HEALTH, SHIP_SIZE } from '../constants/entities/ship';
-import { FPS } from '../constants/physics';
-import { getCTX, getCVS } from '../constants/rendering/canvas';
-import { TEXT_FADE_TIME, TEXT_SIZE } from '../constants/rendering/drawing';
-
-// Consider tweaking if jitter causes flicker
-const REMOTE_PLAYER_STALE_MS = 1500;
-
-// Thruster speed threshold (squared to avoid sqrt in render loop)
-const THRUSTER_SPEED_THRESHOLD_SQ = 0.01; // (0.1)^2
-
-import { GameController } from '../core/gameController';
-import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
-import { drawRoidsRelative } from '../entities/asteroid/asteroidRenderer';
-import { BotPlayer } from '../entities/bot/BotPlayer';
-// import type { BotPlayer } from '../entities/bot/types';
-import { PlayerNetwork } from '../entities/player/playerNetwork';
-import type { Player } from '../entities/player/types';
+import type { Position } from '../../shared-types';
+import {
+  CANVAS_DEFAULT_CENTER_X,
+  CANVAS_DEFAULT_CENTER_Y,
+  CANVAS_INTERNAL_HEIGHT,
+  CANVAS_INTERNAL_WIDTH,
+} from '../constants/canvas';
+import type { Player } from '../entities/player/Player';
+import type { RoidBelt } from '../entities/roid/Roid';
+import { drawRoidsRelative } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
-import { drawGenericThruster } from '../entities/ship/shipRenderer';
-import { getGameBoundary } from '../physics/boundary';
+import { drawLasers, drawShipAtPosition } from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
 import { drawFieryBoundary } from './boundaryRenderer';
-// Dynamic import to avoid chunking conflicts with other dynamic imports
-import { worldToScreen } from './viewport';
+import {
+  drawConnectionStatus,
+  drawFramerate,
+  drawLeaderboard,
+  drawLivesIndicator,
+  drawScoreOverlay,
+  drawTextOverlay,
+} from './hud/gameInfo';
+import { drawMiniMap } from './hud/minimap';
 
-// Defer initialization to avoid circular dependency issues
-let gameController: GameController;
-let playerNetwork: PlayerNetwork;
+// Canvas manager class for handling dynamic canvas operations and game rendering
+class CanvasManager {
+  private canvas: HTMLCanvasElement | null = null;
+  private context: CanvasRenderingContext2D | null = null;
+  private resizeHandler: (() => void) | null = null;
 
-function getGameController(): GameController {
-  if (!gameController) {
-    gameController = GameController.getInstance();
-  }
-  return gameController;
-}
+  // Initialize canvas with proper scaling
+  initialize(): void {
+    this.canvas = document.querySelector('canvas');
+    this.context = this.canvas?.getContext('2d') || null;
 
-function getPlayerNetwork(): PlayerNetwork {
-  if (!playerNetwork) {
-    playerNetwork = PlayerNetwork.getInstance();
-  }
-  return playerNetwork;
-}
+    if (this.canvas && this.context) {
+      // Get the viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-export function drawSpace(): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
+      // Set the internal resolution to match the viewport (what the game logic uses)
+      this.canvas.width = viewportWidth;
+      this.canvas.height = viewportHeight;
 
-  // Don't fill with black - let the CSS background show through
-  // ctx.fillStyle = 'black';
-  // ctx.fillRect(0, 0, cvs.width, cvs.height);
+      // Enable crisp pixel rendering
+      this.context.imageSmoothingEnabled = false;
+      this.context.imageSmoothingQuality = 'high';
 
-  // Clear the canvas with transparency instead
-  ctx.clearRect(0, 0, cvs.width, cvs.height);
-}
+      // Add resize handler to maintain full-screen coverage
+      this.resizeHandler = this.handleCanvasResize.bind(this);
+      window.addEventListener('resize', this.resizeHandler);
 
-function drawGameText(textAlpha: number, text: string): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = `rgba(255,255,255, ${String(textAlpha)})`;
-  ctx.font = `small-caps ${String(TEXT_SIZE)}px dejavu sans mono`;
-  ctx.fillText(text, cvs.width / 2, (cvs.height * 3) / 4);
-
-  textAlpha -= 1.0 / TEXT_FADE_TIME / FPS;
-  getGameController().updateTextAlpha(textAlpha);
-}
-
-function drawTriangle(centroid: Point, angle: number, color = 'white'): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
+      // Initial resize call
+      this.handleCanvasResize();
+    }
   }
 
-  const radius = SHIP_SIZE / 2;
-  const x = centroid.x;
-  const y = centroid.y;
+  // Handle canvas resizing to maintain full-screen coverage
+  private handleCanvasResize(): void {
+    if (this.canvas && this.context) {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = SHIP_SIZE / 20;
-  ctx.beginPath();
-  ctx.moveTo(
-    // nose of ship
-    x + (4 / 3) * radius * Math.cos(angle),
-    y - (4 / 3) * radius * Math.sin(angle)
-  );
-  ctx.lineTo(
-    // rear left
-    x - radius * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
-    y + radius * ((2 / 3) * Math.sin(angle) - Math.cos(angle))
-  );
-  ctx.lineTo(
-    // rear right
-    x - radius * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
-    y + radius * ((2 / 3) * Math.sin(angle) + Math.cos(angle))
-  );
-  ctx.closePath();
-  ctx.stroke();
-}
+      // Update internal resolution to match new viewport size
+      this.canvas.width = viewportWidth;
+      this.canvas.height = viewportHeight;
 
-function drawLives(lives: number, ship: Ship): void {
-  let lifeColor: string;
-  for (let i = 0; i < lives; i++) {
-    lifeColor = getLifeColor(lives, ship);
-    const lifeCentroid = new Point(SHIP_SIZE + i * SHIP_SIZE * 1.2, SHIP_SIZE);
-    drawTriangle(lifeCentroid, 0.5 * Math.PI, lifeColor);
-  }
-}
-
-function getLifeColor(lives: number, ship: Ship): string {
-  return ship.exploding && lives === 1 ? 'red' : 'white';
-}
-
-function drawScores(score: number, personalBest: number): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
+      // Re-enable crisp rendering after resize
+      this.context.imageSmoothingEnabled = false;
+      this.context.imageSmoothingQuality = 'high';
+    }
   }
 
-  // draw the score
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'white';
-  ctx.font = `${String(TEXT_SIZE)}px dejavu sans mono`;
-  ctx.fillText(String(score), cvs.width - 15, 30);
+  // Cleanup method
+  destroy(): void {
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
+    this.canvas = null;
+    this.context = null;
+  }
 
-  // draw the personal best
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'white';
-  ctx.font = `${String(TEXT_SIZE * 0.75)}px dejavu sans mono`;
-  ctx.fillText(`BEST ${String(personalBest)}`, cvs.width / 2, 30);
-}
+  // Safe accessor methods for canvas and context
+  getCanvas(): HTMLCanvasElement | null {
+    return this.canvas;
+  }
 
-function drawOtherPlayers(localShip: Ship): void {
-  const otherPlayers = getPlayerNetwork().getOtherPlayers();
-  const bots = getGameController().getBots();
+  getContext(): CanvasRenderingContext2D | null {
+    return this.context;
+  }
 
-  // Always draw players in multiplayer mode
+  requireCanvas(): HTMLCanvasElement {
+    if (!this.canvas) {
+      throw new Error('Canvas not initialized');
+    }
+    return this.canvas;
+  }
 
-  // Draw human players
-  for (const player of otherPlayers) {
-    // Only draw players that are nearby (within viewport)
-    if (getPlayerNetwork().isPlayerNearby(player, localShip)) {
-      // Don't draw if player is exploding
-      if (player.ship.exploding) {
-        continue;
+  requireContext(): CanvasRenderingContext2D {
+    if (!this.context) {
+      throw new Error('Canvas context not initialized');
+    }
+    return this.context;
+  }
+
+  // Coordinate scaling utilities for dynamic canvas sizes
+  getScaleX(): number {
+    return this.canvas ? this.canvas.width / CANVAS_INTERNAL_WIDTH : 1;
+  }
+
+  getScaleY(): number {
+    return this.canvas ? this.canvas.height / CANVAS_INTERNAL_HEIGHT : 1;
+  }
+
+  scaleX(x: number): number {
+    return x * this.getScaleX();
+  }
+
+  scaleY(y: number): number {
+    return y * this.getScaleY();
+  }
+
+  getCanvasCenter(): { x: number; y: number } {
+    return {
+      x: this.canvas ? this.canvas.width / 2 : CANVAS_DEFAULT_CENTER_X,
+      y: this.canvas ? this.canvas.height / 2 : CANVAS_DEFAULT_CENTER_Y,
+    };
+  }
+
+  // Viewport transformation methods
+  worldToScreen(worldPos: Position, shipPos: Position): Point {
+    if (!this.canvas) {
+      // Fallback to default values if canvas is not available
+      return new Point(worldPos.x - shipPos.x, worldPos.y - shipPos.y);
+    }
+
+    return new Point(
+      this.canvas.width / 2 - shipPos.x + worldPos.x,
+      this.canvas.height / 2 - shipPos.y + worldPos.y
+    );
+  }
+
+  screenToWorld(screenPos: Point, shipPos: Position): Position {
+    if (!this.canvas) {
+      // Fallback to default values if canvas is not available
+      return { x: screenPos.x + shipPos.x, y: screenPos.y + shipPos.y };
+    }
+
+    return {
+      x: screenPos.x - this.canvas.width / 2 + shipPos.x,
+      y: screenPos.y - this.canvas.height / 2 + shipPos.y,
+    };
+  }
+
+  isWorldPositionVisible(worldPos: Position, shipPos: Position, margin: number = 100): boolean {
+    if (!this.canvas) {
+      // Fallback to true if canvas is not available
+      return true;
+    }
+
+    const screenPos = this.worldToScreen(worldPos, shipPos);
+    return (
+      screenPos.x >= -margin &&
+      screenPos.x <= this.canvas.width + margin &&
+      screenPos.y >= -margin &&
+      screenPos.y <= this.canvas.height + margin
+    );
+  }
+
+  // Game rendering method that draws all game elements
+  drawGame(
+    currShip: Ship,
+    currRoidBelt: RoidBelt,
+    currScore: number,
+    textAlpha: number,
+    text: string,
+    bots: Map<string, Player>,
+    lives: number,
+    allPlayers: Player[],
+    currentPlayerId: string,
+    isConnected: boolean,
+    fps: number
+  ): void {
+    const ctx = this.getContext();
+    const canvas = this.getCanvas();
+
+    if (!ctx || !canvas) {
+      return;
+    }
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw fiery boundary
+    drawFieryBoundary(currShip.position);
+
+    // Draw roids
+    const roids = currRoidBelt.getRoids();
+    if (roids.length > 0) {
+      drawRoidsRelative(currShip, roids);
+    }
+
+    // Draw all players (including bots) using unified rendering
+    try {
+      for (const [, player] of bots.entries()) {
+        if (!player.ship.exploding) {
+          // All players use the same ship rendering with world coordinates
+          drawShipAtPosition(player.ship, currShip.position);
+        }
       }
-
-      // Don't draw if player hasn't updated recently (stale data)
-      const now = Date.now();
-      if (now - player.lastUpdate > REMOTE_PLAYER_STALE_MS) {
-        continue;
-      }
-
-      // Implement blinking effect for invincible players
-      if (player.ship.blinkCount && player.ship.blinkCount > 0 && !player.ship.blinkOn) {
-        // Player is invincible but currently in "off" blink state - don't render
-        continue;
-      }
-
-      // Get the local ship position for viewport transformation
-      const localShip = getGameController().getCurrShip();
-      const screenPos = worldToScreen(player.ship.position, localShip.position);
-
-      // Draw the other player's ship
-      drawShip(player.ship, screenPos, player.color, {
-        name: player.name,
-        score: player.score,
-        showThruster:
-          player.ship.velocity.x ** 2 + player.ship.velocity.y ** 2 > THRUSTER_SPEED_THRESHOLD_SQ,
-        thrusterColor: 'default',
-      });
-    }
-  }
-
-  // Draw bot players
-  for (const [, bot] of bots.entries()) {
-    // Don't draw if bot is exploding
-    if (bot.ship.exploding) {
-      continue;
+    } catch (error: unknown) {
+      console.error('Error drawing game:', error);
     }
 
-    // Implement blinking effect for invincible bots
-    if (bot.ship.blinkCount > 0 && !bot.ship.blinkOn) {
-      // Bot is invincible but currently in "off" blink state - don't render
-      continue;
+    // Draw ship (if not exploding, this will be handled by handleShipState)
+    // The ship drawing is handled separately in the event loop for blinking effects
+
+    // Draw ship lasers
+    drawLasers(currShip);
+
+    // Draw mini map with all players, bots, and lasers
+    this.drawMiniMapWithPlayers(currShip);
+
+    // Draw score overlay
+    drawScoreOverlay(ctx, canvas, currScore);
+
+    // Draw lives indicator
+    drawLivesIndicator(ctx, lives, currShip.color);
+
+    // Draw framerate
+    drawFramerate(ctx, fps);
+
+    // Draw text overlay if there is text to display
+    if (text && textAlpha > 0) {
+      drawTextOverlay(ctx, canvas, text, textAlpha);
     }
 
-    // Get the local ship position for viewport transformation
-    const localShip = getGameController().getCurrShip();
-    const screenPos = worldToScreen(bot.ship.position, localShip.position);
-
-    // Draw the bot ship
-    drawShip(bot.ship, screenPos, bot.color, {
-      name: bot.name,
-      isBot: true,
-      showThruster: bot.ship.thrusterActive,
-      thrusterColor: 'default',
-    });
-  }
-
-  // Draw bot lasers
-  drawAllLasers();
-}
-
-function drawShip(
-  ship: Ship,
-  screenPos: Point,
-  color: string,
-  options: {
-    name?: string;
-    isBot?: boolean;
-    botType?: string;
-    behaviorState?: string;
-    score?: number;
-    showThruster?: boolean;
-    thrusterColor?: string;
-  } = {}
-): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
-  }
-
-  const angle = ship.angle;
-  const r = ship.r;
-
-  // Draw ship triangle
-  ctx.strokeStyle = color;
-  ctx.lineWidth = SHIP_SIZE / 20;
-  ctx.beginPath();
-  ctx.moveTo(
-    // nose of ship
-    screenPos.x + (4 / 3) * r * Math.cos(angle),
-    screenPos.y - (4 / 3) * r * Math.sin(angle)
-  );
-  ctx.lineTo(
-    // rear left
-    screenPos.x - r * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
-    screenPos.y + r * ((2 / 3) * Math.sin(angle) - Math.cos(angle))
-  );
-  ctx.lineTo(
-    // rear right
-    screenPos.x - r * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
-    screenPos.y + r * ((2 / 3) * Math.sin(angle) + Math.cos(angle))
-  );
-  ctx.closePath();
-  ctx.stroke();
-
-  // Draw thruster effect if enabled
-  if (options.showThruster && !ship.exploding) {
-    const thrusterColor = options.thrusterColor || 'default';
-    drawGenericThruster(screenPos.x, screenPos.y, angle, r, thrusterColor);
-  }
-
-  // Draw name above ship
-  if (options.name) {
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillStyle = color;
-    ctx.font = '12px dejavu sans mono';
-    const displayName = options.isBot ? `[BOT] ${options.name}` : options.name;
-    ctx.fillText(displayName, screenPos.x, screenPos.y - r - 10);
-  }
-
-  // Draw health bar above the name
-  drawUnifiedHealthBar(
-    screenPos,
-    ship.health ?? SHIP_MAX_HEALTH,
-    ship.maxHealth ?? SHIP_MAX_HEALTH,
-    r,
-    {
-      width: 40,
-      height: 4,
-      borderColor: '#00ff00',
-      textColor: '#00ff00',
-      showText: true,
-      textAbove: true,
+    // Draw leaderboard if there are multiple players
+    if (allPlayers.length > 1) {
+      drawLeaderboard(ctx, canvas, allPlayers, currentPlayerId);
     }
-  );
 
-  // Draw info below ship
-  if (options.isBot) {
-    // Bot info (simplified)
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = color;
-    ctx.font = '10px dejavu sans mono';
-    ctx.fillText(`BOT`, screenPos.x, screenPos.y + r + 5);
-  } else if (options.score !== undefined) {
-    // Player score
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = color;
-    ctx.font = '10px dejavu sans mono';
-    ctx.fillText(`Score: ${options.score}`, screenPos.x, screenPos.y + r + 5);
+    // Draw connection status
+    const remoteHumanCount = allPlayers.filter((p) => p.type === 'remote').length;
+    const botCount = allPlayers.filter((p) => p.type === 'bot').length;
+    drawConnectionStatus(ctx, canvas, isConnected, allPlayers.length, remoteHumanCount, botCount);
+  }
+
+  // Helper method to draw mini map with all players
+  private drawMiniMapWithPlayers(ship: Ship): void {
+    // Draw the base mini map
+    const ctx = this.getContext();
+    const canvas = this.getCanvas();
+    if (ctx && canvas) {
+      drawMiniMap(ctx, canvas, ship);
+    }
+
+    // The mini map module will handle drawing all players internally
   }
 }
 
-function drawUnifiedHealthBar(
-  screenPos: Point,
-  currentHealth: number,
-  maxHealth: number,
-  radius: number,
-  options: {
-    width?: number;
-    height?: number;
-    borderColor?: string;
-    textColor?: string;
-    showText?: boolean;
-    textAbove?: boolean;
-  } = {}
-): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
-  }
+// Singleton instance
+const canvasManager = new CanvasManager();
 
-  // Default options
-  const width = options.width || radius * 2.5;
-  const height = options.height || 6;
-  const borderColor = options.borderColor || '#00ff00';
-  const textColor = options.textColor || '#00ff00';
-  const showText = options.showText !== false;
-  const textAbove = options.textAbove || false;
-
-  const healthBarY = screenPos.y - radius - (textAbove ? 25 : 15);
-
-  // Get health percentage
-  const healthPercent = Math.max(0, Math.min(1, currentHealth / maxHealth));
-
-  // Draw health bar background (dark)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(screenPos.x - width / 2, healthBarY, width, height);
-
-  // Draw health bar border
-  ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(screenPos.x - width / 2, healthBarY, width, height);
-
-  // Draw health bar fill (green to red based on health)
-  let healthColor: string;
-  if (healthPercent > 0.6) {
-    healthColor = '#00ff00'; // Green for high health
-  } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00'; // Yellow for medium health
-  } else {
-    healthColor = '#ff0000'; // Red for low health
-  }
-
-  ctx.fillStyle = healthColor;
-  ctx.fillRect(screenPos.x - width / 2, healthBarY, width * healthPercent, height);
-
-  // Draw health text if enabled
-  if (showText) {
-    ctx.fillStyle = textColor;
-    ctx.font = '8px dejavu sans mono';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = textAbove ? 'bottom' : 'top';
-    const textY = textAbove ? healthBarY - 2 : healthBarY + height + 2;
-    ctx.fillText(`${Math.ceil(currentHealth)}/${maxHealth}`, screenPos.x, textY);
-  }
-}
-
-function drawAllLasers(): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
-  }
-
-  const localShip = getGameController().getCurrShip();
-
-  // Draw player lasers
-  const currentPlayer = getGameController().getCurrPlayer();
-  if (currentPlayer && localShip.lasers.length > 0) {
-    for (const laser of localShip.lasers) {
-      const screenPos = worldToScreen(laser.position, localShip.position);
-      drawLaser(screenPos, currentPlayer.color, laser.explodeTime);
-    }
-  }
-
-  // Draw bot lasers (unified system)
-  const bots = getGameController().getBots();
-  for (const [, bot] of bots.entries()) {
-    if (bot instanceof BotPlayer && bot.ship.lasers.length > 0) {
-      for (const laser of bot.ship.lasers) {
-        const screenPos = worldToScreen(laser.position, localShip.position);
-        drawLaser(screenPos, bot.color, laser.explodeTime);
-      }
-    }
-  }
-}
-
-// Helper function to draw a single laser
-function drawLaser(screenPos: Point, color: string, explodeTime: number): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
-  }
-
-  ctx.save();
-
-  if (explodeTime === 0) {
-    // Normal laser
-    ctx.fillStyle = color;
-    const laserRadius = SHIP_SIZE / 3;
-    ctx.beginPath();
-    ctx.arc(screenPos.x, screenPos.y, laserRadius, 0, Math.PI * 2, false);
-    ctx.fill();
-  } else {
-    // Exploding laser
-    ctx.fillStyle = 'orangered';
-    const explosionRadius = SHIP_SIZE / 2;
-    ctx.beginPath();
-    ctx.arc(screenPos.x, screenPos.y, explosionRadius, 0, Math.PI * 2, false);
-    ctx.fill();
-
-    ctx.fillStyle = color;
-    const laserRadius = SHIP_SIZE / 3;
-    ctx.beginPath();
-    ctx.arc(screenPos.x, screenPos.y, laserRadius, 0, Math.PI * 2, false);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawMultiplayerStatus(): void {
-  const status = getPlayerNetwork().getConnectionStatus();
-  const localPlayer = getPlayerNetwork().getLocalPlayerInfo();
-
-  // Start drawing from a safe position that won't overlap with other UI
-  let yOffset = 60;
-  const xPos = 15;
-  const lineHeight = 18;
-
-  // Draw connection status
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = status.connected ? '#00ff00' : '#ff0000';
-  ctx.font = '12px dejavu sans mono';
-
-  const statusText = status.connected ? 'CONNECTED' : 'DISCONNECTED';
-  ctx.fillText(`MP: ${statusText}`, xPos, yOffset);
-  yOffset += lineHeight;
-
-  // Get other players early so we can use them in the player count display
-  const allPlayers = getPlayerNetwork().getOtherPlayers();
-
-  // Filter out bot players to show only real players
-  const realPlayers = allPlayers.filter((player) => !(player instanceof BotPlayer));
-
-  // Draw player count (show only real players, no server/local differentiation)
-  ctx.fillStyle = '#00ff00';
-  ctx.fillText(`Players: ${realPlayers.length + 1}`, xPos, yOffset);
-  yOffset += lineHeight;
-
-  // Draw local player info
-  ctx.fillStyle = '#00ff00';
-  ctx.fillText(`You: ${localPlayer.name}`, xPos, yOffset);
-  yOffset += lineHeight;
-
-  // Draw multiplayer mode indicator
-  ctx.fillStyle = '#00ff00';
-  const asteroidCount = getGameController().getCurrAsteroidCount();
-  ctx.fillText(`Asteroids: ${asteroidCount} (MP Mode)`, xPos, yOffset);
-  yOffset += lineHeight;
-
-  // Draw bot count
-  const botCount = getGameController().getBots().size;
-  if (botCount > 0) {
-    ctx.fillStyle = '#ff00ff';
-    ctx.fillText(`Bots: ${botCount}`, xPos, yOffset);
-    yOffset += lineHeight;
-  }
-
-  // Draw mini-map showing only real players (no bots)
-  const currentShip = getGameController().getCurrShip();
-  const bots = getGameController().getBots();
-  const botArray = Array.from(bots.values()) as BotPlayer[];
-  drawMiniMap(currentShip, realPlayers, botArray, xPos, yOffset);
-  yOffset += 120; // Add space for mini-map
-
-  // Draw mini-map legend
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '10px dejavu sans mono';
-  ctx.fillText('Mini-map Legend:', xPos, yOffset);
-  yOffset += lineHeight;
-
-  // Green dot (local player)
-  ctx.fillStyle = '#00ff00';
-  ctx.fillRect(xPos, yOffset - 2, 4, 4);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('You', xPos + 8, yOffset);
-  yOffset += lineHeight;
-
-  // Yellow dot (other players)
-  ctx.fillStyle = '#ffff00';
-  ctx.fillRect(xPos, yOffset - 2, 4, 4);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('Other Players', xPos + 8, yOffset);
-  yOffset += lineHeight;
-
-  // Purple dot (bots)
-  ctx.fillStyle = '#ff00ff';
-  ctx.fillRect(xPos, yOffset - 2, 4, 4);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('Bots', xPos + 8, yOffset);
-  yOffset += lineHeight;
-
-  // Show health summary for all players
-  if (realPlayers.length > 0) {
-    yOffset += lineHeight; // Add spacing
-    ctx.fillStyle = '#ffff00'; // Yellow for health info
-    ctx.fillText('Player Health:', xPos, yOffset);
-    yOffset += lineHeight;
-
-    // Show local player health
-    const localShip = getGameController().getCurrShip();
-    const localHealth = localShip.health;
-    const localMaxHealth = localShip.maxHealth;
-    const localHealthPercent = Math.round((localHealth / localMaxHealth) * 100);
-    ctx.fillStyle = '#00ff00';
-    ctx.fillText(`You: ${localHealth}/${localMaxHealth} (${localHealthPercent}%)`, xPos, yOffset);
-    yOffset += lineHeight;
-
-    // Show other players' health
-    for (const player of realPlayers) {
-      if (player.ship.health !== undefined && player.ship.maxHealth !== undefined) {
-        const healthPercent = Math.round((player.ship.health / player.ship.maxHealth) * 100);
-        const healthColor =
-          healthPercent > 60 ? '#00ff00' : healthPercent > 30 ? '#ffff00' : '#ff0000';
-        ctx.fillStyle = healthColor;
-        ctx.fillText(
-          `${player.name}: ${Math.ceil(player.ship.health)}/${player.ship.maxHealth} (${healthPercent}%)`,
-          xPos,
-          yOffset
-        );
-        yOffset += lineHeight;
-      }
-    }
-  }
-}
-
-function drawMiniMap(
-  localShip: Ship,
-  otherPlayers: Player[],
-  bots: BotPlayer[],
-  xPos: number,
-  yPos: number
-): void {
-  const ctx = getCTX();
-  if (!ctx) {
-    return;
-  }
-
-  const mapSize = 100; // 100x100 pixel mini-map
-  const mapRadius = mapSize / 2;
-  const mapCenterX = xPos + mapRadius;
-  const mapCenterY = yPos + mapRadius;
-
-  // Draw mini-map background
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(xPos, yPos, mapSize, mapSize);
-  ctx.strokeStyle = '#00ff00';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(xPos, yPos, mapSize, mapSize);
-
-  // Calculate world bounds for scaling (adjust these values based on your game world)
-  const worldRadius = 2000; // Adjust based on your game world size
-  const scale = mapRadius / worldRadius;
-
-  // Draw boundary on mini-map
-  const boundary = getGameBoundary();
-
-  // Convert boundary coordinates to mini-map scale (absolute world coordinates)
-  const boundaryLeft = boundary.x * scale;
-  const boundaryRight = (boundary.x + boundary.width) * scale;
-  const boundaryTop = boundary.y * scale;
-  const boundaryBottom = (boundary.y + boundary.height) * scale;
-
-  // Draw boundary rectangle (represents the actual game boundary)
-  ctx.strokeStyle = '#ff4400'; // Fiery red color to match the main boundary
-  ctx.lineWidth = 2;
-  ctx.setLineDash([3, 3]); // Dashed line to make it clear it's a boundary
-
-  // Calculate the rectangle bounds relative to mini-map center
-  const rectLeft = mapCenterX + boundaryLeft;
-  const rectRight = mapCenterX + boundaryRight;
-  const rectTop = mapCenterY + boundaryTop;
-  const rectBottom = mapCenterY + boundaryBottom;
-
-  // Draw the boundary rectangle
-  ctx.strokeRect(rectLeft, rectTop, rectRight - rectLeft, rectBottom - rectTop);
-  ctx.setLineDash([]); // Reset line dash
-
-  // Draw local player at their actual world position
-  const localPlayerX = localShip.position.x * scale;
-  const localPlayerY = localShip.position.y * scale;
-  const mapLocalX = mapCenterX + localPlayerX;
-  const mapLocalY = mapCenterY + localPlayerY;
-
-  ctx.fillStyle = '#00ff00'; // Green for local player
-  ctx.fillRect(mapLocalX - 2, mapLocalY - 2, 4, 4);
-
-  // Draw other players
-  for (const player of otherPlayers) {
-    if (player.ship.exploding) {
-      continue;
-    }
-
-    // Calculate absolute world position
-    const playerX = player.ship.position.x * scale;
-    const playerY = player.ship.position.y * scale;
-
-    // Check if player is within mini-map bounds (rectangular check)
-    if (
-      playerX >= -mapRadius &&
-      playerX <= mapRadius &&
-      playerY >= -mapRadius &&
-      playerY <= mapRadius
-    ) {
-      const mapX = mapCenterX + playerX;
-      const mapY = mapCenterY + playerY;
-
-      // Draw player dot
-      ctx.fillStyle = '#ffff00'; // Yellow for other players
-      ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
-    }
-  }
-
-  // Draw bots
-  for (const bot of bots) {
-    if (bot.ship.exploding) {
-      continue;
-    }
-
-    // Calculate absolute world position
-    const botX = bot.ship.position.x * scale;
-    const botY = bot.ship.position.y * scale;
-
-    // Check if bot is within mini-map bounds (rectangular check)
-    if (botX >= -mapRadius && botX <= mapRadius && botY >= -mapRadius && botY <= mapRadius) {
-      const mapX = mapCenterX + botX;
-      const mapY = mapCenterY + botY;
-
-      // Draw bot dot
-      ctx.fillStyle = '#ff00ff'; // Purple for bots
-      ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
-    }
-  }
-}
-
-export function drawGameCanvas(
-  ship: Ship,
-  roidBelt: AsteroidBelt,
-  currScore: number,
-  personalBest: number,
-  textAlpha: number,
-  text: string
-): void {
-  try {
-    // Log the start of frame drawing
-    drawSpace();
-    roidBelt.spawnRoids();
-
-    drawRoidsRelative(ship, roidBelt.roids);
-
-    // Draw other players if multiplayer is enabled
-    drawOtherPlayers(ship);
-
-    // Draw the fiery boundary
-    drawFieryBoundary(ship.position);
-
-    drawScores(currScore, personalBest);
-    // Get lives from the current player
-    const currentPlayer = getGameController().getCurrPlayer();
-    drawLives(currentPlayer.lives, ship);
-
-    // Draw multiplayer status
-    drawMultiplayerStatus();
-
-    if (textAlpha >= 0) {
-      drawGameText(textAlpha, text);
-    } else if (ship.exploding && ship.explodeTime === 0) {
-      // Only show game over when explosion animation is finished
-      const currentPlayer = getGameController().getCurrPlayer();
-      if (currentPlayer && currentPlayer.lives <= 0) {
-        // Dynamic import to avoid chunking conflicts
-        import('../ui/mainMenu').then(({ showGameOverMenu }) => {
-          showGameOverMenu();
-        });
-      }
-    }
-  } catch (error) {
-    console.error('CANVAS', 'Error in drawGameCanvas', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      shipPos: { x: ship.position.x, y: ship.position.y },
-    });
-  }
-}
+// Export the singleton instance
+export { canvasManager };

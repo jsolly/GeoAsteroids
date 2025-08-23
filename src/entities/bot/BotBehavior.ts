@@ -1,7 +1,6 @@
-import type { Asteroid } from '../asteroid/Asteroid';
+import type { Position, Velocity } from '../../../shared-types';
 import type { Player } from '../player/Player';
-import type { Player as PlayerInterface, Position, Velocity } from '../player/types';
-import { BotPlayer } from './BotPlayer';
+import type { Roid } from '../roid/Roid';
 
 export interface BotShoot {
   botId: string;
@@ -23,7 +22,7 @@ export class BotBehavior {
   }
 
   // Movement methods
-  initializeBotSteering(botId: string, _botType: string): void {
+  initializeBotSteering(botId: string): void {
     // Initialize with a random target position
     const target = this.getRandomTargetPosition();
     this.steeringTargets.set(botId, target);
@@ -37,8 +36,8 @@ export class BotBehavior {
     this.steeringTargets.clear();
   }
 
-  moveBot(bot: Player, asteroids: Asteroid[], otherPlayers: PlayerInterface[] = []): void {
-    if (!(bot instanceof BotPlayer) || bot.ship.exploding || this.debugMovementDisabled) {
+  moveBot(bot: Player, roids: Roid[], otherPlayers: Player[] = []): void {
+    if (bot.type !== 'bot' || bot.ship.exploding || this.debugMovementDisabled) {
       return;
     }
 
@@ -63,8 +62,8 @@ export class BotBehavior {
       }
     }
 
-    // Adjust target using asteroid avoidance
-    let adjustedTarget = this.adjustTargetForAsteroids(bot, target, asteroids);
+    // Adjust target using roid avoidance
+    let adjustedTarget = this.adjustTargetForRoids(bot, target, roids);
 
     // Add short-range avoidance to players to reduce collisions
     adjustedTarget = this.adjustTargetForPlayers(bot, adjustedTarget, otherPlayers);
@@ -77,17 +76,13 @@ export class BotBehavior {
     // Smoothly rotate toward desiredAngle using angular velocity
     this.smoothRotateTowards(bot, desiredAngle);
 
-    // Thrust only when mostly facing the target for natural movement
+    // Thrust more aggressively - bots should be more active
     const angleDiff = this.getSmallestAngleDiff(desiredAngle, bot.ship.angle);
-    const thrustAngleThreshold = 0.6; // ~34 degrees
+    const thrustAngleThreshold = 1.2; // ~68 degrees - much more generous
     bot.ship.thrusting = Math.abs(angleDiff) < thrustAngleThreshold && !bot.ship.exploding;
   }
 
-  private adjustTargetForAsteroids(
-    bot: Player,
-    originalTarget: Position,
-    asteroids: Asteroid[]
-  ): Position {
+  private adjustTargetForRoids(bot: Player, originalTarget: Position, roids: Roid[]): Position {
     const maxAvoidanceDistance = 120; // Maximum distance for avoidance influence
 
     const adjustedTarget = { ...originalTarget };
@@ -95,23 +90,23 @@ export class BotBehavior {
     let totalAvoidanceY = 0;
     let avoidanceCount = 0;
 
-    for (const asteroid of asteroids) {
-      const distance = this.getDistance(bot.ship.position, asteroid.position);
+    for (const roid of roids) {
+      const distance = this.getDistance(bot.ship.position, roid.position);
 
       if (distance < maxAvoidanceDistance) {
-        // Calculate avoidance vector (away from asteroid)
-        const dx = bot.ship.position.x - asteroid.position.x;
-        const dy = bot.ship.position.y - asteroid.position.y;
-        const asteroidDistance = Math.sqrt(dx * dx + dy * dy);
+        // Calculate avoidance vector (away from roid)
+        const dx = bot.ship.position.x - roid.position.x;
+        const dy = bot.ship.position.y - roid.position.y;
+        const roidDistance = Math.sqrt(dx * dx + dy * dy);
 
-        if (asteroidDistance > 0) {
-          // Stronger avoidance for closer asteroids
+        if (roidDistance > 0) {
+          // Stronger avoidance for closer roids
           const avoidanceStrength = Math.max(
             0,
             (maxAvoidanceDistance - distance) / maxAvoidanceDistance
           );
-          const normalizedDx = dx / asteroidDistance;
-          const normalizedDy = dy / asteroidDistance;
+          const normalizedDx = dx / roidDistance;
+          const normalizedDy = dy / roidDistance;
 
           totalAvoidanceX += normalizedDx * avoidanceStrength;
           totalAvoidanceY += normalizedDy * avoidanceStrength;
@@ -120,7 +115,7 @@ export class BotBehavior {
       }
     }
 
-    // Apply avoidance if any asteroids are nearby
+    // Apply avoidance if any roids are nearby
     if (avoidanceCount > 0) {
       const averageAvoidanceX = totalAvoidanceX / avoidanceCount;
       const averageAvoidanceY = totalAvoidanceY / avoidanceCount;
@@ -138,7 +133,7 @@ export class BotBehavior {
   private adjustTargetForPlayers(
     bot: Player,
     originalTarget: Position,
-    otherPlayers: PlayerInterface[]
+    otherPlayers: Player[]
   ): Position {
     // Only apply close-range separation to avoid damaging collisions
     const separationDistance = 100; // pixels; tuned to reduce body collisions
@@ -199,7 +194,7 @@ export class BotBehavior {
   }
 
   private smoothRotateTowards(bot: Player, targetAngle: number): void {
-    if (!(bot instanceof BotPlayer)) {
+    if (bot.type !== 'bot') {
       return;
     }
 
@@ -212,21 +207,8 @@ export class BotBehavior {
       angleDiff += Math.PI * 2;
     }
 
-    // Rotation acceleration depends on bot type (keeps it feeling alive)
-    let rotationAcceleration: number;
-    switch (bot.botType) {
-      case 'aggressive':
-        rotationAcceleration = 0.08;
-        break;
-      case 'defensive':
-        rotationAcceleration = 0.06;
-        break;
-      case 'patrol':
-        rotationAcceleration = 0.07;
-        break;
-      default:
-        rotationAcceleration = 0.07;
-    }
+    // Rotation acceleration for bots
+    const rotationAcceleration = 0.07;
 
     // Apply rotation acceleration toward the target
     if (angleDiff > 0) {
@@ -262,7 +244,7 @@ export class BotBehavior {
   // Combat methods
   updateBotShooting(bots: Map<string, Player>): void {
     for (const [, bot] of bots.entries()) {
-      if (!(bot instanceof BotPlayer) || bot.ship.exploding) {
+      if (bot.type !== 'bot' || bot.ship.exploding) {
         continue;
       }
 
@@ -274,7 +256,7 @@ export class BotBehavior {
   }
 
   private shouldBotShoot(bot: Player): boolean {
-    if (!(bot instanceof BotPlayer) || !this.localPlayerAlive) {
+    if (bot.type !== 'bot' || !this.localPlayerAlive) {
       return false;
     }
 
@@ -301,7 +283,7 @@ export class BotBehavior {
 
   private makeBotShoot(bot: Player): void {
     // Shoot straight (from current ship angle) using the same system as players
-    if (bot instanceof BotPlayer) {
+    if (bot.type === 'bot') {
       bot.ship.fireLaser();
       bot.ship.lastShotTime = Date.now();
     }
@@ -316,7 +298,7 @@ export class BotBehavior {
   // Update bot lasers using Ship's built-in laser movement system
   updateBotLasers(bots: Map<string, Player>): void {
     for (const [, bot] of bots.entries()) {
-      if (!(bot instanceof BotPlayer)) {
+      if (bot.type !== 'bot') {
         continue;
       }
 
@@ -327,7 +309,7 @@ export class BotBehavior {
 
   clearBotLasers(bots: Map<string, Player>): void {
     for (const [, bot] of bots.entries()) {
-      if (!(bot instanceof BotPlayer)) {
+      if (bot.type !== 'bot') {
         continue;
       }
 

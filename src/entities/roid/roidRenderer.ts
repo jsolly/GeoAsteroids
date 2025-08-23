@@ -1,10 +1,10 @@
-import { getCTX } from '../../constants/rendering/canvas';
 import type { Ship } from '../../entities/ship/Ship';
-import { worldToScreen } from '../../rendering/viewport';
-import type { Asteroid } from './Asteroid';
+import { canvasManager } from '../../rendering/canvas';
 
-export function drawRoidsRelative(ship: Ship, roids: Asteroid[]): void {
-  const ctx = getCTX();
+import type { Roid } from './Roid';
+
+export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
+  const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
@@ -13,8 +13,8 @@ export function drawRoidsRelative(ship: Ship, roids: Asteroid[]): void {
     ctx.strokeStyle = 'slategrey';
     ctx.lineWidth = 1.5;
 
-    // Convert asteroid world position to screen position using viewport transformation
-    const screenPos = worldToScreen(roid.position, ship.position);
+    // Convert roid world position to screen position using viewport transformation
+    const screenPos = canvasManager.worldToScreen(roid.position, ship.position);
 
     const r = roid.r;
     const angle = roid.angle;

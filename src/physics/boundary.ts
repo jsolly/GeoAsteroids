@@ -1,6 +1,3 @@
-import { SHIP_SIZE } from '../constants/entities/ship';
-import type { Position } from '../entities/player/types';
-
 export interface Boundary {
   x: number;
   y: number;
@@ -19,60 +16,5 @@ export function getGameBoundary(): Boundary {
     y: -boundarySize / 2 - buffer,
     width: boundarySize + buffer * 2,
     height: boundarySize + buffer * 2,
-  };
-}
-
-export function isShipOutOfBounds(shipPosition: Position): boolean {
-  const boundary = getGameBoundary();
-  const shipRadius = SHIP_SIZE / 2;
-
-  // Check if ship center is outside the boundary
-  return (
-    shipPosition.x - shipRadius < boundary.x ||
-    shipPosition.x + shipRadius > boundary.x + boundary.width ||
-    shipPosition.y - shipRadius < boundary.y ||
-    shipPosition.y + shipRadius > boundary.y + boundary.height
-  );
-}
-
-export function getBoundaryCollisionSide(
-  shipPosition: Position
-): 'top' | 'right' | 'bottom' | 'left' | null {
-  const boundary = getGameBoundary();
-  const shipRadius = SHIP_SIZE / 2;
-
-  if (shipPosition.x - shipRadius < boundary.x) {
-    return 'left';
-  }
-  if (shipPosition.x + shipRadius > boundary.x + boundary.width) {
-    return 'right';
-  }
-  if (shipPosition.y - shipRadius < boundary.y) {
-    return 'top';
-  }
-  if (shipPosition.y + shipRadius > boundary.y + boundary.height) {
-    return 'bottom';
-  }
-
-  return null;
-}
-
-/**
- * Generates a random position within the game boundary, ensuring ships respawn safely
- * @returns A random position that's guaranteed to be inside the boundary
- */
-export function getRandomPositionWithinBoundary(): Position {
-  const boundary = getGameBoundary();
-  const shipRadius = SHIP_SIZE / 2;
-
-  // Ensure the ship's entire radius fits within the boundary
-  const safeX = boundary.x + shipRadius;
-  const safeY = boundary.y + shipRadius;
-  const safeWidth = boundary.width - shipRadius * 2;
-  const safeHeight = boundary.height - shipRadius * 2;
-
-  return {
-    x: safeX + Math.random() * safeWidth,
-    y: safeY + Math.random() * safeHeight,
   };
 }

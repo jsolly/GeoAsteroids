@@ -1,8 +1,8 @@
-import { ROID_SIZE } from '../../constants/entities/asteroid';
-import { getCVS } from '../../constants/rendering/canvas';
-import type { Position } from '../player/types';
+import type { Position } from '../../../shared-types';
+import { ROID_SIZE } from '../../constants/entities/roid';
+import { canvasManager } from '../../rendering/canvas';
 
-export function spawnAsteroidFromEdge(): Position {
+export function spawnRoidFromEdge(): Position {
   // Get the current canvas dimensions for full-screen spawning
   const canvasWidth = window.innerWidth;
   const canvasHeight = window.innerHeight;
@@ -52,7 +52,7 @@ export function spawnAsteroidFromEdge(): Position {
 }
 
 export function calculateSpawnCount(): number {
-  const cvs = getCVS();
+  const cvs = canvasManager.getCanvas();
   const width = cvs?.width ?? 800; // Default to 800 for tests and server environments
   return Math.min(6, Math.floor(width / 200));
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Laser } from '../src/entities/laser';
-import type { Player } from '../src/entities/player/types.ts';
+import { Laser } from '../src/entities/laser/Laser';
+import { Player } from '../src/entities/player/Player';
 import { Ship } from '../src/entities/ship/Ship.ts';
-import { detectLaserPlayerCollisions } from '../src/physics/collision';
+import { detectLaserPlayerCollisions } from '../src/physics/collision/laserCollisions';
 
 // Mock the constants
 vi.mock('../src/constants', () => ({
@@ -33,8 +33,8 @@ vi.mock('../src/constants', () => ({
 }));
 
 // Mock the sound effects
-vi.mock('../src/entities/asteroid/Asteroid.ts', () => ({
-  Asteroid: {
+vi.mock('../src/entities/roid/Roid.ts', () => ({
+  Roid: {
     fxHit: {
       play: vi.fn(),
     },
@@ -46,7 +46,6 @@ vi.mock('../src/entities/bot/botManager.ts', () => ({
   BotManager: {
     getInstance: vi.fn(() => ({
       getBotLasers: vi.fn(() => new Map()),
-      botTakeDamage: vi.fn(),
     })),
   },
 }));
@@ -97,24 +96,18 @@ describe('Collision Detection System', () => {
       shotCooldown: 2000,
     } as unknown as Ship;
 
-    const otherPlayer = {
+    const otherPlayer = Player.createPlayer({
       id: 'player-1',
       name: 'Player1',
-      ship: mockShip,
-      score: 0,
-      lastUpdate: Date.now(),
-      isBot: false,
-      lives: 3,
-      spawnProtectedUntil: Date.now() + 3000, // 3 seconds spawn protection
-      color: '#ff0000', // Test color for the other player
-      respawn: () => {},
-      onShipExploded: () => {},
-      update: () => {},
-      get isDead(): boolean {
-        return this.lives <= 0;
-      },
-      handleLifeLost: () => {},
-    };
+      type: 'remote',
+      position: { x: 100, y: 0 },
+    });
+    otherPlayer.ship = mockShip;
+    otherPlayer.score = 0;
+    otherPlayer.lastUpdate = Date.now();
+    otherPlayer.lives = 3;
+    otherPlayer.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
+    otherPlayer.color = '#ff0000'; // Test color for the other player
 
     // Add laser to ship
     ship.lasers = [laser];
@@ -185,18 +178,14 @@ describe('Collision Detection System', () => {
         healthRegenTimer: 0,
       } as unknown as Ship;
 
-      const otherPlayer2 = {
-        ...otherPlayer,
+      const otherPlayer2 = Player.createPlayer({
         id: 'player-2',
         name: 'Player2',
-        ship: mockShip2,
-        lives: 3,
-        update: () => {},
-        get isDead(): boolean {
-          return this.lives <= 0;
-        },
-        handleLifeLost: () => {},
-      };
+        type: 'remote',
+        position: { x: 200, y: 0 },
+      });
+      otherPlayer2.ship = mockShip2;
+      otherPlayer2.lives = 3;
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer, otherPlayer2]);
 
@@ -320,7 +309,7 @@ describe('Collision Detection System', () => {
   // detectPlayerLaserShipCollisions tests removed (no local simulation)
 });
 
-// Mock the constants needed for bot-asteroid collisions
+// Mock the constants needed for bot-roid collisions
 vi.mock('../src/constants', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -333,19 +322,19 @@ vi.mock('../src/constants', async (importOriginal) => {
   };
 });
 
-// Mock the asteroid sound
-vi.mock('../src/entities/asteroid/Asteroid.ts', () => ({
-  Asteroid: {
+// Mock the roid sound
+vi.mock('../src/entities/roid/Roid.ts', () => ({
+  Roid: {
     fxHit: {
       play: vi.fn(),
     },
   },
 }));
 
-describe('Bot-Asteroid Collision System', () => {
-  it('should apply damage to bots when hitting asteroids', async () => {
+describe('Bot-Roid Collision System', () => {
+  it('should apply damage to bots when hitting roids', async () => {
     // Import the function after mocking
-    const { detectPlayerAsteroidCollisions } = await import('../src/physics/collision');
+    const { detectPlayerRoidCollisions } = await import('../src/physics/collision/shipCollisions');
 
     // Create a mock bot with minimal required properties
     const mockBot = {
@@ -376,8 +365,8 @@ describe('Bot-Asteroid Collision System', () => {
       spawnProtectedUntil: 0,
     };
 
-    // Create a mock asteroid belt with one asteroid
-    const mockAsteroidBelt = {
+    // Create a mock roid belt with one roid
+    const mockRoidBelt = {
       roids: [
         {
           position: { x: 10, y: 0 }, // Close enough to collide
@@ -387,12 +376,12 @@ describe('Bot-Asteroid Collision System', () => {
     };
 
     // Create bots array and cast to expected types for testing
-    const bots = [mockBot as unknown as import('../src/entities/bot/types').BotPlayer];
+    const bots = [mockBot as unknown as Player];
 
     // Call the function
-    detectPlayerAsteroidCollisions(
+    detectPlayerRoidCollisions(
       bots,
-      mockAsteroidBelt as unknown as import('../src/entities/asteroid/Asteroid').AsteroidBelt
+      mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
     );
 
     // Verify damage was applied
@@ -403,13 +392,14 @@ describe('Bot-Asteroid Collision System', () => {
 
   it('should trigger bot explosion when health reaches 0', async () => {
     // Import the function after mocking
-    const { detectPlayerAsteroidCollisions } = await import('../src/physics/collision');
+    const { detectPlayerRoidCollisions } = await import('../src/physics/collision/shipCollisions');
 
     // Create a mock bot with low health
     const mockBot = {
       id: 'test-bot',
       botType: 'aggressive' as const,
       ship: {
+        id: 'test-bot-ship',
         position: { x: 0, y: 0 },
         r: 15,
         health: 20, // Low health
@@ -428,16 +418,24 @@ describe('Bot-Asteroid Collision System', () => {
             mockBot.ship.health = 0;
             mockBot.ship.exploding = true;
             mockBot.ship.explodeTime = 18;
+            // Simulate the shipExploded event dispatch that would happen in real code
+            window.dispatchEvent(
+              new CustomEvent('shipExploded', {
+                detail: {
+                  shipId: mockBot.ship.id || 'test-bot-ship',
+                  position: { x: mockBot.ship.position.x, y: mockBot.ship.position.y },
+                },
+              })
+            );
           }
         },
       },
       spawnProtectedUntil: 0,
       respawnTimer: undefined,
-      respawnPosition: undefined,
     };
 
-    // Create a mock asteroid belt with one asteroid
-    const mockAsteroidBelt = {
+    // Create a mock roid belt with one roid
+    const mockRoidBelt = {
       roids: [
         {
           position: { x: 10, y: 0 }, // Close enough to collide
@@ -447,25 +445,25 @@ describe('Bot-Asteroid Collision System', () => {
     };
 
     // Create bots array and cast to expected types for testing
-    const bots = [mockBot as unknown as import('../src/entities/bot/types').BotPlayer];
+    const bots = [mockBot as unknown as Player];
 
     // Call the function
-    detectPlayerAsteroidCollisions(
+    detectPlayerRoidCollisions(
       bots,
-      mockAsteroidBelt as unknown as import('../src/entities/asteroid/Asteroid').AsteroidBelt
+      mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
     );
 
     // Verify explosion was triggered
     expect(mockBot.ship.health).toBe(0);
     expect(mockBot.ship.exploding).toBe(true);
     expect(mockBot.ship.explodeTime).toBe(18);
-    expect(mockBot.respawnTimer).toBe(300);
-    expect(mockBot.respawnPosition).toBeDefined();
+    // Note: respawnTimer is set by botManager.updateBotsInGameLoop(), not by collision detection
+    // The collision detection only triggers the explosion, the bot manager handles respawn timing
   });
 
   it('should skip invincible bots (blinking)', async () => {
     // Import the function after mocking
-    const { detectPlayerAsteroidCollisions } = await import('../src/physics/collision');
+    const { detectPlayerRoidCollisions } = await import('../src/physics/collision/shipCollisions');
 
     // Create a mock bot that is blinking (invincible)
     const mockBot = {
@@ -486,8 +484,8 @@ describe('Bot-Asteroid Collision System', () => {
       spawnProtectedUntil: 0,
     };
 
-    // Create a mock asteroid belt with one asteroid
-    const mockAsteroidBelt = {
+    // Create a mock roid belt with one roid
+    const mockRoidBelt = {
       roids: [
         {
           position: { x: 10, y: 0 }, // Close enough to collide
@@ -497,12 +495,12 @@ describe('Bot-Asteroid Collision System', () => {
     };
 
     // Create bots array and cast to expected types for testing
-    const bots = [mockBot as unknown as import('../src/entities/bot/types').BotPlayer];
+    const bots = [mockBot as unknown as Player];
 
     // Call the function
-    detectPlayerAsteroidCollisions(
+    detectPlayerRoidCollisions(
       bots,
-      mockAsteroidBelt as unknown as import('../src/entities/asteroid/Asteroid').AsteroidBelt
+      mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
     );
 
     // Verify no damage was applied

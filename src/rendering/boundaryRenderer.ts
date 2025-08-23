@@ -1,14 +1,16 @@
-import { SHIP_EXPLODE_DUR_FRAMES, SHIP_RESPAWN_DELAY_FRAMES } from '../constants/entities/ship';
-import { getCTX, getCVS } from '../constants/rendering/canvas';
-import { Asteroid } from '../entities/asteroid/Asteroid';
-import type { Player, Position } from '../entities/player/types';
+import type { Position } from '../../shared-types';
+import { SHIP_EXPLODE_DUR_FRAMES } from '../constants/entities/ship';
+import type { Player } from '../entities/player/Player';
+import { Roid } from '../entities/roid/Roid';
 import type { Ship } from '../entities/ship/Ship';
-import { getGameBoundary, isShipOutOfBounds } from '../physics/boundary';
+import { getGameBoundary } from '../physics/boundary';
+import { isShipOutOfBounds } from '../physics/collision/boundaryCollisions';
 import { logCollisionDetection } from '../physics/collision/collisionUtils';
+import { canvasManager } from './canvas';
 
 export function drawFieryBoundary(shipPosition: Position): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
 
   if (!ctx || !cvs) {
     return;
@@ -77,12 +79,8 @@ export function detectBoundaryCollisions(ship: Ship): boolean {
     return false;
   }
 
-  // Skip collision detection if ship is invincible (blinking or spawn protection)
-  if (ship.blinkCount > 0) {
-    logCollisionDetection('Boundary Collision', 'Boundary', ship.id, false);
-    return false;
-  }
-
+  // BOUNDARY IS THE ULTIMATE KILLER - ignores all invincibility!
+  // No spawn protection, no blinking protection - if you hit the boundary, you die!
   if (isShipOutOfBounds(ship.position)) {
     logCollisionDetection('Boundary Collision', 'Boundary', ship.id, true);
 
@@ -101,7 +99,7 @@ export function detectBoundaryCollisions(ship: Ship): boolean {
     );
 
     // Play explosion sound
-    Asteroid.fxHit.play();
+    Roid.fxHit.play();
 
     return true;
   }
@@ -115,12 +113,8 @@ export function detectPlayerBoundaryCollisions(otherPlayers: Player[]): void {
   }
 
   for (const player of otherPlayers) {
-    if (player.ship.exploding) {
-      continue;
-    }
-
-    // Skip collision detection if player is invincible (blinking or spawn protection)
-    if (player.ship.blinkCount > 0 || player.spawnProtectedUntil > Date.now()) {
+    // Skip if player is currently exploding or awaiting respawn
+    if (player.ship.exploding || player.respawnTimer !== undefined) {
       continue;
     }
 
@@ -131,18 +125,17 @@ export function detectPlayerBoundaryCollisions(otherPlayers: Player[]): void {
       player.ship.exploding = true;
       player.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
-      // Start respawn timer and random position so it respawns after explosion
-      player.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-
-      // Generate random respawn position within the game boundary
-      const boundary = getGameBoundary();
-      const margin = 100; // Keep players away from the very edge
-      const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
-      const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
-      player.respawnPosition = { x: randomX, y: randomY };
+      window.dispatchEvent(
+        new CustomEvent('shipExploded', {
+          detail: {
+            shipId: player.ship.id,
+            position: { x: player.ship.position.x, y: player.ship.position.y },
+          },
+        })
+      );
 
       // Play explosion sound
-      Asteroid.fxHit.play();
+      Roid.fxHit.play();
     }
   }
 }

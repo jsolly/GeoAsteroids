@@ -1,13 +1,12 @@
-import type { BotPlayer as BotPlayerInterface, BotShoot } from '../entities/bot/types';
 import type {
-  Player as PlayerInterface,
   PlayerJoin,
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
   Position,
   Velocity,
-} from '../entities/player/types';
+} from '../../shared-types';
+import type { BotShoot } from '../entities/bot/types';
 
 export interface GameState {
   players: Array<{
@@ -21,7 +20,7 @@ export interface GameState {
     score: number;
     exploding: boolean;
   }>;
-  asteroids: Array<{
+  roids: Array<{
     position: Position;
     size: number;
     jaggedness: number;
@@ -47,7 +46,3 @@ export interface ClientMessage {
   data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot;
   timestamp: number;
 }
-
-// Re-export player and bot types for convenience
-export type { PlayerInterface as Player, PlayerUpdate, PlayerJoin, PlayerLeave, PlayerShoot };
-export type { BotPlayerInterface as BotPlayer, BotShoot };

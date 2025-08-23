@@ -1,4 +1,5 @@
-import type { Ship } from '../ship/Ship';
+// Shared types between client and server
+// These types are used in network communication and should be identical on both sides
 
 // Common position and velocity types used throughout the system
 export interface Position {
@@ -9,24 +10,6 @@ export interface Position {
 export interface Velocity {
   x: number;
   y: number;
-}
-
-export interface Player {
-  id: string;
-  name: string;
-  ship: Ship;
-  score: number;
-  lastUpdate: number;
-  lives: number;
-  respawnTimer?: number; // Timer for respawning after death (in frames)
-  respawnPosition?: Position; // Position where player will respawn
-  spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
-  color: string; // Player's unique color for lasers and other visual elements
-  respawn(): void;
-  onShipExploded(): void;
-  update(): void;
-  get isDead(): boolean;
-  handleLifeLost(): void;
 }
 
 // Network update interface - only what needs to be synced
@@ -55,4 +38,10 @@ export interface PlayerShoot {
   id: string;
   laserStart: Position;
   laserDirection: Velocity;
+}
+
+// Game state types that might be shared
+export interface GameState {
+  players: PlayerUpdate[];
+  // Add other game state properties as needed
 }

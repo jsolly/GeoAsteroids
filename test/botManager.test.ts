@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import { BotPlayer } from '../src/entities/bot/BotPlayer.ts';
 import { BotManager } from '../src/entities/bot/botManager.ts';
+import { Player } from '../src/entities/player/Player.ts';
 
 // Note: Tests now use BotManager singleton without reset
 
@@ -12,39 +12,28 @@ test('BotManager Singleton', () => {
 
 test('Create Bots', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(3);
 
   const bots = botManager.getBots();
   expect(bots.size).toBe(3);
 
-  // Check that all bots are BotPlayer instances
+  // Check that all bots are Player instances with type 'bot'
   for (const bot of bots.values()) {
-    expect(bot).toBeInstanceOf(BotPlayer);
-    expect(bot instanceof BotPlayer).toBe(true);
+    expect(bot).toBeInstanceOf(Player);
+    expect(bot.type).toBe('bot');
   }
-});
-
-test('Clear Bots', () => {
-  const botManager = BotManager.getInstance();
-  botManager.activate();
-  botManager.createBots(3);
-  expect(botManager.getBots().size).toBe(3);
-
-  botManager.clearBots();
-  expect(botManager.getBots().size).toBe(0);
 });
 
 test('Bot Movement System', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(2);
 
   const bots = botManager.getBots();
   const firstBot = Array.from(bots.values())[0];
 
   // Test bot movement initialization
-  expect(firstBot).toBeInstanceOf(BotPlayer);
+  expect(firstBot).toBeInstanceOf(Player);
+  expect(firstBot.type).toBe('bot');
   expect(firstBot.ship.position).toEqual(
     expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) })
   );
@@ -52,50 +41,33 @@ test('Bot Movement System', () => {
 
 test('Bot Combat System', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(1);
 
   const bots = botManager.getBots();
   const bot = Array.from(bots.values())[0];
 
   // Test bot combat initialization
-  expect(bot).toBeInstanceOf(BotPlayer);
+  expect(bot).toBeInstanceOf(Player);
+  expect(bot.type).toBe('bot');
   expect(bot.ship.health).toBeGreaterThan(0);
 });
 
 test('Bot Factory Integration', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(3);
 
   const bots = botManager.getBots();
   expect(bots.size).toBe(3);
 
-  // Check that bots are created
-  expect(bots.size).toBe(3);
-
-  // Check that all bots are BotPlayer instances
+  // Check that all bots are Player instances with type 'bot'
   for (const bot of bots.values()) {
-    expect(bot instanceof BotPlayer).toBe(true);
+    expect(bot).toBeInstanceOf(Player);
+    expect(bot.type).toBe('bot');
   }
-});
-
-test.skip('Bot Manager State Management', () => {
-  const botManager = BotManager.getInstance();
-
-  // Initially inactive
-  expect(botManager.isActive).toBe(false);
-
-  botManager.activate();
-  expect(botManager.isActive).toBe(true);
-
-  botManager.deactivate();
-  expect(botManager.isActive).toBe(false);
 });
 
 test('Bot Manager Local Player Info', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
 
   const testPosition = { x: 100, y: 200 };
   const testAlive = true;
@@ -105,13 +77,12 @@ test('Bot Manager Local Player Info', () => {
   expect(botManager.localPlayerAlive).toBe(testAlive);
 });
 
-test('Bot Manager Asteroid Avoidance', () => {
+test('Bot Manager Roid Avoidance', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(1);
 
-  // Mock asteroids for testing
-  const mockAsteroids = [
+  // Mock roids for testing
+  const mockRoids = [
     {
       position: { x: 50, y: 50 },
       r: 20,
@@ -130,29 +101,19 @@ test('Bot Manager Asteroid Avoidance', () => {
     },
   ];
 
-  // Set asteroids for bot avoidance
-  botManager.setAsteroids(mockAsteroids);
+  // Set roids for bot avoidance
+  botManager.setRoids(mockRoids);
 
-  // Verify that asteroids are set (we can't directly access the private field,
+  // Verify that roids are set (we can't directly access the private field,
   // but we can test that the method doesn't throw errors)
-  expect(() => botManager.setAsteroids(mockAsteroids)).not.toThrow();
+  expect(() => botManager.setRoids(mockRoids)).not.toThrow();
 
-  // Test with empty asteroid array
-  expect(() => botManager.setAsteroids([])).not.toThrow();
-});
-
-test('Bot Manager Clear Bot Lasers', () => {
-  const botManager = BotManager.getInstance();
-  botManager.activate();
-  botManager.createBots(1);
-
-  // Test that clearBotLasers doesn't throw
-  expect(() => botManager.clearBotLasers()).not.toThrow();
+  // Test with empty roid array
+  expect(() => botManager.setRoids([])).not.toThrow();
 });
 
 test('Bot Manager Unified Laser System', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(1);
 
   const bots = botManager.getBots();
@@ -165,15 +126,14 @@ test('Bot Manager Unified Laser System', () => {
 
 test('Bot Manager Bot Damage', () => {
   const botManager = BotManager.getInstance();
-  botManager.activate();
   botManager.createBots(1);
 
   const bots = botManager.getBots();
   const bot = Array.from(bots.values())[0];
   const initialHealth = bot.ship.health;
 
-  // Test that botTakeDamage doesn't throw
-  expect(() => botManager.botTakeDamage(bot, 25)).not.toThrow();
+  // Test that bot damage system works through the unified Player system
+  expect(() => bot.ship.takeDamage(25)).not.toThrow();
 
   // Health should be reduced
   expect(bot.ship.health).toBeLessThan(initialHealth);

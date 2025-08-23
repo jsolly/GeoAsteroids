@@ -1,16 +1,13 @@
+import type { Position } from '../../../shared-types';
 import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import {
-  SHIP_COLLISION_DAMAGE,
-  SHIP_EXPLODE_DUR_FRAMES,
-  SHIP_RESPAWN_DELAY_FRAMES,
-} from '../../constants/entities/ship';
-import { FPS } from '../../constants/physics';
+import { SHIP_COLLISION_DAMAGE, SHIP_EXPLODE_DUR_FRAMES } from '../../constants/entities/ship';
+import { FPS } from '../../constants/game';
 import { GameController } from '../../core/gameController';
-import { Asteroid, type AsteroidBelt } from '../../entities/asteroid/Asteroid';
-import type { Player, Position } from '../../entities/player/types';
+import type { Player } from '../../entities/player/Player';
+import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
 import { getDistance } from '../../utils/mathUtils';
-import { getGameBoundary } from '../boundary';
+
 import {
   dispatchBotDestroyedEvent,
   shouldApplyDamageToLocalPlayer,
@@ -99,7 +96,7 @@ export function detectAllPlayerBotCollisions(
           bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
           // Play hit sound
-          Asteroid.fxHit.play();
+          Roid.fxHit.play();
 
           // Dispatch event to notify bot destruction
           dispatchBotDestroyedEvent(botId, 'local_player_collision');
@@ -129,7 +126,7 @@ export function detectAllPlayerBotCollisions(
             bot.ship.explodeTime = 60; // 1 second explosion duration
 
             // Play hit sound
-            Asteroid.fxHit.play();
+            Roid.fxHit.play();
 
             // Dispatch event to notify bot destruction
             dispatchBotDestroyedEvent(botId, 'other_player_collision');
@@ -143,17 +140,17 @@ export function detectAllPlayerBotCollisions(
   }
 }
 
-export function detectRoidHits(currShip: Ship, currAsteroidBelt: AsteroidBelt): number {
+export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
   let score = 0;
 
-  // check for asteroid collisions (when not exploding)
+  // check for roid collisions (when not exploding)
   if (!currShip.exploding) {
     // only check when not blinking
     if (currShip.blinkCount === 0) {
-      for (let i = 0; i < currAsteroidBelt.roids.length; i++) {
+      for (let i = 0; i < currRoidBelt.roids.length; i++) {
         if (
-          getDistance(currShip.position, currAsteroidBelt.roids[i].position) <
-          currShip.r + currAsteroidBelt.roids[i].r
+          getDistance(currShip.position, currRoidBelt.roids[i].position) <
+          currShip.r + currRoidBelt.roids[i].r
         ) {
           // Check if debug system wants to prevent damage
           const shouldApplyDamage = shouldApplyDamageToLocalPlayer(currShip);
@@ -166,8 +163,8 @@ export function detectRoidHits(currShip: Ship, currAsteroidBelt: AsteroidBelt): 
           // Never explode the ship here - let takeDamage handle life loss and respawn
           // The ship will only explode when it's actually dead (no lives remaining)
 
-          Asteroid.fxHit.play();
-          score = currAsteroidBelt.destroyRoid(i);
+          Roid.fxHit.play();
+          score = currRoidBelt.destroyRoid(i);
         }
       }
     }
@@ -248,7 +245,7 @@ export function detectShipToShipCollisions(
       // The ship will only explode when it's actually dead (no lives remaining)
 
       // Play hit sound
-      Asteroid.fxHit.play();
+      Roid.fxHit.play();
 
       // Dispatch event to notify bot destruction
       dispatchBotDestroyedEvent('unknown', 'ship_collision');
@@ -295,7 +292,7 @@ export function detectShipToShipCollisions(
         }
 
         // Play hit sound
-        Asteroid.fxHit.play();
+        Roid.fxHit.play();
 
         // Only handle one collision at a time
         break;
@@ -306,21 +303,18 @@ export function detectShipToShipCollisions(
   return score;
 }
 
-// Unified function for all player asteroid collisions (bots + remote players)
-export function detectPlayerAsteroidCollisions(
-  players: Player[],
-  currAsteroidBelt: AsteroidBelt
-): void {
+// Unified function for all player roid collisions (bots + remote players)
+export function detectPlayerRoidCollisions(players: Player[], currRoidBelt: RoidBelt): void {
   if (!players || players.length === 0) {
     return;
   }
 
-  const roids = currAsteroidBelt.roids;
+  const roids = currRoidBelt.roids;
   if (roids.length === 0) {
     return;
   }
 
-  // Check each player for asteroid collisions
+  // Check each player for roid collisions
   for (const player of players) {
     // Skip exploding players
     if (player.ship.exploding) {
@@ -332,7 +326,7 @@ export function detectPlayerAsteroidCollisions(
       continue;
     }
 
-    // Check collision with each asteroid
+    // Check collision with each roid
     for (let i = 0; i < roids.length; i++) {
       const distance = getDistance(player.ship.position, roids[i].position);
       const collisionThreshold = player.ship.r + roids[i].r;
@@ -343,24 +337,13 @@ export function detectPlayerAsteroidCollisions(
         player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
         // If player health reaches 0, takeDamage will handle the explosion
-        // We just need to set the respawn position for when they respawn
-        if (player.ship.health <= 0) {
-          // Start respawn timer and random position so it respawns after explosion
-          player.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-
-          // Generate random respawn position within the game boundary
-          const boundary = getGameBoundary();
-          const margin = 100; // Keep players away from the very edge
-          const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
-          const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
-          player.respawnPosition = { x: randomX, y: randomY };
-        }
+        // and dispatch the shipExploded event, which will trigger respawn logic
 
         // Play hit sound
-        Asteroid.fxHit.play();
+        Roid.fxHit.play();
 
         // Dispatch event to notify player destruction
-        dispatchBotDestroyedEvent(player.id, 'asteroid_collision');
+        dispatchBotDestroyedEvent(player.id, 'roid_collision');
 
         // Only handle one collision per player to avoid multiple simultaneous destructions
         break;

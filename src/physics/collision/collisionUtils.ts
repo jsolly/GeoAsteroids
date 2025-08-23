@@ -1,4 +1,5 @@
-import type { Player } from '../../entities/player/types';
+import { DEBUG_ROID_COUNT } from '../../constants/entities/roid';
+import type { Player } from '../../entities/player/Player';
 import type { Ship } from '../../entities/ship/Ship';
 
 // Global debug state that can be set by the game controller
@@ -72,33 +73,24 @@ export function dispatchBotDestroyedEvent(
   );
 }
 
-// Debug logging functions
+// Debug logging functions - removed to reduce console noise
+// These functions are kept for API compatibility but no longer log anything
 export function logCollisionDetection(
-  collisionType: string,
-  source: string,
-  target: string,
-  damageApplied: boolean
+  _collisionType: string,
+  _source: string,
+  _target: string,
+  _damageApplied: boolean
 ): void {
-  if (isDebugModeEnabled()) {
-    console.info(
-      'DEBUG_COLLISIONS',
-      `${collisionType}: ${source} vs ${target}, damage: ${damageApplied ? 'YES' : 'NO'}`
-    );
-  }
+  // Removed debug logging to reduce console noise
 }
 
 export function logBotHealthChange(
-  bot: Player,
-  oldHealth: number,
-  newHealth: number,
-  damageAmount: number
+  _bot: Player,
+  _oldHealth: number,
+  _newHealth: number,
+  _damageAmount: number
 ): void {
-  if (isDebugModeEnabled()) {
-    console.info(
-      'DEBUG_COLLISIONS',
-      `Bot ${bot.name} health: ${oldHealth} -> ${newHealth} (damage: ${damageAmount})`
-    );
-  }
+  // Removed debug logging to reduce console noise
 }
 
 // Export debug config for other modules to use
@@ -108,13 +100,15 @@ export function getDebugConfig() {
     disableMovement: import.meta.env.VITE_DEBUG_DISABLE_MOVEMENT === 'true',
     disableBotMovement: import.meta.env.VITE_DEBUG_DISABLE_BOT_MOVEMENT === 'true',
     disableBotGuns: import.meta.env.VITE_DEBUG_DISABLE_BOT_GUNS === 'true',
-    placeAsteroidOnBot: import.meta.env.VITE_DEBUG_PLACE_ASTEROID_ON_BOT === 'true',
-    debugAsteroidCount: parseInt(import.meta.env.VITE_DEBUG_ASTEROID_COUNT || '100', 10),
+    placeRoidOnBot: import.meta.env.VITE_DEBUG_PLACE_ROID_ON_BOT === 'true',
+    debugRoidCount: parseInt(
+      import.meta.env.VITE_DEBUG_ROID_COUNT || DEBUG_ROID_COUNT.toString(),
+      10
+    ),
     localPlayerInvincible: import.meta.env.VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE === 'true',
-    drawAsteroids: import.meta.env.VITE_DEBUG_DRAW_ASTEROIDS !== 'false',
-    disableAsteroidMultiplication:
-      import.meta.env.VITE_DEBUG_DISABLE_ASTEROID_MULTIPLICATION === 'true',
-    disableAsteroidMovement: import.meta.env.VITE_DEBUG_DISABLE_ASTEROID_MOVEMENT === 'true',
+    drawRoids: import.meta.env.VITE_DEBUG_DRAW_ROIDS !== 'false',
+
+    disableRoidMovement: import.meta.env.VITE_DEBUG_DISABLE_ROID_MOVEMENT === 'true',
     disableBotSpawnProtection: import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true',
   };
 }

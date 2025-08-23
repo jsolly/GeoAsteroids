@@ -9,7 +9,7 @@ const dom = new JSDOM(
   <body>
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
-        <h1 class="text-center fs-1">GeoAsteroids</h1>
+        <h1 class="text-center fs-1">GeoRoids</h1>
         <ul class="nav flex-column">
           <li class="nav-item">
             

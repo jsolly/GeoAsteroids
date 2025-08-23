@@ -1,6 +1,3 @@
-// Build information utility
-// This provides build metadata for debugging and version tracking
-
 interface BuildInfo {
   commitHash: string;
   buildTime: string;

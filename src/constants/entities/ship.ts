@@ -1,6 +1,6 @@
 export const TURN_SPEED = 450; // turn speed in degrees per second
 export const SHIP_MAX_HEALTH = 100; // Maximum health points for ship
-export const SHIP_COLLISION_DAMAGE = 20; // Damage from any collision (asteroid, bot, player)
+export const SHIP_COLLISION_DAMAGE = 20; // Damage from any collision (roid, bot, player)
 export const SHIP_HEALTH_REGEN_RATE = 1; // Health regeneration per second when not taking damage
 export const SHIP_HEALTH_REGEN_DELAY = 5; // Seconds to wait before health regeneration starts
 export const SHIP_THRUST = 5; // Thrust in pixels per second per second (Acceleration)

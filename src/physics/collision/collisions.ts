@@ -1,32 +1,6 @@
-// Main collisions module that orchestrates all collision detection
-// This file now serves as a facade for the modular collision system
-
-export {
-  detectBoundaryCollisions,
-  detectPlayerBoundaryCollisions,
-} from '../../rendering/boundaryRenderer';
-
-// Re-export utility functions and interfaces
-export {
-  dispatchBotDestroyedEvent,
-  isPlayerInvincible,
-  isShipInvincible,
-  shouldApplyDamageToLocalPlayer,
-  shouldSkipPlayerCollision,
-} from './collisionUtils';
-
-// Re-export all collision functions from their respective modules
-export {
-  detectLaserHits,
-  detectLaserPlayerCollisions,
-  detectPlayerLaserShipCollisions,
-  isHit,
-  isLaserHitBot,
-} from './laserCollisions';
-
-export {
-  detectAllPlayerBotCollisions,
-  detectPlayerAsteroidCollisions,
-  detectRoidHits,
-  detectShipToShipCollisions,
-} from './shipCollisions';
+// This file was a facade with re-exports, which has been removed.
+// Import directly from the specific files that contain the actual implementations:
+// - collisionUtils.ts for utility functions
+// - laserCollisions.ts for laser collision detection
+// - shipCollisions.ts for ship collision detection
+// - boundaryCollisions.ts for boundary collision detection

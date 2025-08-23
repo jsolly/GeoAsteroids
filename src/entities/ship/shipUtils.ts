@@ -1,7 +1,7 @@
+import type { Position } from '../../../shared-types';
 import { SHIP_HEALTH_REGEN_DELAY, SHIP_HEALTH_REGEN_RATE } from '../../constants/entities/ship';
-import { FPS } from '../../constants/physics';
+import { FPS } from '../../constants/game';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
-import type { Position } from '../player/types';
 
 export function canTakeCollisionDamage(
   lastCollisionTime: number,

@@ -1,76 +1,39 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getRandomPositionWithinBoundary } from '../../physics/boundary';
-import type { Player } from '../player/Player';
-import { BotPlayer } from './BotPlayer';
-
-// Bot creation utilities
-const BOT_COLORS = {
-  aggressive: '#666666', // Medium gray
-  defensive: '#666666', // Medium gray
-  patrol: '#666666', // Medium gray
-};
-
-const BOT_NAMES = {
-  aggressive: 'Aggressive',
-  defensive: 'Defensive',
-  patrol: 'Patrol',
-};
+import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import { Player } from '../player/Player';
 
 export class BotFactory {
   public createBots(count: number): Map<string, Player> {
     const bots = new Map<string, Player>();
-    const botTypes: Array<'aggressive' | 'defensive' | 'patrol'> = [
-      'aggressive',
-      'defensive',
-      'patrol',
-    ];
-
     const positions = this.getBotStartingPositions(count);
 
     for (let i = 0; i < count; i++) {
-      const botType = botTypes[i % botTypes.length];
       const position = positions[i];
-
-      const bot = this.createBotPlayer(botType, position);
+      const bot = this.createBotPlayer(position);
       bots.set(bot.id, bot);
     }
 
     return bots;
   }
 
-  private createBotPlayer(
-    botType: 'aggressive' | 'defensive' | 'patrol',
-    position?: { x: number; y: number }
-  ): Player {
+  private createBotPlayer(position?: { x: number; y: number }): Player {
     const id = uuidv4();
-    const name = `${BOT_NAMES[botType]} Bot`;
-    const botPlayer = new BotPlayer({ id, name, botType });
+    const name = 'Bot';
+    const botPlayer = new Player({ id, name, type: 'bot' });
 
-    // Set bot-specific properties
-    botPlayer.color = BOT_COLORS[botType];
+    // Set bot color to space gray
+    botPlayer.color = '#888888';
+    botPlayer.ship.color = botPlayer.color;
 
     if (position) {
       botPlayer.ship.position = position;
     }
 
     // Configure bot ship properties
-    botPlayer.ship.shotCooldown = this.getBotShotCooldown(botType);
+    botPlayer.ship.shotCooldown = 500 + Math.random() * 500; // 0.5-1.0 seconds
     botPlayer.ship.lastPosition = { ...botPlayer.ship.position };
 
     return botPlayer;
-  }
-
-  private getBotShotCooldown(botType: string): number {
-    switch (botType) {
-      case 'aggressive':
-        return 300 + Math.random() * 700; // 0.3-1.0 seconds
-      case 'defensive':
-        return 500 + Math.random() * 1000; // 0.5-1.5 seconds
-      case 'patrol':
-        return 400 + Math.random() * 800; // 0.4-1.2 seconds
-      default:
-        return 500;
-    }
   }
 
   private getBotStartingPositions(count: number): Array<{ x: number; y: number }> {

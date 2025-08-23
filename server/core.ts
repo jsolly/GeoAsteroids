@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import { logger } from '../setup/serverLogger';
-import type { Position, Velocity } from '../src/entities/player/types';
+import type { Position, Velocity } from '../shared-types';
 
 // Player management
 export interface ConnectedPlayer {
@@ -229,7 +229,7 @@ export class WebSocketCore {
           exploding: exploding || false,
         })
         ),
-        asteroids: [], // Empty array for now, can be populated later
+        roids: [], // Empty array for now, can be populated later
         gameTime: this.gameTime,
       },
       timestamp: Date.now(),

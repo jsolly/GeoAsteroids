@@ -1,7 +1,7 @@
 {
   "name": "geoasteroids-multiplayer-server",
   "version": "1.0.0",
-  "description": "Multiplayer server for GeoAsteroids game",
+  "description": "Multiplayer server for GeoRoids game",
   "main": "server.ts",
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "multiplayer",
     "game",
     "websocket",
-    "asteroids"
+    "roids"
   ],
   "author": "Your Name",
   "license": "MIT",

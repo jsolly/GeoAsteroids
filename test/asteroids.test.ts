@@ -1,45 +1,49 @@
 import { expect, test } from 'vitest';
 import { ROID_NUM } from '../src/constants/game';
-import { Asteroid, createAsteroidBelt } from '../src/entities/asteroid/Asteroid.ts';
+import { createRoidBelt, Roid } from '../src/entities/roid/Roid.ts';
 
-test('Asteroid Creation', () => {
+test('Roid Creation', () => {
   const roidPoint = { x: 10, y: 20 };
   const roidRadius = 10;
-  const newRoid = new Asteroid(roidPoint, roidRadius);
-  expect(newRoid).toBeInstanceOf(Asteroid);
+  const newRoid = new Roid(roidPoint, roidRadius);
+  expect(newRoid).toBeInstanceOf(Roid);
 });
 
-test('Asteroid Belt Creation', () => {
-  const testRoidBelt = createAsteroidBelt();
+test('Roid Belt Creation', () => {
+  const testRoidBelt = createRoidBelt();
   expect(testRoidBelt).toBeInstanceOf(testRoidBelt.constructor);
   expect(testRoidBelt.roids.length).toEqual(ROID_NUM);
 });
 
-test('Asteroid Belt Add Asteroid', () => {
-  const testRoidBelt = createAsteroidBelt();
+test('Roid Belt Add Roid', () => {
+  const testRoidBelt = createRoidBelt();
   const roidCount = testRoidBelt.roids.length;
   testRoidBelt.addRoid();
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1);
 });
 
-test('Asteroid Belt Spawn Asteroids', () => {
-  const testRoidBelt = createAsteroidBelt();
-  testRoidBelt.spawnTime = 0; // so we don't have to wait a second for the spawn time to hit
-  const roidCount = testRoidBelt.roids.length;
+test('Roid Belt Spawn Roids', () => {
+  const testRoidBelt = createRoidBelt();
+
+  // Remove some roids to trigger spawning
+  testRoidBelt.roids.splice(0, 8); // Remove 8 roids, leaving 2 (below minCount of 5)
+
   testRoidBelt.spawnRoids();
-  expect(testRoidBelt.roids.length).toEqual(roidCount + 4);
+
+  // Should spawn enough to reach minCount (5)
+  expect(testRoidBelt.roids.length).toEqual(5);
 });
 
-test('Destroy Asteroid', () => {
-  const testRoidBelt = createAsteroidBelt();
+test('Destroy Roid', () => {
+  const testRoidBelt = createRoidBelt();
   testRoidBelt.addRoid();
   const roidCount = testRoidBelt.roids.length;
   testRoidBelt.destroyRoid(0);
-  expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Asteroid splits in two
+  expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Roid splits in two
 });
 
-test('Move Asteroids', () => {
-  const testRoidBelt = createAsteroidBelt();
+test('Move Roids', () => {
+  const testRoidBelt = createRoidBelt();
   testRoidBelt.addRoid();
   const firstRoid = testRoidBelt.roids[0];
 
@@ -52,4 +56,4 @@ test('Move Asteroids', () => {
 });
 
 // Debug functionality is tested separately in the debug system
-// since it's completely decoupled from the main asteroid logic
+// since it's completely decoupled from the main roid logic

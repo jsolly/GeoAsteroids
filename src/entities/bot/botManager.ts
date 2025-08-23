@@ -1,11 +1,8 @@
-import { SHIP_RESPAWN_DELAY_FRAMES } from '../../constants/entities/ship';
-import { getGameBoundary } from '../../physics/boundary';
-import type { Asteroid } from '../asteroid/Asteroid';
+import type { Position } from '../../../shared-types';
 import type { Player } from '../player/Player';
-import type { Player as PlayerInterface, Position } from '../player/types';
+import type { Roid } from '../roid/Roid';
 
 import { BotBehavior } from './BotBehavior';
-import { BotPlayer } from './BotPlayer';
 import { BotFactory } from './botFactory';
 
 export class BotManager {
@@ -14,9 +11,9 @@ export class BotManager {
   private localPlayerId: string;
   public localPlayerPosition: Position = { x: 0, y: 0 };
   public localPlayerAlive: boolean = true;
-  public isActive: boolean = false;
-  private asteroids: Asteroid[] = [];
-  private otherPlayers: PlayerInterface[] = [];
+
+  private roids: Roid[] = [];
+  private otherPlayers: Player[] = [];
 
   // Unified bot behavior system
   private botBehavior: BotBehavior;
@@ -53,23 +50,7 @@ export class BotManager {
     this.botBehavior.setLocalPlayerInfo(this.localPlayerId, position, alive);
   }
 
-  public activate(): void {
-    if (this.isActive) {
-      return;
-    }
-
-    this.isActive = true;
-  }
-
-  public deactivate(): void {
-    this.isActive = false;
-  }
-
   public createBots(count: number): void {
-    if (!this.isActive) {
-      return;
-    }
-
     // Clear existing bots
     this.bots.clear();
     this.botBehavior.clearAllSteering();
@@ -79,33 +60,12 @@ export class BotManager {
 
     // Initialize steering for each bot
     for (const [botId, bot] of newBots.entries()) {
-      if (bot instanceof BotPlayer) {
-        this.botBehavior.initializeBotSteering(botId, 'aggressive'); // Default type
+      if (bot.type === 'bot') {
+        this.botBehavior.initializeBotSteering(botId);
       }
     }
 
     this.bots = newBots;
-  }
-
-  public clearBots(): void {
-    this.botBehavior.clearBotLasers(this.bots);
-    this.bots.clear();
-    this.botBehavior.clearAllSteering();
-  }
-
-  public resetDebugFlags(): void {
-    this.botBehavior.debugMovementDisabled = false;
-  }
-
-  public clearBotLasers(): void {
-    this.botBehavior.clearBotLasers(this.bots);
-  }
-
-  // Legacy compatibility method
-  public botTakeDamage(bot: PlayerInterface, amount: number): void {
-    if (bot instanceof BotPlayer) {
-      bot.ship.takeDamage(amount);
-    }
   }
 
   // Public method to update local player position (called from game loop)
@@ -118,75 +78,21 @@ export class BotManager {
   }
 
   public updateBotsInGameLoop(): void {
-    if (!this.isActive) {
+    // Only run if there are bots to update
+    if (this.bots.size === 0) {
       return;
     }
 
-    // Update bot behavior and movement
+    // Only bot-specific behavior (movement, shooting decisions)
     this.updateBotBehavior();
-
-    // Update bot shooting
     this.botBehavior.updateBotShooting(this.bots);
-
-    // Update bot explosions and handle respawning
-    for (const bot of this.bots.values()) {
-      if (bot.ship.exploding) {
-        // Start a respawn timer when explosion starts
-        if (bot.respawnTimer === undefined && bot.ship.explodeTime > 0) {
-          bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-
-          // Generate random respawn position within the game boundary
-          const boundary = getGameBoundary();
-          const margin = 100; // Keep bots away from the very edge
-          const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
-          const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
-          bot.respawnPosition = { x: randomX, y: randomY };
-
-          // Log bot explosion for debugging
-          import('../../physics/collision/collisionUtils').then(({ logCollisionDetection }) => {
-            logCollisionDetection('Bot Exploded', bot.name, 'Collision', true);
-          });
-        }
-
-        bot.ship.updateExplosion();
-        continue;
-      }
-
-      // If a respawn timer is active, count down and respawn when it reaches zero
-      if (bot.respawnTimer !== undefined) {
-        if (bot.respawnTimer > 0) {
-          bot.respawnTimer--;
-        }
-
-        if (bot.respawnTimer === 0) {
-          // Log bot respawn for debugging
-          import('../../physics/collision/collisionUtils').then(({ logCollisionDetection }) => {
-            logCollisionDetection('Bot Respawning', bot.name, 'Respawn', false);
-          });
-
-          bot.respawn();
-          bot.respawnTimer = undefined;
-        }
-      }
-    }
-
-    // Update bot lasers
-    this.botBehavior.updateBotLasers(this.bots);
-
-    // Update bot invincibility and health using Ship's built-in methods
-    for (const bot of this.bots.values()) {
-      if (!bot.ship.exploding) {
-        bot.ship.updateInvincibility();
-        bot.ship.updateHealth();
-      }
-    }
   }
 
-  public setAsteroids(asteroids: Asteroid[]): void {
-    this.asteroids = asteroids;
+  public setRoids(roids: Roid[]): void {
+    this.roids = roids;
   }
 
-  public setOtherPlayers(players: PlayerInterface[]): void {
+  public setOtherPlayers(players: Player[]): void {
     this.otherPlayers = players;
   }
 
@@ -198,7 +104,7 @@ export class BotManager {
       }
 
       // Move bot based on behavior
-      this.botBehavior.moveBot(bot, this.asteroids, this.otherPlayers);
+      this.botBehavior.moveBot(bot, this.roids, this.otherPlayers);
 
       // Apply ship movement to update position based on velocity
       bot.ship.move();

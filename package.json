@@ -1,5 +1,5 @@
 {
-  "name": "geoasteroids",
+  "name": "georoids",
   "private": true,
   "version": "1.0.0",
   "description": "",
@@ -29,14 +29,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jsolly/GeoAsteroids.git"
+    "url": "git+https://github.com/jsolly/GeoRoids.git"
   },
   "author": "jsolly",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jsolly/GeoAsteroids/issues"
+    "url": "https://github.com/jsolly/GeoRoids/issues"
   },
-  "homepage": "https://github.com/jsolly/GeoAsteroids#readme",
+  "homepage": "https://github.com/jsolly/GeoRoids#readme",
   "engines": {
     "node": ">=22.0.0"
   },

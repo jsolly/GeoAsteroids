@@ -1,7 +1,7 @@
 import { SHIP_SIZE } from '../../constants/entities/ship';
-import { getCTX, getCVS } from '../../constants/rendering/canvas';
 import { Point } from '../../physics/Point';
-import { worldToScreen } from '../../rendering/viewport';
+import { canvasManager } from '../../rendering/canvas';
+
 import type { Ship } from './Ship';
 
 // Helper function to create complementary colors that work well with the laser color
@@ -99,14 +99,8 @@ function createComplementaryColor(
   return `hsl(${complementaryHue}, ${adjustedSaturation}%, ${adjustedLightness}%)`;
 }
 
-export function drawGenericThruster(
-  x: number,
-  y: number,
-  angle: number,
-  radius: number,
-  color?: string
-): void {
-  const ctx = getCTX();
+export function drawGenericThruster(x: number, y: number, angle: number, radius: number): void {
+  const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
@@ -138,26 +132,12 @@ export function drawGenericThruster(
     flameLength
   );
 
-  if (color === 'blue') {
-    // Blue thruster for defensive bots
-    gradient.addColorStop(0, '#ffffff'); // White hot center
-    gradient.addColorStop(0.2, '#66ccff'); // Bright blue
-    gradient.addColorStop(0.6, '#0066ff'); // Medium blue
-    gradient.addColorStop(1, '#0033cc'); // Dark blue edge
-  } else if (color === 'red') {
-    // Red thruster for aggressive bots
-    gradient.addColorStop(0, '#ffffff'); // White hot center
-    gradient.addColorStop(0.2, '#ffaa00'); // Bright orange
-    gradient.addColorStop(0.6, '#ff6600'); // Medium orange
-    gradient.addColorStop(1, '#cc3300'); // Dark red edge
-  } else {
-    // Default enhanced thruster (for player ship and patrol bots)
-    gradient.addColorStop(0, '#ffffff'); // White hot center
-    gradient.addColorStop(0.2, '#ffff00'); // Bright yellow
-    gradient.addColorStop(0.5, '#ffaa00'); // Orange
-    gradient.addColorStop(0.8, '#ff6600'); // Dark orange
-    gradient.addColorStop(1, '#cc3300'); // Dark red edge
-  }
+  // Default enhanced thruster (same for all ships)
+  gradient.addColorStop(0, '#ffffff'); // White hot center
+  gradient.addColorStop(0.2, '#ffff00'); // Bright yellow
+  gradient.addColorStop(0.5, '#ffaa00'); // Orange
+  gradient.addColorStop(0.8, '#ff6600'); // Dark orange
+  gradient.addColorStop(1, '#cc3300'); // Dark red edge
 
   // Draw the main flame body
   ctx.fillStyle = gradient;
@@ -189,24 +169,21 @@ export function drawGenericThruster(
   ctx.fill();
 
   // Add some particle effects for extra visual appeal
-  if (color === 'default') {
-    // Only add particles to player ship thruster for performance
-    for (let i = 0; i < 3; i++) {
-      const particleDistance = Math.random() * flameLength * 0.7;
-      const particleAngle = angle + (Math.random() - 0.5) * 0.3;
-      const particleX = rearCenter.x - Math.cos(particleAngle) * particleDistance;
-      const particleY = rearCenter.y + Math.sin(particleAngle) * particleDistance;
+  for (let i = 0; i < 3; i++) {
+    const particleDistance = Math.random() * flameLength * 0.7;
+    const particleAngle = angle + (Math.random() - 0.5) * 0.3;
+    const particleX = rearCenter.x - Math.cos(particleAngle) * particleDistance;
+    const particleY = rearCenter.y + Math.sin(particleAngle) * particleDistance;
 
-      ctx.fillStyle = `rgba(255, 255, 0, ${0.8 - particleDistance / flameLength})`;
-      ctx.beginPath();
-      ctx.arc(particleX, particleY, 2, 0, Math.PI * 2, false);
-      ctx.fill();
-    }
+    ctx.fillStyle = `rgba(255, 255, 0, ${0.8 - particleDistance / flameLength})`;
+    ctx.beginPath();
+    ctx.arc(particleX, particleY, 2, 0, Math.PI * 2, false);
+    ctx.fill();
   }
 }
 
 export function drawThruster(ship: Ship): void {
-  const cvs = getCVS();
+  const cvs = canvasManager.getCanvas();
   if (!cvs) {
     return;
   }
@@ -220,9 +197,9 @@ export function drawThruster(ship: Ship): void {
   }
 }
 
-export function drawShipRelative(ship: Ship, color?: string): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
+export function drawShipRelative(ship: Ship): void {
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
   if (!ctx || !cvs) {
     return;
   }
@@ -244,7 +221,7 @@ export function drawShipRelative(ship: Ship, color?: string): void {
     y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(angle) + Math.cos(angle)),
   };
 
-  ctx.strokeStyle = color || 'white';
+  ctx.strokeStyle = ship.color;
   ctx.lineWidth = SHIP_SIZE / 20;
   ctx.beginPath();
   ctx.moveTo(nose.x, nose.y);
@@ -254,7 +231,7 @@ export function drawShipRelative(ship: Ship, color?: string): void {
   ctx.stroke();
 
   // Draw center dot to show ship orientation
-  ctx.fillStyle = color || 'white';
+  ctx.fillStyle = ship.color;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r / 6, 0, Math.PI * 2, false);
   ctx.fill();
@@ -299,8 +276,8 @@ export function drawShipRelative(ship: Ship, color?: string): void {
 }
 
 export function drawShipExplosion(ship: Ship, color?: string): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
   if (!ctx || !cvs) {
     return;
   }
@@ -340,14 +317,14 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
 }
 
 export function drawLasers(ship: Ship, color?: string): void {
-  const ctx = getCTX();
+  const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
 
   for (const laser of ship.lasers) {
     // Convert laser world position to screen position using viewport transformation
-    const screenPos = worldToScreen(laser.position, ship.position);
+    const screenPos = canvasManager.worldToScreen(laser.position, ship.position);
 
     if (laser.explodeTime === 0) {
       ctx.fillStyle = color || 'salmon';
@@ -369,8 +346,8 @@ export function drawLasers(ship: Ship, color?: string): void {
 }
 
 export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
   if (!ctx || !cvs) {
     return;
   }
@@ -409,4 +386,140 @@ export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): v
     ctx.lineTo(endX, endY);
     ctx.stroke();
   }
+}
+
+// Ship rendering with world coordinates (for other players)
+export function drawShipAtPosition(
+  ship: Ship,
+  shipPosition: { x: number; y: number },
+  color?: string
+): void {
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
+
+  if (!ctx || !cvs || ship.exploding) {
+    return;
+  }
+
+  // Apply blinking effect for invincibility
+  if (ship.blinkCount > 0 && !ship.blinkOn) {
+    return; // Skip rendering this frame
+  }
+
+  // Convert world coordinates to screen coordinates
+  const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
+  const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+
+  // Use ship's own color or provided color
+  const shipColor = color || ship.color;
+
+  // Compute triangle points using the same geometry as drawShipRelative
+  const angle = ship.angle;
+  const nose = {
+    x: screenX + (4 / 3) * ship.r * Math.cos(angle),
+    y: screenY - (4 / 3) * ship.r * Math.sin(angle),
+  };
+  const rearLeft = {
+    x: screenX - ship.r * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
+    y: screenY + ship.r * ((2 / 3) * Math.sin(angle) - Math.cos(angle)),
+  };
+  const rearRight = {
+    x: screenX - ship.r * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
+    y: screenY + ship.r * ((2 / 3) * Math.sin(angle) + Math.cos(angle)),
+  };
+
+  // Draw ship body (triangle)
+  ctx.strokeStyle = shipColor;
+  ctx.lineWidth = SHIP_SIZE / 20;
+  ctx.beginPath();
+  ctx.moveTo(nose.x, nose.y);
+  ctx.lineTo(rearLeft.x, rearLeft.y);
+  ctx.lineTo(rearRight.x, rearRight.y);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Draw center dot
+  ctx.fillStyle = shipColor;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r / 6, 0, Math.PI * 2, false);
+  ctx.fill();
+
+  // Draw health bar above ship (same as local)
+  const barWidth = ship.r * 2.5;
+  const barHeight = 6;
+  const barY = screenY - ship.r - 15;
+  const healthPercent = ship.health / ship.maxHealth;
+  const currentWidth = barWidth * healthPercent;
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(screenX - barWidth / 2, barY, barWidth, barHeight);
+
+  let healthColor: string;
+  if (healthPercent > 0.6) {
+    healthColor = '#00ff00';
+  } else if (healthPercent > 0.3) {
+    healthColor = '#ffff00';
+  } else {
+    healthColor = '#ff0000';
+  }
+  ctx.fillStyle = healthColor;
+  ctx.fillRect(screenX - barWidth / 2, barY, currentWidth, barHeight);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(screenX - barWidth / 2, barY, barWidth, barHeight);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenX, barY - 12);
+}
+
+// Helper function to draw player health bar in the HUD
+export function drawPlayerHealthBar(health: number, maxHealth: number): void {
+  const ctx = canvasManager.getContext();
+  const canvas = canvasManager.getCanvas();
+  if (!ctx || !canvas) {
+    return;
+  }
+
+  const barWidth = 200;
+  const barHeight = 20;
+  const barX = canvas.width - barWidth - 20;
+  const barY = 20;
+
+  // Health percentage
+  const healthPercent = health / maxHealth;
+  const currentWidth = barWidth * healthPercent;
+
+  ctx.save();
+
+  // Background (empty health bar)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(barX, barY, barWidth, barHeight);
+
+  // Health bar color based on health level
+  let healthColor: string;
+  if (healthPercent > 0.6) {
+    healthColor = '#00ff00'; // Green for high health
+  } else if (healthPercent > 0.3) {
+    healthColor = '#ffff00'; // Yellow for medium health
+  } else {
+    healthColor = '#ff0000'; // Red for low health
+  }
+
+  // Current health
+  ctx.fillStyle = healthColor;
+  ctx.fillRect(barX, barY, currentWidth, barHeight);
+
+  // Border
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+  // Health text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '14px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${Math.ceil(health)}/${maxHealth}`, barX + barWidth / 2, barY - 8);
+
+  ctx.restore();
 }

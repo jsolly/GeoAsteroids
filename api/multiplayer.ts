@@ -1,13 +1,13 @@
-import type { BotShoot } from '../src/entities/bot/types.ts';
-import type { Position, Velocity } from '../src/entities/player/types.ts';
 import type {
-  ClientMessage,
   PlayerJoin,
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
-  ServerMessage,
-} from '../src/multiplayer/types.ts';
+  Position,
+  Velocity,
+} from '../shared-types';
+import type { BotShoot } from '../src/entities/bot/types.ts';
+import type { ClientMessage, ServerMessage } from '../src/multiplayer/types.ts';
 
 type WebSocketWithEvents = WebSocket & {
   on(event: string, listener: (...args: unknown[]) => void): void;
@@ -273,7 +273,7 @@ class MultiplayerServer {
           score: p.score,
           exploding: p.exploding,
         })),
-        asteroids: [], // Will be implemented in Phase 2
+        roids: [], // Will be implemented in Phase 2
         gameTime: this.gameTime,
       },
       timestamp: Date.now(),

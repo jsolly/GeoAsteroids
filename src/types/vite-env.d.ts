@@ -13,10 +13,10 @@ interface ImportMetaEnv {
   readonly VITE_DEBUG_DISABLE_MOVEMENT: string;
   readonly VITE_DEBUG_DISABLE_BOT_MOVEMENT: string;
   readonly VITE_DEBUG_DISABLE_BOT_GUNS: string;
-  readonly VITE_DEBUG_PLACE_ASTEROID_ON_BOT: string;
-  readonly VITE_DEBUG_ASTEROID_COUNT: string;
+  readonly VITE_DEBUG_PLACE_ROID_ON_BOT: string;
+  readonly VITE_DEBUG_ROID_COUNT: string;
   readonly VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE: string;
-  readonly VITE_DEBUG_DRAW_ASTEROIDS: string;
+  readonly VITE_DEBUG_DRAW_ROIDS: string;
 
   readonly MODE: string;
   readonly DEV: boolean;

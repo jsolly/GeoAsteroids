@@ -1,11 +1,10 @@
 import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
 import { SHIP_COLLISION_DAMAGE } from '../../constants/entities/ship';
-import { FPS } from '../../constants/physics';
+import { FPS } from '../../constants/game';
 import { GameController } from '../../core/gameController';
-import { Asteroid, type AsteroidBelt } from '../../entities/asteroid/Asteroid';
-import { BotManager } from '../../entities/bot/botManager';
-import type { Laser } from '../../entities/laser';
-import type { Player } from '../../entities/player/types';
+import type { Laser } from '../../entities/laser/Laser';
+import type { Player } from '../../entities/player/Player';
+import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
 import { getDistance } from '../../utils/mathUtils';
 import { dispatchBotDestroyedEvent, shouldSkipPlayerCollision } from './collisionUtils';
@@ -27,14 +26,14 @@ function logLaserCollision(
 }
 
 export function detectLaserHits(
-  currAsteroidBelt: AsteroidBelt,
+  currRoidBelt: RoidBelt,
   currShip: Ship,
   bots?: Map<string, Player>
 ): number {
-  const roids = currAsteroidBelt.roids;
+  const roids = currRoidBelt.roids;
   let score = 0;
 
-  // detect laser hits on asteroids
+  // detect laser hits on roids
   for (let j = currShip.lasers.length - 1; j >= 0; j--) {
     const laser = currShip.lasers[j];
 
@@ -46,20 +45,20 @@ export function detectLaserHits(
     for (let i = roids.length - 1; i >= 0; i--) {
       // detect hits
       if (isHit(laser, roids[i])) {
-        logLaserCollision(laser, `asteroid ${i}`, 'hit', laser.explodeTime);
+        logLaserCollision(laser, `roid ${i}`, 'hit', laser.explodeTime);
 
-        // remove asteroid and activate laser explosion
-        Asteroid.fxHit.play();
-        score = currAsteroidBelt.destroyRoid(i);
+        // remove roid and activate laser explosion
+        Roid.fxHit.play();
+        score = currRoidBelt.destroyRoid(i);
         currShip.updateLaserExplodeTime(j);
 
-        logLaserCollision(laser, `asteroid ${i}`, 'exploded', currShip.lasers[j].explodeTime);
+        logLaserCollision(laser, `roid ${i}`, 'exploded', currShip.lasers[j].explodeTime);
         break; // This laser is now exploded, move to next
       }
     }
   }
 
-  // detect bot laser hits on asteroids (unified system)
+  // detect bot laser hits on roids (unified system)
   if (bots && bots.size > 0) {
     for (const [, bot] of bots.entries()) {
       if (bot.ship.exploding) {
@@ -76,19 +75,14 @@ export function detectLaserHits(
 
         for (let i = roids.length - 1; i >= 0; i--) {
           if (isHit(laser, roids[i])) {
-            logLaserCollision(laser, `asteroid ${i}`, 'hit (bot)', laser.explodeTime);
+            logLaserCollision(laser, `roid ${i}`, 'hit (bot)', laser.explodeTime);
 
-            Asteroid.fxHit.play();
-            score = currAsteroidBelt.destroyRoid(i);
+            Roid.fxHit.play();
+            score = currRoidBelt.destroyRoid(i);
             // trigger laser explode like player
             bot.ship.updateLaserExplodeTime(j);
 
-            logLaserCollision(
-              laser,
-              `asteroid ${i}`,
-              'exploded (bot)',
-              bot.ship.lasers[j].explodeTime
-            );
+            logLaserCollision(laser, `roid ${i}`, 'exploded (bot)', bot.ship.lasers[j].explodeTime);
             break; // This laser is now exploded, move to next
           }
         }
@@ -121,9 +115,8 @@ export function detectLaserHits(
         if (isLaserHitBot(laser, bot)) {
           logLaserCollision(laser, `bot ${botId}`, 'hit', laser.explodeTime);
 
-          // Deal damage to bot (same logic as botTakeDamage method)
-          const botManager = BotManager.getInstance();
-          botManager.botTakeDamage(bot, SHIP_COLLISION_DAMAGE);
+          // Deal damage to bot using the unified damage system
+          bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
           currShip.updateLaserExplodeTime(j);
 
@@ -135,7 +128,7 @@ export function detectLaserHits(
           }
 
           // Play hit sound
-          Asteroid.fxHit.play();
+          Roid.fxHit.play();
 
           // Only dispatch event if bot is actually destroyed
           if (bot.ship.exploding) {
@@ -150,7 +143,7 @@ export function detectLaserHits(
 
   // NOTE: Intentional: bots should not damage other bots with lasers.
   // The following bot-on-bot laser collision handling has been removed to ensure
-  // bots only attack players and asteroids.
+  // bots only attack players and roids.
 
   return score;
 }
@@ -208,7 +201,7 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
         logLaserCollision(laser, `player ${player.id}`, 'exploded', laser.explodeTime);
 
         // Play hit sound
-        Asteroid.fxHit.play();
+        Roid.fxHit.play();
 
         // Check if player should die from health loss
         if (newHealth <= 0) {
@@ -235,7 +228,7 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
           }
         }
 
-        // Award points for player hit (similar to asteroid destruction)
+        // Award points for player hit (similar to roid destruction)
         score += 50;
 
         // Only handle one hit per laser per frame
@@ -290,7 +283,7 @@ export function detectPlayerLaserShipCollisions(localShip: Ship, otherPlayers: P
         logLaserCollision(laser, `local ship`, 'exploded', player.ship.lasers[j].explodeTime);
 
         // Play hit sound
-        Asteroid.fxHit.play();
+        Roid.fxHit.play();
 
         // Check if ship should die from health loss
         if (newHealth <= 0) {
@@ -310,7 +303,7 @@ export function detectPlayerLaserShipCollisions(localShip: Ship, otherPlayers: P
   return score;
 }
 
-export function isHit(laser: Laser, roid: Asteroid): boolean {
+export function isHit(laser: Laser, roid: Roid): boolean {
   if (
     laser.explodeTime === 0 &&
     !laser.hasExploded &&

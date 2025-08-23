@@ -1,18 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Asteroid } from '../entities/asteroid/Asteroid';
+import type { PlayerJoin, PlayerLeave, PlayerUpdate, Position } from '../../shared-types';
 import { BotManager } from '../entities/bot/botManager';
 import { Player } from '../entities/player/Player';
-import type { Player as PlayerInterface, Position } from '../entities/player/types';
+import type { Roid } from '../entities/roid/Roid';
 import { Ship } from '../entities/ship/Ship';
 import { generateRandomPlayerColor } from '../utils/colorUtils';
-import type {
-  ClientMessage,
-  GameState,
-  PlayerJoin,
-  PlayerLeave,
-  PlayerUpdate,
-  ServerMessage,
-} from './types';
+import type { ClientMessage, GameState, ServerMessage } from './types';
 
 export class MultiplayerManager {
   private static instance: MultiplayerManager;
@@ -148,6 +141,8 @@ export class MultiplayerManager {
       const newPlayer = Player.createPlayer({
         id: data.id,
         name: data.name,
+        type: 'remote',
+        position: data.position,
       });
 
       // Set additional properties
@@ -230,6 +225,8 @@ export class MultiplayerManager {
         const newPlayer = Player.createPlayer({
           id: playerData.id,
           name: playerData.name,
+          type: 'remote',
+          position: playerData.position,
         });
 
         // Set additional properties
@@ -305,7 +302,6 @@ export class MultiplayerManager {
 
   // Unified player management - bots and remote players are treated similarly
   public initializeBots(count: number): void {
-    this.botManager.activate();
     this.botManager.createBots(count);
   }
 
@@ -346,20 +342,20 @@ export class MultiplayerManager {
     // Could also update for remote players if needed
   }
 
-  public updateAllPlayerData(asteroids: Asteroid[], otherPlayers: PlayerInterface[]): void {
+  public updateAllPlayerData(roids: Roid[], otherPlayers: Player[]): void {
     // Update data for all players (bots and remote players)
-    this.botManager.setAsteroids(asteroids);
+    this.botManager.setRoids(roids);
     this.botManager.setOtherPlayers(otherPlayers);
     // Could also update remote player data if needed
   }
 
-  public getOtherPlayersArray(): PlayerInterface[] {
+  public getOtherPlayersArray(): Player[] {
     return Array.from(this.players.values());
   }
 
-  public getAllPlayersArray(): PlayerInterface[] {
+  public getAllPlayersArray(): Player[] {
     // Get all players (remote + bots) as an array
-    const allPlayers: PlayerInterface[] = [];
+    const allPlayers: Player[] = [];
 
     // Add remote players
     for (const player of this.players.values()) {

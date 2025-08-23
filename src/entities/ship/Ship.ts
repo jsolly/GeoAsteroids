@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
 import { LASER_MAX } from '../../constants/entities/laser';
 import {
@@ -9,11 +10,10 @@ import {
   SHIP_SIZE,
   SHIP_THRUST,
 } from '../../constants/entities/ship';
-import { EMP_PULSE_DURATION } from '../../constants/game';
-import { FPS, FRICTION } from '../../constants/physics';
+import { EMP_PULSE_DURATION, FPS, FRICTION } from '../../constants/game';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
-import { createLaser, type Laser } from '../laser';
-import type { Position, Velocity } from '../player/types';
+import type { Laser } from '../laser/Laser';
+import { createLaser } from '../laser/laserUtils';
 
 import { drawThruster } from './shipRenderer';
 

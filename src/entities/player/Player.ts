@@ -1,28 +1,34 @@
-import { v4 as uuidv4 } from 'uuid';
-import { SHIP_INV_BLINK_DUR, SHIP_INV_DUR } from '../../constants/entities/ship';
-import { START_LIVES } from '../../constants/game';
-import { FPS } from '../../constants/physics';
-import { getRandomPositionWithinBoundary } from '../../physics/boundary';
+import {
+  SHIP_INV_BLINK_DUR,
+  SHIP_INV_DUR,
+  SHIP_RESPAWN_DELAY_FRAMES,
+} from '../../constants/entities/ship';
+import { FPS, START_LIVES } from '../../constants/game';
 import { logCollisionDetection } from '../../physics/collision/collisionUtils';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
+import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
 import { Ship } from '../ship/Ship';
-import type { Position } from './types';
 
 export class Player {
   id: string;
   name: string;
+  type: 'local' | 'remote' | 'bot';
   ship: Ship;
   score: number = 0;
   lastUpdate: number = Date.now();
   lives: number = START_LIVES;
   respawnTimer?: number; // Timer for respawning after death (in frames)
-  respawnPosition?: Position; // Position where player will respawn
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
   color: string; // Player's unique color for lasers and other visual elements
 
-  constructor(params: { id: string; name: string }) {
+  constructor(params: {
+    id: string;
+    name: string;
+    type: 'local' | 'remote' | 'bot';
+  }) {
     this.id = params.id;
     this.name = params.name;
+    this.type = params.type;
 
     // Assign a random color for this player
     this.color = generateRandomPlayerColor();
@@ -62,8 +68,10 @@ export class Player {
     this.lives--;
 
     if (this.lives > 0) {
-      // Player still has lives, handle respawn
-      this.handleLifeLost();
+      // Player still has lives, set respawn timer instead of immediately respawning
+      // This allows the explosion animation to play out before respawning
+      // The respawn() method will handle finding a safe random position
+      this.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
     } else {
       // No lives remaining - game over
       // Dispatch game over event for the game controller to handle
@@ -73,11 +81,6 @@ export class Player {
         })
       );
     }
-  }
-
-  handleLifeLost(): void {
-    // After a life is lost, respawn the player
-    this.respawn();
   }
 
   // Getter to check if player is dead (when no lives remaining)
@@ -90,7 +93,7 @@ export class Player {
     this.ship.exploding = false;
     this.ship.explodeTime = 0;
 
-    // Reset ship position to a safe location within the boundary
+    // Always spawn at a random safe location within the boundary
     this.ship.position = getRandomPositionWithinBoundary();
 
     // Reset ship velocity to prevent momentum from previous life
@@ -109,28 +112,21 @@ export class Player {
     this.ship.lastDamageTime = 0;
     this.ship.healthRegenTimer = 0;
 
-    // Reset respawn timer and position
+    // Reset respawn timer
     this.respawnTimer = undefined;
-    this.respawnPosition = undefined;
 
     // Set spawn protection
     this.spawnProtectedUntil = Date.now() + SHIP_INV_DUR * 1000;
   }
 
   static createPlayer(params: {
-    id?: string;
-    name?: string;
-    position?: { x: number; y: number };
+    id: string;
+    name: string;
+    type: 'local' | 'remote' | 'bot';
+    position: { x: number; y: number };
   }): Player {
-    const id = params.id || uuidv4();
-    const name = params.name || 'Player';
-
-    const player = new Player({ id, name });
-
-    if (params.position) {
-      player.ship.position = params.position;
-    }
-
+    const player = new Player({ id: params.id, name: params.name, type: params.type });
+    player.ship.position = params.position;
     return player;
   }
 }

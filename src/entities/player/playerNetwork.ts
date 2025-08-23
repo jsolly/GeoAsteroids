@@ -1,7 +1,7 @@
+import type { Position } from '../../../shared-types';
 import { GameController } from '../../core/gameController';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import type { Player } from './Player';
-import type { Position } from './types';
 
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
@@ -43,30 +43,39 @@ export class PlayerNetwork {
     // Update local player state for multiplayer (network-only)
     this.gameController.updateMultiplayerPlayerState();
 
-    // For remote players and bots, physics/timers are updated elsewhere
-    // here we only maintain aggregate/network-related state.
-    const players = this.multiplayerManager.players;
-    const bots = this.multiplayerManager.getBots();
+    // Get all players (remote and bot)
+    const allPlayers = this.getAllPlayers();
 
-    // Update bot AI data (asteroids and other players for decision making)
-    if (bots.size > 0) {
-      const asteroids = this.gameController.getCurrRoidBelt()?.getRoids() || [];
-      const otherPlayers = this.multiplayerManager.getOtherPlayersArray();
-      this.multiplayerManager.updateAllPlayerData(asteroids, otherPlayers);
+    // Update AI data for bots (bot players need roids and other players for decision making)
+    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
+    if (botPlayers.length > 0) {
+      const roids = this.gameController.getCurrRoidBelt()?.getRoids() || [];
+      const otherPlayers = allPlayers.filter((player) => player.type !== 'bot');
+      this.multiplayerManager.updateAllPlayerData(roids, otherPlayers);
     }
 
     // Only update network-derived counts if connected
     if (this.multiplayerManager.isConnected) {
-      const totalPlayerCount = players.size + bots.size;
-      this.gameController.getGameState().playerCount = totalPlayerCount;
+      this.gameController.getGameState().playerCount = allPlayers.length;
     }
   }
 
   // Remote players should not be force-respawned client-side; server/state updates handle respawn.
 
+  public getAllPlayers(): Player[] {
+    // Get all players: remote and bot (bots)
+    const remotePlayers = Array.from(this.multiplayerManager.players.values());
+    const botPlayers = Array.from(this.multiplayerManager.getBots().values());
+    return [...remotePlayers, ...botPlayers];
+  }
+
   public getOtherPlayers(): Player[] {
-    const players = this.multiplayerManager.players;
-    return Array.from(players.values());
+    // Return all non-local players (remote and bot/bots)
+    return this.getAllPlayers();
+  }
+
+  public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {
+    return this.getAllPlayers().filter((player) => player.type === type);
   }
 
   public isPlayerNearby(
@@ -96,8 +105,8 @@ export class PlayerNetwork {
   }
 
   public getPlayerById(id: string): Player | undefined {
-    const players = this.multiplayerManager.players;
-    return players.get(id);
+    // Search all players (remote and bot/bots)
+    return this.getAllPlayers().find((player) => player.id === id);
   }
 
   public getLocalPlayerInfo(): { id: string; name: string } {
@@ -107,10 +116,18 @@ export class PlayerNetwork {
     };
   }
 
-  public getConnectionStatus(): { connected: boolean; playerCount: number } {
+  public getConnectionStatus(): {
+    connected: boolean;
+    playerCount: number;
+    remoteHumanCount: number;
+    botCount: number;
+  } {
+    const allPlayers = this.getAllPlayers();
     return {
       connected: this.multiplayerManager.isConnected,
-      playerCount: this.multiplayerManager.players.size,
+      playerCount: allPlayers.length,
+      remoteHumanCount: this.getPlayersByType('remote').length,
+      botCount: this.getPlayersByType('bot').length,
     };
   }
 }

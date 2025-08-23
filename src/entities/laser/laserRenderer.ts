@@ -1,6 +1,6 @@
 import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import { FPS } from '../../constants/physics';
-import { getCTX, getCVS } from '../../constants/rendering/canvas';
+import { FPS } from '../../constants/game';
+import { canvasManager } from '../../rendering/canvas';
 import type { Laser } from './Laser';
 
 // Interface for boundary objects
@@ -13,8 +13,8 @@ interface Boundary {
 
 // Laser-specific rendering functions
 export function drawLaser(laser: Laser, shipPosition: { x: number; y: number }): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
 
   if (!ctx || !cvs || laser.explodeTime > 0) {
     return;

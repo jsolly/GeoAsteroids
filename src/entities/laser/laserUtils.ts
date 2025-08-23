@@ -1,7 +1,7 @@
+import type { Velocity } from '../../../shared-types';
 import { LASER_SPEED } from '../../constants/entities/laser';
-import { FPS } from '../../constants/physics';
+import { FPS } from '../../constants/game';
 import { addVectors } from '../../utils/mathUtils';
-import type { Velocity } from '../player/types';
 import type { Ship } from '../ship/Ship';
 import { Laser } from './Laser';
 

@@ -1,36 +1,32 @@
 import { expect, test } from 'vitest';
-import { SAVE_KEY_PERSONAL_BEST } from '../src/constants/game';
 import { GameState } from '../src/core/gameState.ts';
 
 const gameState = GameState.getInstance();
 
-// Test that getPersonalBest returns 0 when local storage is empty
-test('getPersonalBest - initial', () => {
-  localStorage.removeItem(SAVE_KEY_PERSONAL_BEST);
-  expect(gameState.getPersonalBest()).toBe(0);
-  expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('0');
-});
-
-// Test that getPersonalBest returns the score from local storage
-test('getPersonalBest - after setting a score', () => {
-  localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  expect(gameState.getPersonalBest()).toBe(100);
-});
-
-// Test that updatePersonalBest updates the score in local storage when the new score is higher
-test('updatePersonalBest - higher score', () => {
-  localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  gameState.updateCurrentScore(200);
-  gameState.updatePersonalBest();
-  expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('200');
-});
-
-// Test that updatePersonalBest does not update the score in local storage when the new score is lower
-test('updatePersonalBest - lower score', () => {
+// Test that getCurrentScore returns initial score
+test('getCurrentScore - initial', () => {
   gameState.resetCurrentScore();
+  expect(gameState.getCurrentScore()).toBe(0);
+});
 
-  localStorage.setItem(SAVE_KEY_PERSONAL_BEST, '100');
-  gameState.updateCurrentScore(-50);
-  gameState.updatePersonalBest();
-  expect(localStorage.getItem(SAVE_KEY_PERSONAL_BEST)).toBe('100');
+// Test that updateCurrentScore adds to the current score
+test('updateCurrentScore - add points', () => {
+  gameState.resetCurrentScore();
+  gameState.updateCurrentScore(100);
+  expect(gameState.getCurrentScore()).toBe(100);
+});
+
+// Test that updateCurrentScore can add multiple times
+test('updateCurrentScore - multiple additions', () => {
+  gameState.resetCurrentScore();
+  gameState.updateCurrentScore(50);
+  gameState.updateCurrentScore(25);
+  expect(gameState.getCurrentScore()).toBe(75);
+});
+
+// Test that resetCurrentScore resets to zero
+test('resetCurrentScore - reset to initial', () => {
+  gameState.updateCurrentScore(200);
+  gameState.resetCurrentScore();
+  expect(gameState.getCurrentScore()).toBe(0);
 });

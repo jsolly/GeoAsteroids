@@ -1,9 +1,9 @@
+import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
 import { LASER_DIST, LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import { FPS } from '../../constants/physics';
-import { getCVS } from '../../constants/rendering/canvas';
+import { FPS } from '../../constants/game';
+import { canvasManager } from '../../rendering/canvas';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
-import type { Position, Velocity } from '../player/types';
 
 export interface LaserData {
   position: Position;
@@ -43,7 +43,7 @@ export class Laser implements LaserData {
   }
 
   isExpired(): boolean {
-    const cvs = getCVS();
+    const cvs = canvasManager.getCanvas();
     return cvs ? this.distTraveled >= LASER_DIST + cvs.width : false;
   }
 
