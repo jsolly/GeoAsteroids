@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { getRandomPositionWithinBoundary } from '../../physics/boundary';
 import type { Player } from '../player/Player';
 import { BotPlayer } from './BotPlayer';
 
@@ -73,18 +74,13 @@ export class BotFactory {
   }
 
   private getBotStartingPositions(count: number): Array<{ x: number; y: number }> {
-    const margin = 150;
-    const positions = [
-      { x: -margin, y: -margin }, // Top-left
-      { x: margin, y: -margin }, // Top-right
-      { x: margin, y: margin }, // Bottom-right
-      { x: -margin, y: margin }, // Bottom-left
-      { x: margin, y: 0 }, // Right of world center
-      { x: -margin, y: 0 }, // Left of world center
-      { x: 0, y: margin }, // Below world center
-      { x: 0, y: -margin }, // Above world center
-    ];
+    const positions: Array<{ x: number; y: number }> = [];
 
-    return Array.from({ length: count }, (_, i) => positions[i % positions.length]);
+    // Generate random positions within the boundary for each bot
+    for (let i = 0; i < count; i++) {
+      positions.push(getRandomPositionWithinBoundary());
+    }
+
+    return positions;
   }
 }

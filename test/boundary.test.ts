@@ -3,6 +3,7 @@ import type { Ship } from '../src/entities/ship/Ship';
 import {
   getBoundaryCollisionSide,
   getGameBoundary,
+  getRandomPositionWithinBoundary,
   isShipOutOfBounds,
 } from '../src/physics/boundary';
 import { detectBoundaryCollisions, detectPlayerBoundaryCollisions } from '../src/physics/collision';
@@ -121,4 +122,26 @@ describe('Boundary System', () => {
       expect(bot.respawnPosition?.y).toBeLessThanOrEqual(boundary.y + boundary.height - margin);
     });
   });
+});
+
+it('should generate positions within boundary', () => {
+  const position = getRandomPositionWithinBoundary();
+  const boundary = getGameBoundary();
+  const shipRadius = 15; // Assuming SHIP_SIZE is 30, so radius is 15
+
+  // Check that the ship's entire radius fits within the boundary
+  expect(position.x - shipRadius).toBeGreaterThanOrEqual(boundary.x);
+  expect(position.x + shipRadius).toBeLessThanOrEqual(boundary.x + boundary.width);
+  expect(position.y - shipRadius).toBeGreaterThanOrEqual(boundary.y);
+  expect(position.y + shipRadius).toBeLessThanOrEqual(boundary.y + boundary.height);
+});
+
+it('should generate different positions', () => {
+  const position1 = getRandomPositionWithinBoundary();
+  const position2 = getRandomPositionWithinBoundary();
+
+  // It's possible but very unlikely for two random positions to be identical
+  // If they are identical, it suggests the random generation isn't working
+  const positionsAreDifferent = position1.x !== position2.x || position1.y !== position2.y;
+  expect(positionsAreDifferent).toBe(true);
 });

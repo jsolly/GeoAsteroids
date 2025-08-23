@@ -4,6 +4,7 @@ import { Asteroid } from '../entities/asteroid/Asteroid';
 import type { Player, Position } from '../entities/player/types';
 import type { Ship } from '../entities/ship/Ship';
 import { getGameBoundary, isShipOutOfBounds } from '../physics/boundary';
+import { logCollisionDetection } from '../physics/collision/collisionUtils';
 
 export function drawFieryBoundary(shipPosition: Position): void {
   const ctx = getCTX();
@@ -72,17 +73,32 @@ export function drawFieryBoundary(shipPosition: Position): void {
 // Boundary collision detection functions
 export function detectBoundaryCollisions(ship: Ship): boolean {
   if (ship.exploding) {
+    logCollisionDetection('Boundary Collision', 'Boundary', ship.id, false);
     return false;
   }
 
   // Skip collision detection if ship is invincible (blinking or spawn protection)
   if (ship.blinkCount > 0) {
+    logCollisionDetection('Boundary Collision', 'Boundary', ship.id, false);
     return false;
   }
 
   if (isShipOutOfBounds(ship.position)) {
+    logCollisionDetection('Boundary Collision', 'Boundary', ship.id, true);
+
     // Ship is out of bounds, trigger explosion
     ship.explode();
+
+    // CRITICAL FIX: Dispatch shipExploded event so Player.onShipExploded() gets called
+    // This is needed because boundary collisions bypass the normal damage system
+    window.dispatchEvent(
+      new CustomEvent('shipExploded', {
+        detail: {
+          shipId: ship.id,
+          position: { x: ship.position.x, y: ship.position.y },
+        },
+      })
+    );
 
     // Play explosion sound
     Asteroid.fxHit.play();
