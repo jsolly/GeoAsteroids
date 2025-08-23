@@ -108,14 +108,24 @@ export async function copyLogs(): Promise<void> {
     document.body.appendChild(textarea);
     textarea.select();
 
-    // Use execCommand as last resort (deprecated but still supported in some browsers)
-    if (document.execCommand('copy')) {
-      document.body.removeChild(textarea);
-      return;
+    // Modern clipboard fallback - show text to user for manual copy
+    try {
+      // Try to use the modern clipboard API first
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        document.body.removeChild(textarea);
+        return;
+      }
+    } catch {
+      // Fall through to manual copy approach
     }
 
+    // Manual copy approach - show text in alert for user to copy
     document.body.removeChild(textarea);
-    throw new Error('execCommand copy failed');
+    alert(
+      `Logs copied to clipboard:\n\n${text.substring(0, 1000)}${text.length > 1000 ? '...' : ''}`
+    );
+    throw new Error('Modern clipboard API not available');
   } catch (error) {
     // Log the error and fall back to printing the text
     console.warn('Failed to copy logs to clipboard:', error);

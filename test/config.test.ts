@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 import { ROID_NUM } from '../src/constants/game';
-import { LOCAL_STORAGE_KEYS, musicIsOn, soundIsOn } from '../src/constants/preferences';
+import { LOCAL_STORAGE_KEYS, soundIsOn } from '../src/constants/user-preferences';
 
 beforeEach(() => {
   localStorage.clear();
@@ -8,7 +8,6 @@ beforeEach(() => {
 
 test('Local Storage Keys', () => {
   expect(LOCAL_STORAGE_KEYS.soundOn).toBe('soundOn');
-  expect(LOCAL_STORAGE_KEYS.musicOn).toBe('musicOn');
 });
 
 test('Sound On', () => {
@@ -21,15 +20,6 @@ test('Sound Off', () => {
   expect(soundIsOn()).toBe(false);
 });
 
-test('Music On', () => {
-  localStorage.setItem('musicOn', 'true');
-  expect(musicIsOn()).toBe(true);
-});
-
-test('Music Off', () => {
-  localStorage.setItem('musicOn', 'false');
-  expect(musicIsOn()).toBe(false);
-});
 test('ROID_NUM constant', () => {
   expect(ROID_NUM).toBe(10);
 });

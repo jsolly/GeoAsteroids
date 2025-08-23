@@ -1,7 +1,6 @@
 // Console overrides and error handling are now handled by logLevel.ts which loads first
 
 // Simple logging - removed complex logger dependency
-import { setMusic } from '../audio/Music';
 import { setSound } from '../audio/Sound';
 
 import { GameController } from '../core/gameController';
@@ -13,7 +12,6 @@ import { toggleScreen } from './uiUtils';
 
 // UI element references
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
-const musicCheckBox = getElementById<HTMLInputElement>('musicPref');
 
 const startMultiplayerBtn = getElementById<HTMLButtonElement>('start-multiplayer');
 const startDebugBtn = getElementById<HTMLButtonElement>('start-debug');
@@ -36,7 +34,7 @@ function updatePlayerCount(): void {
   if (playerCountElement) {
     const gameController = getGameController();
     const currentCount = parseInt(playerCountElement.textContent || '1', 10);
-    const playerCount = gameController.getPlayerCount();
+    const playerCount = gameController.getGameState().playerCount;
 
     // Only update if the count actually changed
     if (currentCount !== playerCount) {
@@ -122,22 +120,15 @@ function hideMultiplayerNameModal(): void {
 
 // Function to start debug mode
 function startDebugMode(): void {
-  // Import and use the debug manager
-  import('../debug/debugManager').then(({ DebugManager }) => {
-    const debugManager = DebugManager.getInstance();
+  // Update button state
+  startDebugBtn?.classList.add('active-mode');
 
-    // Enable debug mode
-    debugManager.enableDebugMode();
+  // Get the game controller and enable debug mode
+  const gameController = getGameController();
+  gameController.enableDebugMode();
 
-    // Get the debug game controller and start the game
-    const debugGameController = debugManager.getDebugGameController();
-
-    // Update button state
-    startDebugBtn?.classList.add('active-mode');
-
-    // Start the game in debug mode
-    debugGameController.startGame();
-  });
+  // Start the game - debug mode will be automatically detected and setup
+  gameController.startGame();
 }
 
 // Function to start multiplayer with the entered name
@@ -159,9 +150,6 @@ function startMultiplayerWithName(): void {
 
       // Hide the modal
       hideMultiplayerNameModal();
-
-      // Enable multiplayer and start the game
-      gameController.enableMultiplayer();
 
       // Update button state
       startMultiplayerBtn?.classList.add('active-mode');
@@ -208,11 +196,6 @@ window.addEventListener('resize', updateScrollIndicator);
 attachEventListener(soundCheckBox, 'change', (ev) => {
   const target = ev.target as HTMLInputElement;
   setSound(target.checked);
-});
-
-attachEventListener(musicCheckBox, 'change', (ev) => {
-  const target = ev.target as HTMLInputElement;
-  setMusic(target.checked);
 });
 
 export function showGameOverMenu(): void {

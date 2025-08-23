@@ -1,10 +1,6 @@
+import { v4 as uuidv4 } from 'uuid';
 import { Sound } from '../../audio/Sound';
-import {
-  LASER_DIST,
-  LASER_EXPLODE_DUR,
-  LASER_MAX,
-  LASER_SPEED,
-} from '../../constants/entities/laser';
+import { LASER_MAX } from '../../constants/entities/laser';
 import {
   SHIP_EXPLODE_DUR_FRAMES,
   SHIP_INV_BLINK_DUR,
@@ -15,13 +11,8 @@ import {
 } from '../../constants/entities/ship';
 import { EMP_PULSE_DURATION } from '../../constants/game';
 import { FPS, FRICTION } from '../../constants/physics';
-import { getCVS } from '../../constants/rendering/canvas';
-import {
-  addPositionAndVelocity,
-  addVectors,
-  getVelocityMagnitude,
-  multiplyVelocity,
-} from '../../utils/mathUtils';
+import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
+import { createLaser, type Laser } from '../laser';
 import type { Position, Velocity } from '../player/types';
 
 import { drawThruster } from './shipRenderer';
@@ -31,31 +22,12 @@ import {
   calculateHealthAfterHeal,
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
-  calculateLaserStartPosition,
   canTakeCollisionDamage,
   shouldStartHealthRegeneration,
 } from './shipUtils';
 
-interface LaserData {
-  position: Position;
-  velocity: Velocity;
-  distTraveled: number;
-  explodeTime: number;
-}
-
-class Laser implements LaserData {
-  static fxLaser: Sound = new Sound('sounds/laser.m4a', 5);
-  static fxHit: Sound = new Sound('sounds/hit.m4a', 5);
-
-  constructor(
-    public position: Position,
-    public velocity: Velocity,
-    public distTraveled: number,
-    public explodeTime: number
-  ) {}
-}
-
 class Ship {
+  id: string = uuidv4(); // Unique identifier for event handling
   position: Position = { x: 0, y: 0 };
   velocity: Velocity = { x: 0, y: 0 };
   r: number = SHIP_SIZE / 2;
@@ -81,6 +53,7 @@ class Ship {
   thrusterActive: boolean = false;
   lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
+  color: string = '#ffffff'; // Ship color for rendering
 
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
@@ -88,6 +61,7 @@ class Ship {
   constructor(options?: {
     position?: Position;
     shotCooldown?: number;
+    color?: string;
   }) {
     // Apply optional overrides for bot-specific configuration
     if (options?.position) {
@@ -95,6 +69,9 @@ class Ship {
     }
     if (options?.shotCooldown !== undefined) {
       this.shotCooldown = options.shotCooldown;
+    }
+    if (options?.color) {
+      this.color = options.color;
     }
   }
 
@@ -152,44 +129,28 @@ class Ship {
   fireLaser(): void {
     const laser = this.generateLaser();
     this.lasers.push(laser);
-    Laser.fxLaser.play();
+    laser.playLaserSound();
   }
 
   moveLasers(): void {
     for (let i = this.lasers.length - 1; i >= 0; i--) {
       const laser = this.lasers[i];
 
-      if (laser.explodeTime > 0) {
-        laser.explodeTime--;
-        if (laser.explodeTime === 0) {
-          this.lasers.splice(i, 1);
-          continue;
-        }
-      } else {
-        laser.position = addPositionAndVelocity(laser.position, laser.velocity);
-        laser.distTraveled += getVelocityMagnitude(laser.velocity);
-      }
+      laser.move();
 
-      const cvs = getCVS();
-      if (cvs && laser.distTraveled >= LASER_DIST + cvs.width) {
+      // Remove lasers that have traveled their maximum distance OR finished exploding
+      if (laser.shouldBeRemoved()) {
         this.lasers.splice(i, 1);
       }
     }
   }
 
   updateLaserExplodeTime(i: number): void {
-    this.lasers[i].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+    this.lasers[i].updateExplodeTime();
   }
 
   generateLaser(): Laser {
-    const baseVelocity: Velocity = {
-      x: (Math.cos(this.angle) * LASER_SPEED) / FPS,
-      y: (-Math.sin(this.angle) * LASER_SPEED) / FPS,
-    };
-    const laserVelocity = addVectors(baseVelocity, this.velocity);
-
-    const laserStartPosition = calculateLaserStartPosition(this.position, this.angle, this.r);
-    return new Laser(laserStartPosition, laserVelocity, 0, 0);
+    return createLaser(this);
   }
 
   updateFromNetwork(data: {
@@ -275,18 +236,6 @@ class Ship {
       return;
     }
 
-    // Check if debug invincibility is enabled
-    const isDebugInvincible = (() => {
-      try {
-        if (import.meta.env.VITE_DEBUG === 'true') {
-          return import.meta.env.VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE === 'true';
-        }
-        return false;
-      } catch {
-        return false;
-      }
-    })();
-
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
     this.lastDamageTime = FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
@@ -294,28 +243,18 @@ class Ship {
     if (this.health <= 0) {
       this.health = 0;
 
-      if (isDebugInvincible) {
-        this.health = this.maxHealth;
-        this.lastDamageTime = 0;
-        this.healthRegenTimer = 0;
-      } else {
-        // Ship health reached 0, notify that a life should be lost
-        this.health = this.maxHealth;
-        this.lastDamageTime = 0;
-        this.healthRegenTimer = 0;
+      // Ship health reached 0, it should explode
+      this.explode();
 
-        // Ship health reached 0, it should explode
-        this.explode();
-
-        // Dispatch event to notify that ship has exploded
-        window.dispatchEvent(
-          new CustomEvent('shipExploded', {
-            detail: {
-              position: { x: this.position.x, y: this.position.y },
-            },
-          })
-        );
-      }
+      // Dispatch event to notify that ship has exploded
+      window.dispatchEvent(
+        new CustomEvent('shipExploded', {
+          detail: {
+            shipId: this.id,
+            position: { x: this.position.x, y: this.position.y },
+          },
+        })
+      );
     }
   }
 
@@ -376,4 +315,4 @@ class Ship {
   }
 }
 
-export { Ship, Laser };
+export { Ship };

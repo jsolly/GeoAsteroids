@@ -4,9 +4,9 @@ import { START_LIVES } from '../../constants/game';
 import { FPS } from '../../constants/physics';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
 import { Ship } from '../ship/Ship';
-import type { Player as PlayerInterface, Position } from './types';
+import type { Position } from './types';
 
-export class Player implements PlayerInterface {
+export class Player {
   id: string;
   name: string;
   ship: Ship;
@@ -21,12 +21,29 @@ export class Player implements PlayerInterface {
   constructor(params: { id: string; name: string }) {
     this.id = params.id;
     this.name = params.name;
-    this.ship = new Ship();
-    this.lives = START_LIVES;
-    this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
 
     // Assign a random color for this player
     this.color = generateRandomPlayerColor();
+
+    // Create ship with player's color
+    this.ship = new Ship({ color: this.color });
+
+    this.lives = START_LIVES;
+    this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
+
+    // Set up event listeners for ship events
+    this.setupShipEventListeners();
+  }
+
+  private setupShipEventListeners(): void {
+    // Listen for ship explosion events
+    window.addEventListener('shipExploded', (event: Event) => {
+      const customEvent = event as CustomEvent;
+      // Check if this event is from our ship
+      if (customEvent.detail?.shipId === this.ship.id) {
+        this.onShipExploded();
+      }
+    });
   }
 
   update(): void {
@@ -42,8 +59,15 @@ export class Player implements PlayerInterface {
     if (this.lives > 0) {
       // Player still has lives, handle respawn
       this.handleLifeLost();
+    } else {
+      // No lives remaining - game over
+      // Dispatch game over event for the game controller to handle
+      window.dispatchEvent(
+        new CustomEvent('playerGameOver', {
+          detail: { playerId: this.id },
+        })
+      );
     }
-    // If lives <= 0, player is game over (no respawn)
   }
 
   handleLifeLost(): void {
@@ -105,9 +129,6 @@ export class Player implements PlayerInterface {
     if (params.position) {
       player.ship.position = params.position;
     }
-
-    // Assign random color for players
-    player.color = generateRandomPlayerColor();
 
     return player;
   }

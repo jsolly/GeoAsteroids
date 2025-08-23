@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { Ship } from '../src/entities/ship/Ship';
 import {
   getBoundaryCollisionSide,
   getGameBoundary,
   isShipOutOfBounds,
 } from '../src/physics/boundary';
-import {
-  detectBotBoundaryCollisions,
-  detectPlayerBoundaryCollisions,
-} from '../src/physics/collisions';
+import { detectBoundaryCollisions, detectPlayerBoundaryCollisions } from '../src/physics/collision';
 
 describe('Boundary System', () => {
   it('should create a boundary with correct dimensions', () => {
@@ -73,11 +71,16 @@ describe('Boundary System', () => {
   describe('Boundary Collision Functions', () => {
     it('should export boundary collision functions without errors', () => {
       // Test that the functions exist and can be called
-      expect(typeof detectBotBoundaryCollisions).toBe('function');
+      expect(typeof detectBoundaryCollisions).toBe('function');
       expect(typeof detectPlayerBoundaryCollisions).toBe('function');
 
       // Test that they don't throw with empty inputs
-      expect(() => detectBotBoundaryCollisions(new Map())).not.toThrow();
+      expect(() =>
+        detectBoundaryCollisions({
+          position: { x: 0, y: 0 },
+          r: 15,
+        } as unknown as Ship)
+      ).not.toThrow();
       expect(() => detectPlayerBoundaryCollisions([])).not.toThrow();
     });
 
@@ -95,11 +98,11 @@ describe('Boundary System', () => {
       bot.spawnProtectedUntil = Date.now() - 1000; // Set to 1 second ago
       bot.ship.blinkCount = 0; // Remove ship invincibility
 
-      // Create a map with the bot
-      const bots = new Map([['test-bot', bot]]);
+      // Create an array with the bot
+      const bots = [bot];
 
       // Call the boundary collision detection
-      detectBotBoundaryCollisions(bots);
+      detectPlayerBoundaryCollisions(bots);
 
       // Verify the bot is marked for explosion
       expect(bot.ship.exploding).toBe(true);

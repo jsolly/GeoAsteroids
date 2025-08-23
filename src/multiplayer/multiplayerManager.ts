@@ -1,11 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Asteroid } from '../entities/asteroid/Asteroid';
+import { BotManager } from '../entities/bot/botManager';
 import { Player } from '../entities/player/Player';
 import type { Player as PlayerInterface, Position } from '../entities/player/types';
 import { Ship } from '../entities/ship/Ship';
-
 import { generateRandomPlayerColor } from '../utils/colorUtils';
-import { BotIntegrationManager } from './botIntegrationManager';
 import type {
   ClientMessage,
   GameState,
@@ -18,7 +17,7 @@ import type {
 export class MultiplayerManager {
   private static instance: MultiplayerManager;
   private socket: WebSocket | null = null;
-  public players: Map<string, PlayerInterface> = new Map();
+  public players: Map<string, Player> = new Map();
   public localPlayerId: string;
   public localPlayerName: string;
   public isConnected: boolean = false;
@@ -27,12 +26,12 @@ export class MultiplayerManager {
   private reconnectDelay: number = 1000;
   // Persist colors across re-initializations per remote player id
   private playerColors: Map<string, string> = new Map();
-  private botIntegration: BotIntegrationManager;
+  private botManager: BotManager;
 
   private constructor() {
     this.localPlayerId = uuidv4();
     this.localPlayerName = `Player_${Math.floor(Math.random() * 1000)}`;
-    this.botIntegration = new BotIntegrationManager();
+    this.botManager = BotManager.getInstance();
   }
 
   public static getInstance(): MultiplayerManager {
@@ -304,49 +303,107 @@ export class MultiplayerManager {
     }
   }
 
-  // Minimal bot integration methods needed by GameController
-  public enableBots(count: number): void {
-    this.botIntegration.enableBots(count);
+  // Unified player management - bots and remote players are treated similarly
+  public initializeBots(count: number): void {
+    this.botManager.activate();
+    this.botManager.createBots(count);
   }
 
-  public disableBots(): void {
-    this.botIntegration.disableBots();
+  public getAllPlayers(): Map<string, Player> {
+    // Combine remote players and bots into a single collection
+    const allPlayers = new Map<string, Player>();
+
+    // Add remote players
+    for (const [id, player] of this.players.entries()) {
+      allPlayers.set(id, player);
+    }
+
+    // Add bots
+    const bots = this.botManager.getBots();
+    for (const [id, bot] of bots.entries()) {
+      allPlayers.set(id, bot);
+    }
+
+    return allPlayers;
   }
 
-  public getBots(): Map<string, PlayerInterface> {
-    return this.botIntegration.manager.getBots();
+  public getBots(): Map<string, Player> {
+    return this.botManager.getBots();
   }
 
-  public updateBotsInGameLoop(): void {
-    // Bot movement and combat updates are handled by the BotManager
-    // This method is called by the game loop to ensure bots are updated
-    this.botIntegration.manager.updateBotsInGameLoop();
+  public getRemotePlayers(): Map<string, Player> {
+    return this.players;
   }
 
-  public empDestroyBot(_botId: string): void {
-    // EMP pulse destroys a bot - this will be handled by the BotManager
+  public empDestroyPlayer(_playerId: string): void {
+    // EMP pulse destroys any player (bot or remote) - this will be handled by the respective manager
     // when the EMP pulse is processed
   }
 
-  public updateLocalPlayerForBots(position: Position, alive: boolean): void {
-    this.botIntegration.updateLocalPlayerForBots(position, alive);
+  public updateLocalPlayerForAllPlayers(position: Position, alive: boolean): void {
+    // Update local player position for both bots and remote players
+    this.botManager.updateLocalPlayerPosition(position, alive);
+    // Could also update for remote players if needed
   }
 
-  public setAsteroidsForBots(asteroids: Asteroid[]): void {
-    this.botIntegration.manager.setAsteroids(asteroids);
-  }
-
-  public setOtherPlayersForBots(players: PlayerInterface[]): void {
-    this.botIntegration.manager.setOtherPlayers(players);
+  public updateAllPlayerData(asteroids: Asteroid[], otherPlayers: PlayerInterface[]): void {
+    // Update data for all players (bots and remote players)
+    this.botManager.setAsteroids(asteroids);
+    this.botManager.setOtherPlayers(otherPlayers);
+    // Could also update remote player data if needed
   }
 
   public getOtherPlayersArray(): PlayerInterface[] {
     return Array.from(this.players.values());
   }
 
+  public getAllPlayersArray(): PlayerInterface[] {
+    // Get all players (remote + bots) as an array
+    const allPlayers: PlayerInterface[] = [];
+
+    // Add remote players
+    for (const player of this.players.values()) {
+      allPlayers.push(player);
+    }
+
+    // Add bots
+    const bots = this.botManager.getBots();
+    for (const bot of bots.values()) {
+      allPlayers.push(bot);
+    }
+
+    return allPlayers;
+  }
+
+  public getPlayerById(playerId: string): Player | undefined {
+    // Get player from either collection (remote players or bots)
+    const remotePlayer = this.players.get(playerId);
+    if (remotePlayer) {
+      return remotePlayer;
+    }
+
+    // Check bots if not found in remote players
+    const bots = this.botManager.getBots();
+    return bots.get(playerId);
+  }
+
+  public getPlayerCount(): number {
+    // Total count of all players (remote + bots)
+    return this.players.size + this.botManager.getBots().size;
+  }
+
+  public getRemotePlayerCount(): number {
+    return this.players.size;
+  }
+
+  public getBotCount(): number {
+    return this.botManager.getBots().size;
+  }
+
   public removePlayer(playerId: string): void {
-    const player = this.players.get(playerId);
-    if (player) {
+    // Remove player from appropriate collection (bots or remote players)
+    const remotePlayer = this.players.get(playerId);
+    if (remotePlayer) {
       this.players.delete(playerId);
 
       // Dispatch event to notify other systems
@@ -354,11 +411,20 @@ export class MultiplayerManager {
         new CustomEvent('playerRemoved', {
           detail: {
             playerId,
-            playerName: player.name,
+            playerName: remotePlayer.name,
             reason: 'No lives remaining',
           },
         })
       );
+      return;
+    }
+
+    // Check if it's a bot
+    const bots = this.botManager.getBots();
+    const botPlayer = bots.get(playerId);
+    if (botPlayer) {
+      // Note: Bot removal is handled by BotManager, not here
+      // This is just for reference
     }
   }
 

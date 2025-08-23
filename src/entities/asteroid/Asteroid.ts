@@ -9,7 +9,7 @@ import {
   ROID_SPEED,
   ROID_VERTICES,
 } from '../../constants/entities/asteroid';
-import { DRAW_ASTEROIDS, ROID_NUM } from '../../constants/game';
+import { ROID_NUM } from '../../constants/game';
 import { FPS } from '../../constants/physics';
 import { GameController } from '../../core/gameController';
 import type { Position, Velocity } from '../player/types';
@@ -52,18 +52,12 @@ class AsteroidBelt {
     // Don't check multiplayer mode during construction to avoid circular dependency
     // The asteroid count will be adjusted later when the game starts
 
-    if (DRAW_ASTEROIDS) {
-      for (let i = 0; i < this.roidNum; i++) {
-        this.addRoid();
-      }
+    for (let i = 0; i < this.roidNum; i++) {
+      this.addRoid();
     }
   }
 
   addRoid(): void {
-    if (!DRAW_ASTEROIDS) {
-      return;
-    }
-
     const asteroidPosition = spawnAsteroidFromEdge();
     this.roids.push(new Asteroid(asteroidPosition, Math.ceil(ROID_SIZE / 2)));
   }
@@ -98,9 +92,6 @@ class AsteroidBelt {
   }
 
   moveRoids(): void {
-    if (!DRAW_ASTEROIDS) {
-      return;
-    }
     for (const roid of this.roids) {
       // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
       // let dt = 1/Math.sqrt(1-beta_squared)
@@ -112,9 +103,6 @@ class AsteroidBelt {
   }
 
   spawnRoids(): void {
-    if (!DRAW_ASTEROIDS) {
-      return;
-    }
     if (this.spawnTime === 0) {
       // Spawn more asteroids since we have full-screen space
       const spawnCount = calculateSpawnCount();
@@ -130,10 +118,10 @@ class AsteroidBelt {
   adjustForMultiplayer(): void {
     try {
       const gameController = GameController.getInstance();
-      const isMultiplayer = gameController.isMultiplayerEnabled();
+      const isMultiplayer = true; // Always multiplayer
 
       if (isMultiplayer) {
-        const playerCount = gameController.getPlayerCount();
+        const playerCount = gameController.getGameState().playerCount;
 
         // Guard against zero player count
         const safePlayerCount = Math.max(1, playerCount);

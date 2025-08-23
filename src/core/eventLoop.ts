@@ -1,40 +1,43 @@
-import { SHIP_INV_BLINK_DUR, SHIP_INV_DUR } from '../constants/entities/ship';
-import { DRAW_ASTEROIDS, EMP_PULSE_DURATION, EMP_PULSE_RADIUS } from '../constants/game';
+import { SHIP_INV_BLINK_DUR } from '../constants/entities/ship';
+import { EMP_PULSE_DURATION, EMP_PULSE_RADIUS } from '../constants/game';
 import { FPS } from '../constants/physics';
-import { musicIsOn } from '../constants/preferences';
-import { BotPlayer } from '../entities/bot/BotPlayer';
+import { initializeCanvas } from '../constants/rendering/canvas';
+import { BotManager } from '../entities/bot/botManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
-import type { Player } from '../entities/player/types';
 import type { Ship } from '../entities/ship/Ship';
 import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/ship/shipRenderer';
 import {
-  detectAllPlayerBotCollisions,
-  detectBotAsteroidCollisions,
-  detectBotBoundaryCollisions,
-  detectBotLaserPlayerCollisions,
-  detectBotShipCollisions,
   detectBoundaryCollisions,
   detectLaserHits,
   detectLaserPlayerCollisions,
+  detectPlayerAsteroidCollisions,
   detectPlayerBoundaryCollisions,
   detectPlayerLaserShipCollisions,
   detectRoidHits,
   detectShipToShipCollisions,
-} from '../physics/collisions';
-
+} from '../physics/collision';
 import { drawGameCanvas } from '../rendering/canvas';
 import { GameController } from './gameController';
 
 const gameController = GameController.getInstance();
 const playerNetwork = PlayerNetwork.getInstance();
 
-window.addEventListener('gameStart', () => {
-  // Game started, setting up game loop
+// Initialize canvas with proper scaling after DOM is loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeCanvas);
+} else {
+  initializeCanvas();
+}
 
-  // Set up bot shoot handler if multiplayer is enabled
-  if (gameController.isMultiplayerEnabled()) {
-    gameController.setupBotShootHandler();
-  }
+// Set up main menu updates
+(async () => {
+  const { setupMainMenuUpdates } = await import('../ui/mainMenu');
+  setupMainMenuUpdates();
+})();
+
+window.addEventListener('gameStart', () => {
+  // Set up bot shoot handler
+  gameController.setupBotShootHandler();
 
   function gameLoop(): void {
     if (!gameController.getIsGameRunning()) {
@@ -53,16 +56,6 @@ window.addEventListener('gameStart', () => {
   window.requestAnimationFrame(gameLoop);
 });
 
-// Add event listener for ship explosion
-window.addEventListener('shipExploded', () => {
-  const player = gameController.getCurrPlayer();
-  if (player) {
-    // Ship has exploded, just decrement player lives
-    // The explosion animation will be handled by the normal game loop
-    player.lives--;
-  }
-});
-
 function updateGame(): void {
   const currShip = gameController.getCurrShip();
   const currPlayer = gameController.getCurrPlayer();
@@ -75,18 +68,16 @@ function updateGame(): void {
   handleLevelUp();
 
   // Always update player network state (invincibility/blink timers, explosions, regen)
+  // This now handles ALL players (local + remote + bots) in a unified way
   playerNetwork.updatePlayerState();
 
-  // Update bot systems only when multiplayer is enabled
-  if (gameController.isMultiplayerEnabled()) {
-    // Update all bot systems at the same framerate as the main game loop
-    gameController.updateBotsInGameLoop();
-  }
+  // Update bot movement and behavior
+  const botManager = BotManager.getInstance();
+  botManager.updateBotsInGameLoop();
 
   drawGameCanvas(currShip, currRoidBelt, currScore, personalBest, textAlpha, text);
 
-  handleMusic();
-  handleShipState(currShip, currPlayer);
+  handleShipState(currShip);
   handleCollision(currShip);
 
   // Only move ship if it's not exploding and player has lives remaining
@@ -104,21 +95,15 @@ function handleLevelUp(): void {
   }
 }
 
-function handleMusic(): void {
-  if (musicIsOn()) {
-    gameController.tickMusic();
-  }
-}
-
-function handleShipState(ship: Ship, player: Player): void {
+function handleShipState(ship: Ship): void {
   try {
     ship.setBlinkOn();
     ship.setExploding();
     ship.updateEmpPulse(); // Update EMP pulse state
 
     if (!ship.exploding) {
-      if (player.lives > 0 && ship.blinkOn) {
-        drawShipRelative(ship, player.color);
+      if (ship.blinkOn) {
+        drawShipRelative(ship, ship.color);
       }
 
       // Draw EMP pulse effect if active
@@ -136,46 +121,23 @@ function handleShipState(ship: Ship, player: Player): void {
         }
       }
     } else {
-      handleShipExplosion(ship, player);
+      handleShipExplosion(ship);
     }
   } catch (error: unknown) {
     console.error('EVENT_LOOP', 'Error in ship state handling', { error });
   }
 }
 
-function handleShipExplosion(ship: Ship, player: Player): void {
+function handleShipExplosion(ship: Ship): void {
   // Only draw explosion if it's still in progress
   if (ship.explodeTime > 0) {
-    drawShipExplosion(ship, player.color);
+    drawShipExplosion(ship, ship.color);
     ship.explodeTime--;
   }
 
   if (ship.explodeTime === 0) {
-    // Explosion finished, check if player has lives remaining
-    if (player.lives > 0) {
-      // Player still has lives - respawn the ship
-      ship.exploding = false;
-      ship.explodeTime = 0;
-      // Give ship temporary invincibility (blinking effect)
-      ship.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-      ship.spawnProtectionTimer = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
-      ship.blinkOn = true;
-
-      // Reset ship health to full
-      ship.health = ship.maxHealth;
-      ship.lastDamageTime = 0;
-      ship.healthRegenTimer = 0;
-
-      // Reset ship position to center
-      ship.position = { x: 0, y: 0 }; // Use world origin instead of canvas center
-      ship.velocity = { x: 0, y: 0 };
-      ship.angle = (90 / 180) * Math.PI; // Reset to upward direction
-    } else {
-      // No lives remaining - game over
-      // Don't respawn the ship, just call gameOver
-      // The ship will remain exploded and won't be drawn
-      gameController.gameOver();
-    }
+    // Explosion finished, ship will be handled by Player via events
+    // No need to manually manage respawn here
   }
 }
 
@@ -184,8 +146,7 @@ function handleCollision(ship: Ship): void {
     const currRoidBelt = gameController.getCurrRoidBelt();
 
     // Get bots and bot bullets for collision detection
-    const bots = gameController.isMultiplayerEnabled() ? gameController.getBots() : undefined;
-    // Legacy bot bullets removed – collisions read bot lasers directly from manager
+    const bots = gameController.getBots();
 
     // Check for boundary collisions first
     if (detectBoundaryCollisions(ship)) {
@@ -194,50 +155,26 @@ function handleCollision(ship: Ship): void {
     }
 
     gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, bots));
-    if (DRAW_ASTEROIDS) {
-      gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
-    }
+    gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
 
-    // Add ship-to-ship collision detection
-    if (bots && bots.size > 0) {
-      gameController.updateCurrScore(detectShipToShipCollisions(ship, bots));
+    // Get all other players (bots + remote players)
+    const allOtherPlayers = [...Array.from(bots.values()), ...playerNetwork.getOtherPlayers()];
 
-      // Add bot boundary collision detection
-      detectBotBoundaryCollisions(bots);
+    if (allOtherPlayers.length > 0) {
+      // Unified collision detection for all players
+      gameController.updateCurrScore(detectLaserPlayerCollisions(ship, allOtherPlayers));
 
-      // Add bot-asteroid collision detection
-      detectBotAsteroidCollisions(bots, currRoidBelt);
+      // Unified boundary collision detection
+      detectPlayerBoundaryCollisions(allOtherPlayers);
 
-      // Add bot-ship collision detection
-      detectBotShipCollisions(ship, bots);
-    }
+      // Unified ship-to-ship collision detection
+      gameController.updateCurrScore(detectShipToShipCollisions(ship, allOtherPlayers));
 
-    // Add laser-to-player collision detection for any non-bot players present
-    // Run this regardless of the multiplayer flag
-    const otherPlayers = playerNetwork.getOtherPlayers();
+      // Unified laser collision detection
+      detectPlayerLaserShipCollisions(ship, allOtherPlayers);
 
-    // Filter out bot players since they're handled by detectLaserHits
-    const realPlayers = otherPlayers.filter((player) => !(player instanceof BotPlayer));
-
-    if (realPlayers.length > 0) {
-      gameController.updateCurrScore(detectLaserPlayerCollisions(ship, realPlayers));
-
-      // Add boundary collision detection for other players
-      detectPlayerBoundaryCollisions(realPlayers);
-
-      // Add detection of other players' lasers hitting the local ship
-      detectPlayerLaserShipCollisions(ship, realPlayers);
-
-      // Add ship-to-ship collision detection between player and other players
-      if (bots && bots.size > 0) {
-        gameController.updateCurrScore(detectShipToShipCollisions(ship, bots, realPlayers));
-
-        // Add collision detection between other players and bots
-        detectAllPlayerBotCollisions(ship, realPlayers, bots);
-
-        // Add bot laser collision detection on other players
-        detectBotLaserPlayerCollisions(realPlayers, bots);
-      }
+      // Unified asteroid collision detection for all players
+      detectPlayerAsteroidCollisions(allOtherPlayers, currRoidBelt);
     }
 
     gameController.updatePersonalBest();

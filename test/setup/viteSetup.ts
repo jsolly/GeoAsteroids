@@ -28,15 +28,7 @@ const dom = new JSDOM(
             />
             <label class="form-check-label" for="soundPref"> Sound </label>
           </li>
-          <li class="nav-item">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              value=""
-              id="musicPref"
-            />
-            <label class="form-check-label" for="musicPref"> Music </label>
-          </li>
+
         </ul>
         <h2>Difficulty</h2>
         <div

@@ -1,4 +1,4 @@
-import { soundIsOn } from '../constants/preferences';
+import { soundIsOn } from '../constants/user-preferences';
 
 export class Sound {
   streamNum = 0;

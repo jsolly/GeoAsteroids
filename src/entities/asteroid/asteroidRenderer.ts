@@ -1,4 +1,3 @@
-import { SHOW_COLLISION_CIRCLES } from '../../constants/game';
 import { getCTX } from '../../constants/rendering/canvas';
 import type { Ship } from '../../entities/ship/Ship';
 import { worldToScreen } from '../../rendering/viewport';
@@ -37,13 +36,5 @@ export function drawRoidsRelative(ship: Ship, roids: Asteroid[]): void {
     }
     ctx.closePath();
     ctx.stroke();
-
-    // show asteroid's collision circle
-    if (SHOW_COLLISION_CIRCLES) {
-      ctx.strokeStyle = 'lime';
-      ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, r, 0, Math.PI * 2, false);
-      ctx.stroke();
-    }
   }
 }

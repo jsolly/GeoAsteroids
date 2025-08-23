@@ -40,27 +40,25 @@ export class PlayerNetwork {
   }
 
   public updatePlayerState(): void {
-    // Update local player state for multiplayer
+    // Update local player state for multiplayer (network-only)
     this.gameController.updateMultiplayerPlayerState();
 
-    // Update all players' ship states
+    // For remote players and bots, physics/timers are updated elsewhere
+    // here we only maintain aggregate/network-related state.
     const players = this.multiplayerManager.players;
-    for (const player of players.values()) {
-      // Update ship explosion state
-      player.ship.updateExplosion();
+    const bots = this.multiplayerManager.getBots();
 
-      // Update ship invincibility system
-      player.ship.updateInvincibility();
-
-      // Update ship health regeneration system
-      player.ship.updateHealth();
+    // Update bot AI data (asteroids and other players for decision making)
+    if (bots.size > 0) {
+      const asteroids = this.gameController.getCurrRoidBelt()?.getRoids() || [];
+      const otherPlayers = this.multiplayerManager.getOtherPlayersArray();
+      this.multiplayerManager.updateAllPlayerData(asteroids, otherPlayers);
     }
 
-    // Only update network state if connected
+    // Only update network-derived counts if connected
     if (this.multiplayerManager.isConnected) {
-      // Update player count in game state
-      const playerCount = this.multiplayerManager.players.size;
-      this.gameController.getGameState().setPlayerCount(playerCount);
+      const totalPlayerCount = players.size + bots.size;
+      this.gameController.getGameState().playerCount = totalPlayerCount;
     }
   }
 

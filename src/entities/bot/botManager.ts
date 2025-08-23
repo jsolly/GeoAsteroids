@@ -1,7 +1,8 @@
 import { SHIP_RESPAWN_DELAY_FRAMES } from '../../constants/entities/ship';
 import { getGameBoundary } from '../../physics/boundary';
 import type { Asteroid } from '../asteroid/Asteroid';
-import type { Player, Player as PlayerInterface, Position } from '../player/types';
+import type { Player } from '../player/Player';
+import type { Player as PlayerInterface, Position } from '../player/types';
 
 import { BotBehavior } from './BotBehavior';
 import { BotPlayer } from './BotPlayer';
@@ -92,12 +93,16 @@ export class BotManager {
     this.botBehavior.clearAllSteering();
   }
 
+  public resetDebugFlags(): void {
+    this.botBehavior.debugMovementDisabled = false;
+  }
+
   public clearBotLasers(): void {
     this.botBehavior.clearBotLasers(this.bots);
   }
 
   // Legacy compatibility method
-  public botTakeDamage(bot: Player, amount: number): void {
+  public botTakeDamage(bot: PlayerInterface, amount: number): void {
     if (bot instanceof BotPlayer) {
       bot.ship.takeDamage(amount);
     }
@@ -136,6 +141,11 @@ export class BotManager {
           const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
           const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
           bot.respawnPosition = { x: randomX, y: randomY };
+
+          // Log bot explosion for debugging
+          import('../../physics/collision/collisionUtils').then(({ logCollisionDetection }) => {
+            logCollisionDetection('Bot Exploded', bot.name, 'Collision', true);
+          });
         }
 
         bot.ship.updateExplosion();
@@ -149,6 +159,11 @@ export class BotManager {
         }
 
         if (bot.respawnTimer === 0) {
+          // Log bot respawn for debugging
+          import('../../physics/collision/collisionUtils').then(({ logCollisionDetection }) => {
+            logCollisionDetection('Bot Respawning', bot.name, 'Respawn', false);
+          });
+
           bot.respawn();
           bot.respawnTimer = undefined;
         }

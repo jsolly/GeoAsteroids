@@ -23,11 +23,6 @@ interface GameStateData {
   getTextAlpha(): number;
   getText(): string;
   getIsGameRunning(): boolean;
-  // Multiplayer methods
-  isMultiplayerEnabled(): boolean;
-  setMultiplayerEnabled(enabled: boolean): void;
-  getPlayerCount(): number;
-  setPlayerCount(count: number): void;
 }
 
 class GameState implements GameStateData {
@@ -39,8 +34,7 @@ class GameState implements GameStateData {
   private text = 'Level 1';
   private isGameRunning = false;
   // Multiplayer state - always enabled
-  private multiplayerEnabled = true;
-  private playerCount = 1;
+  public playerCount = 1;
 
   private constructor() {}
 
@@ -121,23 +115,6 @@ class GameState implements GameStateData {
   }
   updateText(text: string): void {
     this.text = text;
-  }
-
-  // Multiplayer methods
-  isMultiplayerEnabled(): boolean {
-    return this.multiplayerEnabled;
-  }
-
-  setMultiplayerEnabled(enabled: boolean): void {
-    this.multiplayerEnabled = enabled;
-  }
-
-  getPlayerCount(): number {
-    return this.playerCount;
-  }
-
-  setPlayerCount(count: number): void {
-    this.playerCount = count;
   }
 }
 

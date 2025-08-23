@@ -1,5 +1,4 @@
-import { SHIP_SIZE } from '../constants/entities/ship';
-import { DEBUG, DRAW_ASTEROIDS, SHOW_COLLISION_CIRCLES } from '../constants/game';
+import { SHIP_MAX_HEALTH, SHIP_SIZE } from '../constants/entities/ship';
 import { FPS } from '../constants/physics';
 import { getCTX, getCVS } from '../constants/rendering/canvas';
 import { TEXT_FADE_TIME, TEXT_SIZE } from '../constants/rendering/drawing';
@@ -75,28 +74,6 @@ function drawGameText(textAlpha: number, text: string): void {
   getGameController().updateTextAlpha(textAlpha);
 }
 
-function drawDebugFeatures(ship: Ship): void {
-  const ctx = getCTX();
-  const cvs = getCVS();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  // Use the same coordinate system as the ship drawing (relative to screen center)
-  const x = cvs.width / 2;
-  const y = cvs.height / 2;
-
-  // Draw Ship collision bounding box (only if collision circles are enabled)
-  if (SHOW_COLLISION_CIRCLES) {
-    ctx.strokeStyle = 'lime';
-    ctx.beginPath();
-    ctx.arc(x, y, ship.r, 0, Math.PI * 2, false);
-    ctx.stroke();
-  }
-
-  // Red center dot removed - was causing visual confusion
-}
-
 function drawTriangle(centroid: Point, angle: number, color = 'white'): void {
   const ctx = getCTX();
   if (!ctx) {
@@ -168,10 +145,7 @@ function drawOtherPlayers(localShip: Ship): void {
   const otherPlayers = getPlayerNetwork().getOtherPlayers();
   const bots = getGameController().getBots();
 
-  // Only draw players when multiplayer is enabled
-  if (!getGameController().isMultiplayerEnabled()) {
-    return;
-  }
+  // Always draw players in multiplayer mode
 
   // Draw human players
   for (const player of otherPlayers) {
@@ -209,36 +183,34 @@ function drawOtherPlayers(localShip: Ship): void {
     }
   }
 
-  // Draw bot players (only when multiplayer is enabled)
-  if (getGameController().isMultiplayerEnabled()) {
-    for (const [, bot] of bots.entries()) {
-      // Don't draw if bot is exploding
-      if (bot.ship.exploding) {
-        continue;
-      }
-
-      // Implement blinking effect for invincible bots
-      if (bot.ship.blinkCount > 0 && !bot.ship.blinkOn) {
-        // Bot is invincible but currently in "off" blink state - don't render
-        continue;
-      }
-
-      // Get the local ship position for viewport transformation
-      const localShip = getGameController().getCurrShip();
-      const screenPos = worldToScreen(bot.ship.position, localShip.position);
-
-      // Draw the bot ship
-      drawShip(bot.ship, screenPos, bot.color, {
-        name: bot.name,
-        isBot: true,
-        showThruster: bot.ship.thrusterActive,
-        thrusterColor: 'default',
-      });
+  // Draw bot players
+  for (const [, bot] of bots.entries()) {
+    // Don't draw if bot is exploding
+    if (bot.ship.exploding) {
+      continue;
     }
 
-    // Draw bot lasers
-    drawAllLasers();
+    // Implement blinking effect for invincible bots
+    if (bot.ship.blinkCount > 0 && !bot.ship.blinkOn) {
+      // Bot is invincible but currently in "off" blink state - don't render
+      continue;
+    }
+
+    // Get the local ship position for viewport transformation
+    const localShip = getGameController().getCurrShip();
+    const screenPos = worldToScreen(bot.ship.position, localShip.position);
+
+    // Draw the bot ship
+    drawShip(bot.ship, screenPos, bot.color, {
+      name: bot.name,
+      isBot: true,
+      showThruster: bot.ship.thrusterActive,
+      thrusterColor: 'default',
+    });
   }
+
+  // Draw bot lasers
+  drawAllLasers();
 }
 
 function drawShip(
@@ -302,14 +274,20 @@ function drawShip(
   }
 
   // Draw health bar above the name
-  drawUnifiedHealthBar(screenPos, ship.health || 100, ship.maxHealth || 100, r, {
-    width: 40,
-    height: 4,
-    borderColor: '#00ff00',
-    textColor: '#00ff00',
-    showText: true,
-    textAbove: true,
-  });
+  drawUnifiedHealthBar(
+    screenPos,
+    ship.health ?? SHIP_MAX_HEALTH,
+    ship.maxHealth ?? SHIP_MAX_HEALTH,
+    r,
+    {
+      width: 40,
+      height: 4,
+      borderColor: '#00ff00',
+      textColor: '#00ff00',
+      showText: true,
+      textAbove: true,
+    }
+  );
 
   // Draw info below ship
   if (options.isBot) {
@@ -411,15 +389,13 @@ function drawAllLasers(): void {
     }
   }
 
-  // Draw bot lasers if multiplayer is enabled (unified system)
-  if (getGameController().isMultiplayerEnabled()) {
-    const bots = getGameController().getBots();
-    for (const [, bot] of bots.entries()) {
-      if (bot instanceof BotPlayer && bot.ship.lasers.length > 0) {
-        for (const laser of bot.ship.lasers) {
-          const screenPos = worldToScreen(laser.position, localShip.position);
-          drawLaser(screenPos, bot.color, laser.explodeTime);
-        }
+  // Draw bot lasers (unified system)
+  const bots = getGameController().getBots();
+  for (const [, bot] of bots.entries()) {
+    if (bot instanceof BotPlayer && bot.ship.lasers.length > 0) {
+      for (const laser of bot.ship.lasers) {
+        const screenPos = worldToScreen(laser.position, localShip.position);
+        drawLaser(screenPos, bot.color, laser.explodeTime);
       }
     }
   }
@@ -460,10 +436,6 @@ function drawLaser(screenPos: Point, color: string, explodeTime: number): void {
 }
 
 function drawMultiplayerStatus(): void {
-  if (!getGameController().isMultiplayerEnabled()) {
-    return;
-  }
-
   const status = getPlayerNetwork().getConnectionStatus();
   const localPlayer = getPlayerNetwork().getLocalPlayerInfo();
 
@@ -510,22 +482,18 @@ function drawMultiplayerStatus(): void {
   ctx.fillText(`Asteroids: ${asteroidCount} (MP Mode)`, xPos, yOffset);
   yOffset += lineHeight;
 
-  // Draw bot count if bots are enabled
-  if (getGameController().isMultiplayerEnabled()) {
-    const botCount = getGameController().getBots().size;
-    if (botCount > 0) {
-      ctx.fillStyle = '#ff00ff';
-      ctx.fillText(`Bots: ${botCount}`, xPos, yOffset);
-      yOffset += lineHeight;
-    }
+  // Draw bot count
+  const botCount = getGameController().getBots().size;
+  if (botCount > 0) {
+    ctx.fillStyle = '#ff00ff';
+    ctx.fillText(`Bots: ${botCount}`, xPos, yOffset);
+    yOffset += lineHeight;
   }
 
   // Draw mini-map showing only real players (no bots)
   const currentShip = getGameController().getCurrShip();
-  const bots = getGameController().isMultiplayerEnabled()
-    ? getGameController().getBots()
-    : new Map();
-  const botArray = Array.from(bots.values());
+  const bots = getGameController().getBots();
+  const botArray = Array.from(bots.values()) as BotPlayer[];
   drawMiniMap(currentShip, realPlayers, botArray, xPos, yOffset);
   yOffset += 120; // Add space for mini-map
 
@@ -555,27 +523,6 @@ function drawMultiplayerStatus(): void {
   ctx.fillStyle = '#ffffff';
   ctx.fillText('Bots', xPos + 8, yOffset);
   yOffset += lineHeight;
-
-  // Show additional debug info if debug mode is enabled
-  if (DEBUG) {
-    // Show each real player's position and state (limit to prevent overflow)
-    const maxPlayersToShow = 5;
-    let playersShown = 0;
-    for (const player of realPlayers) {
-      if (playersShown >= maxPlayersToShow) {
-        ctx.fillText(`... and ${realPlayers.length - maxPlayersToShow} more`, xPos, yOffset);
-        break;
-      }
-      ctx.fillStyle = '#00ffff'; // Cyan for debug info
-      ctx.fillText(
-        `${player.name}: (${Math.round(player.ship.position.x)}, ${Math.round(player.ship.position.y)}) - ${player.ship.exploding ? 'DEAD' : 'ALIVE'}`,
-        xPos,
-        yOffset
-      );
-      yOffset += lineHeight;
-      playersShown++;
-    }
-  }
 
   // Show health summary for all players
   if (realPlayers.length > 0) {
@@ -733,13 +680,7 @@ export function drawGameCanvas(
     drawSpace();
     roidBelt.spawnRoids();
 
-    if (DEBUG) {
-      drawDebugFeatures(ship);
-    }
-
-    if (DRAW_ASTEROIDS) {
-      drawRoidsRelative(ship, roidBelt.roids);
-    }
+    drawRoidsRelative(ship, roidBelt.roids);
 
     // Draw other players if multiplayer is enabled
     drawOtherPlayers(ship);

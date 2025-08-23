@@ -1,6 +1,9 @@
+import { SHIP_EXPLODE_DUR_FRAMES, SHIP_RESPAWN_DELAY_FRAMES } from '../constants/entities/ship';
 import { getCTX, getCVS } from '../constants/rendering/canvas';
-import type { Position } from '../entities/player/types';
-import { getGameBoundary } from '../physics/boundary';
+import { Asteroid } from '../entities/asteroid/Asteroid';
+import type { Player, Position } from '../entities/player/types';
+import type { Ship } from '../entities/ship/Ship';
+import { getGameBoundary, isShipOutOfBounds } from '../physics/boundary';
 
 export function drawFieryBoundary(shipPosition: Position): void {
   const ctx = getCTX();
@@ -64,4 +67,66 @@ export function drawFieryBoundary(shipPosition: Position): void {
 
   // Reset shadow
   ctx.shadowBlur = 0;
+}
+
+// Boundary collision detection functions
+export function detectBoundaryCollisions(ship: Ship): boolean {
+  if (ship.exploding) {
+    return false;
+  }
+
+  // Skip collision detection if ship is invincible (blinking or spawn protection)
+  if (ship.blinkCount > 0) {
+    return false;
+  }
+
+  if (isShipOutOfBounds(ship.position)) {
+    // Ship is out of bounds, trigger explosion
+    ship.explode();
+
+    // Play explosion sound
+    Asteroid.fxHit.play();
+
+    return true;
+  }
+
+  return false;
+}
+
+export function detectPlayerBoundaryCollisions(otherPlayers: Player[]): void {
+  if (!otherPlayers || otherPlayers.length === 0) {
+    return;
+  }
+
+  for (const player of otherPlayers) {
+    if (player.ship.exploding) {
+      continue;
+    }
+
+    // Skip collision detection if player is invincible (blinking or spawn protection)
+    if (player.ship.blinkCount > 0 || player.spawnProtectedUntil > Date.now()) {
+      continue;
+    }
+
+    if (isShipOutOfBounds(player.ship.position)) {
+      // Player is out of bounds, trigger explosion directly (bypassing debug mode)
+      player.ship.health = 0;
+      player.ship.explode();
+      player.ship.exploding = true;
+      player.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
+
+      // Start respawn timer and random position so it respawns after explosion
+      player.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
+
+      // Generate random respawn position within the game boundary
+      const boundary = getGameBoundary();
+      const margin = 100; // Keep players away from the very edge
+      const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
+      const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
+      player.respawnPosition = { x: randomX, y: randomY };
+
+      // Play explosion sound
+      Asteroid.fxHit.play();
+    }
+  }
 }
