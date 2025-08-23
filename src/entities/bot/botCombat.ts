@@ -1,13 +1,21 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FPS, getCVS, LASER_DIST, LASER_SPEED } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import {
+  addPositions,
+  createPositionFromAngle,
+  getDistance,
+  getVelocityMagnitude,
+  multiplyVelocity,
+  subtractPositions,
+} from '../../utils/mathUtils';
+import type { Position, Velocity } from '../player/types';
 import { Laser } from '../ship/Ship';
 import type { BotPlayer, BotShoot } from './types';
 
 export class BotCombat {
   private botLasers: Map<string, Laser[]> = new Map();
   private localPlayerId: string;
-  private localPlayerPosition: Vector = new Vector(0, 0);
+  private localPlayerPosition: Position = { x: 0, y: 0 };
   private localPlayerAlive: boolean = true;
   private botShootCallback?: (botShoot: BotShoot) => void;
 
@@ -15,7 +23,7 @@ export class BotCombat {
     this.localPlayerId = uuidv4();
   }
 
-  public setLocalPlayerInfo(id: string, position: Vector, alive: boolean): void {
+  public setLocalPlayerInfo(id: string, position: Position, alive: boolean): void {
     this.localPlayerId = id;
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
@@ -30,11 +38,11 @@ export class BotCombat {
   }
 
   public createBotLaser(botShoot: BotShoot): void {
-    const start = new Vector(botShoot.laserStart.x, botShoot.laserStart.y);
-    const direction = new Vector(botShoot.laserDirection.x, botShoot.laserDirection.y);
+    const start: Position = { x: botShoot.laserStart.x, y: botShoot.laserStart.y };
+    const direction: Velocity = { x: botShoot.laserDirection.x, y: botShoot.laserDirection.y };
 
     // Match player laser physics
-    const baseVelocity = direction.multiply(LASER_SPEED / FPS);
+    const baseVelocity: Velocity = multiplyVelocity(direction, LASER_SPEED / FPS);
     const velocity = baseVelocity;
 
     const laser = new Laser(start, velocity, 0, 0);
@@ -61,8 +69,8 @@ export class BotCombat {
             continue;
           }
         } else {
-          laser.position = laser.position.add(laser.velocity);
-          laser.distTraveled += laser.velocity.magnitude();
+          laser.position = addPositions(laser.position, laser.velocity);
+          laser.distTraveled += getVelocityMagnitude(laser.velocity);
         }
 
         // Match player removal logic
@@ -124,7 +132,7 @@ export class BotCombat {
       this.localPlayerPosition.x - bot.ship.position.x
     );
 
-    const angleDiff = Math.abs(angleToPlayer - bot.ship.a);
+    const angleDiff = Math.abs(angleToPlayer - bot.ship.angle);
     const normalizedAngleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
 
     // Bot must be facing within 60 degrees of player
@@ -137,8 +145,8 @@ export class BotCombat {
     }
 
     // Calculate laser direction towards player
-    const direction = this.localPlayerPosition.subtract(bot.ship.position);
-    const distance = direction.magnitude();
+    const direction = subtractPositions(this.localPlayerPosition, bot.ship.position);
+    const distance = getDistance(this.localPlayerPosition, bot.ship.position);
 
     if (distance === 0) {
       return;
@@ -166,11 +174,11 @@ export class BotCombat {
     }
 
     // Calculate laser start position (from bot's nose)
-    const noseOffset = Vector.fromAngle(bot.ship.a).multiply((4 / 3) * bot.ship.r);
-    const laserStart = bot.ship.position.add(noseOffset);
+    const noseOffset = createPositionFromAngle(bot.ship.angle, (4 / 3) * bot.ship.r);
+    const laserStart = addPositions(bot.ship.position, noseOffset);
 
     // Calculate laser direction
-    const laserDirection = Vector.fromAngle(finalAngle);
+    const laserDirection = createPositionFromAngle(finalAngle, 1);
 
     const botShoot: BotShoot = {
       botId: bot.id,
@@ -209,7 +217,7 @@ export class BotCombat {
     return (hash & 0xff) / 255;
   }
 
-  private getDistanceToPlayer(botPosition: Vector): number {
-    return botPosition.distance(this.localPlayerPosition);
+  private getDistanceToPlayer(botPosition: Position): number {
+    return getDistance(botPosition, this.localPlayerPosition);
   }
 }

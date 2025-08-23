@@ -1,4 +1,5 @@
 import type { BotShoot } from '../src/entities/bot/types.ts';
+import type { Position, Velocity } from '../src/entities/player/types.ts';
 import type {
   ClientMessage,
   PlayerJoin,
@@ -7,7 +8,6 @@ import type {
   PlayerUpdate,
   ServerMessage,
 } from '../src/multiplayer/types.ts';
-import { Vector } from '../src/physics/Vector.ts';
 
 type WebSocketWithEvents = WebSocket & {
   on(event: string, listener: (...args: unknown[]) => void): void;
@@ -16,10 +16,10 @@ type WebSocketWithEvents = WebSocket & {
 interface ConnectedPlayer {
   id: string;
   name: string;
-  position: Vector;
-  velocity: Vector;
+  position: Position;
+  velocity: Velocity;
   r: number;
-  a: number;
+  angle: number;
   lives: number;
   score: number;
   exploding: boolean;
@@ -154,9 +154,9 @@ class MultiplayerServer {
   private handlePlayerJoin(data: PlayerJoin, ws: WebSocketWithEvents): void {
     const player: ConnectedPlayer = {
       ...data,
-      velocity: new Vector(0, 0),
+      velocity: { x: 0, y: 0 },
       r: 0,
-      a: 0,
+      angle: 0,
       lives: 3,
       score: 0,
       exploding: false,
@@ -268,7 +268,7 @@ class MultiplayerServer {
           position: p.position,
           velocity: p.velocity,
           r: p.r,
-          a: p.a,
+          angle: p.angle,
           lives: p.lives,
           score: p.score,
           exploding: p.exploding,

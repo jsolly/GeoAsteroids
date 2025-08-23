@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Vector } from '../../physics/Vector';
+import type { Position } from '../player/types';
 import { BotPlayer } from './BotPlayer';
 
 export class BotFactory {
@@ -23,28 +23,28 @@ export class BotFactory {
       // Configure the bot's ship after creation
       bot.ship.position = position; // Override default (0,0) - bots spawn at specific world positions
       bot.ship.shotCooldown = this.getBotShotCooldown(botType);
-      bot.ship.lastPosition = new Vector(position.x, position.y); // Clone to avoid aliasing
+      bot.ship.lastPosition = { x: position.x, y: position.y }; // Clone to avoid aliasing
       bots.set(botId, bot);
     }
 
     return bots;
   }
 
-  private getBotStartingPosition(index: number): Vector {
+  private getBotStartingPosition(index: number): Position {
     // Use world coordinates instead of canvas coordinates
     // Position bots at a moderate distance from the world origin (0, 0) where the ship starts
     const margin = 150; // Moderate distance for dramatic entrance
 
     // Mix of positions around the center for dramatic hunting
-    const positions = [
-      new Vector(-margin, -margin), // Top-left
-      new Vector(margin, -margin), // Top-right
-      new Vector(margin, margin), // Bottom-right
-      new Vector(-margin, margin), // Bottom-left
-      new Vector(margin, 0), // Right of world center
-      new Vector(-margin, 0), // Left of world center
-      new Vector(0, margin), // Below world center
-      new Vector(0, -margin), // Above world center
+    const positions: Position[] = [
+      { x: -margin, y: -margin }, // Top-left
+      { x: margin, y: -margin }, // Top-right
+      { x: margin, y: margin }, // Bottom-right
+      { x: -margin, y: margin }, // Bottom-left
+      { x: margin, y: 0 }, // Right of world center
+      { x: -margin, y: 0 }, // Left of world center
+      { x: 0, y: margin }, // Below world center
+      { x: 0, y: -margin }, // Above world center
     ];
 
     return positions[index % positions.length];

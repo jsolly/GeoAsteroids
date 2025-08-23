@@ -1,8 +1,7 @@
 import { FPS, SHIP_INV_BLINK_DUR, SHIP_INV_DUR, START_LIVES } from '../../constants';
-import { Vector } from '../../physics/Vector';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
 import { Ship } from '../ship/Ship';
-import type { Player as PlayerInterface } from './types';
+import type { Player as PlayerInterface, Position } from './types';
 
 export class Player implements PlayerInterface {
   id: string;
@@ -13,7 +12,7 @@ export class Player implements PlayerInterface {
   isBot?: boolean;
   lives: number = START_LIVES;
   respawnTimer?: number; // Timer for respawning after death (in frames)
-  respawnPosition?: Vector; // Position where player will respawn
+  respawnPosition?: Position; // Position where player will respawn
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
   color: string; // Player's unique color for lasers and other visual elements
 
@@ -78,11 +77,11 @@ export class Player implements PlayerInterface {
       // Reset ship position to a safe location (random position around origin)
       const angle = Math.random() * Math.PI * 2;
       const distance = 200 + Math.random() * 300; // Between 200-500 units from origin
-      this.ship.position = new Vector(Math.cos(angle) * distance, Math.sin(angle) * distance);
+      this.ship.position = { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
     }
 
-    this.ship.velocity = new Vector(0, 0);
-    this.ship.a = Math.random() * Math.PI * 2; // Random rotation
+    this.ship.velocity = { x: 0, y: 0 };
+    this.ship.angle = Math.random() * Math.PI * 2; // Random rotation
 
     // Reset respawn timer and position
     this.respawnTimer = undefined;

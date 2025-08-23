@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { LASER_MAX } from '../src/constants';
 import { Ship } from '../src/entities/ship/Ship.ts';
-import { Vector } from '../src/physics/Vector.ts';
 
 let mockShip: Ship;
 
@@ -20,14 +19,14 @@ test('Ship Creation', () => {
 });
 
 test('Move Ship', () => {
-  mockShip.velocity = new Vector(1, 1);
+  mockShip.velocity = { x: 1, y: 1 };
   mockShip.move();
   expect(mockShip.position.x).toBeGreaterThan(0);
   expect(mockShip.position.y).toBeGreaterThan(0);
 });
 
 test('Ship Slows Down (Friction)', () => {
-  mockShip.velocity = new Vector(1, 1);
+  mockShip.velocity = { x: 1, y: 1 };
   mockShip.thrusting = false;
   mockShip.move();
   expect(mockShip.velocity.x).toBeLessThan(1);
@@ -41,8 +40,8 @@ test('Ship Can Shoot', () => {
 
 test('Ship Cannot Shoot', () => {
   const mockLaser = {
-    position: new Vector(0, 0),
-    velocity: new Vector(0, 0),
+    position: { x: 0, y: 0 },
+    velocity: { x: 0, y: 0 },
     distTraveled: 0,
     explodeTime: 0,
   };

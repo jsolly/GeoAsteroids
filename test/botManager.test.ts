@@ -1,7 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 import { BotPlayer } from '../src/entities/bot/BotPlayer.ts';
 import { BotManager } from '../src/entities/bot/botManager.ts';
-import { Vector } from '../src/physics/Vector.ts';
 
 beforeEach(() => {
   // Reset the singleton instance for each test
@@ -62,7 +61,9 @@ test('Bot Movement System', () => {
 
   // Test bot movement initialization
   expect(firstBot).toBeInstanceOf(BotPlayer);
-  expect(firstBot.ship.position).toBeInstanceOf(Vector);
+  expect(firstBot.ship.position).toEqual(
+    expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) })
+  );
 });
 
 test('Bot Combat System', () => {
@@ -113,7 +114,7 @@ test('Bot Manager Local Player Info', () => {
   const botManager = BotManager.getInstance();
   botManager.activate();
 
-  const testPosition = new Vector(100, 200);
+  const testPosition = { x: 100, y: 200 };
   botManager.setLocalPlayerInfo('test-player', testPosition, true);
 
   expect(botManager.localPlayerPosition.x).toBe(100);
@@ -169,8 +170,8 @@ test('Bot Manager Create Bot Laser', () => {
   expect(() => {
     botManager.createBotLaser({
       botId,
-      laserStart: new Vector(0, 0),
-      laserDirection: new Vector(1, 0),
+      laserStart: { x: 0, y: 0 },
+      laserDirection: { x: 1, y: 0 },
       targetPlayerId: 'test-player',
     });
   }).not.toThrow();

@@ -9,7 +9,7 @@ export class DebugBotIntegrationManager extends BotIntegrationManager {
     const botManager = this.manager;
     if (botManager) {
       // Access the bot movement system through the bot manager
-      const botMovement = (botManager as any).botMovement;
+      const botMovement = botManager.botMovementSystem;
       if (botMovement) {
         botMovement.debugMovementDisabled = true;
       }
@@ -20,7 +20,7 @@ export class DebugBotIntegrationManager extends BotIntegrationManager {
     this.botMovementDisabled = false;
     const botManager = this.manager;
     if (botManager) {
-      const botMovement = (botManager as any).botMovement;
+      const botMovement = botManager.botMovementSystem;
       if (botMovement) {
         botMovement.debugMovementDisabled = false;
       }

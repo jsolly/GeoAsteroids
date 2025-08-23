@@ -193,7 +193,7 @@ export class DebugGameController {
     if (bots.size > 0) {
       bots.forEach((bot, _botId) => {
         // Guard against bots without valid position
-        if (bot && bot.ship && bot.ship.position) {
+        if (bot?.ship?.position) {
           const botPosition = bot.ship.position;
           // Create an asteroid at the bot's position for collision testing
           // This works independently of VITE_DEBUG_DRAW_ASTEROIDS

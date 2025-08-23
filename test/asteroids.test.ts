@@ -1,10 +1,9 @@
 import { expect, test } from 'vitest';
 import { ROID_NUM } from '../src/constants';
 import { Asteroid, createAsteroidBelt } from '../src/entities/asteroid/Asteroid.ts';
-import { Vector } from '../src/physics/Vector.ts';
 
 test('Asteroid Creation', () => {
-  const roidPoint = new Vector(10, 20);
+  const roidPoint = { x: 10, y: 20 };
   const roidRadius = 10;
   const newRoid = new Asteroid(roidPoint, roidRadius);
   expect(newRoid).toBeInstanceOf(Asteroid);
@@ -45,7 +44,7 @@ test('Move Asteroids', () => {
   const firstRoid = testRoidBelt.roids[0];
 
   // Set deterministic velocity to ensure movement test is reliable
-  firstRoid.velocity = new Vector(1, 0); // Move right at 1 unit per frame
+  firstRoid.velocity = { x: 1, y: 0 }; // Move right at 1 unit per frame
 
   const previousX = firstRoid.position.x;
   testRoidBelt.moveRoids();

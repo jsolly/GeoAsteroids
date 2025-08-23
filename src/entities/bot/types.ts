@@ -1,5 +1,4 @@
-import type { Vector } from '../../physics/Vector';
-import type { Player } from '../player/types';
+import type { Player, Position, Velocity } from '../player/types';
 
 export interface BotPlayer extends Player {
   isBot: true;
@@ -11,7 +10,7 @@ export interface BotPlayer extends Player {
 
 export interface BotShoot {
   botId: string;
-  laserStart: Vector;
-  laserDirection: Vector;
+  laserStart: Position;
+  laserDirection: Velocity;
   targetPlayerId: string;
 }

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Player } from '../src/entities/player/types.ts';
 import { Laser, Ship } from '../src/entities/ship/Ship.ts';
 import { detectLaserPlayerCollisions } from '../src/physics/collisions.ts';
-import { Vector } from '../src/physics/Vector.ts';
 
 // Mock the constants
 vi.mock('../src/constants', () => ({
@@ -67,7 +66,7 @@ describe('Collision Detection System', () => {
   function createTestObjects() {
     // Create a test ship
     const ship = new Ship();
-    ship.position = new Vector(0, 0);
+    ship.position = { x: 0, y: 0 };
     ship.lasers = [];
 
     // Make ship vulnerable for testing (remove invincibility)
@@ -75,15 +74,15 @@ describe('Collision Detection System', () => {
     ship.blinkOn = false;
 
     // Create a test laser
-    const laser = new Laser(new Vector(100, 0), new Vector(1, 0), 0, 0);
+    const laser = new Laser({ x: 100, y: 0 }, { x: 1, y: 0 }, 0, 0);
     laser.explodeTime = 0; // Not exploding
 
     // Create a non-bot other player with minimal mock
     const mockShip = {
-      position: new Vector(100, 0), // Same position as laser
-      velocity: new Vector(0, 0),
+      position: { x: 100, y: 0 }, // Same position as laser
+      velocity: { x: 0, y: 0 },
       r: 15, // Player radius
-      a: 0,
+      angle: 0,
       exploding: false,
       explodeTime: 0,
       blinkCount: 0, // No invincibility
@@ -165,10 +164,10 @@ describe('Collision Detection System', () => {
       const { ship, laser, otherPlayer } = createTestObjects();
 
       const mockShip2 = {
-        position: new Vector(200, 0), // Further away
-        velocity: new Vector(0, 0),
+        position: { x: 200, y: 0 }, // Further away
+        velocity: { x: 0, y: 0 },
         r: 15,
-        a: 0,
+        angle: 0,
         exploding: false,
         explodeTime: 0,
         blinkCount: 0,
@@ -237,8 +236,8 @@ describe('Collision Detection System', () => {
     it('should handle collision threshold correctly', () => {
       const { ship, laser, otherPlayer } = createTestObjects();
       // Position laser just outside collision threshold
-      laser.position = new Vector(120, 0); // 100 + 15 (player radius) + 2 (laser radius) + 3 (extra buffer) = 120
-      otherPlayer.ship.position = new Vector(100, 0);
+      laser.position = { x: 120, y: 0 }; // 100 + 15 (player radius) + 2 (laser radius) + 3 (extra buffer) = 120
+      otherPlayer.ship.position = { x: 100, y: 0 };
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
 
@@ -250,8 +249,8 @@ describe('Collision Detection System', () => {
     it('should handle collision threshold correctly when laser is inside', () => {
       const { ship, laser, otherPlayer } = createTestObjects();
       // Position laser inside collision threshold
-      laser.position = new Vector(110, 0); // 100 + 10 (inside player radius)
-      otherPlayer.ship.position = new Vector(100, 0);
+      laser.position = { x: 110, y: 0 }; // 100 + 10 (inside player radius)
+      otherPlayer.ship.position = { x: 100, y: 0 };
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
 
@@ -292,7 +291,7 @@ describe('Collision Detection System', () => {
 
     it('should handle multiple lasers hitting same player', () => {
       const { ship, laser, otherPlayer } = createTestObjects();
-      const laser2 = new Laser(new Vector(100, 0), new Vector(1, 0), 0, 0);
+      const laser2 = new Laser({ x: 100, y: 0 }, { x: 1, y: 0 }, 0, 0);
       laser2.explodeTime = 0;
 
       ship.lasers = [laser, laser2];
@@ -341,7 +340,7 @@ describe('Bot-Asteroid Collision System', () => {
       id: 'test-bot',
       botType: 'aggressive' as const,
       ship: {
-        position: new Vector(0, 0),
+        position: { x: 0, y: 0 },
         r: 15,
         health: 100,
         maxHealth: 100,
@@ -359,7 +358,7 @@ describe('Bot-Asteroid Collision System', () => {
     const mockAsteroidBelt = {
       roids: [
         {
-          position: new Vector(10, 0), // Close enough to collide
+          position: { x: 10, y: 0 }, // Close enough to collide
           r: 20,
         },
       ],
@@ -391,7 +390,7 @@ describe('Bot-Asteroid Collision System', () => {
       id: 'test-bot',
       botType: 'aggressive' as const,
       ship: {
-        position: new Vector(0, 0),
+        position: { x: 0, y: 0 },
         r: 15,
         health: 20, // Low health
         maxHealth: 100,
@@ -411,7 +410,7 @@ describe('Bot-Asteroid Collision System', () => {
     const mockAsteroidBelt = {
       roids: [
         {
-          position: new Vector(10, 0), // Close enough to collide
+          position: { x: 10, y: 0 }, // Close enough to collide
           r: 20,
         },
       ],
@@ -445,7 +444,7 @@ describe('Bot-Asteroid Collision System', () => {
       id: 'test-bot',
       botType: 'aggressive' as const,
       ship: {
-        position: new Vector(0, 0),
+        position: { x: 0, y: 0 },
         r: 15,
         health: 100,
         maxHealth: 100,
@@ -463,7 +462,7 @@ describe('Bot-Asteroid Collision System', () => {
     const mockAsteroidBelt = {
       roids: [
         {
-          position: new Vector(10, 0), // Close enough to collide
+          position: { x: 10, y: 0 }, // Close enough to collide
           r: 20,
         },
       ],

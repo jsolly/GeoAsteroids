@@ -215,7 +215,7 @@ export function drawThruster(ship: Ship): void {
     const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
 
     // Use the generic thruster function
-    drawGenericThruster(screenCenter.x, screenCenter.y, ship.a, ship.r);
+    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r);
   }
 }
 
@@ -229,18 +229,18 @@ export function drawShipRelative(ship: Ship, color?: string): void {
   // Ship is always drawn at screen center (viewport transformation)
   const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
 
-  const { a } = ship;
+  const { angle } = ship;
   const nose = {
-    x: screenCenter.x + (4 / 3) * ship.r * Math.cos(a),
-    y: screenCenter.y - (4 / 3) * ship.r * Math.sin(a),
+    x: screenCenter.x + (4 / 3) * ship.r * Math.cos(angle),
+    y: screenCenter.y - (4 / 3) * ship.r * Math.sin(angle),
   };
   const rearLeft = {
-    x: screenCenter.x - ship.r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
-    y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(a) - Math.cos(a)),
+    x: screenCenter.x - ship.r * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
+    y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(angle) - Math.cos(angle)),
   };
   const rearRight = {
-    x: screenCenter.x - ship.r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
-    y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(a) + Math.cos(a)),
+    x: screenCenter.x - ship.r * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
+    y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(angle) + Math.cos(angle)),
   };
 
   ctx.strokeStyle = color || 'white';

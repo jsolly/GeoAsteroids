@@ -14,6 +14,22 @@ export interface ConnectedPlayer {
   score: number;
 }
 
+// Message types
+export interface ClientMessage {
+  type: string;
+  data?: Record<string, unknown>;
+  id?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+export interface ServerMessage {
+  type: string;
+  data?: unknown;
+  timestamp: number;
+  [key: string]: unknown;
+}
+
 export class WebSocketCore {
   private players = new Map<string, ConnectedPlayer>();
   private gameTime = 0;
@@ -60,7 +76,7 @@ export class WebSocketCore {
     }
   }
 
-  public updatePlayer(id: string, data: any): void {
+  public updatePlayer(id: string, data: Partial<ConnectedPlayer>): void {
     const player = this.players.get(id);
     if (player) {
       Object.assign(player, data);
@@ -80,7 +96,7 @@ export class WebSocketCore {
     return Array.from(this.players.values());
   }
 
-  public broadcastToAll(message: any, excludeId?: string): void {
+  public broadcastToAll(message: ServerMessage, excludeId?: string): void {
     const messageStr = JSON.stringify(message);
     for (const [id, player] of this.players.entries()) {
       if (id !== excludeId && player.ws.readyState === WebSocket.OPEN) {
@@ -89,7 +105,7 @@ export class WebSocketCore {
     }
   }
 
-  public sendToWebSocket(ws: WebSocket, message: any): void {
+  public sendToWebSocket(ws: WebSocket, message: ServerMessage): void {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
     }
@@ -99,17 +115,17 @@ export class WebSocketCore {
     this.sendToWebSocket(ws, { type: 'error', data: message, timestamp: Date.now() });
   }
 
-  public handleClientMessage(message: any, ws: WebSocket): void {
+  public handleClientMessage(message: ClientMessage, ws: WebSocket): void {
     // Accept both top-level fields and nested data payloads for compatibility
     const type = message.type;
     const payload = typeof message.data === 'object' && message.data !== null ? message.data : {};
     const id = message.id ?? payload.id;
     const name = message.name ?? payload.name;
-    const restData = { ...payload, ...message };
-    delete (restData as any).type;
-    delete (restData as any).data;
-    delete (restData as any).id;
-    delete (restData as any).name;
+    const restData = { ...payload, ...message } as Record<string, unknown>;
+    delete restData.type;
+    delete restData.data;
+    delete restData.id;
+    delete restData.name;
 
     switch (type) {
       case 'join':
@@ -182,8 +198,8 @@ export class WebSocketCore {
             name,
             position,
             velocity: velocity || { x: 0, y: 0 },
-            r: rotation || 0,
-            a: 0, // angular velocity, default to 0
+            radius: 15, // Default ship radius
+            angle: rotation || 0, // Use rotation as angle for backward compatibility
             lives: health || 3,
             score,
             exploding: false, // default to false

@@ -1,16 +1,17 @@
-import type { Vector } from '../../physics/Vector';
 import type { Ship } from '../ship/Ship';
 
-// Player-specific properties that don't exist in Ship
-export interface PlayerData {
-  id: string;
-  name: string;
-  lastUpdate: number;
-  isBot?: boolean;
+// Common position and velocity types used throughout the system
+export interface Position {
+  x: number;
+  y: number;
 }
 
-// Player is now a composition of Ship + Player-specific data
-export interface Player extends PlayerData {
+export interface Velocity {
+  x: number;
+  y: number;
+}
+
+export interface Player {
   id: string;
   name: string;
   ship: Ship;
@@ -19,7 +20,7 @@ export interface Player extends PlayerData {
   isBot?: boolean;
   lives: number;
   respawnTimer?: number; // Timer for respawning after death (in frames)
-  respawnPosition?: Vector; // Position where player will respawn
+  respawnPosition?: Position; // Position where player will respawn
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
   color: string; // Player's unique color for lasers and other visual elements
   respawn(): void;
@@ -29,10 +30,10 @@ export interface Player extends PlayerData {
 // Network update interface - only what needs to be synced
 export interface PlayerUpdate {
   id: string;
-  position: Vector;
-  velocity: Vector;
+  position: Position;
+  velocity: Velocity;
   r: number;
-  a: number;
+  angle: number;
   lives: number;
   score: number;
   exploding: boolean;
@@ -41,7 +42,7 @@ export interface PlayerUpdate {
 export interface PlayerJoin {
   id: string;
   name: string;
-  position: Vector;
+  position: Position;
 }
 
 export interface PlayerLeave {
@@ -50,6 +51,6 @@ export interface PlayerLeave {
 
 export interface PlayerShoot {
   id: string;
-  laserStart: Vector;
-  laserDirection: Vector;
+  laserStart: Position;
+  laserDirection: Velocity;
 }

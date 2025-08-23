@@ -1,6 +1,6 @@
 import { BotManager } from '../entities/bot/botManager';
 import type { BotShoot } from '../entities/bot/types';
-import type { Vector } from '../physics/Vector';
+import type { Position } from '../entities/player/types';
 
 export class BotIntegrationManager {
   private botManager: BotManager;
@@ -29,7 +29,7 @@ export class BotIntegrationManager {
     this.botManager.clearBotLasers();
   }
 
-  public updateLocalPlayerForBots(position: Vector, alive: boolean): void {
+  public updateLocalPlayerForBots(position: Position, alive: boolean): void {
     this.botManager.updateLocalPlayerPosition(position, alive);
   }
 

@@ -1,17 +1,20 @@
 import { WebSocket } from 'ws';
 import { logger } from '../setup/serverLogger';
+import type { Position, Velocity } from '../src/entities/player/types';
 
 // Player management
 export interface ConnectedPlayer {
   id: string;
   name: string;
-  ws: WebSocket;
-  lastUpdate: number;
-  position: { x: number; y: number };
-  velocity: { x: number; y: number };
+  position: Position;
+  velocity: Velocity;
   rotation: number;
-  health: number;
+  angularVelocity: number;
+  lives: number;
   score: number;
+  exploding: boolean;
+  lastUpdate: number;
+  ws: WebSocket;
 }
 
 export class WebSocketCore {
@@ -37,18 +40,22 @@ export class WebSocketCore {
     }
   }
 
-  public addPlayer(id: string, name: string, ws: WebSocket): void {
-    this.players.set(id, {
+  public addPlayer(id: string, name: string, ws: WebSocket, position?: Position): void {
+    const player: ConnectedPlayer = {
       id,
       name,
-      ws,
-      lastUpdate: Date.now(),
-      position: { x: 0, y: 0 },
+      position: position || { x: 0, y: 0 },
       velocity: { x: 0, y: 0 },
       rotation: 0,
-      health: 100,
+      angularVelocity: 0,
+      lives: 3,
       score: 0,
-    });
+      exploding: false,
+      lastUpdate: Date.now(),
+      ws,
+    };
+
+    this.players.set(id, player);
     logger.info(`👤 Player ${name} (${id}) added`);
   }
 
@@ -63,7 +70,21 @@ export class WebSocketCore {
   public updatePlayer(id: string, data: any): void {
     const player = this.players.get(id);
     if (player) {
-      Object.assign(player, data);
+      // Use Object.assign for efficient bulk assignment
+      const updates: Partial<ConnectedPlayer> = {};
+      
+      if (data.position) updates.position = data.position;
+      if (data.velocity) updates.velocity = data.velocity;
+      if (data.rotation !== undefined) updates.rotation = data.rotation;
+      if (data.angularVelocity !== undefined) updates.angularVelocity = data.angularVelocity;
+      if (data.lives !== undefined) updates.lives = data.lives;
+      if (data.score !== undefined) updates.score = data.score;
+      if (data.exploding !== undefined) updates.exploding = data.exploding;
+      
+      // Backward compatibility for old a property (r is ship radius, not player rotation)
+      if (data.a !== undefined) updates.angularVelocity = data.a;
+      
+      Object.assign(player, updates);
       player.lastUpdate = Date.now();
     }
   }
@@ -117,13 +138,33 @@ export class WebSocketCore {
           this.sendError(ws, 'Missing player ID or name');
           return;
         }
-        this.addPlayer(id as string, name as string, ws);
-        this.sendToWebSocket(ws, { type: 'joined', id, name, timestamp: Date.now() });
-        this.broadcastToAll({ 
-          type: 'playerJoin', 
-          data: { id, name, position: { x: 0, y: 0 } }, 
-          timestamp: Date.now() 
-        }, id as string);
+        
+        // Handle position if provided by client
+        let joinPosition = { x: 0, y: 0 };
+        if (restData.position && typeof restData.position === 'object') {
+          joinPosition = restData.position;
+        }
+        
+        this.addPlayer(id as string, name as string, ws, joinPosition);
+
+        // Send confirmation to the joining player
+        this.sendToWebSocket(ws, {
+          type: 'joined',
+          id,
+          name,
+          position: joinPosition,
+        });
+
+        // Broadcast to all other players
+        this.broadcastToAll(
+          {
+            type: 'playerJoined',
+            id,
+            name,
+            position: joinPosition,
+          },
+          id as string
+        );
         this.broadcastGameState();
         break;
 
@@ -132,6 +173,8 @@ export class WebSocketCore {
           this.sendError(ws, 'Missing player ID');
           return;
         }
+        // Direct assignment - no conversion needed since we use plain objects
+        
         this.updatePlayer(id as string, restData);
         this.broadcastToAll(
           { type: 'playerUpdate', data: { id, ...restData }, timestamp: Date.now() },
@@ -174,17 +217,17 @@ export class WebSocketCore {
       type: 'gameState',
       data: {
         players: Array.from(this.players.values()).map(
-          ({ id, name, position, velocity, rotation, health, score }) => ({
-            id,
-            name,
-            position,
-            velocity: velocity || { x: 0, y: 0 },
-            r: rotation || 0,
-            a: 0, // angular velocity, default to 0
-            lives: health || 3,
-            score,
-            exploding: false, // default to false
-          })
+                  ({ id, name, position, velocity, rotation, angularVelocity, lives, score, exploding }) => ({
+          id,
+          name,
+          position,
+          velocity: velocity || { x: 0, y: 0 },
+          rotation: rotation || 0,
+          angularVelocity: angularVelocity || 0, // angular velocity, default to 0
+          lives: lives || 3,
+          score,
+          exploding: exploding || false,
+        })
         ),
         asteroids: [], // Empty array for now, can be populated later
         gameTime: this.gameTime,

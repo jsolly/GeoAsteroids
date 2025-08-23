@@ -17,21 +17,21 @@ export function drawRoidsRelative(ship: Ship, roids: Asteroid[]): void {
     const screenPos = worldToScreen(roid.position, ship.position);
 
     const r = roid.r;
-    const a = roid.a;
+    const angle = roid.angle;
     const vertices = roid.vertices;
     const offsets = roid.offsets;
 
     // draw a path
     ctx.beginPath();
     ctx.moveTo(
-      screenPos.x + r * offsets[0] * Math.cos(a),
-      screenPos.y + r * offsets[0] * Math.sin(a)
+      screenPos.x + r * offsets[0] * Math.cos(angle),
+      screenPos.y + r * offsets[0] * Math.sin(angle)
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
       ctx.lineTo(
-        screenPos.x + r * offsets[j] * Math.cos(a + (j * Math.PI * 2) / vertices),
-        screenPos.y + r * offsets[j] * Math.sin(a + (j * Math.PI * 2) / vertices)
+        screenPos.x + r * offsets[j] * Math.cos(angle + (j * Math.PI * 2) / vertices),
+        screenPos.y + r * offsets[j] * Math.sin(angle + (j * Math.PI * 2) / vertices)
       );
     }
     ctx.closePath();

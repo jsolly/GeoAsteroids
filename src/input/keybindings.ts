@@ -26,7 +26,7 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         player.ship.empPulse();
         break;
       case 'ArrowLeft':
-        player.ship.rot = ((TURN_SPEED / 180) * Math.PI) / FPS;
+        player.ship.angularVelocity = ((TURN_SPEED / 180) * Math.PI) / FPS;
         break;
       case 'ArrowUp':
         player.ship.thrusting = true;
@@ -35,7 +35,7 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         }
         break;
       case 'ArrowRight':
-        player.ship.rot = ((-TURN_SPEED / 180) * Math.PI) / FPS;
+        player.ship.angularVelocity = ((-TURN_SPEED / 180) * Math.PI) / FPS;
         break;
     }
   }
@@ -55,9 +55,9 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
         break;
       case 'ArrowLeft':
         if (!keys.ArrowRight) {
-          player.ship.rot = 0;
+          player.ship.angularVelocity = 0;
         } else {
-          player.ship.rot = ((-TURN_SPEED / 180) * Math.PI) / FPS; // If right arrow is still down, continue rotation
+          player.ship.angularVelocity = ((-TURN_SPEED / 180) * Math.PI) / FPS; // If right arrow is still down, continue rotation
         }
         break;
       case 'ArrowUp':
@@ -66,9 +66,9 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
         break;
       case 'ArrowRight':
         if (!keys.ArrowLeft) {
-          player.ship.rot = 0;
+          player.ship.angularVelocity = 0;
         } else {
-          player.ship.rot = ((TURN_SPEED / 180) * Math.PI) / FPS; // If left arrow is still down, continue rotation
+          player.ship.angularVelocity = ((TURN_SPEED / 180) * Math.PI) / FPS; // If left arrow is still down, continue rotation
         }
         break;
     }

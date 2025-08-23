@@ -15,7 +15,13 @@ import {
   SHIP_SIZE,
   SHIP_THRUST,
 } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import {
+  addPositionAndVelocity,
+  addVectors,
+  getVelocityMagnitude,
+  multiplyVelocity,
+} from '../../utils/mathUtils';
+import type { Position, Velocity } from '../player/types';
 
 import { drawThruster } from './shipRenderer';
 
@@ -31,8 +37,8 @@ import {
 } from './shipUtils';
 
 interface LaserData {
-  position: Vector;
-  velocity: Vector;
+  position: Position;
+  velocity: Velocity;
   distTraveled: number;
   explodeTime: number;
 }
@@ -42,25 +48,25 @@ class Laser implements LaserData {
   static fxHit: Sound = new Sound('sounds/hit.m4a', 5);
 
   constructor(
-    public position: Vector,
-    public velocity: Vector,
+    public position: Position,
+    public velocity: Velocity,
     public distTraveled: number,
     public explodeTime: number
   ) {}
 }
 
 class Ship {
-  position = new Vector(0, 0);
-  velocity = new Vector(0, 0);
+  position: Position = { x: 0, y: 0 };
+  velocity: Velocity = { x: 0, y: 0 };
   r: number = SHIP_SIZE / 2;
-  a: number = (90 / 180) * Math.PI;
+  angle: number = (90 / 180) * Math.PI;
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   spawnProtectionTimer: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
   canShoot = true;
   exploding = false;
   lasers: Laser[] = [];
   explodeTime = 0;
-  rot = 0;
+  angularVelocity = 0;
   thrusting = false;
   empPulseActive = false;
   empPulseTime = 0;
@@ -73,14 +79,14 @@ class Ship {
   lastShotTime: number = 0;
   shotCooldown: number = 2000;
   thrusterActive: boolean = false;
-  lastPosition?: Vector; // Track previous position for movement analysis
+  lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
 
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
 
   constructor(options?: {
-    position?: Vector;
+    position?: Position;
     shotCooldown?: number;
   }) {
     // Apply optional overrides for bot-specific configuration
@@ -108,19 +114,22 @@ class Ship {
 
   applyVelocity(): void {
     if (this.thrusting) {
-      const thrust = Vector.fromAngle(this.a).multiply(SHIP_THRUST / FPS);
-      this.velocity = this.velocity.add(thrust);
+      const thrust: Velocity = {
+        x: (Math.cos(this.angle) * SHIP_THRUST) / FPS,
+        y: (-Math.sin(this.angle) * SHIP_THRUST) / FPS,
+      };
+      this.velocity = addVectors(this.velocity, thrust);
       drawThruster(this);
     } else {
-      this.velocity = this.velocity.multiply(1 - FRICTION / FPS);
+      this.velocity = multiplyVelocity(this.velocity, 1 - FRICTION / FPS);
     }
   }
 
   move(): void {
-    this.a += this.rot;
+    this.angle += this.angularVelocity;
     this.applyVelocity();
 
-    const newPosition = this.position.add(this.velocity);
+    const newPosition = addPositionAndVelocity(this.position, this.velocity);
     this.position = newPosition;
 
     this.updateHealth();
@@ -157,8 +166,8 @@ class Ship {
           continue;
         }
       } else {
-        laser.position = laser.position.add(laser.velocity);
-        laser.distTraveled += laser.velocity.magnitude();
+        laser.position = addPositionAndVelocity(laser.position, laser.velocity);
+        laser.distTraveled += getVelocityMagnitude(laser.velocity);
       }
 
       const cvs = getCVS();
@@ -173,51 +182,58 @@ class Ship {
   }
 
   generateLaser(): Laser {
-    const laserVelocity = Vector.fromAngle(this.a)
-      .multiply(LASER_SPEED / FPS)
-      .add(this.velocity);
+    const baseVelocity: Velocity = {
+      x: (Math.cos(this.angle) * LASER_SPEED) / FPS,
+      y: (-Math.sin(this.angle) * LASER_SPEED) / FPS,
+    };
+    const laserVelocity = addVectors(baseVelocity, this.velocity);
 
-    const laserStartPosition = calculateLaserStartPosition(this.position, this.a, this.r);
+    const laserStartPosition = calculateLaserStartPosition(this.position, this.angle, this.r);
     return new Laser(laserStartPosition, laserVelocity, 0, 0);
   }
 
   updateFromNetwork(data: {
-    position?: Vector;
-    velocity?: Vector;
+    position?: Position;
+    velocity?: Velocity;
     r?: number;
-    a?: number;
+    angle?: number;
     lives?: number;
     exploding?: boolean;
   }): void {
+    // Use Object.assign for efficient bulk assignment
+    const updates: Partial<Ship> = {};
+
     if (data.position) {
-      this.position = new Vector(data.position.x, data.position.y);
+      updates.position = data.position;
     }
     if (data.velocity) {
-      this.velocity = new Vector(data.velocity.x, data.velocity.y);
+      updates.velocity = data.velocity;
     }
     if (data.r !== undefined) {
-      this.r = data.r;
+      updates.r = data.r;
     }
-    if (data.a !== undefined) {
-      this.a = data.a;
+    if (data.angle !== undefined) {
+      updates.angle = data.angle;
     }
     if (data.exploding !== undefined) {
-      this.exploding = data.exploding;
+      updates.exploding = data.exploding;
     }
+
+    Object.assign(this, updates);
   }
 
   getNetworkData(): {
-    position: Vector;
-    velocity: Vector;
+    position: { x: number; y: number };
+    velocity: { x: number; y: number };
     r: number;
-    a: number;
+    angle: number;
     exploding: boolean;
   } {
     return {
-      position: this.position,
-      velocity: this.velocity,
+      position: { x: this.position.x, y: this.position.y },
+      velocity: { x: this.velocity.x, y: this.velocity.y },
       r: this.r,
-      a: this.a,
+      angle: this.angle,
       exploding: this.exploding,
     };
   }

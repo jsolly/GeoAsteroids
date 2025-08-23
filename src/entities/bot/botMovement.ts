@@ -1,11 +1,20 @@
 import { FPS, FRICTION, SHIP_THRUST } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import {
+  addPositions,
+  addVectors,
+  createPositionFromAngle,
+  getDistance,
+  multiplyPosition,
+  multiplyVelocity,
+  subtractPositions,
+} from '../../utils/mathUtils';
+import type { Position } from '../player/types';
 import type { BotPlayer } from './types';
 
 // Enhanced bot movement with steering behaviors
 interface BotSteering {
-  desired: Vector;
-  steering: Vector;
+  desired: Position;
+  steering: Position;
   maxSpeed: number;
   maxForce: number;
   wanderAngle: number;
@@ -18,19 +27,19 @@ interface BotSteering {
 
 export class BotMovement {
   private botSteering: Map<string, BotSteering> = new Map();
-  private localPlayerPosition: Vector = new Vector(0, 0);
+  private localPlayerPosition: Position = { x: 0, y: 0 };
   private localPlayerAlive: boolean = true;
   public debugMovementDisabled: boolean = false;
 
-  public setLocalPlayerInfo(position: Vector, alive: boolean): void {
+  public setLocalPlayerInfo(position: Position, alive: boolean): void {
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
   }
 
   public initializeBotSteering(botId: string, botType: string): void {
     const steering: BotSteering = {
-      desired: new Vector(0, 0),
-      steering: new Vector(0, 0),
+      desired: { x: 0, y: 0 },
+      steering: { x: 0, y: 0 },
       maxSpeed: this.getBotMaxSpeed(botType),
       maxForce: this.getBotMaxForce(botType),
       wanderAngle: Math.random() * Math.PI * 2,
@@ -65,13 +74,13 @@ export class BotMovement {
 
     // Determine if bot should thrust based on behavior
     let shouldThrust = false;
-    let thrustDirection = bot.ship.a;
+    let thrustDirection = bot.ship.angle;
 
     switch (bot.behaviorState) {
       case 'hunting': {
         if (this.localPlayerAlive) {
-          const direction = this.localPlayerPosition.subtract(bot.ship.position);
-          const distance = direction.magnitude();
+          const direction = subtractPositions(this.localPlayerPosition, bot.ship.position);
+          const distance = getDistance(this.localPlayerPosition, bot.ship.position);
 
           if (distance > 0) {
             thrustDirection = Math.atan2(-direction.y, direction.x);
@@ -88,34 +97,35 @@ export class BotMovement {
     // If we're still turning a lot, don't thrust yet
     let angleOk = true;
     {
-      let diff = Math.abs(thrustDirection - bot.ship.a);
+      let diff = Math.abs(thrustDirection - bot.ship.angle);
       diff = Math.min(diff, Math.PI * 2 - diff);
       angleOk = diff < 0.6;
     }
 
     // Apply thrust like the player ship does
     if (shouldThrust && angleOk && !bot.ship.exploding) {
-      const thrust = Vector.fromAngle(bot.ship.a).multiply(SHIP_THRUST / FPS);
-      bot.ship.velocity = bot.ship.velocity.add(thrust);
+      const thrust = createPositionFromAngle(bot.ship.angle, SHIP_THRUST / FPS);
+      bot.ship.velocity = addVectors(bot.ship.velocity, thrust);
       bot.ship.thrusterActive = true;
     } else {
       bot.ship.thrusterActive = false;
 
       // Apply friction when not thrusting
-      bot.ship.velocity = bot.ship.velocity.multiply(1 - FRICTION / FPS);
+      bot.ship.velocity = multiplyVelocity(bot.ship.velocity, 1 - FRICTION / FPS);
     }
 
     // Move the bot using velocity
-    bot.ship.position = bot.ship.position.add(bot.ship.velocity);
+    bot.ship.position = addPositions(bot.ship.position, bot.ship.velocity);
 
     // Add position smoothing to reduce flickering
     if (bot.ship.lastPosition) {
       const smoothingFactor = 0.1;
-      bot.ship.position = bot.ship.lastPosition
-        .multiply(1 - smoothingFactor)
-        .add(bot.ship.position.multiply(smoothingFactor));
+      bot.ship.position = addPositions(
+        multiplyPosition(bot.ship.lastPosition, 1 - smoothingFactor),
+        multiplyPosition(bot.ship.position, smoothingFactor)
+      );
     }
-    bot.ship.lastPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
+    bot.ship.lastPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
   }
 
   private updateBotRotation(bot: BotPlayer, desiredDirection: number): void {
@@ -131,7 +141,7 @@ export class BotMovement {
 
     steering.targetRotation = targetAngle;
 
-    let angleDiff = targetAngle - bot.ship.a;
+    let angleDiff = targetAngle - bot.ship.angle;
 
     // Normalize angle difference to [-π, π]
     while (angleDiff > Math.PI) {
@@ -176,7 +186,7 @@ export class BotMovement {
     );
 
     // Apply rotation velocity to angle
-    bot.ship.a += steering.rotationVelocity;
+    bot.ship.angle += steering.rotationVelocity;
 
     // Apply rotation damping
     steering.rotationVelocity *= 0.7;
@@ -184,7 +194,7 @@ export class BotMovement {
     // Add rotation smoothing
     if (bot.ship.lastRotation !== undefined) {
       const rotationSmoothingFactor = 0.2;
-      const angleDiff = bot.ship.a - bot.ship.lastRotation;
+      const angleDiff = bot.ship.angle - bot.ship.lastRotation;
       let normalizedDiff = angleDiff;
       while (normalizedDiff > Math.PI) {
         normalizedDiff -= Math.PI * 2;
@@ -193,16 +203,16 @@ export class BotMovement {
         normalizedDiff += Math.PI * 2;
       }
 
-      bot.ship.a = bot.ship.lastRotation + normalizedDiff * rotationSmoothingFactor;
+      bot.ship.angle = bot.ship.lastRotation + normalizedDiff * rotationSmoothingFactor;
     }
-    bot.ship.lastRotation = bot.ship.a;
+    bot.ship.lastRotation = bot.ship.angle;
 
     // Keep angle in [0, 2π] range
-    while (bot.ship.a < 0) {
-      bot.ship.a += Math.PI * 2;
+    while (bot.ship.angle < 0) {
+      bot.ship.angle += Math.PI * 2;
     }
-    while (bot.ship.a >= Math.PI * 2) {
-      bot.ship.a -= Math.PI * 2;
+    while (bot.ship.angle >= Math.PI * 2) {
+      bot.ship.angle -= Math.PI * 2;
     }
   }
 
@@ -210,8 +220,8 @@ export class BotMovement {
     const steering = this.botSteering.get(botId);
     if (steering) {
       steering.wanderAngle = Math.random() * Math.PI * 2;
-      steering.desired = new Vector(0, 0);
-      steering.steering = new Vector(0, 0);
+      steering.desired = { x: 0, y: 0 };
+      steering.steering = { x: 0, y: 0 };
       steering.rotationVelocity = 0;
       steering.targetRotation = Math.random() * Math.PI * 2;
     }

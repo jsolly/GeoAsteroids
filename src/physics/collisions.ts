@@ -14,10 +14,10 @@ import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid';
 import { BotManager } from '../entities/bot/botManager';
 // Simple logging - removed complex logger dependency
 import type { BotPlayer } from '../entities/bot/types';
-import type { Player } from '../entities/player/types';
+import type { Player, Position } from '../entities/player/types';
 import type { Laser, Ship } from '../entities/ship/Ship';
 import { isDevelopmentMode } from '../utils/debugUtils';
-import { Vector } from './Vector';
+import { getDistance } from '../utils/mathUtils';
 
 // Test DEBUG constant at import time
 // console.log('🔍 COLLISIONS: DEBUG constant imported as:', DEBUG, 'Type:', typeof DEBUG);
@@ -200,7 +200,7 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
       }
 
       // Check collision using distance and radius
-      const distance = laser.position.distance(player.ship.position);
+      const distance = getDistance(laser.position, player.ship.position);
       const collisionThreshold = player.ship.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
@@ -266,7 +266,7 @@ export function detectAllPlayerBotCollisions(
   }
 
   // Create a combined list of all players including the local player
-  const allPlayers: Array<{ id: string; position: Vector; r: number; isLocal: boolean }> = [
+  const allPlayers: Array<{ id: string; position: Position; r: number; isLocal: boolean }> = [
     // Add local player
     {
       id: 'local-player',
@@ -318,7 +318,7 @@ export function detectAllPlayerBotCollisions(
       }
 
       // Calculate distance between player and bot centers
-      const distance = player.position.distance(bot.ship.position);
+      const distance = getDistance(player.position, bot.ship.position);
       const collisionThreshold = player.r + bot.ship.r;
 
       if (distance < collisionThreshold) {
@@ -394,7 +394,7 @@ export function detectRoidHits(currShip: Ship, currAsteroidBelt: AsteroidBelt): 
     if (currShip.blinkCount === 0) {
       for (let i = 0; i < currAsteroidBelt.roids.length; i++) {
         if (
-          currShip.position.distance(currAsteroidBelt.roids[i].position) <
+          getDistance(currShip.position, currAsteroidBelt.roids[i].position) <
           currShip.r + currAsteroidBelt.roids[i].r
         ) {
           // Deal damage instead of instant death
@@ -439,7 +439,7 @@ export function detectBotAsteroidCollisions(
 
     // Check collision with each asteroid
     for (let i = 0; i < roids.length; i++) {
-      const distance = bot.ship.position.distance(roids[i].position);
+      const distance = getDistance(bot.ship.position, roids[i].position);
       const collisionThreshold = bot.ship.r + roids[i].r;
 
       if (distance < collisionThreshold) {
@@ -456,7 +456,7 @@ export function detectBotAsteroidCollisions(
 
           // Start respawn timer and position so it respawns after explosion
           bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-          bot.respawnPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
+          bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
         }
 
         // Play hit sound
@@ -481,7 +481,7 @@ export function detectBotAsteroidCollisions(
 }
 
 export function isHit(laser: Laser, roid: Asteroid): boolean {
-  if (laser.explodeTime === 0 && roid.position.distance(laser.position) < roid.r) {
+  if (laser.explodeTime === 0 && getDistance(roid.position, laser.position) < roid.r) {
     return true;
   }
   return false;
@@ -494,7 +494,7 @@ export function isLaserHitBot(laser: Laser, bot: BotPlayer): boolean {
   }
 
   // Calculate distance between laser and bot center
-  const distance = bot.ship.position.distance(laser.position);
+  const distance = getDistance(bot.ship.position, laser.position);
 
   // Make collision detection more forgiving - use a larger hit area
   // This accounts for the fact that lasers are moving and bots are small
@@ -530,7 +530,7 @@ export function detectShipToShipCollisions(
     }
 
     // Check collision with ship
-    const distance = bot.ship.position.distance(currShip.position);
+    const distance = getDistance(bot.ship.position, currShip.position);
     const collisionThreshold = currShip.r + bot.ship.r;
 
     if (distance < collisionThreshold) {
@@ -607,7 +607,7 @@ export function detectShipToShipCollisions(
       }
 
       // Calculate distance between ship centers
-      const distance = currShip.position.distance(player.ship.position);
+      const distance = getDistance(currShip.position, player.ship.position);
       const collisionThreshold = currShip.r + player.ship.r;
 
       if (distance < collisionThreshold) {
@@ -677,7 +677,7 @@ export function detectBotShipCollisions(currShip: Ship, bots: Map<string, BotPla
     }
 
     // Check collision with ship
-    const distance = bot.ship.position.distance(currShip.position);
+    const distance = getDistance(bot.ship.position, currShip.position);
     const collisionThreshold = bot.ship.r + currShip.r;
 
     if (distance < collisionThreshold) {
@@ -768,7 +768,7 @@ export function detectBotLaserPlayerCollisions(
         }
 
         // Check collision using distance and radius
-        const distance = laser.position.distance(player.ship.position);
+        const distance = getDistance(laser.position, player.ship.position);
         const collisionThreshold = player.ship.r + 2; // Laser radius is small, use 2 pixels
 
         if (distance < collisionThreshold) {

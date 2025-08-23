@@ -6,7 +6,7 @@ import { Player } from '../entities/player/index';
 import type { Ship } from '../entities/ship/Ship';
 import { keyDown, keyUp } from '../input/keybindings';
 import { MultiplayerManager } from '../multiplayer/multiplayerManager';
-import { Vector } from '../physics/Vector';
+
 import { toggleScreen } from '../ui/uiUtils';
 import { GameState } from './gameState';
 
@@ -60,9 +60,6 @@ class GameController implements GameControllerData {
     this.currShip = this.player.ship;
     this.currRoidBelt = createAsteroidBelt();
     this.multiplayerManager = MultiplayerManager.getInstance();
-
-    // Expose multiplayer testing commands to browser console
-    MultiplayerManager.exposeToWindow();
 
     // Set up EMP pulse event listener
     this.setupEmpPulseHandler();
@@ -236,7 +233,7 @@ class GameController implements GameControllerData {
         position: this.currShip.position,
         velocity: this.currShip.velocity,
         r: this.currShip.r,
-        a: this.currShip.a,
+        angle: this.currShip.angle,
         lives: this.player.lives,
         score: this.gameState.getCurrentScore(),
         exploding: this.currShip.exploding,
@@ -311,8 +308,8 @@ class GameController implements GameControllerData {
 
   private checkBotLaserHit(botShoot: BotShoot): boolean {
     // Simple collision detection between bot laser and player ship
-    const laserStart = new Vector(botShoot.laserStart.x, botShoot.laserStart.y);
-    const laserDirection = new Vector(botShoot.laserDirection.x, botShoot.laserDirection.y);
+    const laserStart = { x: botShoot.laserStart.x, y: botShoot.laserStart.y };
+    const laserDirection = { x: botShoot.laserDirection.x, y: botShoot.laserDirection.y };
     const shipPos = this.currShip.position;
     const shipRadius = this.currShip.r;
 
@@ -321,11 +318,14 @@ class GameController implements GameControllerData {
     const laserEndY = laserStart.y + laserDirection.y * 1000;
 
     // Calculate perpendicular distance from point to line
-    const A = laserEndY - laserStart.y;
-    const B = laserStart.x - laserEndX;
-    const C = laserEndX * laserStart.y - laserStart.x * laserEndY;
+    // Using line equation: Ax + By + C = 0
+    const lineCoeffA = laserEndY - laserStart.y;
+    const lineCoeffB = laserStart.x - laserEndX;
+    const lineCoeffC = laserEndX * laserStart.y - laserStart.x * laserEndY;
 
-    const distance = Math.abs(A * shipPos.x + B * shipPos.y + C) / Math.sqrt(A * A + B * B);
+    const distance =
+      Math.abs(lineCoeffA * shipPos.x + lineCoeffB * shipPos.y + lineCoeffC) /
+      Math.sqrt(lineCoeffA * lineCoeffA + lineCoeffB * lineCoeffB);
 
     // Debug collision detection
     // Check if laser passes close enough to ship

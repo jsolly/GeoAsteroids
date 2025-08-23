@@ -1,5 +1,6 @@
 import { FPS, SHIP_HEALTH_REGEN_DELAY, SHIP_HEALTH_REGEN_RATE } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
+import type { Position } from '../player/types';
 
 export function canTakeCollisionDamage(
   lastCollisionTime: number,
@@ -49,19 +50,19 @@ export function isDebugMode(): boolean {
 }
 
 export function calculateThrusterPosition(
-  shipPosition: Vector,
+  shipPosition: Position,
   shipAngle: number,
   shipRadius: number
-): Vector {
-  const thrusterOffset = Vector.fromAngle(shipAngle).multiply(-shipRadius);
-  return shipPosition.add(thrusterOffset);
+): Position {
+  const thrusterOffset = createPositionFromAngle(shipAngle, -shipRadius);
+  return addPositions(shipPosition, thrusterOffset);
 }
 
 export function calculateLaserStartPosition(
-  shipPosition: Vector,
+  shipPosition: Position,
   shipAngle: number,
   shipRadius: number
-): Vector {
-  const noseOffset = Vector.fromAngle(shipAngle).multiply((4 / 3) * shipRadius);
-  return shipPosition.add(noseOffset);
+): Position {
+  const noseOffset = createPositionFromAngle(shipAngle, (4 / 3) * shipRadius);
+  return addPositions(shipPosition, noseOffset);
 }

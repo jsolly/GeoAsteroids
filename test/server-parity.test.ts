@@ -11,7 +11,8 @@ describe('Server Message Parity', () => {
 
   afterAll(() => {
     // Clean up any timers
-    wsCore['cleanupStalePlayers']();
+    // Note: cleanupStalePlayers is private, so we can't call it directly
+    // The interval will be cleaned up when the process ends
   });
 
   it('should handle join messages with nested data payloads', () => {
@@ -47,11 +48,12 @@ describe('Server Message Parity', () => {
       return parsed.type === 'joined';
     });
     expect(joinedMessage).toBeDefined();
+    expect(joinedMessage).toBeTruthy();
 
-    const parsedJoined = JSON.parse(joinedMessage!);
+    const parsedJoined = JSON.parse(joinedMessage as string);
     expect(parsedJoined.id).toBe('test-id');
     expect(parsedJoined.name).toBe('test-name');
-    expect(parsedJoined.timestamp).toBeDefined();
+    expect(parsedJoined.position).toBeDefined();
   });
 
   it('should handle update messages with nested data payloads', () => {
@@ -121,8 +123,9 @@ describe('Server Message Parity', () => {
       return parsed.type === 'joined';
     });
     expect(joinedMessage).toBeDefined();
+    expect(joinedMessage).toBeTruthy();
 
-    const parsedJoined = JSON.parse(joinedMessage!);
+    const parsedJoined = JSON.parse(joinedMessage as string);
     expect(parsedJoined.id).toBe('top-level-id');
     expect(parsedJoined.name).toBe('top-level-name');
   });

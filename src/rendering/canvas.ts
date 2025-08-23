@@ -13,6 +13,9 @@ import {
 // Consider tweaking if jitter causes flicker
 const REMOTE_PLAYER_STALE_MS = 1500;
 
+// Thruster speed threshold (squared to avoid sqrt in render loop)
+const THRUSTER_SPEED_THRESHOLD_SQ = 0.01; // (0.1)^2
+
 import { GameController } from '../core/gameController';
 import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
 import { drawRoidsRelative } from '../entities/asteroid/asteroidRenderer';
@@ -98,13 +101,13 @@ function drawDebugFeatures(ship: Ship): void {
   // Red center dot removed - was causing visual confusion
 }
 
-function drawTriangle(centroid: Point, a: number, color = 'white'): void {
+function drawTriangle(centroid: Point, angle: number, color = 'white'): void {
   const ctx = getCTX();
   if (!ctx) {
     return;
   }
 
-  const r = SHIP_SIZE / 2;
+  const radius = SHIP_SIZE / 2;
   const x = centroid.x;
   const y = centroid.y;
 
@@ -113,18 +116,18 @@ function drawTriangle(centroid: Point, a: number, color = 'white'): void {
   ctx.beginPath();
   ctx.moveTo(
     // nose of ship
-    x + (4 / 3) * r * Math.cos(a),
-    y - (4 / 3) * r * Math.sin(a)
+    x + (4 / 3) * radius * Math.cos(angle),
+    y - (4 / 3) * radius * Math.sin(angle)
   );
   ctx.lineTo(
     // rear left
-    x - r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
-    y + r * ((2 / 3) * Math.sin(a) - Math.cos(a))
+    x - radius * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
+    y + radius * ((2 / 3) * Math.sin(angle) - Math.cos(angle))
   );
   ctx.lineTo(
     // rear right
-    x - r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
-    y + r * ((2 / 3) * Math.sin(a) + Math.cos(a))
+    x - radius * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
+    y + radius * ((2 / 3) * Math.sin(angle) + Math.cos(angle))
   );
   ctx.closePath();
   ctx.stroke();
@@ -203,7 +206,8 @@ function drawOtherPlayers(localShip: Ship): void {
       drawShip(player.ship, screenPos, player.color, {
         name: player.name,
         score: player.score,
-        showThruster: player.ship.velocity.magnitude() > 0.1,
+        showThruster:
+          player.ship.velocity.x ** 2 + player.ship.velocity.y ** 2 > THRUSTER_SPEED_THRESHOLD_SQ,
         thrusterColor: 'default',
       });
     }
@@ -263,7 +267,7 @@ function drawShip(
     return;
   }
 
-  const a = ship.a;
+  const angle = ship.angle;
   const r = ship.r;
 
   // Draw ship triangle
@@ -272,18 +276,18 @@ function drawShip(
   ctx.beginPath();
   ctx.moveTo(
     // nose of ship
-    screenPos.x + (4 / 3) * r * Math.cos(a),
-    screenPos.y - (4 / 3) * r * Math.sin(a)
+    screenPos.x + (4 / 3) * r * Math.cos(angle),
+    screenPos.y - (4 / 3) * r * Math.sin(angle)
   );
   ctx.lineTo(
     // rear left
-    screenPos.x - r * ((2 / 3) * Math.cos(a) + Math.sin(a)),
-    screenPos.y + r * ((2 / 3) * Math.sin(a) - Math.cos(a))
+    screenPos.x - r * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
+    screenPos.y + r * ((2 / 3) * Math.sin(angle) - Math.cos(angle))
   );
   ctx.lineTo(
     // rear right
-    screenPos.x - r * ((2 / 3) * Math.cos(a) - Math.sin(a)),
-    screenPos.y + r * ((2 / 3) * Math.sin(a) + Math.cos(a))
+    screenPos.x - r * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
+    screenPos.y + r * ((2 / 3) * Math.sin(angle) + Math.cos(angle))
   );
   ctx.closePath();
   ctx.stroke();
@@ -291,7 +295,7 @@ function drawShip(
   // Draw thruster effect if enabled
   if (options.showThruster && !ship.exploding) {
     const thrusterColor = options.thrusterColor || 'default';
-    drawGenericThruster(screenPos.x, screenPos.y, a, r, thrusterColor);
+    drawGenericThruster(screenPos.x, screenPos.y, angle, r, thrusterColor);
   }
 
   // Draw name above ship

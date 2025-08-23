@@ -6,4 +6,6 @@ export type {
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
+  Position,
+  Velocity,
 } from './types';

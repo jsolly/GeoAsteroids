@@ -5,23 +5,24 @@ import type {
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
+  Position,
+  Velocity,
 } from '../entities/player/index';
-import type { Vector } from '../physics/Vector';
 
 export interface GameState {
   players: Array<{
     id: string;
     name: string;
-    position: Vector;
-    velocity: Vector;
+    position: Position;
+    velocity: Velocity;
     r: number;
-    a: number;
+    angle: number;
     lives: number;
     score: number;
     exploding: boolean;
   }>;
   asteroids: Array<{
-    position: Vector;
+    position: Position;
     size: number;
     jaggedness: number;
   }>;

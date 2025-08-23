@@ -20,7 +20,7 @@ export default defineConfig(() => {
 
   return {
     resolve: {
-      extensions: ['.ts', '.js', '.tsx', '.jsx'],
+      extensions: ['.ts'],
     },
     build: {
       target: 'ESNext',

@@ -1,5 +1,6 @@
 import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
 import type { BotPlayer } from '../entities/bot/types';
+import { getDistance } from '../utils/mathUtils';
 import { DebugCollisionManager } from './debugCollisionManager';
 
 /**
@@ -56,7 +57,7 @@ export class DebugCollisionWrapper {
 
       // Check collision with each asteroid
       for (let i = 0; i < roids.length; i++) {
-        const distance = bot.ship.position.distance(roids[i].position);
+        const distance = getDistance(bot.ship.position, roids[i].position);
         const collisionThreshold = bot.ship.r + roids[i].r;
 
         if (distance < collisionThreshold) {

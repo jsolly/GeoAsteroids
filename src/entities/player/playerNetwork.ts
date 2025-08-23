@@ -1,7 +1,6 @@
 import { GameController } from '../../core/gameController';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
-import type { Vector } from '../../physics/Vector';
-import type { Player } from './types';
+import type { Player, Position } from './types';
 
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
@@ -55,11 +54,6 @@ export class PlayerNetwork {
 
       // Update ship health regeneration system
       player.ship.updateHealth();
-
-      // Handle respawn if explosion is done and player has lives remaining
-      if (!player.ship.exploding && player.lives > 0) {
-        this.respawnPlayer(player);
-      }
     }
 
     // Only update network state if connected
@@ -70,10 +64,7 @@ export class PlayerNetwork {
     }
   }
 
-  private respawnPlayer(player: Player): void {
-    // Delegate respawn logic to the player
-    player.respawn();
-  }
+  // Remote players should not be force-respawned client-side; server/state updates handle respawn.
 
   public getOtherPlayers(): Player[] {
     const players = this.multiplayerManager.players;
@@ -82,7 +73,7 @@ export class PlayerNetwork {
 
   public isPlayerNearby(
     player: Player,
-    localPlayer: { position: Vector },
+    localPlayer: { position: Position },
     viewportRadius: number = 1200
   ): boolean {
     if (!localPlayer || !localPlayer.position) {
@@ -98,7 +89,7 @@ export class PlayerNetwork {
   }
 
   public getVisiblePlayers(
-    localPlayer: { position: Vector },
+    localPlayer: { position: Position },
     viewportRadius: number = 1200
   ): Player[] {
     return this.getOtherPlayers().filter((player) =>

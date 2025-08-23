@@ -13,28 +13,28 @@ import {
   ROID_VERTICES,
 } from '../../constants';
 import { GameController } from '../../core/gameController';
-import { Vector } from '../../physics/Vector';
+import type { Position, Velocity } from '../player/types';
 import { calculateSpawnCount, spawnAsteroidFromEdge } from './asteroidUtils';
 
 class Asteroid {
-  a: number;
+  angle: number;
   readonly offsets: number[] = [];
   vertices: number;
-  velocity: Vector;
+  velocity: Velocity;
   static fxHit = new Sound('sounds/hit.m4a', 5);
 
   constructor(
-    public position: Vector,
+    public position: Position,
     public r: number
   ) {
     const currLevel = 0;
     const lvlMult = 1 + 0.1 * currLevel;
-    this.a = Math.random() * Math.PI * 2; // in radians
+    this.angle = Math.random() * Math.PI * 2; // in radians
     const speed = (Math.random() * ROID_SPEED * lvlMult) / FPS;
-    this.velocity = new Vector(
-      speed * (Math.random() < 0.5 ? 1 : -1),
-      speed * (Math.random() < 0.5 ? 1 : -1)
-    );
+    this.velocity = {
+      x: speed * (Math.random() < 0.5 ? 1 : -1),
+      y: speed * (Math.random() < 0.5 ? 1 : -1),
+    };
 
     this.vertices = Math.floor(Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2);
 
@@ -105,7 +105,10 @@ class AsteroidBelt {
     for (const roid of this.roids) {
       // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
       // let dt = 1/Math.sqrt(1-beta_squared)
-      roid.position = roid.position.add(roid.velocity);
+      roid.position = {
+        x: roid.position.x + roid.velocity.x,
+        y: roid.position.y + roid.velocity.y,
+      };
     }
   }
 

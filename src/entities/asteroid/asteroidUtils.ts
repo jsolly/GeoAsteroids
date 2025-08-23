@@ -1,7 +1,7 @@
 import { getCVS, ROID_SIZE } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import type { Position } from '../player/types';
 
-export function spawnAsteroidFromEdge(): Vector {
+export function spawnAsteroidFromEdge(): Position {
   // Get the current canvas dimensions for full-screen spawning
   const canvasWidth = window.innerWidth;
   const canvasHeight = window.innerHeight;
@@ -47,7 +47,7 @@ export function spawnAsteroidFromEdge(): Vector {
     }
   }
 
-  return new Vector(x, y);
+  return { x, y };
 }
 
 export function calculateSpawnCount(): number {

@@ -22,7 +22,7 @@ import {
   detectRoidHits,
   detectShipToShipCollisions,
 } from '../physics/collisions';
-import { Vector } from '../physics/Vector';
+
 import { drawGameCanvas } from '../rendering/canvas';
 import { GameController } from './gameController';
 
@@ -187,9 +187,9 @@ function handleShipExplosion(ship: Ship, player: Player): void {
       ship.healthRegenTimer = 0;
 
       // Reset ship position to center
-      ship.position = new Vector(0, 0); // Use world origin instead of canvas center
-      ship.velocity = new Vector(0, 0);
-      ship.a = (90 / 180) * Math.PI; // Reset to upward direction
+      ship.position = { x: 0, y: 0 }; // Use world origin instead of canvas center
+      ship.velocity = { x: 0, y: 0 };
+      ship.angle = (90 / 180) * Math.PI; // Reset to upward direction
     } else {
       // No lives remaining - game over
       // Don't respawn the ship, just call gameOver
@@ -217,10 +217,6 @@ function handleCollision(ship: Ship): void {
       gameController.updateCurrScore(detectShipToShipCollisions(ship, bots));
 
       // Add bot-asteroid collision detection
-      console.debug('COLLISION_DEBUG', 'Calling detectBotAsteroidCollisions', {
-        botCount: bots.size,
-        asteroidCount: currRoidBelt.roids.length,
-      });
       detectBotAsteroidCollisions(bots, currRoidBelt);
 
       // Add bot-ship collision detection
@@ -250,8 +246,6 @@ function handleCollision(ship: Ship): void {
         // Add bot laser collision detection on other players
         detectBotLaserPlayerCollisions(realPlayers, bots);
       }
-    } else {
-      console.debug('COLLISION_DEBUG', 'No real players found for collision detection');
     }
 
     gameController.updatePersonalBest();

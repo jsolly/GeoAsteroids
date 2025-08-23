@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { SHIP_RESPAWN_DELAY_FRAMES } from '../../constants';
-import { Vector } from '../../physics/Vector';
+import type { Position } from '../player/types';
 import type { Laser } from '../ship/Ship';
 import { BotCombat } from './botCombat';
 import { BotFactory } from './botFactory';
@@ -11,7 +11,7 @@ export class BotManager {
   private static instance: BotManager;
   private bots: Map<string, BotPlayer> = new Map();
   private localPlayerId: string;
-  public localPlayerPosition: Vector = new Vector(0, 0);
+  public localPlayerPosition: Position = { x: 0, y: 0 };
   public localPlayerAlive: boolean = true;
   public isActive: boolean = false;
 
@@ -40,17 +40,21 @@ export class BotManager {
       BotManager.instance.isActive = false;
       BotManager.instance.clearBots();
       BotManager.instance.localPlayerId = '';
-      BotManager.instance.localPlayerPosition = new Vector(0, 0);
+      BotManager.instance.localPlayerPosition = { x: 0, y: 0 };
       BotManager.instance.localPlayerAlive = true;
     }
-    (BotManager as any).instance = undefined;
+    (BotManager as unknown as { instance: BotManager | undefined }).instance = undefined;
   }
 
   public getBots(): Map<string, BotPlayer> {
     return this.bots;
   }
 
-  public setLocalPlayerInfo(id: string, position: Vector, alive: boolean): void {
+  public get botMovementSystem(): BotMovement {
+    return this.botMovement;
+  }
+
+  public setLocalPlayerInfo(id: string, position: Position, alive: boolean): void {
     this.localPlayerId = id;
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
@@ -140,7 +144,7 @@ export class BotManager {
     // Initialize respawn timer when explosion starts
     if (bot.respawnTimer === undefined) {
       bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-      bot.respawnPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
+      bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
     }
   }
 
@@ -158,7 +162,7 @@ export class BotManager {
     // Initialize respawn timer when explosion starts
     if (bot.respawnTimer === undefined) {
       bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-      bot.respawnPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
+      bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
     }
   }
 
@@ -168,7 +172,7 @@ export class BotManager {
   }
 
   // Public method to update local player position (called from game loop)
-  public updateLocalPlayerPosition(position: Vector, alive: boolean): void {
+  public updateLocalPlayerPosition(position: Position, alive: boolean): void {
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
 
@@ -194,7 +198,7 @@ export class BotManager {
         // Start a respawn timer when explosion starts
         if (bot.respawnTimer === undefined && bot.ship.explodeTime > 0) {
           bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-          bot.respawnPosition = new Vector(bot.ship.position.x, bot.ship.position.y);
+          bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
         }
 
         bot.ship.updateExplosion();
