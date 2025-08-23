@@ -1,12 +1,8 @@
-import {
-  DRAW_ASTEROIDS,
-  EMP_PULSE_DURATION,
-  EMP_PULSE_RADIUS,
-  FPS,
-  musicIsOn,
-  SHIP_INV_BLINK_DUR,
-  SHIP_INV_DUR,
-} from '../constants';
+import { SHIP_INV_BLINK_DUR, SHIP_INV_DUR } from '../constants/entities/ship';
+import { DRAW_ASTEROIDS, EMP_PULSE_DURATION, EMP_PULSE_RADIUS } from '../constants/game';
+import { FPS } from '../constants/physics';
+import { musicIsOn } from '../constants/preferences';
+import { BotPlayer } from '../entities/bot/BotPlayer';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import type { Player } from '../entities/player/types';
 import type { Ship } from '../entities/ship/Ship';
@@ -14,10 +10,13 @@ import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/s
 import {
   detectAllPlayerBotCollisions,
   detectBotAsteroidCollisions,
+  detectBotBoundaryCollisions,
   detectBotLaserPlayerCollisions,
   detectBotShipCollisions,
+  detectBoundaryCollisions,
   detectLaserHits,
   detectLaserPlayerCollisions,
+  detectPlayerBoundaryCollisions,
   detectPlayerLaserShipCollisions,
   detectRoidHits,
   detectShipToShipCollisions,
@@ -42,19 +41,10 @@ window.addEventListener('gameStart', () => {
       return;
     }
 
-    // Add debug logging to verify console override is working
-    console.debug('GAME_LOOP_DEBUG', 'Game loop iteration', {
-      timestamp: Date.now(),
-      frame: performance.now(),
-    });
-
     try {
       updateGame();
     } catch (error) {
-      console.error('GAME_LOOP', 'Error in game loop', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
+      console.error('EVENT_LOOP', 'Error in game loop', { error });
     }
 
     window.requestAnimationFrame(gameLoop);
@@ -65,9 +55,8 @@ window.addEventListener('gameStart', () => {
 
 // Add event listener for ship explosion
 window.addEventListener('shipExploded', () => {
-  const ship = gameController.getCurrShip();
   const player = gameController.getCurrPlayer();
-  if (ship && player) {
+  if (player) {
     // Ship has exploded, just decrement player lives
     // The explosion animation will be handled by the normal game loop
     player.lives--;
@@ -136,10 +125,6 @@ function handleShipState(ship: Ship, player: Player): void {
       if (ship.empPulseActive) {
         const empAlpha = ship.empPulseTime / (EMP_PULSE_DURATION * FPS); // Fade out over duration
         drawEmpPulse(ship, EMP_PULSE_RADIUS, empAlpha);
-        // console.debug('EMP_PULSE', 'Drawing EMP pulse effect', {
-        //   alpha: empAlpha,
-        //   timeRemaining: ship.empPulseTime
-        // });
       }
 
       if (ship.blinkCount > 0) {
@@ -148,18 +133,13 @@ function handleShipState(ship: Ship, player: Player): void {
         if (ship.spawnProtectionTimer === 0) {
           ship.spawnProtectionTimer = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
           ship.blinkCount--;
-          // console.debug('SHIP_STATE', 'Blink count decremented', { newBlinkCount: ship.blinkCount });
         }
       }
     } else {
       handleShipExplosion(ship, player);
     }
   } catch (error: unknown) {
-    console.error('SHIP_STATE', 'Error in handleShipState', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      shipPos: { x: ship.position.x, y: ship.position.y },
-    });
+    console.error('EVENT_LOOP', 'Error in ship state handling', { error });
   }
 }
 
@@ -207,6 +187,12 @@ function handleCollision(ship: Ship): void {
     const bots = gameController.isMultiplayerEnabled() ? gameController.getBots() : undefined;
     // Legacy bot bullets removed – collisions read bot lasers directly from manager
 
+    // Check for boundary collisions first
+    if (detectBoundaryCollisions(ship)) {
+      // Boundary collision detected, ship will explode and respawn
+      return;
+    }
+
     gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, bots));
     if (DRAW_ASTEROIDS) {
       gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
@@ -215,6 +201,9 @@ function handleCollision(ship: Ship): void {
     // Add ship-to-ship collision detection
     if (bots && bots.size > 0) {
       gameController.updateCurrScore(detectShipToShipCollisions(ship, bots));
+
+      // Add bot boundary collision detection
+      detectBotBoundaryCollisions(bots);
 
       // Add bot-asteroid collision detection
       detectBotAsteroidCollisions(bots, currRoidBelt);
@@ -228,10 +217,13 @@ function handleCollision(ship: Ship): void {
     const otherPlayers = playerNetwork.getOtherPlayers();
 
     // Filter out bot players since they're handled by detectLaserHits
-    const realPlayers = otherPlayers.filter((player) => !player.isBot);
+    const realPlayers = otherPlayers.filter((player) => !(player instanceof BotPlayer));
 
     if (realPlayers.length > 0) {
       gameController.updateCurrScore(detectLaserPlayerCollisions(ship, realPlayers));
+
+      // Add boundary collision detection for other players
+      detectPlayerBoundaryCollisions(realPlayers);
 
       // Add detection of other players' lasers hitting the local ship
       detectPlayerLaserShipCollisions(ship, realPlayers);
@@ -250,10 +242,6 @@ function handleCollision(ship: Ship): void {
 
     gameController.updatePersonalBest();
   } catch (error) {
-    console.error('COLLISION', 'Error in handleCollision', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      shipPos: { x: ship.position.x, y: ship.position.y },
-    });
+    console.error('EVENT_LOOP', 'Error in collision handling', { error });
   }
 }

@@ -1,4 +1,5 @@
-import { getCVS, ROID_SIZE } from '../../constants';
+import { ROID_SIZE } from '../../constants/entities/asteroid';
+import { getCVS } from '../../constants/rendering/canvas';
 import type { Position } from '../player/types';
 
 export function spawnAsteroidFromEdge(): Position {
@@ -54,20 +55,4 @@ export function calculateSpawnCount(): number {
   const cvs = getCVS();
   const width = cvs?.width ?? 800; // Default to 800 for tests and server environments
   return Math.min(6, Math.floor(width / 200));
-}
-
-export function calculateMultiplayerReductionFactor(playerCount: number): number {
-  if (playerCount >= 5) {
-    return 0.3; // 30% of normal for 5+ players
-  } else if (playerCount >= 3) {
-    return 0.35; // 35% of normal for 3-4 players
-  }
-  return 0.4; // Base 40% reduction
-}
-
-export function calculateTargetAsteroidCount(
-  currentCount: number,
-  reductionFactor: number
-): number {
-  return Math.max(2, Math.floor(currentCount * reductionFactor));
 }

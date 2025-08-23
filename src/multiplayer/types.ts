@@ -1,13 +1,13 @@
-import type { BotPlayerInterface, BotShoot } from '../entities/bot/index';
+import type { BotPlayer as BotPlayerInterface, BotShoot } from '../entities/bot/types';
 import type {
-  PlayerInterface as Player,
+  Player as PlayerInterface,
   PlayerJoin,
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
   Position,
   Velocity,
-} from '../entities/player/index';
+} from '../entities/player/types';
 
 export interface GameState {
   players: Array<{
@@ -49,5 +49,5 @@ export interface ClientMessage {
 }
 
 // Re-export player and bot types for convenience
-export type { Player, PlayerUpdate, PlayerJoin, PlayerLeave, PlayerShoot };
+export type { PlayerInterface as Player, PlayerUpdate, PlayerJoin, PlayerLeave, PlayerShoot };
 export type { BotPlayerInterface as BotPlayer, BotShoot };

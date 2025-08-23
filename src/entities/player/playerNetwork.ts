@@ -1,6 +1,7 @@
 import { GameController } from '../../core/gameController';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
-import type { Player, Position } from './types';
+import type { Player } from './Player';
+import type { Position } from './types';
 
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
@@ -39,8 +40,7 @@ export class PlayerNetwork {
   }
 
   public updatePlayerState(): void {
-    // Always update local player state for bots, regardless of connection status
-    // This ensures bots can target the player even when not connected to multiplayer
+    // Update local player state for multiplayer
     this.gameController.updateMultiplayerPlayerState();
 
     // Update all players' ship states

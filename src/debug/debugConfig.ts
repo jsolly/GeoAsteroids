@@ -6,51 +6,52 @@ export interface DebugConfig {
   disableBotGuns: boolean;
   placeAsteroidOnBot: boolean;
   debugAsteroidCount: number;
-  invincible: boolean;
+  localPlayerInvincible: boolean;
   drawAsteroids: boolean;
   disableAsteroidMultiplication: boolean;
   disableAsteroidMovement: boolean;
   disableBotSpawnProtection: boolean;
 }
 
+// Default configuration that doesn't interfere with normal gameplay
+const DEFAULT_DEBUG_CONFIG: DebugConfig = {
+  botCount: 1,
+  disableMovement: false,
+  disableBotMovement: false, // Changed from true to false - bots move normally by default
+  disableBotGuns: false,
+  placeAsteroidOnBot: false,
+  debugAsteroidCount: 100,
+  localPlayerInvincible: false,
+  drawAsteroids: true,
+  disableAsteroidMultiplication: false,
+  disableAsteroidMovement: false,
+  disableBotSpawnProtection: false,
+};
+
+// Environment variable configuration that overrides defaults when debug mode is enabled
+const ENV_DEBUG_CONFIG: DebugConfig = {
+  botCount: parseInt(import.meta.env.VITE_DEBUG_BOT_COUNT || '1', 10),
+  disableMovement: import.meta.env.VITE_DEBUG_DISABLE_MOVEMENT === 'true',
+  disableBotMovement: import.meta.env.VITE_DEBUG_DISABLE_BOT_MOVEMENT === 'true',
+  disableBotGuns: import.meta.env.VITE_DEBUG_DISABLE_BOT_GUNS === 'true',
+  placeAsteroidOnBot: import.meta.env.VITE_DEBUG_PLACE_ASTEROID_ON_BOT === 'true',
+  debugAsteroidCount: parseInt(import.meta.env.VITE_DEBUG_ASTEROID_COUNT || '100', 10),
+  localPlayerInvincible: import.meta.env.VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE === 'true',
+  drawAsteroids: import.meta.env.VITE_DEBUG_DRAW_ASTEROIDS !== 'false',
+  disableAsteroidMultiplication:
+    import.meta.env.VITE_DEBUG_DISABLE_ASTEROID_MULTIPLICATION === 'true',
+  disableAsteroidMovement: import.meta.env.VITE_DEBUG_DISABLE_ASTEROID_MOVEMENT === 'true',
+  disableBotSpawnProtection: import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true',
+};
+
 export function getDebugConfig(): DebugConfig {
-  return {
-    // Number of bots to create in debug mode (default: 1)
-    botCount: parseInt(import.meta.env.VITE_DEBUG_BOT_COUNT || '1', 10),
+  // Return default config - environment variables only apply when debug mode is explicitly enabled
+  return { ...DEFAULT_DEBUG_CONFIG };
+}
 
-    // Disable all movement in debug mode (default: false)
-    disableMovement: import.meta.env.VITE_DEBUG_DISABLE_MOVEMENT === 'true',
-
-    // Disable bot movement in debug mode (default: true)
-    disableBotMovement: import.meta.env.VITE_DEBUG_DISABLE_BOT_MOVEMENT !== 'false',
-
-    // Disable bot guns in debug mode (default: false)
-    disableBotGuns: import.meta.env.VITE_DEBUG_DISABLE_BOT_GUNS === 'true',
-
-    // Place asteroid on top of each bot when debug mode loads (default: false)
-    placeAsteroidOnBot: import.meta.env.VITE_DEBUG_PLACE_ASTEROID_ON_BOT === 'true',
-
-    // Number of extra asteroids to spawn in debug mode (default: 100)
-    debugAsteroidCount: parseInt(import.meta.env.VITE_DEBUG_ASTEROID_COUNT || '100', 10),
-
-    // Player invincibility in debug mode (default: false)
-    invincible: import.meta.env.VITE_DEBUG_INVINCIBLE === 'true',
-
-    // Draw asteroids in debug mode (default: true)
-    drawAsteroids: import.meta.env.VITE_DEBUG_DRAW_ASTEROIDS !== 'false',
-
-    // Disable asteroid multiplication over time (default: false)
-    disableAsteroidMultiplication:
-      import.meta.env.VITE_DEBUG_DISABLE_ASTEROID_MULTIPLICATION === 'true',
-
-    // Disable asteroid movement (default: false)
-    disableAsteroidMovement: import.meta.env.VITE_DEBUG_DISABLE_ASTEROID_MOVEMENT === 'true',
-
-    // Disable bot spawn protection for testing collision systems (default: false)
-    // When enabled, bots will take damage from collisions even during spawn protection period
-    // This is useful for testing collision detection without waiting for spawn protection to expire
-    disableBotSpawnProtection: import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true',
-  };
+// Function to get debug config with environment variable overrides (only called when debug mode is enabled)
+export function getDebugConfigWithEnvOverrides(): DebugConfig {
+  return { ...DEFAULT_DEBUG_CONFIG, ...ENV_DEBUG_CONFIG };
 }
 
 // Helper function to check if debug mode is enabled

@@ -3,7 +3,7 @@ import {
   SAVE_KEY_PERSONAL_BEST,
   START_LEVEL,
   STARTING_SCORE,
-} from '../constants';
+} from '../constants/game';
 
 interface GameStateData {
   getCurrentScore(): number;

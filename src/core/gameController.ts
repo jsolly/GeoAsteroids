@@ -1,8 +1,9 @@
 import { Music } from '../audio/Music';
-import { DEFAULT_BOT_COUNT, DRAW_ASTEROIDS, EMP_PULSE_RADIUS } from '../constants';
+import { DEFAULT_BOT_COUNT, DRAW_ASTEROIDS, EMP_PULSE_RADIUS } from '../constants/game';
 import { type AsteroidBelt, createAsteroidBelt } from '../entities/asteroid/Asteroid';
-import type { BotPlayer, BotShoot } from '../entities/bot/types';
-import { Player } from '../entities/player/index';
+import type { BotShoot } from '../entities/bot/types';
+import { Player } from '../entities/player/Player';
+import type { Player as PlayerInterface } from '../entities/player/types';
 import type { Ship } from '../entities/ship/Ship';
 import { keyDown, keyUp } from '../input/keybindings';
 import { MultiplayerManager } from '../multiplayer/multiplayerManager';
@@ -31,7 +32,7 @@ interface GameControllerData {
   gameOver(): void;
   tickMusic(): void;
   getCurrShip(): Ship;
-  getCurrPlayer(): Player;
+  getCurrPlayer(): PlayerInterface;
   getCurrRoidBelt(): AsteroidBelt;
   updateCurrScore(points: number): void;
   updatePersonalBest(): void;
@@ -47,7 +48,7 @@ class GameController implements GameControllerData {
   private gameState: GameState;
   private music: Music;
   private currShip: Ship;
-  private player: Player;
+  private player: PlayerInterface;
   private currRoidBelt: AsteroidBelt;
   private multiplayerManager: MultiplayerManager;
   private botShootHandler?: (event: CustomEvent) => void;
@@ -56,7 +57,10 @@ class GameController implements GameControllerData {
     this.gameState = GameState.getInstance();
     this.music = new Music('sounds/music-low.m4a', 'sounds/music-high.m4a');
     // Create player (it will create its own ship)
-    this.player = new Player({ id: 'local-player', name: 'LocalPlayer', isBot: false });
+    this.player = Player.createPlayer({
+      id: 'local-player',
+      name: 'LocalPlayer',
+    });
     this.currShip = this.player.ship;
     this.currRoidBelt = createAsteroidBelt();
     this.multiplayerManager = MultiplayerManager.getInstance();
@@ -92,7 +96,10 @@ class GameController implements GameControllerData {
     this.gameState.resetCurrentScore();
     this.gameState.resetCurrentLevel();
     // Create player (it will create its own ship)
-    this.player = new Player({ id: 'local-player', name: 'LocalPlayer', isBot: false });
+    this.player = Player.createPlayer({
+      id: 'local-player',
+      name: 'LocalPlayer',
+    });
     this.currShip = this.player.ship;
     this.currRoidBelt = createAsteroidBelt();
     this.music.setMusicTempo(1.0);
@@ -150,7 +157,7 @@ class GameController implements GameControllerData {
     return this.currShip;
   }
 
-  getCurrPlayer(): Player {
+  getCurrPlayer(): PlayerInterface {
     return this.player;
   }
   getCurrRoidBelt(): AsteroidBelt {
@@ -257,7 +264,7 @@ class GameController implements GameControllerData {
     }
   }
 
-  getBots(): Map<string, BotPlayer> {
+  getBots(): Map<string, Player> {
     if (this.gameState.isMultiplayerEnabled()) {
       return this.multiplayerManager.getBots();
     }
@@ -272,6 +279,14 @@ class GameController implements GameControllerData {
 
   updateBotsInGameLoop(): void {
     if (this.gameState.isMultiplayerEnabled()) {
+      // Pass asteroids to bot manager for avoidance
+      const asteroids = this.currRoidBelt.getRoids();
+      this.multiplayerManager.setAsteroidsForBots(asteroids);
+
+      // Pass other players for player avoidance
+      const otherPlayers = this.multiplayerManager.getOtherPlayersArray();
+      this.multiplayerManager.setOtherPlayersForBots(otherPlayers);
+
       this.multiplayerManager.updateBotsInGameLoop();
     }
   }

@@ -1,23 +1,37 @@
+import { LASER_EXPLODE_DUR } from '../constants/entities/laser';
 import {
-  DEBUG,
-  DRAW_ASTEROIDS,
-  FPS,
-  LASER_EXPLODE_DUR,
   SHIP_ASTEROID_DAMAGE,
   SHIP_BOT_DAMAGE,
   SHIP_EXPLODE_DUR_FRAMES,
   SHIP_HEALTH_REGEN_DELAY,
   SHIP_RESPAWN_DELAY_FRAMES,
-} from '../constants';
+} from '../constants/entities/ship';
+import { DEBUG, DRAW_ASTEROIDS } from '../constants/game';
+import { FPS } from '../constants/physics';
 import { GameController } from '../core/gameController';
 import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid';
 import { BotManager } from '../entities/bot/botManager';
 // Simple logging - removed complex logger dependency
-import type { BotPlayer } from '../entities/bot/types';
+
 import type { Player, Position } from '../entities/player/types';
 import type { Laser, Ship } from '../entities/ship/Ship';
-import { isDevelopmentMode } from '../utils/debugUtils';
+
 import { getDistance } from '../utils/mathUtils';
+import { getGameBoundary, isShipOutOfBounds } from './boundary';
+
+// Helper function to check if debug invincibility is enabled
+function isDebugInvincibilityEnabled(): boolean {
+  try {
+    // Check if debug mode is enabled via environment variable
+    if (import.meta.env.VITE_DEBUG === 'true') {
+      // Only apply invincibility if debug mode is explicitly enabled
+      return import.meta.env.VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE === 'true';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // Test DEBUG constant at import time
 // console.log('🔍 COLLISIONS: DEBUG constant imported as:', DEBUG, 'Type:', typeof DEBUG);
@@ -27,7 +41,7 @@ import { getDistance } from '../utils/mathUtils';
 export function detectLaserHits(
   currAsteroidBelt: AsteroidBelt,
   currShip: Ship,
-  bots?: Map<string, BotPlayer>
+  bots?: Map<string, Player>
 ): number {
   const roids = currAsteroidBelt.roids;
   let score = 0;
@@ -47,18 +61,20 @@ export function detectLaserHits(
     }
   }
 
-  // detect bot laser hits on asteroids (bots now use Laser)
-  const botManager = BotManager.getInstance();
-  const botLasersMap = botManager.getBotLasers();
-  if (DRAW_ASTEROIDS && botLasersMap && botLasersMap.size > 0) {
-    for (const [, lasers] of botLasersMap.entries()) {
-      for (let j = lasers.length - 1; j >= 0; j--) {
+  // detect bot laser hits on asteroids (unified system)
+  if (DRAW_ASTEROIDS && bots && bots.size > 0) {
+    for (const [, bot] of bots.entries()) {
+      if (bot.ship.exploding) {
+        continue;
+      }
+
+      for (let j = bot.ship.lasers.length - 1; j >= 0; j--) {
         for (let i = roids.length - 1; i >= 0; i--) {
-          if (isHit(lasers[j], roids[i])) {
+          if (isHit(bot.ship.lasers[j], roids[i])) {
             Asteroid.fxHit.play();
             score = currAsteroidBelt.destroyRoid(i);
             // trigger laser explode like player
-            lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+            bot.ship.updateLaserExplodeTime(j);
             break;
           }
         }
@@ -90,6 +106,7 @@ export function detectLaserHits(
 
         if (isLaserHitBot(laser, bot)) {
           // Deal damage to bot (same logic as botTakeDamage method)
+          const botManager = BotManager.getInstance();
           botManager.botTakeDamage(bot, SHIP_BOT_DAMAGE);
 
           currShip.updateLaserExplodeTime(j);
@@ -106,7 +123,7 @@ export function detectLaserHits(
           if (bot.ship.exploding) {
             window.dispatchEvent(
               new CustomEvent('botDestroyed', {
-                detail: { botId, botType: bot.botType },
+                detail: { botId, botType: 'unknown' },
               })
             );
           }
@@ -117,51 +134,9 @@ export function detectLaserHits(
     }
   }
 
-  // detect bot laser hits on other bots (bot-on-bot combat)
-  if (bots && bots.size > 0 && botLasersMap && botLasersMap.size > 0) {
-    for (const [shootingBotId, lasers] of botLasersMap.entries()) {
-      const shootingBot = bots.get(shootingBotId);
-      if (!shootingBot || shootingBot.ship.exploding) {
-        continue;
-      }
-
-      for (let j = lasers.length - 1; j >= 0; j--) {
-        const laser = lasers[j];
-        if (laser.explodeTime > 0) {
-          continue;
-        }
-
-        for (const [targetBotId, targetBot] of bots.entries()) {
-          if (targetBotId === shootingBotId || targetBot.ship.exploding) {
-            continue;
-          }
-
-          if (targetBot.ship.blinkCount > 0 || targetBot.spawnProtectedUntil > Date.now()) {
-            continue;
-          }
-
-          if (isLaserHitBot(laser, targetBot)) {
-            botManager.botTakeDamage(targetBot, SHIP_BOT_DAMAGE);
-            laser.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-
-            if (targetBot.ship.exploding) {
-              window.dispatchEvent(
-                new CustomEvent('botDestroyed', {
-                  detail: {
-                    botId: targetBotId,
-                    botType: targetBot.botType,
-                    killedBy: 'bot_laser',
-                  },
-                })
-              );
-            }
-
-            break;
-          }
-        }
-      }
-    }
-  }
+  // NOTE: Intentional: bots should not damage other bots with lasers.
+  // The following bot-on-bot laser collision handling has been removed to ensure
+  // bots only attack players and asteroids.
 
   return score;
 }
@@ -190,9 +165,7 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
       }
 
       // Skip bot players (they're handled by detectLaserHits)
-      if (player.isBot) {
-        continue;
-      }
+      // Note: This function should only receive human players
 
       // Skip invincible players (blinking)
       if (player.ship.blinkCount && player.ship.blinkCount > 0 && player.ship.blinkOn) {
@@ -259,7 +232,7 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
 export function detectAllPlayerBotCollisions(
   localShip: Ship,
   otherPlayers: Player[],
-  bots: Map<string, BotPlayer>
+  bots: Map<string, Player>
 ): void {
   if (!bots || bots.size === 0) {
     return;
@@ -338,7 +311,7 @@ export function detectAllPlayerBotCollisions(
           // Dispatch event to notify bot destruction
           window.dispatchEvent(
             new CustomEvent('botDestroyed', {
-              detail: { botId, botType: bot.botType, killedBy: 'local_player_collision' },
+              detail: { botId, botType: 'unknown', killedBy: 'local_player_collision' },
             })
           );
         } else {
@@ -372,7 +345,7 @@ export function detectAllPlayerBotCollisions(
             // Dispatch event to notify bot destruction
             window.dispatchEvent(
               new CustomEvent('botDestroyed', {
-                detail: { botId, botType: bot.botType, killedBy: 'other_player_collision' },
+                detail: { botId, botType: 'unknown', killedBy: 'other_player_collision' },
               })
             );
           }
@@ -413,7 +386,7 @@ export function detectRoidHits(currShip: Ship, currAsteroidBelt: AsteroidBelt): 
 }
 
 export function detectBotAsteroidCollisions(
-  bots: Map<string, BotPlayer>,
+  bots: Map<string, Player>,
   currAsteroidBelt: AsteroidBelt
 ): void {
   if (!bots || bots.size === 0) {
@@ -454,9 +427,15 @@ export function detectBotAsteroidCollisions(
           bot.ship.exploding = true;
           bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
 
-          // Start respawn timer and position so it respawns after explosion
+          // Start respawn timer and random position so it respawns after explosion
           bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-          bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
+
+          // Generate random respawn position within the game boundary
+          const boundary = getGameBoundary();
+          const margin = 100; // Keep bots away from the very edge
+          const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
+          const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
+          bot.respawnPosition = { x: randomX, y: randomY };
         }
 
         // Play hit sound
@@ -467,7 +446,7 @@ export function detectBotAsteroidCollisions(
           new CustomEvent('botDestroyed', {
             detail: {
               botId,
-              botType: bot.botType,
+              botType: 'unknown',
               killedBy: 'asteroid_collision',
             },
           })
@@ -487,7 +466,7 @@ export function isHit(laser: Laser, roid: Asteroid): boolean {
   return false;
 }
 
-export function isLaserHitBot(laser: Laser, bot: BotPlayer): boolean {
+export function isLaserHitBot(laser: Laser, bot: Player): boolean {
   // Skip lasers that are already exploding
   if (laser.explodeTime > 0) {
     return false;
@@ -507,7 +486,7 @@ export function isLaserHitBot(laser: Laser, bot: BotPlayer): boolean {
 
 export function detectShipToShipCollisions(
   currShip: Ship,
-  bots: Map<string, BotPlayer>,
+  bots: Map<string, Player>,
   otherPlayers?: Player[]
 ): number {
   let score = 0;
@@ -539,10 +518,10 @@ export function detectShipToShipCollisions(
         continue;
       }
 
-      // Check if we're in debug mode
-      const isDevelopment = import.meta.env?.DEV === true || import.meta.env.MODE === 'development';
+      // Check if we're in debug mode and invincibility is enabled
+      const isDebugInvincible = isDebugInvincibilityEnabled();
 
-      if (DEBUG || isDevelopment) {
+      if (DEBUG || isDebugInvincible) {
         // DEBUG MODE: Player is invincible, only bot is destroyed
 
         // Destroy the bot
@@ -558,7 +537,7 @@ export function detectShipToShipCollisions(
         // Dispatch event to notify bot destruction
         window.dispatchEvent(
           new CustomEvent('botDestroyed', {
-            detail: { botId, botType: bot.botType, killedBy: 'ship_collision' },
+            detail: { botId, botType: 'unknown', killedBy: 'ship_collision' },
           })
         );
       } else {
@@ -583,7 +562,7 @@ export function detectShipToShipCollisions(
         // Dispatch event to notify bot destruction
         window.dispatchEvent(
           new CustomEvent('botDestroyed', {
-            detail: { botId, botType: bot.botType, killedBy: 'ship_collision' },
+            detail: { botId, botType: 'unknown', killedBy: 'ship_collision' },
           })
         );
       }
@@ -596,8 +575,8 @@ export function detectShipToShipCollisions(
   // Check for ship-to-ship collisions with other players
   if (otherPlayers && otherPlayers.length > 0) {
     for (const player of otherPlayers) {
-      // Skip exploding or bot players
-      if (player.ship.exploding || player.isBot) {
+      // Skip exploding players
+      if (player.ship.exploding) {
         continue;
       }
 
@@ -611,8 +590,8 @@ export function detectShipToShipCollisions(
       const collisionThreshold = currShip.r + player.ship.r;
 
       if (distance < collisionThreshold) {
-        // Check if we're in debug mode
-        if (DEBUG || isDevelopmentMode()) {
+        // Check if we're in debug mode and invincibility is enabled
+        if (DEBUG || isDebugInvincibilityEnabled()) {
           // DEBUG MODE: Player is invincible, only other player is destroyed
 
           // Destroy the other player
@@ -656,7 +635,7 @@ export function detectShipToShipCollisions(
   return score;
 }
 
-export function detectBotShipCollisions(currShip: Ship, bots: Map<string, BotPlayer>): void {
+export function detectBotShipCollisions(currShip: Ship, bots: Map<string, Player>): void {
   if (!bots || bots.size === 0) {
     return;
   }
@@ -706,7 +685,7 @@ export function detectBotShipCollisions(currShip: Ship, bots: Map<string, BotPla
         new CustomEvent('botDestroyed', {
           detail: {
             botId,
-            botType: bot.botType,
+            botType: 'unknown',
             killedBy: 'ship_collision',
           },
         })
@@ -728,28 +707,23 @@ export function detectPlayerLaserShipCollisions(_localShip: Ship, otherPlayers: 
 
 export function detectBotLaserPlayerCollisions(
   otherPlayers: Player[],
-  bots: Map<string, BotPlayer>
+  bots: Map<string, Player>
 ): number {
   if (!otherPlayers || otherPlayers.length === 0 || !bots || bots.size === 0) {
     return 0;
   }
 
-  const score = 0;
-  const botManager = BotManager.getInstance();
-  const botLasersMap = botManager.getBotLasers();
+  let score = 0;
 
-  if (botLasersMap.size === 0) {
-    return 0;
-  }
-
-  // Check each bot's lasers against each player
-  for (const [botId, lasers] of botLasersMap.entries()) {
-    const bot = bots.get(botId);
-    if (!bot || bot.ship.exploding) {
+  // Check each bot's lasers against each player (unified system)
+  for (const [, bot] of bots.entries()) {
+    if (bot.ship.exploding) {
       continue;
     }
 
-    for (const laser of lasers) {
+    for (let j = bot.ship.lasers.length - 1; j >= 0; j--) {
+      const laser = bot.ship.lasers[j];
+
       // Skip lasers that are already exploding
       if (laser.explodeTime > 0) {
         continue;
@@ -757,8 +731,8 @@ export function detectBotLaserPlayerCollisions(
 
       // Check each player
       for (const player of otherPlayers) {
-        // Skip exploding or bot players
-        if (player.ship.exploding || player.isBot) {
+        // Skip exploding players
+        if (player.ship.exploding) {
           continue;
         }
 
@@ -781,8 +755,8 @@ export function detectBotLaserPlayerCollisions(
           player.ship.health = newHealth;
           player.ship.lastDamageTime = Date.now();
 
-          // Activate laser explosion
-          laser.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+          // Activate laser explosion using Ship's method
+          bot.ship.updateLaserExplodeTime(j);
 
           // Play hit sound
           Asteroid.fxHit.play();
@@ -812,6 +786,9 @@ export function detectBotLaserPlayerCollisions(
             }
           }
 
+          // Award score for bot hitting player
+          score += 50;
+
           // Only handle one hit per laser per frame
           break;
         }
@@ -820,4 +797,91 @@ export function detectBotLaserPlayerCollisions(
   }
 
   return score;
+}
+
+export function detectBoundaryCollisions(ship: Ship): boolean {
+  if (ship.exploding) {
+    return false;
+  }
+
+  // Skip collision detection if ship is invincible (blinking or spawn protection)
+  if (ship.blinkCount > 0) {
+    return false;
+  }
+
+  if (isShipOutOfBounds(ship.position)) {
+    // Ship is out of bounds, trigger explosion
+    ship.explode();
+
+    // Play explosion sound
+    Asteroid.fxHit.play();
+
+    return true;
+  }
+
+  return false;
+}
+
+export function detectBotBoundaryCollisions(bots: Map<string, Player>): void {
+  if (!bots || bots.size === 0) {
+    return;
+  }
+
+  for (const [, bot] of bots.entries()) {
+    if (bot.ship.exploding) {
+      continue;
+    }
+
+    // Skip collision detection if bot is invincible (blinking or spawn protection)
+    if (bot.ship.blinkCount > 0 || bot.spawnProtectedUntil > Date.now()) {
+      continue;
+    }
+
+    if (isShipOutOfBounds(bot.ship.position)) {
+      // Bot is out of bounds, trigger explosion directly (bypassing debug mode)
+      bot.ship.health = 0;
+      bot.ship.explode();
+      bot.ship.exploding = true;
+
+      // Set respawn timer and random respawn position
+      bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
+
+      // Generate random respawn position within the game boundary
+      const boundary = getGameBoundary();
+      const margin = 100; // Keep bots away from the very edge
+      const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
+      const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
+      bot.respawnPosition = { x: randomX, y: randomY };
+
+      // Play explosion sound
+      Asteroid.fxHit.play();
+    }
+  }
+}
+
+export function detectPlayerBoundaryCollisions(otherPlayers: Player[]): void {
+  if (!otherPlayers || otherPlayers.length === 0) {
+    return;
+  }
+
+  for (const player of otherPlayers) {
+    if (player.ship.exploding) {
+      continue;
+    }
+
+    // Skip collision detection if player is invincible (blinking or spawn protection)
+    if (player.ship.blinkCount > 0 || player.spawnProtectedUntil > Date.now()) {
+      continue;
+    }
+
+    if (isShipOutOfBounds(player.ship.position)) {
+      // Player is out of bounds, trigger explosion directly (bypassing debug mode)
+      player.ship.health = 0;
+      player.ship.explode();
+      player.ship.exploding = true;
+
+      // Play explosion sound
+      Asteroid.fxHit.play();
+    }
+  }
 }

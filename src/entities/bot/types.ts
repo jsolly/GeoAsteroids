@@ -1,16 +1,13 @@
-import type { Player, Position, Velocity } from '../player/types';
+import type { Player } from '../player/Player';
 
 export interface BotPlayer extends Player {
   isBot: true;
   botType: 'aggressive' | 'defensive' | 'patrol';
-  behaviorState: 'patrolling' | 'hunting' | 'evading';
-  lastBehaviorChange: number;
-  takeDamage(amount: number): void;
 }
 
 export interface BotShoot {
   botId: string;
-  laserStart: Position;
-  laserDirection: Velocity;
+  laserStart: { x: number; y: number };
+  laserDirection: { x: number; y: number };
   targetPlayerId: string;
 }

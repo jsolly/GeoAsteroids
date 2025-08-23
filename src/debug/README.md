@@ -46,7 +46,7 @@ This allows bots to take damage from collisions even during their normal invinci
 | `VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION` | `false` | Disable bot spawn protection for immediate collision testing |
 | `VITE_DEBUG_DISABLE_BOT_MOVEMENT` | `true` | Disable bot movement |
 | `VITE_DEBUG_DISABLE_BOT_GUNS` | `false` | Disable bot shooting |
-| `VITE_DEBUG_INVINCIBLE` | `false` | Make player invincible |
+| `VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE` | `false` | Make local player invincible |
 | `VITE_DEBUG_DRAW_ASTEROIDS` | `true` | Draw asteroids in debug mode |
 
 ## Usage Example

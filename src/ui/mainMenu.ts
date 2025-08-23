@@ -123,7 +123,7 @@ function hideMultiplayerNameModal(): void {
 // Function to start debug mode
 function startDebugMode(): void {
   // Import and use the debug manager
-  import('../debug/index').then(({ DebugManager }) => {
+  import('../debug/debugManager').then(({ DebugManager }) => {
     const debugManager = DebugManager.getInstance();
 
     // Enable debug mode

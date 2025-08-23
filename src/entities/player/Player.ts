@@ -1,4 +1,7 @@
-import { FPS, SHIP_INV_BLINK_DUR, SHIP_INV_DUR, START_LIVES } from '../../constants';
+import { v4 as uuidv4 } from 'uuid';
+import { SHIP_INV_BLINK_DUR, SHIP_INV_DUR } from '../../constants/entities/ship';
+import { START_LIVES } from '../../constants/game';
+import { FPS } from '../../constants/physics';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
 import { Ship } from '../ship/Ship';
 import type { Player as PlayerInterface, Position } from './types';
@@ -9,19 +12,17 @@ export class Player implements PlayerInterface {
   ship: Ship;
   score: number = 0;
   lastUpdate: number = Date.now();
-  isBot?: boolean;
   lives: number = START_LIVES;
   respawnTimer?: number; // Timer for respawning after death (in frames)
   respawnPosition?: Position; // Position where player will respawn
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
   color: string; // Player's unique color for lasers and other visual elements
 
-  constructor(params: { id: string; name: string; isBot?: boolean }) {
+  constructor(params: { id: string; name: string }) {
     this.id = params.id;
     this.name = params.name;
     this.ship = new Ship();
     this.lives = START_LIVES;
-    this.isBot = params.isBot ?? false;
     this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
 
     // Assign a random color for this player
@@ -45,7 +46,7 @@ export class Player implements PlayerInterface {
     // If lives <= 0, player is game over (no respawn)
   }
 
-  private handleLifeLost(): void {
+  handleLifeLost(): void {
     // After a life is lost, respawn the player
     this.respawn();
   }
@@ -89,5 +90,25 @@ export class Player implements PlayerInterface {
 
     // Set spawn protection
     this.spawnProtectedUntil = Date.now() + SHIP_INV_DUR * 1000;
+  }
+
+  static createPlayer(params: {
+    id?: string;
+    name?: string;
+    position?: { x: number; y: number };
+  }): Player {
+    const id = params.id || uuidv4();
+    const name = params.name || 'Player';
+
+    const player = new Player({ id, name });
+
+    if (params.position) {
+      player.ship.position = params.position;
+    }
+
+    // Assign random color for players
+    player.color = generateRandomPlayerColor();
+
+    return player;
   }
 }

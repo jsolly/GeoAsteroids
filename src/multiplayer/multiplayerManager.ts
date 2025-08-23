@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { BotPlayer } from '../entities/bot/types';
-import type { Player, Position } from '../entities/player/types';
+import type { Asteroid } from '../entities/asteroid/Asteroid';
+import { Player } from '../entities/player/Player';
+import type { Player as PlayerInterface, Position } from '../entities/player/types';
 import { Ship } from '../entities/ship/Ship';
 
 import { generateRandomPlayerColor } from '../utils/colorUtils';
@@ -17,7 +18,7 @@ import type {
 export class MultiplayerManager {
   private static instance: MultiplayerManager;
   private socket: WebSocket | null = null;
-  public players: Map<string, Player> = new Map();
+  public players: Map<string, PlayerInterface> = new Map();
   public localPlayerId: string;
   public localPlayerName: string;
   public isConnected: boolean = false;
@@ -98,35 +99,16 @@ export class MultiplayerManager {
     // Only set up message and close handlers here
 
     this.socket.onmessage = (event: MessageEvent): void => {
-      try {
-        if (typeof event.data === 'string') {
-          const parsedData: unknown = JSON.parse(event.data);
-          if (parsedData && typeof parsedData === 'object') {
-            const message: ServerMessage = parsedData as ServerMessage;
-            this.handleServerMessage(message);
-          }
-        }
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('MULTIPLAYER', 'Failed to parse server message', {
-          error: errorMessage,
-        });
-      }
+      const message = JSON.parse(event.data) as ServerMessage;
+      this.handleServerMessage(message);
     };
 
     this.socket.onclose = (): void => {
-      this.isConnected = false;
       this.handleDisconnection();
-    };
-
-    this.socket.onerror = (error: Event): void => {
-      console.error('MULTIPLAYER', 'WebSocket error', { error: error.type });
-      this.handleConnectionError();
     };
   }
 
   private handleServerMessage(message: ServerMessage): void {
-    console.info('MULTIPLAYER', `Received server message: ${message.type}`, message);
     switch (message.type) {
       case 'playerJoin':
         this.handlePlayerJoin(message.data as PlayerJoin);
@@ -164,27 +146,27 @@ export class MultiplayerManager {
       // Use the ship's network update method to handle position
       ship.updateFromNetwork({ position: data.position });
 
-      const newPlayer: Player = {
+      const newPlayer = Player.createPlayer({
         id: data.id,
         name: data.name,
-        ship,
-        score: 0,
-        lastUpdate: Date.now(),
-        lives: 3, // Default lives for new players
-        spawnProtectedUntil: Date.now() + 3000, // 3 seconds spawn protection
-        color: this.getOrCreateColor(data.id),
-        respawn: () => {},
-        onShipExploded: () => {},
-      };
+      });
+
+      // Set additional properties
+      newPlayer.score = 0;
+      newPlayer.lastUpdate = Date.now();
+      newPlayer.lives = 3; // Default lives for new players
+      newPlayer.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
+      newPlayer.color = this.getOrCreateColor(data.id);
+
+      // Update ship position
+      newPlayer.ship.updateFromNetwork({ position: data.position });
       this.players.set(data.id, newPlayer);
-      console.info('MULTIPLAYER', `Player ${data.name} joined the game`);
     }
   }
 
   private handlePlayerLeave(data: PlayerLeave): void {
     const player = this.players.get(data.id);
     if (player) {
-      console.info('MULTIPLAYER', `Player ${player.name} left the game`);
       this.players.delete(data.id);
     }
   }
@@ -213,7 +195,6 @@ export class MultiplayerManager {
   }
 
   private handleGameState(data: GameState): void {
-    console.info('MULTIPLAYER', `Received game state with ${data.players.length} players`);
     // Determine which remote players are present in this snapshot
     const remoteIds = new Set(
       data.players.filter((p) => p.id !== this.localPlayerId).map((p) => p.id)
@@ -247,23 +228,21 @@ export class MultiplayerManager {
         existing.lastUpdate = Date.now();
       } else {
         // Create new remote player once
-        const ship = new Ship();
-        ship.updateFromNetwork(playerData);
-
-        const newPlayer: Player = {
+        const newPlayer = Player.createPlayer({
           id: playerData.id,
           name: playerData.name,
-          ship,
-          score: playerData.score,
-          lastUpdate: Date.now(),
-          lives: playerData.lives || 3,
-          spawnProtectedUntil: Date.now() + 3000,
-          color: this.getOrCreateColor(playerData.id),
-          respawn: () => {},
-          onShipExploded: () => {},
-        };
+        });
+
+        // Set additional properties
+        newPlayer.score = playerData.score;
+        newPlayer.lastUpdate = Date.now();
+        newPlayer.lives = playerData.lives || 3;
+        newPlayer.spawnProtectedUntil = Date.now() + 3000;
+        newPlayer.color = this.getOrCreateColor(playerData.id);
+
+        // Update ship from network data
+        newPlayer.ship.updateFromNetwork(playerData);
         this.players.set(playerData.id, newPlayer);
-        console.info('MULTIPLAYER', `Added player ${playerData.name} from game state`);
       }
     }
   }
@@ -334,7 +313,7 @@ export class MultiplayerManager {
     this.botIntegration.disableBots();
   }
 
-  public getBots(): Map<string, BotPlayer> {
+  public getBots(): Map<string, PlayerInterface> {
     return this.botIntegration.manager.getBots();
   }
 
@@ -351,6 +330,18 @@ export class MultiplayerManager {
 
   public updateLocalPlayerForBots(position: Position, alive: boolean): void {
     this.botIntegration.updateLocalPlayerForBots(position, alive);
+  }
+
+  public setAsteroidsForBots(asteroids: Asteroid[]): void {
+    this.botIntegration.manager.setAsteroids(asteroids);
+  }
+
+  public setOtherPlayersForBots(players: PlayerInterface[]): void {
+    this.botIntegration.manager.setOtherPlayers(players);
+  }
+
+  public getOtherPlayersArray(): PlayerInterface[] {
+    return Array.from(this.players.values());
   }
 
   public removePlayer(playerId: string): void {

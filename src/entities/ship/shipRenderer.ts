@@ -1,4 +1,5 @@
-import { getCTX, getCVS, SHIP_SIZE } from '../../constants';
+import { SHIP_SIZE } from '../../constants/entities/ship';
+import { getCTX, getCVS } from '../../constants/rendering/canvas';
 import { Point } from '../../physics/Point';
 import { worldToScreen } from '../../rendering/viewport';
 import type { Ship } from './Ship';
@@ -251,6 +252,12 @@ export function drawShipRelative(ship: Ship, color?: string): void {
   ctx.lineTo(rearRight.x, rearRight.y);
   ctx.closePath();
   ctx.stroke();
+
+  // Draw center dot to show ship orientation
+  ctx.fillStyle = color || 'white';
+  ctx.beginPath();
+  ctx.arc(screenCenter.x, screenCenter.y, ship.r / 6, 0, Math.PI * 2, false);
+  ctx.fill();
 
   // Draw health bar above ship
   const barWidth = ship.r * 2.5;

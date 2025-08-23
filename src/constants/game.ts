@@ -21,7 +21,6 @@ export const SAVE_KEY_PERSONAL_BEST = 'personal_best'; // localstorage of the us
 /* EMP Pulse Constants*/
 export const EMP_PULSE_RADIUS = 250; // EMP pulse radius in pixels (focused size)
 export const EMP_PULSE_DURATION = 0.5; // EMP pulse visual duration in seconds
-export const EMP_PULSE_COOLDOWN = 3.0; // EMP pulse cooldown in seconds (normal mode)
 
 // Asteroid configuration - simplified to use constant value
 export const ROID_NUM = 10; // Number of asteroids to spawn

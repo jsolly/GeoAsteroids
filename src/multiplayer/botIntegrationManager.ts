@@ -1,5 +1,4 @@
 import { BotManager } from '../entities/bot/botManager';
-import type { BotShoot } from '../entities/bot/types';
 import type { Position } from '../entities/player/types';
 
 export class BotIntegrationManager {
@@ -7,11 +6,7 @@ export class BotIntegrationManager {
 
   constructor() {
     this.botManager = BotManager.getInstance();
-
-    // Set up bot shooting callback
-    this.botManager.setBotShootCallback((botShoot: BotShoot) => {
-      this.handleBotShoot(botShoot);
-    });
+    // No need for callbacks anymore - bots manage their own lasers directly
   }
 
   // Public getter for direct access to botManager
@@ -31,16 +26,5 @@ export class BotIntegrationManager {
 
   public updateLocalPlayerForBots(position: Position, alive: boolean): void {
     this.botManager.updateLocalPlayerPosition(position, alive);
-  }
-
-  private handleBotShoot(botShoot: BotShoot): void {
-    // Handle bot shooting - this will be processed by the game controller
-
-    // Emit a custom event that the game controller can listen to
-    window.dispatchEvent(
-      new CustomEvent('botShoot', {
-        detail: botShoot,
-      })
-    );
   }
 }

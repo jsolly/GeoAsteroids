@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { ROID_NUM } from '../src/constants';
+import { ROID_NUM } from '../src/constants/game';
 import { Asteroid, createAsteroidBelt } from '../src/entities/asteroid/Asteroid.ts';
 
 test('Asteroid Creation', () => {

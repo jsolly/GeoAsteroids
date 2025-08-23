@@ -1,4 +1,5 @@
-import { getCTX, SHOW_COLLISION_CIRCLES } from '../../constants';
+import { SHOW_COLLISION_CIRCLES } from '../../constants/game';
+import { getCTX } from '../../constants/rendering/canvas';
 import type { Ship } from '../../entities/ship/Ship';
 import { worldToScreen } from '../../rendering/viewport';
 import type { Asteroid } from './Asteroid';

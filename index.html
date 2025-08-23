@@ -10,7 +10,6 @@
       const originalConsole = { debug: console.debug, info: console.info, warn: console.warn, error: console.error };
       
       // Allow all logs to pass through - the module system will handle filtering
-      console.info('INLINE_OVERRIDE', 'Console override disabled - debug logs enabled for debugging');
     </script>
     <script defer type="module" src="/src/utils/consoleOverride.ts"></script>
     <script defer type="module" src="/src/core/eventLoop.ts"></script>

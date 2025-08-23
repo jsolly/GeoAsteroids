@@ -1,14 +1,8 @@
-import {
-  DEBUG,
-  DRAW_ASTEROIDS,
-  FPS,
-  getCTX,
-  getCVS,
-  SHIP_SIZE,
-  SHOW_COLLISION_CIRCLES,
-  TEXT_FADE_TIME,
-  TEXT_SIZE,
-} from '../constants';
+import { SHIP_SIZE } from '../constants/entities/ship';
+import { DEBUG, DRAW_ASTEROIDS, SHOW_COLLISION_CIRCLES } from '../constants/game';
+import { FPS } from '../constants/physics';
+import { getCTX, getCVS } from '../constants/rendering/canvas';
+import { TEXT_FADE_TIME, TEXT_SIZE } from '../constants/rendering/drawing';
 
 // Consider tweaking if jitter causes flicker
 const REMOTE_PLAYER_STALE_MS = 1500;
@@ -19,13 +13,15 @@ const THRUSTER_SPEED_THRESHOLD_SQ = 0.01; // (0.1)^2
 import { GameController } from '../core/gameController';
 import type { AsteroidBelt } from '../entities/asteroid/Asteroid';
 import { drawRoidsRelative } from '../entities/asteroid/asteroidRenderer';
-import { BotManager } from '../entities/bot/botManager';
+import { BotPlayer } from '../entities/bot/BotPlayer';
 // import type { BotPlayer } from '../entities/bot/types';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import type { Player } from '../entities/player/types';
 import type { Ship } from '../entities/ship/Ship';
 import { drawGenericThruster } from '../entities/ship/shipRenderer';
+import { getGameBoundary } from '../physics/boundary';
 import { Point } from '../physics/Point';
+import { drawFieryBoundary } from './boundaryRenderer';
 // Dynamic import to avoid chunking conflicts with other dynamic imports
 import { worldToScreen } from './viewport';
 
@@ -235,11 +231,8 @@ function drawOtherPlayers(localShip: Ship): void {
       drawShip(bot.ship, screenPos, bot.color, {
         name: bot.name,
         isBot: true,
-        botType: bot.botType,
-        behaviorState: bot.behaviorState,
         showThruster: bot.ship.thrusterActive,
-        thrusterColor:
-          bot.botType === 'aggressive' ? 'red' : bot.botType === 'defensive' ? 'blue' : 'default',
+        thrusterColor: 'default',
       });
     }
 
@@ -319,13 +312,13 @@ function drawShip(
   });
 
   // Draw info below ship
-  if (options.isBot && options.botType && options.behaviorState) {
-    // Bot info
+  if (options.isBot) {
+    // Bot info (simplified)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = color;
     ctx.font = '10px dejavu sans mono';
-    ctx.fillText(`${options.botType} - ${options.behaviorState}`, screenPos.x, screenPos.y + r + 5);
+    ctx.fillText(`BOT`, screenPos.x, screenPos.y + r + 5);
   } else if (options.score !== undefined) {
     // Player score
     ctx.textAlign = 'center';
@@ -418,14 +411,12 @@ function drawAllLasers(): void {
     }
   }
 
-  // Draw bot lasers if multiplayer is enabled
+  // Draw bot lasers if multiplayer is enabled (unified system)
   if (getGameController().isMultiplayerEnabled()) {
-    const botLasersMap = BotManager.getInstance().getBotLasers();
-    for (const [botId, lasers] of botLasersMap.entries()) {
-      const bots = getGameController().getBots();
-      const bot = bots.get(botId);
-      if (bot) {
-        for (const laser of lasers) {
+    const bots = getGameController().getBots();
+    for (const [, bot] of bots.entries()) {
+      if (bot instanceof BotPlayer && bot.ship.lasers.length > 0) {
+        for (const laser of bot.ship.lasers) {
           const screenPos = worldToScreen(laser.position, localShip.position);
           drawLaser(screenPos, bot.color, laser.explodeTime);
         }
@@ -501,7 +492,7 @@ function drawMultiplayerStatus(): void {
   const allPlayers = getPlayerNetwork().getOtherPlayers();
 
   // Filter out bot players to show only real players
-  const realPlayers = allPlayers.filter((player) => !player.isBot);
+  const realPlayers = allPlayers.filter((player) => !(player instanceof BotPlayer));
 
   // Draw player count (show only real players, no server/local differentiation)
   ctx.fillStyle = '#00ff00';
@@ -519,10 +510,51 @@ function drawMultiplayerStatus(): void {
   ctx.fillText(`Asteroids: ${asteroidCount} (MP Mode)`, xPos, yOffset);
   yOffset += lineHeight;
 
+  // Draw bot count if bots are enabled
+  if (getGameController().isMultiplayerEnabled()) {
+    const botCount = getGameController().getBots().size;
+    if (botCount > 0) {
+      ctx.fillStyle = '#ff00ff';
+      ctx.fillText(`Bots: ${botCount}`, xPos, yOffset);
+      yOffset += lineHeight;
+    }
+  }
+
   // Draw mini-map showing only real players (no bots)
   const currentShip = getGameController().getCurrShip();
-  drawMiniMap(currentShip, realPlayers, xPos, yOffset);
+  const bots = getGameController().isMultiplayerEnabled()
+    ? getGameController().getBots()
+    : new Map();
+  const botArray = Array.from(bots.values());
+  drawMiniMap(currentShip, realPlayers, botArray, xPos, yOffset);
   yOffset += 120; // Add space for mini-map
+
+  // Draw mini-map legend
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px dejavu sans mono';
+  ctx.fillText('Mini-map Legend:', xPos, yOffset);
+  yOffset += lineHeight;
+
+  // Green dot (local player)
+  ctx.fillStyle = '#00ff00';
+  ctx.fillRect(xPos, yOffset - 2, 4, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('You', xPos + 8, yOffset);
+  yOffset += lineHeight;
+
+  // Yellow dot (other players)
+  ctx.fillStyle = '#ffff00';
+  ctx.fillRect(xPos, yOffset - 2, 4, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('Other Players', xPos + 8, yOffset);
+  yOffset += lineHeight;
+
+  // Purple dot (bots)
+  ctx.fillStyle = '#ff00ff';
+  ctx.fillRect(xPos, yOffset - 2, 4, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('Bots', xPos + 8, yOffset);
+  yOffset += lineHeight;
 
   // Show additional debug info if debug mode is enabled
   if (DEBUG) {
@@ -579,7 +611,13 @@ function drawMultiplayerStatus(): void {
   }
 }
 
-function drawMiniMap(localShip: Ship, otherPlayers: Player[], xPos: number, yPos: number): void {
+function drawMiniMap(
+  localShip: Ship,
+  otherPlayers: Player[],
+  bots: BotPlayer[],
+  xPos: number,
+  yPos: number
+): void {
   const ctx = getCTX();
   if (!ctx) {
     return;
@@ -601,9 +639,38 @@ function drawMiniMap(localShip: Ship, otherPlayers: Player[], xPos: number, yPos
   const worldRadius = 2000; // Adjust based on your game world size
   const scale = mapRadius / worldRadius;
 
-  // Draw local player (you) at center
+  // Draw boundary on mini-map
+  const boundary = getGameBoundary();
+
+  // Convert boundary coordinates to mini-map scale (absolute world coordinates)
+  const boundaryLeft = boundary.x * scale;
+  const boundaryRight = (boundary.x + boundary.width) * scale;
+  const boundaryTop = boundary.y * scale;
+  const boundaryBottom = (boundary.y + boundary.height) * scale;
+
+  // Draw boundary rectangle (represents the actual game boundary)
+  ctx.strokeStyle = '#ff4400'; // Fiery red color to match the main boundary
+  ctx.lineWidth = 2;
+  ctx.setLineDash([3, 3]); // Dashed line to make it clear it's a boundary
+
+  // Calculate the rectangle bounds relative to mini-map center
+  const rectLeft = mapCenterX + boundaryLeft;
+  const rectRight = mapCenterX + boundaryRight;
+  const rectTop = mapCenterY + boundaryTop;
+  const rectBottom = mapCenterY + boundaryBottom;
+
+  // Draw the boundary rectangle
+  ctx.strokeRect(rectLeft, rectTop, rectRight - rectLeft, rectBottom - rectTop);
+  ctx.setLineDash([]); // Reset line dash
+
+  // Draw local player at their actual world position
+  const localPlayerX = localShip.position.x * scale;
+  const localPlayerY = localShip.position.y * scale;
+  const mapLocalX = mapCenterX + localPlayerX;
+  const mapLocalY = mapCenterY + localPlayerY;
+
   ctx.fillStyle = '#00ff00'; // Green for local player
-  ctx.fillRect(mapCenterX - 2, mapCenterY - 2, 4, 4);
+  ctx.fillRect(mapLocalX - 2, mapLocalY - 2, 4, 4);
 
   // Draw other players
   for (const player of otherPlayers) {
@@ -611,17 +678,43 @@ function drawMiniMap(localShip: Ship, otherPlayers: Player[], xPos: number, yPos
       continue;
     }
 
-    // Calculate relative position from local ship
-    const relativeX = (player.ship.position.x - localShip.position.x) * scale;
-    const relativeY = (player.ship.position.y - localShip.position.y) * scale;
+    // Calculate absolute world position
+    const playerX = player.ship.position.x * scale;
+    const playerY = player.ship.position.y * scale;
 
-    // Check if player is within mini-map bounds
-    if (Math.abs(relativeX) <= mapRadius && Math.abs(relativeY) <= mapRadius) {
-      const mapX = mapCenterX + relativeX;
-      const mapY = mapCenterY + relativeY;
+    // Check if player is within mini-map bounds (rectangular check)
+    if (
+      playerX >= -mapRadius &&
+      playerX <= mapRadius &&
+      playerY >= -mapRadius &&
+      playerY <= mapRadius
+    ) {
+      const mapX = mapCenterX + playerX;
+      const mapY = mapCenterY + playerY;
 
       // Draw player dot
       ctx.fillStyle = '#ffff00'; // Yellow for other players
+      ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
+    }
+  }
+
+  // Draw bots
+  for (const bot of bots) {
+    if (bot.ship.exploding) {
+      continue;
+    }
+
+    // Calculate absolute world position
+    const botX = bot.ship.position.x * scale;
+    const botY = bot.ship.position.y * scale;
+
+    // Check if bot is within mini-map bounds (rectangular check)
+    if (botX >= -mapRadius && botX <= mapRadius && botY >= -mapRadius && botY <= mapRadius) {
+      const mapX = mapCenterX + botX;
+      const mapY = mapCenterY + botY;
+
+      // Draw bot dot
+      ctx.fillStyle = '#ff00ff'; // Purple for bots
       ctx.fillRect(mapX - 2, mapY - 2, 4, 4);
     }
   }
@@ -650,6 +743,9 @@ export function drawGameCanvas(
 
     // Draw other players if multiplayer is enabled
     drawOtherPlayers(ship);
+
+    // Draw the fiery boundary
+    drawFieryBoundary(ship.position);
 
     drawScores(currScore, personalBest);
     // Get lives from the current player

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { SAVE_KEY_PERSONAL_BEST } from '../src/constants';
+import { SAVE_KEY_PERSONAL_BEST } from '../src/constants/game';
 import { GameState } from '../src/core/gameState.ts';
 
 const gameState = GameState.getInstance();

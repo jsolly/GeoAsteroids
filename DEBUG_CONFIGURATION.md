@@ -14,7 +14,7 @@ VITE_DEBUG_DISABLE_BOT_MOVEMENT=true
 VITE_DEBUG_DISABLE_BOT_GUNS=false
 VITE_DEBUG_PLACE_ASTEROID_ON_BOT=false
 VITE_DEBUG_DRAW_ASTEROIDS=true
-VITE_DEBUG_INVINCIBLE=false
+VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE=false
 VITE_DEBUG_ASTEROID_COUNT=100
 ```
 
@@ -51,9 +51,9 @@ VITE_DEBUG_ASTEROID_COUNT=100
 - **Description**: Controls whether asteroids are rendered and extra asteroids are spawned in debug mode
 - **Use case**: Disable to test collision detection without visual asteroid clutter
 
-### `VITE_DEBUG_INVINCIBLE`
+### `VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE`
 - **Default**: `false`
-- **Description**: Makes the player invincible in debug mode
+- **Description**: Makes the local player invincible in debug mode
 - **Use case**: Test bot behavior and collision systems without player death
 
 ### `VITE_DEBUG_ASTEROID_COUNT`

@@ -108,6 +108,11 @@ describe('Collision Detection System', () => {
       color: '#ff0000', // Test color for the other player
       respawn: () => {},
       onShipExploded: () => {},
+      update: () => {},
+      get isDead(): boolean {
+        return this.lives <= 0;
+      },
+      handleLifeLost: () => {},
     };
 
     // Add laser to ship
@@ -185,6 +190,11 @@ describe('Collision Detection System', () => {
         name: 'Player2',
         ship: mockShip2,
         lives: 3,
+        update: () => {},
+        get isDead(): boolean {
+          return this.lives <= 0;
+        },
+        handleLifeLost: () => {},
       };
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer, otherPlayer2]);
@@ -222,15 +232,16 @@ describe('Collision Detection System', () => {
       expect(otherPlayer.ship.exploding).toBe(true); // Should be exploding
     });
 
-    it('should skip bot players', () => {
+    it('should handle all player types', () => {
       const { ship, laser, otherPlayer } = createTestObjects();
-      otherPlayer.isBot = true;
+      // Note: In the refactored system, this function should only receive human players
+      // Bot players are handled by a separate detection system
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
 
-      expect(score).toBe(0);
-      expect(laser.explodeTime).toBe(0);
-      expect(otherPlayer.ship.health).toBe(100);
+      expect(score).toBe(50); // Should hit the human player
+      expect(laser.explodeTime).toBeGreaterThan(0);
+      expect(otherPlayer.ship.health).toBe(85);
     });
 
     it('should handle collision threshold correctly', () => {

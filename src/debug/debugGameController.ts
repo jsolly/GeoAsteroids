@@ -1,6 +1,6 @@
 import { GameController } from '../core/gameController';
 import { Asteroid, type AsteroidBelt } from '../entities/asteroid/Asteroid';
-import { getDebugConfig } from './debugConfig';
+import { getDebugConfig, getDebugConfigWithEnvOverrides } from './debugConfig';
 import { DebugMultiplayerManager } from './debugMultiplayerManager';
 
 // Interface for asteroid belt with debug config
@@ -12,7 +12,7 @@ export class DebugGameController {
   private gameController: GameController;
   private debugMultiplayerManager: DebugMultiplayerManager;
   private debugMode = false;
-  private debugConfig = getDebugConfig();
+  private debugConfig = getDebugConfig(); // Default config - will be overridden when debug mode is enabled
   private asteroidInitializationTimer?: number;
   private asteroidInjectionTimer?: number;
   private asteroidBeltReady = false;
@@ -24,6 +24,9 @@ export class DebugGameController {
 
   public enableDebugMode(): void {
     this.debugMode = true;
+
+    // Apply environment variable overrides to debug configuration
+    this.debugConfig = getDebugConfigWithEnvOverrides();
 
     // Cancel any previous timers
     if (this.asteroidInitializationTimer) {

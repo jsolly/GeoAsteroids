@@ -1,12 +1,9 @@
-import { initializeCanvas } from '../constants';
+import { initializeCanvas } from '../constants/rendering/canvas';
 
 /**
  * Handles game initialization that should happen when the application starts
  */
 export function initializeGame(): void {
-  // Test that logging is working
-  console.info('GAME_INITIALIZER', 'Game initialization started');
-
   // Initialize canvas with proper scaling after DOM is loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeCanvas);

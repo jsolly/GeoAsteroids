@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { LASER_MAX } from '../src/constants';
+import { LASER_MAX } from '../src/constants/entities/laser';
 import { Ship } from '../src/entities/ship/Ship.ts';
 
 let mockShip: Ship;

@@ -1,4 +1,5 @@
-import { FPS, SHIP_HEALTH_REGEN_DELAY, SHIP_HEALTH_REGEN_RATE } from '../../constants';
+import { SHIP_HEALTH_REGEN_DELAY, SHIP_HEALTH_REGEN_RATE } from '../../constants/entities/ship';
+import { FPS } from '../../constants/physics';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 import type { Position } from '../player/types';
 
@@ -43,19 +44,6 @@ export function shouldStartHealthRegeneration(
   maxHealth: number
 ): boolean {
   return lastDamageTime <= 0 && currentHealth < maxHealth;
-}
-
-export function isDebugMode(): boolean {
-  return import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
-}
-
-export function calculateThrusterPosition(
-  shipPosition: Position,
-  shipAngle: number,
-  shipRadius: number
-): Position {
-  const thrusterOffset = createPositionFromAngle(shipAngle, -shipRadius);
-  return addPositions(shipPosition, thrusterOffset);
 }
 
 export function calculateLaserStartPosition(

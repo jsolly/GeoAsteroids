@@ -206,13 +206,6 @@ export function setupConsoleOverride(): void {
 // This ensures the override is applied as soon as possible
 setupConsoleOverride();
 
-// Test that the override is working - this should be visible in the browser
-console.info('CONSOLE_OVERRIDE_TEST', 'Console override is working!', {
-  currentLevel: getCurrentLogLevel(),
-  debugEnabled: shouldLog(LogLevel.DEBUG),
-  infoEnabled: shouldLog(LogLevel.INFO),
-});
-
 // Auto-setup error handlers when this module is imported
 // This ensures error handling is applied as soon as possible
 setupErrorHandlers();

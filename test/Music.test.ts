@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Music, setMusic } from '../src/audio/Music.ts';
-import { LOCAL_STORAGE_KEYS, musicIsOn } from '../src/constants';
+import { LOCAL_STORAGE_KEYS, musicIsOn } from '../src/constants/preferences';
 
 let testMusic: Music;
 const mockPlay = vi.fn();

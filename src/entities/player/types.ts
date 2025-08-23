@@ -17,7 +17,6 @@ export interface Player {
   ship: Ship;
   score: number;
   lastUpdate: number;
-  isBot?: boolean;
   lives: number;
   respawnTimer?: number; // Timer for respawning after death (in frames)
   respawnPosition?: Position; // Position where player will respawn
@@ -25,6 +24,9 @@ export interface Player {
   color: string; // Player's unique color for lasers and other visual elements
   respawn(): void;
   onShipExploded(): void;
+  update(): void;
+  get isDead(): boolean;
+  handleLifeLost(): void;
 }
 
 // Network update interface - only what needs to be synced

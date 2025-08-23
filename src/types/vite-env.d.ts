@@ -17,7 +17,7 @@ interface ImportMetaEnv {
   readonly VITE_DEBUG_DISABLE_BOT_GUNS: string;
   readonly VITE_DEBUG_PLACE_ASTEROID_ON_BOT: string;
   readonly VITE_DEBUG_ASTEROID_COUNT: string;
-  readonly VITE_DEBUG_INVINCIBLE: string;
+  readonly VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE: string;
   readonly VITE_DEBUG_DRAW_ASTEROIDS: string;
 
   readonly MODE: string;

@@ -17,9 +17,6 @@ export function getBuildInfo(): BuildInfo {
   // Use commit hash as version, fallback to 'dev'
   const version = commitHash !== 'dev' ? commitHash : 'dev';
 
-  // Debug logging
-  console.info('BUILD_INFO', 'Build info values:', { commitHash, buildTime, version, environment });
-
   return {
     commitHash,
     buildTime,

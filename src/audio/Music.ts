@@ -1,4 +1,5 @@
-import { FPS, LOCAL_STORAGE_KEYS } from '../constants';
+import { FPS } from '../constants/physics';
+import { LOCAL_STORAGE_KEYS } from '../constants/preferences';
 
 export class Music {
   srcLow: string;

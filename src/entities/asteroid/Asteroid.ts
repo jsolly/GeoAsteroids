@@ -1,9 +1,6 @@
 import { Sound } from '../../audio/Sound';
 import {
-  DRAW_ASTEROIDS,
-  FPS,
   ROID_JAGG,
-  ROID_NUM,
   ROID_POINTS_LRG,
   ROID_POINTS_MED,
   ROID_POINTS_SML,
@@ -11,7 +8,9 @@ import {
   ROID_SPAWN_TIME,
   ROID_SPEED,
   ROID_VERTICES,
-} from '../../constants';
+} from '../../constants/entities/asteroid';
+import { DRAW_ASTEROIDS, ROID_NUM } from '../../constants/game';
+import { FPS } from '../../constants/physics';
 import { GameController } from '../../core/gameController';
 import type { Position, Velocity } from '../player/types';
 import { calculateSpawnCount, spawnAsteroidFromEdge } from './asteroidUtils';

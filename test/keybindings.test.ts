@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { FPS, TURN_SPEED } from '../src/constants';
+import { TURN_SPEED } from '../src/constants/entities/ship';
+import { FPS } from '../src/constants/physics';
 import { Player } from '../src/entities/player/Player';
 import { Ship } from '../src/entities/ship/Ship.ts';
 import { keyDown, keyUp } from '../src/input/keybindings.ts';
@@ -21,7 +22,7 @@ beforeEach(() => {
   Ship.fxThrust.play = mockPlay;
   Ship.fxThrust.stop = mockPlay;
 
-  mockPlayer = new Player({ id: 'test-player', name: 'TestPlayer', isBot: false });
+  mockPlayer = new Player({ id: 'test-player', name: 'TestPlayer' });
   mockPlayer.ship.fireLaser = vi.fn(() => {});
 });
 

@@ -41,4 +41,8 @@ export class DebugManager {
   public getDebugGameState(): DebugGameState {
     return this.debugGameState;
   }
+
+  public getDebugConfig() {
+    return this.debugGameController.getDebugConfig();
+  }
 }

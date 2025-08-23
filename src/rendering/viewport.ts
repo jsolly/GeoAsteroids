@@ -1,4 +1,4 @@
-import { getCVS } from '../constants';
+import { getCVS } from '../constants/rendering/canvas';
 import type { Position } from '../entities/player/types';
 import { Point } from '../physics/Point';
 

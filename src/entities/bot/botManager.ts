@@ -1,29 +1,29 @@
-import { v4 as uuidv4 } from 'uuid';
-import { SHIP_RESPAWN_DELAY_FRAMES } from '../../constants';
-import type { Position } from '../player/types';
-import type { Laser } from '../ship/Ship';
-import { BotCombat } from './botCombat';
+import { SHIP_RESPAWN_DELAY_FRAMES } from '../../constants/entities/ship';
+import { getGameBoundary } from '../../physics/boundary';
+import type { Asteroid } from '../asteroid/Asteroid';
+import type { Player, Player as PlayerInterface, Position } from '../player/types';
+
+import { BotBehavior } from './BotBehavior';
+import { BotPlayer } from './BotPlayer';
 import { BotFactory } from './botFactory';
-import { BotMovement } from './botMovement';
-import type { BotPlayer, BotShoot } from './types';
 
 export class BotManager {
   private static instance: BotManager;
-  private bots: Map<string, BotPlayer> = new Map();
+  private bots: Map<string, Player> = new Map();
   private localPlayerId: string;
   public localPlayerPosition: Position = { x: 0, y: 0 };
   public localPlayerAlive: boolean = true;
   public isActive: boolean = false;
+  private asteroids: Asteroid[] = [];
+  private otherPlayers: PlayerInterface[] = [];
 
-  // Modular components
-  private botMovement: BotMovement;
-  private botCombat: BotCombat;
+  // Unified bot behavior system
+  private botBehavior: BotBehavior;
   private botFactory: BotFactory;
 
   private constructor() {
-    this.localPlayerId = uuidv4();
-    this.botMovement = new BotMovement();
-    this.botCombat = new BotCombat();
+    this.localPlayerId = 'local-player';
+    this.botBehavior = new BotBehavior();
     this.botFactory = new BotFactory();
   }
 
@@ -34,24 +34,13 @@ export class BotManager {
     return BotManager.instance;
   }
 
-  // For testing purposes - reset the singleton instance
-  public static resetInstance(): void {
-    if (BotManager.instance) {
-      BotManager.instance.isActive = false;
-      BotManager.instance.clearBots();
-      BotManager.instance.localPlayerId = '';
-      BotManager.instance.localPlayerPosition = { x: 0, y: 0 };
-      BotManager.instance.localPlayerAlive = true;
-    }
-    (BotManager as unknown as { instance: BotManager | undefined }).instance = undefined;
-  }
-
-  public getBots(): Map<string, BotPlayer> {
+  public getBots(): Map<string, Player> {
     return this.bots;
   }
 
-  public get botMovementSystem(): BotMovement {
-    return this.botMovement;
+  // Legacy compatibility - redirect to botBehaviorSystem
+  public get botMovementSystem(): BotBehavior {
+    return this.botBehavior;
   }
 
   public setLocalPlayerInfo(id: string, position: Position, alive: boolean): void {
@@ -59,13 +48,8 @@ export class BotManager {
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
 
-    // Update all modular components
-    this.botMovement.setLocalPlayerInfo(position, alive);
-    this.botCombat.setLocalPlayerInfo(id, position, alive);
-  }
-
-  public setBotShootCallback(callback: (botShoot: BotShoot) => void): void {
-    this.botCombat.setBotShootCallback(callback);
+    // Update bot behavior system
+    this.botBehavior.setLocalPlayerInfo(this.localPlayerId, position, alive);
   }
 
   public activate(): void {
@@ -87,88 +71,36 @@ export class BotManager {
 
     // Clear existing bots
     this.bots.clear();
-    this.botMovement.clearAllSteering();
+    this.botBehavior.clearAllSteering();
 
     // Create new bots using factory
     const newBots = this.botFactory.createBots(count);
 
     // Initialize steering for each bot
     for (const [botId, bot] of newBots.entries()) {
-      this.botMovement.initializeBotSteering(botId, bot.botType);
+      if (bot instanceof BotPlayer) {
+        this.botBehavior.initializeBotSteering(botId, 'aggressive'); // Default type
+      }
     }
 
     this.bots = newBots;
   }
 
-  public getBotLasers(): Map<string, Laser[]> {
-    return this.botCombat.getBotLasers();
-  }
-
-  public createBotLaser(botShoot: BotShoot): void {
-    this.botCombat.createBotLaser(botShoot);
-  }
-
-  public updateBotLasers(): void {
-    this.botCombat.updateBotLasers();
-  }
-
-  public removeBot(botId: string): void {
-    const bot = this.bots.get(botId);
-    if (bot) {
-      this.bots.delete(botId);
-      this.botMovement.removeBotSteering(botId);
-    }
-  }
-
   public clearBots(): void {
+    this.botBehavior.clearBotLasers(this.bots);
     this.bots.clear();
-    this.botCombat.clearBotLasers();
-    this.botMovement.clearAllSteering();
+    this.botBehavior.clearAllSteering();
   }
 
   public clearBotLasers(): void {
-    this.botCombat.clearBotLasers();
+    this.botBehavior.clearBotLasers(this.bots);
   }
 
-  // Handle bot explosion and cleanup
-  public handleBotExplosion(botId: string): void {
-    const bot = this.bots.get(botId);
-    if (!bot) {
-      return;
+  // Legacy compatibility method
+  public botTakeDamage(bot: Player, amount: number): void {
+    if (bot instanceof BotPlayer) {
+      bot.ship.takeDamage(amount);
     }
-
-    // Use Ship's built-in explosion method and set exploding state
-    bot.ship.explode();
-    bot.ship.setExploding();
-
-    // Initialize respawn timer when explosion starts
-    if (bot.respawnTimer === undefined) {
-      bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-      bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
-    }
-  }
-
-  // Method for EMP destruction that triggers respawn system
-  public empDestroyBot(botId: string): void {
-    const bot = this.bots.get(botId);
-    if (!bot) {
-      return;
-    }
-
-    // Use Ship's built-in explosion method and set exploding state
-    bot.ship.explode();
-    bot.ship.setExploding();
-
-    // Initialize respawn timer when explosion starts
-    if (bot.respawnTimer === undefined) {
-      bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-      bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
-    }
-  }
-
-  public botTakeDamage(bot: BotPlayer, amount: number): void {
-    // Use BotPlayer's custom damage method (explosion without life loss)
-    bot.takeDamage(amount);
   }
 
   // Public method to update local player position (called from game loop)
@@ -176,9 +108,8 @@ export class BotManager {
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
 
-    // Update all modular components
-    this.botMovement.setLocalPlayerInfo(position, alive);
-    this.botCombat.setLocalPlayerInfo(this.localPlayerId, position, alive);
+    // Update bot behavior system
+    this.botBehavior.setLocalPlayerInfo(this.localPlayerId, position, alive);
   }
 
   public updateBotsInGameLoop(): void {
@@ -190,15 +121,21 @@ export class BotManager {
     this.updateBotBehavior();
 
     // Update bot shooting
-    this.botCombat.updateBotShooting(this.bots);
+    this.botBehavior.updateBotShooting(this.bots);
 
-    // Update bot explosions and handle respawning with a timer to avoid repeated respawns
+    // Update bot explosions and handle respawning
     for (const bot of this.bots.values()) {
       if (bot.ship.exploding) {
         // Start a respawn timer when explosion starts
         if (bot.respawnTimer === undefined && bot.ship.explodeTime > 0) {
           bot.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
-          bot.respawnPosition = { x: bot.ship.position.x, y: bot.ship.position.y };
+
+          // Generate random respawn position within the game boundary
+          const boundary = getGameBoundary();
+          const margin = 100; // Keep bots away from the very edge
+          const randomX = boundary.x + margin + Math.random() * (boundary.width - 2 * margin);
+          const randomY = boundary.y + margin + Math.random() * (boundary.height - 2 * margin);
+          bot.respawnPosition = { x: randomX, y: randomY };
         }
 
         bot.ship.updateExplosion();
@@ -214,78 +151,45 @@ export class BotManager {
         if (bot.respawnTimer === 0) {
           bot.respawn();
           bot.respawnTimer = undefined;
-
-          // Add bot-specific respawn behavior
-          bot.behaviorState = 'hunting';
-          bot.lastBehaviorChange = Date.now();
-          bot.score = Math.floor(Math.random() * 2000);
         }
       }
     }
 
     // Update bot lasers
-    this.botCombat.updateBotLasers();
+    this.botBehavior.updateBotLasers(this.bots);
 
     // Update bot invincibility and health using Ship's built-in methods
     for (const bot of this.bots.values()) {
       if (!bot.ship.exploding) {
-        const healthBefore = bot.ship.health;
-        const lastDamageTimeBefore = bot.ship.lastDamageTime;
-        const healthRegenTimerBefore = bot.ship.healthRegenTimer;
-
         bot.ship.updateInvincibility();
         bot.ship.updateHealth();
-
-        // Log health changes for debugging
-        if (
-          healthBefore !== bot.ship.health ||
-          lastDamageTimeBefore !== bot.ship.lastDamageTime ||
-          healthRegenTimerBefore !== bot.ship.healthRegenTimer
-        ) {
-          console.debug('BOT_HEALTH_DEBUG', 'Bot health state updated', {
-            botId: bot.id,
-            botType: bot.botType,
-            healthBefore,
-            healthAfter: bot.ship.health,
-            lastDamageTimeBefore,
-            lastDamageTimeAfter: bot.ship.lastDamageTime,
-            healthRegenTimerBefore,
-            healthRegenTimerAfter: bot.ship.healthRegenTimer,
-            exploding: bot.ship.exploding,
-          });
-        }
       }
     }
   }
 
-  private updateBotBehavior(): void {
-    const now = Date.now();
+  public setAsteroids(asteroids: Asteroid[]): void {
+    this.asteroids = asteroids;
+  }
 
+  public setOtherPlayers(players: PlayerInterface[]): void {
+    this.otherPlayers = players;
+  }
+
+  private updateBotBehavior(): void {
     for (const [, bot] of this.bots.entries()) {
       // Skip bots that are exploding
       if (bot.ship.exploding) {
         continue;
       }
 
-      // Update behavior state less frequently to reduce flickering
-      if (now - bot.lastBehaviorChange > 5000 + Math.random() * 8000) {
-        this.updateBotBehaviorState(bot);
-      }
-
       // Move bot based on behavior
-      this.botMovement.moveBot(bot);
+      this.botBehavior.moveBot(bot, this.asteroids, this.otherPlayers);
+
+      // Apply ship movement to update position based on velocity
+      bot.ship.move();
 
       // Update timestamp
-      bot.lastUpdate = now;
+      bot.lastUpdate = Date.now();
     }
-  }
-
-  private updateBotBehaviorState(bot: BotPlayer): void {
-    const now = Date.now();
-
-    // Always hunt - no evading, no patrolling
-    bot.behaviorState = 'hunting';
-
-    bot.lastBehaviorChange = now;
   }
 }

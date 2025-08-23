@@ -1,20 +1,21 @@
 import { Sound } from '../../audio/Sound';
 import {
-  EMP_PULSE_DURATION,
-  FPS,
-  FRICTION,
-  getCVS,
   LASER_DIST,
   LASER_EXPLODE_DUR,
   LASER_MAX,
   LASER_SPEED,
+} from '../../constants/entities/laser';
+import {
   SHIP_EXPLODE_DUR_FRAMES,
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
   SHIP_MAX_HEALTH,
   SHIP_SIZE,
   SHIP_THRUST,
-} from '../../constants';
+} from '../../constants/entities/ship';
+import { EMP_PULSE_DURATION } from '../../constants/game';
+import { FPS, FRICTION } from '../../constants/physics';
+import { getCVS } from '../../constants/rendering/canvas';
 import {
   addPositionAndVelocity,
   addVectors,
@@ -32,7 +33,6 @@ import {
   calculateHealthRegenPerFrame,
   calculateLaserStartPosition,
   canTakeCollisionDamage,
-  isDebugMode,
   shouldStartHealthRegeneration,
 } from './shipUtils';
 
@@ -243,7 +243,7 @@ class Ship {
       return;
     }
 
-    const isDevelopment = isDebugMode();
+    const isDevelopment = import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
@@ -275,7 +275,18 @@ class Ship {
       return;
     }
 
-    const isDebug = isDebugMode();
+    // Check if debug invincibility is enabled
+    const isDebugInvincible = (() => {
+      try {
+        if (import.meta.env.VITE_DEBUG === 'true') {
+          return import.meta.env.VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE === 'true';
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    })();
+
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
     this.lastDamageTime = FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
@@ -283,7 +294,7 @@ class Ship {
     if (this.health <= 0) {
       this.health = 0;
 
-      if (isDebug) {
+      if (isDebugInvincible) {
         this.health = this.maxHealth;
         this.lastDamageTime = 0;
         this.healthRegenTimer = 0;
@@ -336,14 +347,7 @@ class Ship {
         const healthAfter = this.health;
 
         if (healthBefore !== healthAfter) {
-          console.debug('SHIP_HEALTH_DEBUG', 'Health regenerated', {
-            healthBefore,
-            healthAfter,
-            maxHealth: this.maxHealth,
-            regenAmount: calculateHealthRegenPerFrame(),
-            lastDamageTime: this.lastDamageTime,
-            healthRegenTimer: this.healthRegenTimer,
-          });
+          // Health regenerated
         }
       } else {
         this.healthRegenTimer--;

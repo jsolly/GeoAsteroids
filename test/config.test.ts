@@ -1,5 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
-import { LOCAL_STORAGE_KEYS, musicIsOn, ROID_NUM, soundIsOn } from '../src/constants';
+import { ROID_NUM } from '../src/constants/game';
+import { LOCAL_STORAGE_KEYS, musicIsOn, soundIsOn } from '../src/constants/preferences';
 
 beforeEach(() => {
   localStorage.clear();

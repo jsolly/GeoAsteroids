@@ -31,11 +31,3 @@ export function createPositionFromAngle(angle: number, magnitude: number): Posit
 export function addPositions(pos1: Position, pos2: Position): Position {
   return { x: pos1.x + pos2.x, y: pos1.y + pos2.y };
 }
-
-export function subtractPositions(pos1: Position, pos2: Position): Position {
-  return { x: pos1.x - pos2.x, y: pos1.y - pos2.y };
-}
-
-export function multiplyPosition(pos: Position, scalar: number): Position {
-  return { x: pos.x * scalar, y: pos.y * scalar };
-}
