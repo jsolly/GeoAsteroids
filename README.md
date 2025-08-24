@@ -41,6 +41,32 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 
 ## Development
 
+### Environment Variables
+
+The following environment variables can be configured:
+
+#### Debug Mode
+- `VITE_CLIENT_LOG_LEVEL=debug` - Automatically enables all debug features and settings
+- `VITE_DEBUG_BOT_COUNT` - Number of bots to spawn in debug mode (default: 1)
+- `VITE_DEBUG_ROID_COUNT` - Alternative roid count control for debug mode
+- `VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE=true` - Makes the local player invincible in debug mode
+- `VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION=true` - Disables bot spawn protection in debug mode
+- `VITE_DEBUG_DISABLE_BOT_MOVEMENT=true` - Disables bot movement when set to 'true'
+- `VITE_DEBUG_DISABLE_BOT_LASERS=false` - Disables bot shooting when set to 'true'
+- `VITE_DEBUG_PLACE_ROID_ON_BOT=false` - Places roids on bots for testing
+- `VITE_DEBUG_DISABLE_ROID_MOVEMENT=true` - Disables roid movement when set to 'true'
+
+#### Logging
+- `VITE_CLIENT_LOG_LEVEL` - Sets the client-side log level (error, warn, info, debug)
+
+#### Multiplayer
+- `VITE_WEBSOCKET_URL` - WebSocket server URL for multiplayer
+- `VITE_MULTIPLAYER_ENABLED` - Enable/disable multiplayer (default: true)
+
+#### Build Info
+- `VITE_BUILD_TIME` - Build timestamp (auto-generated)
+- `VITE_COMMIT_HASH` - Git commit hash (auto-generated)
+
 ### Multiplayer Development Setup
 
 For local multiplayer development, use the following commands:

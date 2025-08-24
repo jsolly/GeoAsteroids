@@ -6,20 +6,17 @@ import {
   CANVAS_INTERNAL_WIDTH,
 } from '../constants/canvas';
 import type { Player } from '../entities/player/Player';
-import { PlayerManager } from '../entities/player/PlayerManager';
+
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import { drawLasers, drawShipAtPosition } from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
 import { drawFieryBoundary } from './boundaryRenderer';
-import {
-  drawLeaderboard,
-  drawLeftHudPanel,
-  drawScoreOverlay,
-  drawTextOverlay,
-} from './hud/gameInfo';
-import { drawMiniMap } from './hud/minimap';
+import { drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
+import { drawLeaderboard } from './hud/leaderboard';
+import { drawLivesIndicator } from './hud/lives';
+import { drawMiniMap, drawServerInfo } from './hud/minimap';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
 class CanvasManager {
@@ -175,9 +172,7 @@ class CanvasManager {
     textAlpha: number,
     text: string,
     lives: number,
-    allPlayers: Player[],
-    isConnected: boolean,
-    fps: number
+    allPlayers: Player[]
   ): void {
     const currShip = currPlayer.ship;
     const ctx = this.getContext();
@@ -231,21 +226,8 @@ class CanvasManager {
     // Draw score overlay
     drawScoreOverlay(ctx, canvas, currScore);
 
-    // Left HUD panel (lives, fps, connection) - use pre-computed counts
-    const counts = PlayerManager.getInstance().getCounts();
-    const remoteHumanCount = counts.remoteHumans;
-    const botCount = counts.bots;
-    drawLeftHudPanel(
-      ctx,
-      canvas,
-      lives,
-      currShip.color,
-      fps,
-      isConnected,
-      counts.total + 1,
-      remoteHumanCount,
-      botCount
-    );
+    // Draw lives indicator
+    drawLivesIndicator(ctx, lives, currShip.color);
 
     // Draw text overlay if there is text to display
     if (text && textAlpha > 0) {
@@ -265,6 +247,8 @@ class CanvasManager {
     const canvas = this.getCanvas();
     if (ctx && canvas) {
       drawMiniMap(ctx, canvas, ship);
+      // Draw server info below the minimap
+      drawServerInfo(ctx, canvas);
     }
 
     // The mini map module will handle drawing all players internally

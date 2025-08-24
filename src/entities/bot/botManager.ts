@@ -36,11 +36,6 @@ export class BotManager {
     return this.bots;
   }
 
-  // Legacy compatibility - redirect to botBehaviorSystem
-  public get botMovementSystem(): BotBehavior {
-    return this.botBehavior;
-  }
-
   public setLocalPlayerInfo(id: string, position: Position, alive: boolean): void {
     this.localPlayerId = id;
     this.localPlayerPosition = position;
@@ -55,8 +50,8 @@ export class BotManager {
     this.bots.clear();
     this.botBehavior.clearAllSteering();
 
-    // Create new bots using factory
-    const newBots = this.botFactory.createBots(count);
+    // Create new bots using factory, passing local player position for debug placement
+    const newBots = this.botFactory.createBots(count, this.localPlayerPosition);
 
     // Initialize steering for each bot
     for (const [botId, bot] of newBots.entries()) {

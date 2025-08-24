@@ -1,6 +1,7 @@
 import { GameController } from '../../core/gameController';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
+import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import { getGameBoundary } from '../../physics/boundary';
 
 // Circle boundary type local alias for clarity
@@ -67,6 +68,43 @@ export function drawMiniMap(
   }
 
   ctx.restore();
+}
+
+// Draw server name and connection status below the minimap
+export function drawServerInfo(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
+  try {
+    const multiplayerManager = MultiplayerManager.getInstance();
+    const serverName = multiplayerManager.getServerName();
+
+    // Position below the minimap
+    const miniMapSize = 160;
+    const centerX = canvas.width - 20 - miniMapSize / 2;
+    const centerY = canvas.height - 20 - miniMapSize / 2;
+
+    // Position server info directly below the minimap's bottom edge.
+    // Render from the text's top so it never overlaps the minimap circle.
+    const textHeight = 16; // Approximate height for server name only (14px font)
+    const gapBelowMinimap = 10; // Small visual gap under minimap
+    const minimapBottomEdge = centerY + miniMapSize / 2; // Bottom edge of minimap
+    const serverInfoY = Math.min(
+      minimapBottomEdge + gapBelowMinimap, // place text top just under the minimap
+      canvas.height - textHeight // ensure text bottom stays within canvas
+    );
+
+    // Set text properties
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial, sans-serif';
+
+    // Draw server name only
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillText(serverName, centerX, serverInfoY);
+
+    ctx.restore();
+  } catch (error: unknown) {
+    console.error('Error drawing server info:', error);
+  }
 }
 
 // Draw a ship on the mini-map

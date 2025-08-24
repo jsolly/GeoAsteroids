@@ -4,7 +4,11 @@ import { BotManager } from '../entities/bot/botManager';
 import type { Player } from '../entities/player/Player';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 
-import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/ship/shipRenderer';
+import {
+  drawEmpPulse,
+  drawLocalPlayerShip,
+  drawShipExplosion,
+} from '../entities/ship/shipRenderer';
 import {
   detectBoundaryCollisions,
   detectPlayerBoundaryCollisions,
@@ -59,10 +63,6 @@ window.addEventListener('gameStart', () => {
   window.requestAnimationFrame(gameLoop);
 });
 
-// FPS calculation variables
-let lastFrameTime = performance.now();
-let currentFPS = 60;
-
 function updateGame(): void {
   const currShip = gameController.getCurrShip();
   const currPlayer = gameController.getCurrPlayer();
@@ -70,12 +70,6 @@ function updateGame(): void {
   const currScore = gameController.getCurrScore();
   const textAlpha = gameController.getTextAlpha();
   const text = gameController.getText();
-
-  // Calculate FPS
-  const now = performance.now();
-  const deltaTime = now - lastFrameTime;
-  lastFrameTime = now;
-  currentFPS = 1000 / deltaTime;
 
   // Always update player network state (invincibility/blink timers, explosions, regen)
   // This now handles ALL players (local + remote + bots) in a unified way
@@ -87,7 +81,6 @@ function updateGame(): void {
 
   const allPlayers = playerNetwork.getAllPlayers();
   const otherPlayers = playerNetwork.getOtherPlayers(); // Pre-filtered non-local players
-  const connectionStatus = playerNetwork.getConnectionStatus();
 
   // Advance timers for non-local players so they become collidable (blink/invincibility/explosion)
   for (const p of otherPlayers) {
@@ -108,9 +101,7 @@ function updateGame(): void {
     textAlpha,
     text,
     currPlayer.lives,
-    allPlayers,
-    connectionStatus.connected,
-    currentFPS
+    allPlayers
   );
 
   handleShipState(currPlayer);
@@ -139,7 +130,7 @@ function handleShipState(player: Player): void {
 
     if (!ship.exploding) {
       if (ship.blinkOn) {
-        drawShipRelative(player);
+        drawLocalPlayerShip(player);
       }
 
       // Draw EMP pulse effect if active
@@ -216,8 +207,15 @@ function handleCollision(player: Player): void {
     // Get all players (local + remote + bots) from the unified source
     const allPlayers = playerNetwork.getAllPlayers();
 
-    gameController.updateCurrScore(detectLaserHits(currRoidBelt, currPlayer, allPlayers));
-    gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
+    const laserScore = detectLaserHits(currRoidBelt, currPlayer, allPlayers);
+    const roidScore = detectRoidHits(ship, currRoidBelt);
+    gameController.updateCurrScore(laserScore);
+    gameController.updateCurrScore(roidScore);
+
+    // Also update the player's individual score for the leaderboard
+    if (laserScore > 0 || roidScore > 0) {
+      currPlayer.score += laserScore + roidScore;
+    }
 
     // Performance optimization: limit roid processing to prevent slowdown
     const roidCount = currRoidBelt.roids.length;
@@ -250,7 +248,13 @@ function handleCollision(player: Player): void {
 
     if (allPlayers.length > 0) {
       // Unified collision detection using allPlayers (functions handle self-collision internally)
-      gameController.updateCurrScore(detectLaserPlayerCollisions(currPlayer, allPlayers));
+      const playerCollisionScore = detectLaserPlayerCollisions(currPlayer, allPlayers);
+      gameController.updateCurrScore(playerCollisionScore);
+
+      // Also update the player's individual score for the leaderboard
+      if (playerCollisionScore > 0) {
+        currPlayer.score += playerCollisionScore;
+      }
 
       // Unified boundary collision detection
       detectPlayerBoundaryCollisions(currPlayer, allPlayers);

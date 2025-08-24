@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { ROID_NUM } from '../src/constants/game';
 import { createRoidBelt, Roid } from '../src/entities/roid/Roid.ts';
 
@@ -43,6 +43,10 @@ test('Destroy Roid', () => {
 });
 
 test('Move Roids', () => {
+  // Mock debug environment to ensure roid movement works
+  vi.stubEnv('VITE_CLIENT_LOG_LEVEL', 'info');
+  vi.stubEnv('VITE_DEBUG_DISABLE_ROID_MOVEMENT', 'false');
+
   const testRoidBelt = createRoidBelt();
   testRoidBelt.addRoid();
   const firstRoid = testRoidBelt.roids[0];
@@ -53,6 +57,9 @@ test('Move Roids', () => {
   const previousX = firstRoid.position.x;
   testRoidBelt.moveRoids();
   expect(firstRoid.position.x).not.toEqual(previousX);
+
+  // Restore environment
+  vi.unstubAllEnvs();
 });
 
 // Debug functionality is tested separately in the debug system

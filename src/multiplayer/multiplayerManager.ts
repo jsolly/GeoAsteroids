@@ -378,6 +378,45 @@ export class MultiplayerManager {
     return bots.get(playerId);
   }
 
+  // Get server name from websocket URL
+  public getServerName(): string {
+    const wsUrl = import.meta.env.VITE_WEBSOCKET_URL;
+    if (!wsUrl) {
+      return 'Unknown Server';
+    }
+
+    try {
+      const url = new URL(wsUrl);
+      // Extract server name from hostname
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return `Local Server (${url.port || '3001'})`;
+      }
+      return url.hostname;
+    } catch {
+      // Fallback to parsing the URL manually if URL constructor fails
+      const match = wsUrl.match(/ws:\/\/([^/]+)/);
+      if (match) {
+        const host = match[1];
+        if (host === 'localhost:3001') {
+          return 'Local Server (3001)';
+        }
+        return host;
+      }
+      return 'Unknown Server';
+    }
+  }
+
+  // Get connection status
+  public getConnectionStatus(): 'connected' | 'disconnected' | 'connecting' {
+    if (this.isConnected && this.socket && this.socket.readyState === WebSocket.OPEN) {
+      return 'connected';
+    }
+    if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
+      return 'connecting';
+    }
+    return 'disconnected';
+  }
+
   public getPlayerCount(): number {
     // Total count of all players (remote + bots)
     return this.players.size + this.botManager.getBots().size;

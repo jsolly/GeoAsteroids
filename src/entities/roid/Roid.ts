@@ -90,6 +90,14 @@ class RoidBelt {
   }
 
   moveRoids(): void {
+    // Check if asteroid movement is disabled in debug mode
+    if (
+      import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug' &&
+      import.meta.env.VITE_DEBUG_DISABLE_ROID_MOVEMENT === 'true'
+    ) {
+      return;
+    }
+
     for (const roid of this.roids) {
       // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
       // let dt = 1/Math.sqrt(1-beta_squared)

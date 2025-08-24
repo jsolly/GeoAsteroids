@@ -5,6 +5,34 @@ import type { Player } from '../player/Player';
 
 import type { Ship } from './Ship';
 
+// Helper function to calculate ship triangle points for consistent ship rendering
+export function calculateShipTrianglePoints(
+  centerX: number,
+  centerY: number,
+  radius: number,
+  angle: number
+): {
+  nose: { x: number; y: number };
+  rearLeft: { x: number; y: number };
+  rearRight: { x: number; y: number };
+} {
+  // Create a more isosceles triangle shape for better ship appearance
+  const nose = {
+    x: centerX + radius * Math.cos(angle), // Pointed nose
+    y: centerY - radius * Math.sin(angle),
+  };
+  const rearLeft = {
+    x: centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle), // Wider back
+    y: centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle),
+  };
+  const rearRight = {
+    x: centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle), // Wider back
+    y: centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle),
+  };
+
+  return { nose, rearLeft, rearRight };
+}
+
 // Helper function to create complementary colors that work well with the laser color
 function createComplementaryColor(
   baseColor: string,
@@ -198,7 +226,7 @@ export function drawThruster(ship: Ship): void {
   }
 }
 
-export function drawShipRelative(player: Player): void {
+export function drawLocalPlayerShip(player: Player): void {
   const ship = player.ship;
 
   const ctx = canvasManager.getContext();
@@ -210,19 +238,13 @@ export function drawShipRelative(player: Player): void {
   // Ship is always drawn at screen center (viewport transformation)
   const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
 
-  const { angle } = ship;
-  const nose = {
-    x: screenCenter.x + (4 / 3) * ship.r * Math.cos(angle),
-    y: screenCenter.y - (4 / 3) * ship.r * Math.sin(angle),
-  };
-  const rearLeft = {
-    x: screenCenter.x - ship.r * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
-    y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(angle) - Math.cos(angle)),
-  };
-  const rearRight = {
-    x: screenCenter.x - ship.r * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
-    y: screenCenter.y + ship.r * ((2 / 3) * Math.sin(angle) + Math.cos(angle)),
-  };
+  // Use the shared ship triangle calculation function for consistency
+  const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
+    screenCenter.x,
+    screenCenter.y,
+    ship.r,
+    ship.angle
+  );
 
   ctx.strokeStyle = ship.color;
   ctx.lineWidth = SHIP_SIZE / 20;
@@ -232,12 +254,6 @@ export function drawShipRelative(player: Player): void {
   ctx.lineTo(rearRight.x, rearRight.y);
   ctx.closePath();
   ctx.stroke();
-
-  // Draw center dot to show ship orientation
-  ctx.fillStyle = ship.color;
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, ship.r / 6, 0, Math.PI * 2, false);
-  ctx.fill();
 
   // Draw health bar above ship
   const barWidth = ship.r * 2.5;
@@ -421,20 +437,13 @@ export function drawShipAtPosition(
   // Use ship's own color or provided color
   const shipColor = color || ship.color;
 
-  // Compute triangle points using the same geometry as drawShipRelative
-  const angle = ship.angle;
-  const nose = {
-    x: screenX + (4 / 3) * ship.r * Math.cos(angle),
-    y: screenY - (4 / 3) * ship.r * Math.sin(angle),
-  };
-  const rearLeft = {
-    x: screenX - ship.r * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
-    y: screenY + ship.r * ((2 / 3) * Math.sin(angle) - Math.cos(angle)),
-  };
-  const rearRight = {
-    x: screenX - ship.r * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
-    y: screenY + ship.r * ((2 / 3) * Math.sin(angle) + Math.cos(angle)),
-  };
+  // Use the shared ship triangle calculation function for consistency
+  const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
+    screenX,
+    screenY,
+    ship.r,
+    ship.angle
+  );
 
   // Draw ship body (triangle)
   ctx.strokeStyle = shipColor;
@@ -445,12 +454,6 @@ export function drawShipAtPosition(
   ctx.lineTo(rearRight.x, rearRight.y);
   ctx.closePath();
   ctx.stroke();
-
-  // Draw center dot
-  ctx.fillStyle = shipColor;
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, ship.r / 6, 0, Math.PI * 2, false);
-  ctx.fill();
 
   // Draw health bar above ship (same as local)
   const barWidth = ship.r * 2.5;

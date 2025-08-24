@@ -1,4 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
+import { isDebugMode } from '../../utils/debugUtils';
 import type { Player } from '../player/Player';
 import { isBot } from '../player/playerKinds';
 import type { Roid } from '../roid/Roid';
@@ -15,7 +16,6 @@ export class BotBehavior {
   private localPlayerAlive: boolean = true;
 
   private steeringTargets: Map<string, Position> = new Map();
-  public debugMovementDisabled: boolean = false;
 
   // Add thrust cooldown to prevent excessive acceleration
   private botThrustCooldowns: Map<string, number> = new Map();
@@ -44,8 +44,25 @@ export class BotBehavior {
   }
 
   moveBot(bot: Player, roids: Roid[], otherPlayers: Player[] = []): void {
-    if (!isBot(bot) || bot.ship.exploding || this.debugMovementDisabled) {
+    if (!isBot(bot) || bot.ship.exploding) {
       return;
+    }
+
+    // Check if bot movement is disabled in debug mode
+    if (isDebugMode() && import.meta.env.VITE_DEBUG_DISABLE_BOT_MOVEMENT === 'true') {
+      return;
+    }
+
+    // Debug logging to see what's happening
+    if (isDebugMode()) {
+      console.debug('Bot movement debug:', {
+        botId: bot.id,
+        botPosition: bot.ship.position,
+        localPlayerPosition: this.localPlayerPosition,
+        localPlayerAlive: this.localPlayerAlive,
+        roidCount: roids.length,
+        otherPlayerCount: otherPlayers.length,
+      });
     }
 
     // Choose a movement target: hunt local player if alive, otherwise roam
@@ -85,7 +102,7 @@ export class BotBehavior {
 
     // Thrust more aggressively - bots should be more active
     const angleDiff = this.getSmallestAngleDiff(desiredAngle, bot.ship.angle);
-    const thrustAngleThreshold = 1.2; // ~68 degrees - much more generous
+    const thrustAngleThreshold = 2.0; // Increased from 1.2 (~68 degrees) to 2.0 (~115 degrees) for more responsive movement
 
     // Check thrust cooldown to prevent excessive acceleration
     const now = Date.now();
@@ -138,11 +155,17 @@ export class BotBehavior {
       const averageAvoidanceX = totalAvoidanceX / avoidanceCount;
       const averageAvoidanceY = totalAvoidanceY / avoidanceCount;
 
-      // Blend original target with avoidance (70% target, 30% avoidance)
+      // When hunting player, use less aggressive avoidance (90% target, 10% avoidance)
+      // When roaming, use more aggressive avoidance (70% target, 30% avoidance)
+      const targetWeight = this.localPlayerAlive ? 0.9 : 0.7;
+      const avoidanceWeight = 1 - targetWeight;
+
       adjustedTarget.x =
-        originalTarget.x * 0.7 + (bot.ship.position.x + averageAvoidanceX * 100) * 0.3;
+        originalTarget.x * targetWeight +
+        (bot.ship.position.x + averageAvoidanceX * 100) * avoidanceWeight;
       adjustedTarget.y =
-        originalTarget.y * 0.7 + (bot.ship.position.y + averageAvoidanceY * 100) * 0.3;
+        originalTarget.y * targetWeight +
+        (bot.ship.position.y + averageAvoidanceY * 100) * avoidanceWeight;
     }
 
     return adjustedTarget;
@@ -195,9 +218,17 @@ export class BotBehavior {
       const avgRepelX = totalRepelX / closePlayers;
       const avgRepelY = totalRepelY / closePlayers;
 
-      // Blend original target with separation (80% target, 20% separation)
-      adjustedTarget.x = originalTarget.x * 0.8 + (bot.ship.position.x + avgRepelX * 120) * 0.2;
-      adjustedTarget.y = originalTarget.y * 0.8 + (bot.ship.position.y + avgRepelY * 120) * 0.2;
+      // When hunting local player, use less aggressive separation (90% target, 10% separation)
+      // When roaming, use more aggressive separation (80% target, 20% separation)
+      const targetWeight = this.localPlayerAlive ? 0.9 : 0.8;
+      const separationWeight = 1 - targetWeight;
+
+      adjustedTarget.x =
+        originalTarget.x * targetWeight +
+        (bot.ship.position.x + avgRepelX * 120) * separationWeight;
+      adjustedTarget.y =
+        originalTarget.y * targetWeight +
+        (bot.ship.position.y + avgRepelY * 120) * separationWeight;
     }
 
     return adjustedTarget;
@@ -278,6 +309,11 @@ export class BotBehavior {
       return false;
     }
 
+    // Check if bot lasers are disabled in debug mode
+    if (isDebugMode() && import.meta.env.VITE_DEBUG_DISABLE_BOT_LASERS === 'true') {
+      return false;
+    }
+
     // Check cooldown
     const now = Date.now();
     if (now - bot.ship.lastShotTime < bot.ship.shotCooldown) {
@@ -286,7 +322,8 @@ export class BotBehavior {
 
     // Check if player is in range and roughly in front
     const distance = this.getDistance(bot.ship.position, this.localPlayerPosition);
-    if (distance > 300) {
+    if (distance > 600) {
+      // Increased from 300 to 600 for more aggressive hunting
       return false;
     }
 

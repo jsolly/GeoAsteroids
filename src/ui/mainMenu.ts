@@ -1,8 +1,7 @@
 // Console overrides and error handling are now handled by logLevel.ts which loads first
 
-// Simple logging - removed complex logger dependency
 import { setSound } from '../audio/Sound';
-
+// Simple logging - removed complex logger dependency
 import { GameController } from '../core/gameController';
 import { getBuildInfoString } from '../utils/buildInfo';
 import { attachEventListener, getElementById } from '../utils/dom';
@@ -14,9 +13,6 @@ import { toggleScreen } from './uiUtils';
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
 
 const startMultiplayerBtn = getElementById<HTMLButtonElement>('start-multiplayer');
-const startDebugBtn = getElementById<HTMLButtonElement>('start-debug');
-const debugButtonContainer = getElementById<HTMLElement>('debug-button-container');
-const playerCountElement = getElementById<HTMLElement>('playerCount');
 
 // Multiplayer name input elements
 const multiplayerNameModal = getElementById<HTMLElement>('multiplayerNameModal');
@@ -29,58 +25,12 @@ function getGameController() {
   return GameController.getInstance();
 }
 
-// Function to update player count display
-function updatePlayerCount(): void {
-  if (playerCountElement) {
-    const gameController = getGameController();
-    const currentCount = parseInt(playerCountElement.textContent || '1', 10);
-    const playerCount = gameController.getGameState().playerCount;
-
-    // Only update if the count actually changed
-    if (currentCount !== playerCount) {
-      playerCountElement.textContent = playerCount.toString();
-
-      // Add animation class
-      playerCountElement.classList.add('updated');
-
-      // Remove animation class after animation completes
-      setTimeout(() => {
-        playerCountElement.classList.remove('updated');
-      }, 600);
-
-      // Update the heading text to be grammatically correct
-      const heading = playerCountElement.closest('h4');
-      if (heading) {
-        heading.innerHTML = `🌐 <span id="playerCount">${playerCount}</span> ${playerCount === 1 ? 'Player' : 'Players'} Online`;
-      }
-    }
-  }
-}
-
-// Check if we're in development mode
-const isDevelopmentMode = import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
-
-// Show debug button only in development mode
-if (isDevelopmentMode && debugButtonContainer) {
-  debugButtonContainer.style.display = 'block';
-}
-
 // Multiplayer is now the only mode - always enabled
 
 // Set up multiplayer button - this is now the only game mode
 attachEventListener(startMultiplayerBtn, 'click', () => {
   showMultiplayerNameModal();
 });
-
-// Set up debug button - only available in development mode
-if (startDebugBtn) {
-  attachEventListener(startDebugBtn, 'click', () => {
-    startDebugMode();
-  });
-}
-
-// Update player count display initially
-updatePlayerCount();
 
 // Function to check if scrolling is needed and show/hide scroll indicator
 function updateScrollIndicator(): void {
@@ -118,19 +68,6 @@ function hideMultiplayerNameModal(): void {
   }
 }
 
-// Function to start debug mode
-function startDebugMode(): void {
-  // Update button state
-  startDebugBtn?.classList.add('active-mode');
-
-  // Get the game controller and enable debug mode
-  const gameController = getGameController();
-  gameController.enableDebugMode();
-
-  // Start the game - debug mode will be automatically detected and setup
-  gameController.startGame();
-}
-
 // Function to start multiplayer with the entered name
 function startMultiplayerWithName(): void {
   if (multiplayerNameInput?.value.trim()) {
@@ -153,9 +90,6 @@ function startMultiplayerWithName(): void {
 
       // Update button state
       startMultiplayerBtn?.classList.add('active-mode');
-
-      // Update player count immediately
-      updatePlayerCount();
 
       // Start the game
       gameController.startGame();
@@ -208,8 +142,7 @@ export function showGameOverMenu(): void {
 
 // Export function to set up periodic updates
 export function setupMainMenuUpdates(): void {
-  // Set up periodic player count updates (every 2 seconds)
-  setInterval(updatePlayerCount, 2000);
+  // Player count updates removed - no longer needed
 }
 
 // Display build info

@@ -3,13 +3,13 @@ import { DEFAULT_BOT_COUNT, EMP_PULSE_RADIUS } from '../constants/game';
 import type { BotShoot } from '../entities/bot/types';
 import type { Player } from '../entities/player/Player';
 import { playerFactory } from '../entities/player/PlayerFactory';
-
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { createRoidBelt, type RoidBelt } from '../entities/roid/Roid';
 import type { Ship } from '../entities/ship/Ship';
 import { keyDown, keyUp } from '../input/keybindings';
 import { MultiplayerManager } from '../multiplayer/multiplayerManager';
 import { toggleScreen } from '../ui/uiUtils';
+import { isDebugMode } from '../utils/debugUtils';
 import { getRandomPositionWithinBoundary } from '../utils/positionUtils';
 import { GameState } from './gameState';
 
@@ -35,40 +35,26 @@ function initializeListeners(isGameRunning: () => boolean): void {
   });
 }
 
-interface GameControllerData {
-  getCurrShip(): Ship;
-  getCurrPlayer(): Player;
-  getCurrRoidBelt(): RoidBelt;
-  getCurrScore(): number;
-  getCurrRoidCount(): number;
-  getIsGameRunning(): boolean;
-  updateCurrScore(points: number): void;
-  updateTextProperties(text: string, alpha: number): void;
-  newGame(): void;
-  startGame(): void;
-  gameOver(): void;
-  toggleIsGameRunning(): void;
-  getBots(): Map<string, Player>;
-  getMultiplayerManager(): MultiplayerManager;
-}
-
-class GameController implements GameControllerData {
+export class GameController {
   private static instance: GameController;
   private gameState: GameState;
-  private currShip: Ship;
-  private player: Player;
-  private currRoidBelt: RoidBelt;
   private multiplayerManager: MultiplayerManager;
+  private player: Player;
+  private currShip: Ship;
+  private currRoidBelt: RoidBelt;
   private botShootHandler?: (event: CustomEvent) => void;
-  private debugMode: boolean = false;
+  private botsInitialized: boolean = false;
 
   private constructor() {
     this.gameState = GameState.getInstance();
-    // Create player (it will create its own ship)
-    this.player = playerFactory.createLocalPlayer('LocalPlayer', getRandomPositionWithinBoundary());
+    this.multiplayerManager = MultiplayerManager.getInstance();
+    // Create player with proper name from multiplayer manager
+    this.player = playerFactory.createLocalPlayer(
+      this.multiplayerManager.getLocalPlayerName(),
+      getRandomPositionWithinBoundary()
+    );
     this.currShip = this.player.ship;
     this.currRoidBelt = createRoidBelt();
-    this.multiplayerManager = MultiplayerManager.getInstance();
 
     // Set up EMP pulse event listener
     this.setupEmpPulseHandler();
@@ -100,10 +86,16 @@ class GameController implements GameControllerData {
 
   newGame(): void {
     this.gameState.resetCurrentScore();
-    // Create player (it will create its own ship)
-    this.player = playerFactory.createLocalPlayer('LocalPlayer', getRandomPositionWithinBoundary());
+    // Create player with proper name from multiplayer manager
+    this.player = playerFactory.createLocalPlayer(
+      this.multiplayerManager.getLocalPlayerName(),
+      getRandomPositionWithinBoundary()
+    );
     this.currShip = this.player.ship;
     this.currRoidBelt = createRoidBelt();
+
+    // Reset bot initialization flag for new game
+    this.botsInitialized = false;
   }
 
   startGame(): void {
@@ -116,11 +108,7 @@ class GameController implements GameControllerData {
     // Reset button text to default state
     this.resetButtonText();
 
-    // Always initialize bots for multiplayer mode
-    // Bots work independently of websocket connections
-    this.multiplayerManager.initializeBots(DEFAULT_BOT_COUNT);
-
-    // Setup debug mode if enabled
+    // Setup debug mode first to get the correct bot count
     this.setupDebugMode();
 
     // Connect to multiplayer and adjust roids once connected
@@ -230,6 +218,16 @@ class GameController implements GameControllerData {
       this.currShip.position,
       !this.player.isDead
     );
+
+    // Initialize bots once when the game starts (after player position is established)
+    if (!this.botsInitialized) {
+      const botCount = this.isDebugMode()
+        ? parseInt(import.meta.env.VITE_DEBUG_BOT_COUNT || '1', 10)
+        : DEFAULT_BOT_COUNT;
+
+      this.multiplayerManager.initializeBots(botCount);
+      this.botsInitialized = true;
+    }
   }
 
   // Bot management methods - bots are always present in multiplayer mode
@@ -388,33 +386,32 @@ class GameController implements GameControllerData {
 
   // Debug mode setup methods
   public enableDebugMode(): void {
-    this.debugMode = true;
-    this.applyDebugConfig();
+    // This method is now deprecated - debug mode is auto-enabled via environment
+    console.warn(
+      'enableDebugMode() is deprecated - debug mode is now controlled via VITE_CLIENT_LOG_LEVEL=debug'
+    );
   }
 
   public isDebugMode(): boolean {
-    return this.debugMode;
+    return isDebugMode();
   }
 
   private setupDebugMode(): void {
-    // Only setup debug mode if explicitly enabled
-    if (this.debugMode) {
+    // Auto-setup debug mode if environment indicates it should be enabled
+    if (isDebugMode()) {
       this.applyDebugConfig();
     }
   }
 
   private applyDebugConfig(): void {
-    if (!this.debugMode) {
+    if (!isDebugMode()) {
       return;
     }
 
     try {
       const debugConfig = this.getDebugConfig();
 
-      // Apply bot count from env var
-      if (debugConfig.botCount !== 1) {
-        this.multiplayerManager.initializeBots(debugConfig.botCount);
-      }
+      // Bot count is now handled during initialization, no need to reinitialize here
 
       // Apply roid count from env var
       if (debugConfig.debugRoidCount !== 10) {
@@ -440,5 +437,3 @@ class GameController implements GameControllerData {
     };
   }
 }
-
-export { GameController };
