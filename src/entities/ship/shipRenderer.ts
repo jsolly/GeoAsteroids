@@ -226,6 +226,22 @@ export function drawThruster(ship: Ship): void {
   }
 }
 
+export function drawThrusterAtPosition(ship: Ship, shipPosition: { x: number; y: number }): void {
+  const cvs = canvasManager.getCanvas();
+  if (!cvs) {
+    return;
+  }
+
+  if (!ship.exploding && ship.blinkOn) {
+    // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
+    const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
+    const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+
+    // Use the generic thruster function at the calculated screen position
+    drawGenericThruster(screenX, screenY, ship.angle, ship.r);
+  }
+}
+
 export function drawLocalPlayerShip(player: Player): void {
   const ship = player.ship;
 
@@ -332,6 +348,52 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
   ctx.fillStyle = brightColor;
   ctx.beginPath();
   ctx.arc(screenCenter.x, screenCenter.y, ship.r * 0.5, 0, Math.PI * 2, false);
+  ctx.fill();
+}
+
+export function drawShipExplosionAtPosition(
+  ship: Ship,
+  shipPosition: { x: number; y: number },
+  color?: string
+): void {
+  const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
+  if (!ctx || !cvs) {
+    return;
+  }
+
+  // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
+  const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
+  const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+
+  // Create explosion colors that complement the laser color
+  const baseColor = color || ship.color || '#ff0000'; // Default to ship color or red
+
+  // Generate complementary explosion colors that work well with the laser
+  const darkColor = createComplementaryColor(baseColor, -0.3, 0.1); // Darker complementary outer ring
+  const mediumColor = createComplementaryColor(baseColor, -0.1, 0.2); // Medium complementary ring
+  const lightColor = createComplementaryColor(baseColor, 0.1, 0.3); // Lighter complementary inner ring
+  const brightColor = createComplementaryColor(baseColor, 0.3, 0.4); // Bright complementary center
+
+  ctx.fillStyle = darkColor;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r * 1.7, 0, Math.PI * 2, false);
+  ctx.fill();
+  ctx.fillStyle = mediumColor;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r * 1.4, 0, Math.PI * 2, false);
+  ctx.fill();
+  ctx.fillStyle = baseColor;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r * 1.1, 0, Math.PI * 2, false);
+  ctx.fill();
+  ctx.fillStyle = lightColor;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r * 0.8, 0, Math.PI * 2, false);
+  ctx.fill();
+  ctx.fillStyle = brightColor;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r * 0.5, 0, Math.PI * 2, false);
   ctx.fill();
 }
 

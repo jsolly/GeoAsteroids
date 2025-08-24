@@ -10,7 +10,13 @@ import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
-import { drawLasers, drawShipAtPosition } from '../entities/ship/shipRenderer';
+import {
+  drawLasers,
+  drawShipAtPosition,
+  drawShipExplosion,
+  drawShipExplosionAtPosition,
+  drawThrusterAtPosition,
+} from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
 import { drawFieryBoundary } from './boundaryRenderer';
 import { drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
@@ -197,13 +203,37 @@ class CanvasManager {
     // Draw all players (including bots) using unified rendering
     try {
       for (const player of allPlayers) {
-        if (!player.ship.exploding) {
+        if (player.ship.exploding) {
+          // Draw explosion animation for exploding ships
+          if (player.id === currPlayer.id) {
+            // Local player explosion at screen center
+            drawShipExplosion(player.ship, player.ship.color);
+          } else {
+            // Other players' explosions at their world positions
+            drawShipExplosionAtPosition(player.ship, currShip.position, player.ship.color);
+          }
+        } else {
           // All players use the same ship rendering with world coordinates
           drawShipAtPosition(player.ship, currShip.position);
         }
       }
     } catch (error: unknown) {
       console.error('Error drawing game:', error);
+    }
+
+    // Draw thrusters for all players (including bots) at their world positions
+    try {
+      for (const player of allPlayers) {
+        if (!player.ship.exploding && player.ship.thrusting) {
+          if (player.id === currPlayer.id) {
+          } else {
+            // Other players' thrusters at their world positions
+            drawThrusterAtPosition(player.ship, currShip.position);
+          }
+        }
+      }
+    } catch (error: unknown) {
+      console.error('Error drawing thrusters:', error);
     }
 
     // Draw ship (if not exploding, this will be handled by handleShipState)
