@@ -11,7 +11,7 @@ import { shouldSkipPlayerCollision } from './collisionUtils';
 export function detectLaserHits(
   currRoidBelt: RoidBelt,
   currShip: Ship,
-  bots?: Map<string, Player>
+  otherPlayers?: Player[]
 ): number {
   const roids = currRoidBelt.roids;
   let score = 0;
@@ -38,15 +38,15 @@ export function detectLaserHits(
     }
   }
 
-  // detect bot laser hits on roids (unified system)
-  if (bots && bots.size > 0) {
-    for (const [, bot] of bots.entries()) {
-      if (bot.ship.exploding) {
+  // detect other player laser hits on roids (unified system)
+  if (otherPlayers && otherPlayers.length > 0) {
+    for (const player of otherPlayers) {
+      if (player.ship.exploding) {
         continue;
       }
 
-      for (let j = bot.ship.lasers.length - 1; j >= 0; j--) {
-        const laser = bot.ship.lasers[j];
+      for (let j = player.ship.lasers.length - 1; j >= 0; j--) {
+        const laser = player.ship.lasers[j];
 
         // Skip lasers that are already exploding or have exploded
         if (laser.explodeTime > 0 || laser.hasExploded) {
@@ -58,7 +58,7 @@ export function detectLaserHits(
             Roid.fxHit.play();
             score = currRoidBelt.destroyRoid(i);
             // trigger laser explode like player
-            bot.ship.updateLaserExplodeTime(j);
+            player.ship.updateLaserExplodeTime(j);
 
             break; // This laser is now exploded, move to next
           }
@@ -67,8 +67,8 @@ export function detectLaserHits(
     }
   }
 
-  // detect laser hits on bots (if bots are provided)
-  if (bots && bots.size > 0) {
+  // detect laser hits on other players (if other players are provided)
+  if (otherPlayers && otherPlayers.length > 0) {
     for (let j = currShip.lasers.length - 1; j >= 0; j--) {
       const laser = currShip.lasers[j];
 
@@ -77,33 +77,32 @@ export function detectLaserHits(
         continue;
       }
 
-      const botEntries = Array.from(bots.entries());
-      for (const [_botId, bot] of botEntries) {
-        // Skip exploding bots
-        if (bot.ship.exploding) {
+      for (const player of otherPlayers) {
+        // Skip exploding players
+        if (player.ship.exploding) {
           continue;
         }
 
-        // Skip invincible bots (blinking or time-based spawn protection)
-        if (shouldSkipPlayerCollision(bot)) {
+        // Skip invincible players (blinking or time-based spawn protection)
+        if (shouldSkipPlayerCollision(player)) {
           continue;
         }
 
-        if (isLaserHitBot(laser, bot)) {
-          // Deal damage to bot using the unified damage system
-          bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+        if (isLaserHitPlayer(laser, player)) {
+          // Deal damage to player using the unified damage system
+          player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
           currShip.updateLaserExplodeTime(j);
 
-          // Add points for destroying a bot (only if bot is actually destroyed)
-          if (bot.ship.exploding) {
+          // Add points for destroying a player (only if player is actually destroyed)
+          if (player.ship.exploding) {
             score += 200;
           }
 
           // Play hit sound
           Roid.fxHit.play();
 
-          // Bot destroyed - no event needed
+          // Player destroyed - no event needed
 
           break; // This laser is now exploded, move to next
         }
@@ -242,18 +241,18 @@ export function isHit(laser: Laser, roid: Roid): boolean {
   return false;
 }
 
-export function isLaserHitBot(laser: Laser, bot: Player): boolean {
+export function isLaserHitPlayer(laser: Laser, player: Player): boolean {
   // Skip lasers that are already exploding or have exploded
   if (laser.explodeTime > 0 || laser.hasExploded) {
     return false;
   }
 
-  // Calculate distance between laser and bot center
-  const distance = getDistance(bot.ship.position, laser.position);
+  // Calculate distance between laser and player center
+  const distance = getDistance(player.ship.position, laser.position);
 
   // Make collision detection more forgiving - use a larger hit area
-  // This accounts for the fact that lasers are moving and bots are small
-  const hitRadius = bot.ship.r + 5; // Add 5 pixels of tolerance
+  // This accounts for the fact that lasers are moving and players are small
+  const hitRadius = player.ship.r + 5; // Add 5 pixels of tolerance
 
   return distance < hitRadius;
 }

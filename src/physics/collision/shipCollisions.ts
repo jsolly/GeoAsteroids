@@ -9,12 +9,8 @@ import { getDistance } from '../../utils/mathUtils';
 
 import { shouldApplyDamageToLocalPlayer, shouldSkipPlayerCollision } from './collisionUtils';
 
-export function detectAllPlayerBotCollisions(
-  localShip: Ship,
-  otherPlayers: Player[],
-  bots: Map<string, Player>
-): void {
-  if (!bots || bots.size === 0) {
+export function detectAllPlayerCollisions(localShip: Ship, otherPlayers: Player[]): void {
+  if (!otherPlayers || otherPlayers.length === 0) {
     return;
   }
 
@@ -59,24 +55,29 @@ export function detectAllPlayerBotCollisions(
       }
     }
 
-    for (const [_botId, bot] of bots.entries()) {
-      // Skip exploding bots
-      if (bot.ship.exploding) {
+    for (const otherPlayer of otherPlayers) {
+      // Skip self-collision
+      if (otherPlayer.id === player.id) {
         continue;
       }
 
-      // Skip invincible bots (blinking or time-based spawn protection)
-      if (shouldSkipPlayerCollision(bot)) {
+      // Skip exploding other players
+      if (otherPlayer.ship.exploding) {
         continue;
       }
 
-      // Calculate distance between player and bot centers
-      const distance = getDistance(player.position, bot.ship.position);
-      const collisionThreshold = player.r + bot.ship.r;
+      // Skip invincible other players (blinking or time-based spawn protection)
+      if (shouldSkipPlayerCollision(otherPlayer)) {
+        continue;
+      }
+
+      // Calculate distance between player and other player centers
+      const distance = getDistance(player.position, otherPlayer.ship.position);
+      const collisionThreshold = player.r + otherPlayer.ship.r;
 
       if (distance < collisionThreshold) {
         if (player.isLocal) {
-          // Local player collision with bot
+          // Local player collision with other player
 
           // Check if debug system wants to prevent damage
           const shouldApplyDamage = shouldApplyDamageToLocalPlayer(localShip);
@@ -86,28 +87,28 @@ export function detectAllPlayerBotCollisions(
             localShip.takeDamage(SHIP_COLLISION_DAMAGE);
           }
 
-          // Apply damage to bot via unified system (will explode and dispatch event if lethal)
-          bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+          // Apply damage to other player via unified system (will explode and dispatch event if lethal)
+          otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
           // Play hit sound
           Roid.fxHit.play();
 
-          // Bot destroyed - no event needed
+          // Other player destroyed - no event needed
         } else {
-          // Other player collision with bot
-          const otherPlayer = otherPlayers.find((p) => p.id === player.id);
-          if (otherPlayer) {
+          // Other player collision with another other player
+          const playerObj = otherPlayers.find((p) => p.id === player.id);
+          if (playerObj) {
             // Visual explosion for remote/other player; server manages their state
-            otherPlayer.ship.exploding = true;
-            otherPlayer.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+            playerObj.ship.exploding = true;
+            playerObj.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
 
-            // Apply damage to bot via unified system
-            bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+            // Apply damage to other player via unified system
+            otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
             // Play hit sound
             Roid.fxHit.play();
 
-            // Bot destroyed - no event needed
+            // Other player destroyed - no event needed
           }
         }
 

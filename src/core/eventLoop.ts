@@ -12,9 +12,9 @@ import {
   detectPlayerLaserShipCollisions,
 } from '../physics/collision/laserCollisions';
 import {
+  detectAllPlayerCollisions,
   detectPlayerRoidCollisions,
   detectRoidHits,
-  detectShipToShipCollisions,
 } from '../physics/collision/shipCollisions';
 import { canvasManager } from '../rendering/canvas';
 import { GameController } from './gameController';
@@ -198,10 +198,7 @@ function handleCollision(ship: Ship): void {
     // Filter out local player for collision detection to prevent self-collision
     const otherPlayers = allPlayers.filter((player) => player.id !== currPlayer.id);
 
-    // Convert to Map for detectLaserHits compatibility (it expects Map<string, Player>)
-    const otherPlayersMap = new Map(otherPlayers.map((player) => [player.id, player]));
-
-    gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, otherPlayersMap));
+    gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, otherPlayers));
     gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
 
     // Performance optimization: limit roid processing to prevent slowdown
@@ -241,7 +238,7 @@ function handleCollision(ship: Ship): void {
       detectBoundaryCollisions(otherPlayers);
 
       // Unified ship-to-ship collision detection
-      gameController.updateCurrScore(detectShipToShipCollisions(ship, otherPlayers));
+      detectAllPlayerCollisions(ship, otherPlayers);
 
       // Unified laser collision detection
       detectPlayerLaserShipCollisions(ship, otherPlayers);
