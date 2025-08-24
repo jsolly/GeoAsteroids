@@ -3,10 +3,12 @@ import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
 import { LASER_MAX } from '../../constants/entities/laser';
 import {
+  SHIP_BOT_FRICTION,
   SHIP_EXPLODE_DUR_FRAMES,
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
   SHIP_MAX_HEALTH,
+  SHIP_MAX_VELOCITY,
   SHIP_SIZE,
   SHIP_THRUST,
 } from '../../constants/entities/ship';
@@ -55,6 +57,7 @@ class Ship {
   lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
   color: string = '#ffffff'; // Ship color for rendering
+  isBot: boolean = false; // Flag to identify if this ship belongs to a bot
 
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
@@ -63,6 +66,7 @@ class Ship {
     position?: Position;
     shotCooldown?: number;
     color?: string;
+    isBot?: boolean;
   }) {
     // Apply optional overrides for bot-specific configuration
     if (options?.position) {
@@ -73,6 +77,9 @@ class Ship {
     }
     if (options?.color) {
       this.color = options.color;
+    }
+    if (options?.isBot !== undefined) {
+      this.isBot = options.isBot;
     }
   }
 
@@ -97,9 +104,22 @@ class Ship {
         y: (-Math.sin(this.angle) * SHIP_THRUST) / FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
+
+      // Cap velocity to prevent excessive speed
+      const currentSpeed = Math.sqrt(
+        this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
+      );
+      if (currentSpeed > SHIP_MAX_VELOCITY) {
+        const scale = SHIP_MAX_VELOCITY / currentSpeed;
+        this.velocity.x *= scale;
+        this.velocity.y *= scale;
+      }
+
       drawThruster(this);
     } else {
-      this.velocity = multiplyVelocity(this.velocity, 1 - FRICTION / FPS);
+      // Use bot-specific friction if this is a bot ship
+      const frictionCoeff = this.isBot ? SHIP_BOT_FRICTION : FRICTION;
+      this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / FPS);
     }
   }
 

@@ -17,6 +17,10 @@ export class BotBehavior {
   private steeringTargets: Map<string, Position> = new Map();
   public debugMovementDisabled: boolean = false;
 
+  // Add thrust cooldown to prevent excessive acceleration
+  private botThrustCooldowns: Map<string, number> = new Map();
+  private readonly THRUST_COOLDOWN_MS = 100; // Only thrust every 100ms instead of every frame
+
   setLocalPlayerInfo(_id: string, position: Position, alive: boolean): void {
     this.localPlayerPosition = position;
     this.localPlayerAlive = alive;
@@ -31,10 +35,12 @@ export class BotBehavior {
 
   removeBotSteering(botId: string): void {
     this.steeringTargets.delete(botId);
+    this.botThrustCooldowns.delete(botId); // Clean up thrust cooldown
   }
 
   clearAllSteering(): void {
     this.steeringTargets.clear();
+    this.botThrustCooldowns.clear(); // Clean up all thrust cooldowns
   }
 
   moveBot(bot: Player, roids: Roid[], otherPlayers: Player[] = []): void {
@@ -80,7 +86,18 @@ export class BotBehavior {
     // Thrust more aggressively - bots should be more active
     const angleDiff = this.getSmallestAngleDiff(desiredAngle, bot.ship.angle);
     const thrustAngleThreshold = 1.2; // ~68 degrees - much more generous
-    bot.ship.thrusting = Math.abs(angleDiff) < thrustAngleThreshold && !bot.ship.exploding;
+
+    // Check thrust cooldown to prevent excessive acceleration
+    const now = Date.now();
+    const lastThrustTime = this.botThrustCooldowns.get(bot.id) || 0;
+    const canThrust = now - lastThrustTime >= this.THRUST_COOLDOWN_MS;
+
+    if (Math.abs(angleDiff) < thrustAngleThreshold && !bot.ship.exploding && canThrust) {
+      bot.ship.thrusting = true;
+      this.botThrustCooldowns.set(bot.id, now);
+    } else {
+      bot.ship.thrusting = false;
+    }
   }
 
   private adjustTargetForRoids(bot: Player, originalTarget: Position, roids: Roid[]): Position {

@@ -34,7 +34,10 @@ export class Player {
     this.color = generateRandomPlayerColor();
 
     // Create ship with player's color
-    this.ship = new Ship({ color: this.color });
+    this.ship = new Ship({
+      color: this.color,
+      isBot: this.type === 'bot',
+    });
 
     this.lives = START_LIVES;
     this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
