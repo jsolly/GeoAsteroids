@@ -1,4 +1,3 @@
-import type { Position } from '../../../shared-types';
 import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
 import { SHIP_COLLISION_DAMAGE, SHIP_EXPLODE_DUR_FRAMES } from '../../constants/entities/ship';
 import { FPS } from '../../constants/game';
@@ -9,112 +8,61 @@ import { getDistance } from '../../utils/mathUtils';
 
 import { shouldApplyDamageToLocalPlayer, shouldSkipPlayerCollision } from './collisionUtils';
 
-export function detectAllPlayerCollisions(localShip: Ship, otherPlayers: Player[]): void {
+export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Player[]): void {
+  const localShip = localPlayer.ship;
+
+  if (!allPlayers) {
+    return;
+  }
+
+  // Filter out the local player to prevent self-collision
+  const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
+
   if (!otherPlayers || otherPlayers.length === 0) {
     return;
   }
 
-  // Create a combined list of all players including the local player
-  const allPlayers: Array<{ id: string; position: Position; r: number; isLocal: boolean }> = [
-    // Add local player
-    {
-      id: 'local-player',
-      position: localShip.position,
-      r: localShip.r,
-      isLocal: true,
-    },
-    // Add other players
-    ...otherPlayers.map((player) => ({
-      id: player.id,
-      position: player.ship.position,
-      r: player.ship.r,
-      isLocal: false,
-    })),
-  ];
+  // Check local ship against all other players
+  if (localShip.exploding || localShip.blinkCount > 0) {
+    return; // Skip if local ship is exploding or invincible
+  }
 
-  // Check each player against each bot
-  for (const player of allPlayers) {
-    // Skip if player is exploding (for local player, check ship state)
-    if (player.isLocal) {
-      if (localShip.exploding) {
-        continue;
-      }
-      // Skip invincible local player (blinking)
-      if (localShip.blinkCount > 0) {
-        continue;
-      }
-    } else {
-      // For other players, check their state
-      const otherPlayer = otherPlayers.find((p) => p.id === player.id);
-      if (!otherPlayer || otherPlayer.ship.exploding) {
-        continue;
-      }
-      // Skip invincible other players (blinking)
-      if (otherPlayer.ship.blinkCount && otherPlayer.ship.blinkCount > 0) {
-        continue;
-      }
+  for (const otherPlayer of otherPlayers) {
+    // Skip exploding other players
+    if (otherPlayer.ship.exploding) {
+      continue;
     }
 
-    for (const otherPlayer of otherPlayers) {
-      // Skip self-collision
-      if (otherPlayer.id === player.id) {
-        continue;
+    // Skip invincible other players (blinking or time-based spawn protection)
+    if (shouldSkipPlayerCollision(otherPlayer)) {
+      continue;
+    }
+
+    // Calculate distance between local ship and other player centers
+    const distance = getDistance(localShip.position, otherPlayer.ship.position);
+    const collisionThreshold = localShip.r + otherPlayer.ship.r;
+
+    if (distance < collisionThreshold) {
+      // Local player collision with other player
+
+      // Check if debug system wants to prevent damage
+      const shouldApplyDamage = shouldApplyDamageToLocalPlayer(localShip);
+
+      // Deal damage to local ship
+      if (shouldApplyDamage) {
+        localShip.takeDamage(SHIP_COLLISION_DAMAGE);
       }
 
-      // Skip exploding other players
-      if (otherPlayer.ship.exploding) {
-        continue;
-      }
+      // Apply damage to other player via unified system (will explode and dispatch event if lethal)
+      otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
-      // Skip invincible other players (blinking or time-based spawn protection)
-      if (shouldSkipPlayerCollision(otherPlayer)) {
-        continue;
-      }
+      // Play hit sound
+      Roid.fxHit.play();
 
-      // Calculate distance between player and other player centers
-      const distance = getDistance(player.position, otherPlayer.ship.position);
-      const collisionThreshold = player.r + otherPlayer.ship.r;
+      // Other player destroyed - no event needed
 
-      if (distance < collisionThreshold) {
-        if (player.isLocal) {
-          // Local player collision with other player
-
-          // Check if debug system wants to prevent damage
-          const shouldApplyDamage = shouldApplyDamageToLocalPlayer(localShip);
-
-          // Deal damage to local ship
-          if (shouldApplyDamage) {
-            localShip.takeDamage(SHIP_COLLISION_DAMAGE);
-          }
-
-          // Apply damage to other player via unified system (will explode and dispatch event if lethal)
-          otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
-
-          // Play hit sound
-          Roid.fxHit.play();
-
-          // Other player destroyed - no event needed
-        } else {
-          // Other player collision with another other player
-          const playerObj = otherPlayers.find((p) => p.id === player.id);
-          if (playerObj) {
-            // Visual explosion for remote/other player; server manages their state
-            playerObj.ship.exploding = true;
-            playerObj.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-
-            // Apply damage to other player via unified system
-            otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
-
-            // Play hit sound
-            Roid.fxHit.play();
-
-            // Other player destroyed - no event needed
-          }
-        }
-
-        // Only handle one collision per player per frame
-        break;
-      }
+      // Only handle one collision per frame
+      break;
     }
   }
 }
@@ -271,7 +219,18 @@ export function detectShipToShipCollisions(
 }
 
 // Unified function for all player roid collisions (bots + remote players)
-export function detectPlayerRoidCollisions(players: Player[], currRoidBelt: RoidBelt): void {
+export function detectPlayerRoidCollisions(
+  localPlayer: Player,
+  allPlayers?: Player[],
+  currRoidBelt?: RoidBelt
+): void {
+  if (!allPlayers || !currRoidBelt) {
+    return;
+  }
+
+  // Filter out the local player to prevent self-collision
+  const players = allPlayers.filter((player) => player.id !== localPlayer.id);
+
   if (!players || players.length === 0) {
     return;
   }

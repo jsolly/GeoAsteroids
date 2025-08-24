@@ -89,6 +89,13 @@ export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolea
 }
 
 // Backwards compatibility wrapper used by callers/tests
-export function detectPlayerBoundaryCollisions(otherPlayers: Player[]): void {
+export function detectPlayerBoundaryCollisions(localPlayer: Player, allPlayers?: Player[]): void {
+  if (!allPlayers) {
+    return;
+  }
+
+  // Filter out the local player to prevent self-collision
+  const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
+
   detectBoundaryCollisions(otherPlayers);
 }

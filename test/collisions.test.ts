@@ -102,14 +102,27 @@ describe('Collision Detection System', () => {
     // Add laser to ship
     ship.lasers = [laser];
 
-    return { ship, laser, otherPlayer };
+    // Create a local player object with the ship
+    const localPlayer = Player.createPlayer({
+      id: 'local-player',
+      name: 'LocalPlayer',
+      type: 'local',
+      position: { x: 0, y: 0 },
+    });
+    localPlayer.ship = ship;
+    localPlayer.score = 0;
+    localPlayer.lastUpdate = Date.now();
+    localPlayer.lives = 3;
+    localPlayer.color = '#00ff00'; // Test color for the local player
+
+    return { laser, otherPlayer, localPlayer };
   }
 
   describe('detectLaserPlayerCollisions', () => {
     it('should detect collision when laser hits other player', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(50); // Should award 50 points for player hit
       expect(laser.explodeTime).toBeGreaterThan(0); // Laser should explode
@@ -117,10 +130,10 @@ describe('Collision Detection System', () => {
     });
 
     it('should not detect collision when player is exploding', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       otherPlayer.ship.exploding = true;
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(0);
       expect(laser.explodeTime).toBe(0); // Laser should not explode
@@ -128,11 +141,11 @@ describe('Collision Detection System', () => {
     });
 
     it('should not detect collision when player is invincible (blinking)', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       otherPlayer.ship.blinkCount = 10;
       otherPlayer.ship.blinkOn = true;
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(0);
       expect(laser.explodeTime).toBe(0);
@@ -140,17 +153,17 @@ describe('Collision Detection System', () => {
     });
 
     it('should not detect collision when laser is already exploding', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       laser.explodeTime = 10; // Laser is already exploding
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(0);
       expect(otherPlayer.ship.health).toBe(100);
     });
 
     it('should handle multiple players correctly', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
 
       const mockShip2 = {
         position: { x: 200, y: 0 }, // Further away
@@ -177,7 +190,7 @@ describe('Collision Detection System', () => {
       otherPlayer2.ship = mockShip2;
       otherPlayer2.lives = 3;
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer, otherPlayer2]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer, otherPlayer2]);
 
       expect(score).toBe(50); // Should only hit the first player
       expect(laser.explodeTime).toBeGreaterThan(0);
@@ -186,10 +199,10 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle player death when health reaches 0', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       otherPlayer.ship.health = 10; // Low health
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(50);
       expect(laser.explodeTime).toBeGreaterThan(0);
@@ -199,11 +212,11 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle player permanent death when no lives remaining', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       otherPlayer.ship.health = 10;
       otherPlayer.lives = 0; // No lives remaining
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(50);
       expect(laser.explodeTime).toBeGreaterThan(0);
@@ -213,11 +226,11 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle all player types', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       // Note: In the refactored system, this function should only receive human players
       // Bot players are handled by a separate detection system
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(50); // Should hit the human player
       expect(laser.explodeTime).toBeGreaterThan(0);
@@ -225,12 +238,12 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle collision threshold correctly', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       // Position laser just outside collision threshold
       laser.position = { x: 120, y: 0 }; // 100 + 15 (player radius) + 2 (laser radius) + 3 (extra buffer) = 120
       otherPlayer.ship.position = { x: 100, y: 0 };
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(0); // No collision
       expect(laser.explodeTime).toBe(0);
@@ -238,12 +251,12 @@ describe('Collision Detection System', () => {
     });
 
     it('should handle collision threshold correctly when laser is inside', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       // Position laser inside collision threshold
       laser.position = { x: 110, y: 0 }; // 100 + 10 (inside player radius)
       otherPlayer.ship.position = { x: 100, y: 0 };
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(50); // Should collide
       expect(laser.explodeTime).toBeGreaterThan(0);
@@ -253,41 +266,41 @@ describe('Collision Detection System', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty players array', () => {
-      const { ship, laser } = createTestObjects();
+      const { laser, localPlayer } = createTestObjects();
 
-      const score = detectLaserPlayerCollisions(ship, []);
+      const score = detectLaserPlayerCollisions(localPlayer, []);
 
       expect(score).toBe(0);
       expect(laser.explodeTime).toBe(0);
     });
 
     it('should handle undefined players array', () => {
-      const { ship, laser } = createTestObjects();
+      const { laser, localPlayer } = createTestObjects();
 
-      const score = detectLaserPlayerCollisions(ship, undefined as unknown as Player[]);
+      const score = detectLaserPlayerCollisions(localPlayer, undefined);
 
       expect(score).toBe(0);
       expect(laser.explodeTime).toBe(0);
     });
 
     it('should handle ship with no lasers', () => {
-      const { ship, otherPlayer } = createTestObjects();
-      ship.lasers = [];
+      const { otherPlayer, localPlayer } = createTestObjects();
+      localPlayer.ship.lasers = [];
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(0);
       expect(otherPlayer.ship.health).toBe(100);
     });
 
     it('should handle multiple lasers hitting same player', () => {
-      const { ship, laser, otherPlayer } = createTestObjects();
+      const { laser, otherPlayer, localPlayer } = createTestObjects();
       const laser2 = new Laser({ x: 100, y: 0 }, { x: 1, y: 0 }, 0, 0, false);
       laser2.explodeTime = 0;
 
-      ship.lasers = [laser, laser2];
+      localPlayer.ship.lasers = [laser, laser2];
 
-      const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
+      const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
       expect(score).toBe(50); // Only one laser should hit (one hit per player per frame)
       expect(laser.explodeTime).toBe(0); // First laser should not explode (second laser processed first)
@@ -365,11 +378,18 @@ describe('Bot-Roid Collision System', () => {
       ],
     };
 
+    // Create a mock local player
+    const mockLocalPlayer = {
+      id: 'local-player',
+      ship: { position: { x: -100, y: -100 } }, // Far away so it doesn't interfere
+    } as unknown as Player;
+
     // Create bots array and cast to expected types for testing
     const bots = [mockBot as unknown as Player];
 
     // Call the function
     detectPlayerRoidCollisions(
+      mockLocalPlayer,
       bots,
       mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
     );
@@ -434,11 +454,18 @@ describe('Bot-Roid Collision System', () => {
       ],
     };
 
+    // Create a mock local player
+    const mockLocalPlayer = {
+      id: 'local-player',
+      ship: { position: { x: -100, y: -100 } }, // Far away so it doesn't interfere
+    } as unknown as Player;
+
     // Create bots array and cast to expected types for testing
     const bots = [mockBot as unknown as Player];
 
     // Call the function
     detectPlayerRoidCollisions(
+      mockLocalPlayer,
       bots,
       mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
     );
@@ -484,11 +511,18 @@ describe('Bot-Roid Collision System', () => {
       ],
     };
 
+    // Create a mock local player
+    const mockLocalPlayer = {
+      id: 'local-player',
+      ship: { position: { x: -100, y: -100 } }, // Far away so it doesn't interfere
+    } as unknown as Player;
+
     // Create bots array and cast to expected types for testing
     const bots = [mockBot as unknown as Player];
 
     // Call the function
     detectPlayerRoidCollisions(
+      mockLocalPlayer,
       bots,
       mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
     );

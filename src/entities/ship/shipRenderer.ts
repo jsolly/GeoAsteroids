@@ -1,6 +1,7 @@
 import { SHIP_SIZE } from '../../constants/entities/ship';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
+import type { Player } from '../player/Player';
 
 import type { Ship } from './Ship';
 
@@ -197,7 +198,9 @@ export function drawThruster(ship: Ship): void {
   }
 }
 
-export function drawShipRelative(ship: Ship): void {
+export function drawShipRelative(player: Player): void {
+  const ship = player.ship;
+
   const ctx = canvasManager.getContext();
   const cvs = canvasManager.getCanvas();
   if (!ctx || !cvs) {

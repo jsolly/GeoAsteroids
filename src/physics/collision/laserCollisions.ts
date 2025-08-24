@@ -4,17 +4,23 @@ import { FPS } from '../../constants/game';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
-import type { Ship } from '../../entities/ship/Ship';
+
 import { getDistance } from '../../utils/mathUtils';
 import { shouldSkipPlayerCollision } from './collisionUtils';
 
 export function detectLaserHits(
   currRoidBelt: RoidBelt,
-  currShip: Ship,
-  otherPlayers?: Player[]
+  localPlayer: Player,
+  allPlayers?: Player[]
 ): number {
+  const currShip = localPlayer.ship;
   const roids = currRoidBelt.roids;
   let score = 0;
+
+  // Filter out the local player to prevent self-collision
+  const otherPlayers = allPlayers
+    ? allPlayers.filter((player) => player.id !== localPlayer.id)
+    : [];
 
   // detect laser hits on roids
   for (let j = currShip.lasers.length - 1; j >= 0; j--) {
@@ -39,7 +45,7 @@ export function detectLaserHits(
   }
 
   // detect other player laser hits on roids (unified system)
-  if (otherPlayers && otherPlayers.length > 0) {
+  if (allPlayers && allPlayers.length > 0) {
     for (const player of otherPlayers) {
       if (player.ship.exploding) {
         continue;
@@ -67,7 +73,7 @@ export function detectLaserHits(
     }
   }
 
-  // detect laser hits on other players (if other players are provided)
+  // detect laser hits on other players (using the same filtered array)
   if (otherPlayers && otherPlayers.length > 0) {
     for (let j = currShip.lasers.length - 1; j >= 0; j--) {
       const laser = currShip.lasers[j];
@@ -117,7 +123,16 @@ export function detectLaserHits(
   return score;
 }
 
-export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player[]): number {
+export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Player[]): number {
+  const currShip = localPlayer.ship;
+
+  if (!allPlayers) {
+    return 0;
+  }
+
+  // Filter out the local player to prevent self-collision
+  const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
+
   if (!otherPlayers || otherPlayers.length === 0) {
     return 0;
   }
@@ -181,7 +196,19 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
   return score;
 }
 
-export function detectPlayerLaserShipCollisions(localShip: Ship, otherPlayers: Player[]): number {
+export function detectPlayerLaserShipCollisions(
+  localPlayer: Player,
+  allPlayers?: Player[]
+): number {
+  const localShip = localPlayer.ship;
+
+  if (!allPlayers) {
+    return 0;
+  }
+
+  // Filter out the local player to prevent self-collision
+  const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
+
   if (!otherPlayers || otherPlayers.length === 0) {
     return 0;
   }

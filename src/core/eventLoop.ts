@@ -3,9 +3,12 @@ import { EMP_PULSE_DURATION, EMP_PULSE_RADIUS, FPS } from '../constants/game';
 import { BotManager } from '../entities/bot/botManager';
 import type { Player } from '../entities/player/Player';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
-import type { Ship } from '../entities/ship/Ship';
+
 import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/ship/shipRenderer';
-import { detectBoundaryCollisions } from '../physics/collision/boundaryCollisions';
+import {
+  detectBoundaryCollisions,
+  detectPlayerBoundaryCollisions,
+} from '../physics/collision/boundaryCollisions';
 import {
   detectLaserHits,
   detectLaserPlayerCollisions,
@@ -89,20 +92,19 @@ function updateGame(): void {
   handleAllPlayerRespawns(allPlayers);
 
   canvasManager.drawGame(
-    currShip,
+    currPlayer,
     currRoidBelt,
     currScore,
     textAlpha,
     text,
     currPlayer.lives,
     allPlayers,
-    currPlayer.id,
     connectionStatus.connected,
     currentFPS
   );
 
-  handleShipState(currShip);
-  handleCollision(currShip);
+  handleShipState(currPlayer);
+  handleCollision(currPlayer);
 
   // Handle ship movement and updates
   if (!currShip.exploding && currPlayer.lives > 0) {
@@ -113,7 +115,9 @@ function updateGame(): void {
   currRoidBelt.moveRoids();
 }
 
-function handleShipState(ship: Ship): void {
+function handleShipState(player: Player): void {
+  const ship = player.ship;
+
   try {
     ship.setBlinkOn();
     ship.setExploding();
@@ -121,7 +125,7 @@ function handleShipState(ship: Ship): void {
 
     if (!ship.exploding) {
       if (ship.blinkOn) {
-        drawShipRelative(ship);
+        drawShipRelative(player);
       }
 
       // Draw EMP pulse effect if active
@@ -139,14 +143,16 @@ function handleShipState(ship: Ship): void {
         }
       }
     } else {
-      handleShipExplosion(ship);
+      handleShipExplosion(player);
     }
   } catch (error: unknown) {
     console.error('EVENT_LOOP', 'Error in ship state handling', { error });
   }
 }
 
-function handleShipExplosion(ship: Ship): void {
+function handleShipExplosion(player: Player): void {
+  const ship = player.ship;
+
   // Only draw explosion if it's still in progress
   if (ship.explodeTime > 0) {
     drawShipExplosion(ship, ship.color);
@@ -176,7 +182,8 @@ function handleAllPlayerRespawns(players: Player[]): void {
   });
 }
 
-function handleCollision(ship: Ship): void {
+function handleCollision(player: Player): void {
+  const ship = player.ship;
   try {
     const currRoidBelt = gameController.getCurrRoidBelt();
 
@@ -195,10 +202,7 @@ function handleCollision(ship: Ship): void {
     // Get all players (local + remote + bots) from the unified source
     const allPlayers = playerNetwork.getAllPlayers();
 
-    // Filter out local player for collision detection to prevent self-collision
-    const otherPlayers = allPlayers.filter((player) => player.id !== currPlayer.id);
-
-    gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, otherPlayers));
+    gameController.updateCurrScore(detectLaserHits(currRoidBelt, currPlayer, allPlayers));
     gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
 
     // Performance optimization: limit roid processing to prevent slowdown
@@ -222,29 +226,29 @@ function handleCollision(ship: Ship): void {
     }
 
     // Performance optimization: limit entity processing to prevent slowdown
-    if (otherPlayers.length > 20) {
+    if (allPlayers.length > 20) {
       console.warn(
-        `Too many entities detected: ${otherPlayers.length}. Limiting collision checks to prevent slowdown.`
+        `Too many entities detected: ${allPlayers.length}. Limiting collision checks to prevent slowdown.`
       );
       // Skip expensive collision checks when there are too many entities
       return;
     }
 
-    if (otherPlayers.length > 0) {
-      // Unified collision detection for other players (excluding local to prevent self-collision)
-      gameController.updateCurrScore(detectLaserPlayerCollisions(ship, otherPlayers));
+    if (allPlayers.length > 0) {
+      // Unified collision detection using allPlayers (functions handle self-collision internally)
+      gameController.updateCurrScore(detectLaserPlayerCollisions(currPlayer, allPlayers));
 
       // Unified boundary collision detection
-      detectBoundaryCollisions(otherPlayers);
+      detectPlayerBoundaryCollisions(currPlayer, allPlayers);
 
       // Unified ship-to-ship collision detection
-      detectAllPlayerCollisions(ship, otherPlayers);
+      detectAllPlayerCollisions(currPlayer, allPlayers);
 
       // Unified laser collision detection
-      detectPlayerLaserShipCollisions(ship, otherPlayers);
+      detectPlayerLaserShipCollisions(currPlayer, allPlayers);
 
-      // Unified roid collision detection for other players
-      detectPlayerRoidCollisions(otherPlayers, currRoidBelt);
+      // Unified roid collision detection
+      detectPlayerRoidCollisions(currPlayer, allPlayers, currRoidBelt);
     }
   } catch (error: unknown) {
     console.error('EVENT_LOOP', 'Error in collision handling', { error });

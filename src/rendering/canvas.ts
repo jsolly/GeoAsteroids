@@ -168,17 +168,17 @@ class CanvasManager {
 
   // Game rendering method that draws all game elements
   drawGame(
-    currShip: Ship,
+    currPlayer: Player,
     currRoidBelt: RoidBelt,
     currScore: number,
     textAlpha: number,
     text: string,
     lives: number,
     allPlayers: Player[],
-    currentPlayerId: string,
     isConnected: boolean,
     fps: number
   ): void {
+    const currShip = currPlayer.ship;
     const ctx = this.getContext();
     const canvas = this.getCanvas();
 
@@ -244,7 +244,7 @@ class CanvasManager {
 
     // Draw leaderboard if there are multiple players
     if (allPlayers.length > 1) {
-      drawLeaderboard(ctx, canvas, allPlayers, currentPlayerId);
+      drawLeaderboard(ctx, canvas, allPlayers, currPlayer.id);
     }
   }
 
