@@ -275,18 +275,25 @@ export class BotBehavior {
       angleDiff += Math.PI * 2;
     }
 
-    // Rotation acceleration for bots
-    const rotationAcceleration = 0.07;
+    // PD-like control to reduce oscillation (wiggle)
+    const proportionalGain = 0.2; // how strongly to correct toward target
+    const derivativeGain = 0.6; // oppose current rotation to damp overshoot
 
-    // Apply rotation acceleration toward the target
-    if (angleDiff > 0) {
-      bot.ship.angularVelocity += rotationAcceleration;
+    // Small deadzone so we settle without micro-adjustments
+    const angleDeadzone = 0.03; // ~1.7 degrees
+
+    // Apply controller only when outside deadzone
+    if (Math.abs(angleDiff) > angleDeadzone) {
+      const angularAcceleration =
+        proportionalGain * angleDiff - derivativeGain * bot.ship.angularVelocity;
+      bot.ship.angularVelocity += angularAcceleration;
     } else {
-      bot.ship.angularVelocity -= rotationAcceleration;
+      // Within deadzone, gently slow rotation to zero
+      bot.ship.angularVelocity *= 0.85;
     }
 
     // Clamp rotation velocity
-    const maxRotationVelocity = 0.4;
+    const maxRotationVelocity = 0.35;
     if (bot.ship.angularVelocity > maxRotationVelocity) {
       bot.ship.angularVelocity = maxRotationVelocity;
     }
@@ -294,8 +301,8 @@ export class BotBehavior {
       bot.ship.angularVelocity = -maxRotationVelocity;
     }
 
-    // Dampen rotation for smoothness
-    bot.ship.angularVelocity *= 0.7;
+    // Mild additional damping for stability
+    bot.ship.angularVelocity *= 0.92;
   }
 
   private getSmallestAngleDiff(a: number, b: number): number {
