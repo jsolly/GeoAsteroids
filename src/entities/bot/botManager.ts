@@ -1,7 +1,7 @@
 import type { Position } from '../../../shared-types';
 import type { Player } from '../player/Player';
+import { isBot } from '../player/playerKinds';
 import type { Roid } from '../roid/Roid';
-
 import { BotBehavior } from './BotBehavior';
 import { BotFactory } from './botFactory';
 
@@ -60,7 +60,7 @@ export class BotManager {
 
     // Initialize steering for each bot
     for (const [botId, bot] of newBots.entries()) {
-      if (bot.type === 'bot') {
+      if (isBot(bot)) {
         this.botBehavior.initializeBotSteering(botId);
       }
     }

@@ -1,7 +1,9 @@
 import { SHIP_COLLISION_DAMAGE } from '../constants/entities/ship';
 import { DEFAULT_BOT_COUNT, EMP_PULSE_RADIUS } from '../constants/game';
 import type { BotShoot } from '../entities/bot/types';
-import { Player } from '../entities/player/Player';
+import type { Player } from '../entities/player/Player';
+import { playerFactory } from '../entities/player/PlayerFactory';
+
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { createRoidBelt, type RoidBelt } from '../entities/roid/Roid';
 import type { Ship } from '../entities/ship/Ship';
@@ -63,12 +65,7 @@ class GameController implements GameControllerData {
   private constructor() {
     this.gameState = GameState.getInstance();
     // Create player (it will create its own ship)
-    this.player = Player.createPlayer({
-      id: 'local-player',
-      name: 'LocalPlayer',
-      type: 'local',
-      position: getRandomPositionWithinBoundary(),
-    });
+    this.player = playerFactory.createLocalPlayer('LocalPlayer', getRandomPositionWithinBoundary());
     this.currShip = this.player.ship;
     this.currRoidBelt = createRoidBelt();
     this.multiplayerManager = MultiplayerManager.getInstance();
@@ -104,12 +101,7 @@ class GameController implements GameControllerData {
   newGame(): void {
     this.gameState.resetCurrentScore();
     // Create player (it will create its own ship)
-    this.player = Player.createPlayer({
-      id: 'local-player',
-      name: 'LocalPlayer',
-      type: 'local',
-      position: getRandomPositionWithinBoundary(),
-    });
+    this.player = playerFactory.createLocalPlayer('LocalPlayer', getRandomPositionWithinBoundary());
     this.currShip = this.player.ship;
     this.currRoidBelt = createRoidBelt();
   }
@@ -231,13 +223,13 @@ class GameController implements GameControllerData {
         score: this.gameState.getCurrentScore(),
         exploding: this.currShip.exploding,
       });
-
-      // Update bot manager with local player position
-      this.multiplayerManager.updateLocalPlayerForAllPlayers(
-        this.currShip.position,
-        !this.player.isDead
-      );
     }
+
+    // Always update bots with local player info, even when offline
+    this.multiplayerManager.updateLocalPlayerForAllPlayers(
+      this.currShip.position,
+      !this.player.isDead
+    );
   }
 
   // Bot management methods - bots are always present in multiplayer mode
@@ -358,10 +350,9 @@ class GameController implements GameControllerData {
 
   private destroyBotsInRadius(center: { x: number; y: number }, radius: number): void {
     const playerNetwork = PlayerNetwork.getInstance();
-    const allPlayers = playerNetwork.getAllPlayers();
 
-    // Filter to only bot players for destruction
-    const bots = allPlayers.filter((player) => player.type === 'bot');
+    // Get only bot players for destruction
+    const bots = playerNetwork.getBotPlayers();
 
     // Collect bot IDs to destroy first, then destroy them
     const botsToDestroy: string[] = [];

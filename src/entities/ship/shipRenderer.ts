@@ -1,6 +1,6 @@
 import { SHIP_SIZE } from '../../constants/entities/ship';
 import { Point } from '../../physics/Point';
-import { canvasManager } from '../../rendering/canvas';
+import { canvasManager } from '../../rendering/canvas.ts';
 import type { Player } from '../player/Player';
 
 import type { Ship } from './Ship';
@@ -319,7 +319,11 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
   ctx.fill();
 }
 
-export function drawLasers(ship: Ship, color?: string): void {
+export function drawLasers(
+  ship: Ship,
+  color?: string,
+  viewerShipPosition?: { x: number; y: number }
+): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
@@ -327,7 +331,8 @@ export function drawLasers(ship: Ship, color?: string): void {
 
   for (const laser of ship.lasers) {
     // Convert laser world position to screen position using viewport transformation
-    const screenPos = canvasManager.worldToScreen(laser.position, ship.position);
+    const referencePos = viewerShipPosition || ship.position;
+    const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
 
     if (laser.explodeTime === 0) {
       ctx.fillStyle = color || 'salmon';

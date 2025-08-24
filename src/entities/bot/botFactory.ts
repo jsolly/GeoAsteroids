@@ -1,6 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
-import { Player } from '../player/Player';
+import type { Player } from '../player/Player';
+import { playerFactory } from '../player/PlayerFactory';
 
 export class BotFactory {
   public createBots(count: number): Map<string, Player> {
@@ -17,20 +17,10 @@ export class BotFactory {
   }
 
   private createBotPlayer(position?: { x: number; y: number }): Player {
-    const id = uuidv4();
     const name = this.generateBotName();
-    const botPlayer = new Player({ id, name, type: 'bot' });
+    const botPlayer = playerFactory.createBotPlayer(name, position);
 
-    // Set bot color to space gray
-    botPlayer.color = '#888888';
-    botPlayer.ship.color = botPlayer.color;
-
-    if (position) {
-      botPlayer.ship.position = position;
-    }
-
-    // Configure bot ship properties
-    botPlayer.ship.shotCooldown = 500 + Math.random() * 500; // 0.5-1.0 seconds
+    // Set last position for movement tracking
     botPlayer.ship.lastPosition = { ...botPlayer.ship.position };
 
     return botPlayer;

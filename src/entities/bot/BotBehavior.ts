@@ -1,5 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import type { Player } from '../player/Player';
+import { isBot } from '../player/playerKinds';
 import type { Roid } from '../roid/Roid';
 
 export interface BotShoot {
@@ -37,7 +38,7 @@ export class BotBehavior {
   }
 
   moveBot(bot: Player, roids: Roid[], otherPlayers: Player[] = []): void {
-    if (bot.type !== 'bot' || bot.ship.exploding || this.debugMovementDisabled) {
+    if (!isBot(bot) || bot.ship.exploding || this.debugMovementDisabled) {
       return;
     }
 
@@ -194,7 +195,7 @@ export class BotBehavior {
   }
 
   private smoothRotateTowards(bot: Player, targetAngle: number): void {
-    if (bot.type !== 'bot') {
+    if (!isBot(bot)) {
       return;
     }
 
@@ -244,7 +245,7 @@ export class BotBehavior {
   // Combat methods
   updateBotShooting(bots: Map<string, Player>): void {
     for (const [, bot] of bots.entries()) {
-      if (bot.type !== 'bot' || bot.ship.exploding) {
+      if (!isBot(bot) || bot.ship.exploding) {
         continue;
       }
 
@@ -256,7 +257,7 @@ export class BotBehavior {
   }
 
   private shouldBotShoot(bot: Player): boolean {
-    if (bot.type !== 'bot' || !this.localPlayerAlive) {
+    if (!isBot(bot) || !this.localPlayerAlive) {
       return false;
     }
 
@@ -283,7 +284,7 @@ export class BotBehavior {
 
   private makeBotShoot(bot: Player): void {
     // Shoot straight (from current ship angle) using the same system as players
-    if (bot.type === 'bot') {
+    if (isBot(bot)) {
       bot.ship.fireLaser();
       bot.ship.lastShotTime = Date.now();
     }
@@ -298,7 +299,7 @@ export class BotBehavior {
   // Update bot lasers using Ship's built-in laser movement system
   updateBotLasers(bots: Map<string, Player>): void {
     for (const [, bot] of bots.entries()) {
-      if (bot.type !== 'bot') {
+      if (!isBot(bot)) {
         continue;
       }
 
@@ -309,7 +310,7 @@ export class BotBehavior {
 
   clearBotLasers(bots: Map<string, Player>): void {
     for (const [, bot] of bots.entries()) {
-      if (bot.type !== 'bot') {
+      if (!isBot(bot)) {
         continue;
       }
 

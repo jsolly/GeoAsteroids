@@ -6,6 +6,7 @@ import {
   CANVAS_INTERNAL_WIDTH,
 } from '../constants/canvas';
 import type { Player } from '../entities/player/Player';
+import { PlayerManager } from '../entities/player/PlayerManager';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
@@ -213,8 +214,16 @@ class CanvasManager {
     // Draw ship (if not exploding, this will be handled by handleShipState)
     // The ship drawing is handled separately in the event loop for blinking effects
 
-    // Draw ship lasers
+    // Draw ship lasers (local ship uses self as reference)
     drawLasers(currShip);
+
+    // Draw other players' lasers using local ship position for viewport transform
+    for (const player of allPlayers) {
+      if (player.id === currPlayer.id) {
+        continue;
+      }
+      drawLasers(player.ship, player.ship.color, currShip.position);
+    }
 
     // Draw mini map with all players, bots, and lasers
     this.drawMiniMapWithPlayers(currShip);
@@ -222,9 +231,10 @@ class CanvasManager {
     // Draw score overlay
     drawScoreOverlay(ctx, canvas, currScore);
 
-    // Left HUD panel (lives, fps, connection)
-    const remoteHumanCount = allPlayers.filter((p) => p.type === 'remote').length;
-    const botCount = allPlayers.filter((p) => p.type === 'bot').length;
+    // Left HUD panel (lives, fps, connection) - use pre-computed counts
+    const counts = PlayerManager.getInstance().getCounts();
+    const remoteHumanCount = counts.remoteHumans;
+    const botCount = counts.bots;
     drawLeftHudPanel(
       ctx,
       canvas,
@@ -232,7 +242,7 @@ class CanvasManager {
       currShip.color,
       fps,
       isConnected,
-      allPlayers.length,
+      counts.total + 1,
       remoteHumanCount,
       botCount
     );

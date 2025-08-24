@@ -3,8 +3,8 @@ import { SHIP_COLLISION_DAMAGE } from '../../constants/entities/ship';
 import { FPS } from '../../constants/game';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
+import { isRemote } from '../../entities/player/playerKinds';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
-
 import { getDistance } from '../../utils/mathUtils';
 import { shouldSkipPlayerCollision } from './collisionUtils';
 
@@ -173,7 +173,7 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
 
         // Remote players are server-authoritative; do not dispatch client-side respawn logic.
         // Show explosion visuals client-side and let server send updated state/position.
-        if (player.type === 'remote') {
+        if (isRemote(player)) {
           player.ship.exploding = true;
           player.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
         }

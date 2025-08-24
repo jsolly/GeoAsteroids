@@ -2,17 +2,20 @@ import type { Position } from '../../../shared-types';
 import { GameController } from '../../core/gameController';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import type { Player } from './Player';
+import { PlayerManager } from './PlayerManager';
 
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
   private multiplayerManager: MultiplayerManager;
   private gameController: GameController;
+  private playerManager: PlayerManager;
   private updateInterval: ReturnType<typeof setInterval> | null = null;
   private readonly UPDATE_FREQUENCY = 60; // 60 FPS
 
   private constructor() {
     this.multiplayerManager = MultiplayerManager.getInstance();
     this.gameController = GameController.getInstance();
+    this.playerManager = PlayerManager.getInstance();
   }
 
   public static getInstance(): PlayerNetwork {
@@ -47,10 +50,10 @@ export class PlayerNetwork {
     const allPlayers = this.getAllPlayers();
 
     // Update AI data for bots (bot players need roids and other players for decision making)
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
+    const botPlayers = this.getBotPlayers();
     if (botPlayers.length > 0) {
       const roids = this.gameController.getCurrRoidBelt()?.getRoids() || [];
-      const otherPlayers = allPlayers.filter((player) => player.type !== 'bot');
+      const otherPlayers = this.getRemotePlayers(); // Bots need to know about remote players
       this.multiplayerManager.updateAllPlayerData(roids, otherPlayers);
     }
 
@@ -65,19 +68,33 @@ export class PlayerNetwork {
   public getAllPlayers(): Player[] {
     // Get ALL players: local, remote, and bots
     const localPlayer = this.gameController.getCurrPlayer();
-    const otherPlayers = this.getOtherPlayers();
-    return [localPlayer, ...otherPlayers];
+    return this.playerManager.getAllPlayersIncludingLocal(localPlayer);
   }
 
   public getOtherPlayers(): Player[] {
-    // Return all non-local players (remote and bot/bots)
-    const remotePlayers = Array.from(this.multiplayerManager.players.values());
-    const botPlayers = Array.from(this.multiplayerManager.getBots().values());
-    return [...remotePlayers, ...botPlayers];
+    // Return all non-local players via unified manager
+    return this.playerManager.getNonLocalPlayers();
+  }
+
+  public getBotPlayers(): Player[] {
+    return this.playerManager.getBotPlayers();
+  }
+
+  public getRemotePlayers(): Player[] {
+    return this.playerManager.getRemotePlayers();
   }
 
   public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {
-    return this.getAllPlayers().filter((player) => player.type === type);
+    switch (type) {
+      case 'local':
+        return [this.gameController.getCurrPlayer()];
+      case 'remote':
+        return this.getRemotePlayers();
+      case 'bot':
+        return this.getBotPlayers();
+      default:
+        return [];
+    }
   }
 
   public isPlayerNearby(
@@ -107,8 +124,14 @@ export class PlayerNetwork {
   }
 
   public getPlayerById(id: string): Player | undefined {
-    // Search all players (remote and bot/bots)
-    return this.getAllPlayers().find((player) => player.id === id);
+    // Check if it's the local player first
+    const localPlayer = this.gameController.getCurrPlayer();
+    if (localPlayer.id === id) {
+      return localPlayer;
+    }
+
+    // Otherwise search non-local players via PlayerManager
+    return this.playerManager.getPlayerById(id);
   }
 
   public getLocalPlayerInfo(): { id: string; name: string } {
@@ -124,12 +147,12 @@ export class PlayerNetwork {
     remoteHumanCount: number;
     botCount: number;
   } {
-    const allPlayers = this.getAllPlayers();
+    const counts = this.playerManager.getCounts();
     return {
       connected: this.multiplayerManager.isConnected,
-      playerCount: allPlayers.length,
-      remoteHumanCount: this.getPlayersByType('remote').length,
-      botCount: this.getPlayersByType('bot').length,
+      playerCount: counts.total + 1, // include local
+      remoteHumanCount: counts.remoteHumans,
+      botCount: counts.bots,
     };
   }
 }

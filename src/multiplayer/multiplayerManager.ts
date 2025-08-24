@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { PlayerJoin, PlayerLeave, PlayerUpdate, Position } from '../../shared-types';
 import { BotManager } from '../entities/bot/botManager';
-import { Player } from '../entities/player/Player';
+import type { Player } from '../entities/player/Player';
+import { playerFactory } from '../entities/player/PlayerFactory';
 import type { Roid } from '../entities/roid/Roid';
 import { Ship } from '../entities/ship/Ship';
 import { generateRandomPlayerColor } from '../utils/colorUtils';
@@ -138,12 +139,7 @@ export class MultiplayerManager {
       // Use the ship's network update method to handle position
       ship.updateFromNetwork({ position: data.position });
 
-      const newPlayer = Player.createPlayer({
-        id: data.id,
-        name: data.name,
-        type: 'remote',
-        position: data.position,
-      });
+      const newPlayer = playerFactory.createRemotePlayer(data.id, data.name, data.position);
 
       // Set additional properties
       newPlayer.score = 0;
@@ -222,12 +218,11 @@ export class MultiplayerManager {
         existing.lastUpdate = Date.now();
       } else {
         // Create new remote player once
-        const newPlayer = Player.createPlayer({
-          id: playerData.id,
-          name: playerData.name,
-          type: 'remote',
-          position: playerData.position,
-        });
+        const newPlayer = playerFactory.createRemotePlayer(
+          playerData.id,
+          playerData.name,
+          playerData.position
+        );
 
         // Set additional properties
         newPlayer.score = playerData.score;

@@ -19,7 +19,7 @@ import {
   detectPlayerRoidCollisions,
   detectRoidHits,
 } from '../physics/collision/shipCollisions';
-import { canvasManager } from '../rendering/canvas';
+import { canvasManager } from '../rendering/canvas.ts';
 import { GameController } from './gameController';
 
 const gameController = GameController.getInstance();
@@ -86,7 +86,17 @@ function updateGame(): void {
   botManager.updateBotsInGameLoop();
 
   const allPlayers = playerNetwork.getAllPlayers();
+  const otherPlayers = playerNetwork.getOtherPlayers(); // Pre-filtered non-local players
   const connectionStatus = playerNetwork.getConnectionStatus();
+
+  // Advance timers for non-local players so they become collidable (blink/invincibility/explosion)
+  for (const p of otherPlayers) {
+    const ship = p.ship;
+    // Update blinking state and timers like we do for the local ship
+    ship.setBlinkOn();
+    ship.updateInvincibility();
+    ship.updateExplosion();
+  }
 
   // Handle all player respawn timers (allPlayers now truly includes everyone)
   handleAllPlayerRespawns(allPlayers);
@@ -112,6 +122,10 @@ function updateGame(): void {
   }
 
   currShip.moveLasers();
+  // Move lasers for all non-local players
+  for (const p of otherPlayers) {
+    p.ship.moveLasers();
+  }
   currRoidBelt.moveRoids();
 }
 
