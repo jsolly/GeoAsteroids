@@ -1,4 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
+import { SHIP_MAX_VELOCITY } from '../../constants/entities/ship';
 import { isDebugMode } from '../../utils/debugUtils';
 import type { Player } from '../player/Player';
 import { isBot } from '../player/playerKinds';
@@ -17,9 +18,9 @@ export class BotBehavior {
 
   private steeringTargets: Map<string, Position> = new Map();
 
-  // Add thrust cooldown to prevent excessive acceleration
-  private botThrustCooldowns: Map<string, number> = new Map();
-  private readonly THRUST_COOLDOWN_MS = 100; // Only thrust every 100ms instead of every frame
+  // Thruster state hold to prevent flicker
+  private thrustStateChangedAt: Map<string, number> = new Map();
+  private readonly MIN_THRUST_HOLD_MS = 150;
 
   setLocalPlayerInfo(_id: string, position: Position, alive: boolean): void {
     this.localPlayerPosition = position;
@@ -35,12 +36,12 @@ export class BotBehavior {
 
   removeBotSteering(botId: string): void {
     this.steeringTargets.delete(botId);
-    this.botThrustCooldowns.delete(botId); // Clean up thrust cooldown
+    this.thrustStateChangedAt.delete(botId);
   }
 
   clearAllSteering(): void {
     this.steeringTargets.clear();
-    this.botThrustCooldowns.clear(); // Clean up all thrust cooldowns
+    this.thrustStateChangedAt.clear();
   }
 
   moveBot(bot: Player, roids: Roid[], otherPlayers: Player[] = []): void {
@@ -100,20 +101,38 @@ export class BotBehavior {
     // Smoothly rotate toward desiredAngle using angular velocity
     this.smoothRotateTowards(bot, desiredAngle);
 
-    // Thrust more aggressively - bots should be more active
+    // Intelligent thruster control with speed hysteresis
     const angleDiff = this.getSmallestAngleDiff(desiredAngle, bot.ship.angle);
-    const thrustAngleThreshold = 2.0; // Increased from 1.2 (~68 degrees) to 2.0 (~115 degrees) for more responsive movement
+    const thrustAngleThreshold = 2.0; // ~115 degrees
 
-    // Check thrust cooldown to prevent excessive acceleration
-    const now = Date.now();
-    const lastThrustTime = this.botThrustCooldowns.get(bot.id) || 0;
-    const canThrust = now - lastThrustTime >= this.THRUST_COOLDOWN_MS;
+    const speed = Math.hypot(bot.ship.velocity.x, bot.ship.velocity.y);
+    const lowerSpeed = SHIP_MAX_VELOCITY * 0.6; // turn on below this
+    const upperSpeed = SHIP_MAX_VELOCITY * 0.8; // turn off above this
 
-    if (Math.abs(angleDiff) < thrustAngleThreshold && !bot.ship.exploding && canThrust) {
-      bot.ship.thrusting = true;
-      this.botThrustCooldowns.set(bot.id, now);
+    let desiredThrust = bot.ship.thrusting;
+
+    if (Math.abs(angleDiff) < thrustAngleThreshold && !bot.ship.exploding) {
+      if (speed < lowerSpeed) {
+        desiredThrust = true;
+      } else if (speed > upperSpeed) {
+        desiredThrust = false;
+      }
+      // otherwise keep current thrust state (hysteresis band)
     } else {
-      bot.ship.thrusting = false;
+      // If not roughly facing the target, don't thrust
+      desiredThrust = false;
+    }
+
+    // Enforce minimum hold to avoid visual flicker
+    const now = Date.now();
+    const lastChange = this.thrustStateChangedAt.get(bot.id) || 0;
+    const holdElapsed = now - lastChange;
+
+    if (desiredThrust !== bot.ship.thrusting) {
+      if (holdElapsed >= this.MIN_THRUST_HOLD_MS) {
+        bot.ship.thrusting = desiredThrust;
+        this.thrustStateChangedAt.set(bot.id, now);
+      }
     }
   }
 
