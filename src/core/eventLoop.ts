@@ -1,4 +1,4 @@
-import { SHIP_INV_BLINK_DUR } from '../constants/entities/ship';
+import { SHIP_INV_BLINK_DUR_FRAMES } from '../constants/entities/ship';
 import { EMP_PULSE_DURATION, EMP_PULSE_RADIUS, FPS } from '../constants/game';
 import { BotManager } from '../entities/bot/botManager';
 import type { Player } from '../entities/player/Player';
@@ -124,9 +124,17 @@ function handleShipState(player: Player): void {
   const ship = player.ship;
 
   try {
+    const wasExploding = ship.exploding;
     ship.setBlinkOn();
     ship.setExploding();
     ship.updateEmpPulse(); // Update EMP pulse state
+
+    // Log state changes for debugging
+    if (wasExploding !== ship.exploding) {
+      console.debug(
+        `[EventLoop] handleShipState: Player ${player.id} ship exploding state changed: ${wasExploding} -> ${ship.exploding}`
+      );
+    }
 
     if (!ship.exploding) {
       if (ship.blinkOn) {
@@ -143,7 +151,7 @@ function handleShipState(player: Player): void {
         ship.spawnProtectionTimer--;
 
         if (ship.spawnProtectionTimer === 0) {
-          ship.spawnProtectionTimer = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+          ship.spawnProtectionTimer = SHIP_INV_BLINK_DUR_FRAMES;
           ship.blinkCount--;
         }
       }
@@ -162,9 +170,20 @@ function handleShipExplosion(player: Player): void {
   if (ship.explodeTime > 0) {
     drawShipExplosion(ship, ship.color);
     ship.explodeTime--;
+
+    // Log explosion progress every few frames
+    if (ship.explodeTime % 6 === 0) {
+      // Log every 0.1 seconds at 60 FPS
+      console.debug(
+        `[EventLoop] handleShipExplosion: Player ${player.id} explosion time remaining: ${ship.explodeTime} frames (${(ship.explodeTime / 60).toFixed(1)}s)`
+      );
+    }
   }
 
   if (ship.explodeTime === 0) {
+    console.debug(
+      `[EventLoop] handleShipExplosion: Player ${player.id} explosion animation finished`
+    );
     // Explosion finished, ship will be handled by Player via events
     // No need to manually manage respawn here
   }
@@ -176,9 +195,18 @@ function handleAllPlayerRespawns(players: Player[]): void {
     if (player.respawnTimer !== undefined) {
       if (player.respawnTimer > 0) {
         player.respawnTimer--;
+        if (player.respawnTimer % 60 === 0) {
+          // Log every second
+          console.debug(
+            `[Player ${player.id}] handleAllPlayerRespawns: Respawn timer: ${player.respawnTimer} frames (${(player.respawnTimer / 60).toFixed(1)}s)`
+          );
+        }
       }
 
       if (player.respawnTimer === 0) {
+        console.debug(
+          `[Player ${player.id}] handleAllPlayerRespawns: Respawn timer expired, calling respawn()`
+        );
         // Respawn timer expired, respawn the player
         player.respawn();
         player.respawnTimer = undefined;
@@ -195,6 +223,9 @@ function handleCollision(player: Player): void {
     // If we're in the middle of a respawn countdown, skip all collisions
     const currPlayer = gameController.getCurrPlayer();
     if (currPlayer.respawnTimer !== undefined) {
+      console.debug(
+        `[EventLoop] handleCollision: Player ${currPlayer.id} has respawn timer (${currPlayer.respawnTimer} frames), skipping collisions`
+      );
       return;
     }
 

@@ -32,17 +32,6 @@ attachEventListener(startMultiplayerBtn, 'click', () => {
   showMultiplayerNameModal();
 });
 
-// Function to check if scrolling is needed and show/hide scroll indicator
-function updateScrollIndicator(): void {
-  const screenElement = document.getElementById('start-screen');
-  const scrollIndicator = document.querySelector('.scroll-indicator') as HTMLElement;
-
-  if (screenElement && scrollIndicator) {
-    const isScrollable = screenElement.scrollHeight > screenElement.clientHeight;
-    scrollIndicator.style.display = isScrollable ? 'block' : 'none';
-  }
-}
-
 // Function to show multiplayer name input modal
 function showMultiplayerNameModal(): void {
   if (multiplayerNameModal && multiplayerNameInput) {
@@ -122,10 +111,6 @@ if (multiplayerNameInput) {
     }
   });
 }
-
-// Check scroll indicator on load and resize
-updateScrollIndicator();
-window.addEventListener('resize', updateScrollIndicator);
 
 attachEventListener(soundCheckBox, 'change', (ev) => {
   const target = ev.target as HTMLInputElement;

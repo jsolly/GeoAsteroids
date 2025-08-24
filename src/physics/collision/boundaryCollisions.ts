@@ -52,23 +52,35 @@ export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolea
   // Handle single ship
   const ship = shipOrPlayers;
   if (ship.exploding) {
+    console.debug(
+      `[Boundary] detectBoundaryCollisions: Ship ${ship.id} already exploding, skipping`
+    );
     return false;
   }
 
   // BOUNDARY IS THE ULTIMATE KILLER - ignores all invincibility!
   // No spawn protection, no blinking protection - if you hit the boundary, you die!
   if (isShipOutOfBounds(ship.position)) {
+    console.debug(
+      `[Boundary] detectBoundaryCollisions: Ship ${ship.id} out of bounds at (${ship.position.x.toFixed(1)}, ${ship.position.y.toFixed(1)})`
+    );
+
     // Store position where collision occurred for event
     const collisionPosition = { x: ship.position.x, y: ship.position.y };
 
     // Ship is out of bounds, trigger explosion (same as any other collision)
+    console.debug(`[Boundary] detectBoundaryCollisions: Ship ${ship.id} triggering explosion`);
     ship.explode();
 
     // Set health to 0 to trigger respawn (same as other collision types)
     ship.health = 0;
+    console.debug(`[Boundary] detectBoundaryCollisions: Ship ${ship.id} health set to 0`);
 
     // Dispatch shipExploded event so Player.onShipExploded() gets called
     // This triggers the normal respawn process which will handle repositioning
+    console.debug(
+      `[Boundary] detectBoundaryCollisions: Ship ${ship.id} dispatching shipExploded event with cause: boundary`
+    );
     window.dispatchEvent(
       new CustomEvent('shipExploded', {
         detail: {

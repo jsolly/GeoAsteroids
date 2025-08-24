@@ -9,8 +9,8 @@ vi.mock('../src/constants', () => ({
   DEBUG: false,
   LASER_EXPLODE_DUR: 0.1,
   FPS: 60,
-  SHIP_INV_DUR: 3,
-  SHIP_INV_BLINK_DUR: 0.1,
+  SHIP_INV_DUR_FRAMES: 180,
+  SHIP_INV_BLINK_DUR_FRAMES: 6,
 
   SHIP_MAX_HEALTH: 100,
   SHIP_SIZE: 30,
@@ -319,7 +319,7 @@ vi.mock('../src/constants', async (importOriginal) => {
     ...actual,
     SHIP_COLLISION_DAMAGE: 20,
     SHIP_HEALTH_REGEN_DELAY: 5,
-    SHIP_RESPAWN_DELAY_FRAMES: 300,
+    SHIP_POST_EXPLOSION_RESPAWN_DELAY: 60,
     SHIP_EXPLODE_DUR_FRAMES: 18,
     FPS: 60,
   };

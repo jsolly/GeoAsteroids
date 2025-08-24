@@ -7,9 +7,10 @@ export const SHIP_THRUST = 5; // Thrust in pixels per second per second (Acceler
 export const SHIP_MAX_VELOCITY = 8; // Maximum velocity in pixels per second (prevents excessive speed)
 export const SHIP_BOT_FRICTION = 2.0; // Bot friction coefficient (higher = more friction, bots slow down faster)
 export const SHIP_SIZE = 30; // ship height in pixels
-export const SHIP_INV_DUR = 3; // Length of time ship is invulnerable in seconds
-export const SHIP_INV_BLINK_DUR = 0.1; // Time between blinks when ship is invulnerable (seconds)
 
 // Frame-based constants for explosion and respawn timing
 export const SHIP_EXPLODE_DUR_FRAMES = 18; // 0.3 seconds at 60 FPS
-export const SHIP_RESPAWN_DELAY_FRAMES = 300; // 5 seconds at 60 FPS
+
+// Frame-based constants for invincibility timing
+export const SHIP_INV_DUR_FRAMES = 180; // 3 seconds at 60 FPS
+export const SHIP_INV_BLINK_DUR_FRAMES = 6; // 0.1 seconds at 60 FPS

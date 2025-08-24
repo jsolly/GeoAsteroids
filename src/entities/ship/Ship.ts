@@ -5,8 +5,8 @@ import { LASER_MAX } from '../../constants/entities/laser';
 import {
   SHIP_BOT_FRICTION,
   SHIP_EXPLODE_DUR_FRAMES,
-  SHIP_INV_BLINK_DUR,
-  SHIP_INV_DUR,
+  SHIP_INV_BLINK_DUR_FRAMES,
+  SHIP_INV_DUR_FRAMES,
   SHIP_MAX_HEALTH,
   SHIP_MAX_VELOCITY,
   SHIP_SIZE,
@@ -34,8 +34,8 @@ class Ship {
   velocity: Velocity = { x: 0, y: 0 };
   r: number = SHIP_SIZE / 2;
   angle: number = (90 / 180) * Math.PI;
-  blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
-  spawnProtectionTimer: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+  blinkCount: number = Math.ceil(SHIP_INV_DUR_FRAMES / SHIP_INV_BLINK_DUR_FRAMES);
+  spawnProtectionTimer: number = SHIP_INV_BLINK_DUR_FRAMES;
   canShoot = true;
 
   exploding = false;
@@ -88,6 +88,9 @@ class Ship {
   }
 
   explode(): void {
+    console.debug(
+      `[Ship ${this.id}] explode: Starting explosion, duration: ${SHIP_EXPLODE_DUR_FRAMES} frames`
+    );
     this.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
     Ship.fxExplode.play();
@@ -251,15 +254,22 @@ class Ship {
 
   takeDamage(amount: number): void {
     if (this.exploding) {
+      console.debug(`[Ship ${this.id}] takeDamage: Already exploding, ignoring damage`);
       return;
     }
 
+    const healthBefore = this.health;
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
     this.lastDamageTime = FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
+    console.debug(
+      `[Ship ${this.id}] takeDamage: ${amount} damage, health ${healthBefore} -> ${this.health}`
+    );
+
     if (this.health <= 0) {
       this.health = 0;
+      console.debug(`[Ship ${this.id}] takeDamage: Health reached 0, triggering explosion`);
 
       // Ship health reached 0, it should explode
       this.explode();
@@ -316,6 +326,7 @@ class Ship {
     if (this.exploding && this.explodeTime > 0) {
       this.explodeTime--;
       if (this.explodeTime <= 0) {
+        console.debug(`[Ship ${this.id}] updateExplosion: Explosion animation finished`);
         this.exploding = false;
       }
     }
@@ -326,7 +337,7 @@ class Ship {
       this.spawnProtectionTimer--;
       if (this.spawnProtectionTimer <= 0) {
         this.blinkCount--;
-        this.spawnProtectionTimer = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
+        this.spawnProtectionTimer = SHIP_INV_BLINK_DUR_FRAMES;
         this.setBlinkOn();
       }
     }

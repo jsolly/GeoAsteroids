@@ -172,7 +172,8 @@ export function setupConsoleOverride(): void {
       setupConsoleOverride();
     }
     if (shouldLog(LogLevel.DEBUG)) {
-      originalConsole.debug(...args);
+      const timestamp = new Date().toISOString();
+      originalConsole.debug(`[${timestamp}]`, ...args);
       appendToLogBuffer('DEBUG', args);
     }
   };
@@ -183,7 +184,8 @@ export function setupConsoleOverride(): void {
       setupConsoleOverride();
     }
     if (shouldLog(LogLevel.INFO)) {
-      originalConsole.info(...args);
+      const timestamp = new Date().toISOString();
+      originalConsole.info(`[${timestamp}]`, ...args);
       appendToLogBuffer('INFO', args);
     }
   };
@@ -194,7 +196,8 @@ export function setupConsoleOverride(): void {
       setupConsoleOverride();
     }
     if (shouldLog(LogLevel.WARN)) {
-      originalConsole.warn(...args);
+      const timestamp = new Date().toISOString();
+      originalConsole.warn(`[${timestamp}]`, ...args);
       appendToLogBuffer('WARN', args);
     }
   };
@@ -205,7 +208,8 @@ export function setupConsoleOverride(): void {
       setupConsoleOverride();
     }
     if (shouldLog(LogLevel.ERROR)) {
-      originalConsole.error(...args);
+      const timestamp = new Date().toISOString();
+      originalConsole.error(`[${timestamp}]`, ...args);
       appendToLogBuffer('ERROR', args);
     }
   };
