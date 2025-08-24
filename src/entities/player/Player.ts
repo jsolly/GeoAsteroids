@@ -1,4 +1,5 @@
 import {
+  SHIP_EXPLODE_DUR_FRAMES,
   SHIP_INV_BLINK_DUR,
   SHIP_INV_DUR,
   SHIP_RESPAWN_DELAY_FRAMES,
@@ -45,10 +46,14 @@ export class Player {
   private setupShipEventListeners(): void {
     // Listen for ship explosion events
     window.addEventListener('shipExploded', (event: Event) => {
-      const customEvent = event as CustomEvent;
+      const customEvent = event as CustomEvent<{
+        shipId?: string;
+        position?: { x: number; y: number };
+        cause?: string;
+      }>;
       // Check if this event is from our ship
       if (customEvent.detail?.shipId === this.ship.id) {
-        this.onShipExploded();
+        this.onShipExploded(customEvent.detail);
       }
     });
   }
@@ -59,15 +64,21 @@ export class Player {
   }
 
   // Direct method called by Ship when it explodes
-  onShipExploded(): void {
-    // Decrement lives when ship explodes
-    this.lives--;
+  onShipExploded(detail?: { cause?: string }): void {
+    // Decrement lives when ship explodes, but don't go below 0
+    if (this.lives > 0) {
+      this.lives--;
+    }
 
     if (this.lives > 0) {
-      // Player still has lives, set respawn timer instead of immediately respawning
-      // This allows the explosion animation to play out before respawning
-      // The respawn() method will handle finding a safe random position
-      this.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
+      // Player still has lives; set respawn timer based on explosion cause
+      // Boundary collisions should respawn immediately after the explosion animation
+      if (detail?.cause === 'boundary') {
+        this.respawnTimer = SHIP_EXPLODE_DUR_FRAMES;
+      } else {
+        // Default behavior: wait longer before respawning
+        this.respawnTimer = SHIP_RESPAWN_DELAY_FRAMES;
+      }
     } else {
       // No lives remaining - game over
       // Dispatch game over event for the game controller to handle

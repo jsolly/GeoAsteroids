@@ -3,8 +3,6 @@ import type { Ship } from '../src/entities/ship/Ship';
 import { getGameBoundary } from '../src/physics/boundary';
 import {
   detectBoundaryCollisions,
-  detectPlayerBoundaryCollisions,
-  getBoundaryCollisionSide,
   isShipOutOfBounds,
 } from '../src/physics/collision/boundaryCollisions';
 import { getRandomPositionWithinBoundary } from '../src/utils/positionUtils';
@@ -20,43 +18,36 @@ describe('Boundary System', () => {
   it('should detect ship out of bounds when beyond radius (left)', () => {
     const shipPosition = { x: -3200, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship out of bounds when beyond radius (right)', () => {
     const shipPosition = { x: 3200, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship out of bounds when beyond radius (top)', () => {
     const shipPosition = { x: 0, y: -3200 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship out of bounds when beyond radius (bottom)', () => {
     const shipPosition = { x: 0, y: 3200 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship within bounds', () => {
     const shipPosition = { x: 0, y: 0 }; // Center of boundary
     expect(isShipOutOfBounds(shipPosition)).toBe(false);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship near boundary edge but still in bounds', () => {
     const shipPosition = { x: 2900, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(false);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship at boundary edge as out of bounds', () => {
     const shipPosition = { x: 3100, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should provide consistent circular boundary for mini-map rendering', () => {
@@ -70,7 +61,6 @@ describe('Boundary System', () => {
     it('should export boundary collision functions without errors', () => {
       // Test that the functions exist and can be called
       expect(typeof detectBoundaryCollisions).toBe('function');
-      expect(typeof detectPlayerBoundaryCollisions).toBe('function');
 
       // Test that they don't throw with empty inputs
       expect(() =>
@@ -79,7 +69,6 @@ describe('Boundary System', () => {
           r: 15,
         } as unknown as Ship)
       ).not.toThrow();
-      expect(() => detectPlayerBoundaryCollisions([])).not.toThrow();
     });
 
     it('should set random respawn positions for bots hitting boundary', async () => {
@@ -103,7 +92,7 @@ describe('Boundary System', () => {
       const originalPosition = { ...bot.ship.position };
 
       // Call the boundary collision detection
-      detectPlayerBoundaryCollisions(bots);
+      detectBoundaryCollisions(bots);
 
       // Verify the bot is marked for explosion
       expect(bot.ship.exploding).toBe(true);

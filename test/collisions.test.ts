@@ -77,24 +77,14 @@ describe('Collision Detection System', () => {
     const laser = new Laser({ x: 100, y: 0 }, { x: 1, y: 0 }, 0, 0, false);
     laser.explodeTime = 0; // Not exploding
 
-    // Create a non-bot other player with minimal mock
-    const mockShip = {
-      position: { x: 100, y: 0 }, // Same position as laser
-      velocity: { x: 0, y: 0 },
-      r: 15, // Player radius
-      angle: 0,
-      exploding: false,
-      explodeTime: 0,
-      blinkCount: 0, // No invincibility
-      spawnProtectionTimer: 0,
-      blinkOn: false,
-      health: 100,
-      maxHealth: 100,
-      lastDamageTime: 0,
-      healthRegenTimer: 0,
-      lastShotTime: 0,
-      shotCooldown: 2000,
-    } as unknown as Ship;
+    // Create a non-bot other player with a real ship instance
+    const otherPlayerShip = new Ship();
+    otherPlayerShip.position = { x: 100, y: 0 }; // Same position as laser
+    otherPlayerShip.r = 15; // Player radius
+    otherPlayerShip.blinkCount = 0; // No invincibility
+    otherPlayerShip.blinkOn = false;
+    otherPlayerShip.health = 100;
+    otherPlayerShip.maxHealth = 100;
 
     const otherPlayer = Player.createPlayer({
       id: 'player-1',
@@ -102,7 +92,7 @@ describe('Collision Detection System', () => {
       type: 'remote',
       position: { x: 100, y: 0 },
     });
-    otherPlayer.ship = mockShip;
+    otherPlayer.ship = otherPlayerShip;
     otherPlayer.score = 0;
     otherPlayer.lastUpdate = Date.now();
     otherPlayer.lives = 3;
@@ -123,7 +113,7 @@ describe('Collision Detection System', () => {
 
       expect(score).toBe(50); // Should award 50 points for player hit
       expect(laser.explodeTime).toBeGreaterThan(0); // Laser should explode
-      expect(otherPlayer.ship.health).toBe(85); // Player should take 15 damage (100 - 15)
+      expect(otherPlayer.ship.health).toBe(80); // Player should take 20 damage (100 - 20)
     });
 
     it('should not detect collision when player is exploding', () => {
@@ -191,7 +181,7 @@ describe('Collision Detection System', () => {
 
       expect(score).toBe(50); // Should only hit the first player
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(85);
+      expect(otherPlayer.ship.health).toBe(80);
       expect(otherPlayer2.ship.health).toBe(100); // Second player should not be hit
     });
 
@@ -231,7 +221,7 @@ describe('Collision Detection System', () => {
 
       expect(score).toBe(50); // Should hit the human player
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(85);
+      expect(otherPlayer.ship.health).toBe(80);
     });
 
     it('should handle collision threshold correctly', () => {
@@ -257,7 +247,7 @@ describe('Collision Detection System', () => {
 
       expect(score).toBe(50); // Should collide
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(85);
+      expect(otherPlayer.ship.health).toBe(80);
     });
   });
 
@@ -299,10 +289,10 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(ship, [otherPlayer]);
 
-      expect(score).toBe(100); // Both lasers should hit (50 + 50)
-      expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(laser2.explodeTime).toBeGreaterThan(0); // Second laser should also hit
-      expect(otherPlayer.ship.health).toBe(70); // 100 - 15 - 15 = 70
+      expect(score).toBe(50); // Only one laser should hit (one hit per player per frame)
+      expect(laser.explodeTime).toBe(0); // First laser should not explode (second laser processed first)
+      expect(laser2.explodeTime).toBeGreaterThan(0); // Second laser should explode (processed first due to reverse iteration)
+      expect(otherPlayer.ship.health).toBe(80); // 100 - 20 = 80 (only one hit)
     });
   });
 

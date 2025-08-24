@@ -7,11 +7,7 @@ import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
 import { getDistance } from '../../utils/mathUtils';
 
-import {
-  dispatchBotDestroyedEvent,
-  shouldApplyDamageToLocalPlayer,
-  shouldSkipPlayerCollision,
-} from './collisionUtils';
+import { shouldApplyDamageToLocalPlayer, shouldSkipPlayerCollision } from './collisionUtils';
 
 export function detectAllPlayerBotCollisions(
   localShip: Ship,
@@ -63,7 +59,7 @@ export function detectAllPlayerBotCollisions(
       }
     }
 
-    for (const [botId, bot] of bots.entries()) {
+    for (const [_botId, bot] of bots.entries()) {
       // Skip exploding bots
       if (bot.ship.exploding) {
         continue;
@@ -90,43 +86,28 @@ export function detectAllPlayerBotCollisions(
             localShip.takeDamage(SHIP_COLLISION_DAMAGE);
           }
 
-          // Mark bot as exploding
-          bot.ship.exploding = true;
-          bot.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
+          // Apply damage to bot via unified system (will explode and dispatch event if lethal)
+          bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
           // Play hit sound
           Roid.fxHit.play();
 
-          // Dispatch event to notify bot destruction
-          dispatchBotDestroyedEvent(botId, 'local_player_collision');
+          // Bot destroyed - no event needed
         } else {
           // Other player collision with bot
           const otherPlayer = otherPlayers.find((p) => p.id === player.id);
           if (otherPlayer) {
-            // Both player and bot are destroyed in the collision
+            // Visual explosion for remote/other player; server manages their state
             otherPlayer.ship.exploding = true;
             otherPlayer.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
 
-            // Check if player should be removed (no lives remaining)
-            if (otherPlayer.lives <= 0) {
-              // Remove player from game after explosion animation
-              setTimeout(
-                () => {
-                  // Note: Player removal is handled by the multiplayer manager
-                  // This is just a placeholder for the explosion animation
-                },
-                Math.ceil(LASER_EXPLODE_DUR * 1000)
-              ); // Remove after explosion duration
-            }
-
-            bot.ship.exploding = true;
-            bot.ship.explodeTime = 60; // 1 second explosion duration
+            // Apply damage to bot via unified system
+            bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
             // Play hit sound
             Roid.fxHit.play();
 
-            // Dispatch event to notify bot destruction
-            dispatchBotDestroyedEvent(botId, 'other_player_collision');
+            // Bot destroyed - no event needed
           }
         }
 
@@ -233,8 +214,7 @@ export function detectShipToShipCollisions(
       // Play hit sound
       Roid.fxHit.play();
 
-      // Dispatch event to notify bot destruction
-      dispatchBotDestroyedEvent('unknown', 'ship_collision');
+      // Bot destroyed - no event needed
 
       // Only handle one collision at a time to avoid multiple simultaneous destructions
       break;
@@ -328,8 +308,7 @@ export function detectPlayerRoidCollisions(players: Player[], currRoidBelt: Roid
         // Play hit sound
         Roid.fxHit.play();
 
-        // Dispatch event to notify player destruction
-        dispatchBotDestroyedEvent(player.id, 'roid_collision');
+        // Player destroyed - no event needed
 
         // Only handle one collision per player to avoid multiple simultaneous destructions
         break;

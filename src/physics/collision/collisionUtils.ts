@@ -44,16 +44,3 @@ export function isPlayerInvincible(player: Player): boolean {
 export function isShipInvincible(ship: Ship): boolean {
   return ship.blinkCount > 0;
 }
-
-// Helper function to dispatch bot destroyed events
-export function dispatchBotDestroyedEvent(
-  botId: string,
-  killedBy: string,
-  botType: string = 'unknown'
-) {
-  window.dispatchEvent(
-    new CustomEvent('botDestroyed', {
-      detail: { botId, botType, killedBy },
-    })
-  );
-}

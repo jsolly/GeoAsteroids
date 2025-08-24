@@ -1,13 +1,12 @@
 import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
 import { SHIP_COLLISION_DAMAGE } from '../../constants/entities/ship';
 import { FPS } from '../../constants/game';
-import { GameController } from '../../core/gameController';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
 import { getDistance } from '../../utils/mathUtils';
-import { dispatchBotDestroyedEvent, shouldSkipPlayerCollision } from './collisionUtils';
+import { shouldSkipPlayerCollision } from './collisionUtils';
 
 export function detectLaserHits(
   currRoidBelt: RoidBelt,
@@ -79,7 +78,7 @@ export function detectLaserHits(
       }
 
       const botEntries = Array.from(bots.entries());
-      for (const [botId, bot] of botEntries) {
+      for (const [_botId, bot] of botEntries) {
         // Skip exploding bots
         if (bot.ship.exploding) {
           continue;
@@ -104,10 +103,7 @@ export function detectLaserHits(
           // Play hit sound
           Roid.fxHit.play();
 
-          // Only dispatch event if bot is actually destroyed
-          if (bot.ship.exploding) {
-            dispatchBotDestroyedEvent(botId, 'laser_hit');
-          }
+          // Bot destroyed - no event needed
 
           break; // This laser is now exploded, move to next
         }
@@ -158,45 +154,21 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
       const collisionThreshold = player.ship.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
-        // Handle player damage using health system (same as ship system)
-        const damage = 15; // Laser damage
-        const currentHealth = player.ship.health || 100;
-        const newHealth = Math.max(0, currentHealth - damage);
+        // Apply damage to player using unified damage system
+        player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
-        // Update player health
-        player.ship.health = newHealth;
-        player.ship.lastDamageTime = Date.now();
+        // Remote players are server-authoritative; do not dispatch client-side respawn logic.
+        // Show explosion visuals client-side and let server send updated state/position.
+        if (player.type === 'remote') {
+          player.ship.exploding = true;
+          player.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+        }
 
         // Activate laser explosion
         laser.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
 
         // Play hit sound
         Roid.fxHit.play();
-
-        // Check if player should die from health loss
-        if (newHealth <= 0) {
-          if (player.lives > 0) {
-            // Player still has lives, lose a life and respawn
-            player.lives--;
-            player.ship.exploding = true;
-            player.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-          } else {
-            // No lives remaining, player is permanently dead and should be removed
-            player.ship.exploding = true;
-            player.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-
-            // Remove player from game after explosion animation
-            setTimeout(
-              () => {
-                const multiplayerManager = GameController.getInstance().getMultiplayerManager();
-                if (multiplayerManager) {
-                  multiplayerManager.removePlayer(player.id);
-                }
-              },
-              Math.ceil(LASER_EXPLODE_DUR * 1000)
-            ); // Remove after explosion duration
-          }
-        }
 
         // Award points for player hit (similar to roid destruction)
         score += 50;
@@ -236,26 +208,16 @@ export function detectPlayerLaserShipCollisions(localShip: Ship, otherPlayers: P
       const collisionThreshold = localShip.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
-        // Handle local ship damage using health system
+        // Handle local ship damage using unified damage system
         const damage = 15; // Player laser damage
-        const currentHealth = localShip.health || 100;
-        const newHealth = Math.max(0, currentHealth - damage);
-
-        // Update ship health
-        localShip.health = newHealth;
-        localShip.lastDamageTime = Date.now();
+        // Apply damage via Ship.takeDamage so death triggers 'shipExploded' and respawn flow
+        localShip.takeDamage(damage);
 
         // Activate laser explosion using Ship's method
         player.ship.updateLaserExplodeTime(j);
 
         // Play hit sound
         Roid.fxHit.play();
-
-        // Check if ship should die from health loss
-        if (newHealth <= 0) {
-          // Ship will be handled by Player's event system
-          localShip.explode();
-        }
 
         // Award score for player hitting local ship
         score += 50;

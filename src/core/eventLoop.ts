@@ -5,10 +5,7 @@ import type { Player } from '../entities/player/Player';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import type { Ship } from '../entities/ship/Ship';
 import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/ship/shipRenderer';
-import {
-  detectBoundaryCollisions,
-  detectPlayerBoundaryCollisions,
-} from '../physics/collision/boundaryCollisions';
+import { detectBoundaryCollisions } from '../physics/collision/boundaryCollisions';
 import {
   detectLaserHits,
   detectLaserPlayerCollisions,
@@ -245,7 +242,7 @@ function handleCollision(ship: Ship): void {
       gameController.updateCurrScore(detectLaserPlayerCollisions(ship, allOtherPlayers));
 
       // Unified boundary collision detection
-      detectPlayerBoundaryCollisions(allOtherPlayers);
+      detectBoundaryCollisions(allOtherPlayers);
 
       // Unified ship-to-ship collision detection
       gameController.updateCurrScore(detectShipToShipCollisions(ship, allOtherPlayers));

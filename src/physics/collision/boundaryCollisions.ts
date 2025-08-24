@@ -1,5 +1,5 @@
 import type { Position } from '../../../shared-types';
-import { SHIP_EXPLODE_DUR_FRAMES, SHIP_SIZE } from '../../constants/entities/ship';
+import { SHIP_SIZE } from '../../constants/entities/ship';
 import type { Player } from '../../entities/player/Player';
 import { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
@@ -18,15 +18,39 @@ export function isShipOutOfBounds(shipPosition: Position): boolean {
   return distance + shipRadius > boundary.radius;
 }
 
+// Kept for API compatibility, circular boundary has no sides
 export function getBoundaryCollisionSide(
   _shipPosition: Position
 ): 'top' | 'right' | 'bottom' | 'left' | null {
-  // For circular boundary we don't have sides; return null
   return null;
 }
 
 // Boundary collision detection functions
-export function detectBoundaryCollisions(ship: Ship): boolean {
+export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolean {
+  // Handle array of players
+  if (Array.isArray(shipOrPlayers)) {
+    const players = shipOrPlayers;
+    if (!players || players.length === 0) {
+      return false;
+    }
+
+    let anyCollision = false;
+    for (const player of players) {
+      // Skip if player is currently exploding or awaiting respawn
+      if (player.ship.exploding || player.respawnTimer !== undefined) {
+        continue;
+      }
+
+      // Use the same boundary collision logic for each player
+      if (detectBoundaryCollisions(player.ship)) {
+        anyCollision = true;
+      }
+    }
+    return anyCollision;
+  }
+
+  // Handle single ship
+  const ship = shipOrPlayers;
   if (ship.exploding) {
     return false;
   }
@@ -49,6 +73,7 @@ export function detectBoundaryCollisions(ship: Ship): boolean {
       new CustomEvent('shipExploded', {
         detail: {
           shipId: ship.id,
+          cause: 'boundary',
           position: collisionPosition, // Use the position where collision occurred
         },
       })
@@ -63,40 +88,7 @@ export function detectBoundaryCollisions(ship: Ship): boolean {
   return false;
 }
 
+// Backwards compatibility wrapper used by callers/tests
 export function detectPlayerBoundaryCollisions(otherPlayers: Player[]): void {
-  if (!otherPlayers || otherPlayers.length === 0) {
-    return;
-  }
-
-  for (const player of otherPlayers) {
-    // Skip if player is currently exploding or awaiting respawn
-    if (player.ship.exploding || player.respawnTimer !== undefined) {
-      continue;
-    }
-
-    if (isShipOutOfBounds(player.ship.position)) {
-      // Store position where collision occurred for event
-      const collisionPosition = { x: player.ship.position.x, y: player.ship.position.y };
-
-      // Ship is out of bounds, trigger explosion (same as any other collision)
-      player.ship.explode();
-      player.ship.exploding = true;
-      player.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
-
-      // Set health to 0 to trigger respawn (same as other collision types)
-      player.ship.health = 0;
-
-      window.dispatchEvent(
-        new CustomEvent('shipExploded', {
-          detail: {
-            shipId: player.ship.id,
-            position: collisionPosition, // Use the position where collision occurred
-          },
-        })
-      );
-
-      // Play explosion sound
-      Roid.fxHit.play();
-    }
-  }
+  detectBoundaryCollisions(otherPlayers);
 }

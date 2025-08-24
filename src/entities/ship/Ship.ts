@@ -82,7 +82,7 @@ class Ship {
 
   explode(): void {
     this.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
-    this.blinkCount = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
+    this.exploding = true; // Set exploding flag when explosion starts
     Ship.fxExplode.play();
   }
 
