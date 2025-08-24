@@ -3,7 +3,8 @@ import type { Ship } from '../../entities/ship/Ship';
 
 // Get debug mode state from game controller
 function isDebugModeActive(): boolean {
-  return (window as any).gameController?.isDebugMode?.() || false;
+  const { gameController } = window;
+  return gameController?.isDebugMode?.() || false;
 }
 
 // Helper function to check if a player should skip collision detection

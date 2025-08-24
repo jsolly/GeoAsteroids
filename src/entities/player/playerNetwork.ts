@@ -63,15 +63,17 @@ export class PlayerNetwork {
   // Remote players should not be force-respawned client-side; server/state updates handle respawn.
 
   public getAllPlayers(): Player[] {
-    // Get all players: remote and bot (bots)
-    const remotePlayers = Array.from(this.multiplayerManager.players.values());
-    const botPlayers = Array.from(this.multiplayerManager.getBots().values());
-    return [...remotePlayers, ...botPlayers];
+    // Get ALL players: local, remote, and bots
+    const localPlayer = this.gameController.getCurrPlayer();
+    const otherPlayers = this.getOtherPlayers();
+    return [localPlayer, ...otherPlayers];
   }
 
   public getOtherPlayers(): Player[] {
     // Return all non-local players (remote and bot/bots)
-    return this.getAllPlayers();
+    const remotePlayers = Array.from(this.multiplayerManager.players.values());
+    const botPlayers = Array.from(this.multiplayerManager.getBots().values());
+    return [...remotePlayers, ...botPlayers];
   }
 
   public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {

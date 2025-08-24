@@ -1,4 +1,5 @@
 import { GameController } from '../../core/gameController';
+import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
 import { getGameBoundary } from '../../physics/boundary';
 
@@ -48,13 +49,18 @@ export function drawMiniMap(
   // Draw current ship on mini map
   drawShipMiniMap(ctx, ship, '#00ff00', boundary, miniMapX, miniMapY, miniMapSize);
 
-  // Draw all other players (bots) on mini map
+  // Draw all other players (bots + remote players) on mini map
   try {
     const gameController = GameController.getInstance();
-    const bots = gameController.getBots();
+    const playerNetwork = PlayerNetwork.getInstance();
+    const allPlayers = playerNetwork.getAllPlayers();
 
-    for (const bot of bots.values()) {
-      drawShipMiniMap(ctx, bot.ship, bot.color, boundary, miniMapX, miniMapY, miniMapSize);
+    // Filter out local player to avoid drawing it twice (it's drawn above as current ship)
+    const localPlayer = gameController.getCurrPlayer();
+    const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
+
+    for (const player of otherPlayers) {
+      drawShipMiniMap(ctx, player.ship, player.color, boundary, miniMapX, miniMapY, miniMapSize);
     }
   } catch (error: unknown) {
     console.error('Error drawing mini map:', error);

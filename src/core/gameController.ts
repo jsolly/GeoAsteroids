@@ -2,6 +2,7 @@ import { SHIP_COLLISION_DAMAGE } from '../constants/entities/ship';
 import { DEFAULT_BOT_COUNT, EMP_PULSE_RADIUS } from '../constants/game';
 import type { BotShoot } from '../entities/bot/types';
 import { Player } from '../entities/player/Player';
+import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { createRoidBelt, type RoidBelt } from '../entities/roid/Roid';
 import type { Ship } from '../entities/ship/Ship';
 import { keyDown, keyUp } from '../input/keybindings';
@@ -356,19 +357,22 @@ class GameController implements GameControllerData {
   }
 
   private destroyBotsInRadius(center: { x: number; y: number }, radius: number): void {
-    const bots = this.multiplayerManager.getBots();
+    const playerNetwork = PlayerNetwork.getInstance();
+    const allPlayers = playerNetwork.getAllPlayers();
+
+    // Filter to only bot players for destruction
+    const bots = allPlayers.filter((player) => player.type === 'bot');
 
     // Collect bot IDs to destroy first, then destroy them
-    // This avoids issues with modifying the Map during iteration
     const botsToDestroy: string[] = [];
 
-    for (const [botId, bot] of bots.entries()) {
+    for (const bot of bots) {
       const distance = Math.sqrt(
         (bot.ship.position.x - center.x) ** 2 + (bot.ship.position.y - center.y) ** 2
       );
 
       if (distance <= radius) {
-        botsToDestroy.push(botId);
+        botsToDestroy.push(bot.id);
       }
     }
 

@@ -173,7 +173,6 @@ class CanvasManager {
     currScore: number,
     textAlpha: number,
     text: string,
-    bots: Map<string, Player>,
     lives: number,
     allPlayers: Player[],
     currentPlayerId: string,
@@ -201,7 +200,7 @@ class CanvasManager {
 
     // Draw all players (including bots) using unified rendering
     try {
-      for (const [, player] of bots.entries()) {
+      for (const player of allPlayers) {
         if (!player.ship.exploding) {
           // All players use the same ship rendering with world coordinates
           drawShipAtPosition(player.ship, currShip.position);

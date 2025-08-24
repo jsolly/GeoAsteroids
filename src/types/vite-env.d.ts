@@ -21,3 +21,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Extend the global Window interface for game controller access
+interface Window {
+  gameController?: {
+    isDebugMode?: () => boolean;
+  };
+}

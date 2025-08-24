@@ -82,19 +82,18 @@ function updateGame(): void {
   const botManager = BotManager.getInstance();
   botManager.updateBotsInGameLoop();
 
-  // Handle local player respawn timer
-  handleLocalPlayerRespawn(currPlayer);
-
-  const bots = gameController.getBots();
   const allPlayers = playerNetwork.getAllPlayers();
   const connectionStatus = playerNetwork.getConnectionStatus();
+
+  // Handle all player respawn timers (allPlayers now truly includes everyone)
+  handleAllPlayerRespawns(allPlayers);
+
   canvasManager.drawGame(
     currShip,
     currRoidBelt,
     currScore,
     textAlpha,
     text,
-    bots,
     currPlayer.lives,
     allPlayers,
     currPlayer.id,
@@ -160,27 +159,26 @@ function handleShipExplosion(ship: Ship): void {
   }
 }
 
-function handleLocalPlayerRespawn(player: Player): void {
-  // Handle local player respawn timer
-  if (player.respawnTimer !== undefined) {
-    if (player.respawnTimer > 0) {
-      player.respawnTimer--;
-    }
+function handleAllPlayerRespawns(players: Player[]): void {
+  // Handle all player respawn timers uniformly
+  players.forEach((player) => {
+    if (player.respawnTimer !== undefined) {
+      if (player.respawnTimer > 0) {
+        player.respawnTimer--;
+      }
 
-    if (player.respawnTimer === 0) {
-      // Respawn timer expired, respawn the player
-      player.respawn();
-      player.respawnTimer = undefined;
+      if (player.respawnTimer === 0) {
+        // Respawn timer expired, respawn the player
+        player.respawn();
+        player.respawnTimer = undefined;
+      }
     }
-  }
+  });
 }
 
 function handleCollision(ship: Ship): void {
   try {
     const currRoidBelt = gameController.getCurrRoidBelt();
-
-    // Get bots and bot bullets for collision detection
-    const bots = gameController.getBots();
 
     // If we're in the middle of a respawn countdown, skip all collisions
     const currPlayer = gameController.getCurrPlayer();
@@ -194,7 +192,16 @@ function handleCollision(ship: Ship): void {
       return;
     }
 
-    gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, bots));
+    // Get all players (local + remote + bots) from the unified source
+    const allPlayers = playerNetwork.getAllPlayers();
+
+    // Filter out local player for collision detection to prevent self-collision
+    const otherPlayers = allPlayers.filter((player) => player.id !== currPlayer.id);
+
+    // Convert to Map for detectLaserHits compatibility (it expects Map<string, Player>)
+    const otherPlayersMap = new Map(otherPlayers.map((player) => [player.id, player]));
+
+    gameController.updateCurrScore(detectLaserHits(currRoidBelt, ship, otherPlayersMap));
     gameController.updateCurrScore(detectRoidHits(ship, currRoidBelt));
 
     // Performance optimization: limit roid processing to prevent slowdown
@@ -217,43 +224,32 @@ function handleCollision(ship: Ship): void {
       return;
     }
 
-    // Get all other players (bots + remote players) - optimize to avoid array creation
-    const botCount = bots.size;
-    const otherPlayerCount = playerNetwork.getOtherPlayers().length;
-    const totalPlayerCount = botCount + otherPlayerCount;
-
     // Performance optimization: limit entity processing to prevent slowdown
-    if (totalPlayerCount > 20) {
+    if (otherPlayers.length > 20) {
       console.warn(
-        `Too many entities detected: ${totalPlayerCount}. Limiting collision checks to prevent slowdown.`
+        `Too many entities detected: ${otherPlayers.length}. Limiting collision checks to prevent slowdown.`
       );
       // Skip expensive collision checks when there are too many entities
       return;
     }
 
-    if (totalPlayerCount > 0) {
-      // Only create the combined array if we actually need it
-      const allOtherPlayers =
-        totalPlayerCount > 10
-          ? [...Array.from(bots.values()), ...playerNetwork.getOtherPlayers()]
-          : Array.from(bots.values()).concat(playerNetwork.getOtherPlayers());
-
-      // Unified collision detection for all players
-      gameController.updateCurrScore(detectLaserPlayerCollisions(ship, allOtherPlayers));
+    if (otherPlayers.length > 0) {
+      // Unified collision detection for other players (excluding local to prevent self-collision)
+      gameController.updateCurrScore(detectLaserPlayerCollisions(ship, otherPlayers));
 
       // Unified boundary collision detection
-      detectBoundaryCollisions(allOtherPlayers);
+      detectBoundaryCollisions(otherPlayers);
 
       // Unified ship-to-ship collision detection
-      gameController.updateCurrScore(detectShipToShipCollisions(ship, allOtherPlayers));
+      gameController.updateCurrScore(detectShipToShipCollisions(ship, otherPlayers));
 
       // Unified laser collision detection
-      detectPlayerLaserShipCollisions(ship, allOtherPlayers);
+      detectPlayerLaserShipCollisions(ship, otherPlayers);
 
-      // Unified roid collision detection for all players
-      detectPlayerRoidCollisions(allOtherPlayers, currRoidBelt);
+      // Unified roid collision detection for other players
+      detectPlayerRoidCollisions(otherPlayers, currRoidBelt);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('EVENT_LOOP', 'Error in collision handling', { error });
   }
 }
