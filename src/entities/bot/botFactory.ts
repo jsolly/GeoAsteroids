@@ -66,8 +66,9 @@ export class BotFactory {
     localPlayerPosition?: Position
   ): Array<{ x: number; y: number }> {
     const positions: Array<{ x: number; y: number }> = [];
+    const isDebugLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug';
     const shouldPlaceNearLocalPlayer =
-      import.meta.env.VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER === 'true';
+      isDebugLevel && import.meta.env.VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER === 'true';
 
     // Generate positions based on debug configuration
     for (let i = 0; i < count; i++) {
