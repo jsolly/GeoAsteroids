@@ -7,6 +7,12 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { createRoidBelt, type RoidBelt } from '../entities/roid/Roid';
 import type { Ship } from '../entities/ship/Ship';
 import { keyDown, keyUp } from '../input/keybindings';
+import {
+  handleMouseDown,
+  handleMouseMove,
+  handleMouseUp,
+  preventContextMenu,
+} from '../input/mouse';
 import { MultiplayerManager } from '../multiplayer/multiplayerManager';
 import { toggleScreen } from '../ui/uiUtils';
 import { isDebugMode } from '../utils/debugUtils';
@@ -33,6 +39,28 @@ function initializeListeners(isGameRunning: () => boolean): void {
       keyUp(ev, GameController.getInstance().getCurrPlayer());
     }
   });
+
+  // Mouse listeners on canvas for aiming and actions
+  const canvas = document.querySelector('canvas');
+  if (canvas) {
+    canvas.addEventListener('mousemove', (ev) => {
+      if (isGameRunning()) {
+        handleMouseMove(ev, GameController.getInstance().getCurrPlayer());
+      }
+    });
+    canvas.addEventListener('mousedown', (ev) => {
+      if (isGameRunning()) {
+        handleMouseDown(ev, GameController.getInstance().getCurrPlayer());
+      }
+    });
+    canvas.addEventListener('mouseup', (ev) => {
+      if (isGameRunning()) {
+        handleMouseUp(ev, GameController.getInstance().getCurrPlayer());
+      }
+    });
+    // Prevent default context menu for right-click thrust
+    canvas.addEventListener('contextmenu', preventContextMenu);
+  }
 }
 
 export class GameController {

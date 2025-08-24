@@ -21,7 +21,11 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
     }
     switch (ev.code) {
       case 'Space':
-        player.ship.shoot();
+        // Space now thrusts (in addition to right click). Keep arrows unchanged.
+        player.ship.thrusting = true;
+        if (!Ship.fxThrust.isPlaying()) {
+          Ship.fxThrust.play();
+        }
         break;
       case 'KeyE':
         player.ship.empPulse();
@@ -52,7 +56,8 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
   if (!player.isDead && !player.ship.exploding) {
     switch (ev.code) {
       case 'Space':
-        player.ship.canShoot = true;
+        player.ship.thrusting = false;
+        Ship.fxThrust.stop();
         break;
       case 'ArrowLeft':
         if (!keys.ArrowRight) {

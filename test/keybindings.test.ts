@@ -34,9 +34,10 @@ test('dummy test', () => {
   expect(1).toBe(1);
 });
 
-test('keyDown - Space', () => {
+test('keyDown - Space starts thrust and plays sound', () => {
   pressKey('Space');
-  expect(mockPlayer.ship.fireLaser).toHaveBeenCalled();
+  expect(mockPlayer.ship.thrusting).toBeTruthy();
+  expect(mockPlay).toHaveBeenCalled();
 });
 
 test('keyDown - ArrowLeft', () => {
@@ -56,9 +57,10 @@ test('keyDown - ArrowRight', () => {
   releaseKey('ArrowRight'); // For some reason, keyDown is persisting across tests
 });
 
-test('keyDown - Space', () => {
-  pressKey('Space');
-  expect(mockPlayer.ship.fireLaser).toHaveBeenCalled();
+test('keyUp - Space stops thrust and stops sound', () => {
+  releaseKey('Space');
+  expect(mockPlayer.ship.thrusting).toBeFalsy();
+  expect(mockPlay).toHaveBeenCalled();
 });
 
 test('keyUp - ArrowLeft', () => {

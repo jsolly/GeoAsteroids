@@ -107,25 +107,56 @@ function createComplementaryColor(
           hue = 0;
       }
     }
-
-    hue = Math.round(hue * 360);
-    saturation = Math.round(saturation * 100);
-    lightness = Math.round(lightness * 100);
   } else {
-    // Fallback for unknown color format
+    // Fallback to red if color format is not recognized
+    console.warn('Unrecognized color format, using fallback:', baseColor);
     hue = 0;
     saturation = 100;
     lightness = 50;
   }
 
-  // Create a complementary color by shifting hue by 180 degrees
-  const complementaryHue = (hue + 180) % 360;
+  // Apply adjustments
+  hue = (hue * 360 + 180) % 360; // Shift hue by 180 degrees for complementary color
+  saturation = Math.max(0, Math.min(100, saturation * 100 + saturationAdjustment));
+  lightness = Math.max(0, Math.min(100, lightness * 100 + lightnessAdjustment));
 
-  // Adjust saturation and lightness for better visual harmony
-  const adjustedSaturation = Math.max(0, Math.min(100, saturation + saturationAdjustment * 100));
-  const adjustedLightness = Math.max(0, Math.min(100, lightness + lightnessAdjustment * 100));
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
 
-  return `hsl(${complementaryHue}, ${adjustedSaturation}%, ${adjustedLightness}%)`;
+// Helper function to draw a targeting line extending from the ship
+export function drawTargetingLine(
+  centerX: number,
+  centerY: number,
+  angle: number,
+  shipRadius: number,
+  lineLength: number = 300,
+  color: string = '#ffffff',
+  alpha: number = 0.6
+): void {
+  const ctx = canvasManager.getContext();
+  if (!ctx) {
+    return;
+  }
+
+  // Calculate end point of the targeting line
+  const endX = centerX + Math.cos(angle) * (shipRadius + lineLength);
+  const endY = centerY - Math.sin(angle) * (shipRadius + lineLength);
+
+  // Set line style with transparency
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]); // Dashed line for better visibility
+
+  // Draw the targeting line
+  ctx.beginPath();
+  ctx.moveTo(centerX, centerY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // Reset line style
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1.0;
 }
 
 export function drawGenericThruster(x: number, y: number, angle: number, radius: number): void {
@@ -308,6 +339,9 @@ export function drawLocalPlayerShip(player: Player): void {
   ctx.font = '10px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenCenter.x, barY - 12);
+
+  // Draw targeting line for better aiming
+  drawTargetingLine(screenCenter.x, screenCenter.y, ship.angle, ship.r, 300, ship.color, 0.7);
 }
 
 export function drawShipExplosion(ship: Ship, color?: string): void {

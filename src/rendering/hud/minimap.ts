@@ -23,12 +23,12 @@ export function drawMiniMap(
   const miniMapX = centerX - miniMapSize / 2;
   const miniMapY = centerY - miniMapSize / 2;
 
-  // Draw circular minimap background with transparency and clip
+  // Draw circular minimap background with solid black background and clip
   ctx.save();
   ctx.beginPath();
   ctx.arc(centerX, centerY, miniMapSize / 2, 0, Math.PI * 2);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 1.0)'; // Solid black background
   ctx.fill();
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
   ctx.lineWidth = 1.5;
@@ -61,7 +61,16 @@ export function drawMiniMap(
     const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
 
     for (const player of otherPlayers) {
-      drawShipMiniMap(ctx, player.ship, player.color, boundary, miniMapX, miniMapY, miniMapSize);
+      drawShipMiniMap(ctx, player.ship, '#ff0000', boundary, miniMapX, miniMapY, miniMapSize);
+    }
+
+    // Draw asteroids on mini map
+    const currRoidBelt = gameController.getCurrRoidBelt();
+    if (currRoidBelt) {
+      const roids = currRoidBelt.getRoids();
+      for (const roid of roids) {
+        drawRoidMiniMap(ctx, roid, boundary, miniMapX, miniMapY, miniMapSize);
+      }
     }
   } catch (error: unknown) {
     console.error('Error drawing mini map:', error);
@@ -144,6 +153,41 @@ export function drawShipMiniMap(
   ctx.fillStyle = color;
   // Draw small square instead of large circle
   const dotSize = 3; // Small square size
+  ctx.fillRect(miniMapPosX - dotSize / 2, miniMapPosY - dotSize / 2, dotSize, dotSize);
+  ctx.restore();
+}
+
+// Draw an asteroid on the mini-map
+export function drawRoidMiniMap(
+  ctx: CanvasRenderingContext2D,
+  roid: { position: { x: number; y: number }; r: number },
+  boundary: CircleBoundary,
+  miniMapX: number,
+  miniMapY: number,
+  miniMapSize: number
+): void {
+  // Convert world coordinates to mini-map coordinates using circle-to-circle mapping
+  const normalizedX = (roid.position.x - boundary.cx) / boundary.radius;
+  const normalizedY = (roid.position.y - boundary.cy) / boundary.radius;
+
+  const miniMapPosX = miniMapX + miniMapSize / 2 + normalizedX * (miniMapSize / 2);
+  const miniMapPosY = miniMapY + miniMapSize / 2 + normalizedY * (miniMapSize / 2);
+
+  // Ensure the asteroid is within the mini-map bounds (with some tolerance for edge cases)
+  const tolerance = 10; // Allow asteroids slightly outside the minimap
+  if (
+    miniMapPosX < miniMapX - tolerance ||
+    miniMapPosX > miniMapX + miniMapSize + tolerance ||
+    miniMapPosY < miniMapY - tolerance ||
+    miniMapPosY > miniMapY + miniMapSize + tolerance
+  ) {
+    return; // Don't draw if too far outside mini-map
+  }
+
+  // Draw asteroid dot on mini-map (smaller than ships, space gray color)
+  ctx.save();
+  ctx.fillStyle = '#666666'; // Space gray color for asteroids
+  const dotSize = 2; // Smaller than ship dots
   ctx.fillRect(miniMapPosX - dotSize / 2, miniMapPosY - dotSize / 2, dotSize, dotSize);
   ctx.restore();
 }
