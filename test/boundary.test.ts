@@ -2,47 +2,43 @@ import { describe, expect, it } from 'vitest';
 import type { Ship } from '../src/entities/ship/Ship';
 import { getGameBoundary } from '../src/physics/boundary';
 import {
+  detectBoundaryCollisions,
+  detectPlayerBoundaryCollisions,
   getBoundaryCollisionSide,
   isShipOutOfBounds,
 } from '../src/physics/collision/boundaryCollisions';
-import {
-  detectBoundaryCollisions,
-  detectPlayerBoundaryCollisions,
-} from '../src/rendering/boundaryRenderer';
 import { getRandomPositionWithinBoundary } from '../src/utils/positionUtils';
 
 describe('Boundary System', () => {
-  it('should create a boundary with correct dimensions', () => {
+  it('should create a circular boundary with correct values', () => {
     const boundary = getGameBoundary();
-
-    expect(boundary.x).toBe(-1100); // -1000 - 100 buffer
-    expect(boundary.y).toBe(-1100); // -1000 - 100 buffer
-    expect(boundary.width).toBe(2200); // 2000 + 200 buffer
-    expect(boundary.height).toBe(2200); // 2000 + 200 buffer
+    expect(boundary.cx).toBe(0);
+    expect(boundary.cy).toBe(0);
+    expect(boundary.radius).toBe(3100); // 3000 + 100 buffer (3x larger)
   });
 
-  it('should detect ship out of bounds on left side', () => {
-    const shipPosition = { x: -1200, y: 0 }; // Left of boundary
+  it('should detect ship out of bounds when beyond radius (left)', () => {
+    const shipPosition = { x: -3200, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe('left');
+    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
-  it('should detect ship out of bounds on right side', () => {
-    const shipPosition = { x: 1200, y: 0 }; // Right of boundary
+  it('should detect ship out of bounds when beyond radius (right)', () => {
+    const shipPosition = { x: 3200, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe('right');
+    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
-  it('should detect ship out of bounds on top side', () => {
-    const shipPosition = { x: 0, y: -1200 }; // Above boundary
+  it('should detect ship out of bounds when beyond radius (top)', () => {
+    const shipPosition = { x: 0, y: -3200 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe('top');
+    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
-  it('should detect ship out of bounds on bottom side', () => {
-    const shipPosition = { x: 0, y: 1200 }; // Below boundary
+  it('should detect ship out of bounds when beyond radius (bottom)', () => {
+    const shipPosition = { x: 0, y: 3200 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe('bottom');
+    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship within bounds', () => {
@@ -52,24 +48,22 @@ describe('Boundary System', () => {
   });
 
   it('should detect ship near boundary edge but still in bounds', () => {
-    const shipPosition = { x: 950, y: 0 }; // Near right edge but within bounds (considering ship radius)
+    const shipPosition = { x: 2900, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(false);
     expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
   it('should detect ship at boundary edge as out of bounds', () => {
-    const shipPosition = { x: 1100, y: 0 }; // At right edge (considering ship radius: 1100 + 15 = 1115)
+    const shipPosition = { x: 3100, y: 0 };
     expect(isShipOutOfBounds(shipPosition)).toBe(true);
-    expect(getBoundaryCollisionSide(shipPosition)).toBe('right');
+    expect(getBoundaryCollisionSide(shipPosition)).toBe(null);
   });
 
-  it('should provide consistent boundary for mini-map rendering', () => {
+  it('should provide consistent circular boundary for mini-map rendering', () => {
     const boundary = getGameBoundary();
-
-    // Verify boundary is consistent for mini-map calculations
-    expect(boundary.width).toBe(boundary.height); // Should be square for rectangular mini-map representation
-    expect(boundary.x).toBe(-boundary.width / 2); // Should be centered at origin
-    expect(boundary.y).toBe(-boundary.height / 2); // Should be centered at origin
+    expect(boundary.cx).toBe(0);
+    expect(boundary.cy).toBe(0);
+    expect(boundary.radius).toBeGreaterThan(0);
   });
 
   describe('Boundary Collision Functions', () => {
@@ -96,7 +90,7 @@ describe('Boundary System', () => {
       const bot = new Player({ id: 'test-bot', name: 'TestBot', type: 'bot' });
 
       // Position bot outside the boundary
-      bot.ship.position = { x: -1200, y: 0 };
+      bot.ship.position = { x: -3200, y: 0 };
 
       // Remove spawn protection so the bot can be affected by boundary collisions
       bot.spawnProtectedUntil = Date.now() - 1000; // Set to 1 second ago
@@ -104,6 +98,9 @@ describe('Boundary System', () => {
 
       // Create an array with the bot
       const bots = [bot];
+
+      // Capture original position BEFORE boundary collision detection
+      const originalPosition = { ...bot.ship.position };
 
       // Call the boundary collision detection
       detectPlayerBoundaryCollisions(bots);
@@ -116,16 +113,17 @@ describe('Boundary System', () => {
       expect(bot.respawnTimer).toBeDefined();
 
       // Simulate the respawn process to verify the unified respawn system works
-      const originalPosition = { ...bot.ship.position };
       bot.respawn();
 
       // Verify the bot respawned at a different, safe position within the boundary
       const boundary = getGameBoundary();
       const shipRadius = 15; // SHIP_SIZE / 2
-      expect(bot.ship.position.x - shipRadius).toBeGreaterThanOrEqual(boundary.x);
-      expect(bot.ship.position.x + shipRadius).toBeLessThanOrEqual(boundary.x + boundary.width);
-      expect(bot.ship.position.y - shipRadius).toBeGreaterThanOrEqual(boundary.y);
-      expect(bot.ship.position.y + shipRadius).toBeLessThanOrEqual(boundary.y + boundary.height);
+      const dx = bot.ship.position.x - boundary.cx;
+      const dy = bot.ship.position.y - boundary.cy;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // getRandomPositionWithinBoundary already accounts for ship radius, so we just check distance
+      expect(distance).toBeLessThanOrEqual(boundary.radius - shipRadius);
 
       // Verify it's a different position (very unlikely to be the same)
       const positionChanged =
@@ -139,12 +137,11 @@ it('should generate positions within boundary', () => {
   const position = getRandomPositionWithinBoundary();
   const boundary = getGameBoundary();
   const shipRadius = 15; // Assuming SHIP_SIZE is 30, so radius is 15
-
-  // Check that the ship's entire radius fits within the boundary
-  expect(position.x - shipRadius).toBeGreaterThanOrEqual(boundary.x);
-  expect(position.x + shipRadius).toBeLessThanOrEqual(boundary.x + boundary.width);
-  expect(position.y - shipRadius).toBeGreaterThanOrEqual(boundary.y);
-  expect(position.y + shipRadius).toBeLessThanOrEqual(boundary.y + boundary.height);
+  const dx = position.x - boundary.cx;
+  const dy = position.y - boundary.cy;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  // getRandomPositionWithinBoundary already accounts for ship radius, so we just check distance
+  expect(distance).toBeLessThanOrEqual(boundary.radius - shipRadius);
 });
 
 it('should generate different positions', () => {

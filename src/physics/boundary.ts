@@ -1,20 +1,18 @@
-export interface Boundary {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+export interface CircleBoundary {
+  cx: number;
+  cy: number;
+  radius: number;
 }
 
-export function getGameBoundary(): Boundary {
-  // Use a fixed world boundary that's large enough for the game
-  // This creates a boundary around the visible game area
-  const boundarySize = 2000; // Large enough to contain the game world
-  const buffer = 100; // Buffer space before ships are killed
+export function getGameBoundary(): CircleBoundary {
+  // Circular world boundary centered at origin to match circular minimap
+  const boundarySize = 6000; // Diameter of playable area (3x larger)
+  const buffer = 100; // Extra buffer before ship is considered out
+  const radius = boundarySize / 2 + buffer; // 3000 + 100
 
   return {
-    x: -boundarySize / 2 - buffer,
-    y: -boundarySize / 2 - buffer,
-    width: boundarySize + buffer * 2,
-    height: boundarySize + buffer * 2,
+    cx: 0,
+    cy: 0,
+    radius,
   };
 }

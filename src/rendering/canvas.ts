@@ -13,10 +13,8 @@ import { drawLasers, drawShipAtPosition } from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
 import { drawFieryBoundary } from './boundaryRenderer';
 import {
-  drawConnectionStatus,
-  drawFramerate,
   drawLeaderboard,
-  drawLivesIndicator,
+  drawLeftHudPanel,
   drawScoreOverlay,
   drawTextOverlay,
 } from './hud/gameInfo';
@@ -225,11 +223,20 @@ class CanvasManager {
     // Draw score overlay
     drawScoreOverlay(ctx, canvas, currScore);
 
-    // Draw lives indicator
-    drawLivesIndicator(ctx, lives, currShip.color);
-
-    // Draw framerate
-    drawFramerate(ctx, fps);
+    // Left HUD panel (lives, fps, connection)
+    const remoteHumanCount = allPlayers.filter((p) => p.type === 'remote').length;
+    const botCount = allPlayers.filter((p) => p.type === 'bot').length;
+    drawLeftHudPanel(
+      ctx,
+      canvas,
+      lives,
+      currShip.color,
+      fps,
+      isConnected,
+      allPlayers.length,
+      remoteHumanCount,
+      botCount
+    );
 
     // Draw text overlay if there is text to display
     if (text && textAlpha > 0) {
@@ -240,11 +247,6 @@ class CanvasManager {
     if (allPlayers.length > 1) {
       drawLeaderboard(ctx, canvas, allPlayers, currentPlayerId);
     }
-
-    // Draw connection status
-    const remoteHumanCount = allPlayers.filter((p) => p.type === 'remote').length;
-    const botCount = allPlayers.filter((p) => p.type === 'bot').length;
-    drawConnectionStatus(ctx, canvas, isConnected, allPlayers.length, remoteHumanCount, botCount);
   }
 
   // Helper method to draw mini map with all players

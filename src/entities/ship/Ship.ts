@@ -35,6 +35,7 @@ class Ship {
   blinkCount: number = Math.ceil(SHIP_INV_DUR / SHIP_INV_BLINK_DUR);
   spawnProtectionTimer: number = Math.ceil(SHIP_INV_BLINK_DUR * FPS);
   canShoot = true;
+
   exploding = false;
   lasers: Laser[] = [];
   explodeTime = 0;
@@ -204,8 +205,6 @@ class Ship {
       return;
     }
 
-    const isDevelopment = import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
-
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
     Ship.fxExplode.play();
@@ -214,7 +213,6 @@ class Ship {
       detail: {
         shipPosition: this.position,
         shipRadius: this.r,
-        debugMode: isDevelopment,
       },
     });
 

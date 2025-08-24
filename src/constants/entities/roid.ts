@@ -6,4 +6,3 @@ export const ROID_POINTS_LRG = 20; // points for a large roid
 export const ROID_POINTS_MED = 50; // points for a medium roid
 export const ROID_POINTS_SML = 100; // points for a small roid
 export const ROID_SPAWN_TIME = 1; // One roid every three seconds
-export const DEBUG_ROID_COUNT = 100; // Default debug roid count

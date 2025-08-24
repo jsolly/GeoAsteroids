@@ -6,6 +6,10 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import type { Ship } from '../entities/ship/Ship';
 import { drawEmpPulse, drawShipExplosion, drawShipRelative } from '../entities/ship/shipRenderer';
 import {
+  detectBoundaryCollisions,
+  detectPlayerBoundaryCollisions,
+} from '../physics/collision/boundaryCollisions';
+import {
   detectLaserHits,
   detectLaserPlayerCollisions,
   detectPlayerLaserShipCollisions,
@@ -15,10 +19,6 @@ import {
   detectRoidHits,
   detectShipToShipCollisions,
 } from '../physics/collision/shipCollisions';
-import {
-  detectBoundaryCollisions,
-  detectPlayerBoundaryCollisions,
-} from '../rendering/boundaryRenderer';
 import { canvasManager } from '../rendering/canvas';
 import { GameController } from './gameController';
 

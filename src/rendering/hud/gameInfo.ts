@@ -1,3 +1,4 @@
+import { SHIP_SIZE } from '../../constants/entities/ship';
 import type { Player } from '../../entities/player/Player';
 
 interface LeaderboardEntry {
@@ -19,8 +20,8 @@ export function drawScoreOverlay(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
-  // Draw current score centered at top
-  ctx.fillText(`Score: ${score}`, canvas.width / 2, 20);
+  // Draw just the score number centered at top
+  ctx.fillText(score.toString(), canvas.width / 2, 20);
 
   ctx.restore();
 }
@@ -53,10 +54,10 @@ export function drawLivesIndicator(
   ctx.save();
 
   // Draw ship icons for lives
-  const shipSize = 12; // Size of each ship triangle
-  const spacing = 20; // Space between ships
+  const shipSize = SHIP_SIZE; // Match in-game ship size
+  const spacing = shipSize + 10; // Space between ships
   const startX = 20;
-  const startY = 85;
+  const startY = 20;
 
   for (let i = 0; i < lives; i++) {
     const x = startX + i * spacing;
@@ -75,11 +76,46 @@ export function drawLivesIndicator(
 
     // Add white outline for visibility
     ctx.strokeStyle = 'white';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.stroke();
   }
 
   ctx.restore();
+}
+
+// Draw lives only (no panel, no other info)
+export function drawLeftHudPanel(
+  ctx: CanvasRenderingContext2D,
+  _canvas: HTMLCanvasElement,
+  lives: number,
+  shipColor: string,
+  _fps: number,
+  _isConnected: boolean,
+  _playerCount: number,
+  _remoteHumanCount: number,
+  _botCount: number
+): void {
+  const startX = 20;
+  const startY = 20;
+  const shipSize = SHIP_SIZE;
+  const spacing = shipSize + 10;
+
+  // Draw three ship outlines for lives (no fill, just stroke like the ship)
+  for (let i = 0; i < lives; i++) {
+    const x = startX + i * spacing;
+    const y = startY;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y + shipSize);
+    ctx.lineTo(x + shipSize, y + shipSize);
+    ctx.lineTo(x + shipSize / 2, y);
+    ctx.closePath();
+
+    // No fill, just stroke like the ship
+    ctx.strokeStyle = shipColor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
 }
 
 // Helper function to draw multiplayer leaderboard
@@ -104,42 +140,28 @@ export function drawLeaderboard(
     .sort((a, b) => b.score - a.score) // Sort by score descending
     .slice(0, 10); // Show top 10
 
-  // Leaderboard position and styling (below mini-map in top right)
-  const boardWidth = 250;
-  const boardHeight = Math.min(entries.length * 25 + 40, 300);
+  // Leaderboard position and styling (top right, like slither.io)
+  const boardWidth = 260;
   const boardX = canvas.width - boardWidth - 20;
-  const boardY = 200; // Position below mini-map
+  const boardY = 20; // Top-right anchored
 
   ctx.save();
 
-  // Background
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-  ctx.fillRect(boardX, boardY, boardWidth, boardHeight);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(boardX, boardY, boardWidth, boardHeight);
-
-  // Title
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 16px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('Leaderboard', boardX + boardWidth / 2, boardY + 20);
-
   // Draw entries
   entries.forEach((entry, index) => {
-    const y = boardY + 40 + index * 25;
+    const y = boardY + 8 + index * 22;
 
     // Highlight current player
     if (entry.isCurrentPlayer) {
       ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-      ctx.fillRect(boardX + 5, y - 12, boardWidth - 10, 20);
+      ctx.fillRect(boardX + 3, y - 10, boardWidth - 6, 18);
     }
 
     // Rank
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '14px Arial';
+    ctx.fillStyle = 'rgba(170, 170, 170, 0.4)';
+    ctx.font = '12px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`${index + 1}.`, boardX + 10, y);
+    ctx.fillText(`${index + 1}.`, boardX + 8, y);
 
     // Player name with type indicator
     let nameColor = '#ffffff';
@@ -148,25 +170,40 @@ export function drawLeaderboard(
     switch (entry.type) {
       case 'local':
         nameColor = '#00ff00'; // Green for local player
-        namePrefix = '👤 ';
+        namePrefix = '';
         break;
       case 'remote':
         nameColor = '#00aaff'; // Blue for remote players
-        namePrefix = '🌐 ';
+        namePrefix = '';
         break;
       case 'bot':
         nameColor = '#ff8800'; // Orange for bots
-        namePrefix = '🤖 ';
+        namePrefix = 'Bot: ';
         break;
     }
 
-    ctx.fillStyle = nameColor;
-    ctx.fillText(`${namePrefix}${entry.name}`, boardX + 35, y);
+    // Convert hex colors to rgba with transparency
+    let transparentColor = nameColor;
+    if (nameColor.startsWith('#')) {
+      const r = parseInt(nameColor.slice(1, 3), 16);
+      const g = parseInt(nameColor.slice(3, 5), 16);
+      const b = parseInt(nameColor.slice(5, 7), 16);
+      transparentColor = `rgba(${r}, ${g}, ${b}, 0.4)`;
+    }
+    ctx.fillStyle = transparentColor;
+    ctx.font = '12px Arial';
+    // Truncate long names
+    const maxNameLength = 12;
+    const displayName =
+      entry.name.length > maxNameLength
+        ? `${entry.name.substring(0, maxNameLength - 1)}...`
+        : entry.name;
+    ctx.fillText(`${namePrefix}${displayName}`, boardX + 28, y);
 
     // Score
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.textAlign = 'right';
-    ctx.fillText(entry.score.toString(), boardX + boardWidth - 10, y);
+    ctx.fillText(entry.score.toString(), boardX + boardWidth - 8, y);
   });
 
   ctx.restore();
@@ -176,12 +213,12 @@ export function drawLeaderboard(
 export function drawFramerate(ctx: CanvasRenderingContext2D, fps: number): void {
   ctx.save();
 
-  // Position at top left, below the score
+  // Position at top left, below large lives icons
   const fpsX = 20;
-  const fpsY = 120;
+  const fpsY = 20 + SHIP_SIZE + 8;
 
   ctx.fillStyle = '#00ff00'; // Green color for FPS
-  ctx.font = '14px Arial';
+  ctx.font = '12px Arial';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
@@ -202,7 +239,7 @@ export function drawFramerate(ctx: CanvasRenderingContext2D, fps: number): void 
 // Helper function to draw connection status
 export function drawConnectionStatus(
   ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
+  _canvas: HTMLCanvasElement,
   isConnected: boolean,
   playerCount: number,
   remoteHumanCount: number,
@@ -210,34 +247,35 @@ export function drawConnectionStatus(
 ): void {
   ctx.save();
 
-  // Position at top right, above mini-map
-  const statusX = canvas.width - 20;
-  const statusY = 20;
+  // Position at top left, below FPS counter
+  const statusX = 20;
+  const statusY = 20 + SHIP_SIZE + 8 + 18;
 
-  ctx.textAlign = 'right';
-  ctx.font = '14px Arial';
+  ctx.textAlign = 'left';
+  ctx.font = '12px Arial';
 
   // Connection indicator
   if (isConnected) {
     ctx.fillStyle = '#00ff00';
-    ctx.fillText('🟢 Online', statusX, statusY);
+    ctx.fillText('🟢 Connected to main server', statusX, statusY);
   } else {
     ctx.fillStyle = '#ff0000';
-    ctx.fillText('🔴 Offline', statusX, statusY);
+    ctx.fillText('🔴 Disconnected', statusX, statusY);
   }
 
   // Player counts
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(`Players: ${playerCount}`, statusX, statusY + 20);
+  ctx.fillStyle = '#cccccc';
+  ctx.fillStyle = '#cccccc';
+  ctx.fillText(`Players online: ${playerCount}`, statusX, statusY + 18);
 
   if (remoteHumanCount > 0) {
     ctx.fillStyle = '#00aaff';
-    ctx.fillText(`🌐 Remote: ${remoteHumanCount}`, statusX, statusY + 40);
+    ctx.fillText(`🌐 Remote: ${remoteHumanCount}`, statusX, statusY + 36);
   }
 
   if (botCount > 0) {
     ctx.fillStyle = '#ff8800';
-    ctx.fillText(`🤖 Bots: ${botCount}`, statusX, statusY + 60);
+    ctx.fillText(`🤖 Bots: ${botCount}`, statusX, statusY + 54);
   }
 
   ctx.restore();

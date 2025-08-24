@@ -2,13 +2,8 @@ import { GameController } from '../../core/gameController';
 import type { Ship } from '../../entities/ship/Ship';
 import { getGameBoundary } from '../../physics/boundary';
 
-// Interface for boundary objects
-interface Boundary {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+// Circle boundary type local alias for clarity
+type CircleBoundary = { cx: number; cy: number; radius: number };
 
 // Helper function to draw the complete mini map
 export function drawMiniMap(
@@ -19,33 +14,36 @@ export function drawMiniMap(
   // Get the game boundary for mini map calculations
   const boundary = getGameBoundary();
 
-  // Mini map position and size (top right)
-  const miniMapSize = 150;
-  const miniMapX = canvas.width - miniMapSize - 20;
-  const miniMapY = 20;
+  // Mini map position and size (bottom right, circular)
+  const miniMapSize = 160;
+  const centerX = canvas.width - 20 - miniMapSize / 2;
+  const centerY = canvas.height - 20 - miniMapSize / 2;
+  const miniMapX = centerX - miniMapSize / 2;
+  const miniMapY = centerY - miniMapSize / 2;
 
-  // Draw mini map background
+  // Draw circular minimap background with transparency and clip
   ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
-  ctx.fillRect(miniMapX, miniMapY, miniMapSize, miniMapSize);
-  ctx.strokeStyle = '#00ff00'; // Bright green outline like the image
-  ctx.lineWidth = 2; // Slightly thicker for better visibility
-  ctx.strokeRect(miniMapX, miniMapY, miniMapSize, miniMapSize);
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, miniMapSize / 2, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.clip();
 
-  // Calculate scale to fit boundary in mini-map
-  const boundaryScale = miniMapSize / Math.max(boundary.width, boundary.height);
+  // Calculate scale to fit circle boundary in mini-map (circle to circle)
+  const boundaryScale = miniMapSize / 2 / boundary.radius;
   const boundaryOffsetX = miniMapX + miniMapSize / 2;
   const boundaryOffsetY = miniMapY + miniMapSize / 2;
 
-  // Draw boundary outline on mini map
-  ctx.strokeStyle = 'rgba(255, 100, 0, 0.8)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(
-    boundaryOffsetX - (boundary.width * boundaryScale) / 2,
-    boundaryOffsetY - (boundary.height * boundaryScale) / 2,
-    boundary.width * boundaryScale,
-    boundary.height * boundaryScale
-  );
+  // Draw boundary outline on mini map (circle)
+  ctx.strokeStyle = 'rgba(255, 100, 0, 0.5)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(boundaryOffsetX, boundaryOffsetY, boundary.radius * boundaryScale, 0, Math.PI * 2);
+  ctx.stroke();
 
   // Draw current ship on mini map
   drawShipMiniMap(ctx, ship, '#00ff00', boundary, miniMapX, miniMapY, miniMapSize);
@@ -70,7 +68,7 @@ export function drawShipMiniMap(
   ctx: CanvasRenderingContext2D,
   ship: Ship,
   color: string,
-  boundary: Boundary,
+  boundary: CircleBoundary,
   miniMapX: number,
   miniMapY: number,
   miniMapSize: number
@@ -79,17 +77,12 @@ export function drawShipMiniMap(
     return;
   }
 
-  // Convert world coordinates to mini-map coordinates
-  // The boundary is centered at (0,0) in world space, so we need to map that correctly
-  const worldX = ship.position.x - boundary.x; // Ship position relative to boundary corner
-  const worldY = ship.position.y - boundary.y;
+  // Convert world coordinates to mini-map coordinates using circle-to-circle mapping
+  const normalizedX = (ship.position.x - boundary.cx) / boundary.radius;
+  const normalizedY = (ship.position.y - boundary.cy) / boundary.radius;
 
-  // Center the position within the boundary, then scale to minimap
-  const normalizedX = worldX / boundary.width - 0.5; // -0.5 to +0.5 range
-  const normalizedY = worldY / boundary.height - 0.5;
-
-  const miniMapPosX = miniMapX + miniMapSize / 2 + normalizedX * miniMapSize;
-  const miniMapPosY = miniMapY + miniMapSize / 2 + normalizedY * miniMapSize;
+  const miniMapPosX = miniMapX + miniMapSize / 2 + normalizedX * (miniMapSize / 2);
+  const miniMapPosY = miniMapY + miniMapSize / 2 + normalizedY * (miniMapSize / 2);
 
   // Ensure the ship is within the mini-map bounds (with some tolerance for edge cases)
   const tolerance = 10; // Allow ships slightly outside the minimap

@@ -69,13 +69,16 @@ body {
 /* Attribution positioning */
 #attribution {
   position: fixed;
-  bottom: 10px;
-  left: 10px;
-  font-size: 0.5em;
+  bottom: 8px;
+  left: 8px;
+  font-size: 0.35em;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 5px 10px;
-  border-radius: 5px;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+#attribution:hover {
+  opacity: 0.6;
 }
 
 a {

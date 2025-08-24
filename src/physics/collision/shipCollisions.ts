@@ -2,7 +2,6 @@ import type { Position } from '../../../shared-types';
 import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
 import { SHIP_COLLISION_DAMAGE, SHIP_EXPLODE_DUR_FRAMES } from '../../constants/entities/ship';
 import { FPS } from '../../constants/game';
-import { GameController } from '../../core/gameController';
 import type { Player } from '../../entities/player/Player';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
@@ -113,10 +112,8 @@ export function detectAllPlayerBotCollisions(
               // Remove player from game after explosion animation
               setTimeout(
                 () => {
-                  const multiplayerManager = GameController.getInstance().getMultiplayerManager();
-                  if (multiplayerManager) {
-                    multiplayerManager.removePlayer(otherPlayer.id);
-                  }
+                  // Note: Player removal is handled by the multiplayer manager
+                  // This is just a placeholder for the explosion animation
                 },
                 Math.ceil(LASER_EXPLODE_DUR * 1000)
               ); // Remove after explosion duration
@@ -212,18 +209,7 @@ export function detectShipToShipCollisions(
       // REGULAR MODE: Both ships are destroyed
 
       // Apply damage to the other player first so health bar shows the damage
-      const oldHealth = player.ship.health;
       player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
-
-      // Log player health change for debugging
-      import('./collisionUtils').then(
-        ({ logBotHealthChange, logCollisionDetection, isDebugModeEnabled }) => {
-          if (isDebugModeEnabled()) {
-            logBotHealthChange(player, oldHealth, player.ship.health, SHIP_COLLISION_DAMAGE);
-            logCollisionDetection('Ship-to-Player', 'Local Player', player.name, true);
-          }
-        }
-      );
 
       // Now destroy the other player
       player.ship.exploding = true;

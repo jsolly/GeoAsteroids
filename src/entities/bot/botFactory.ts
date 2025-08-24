@@ -18,7 +18,7 @@ export class BotFactory {
 
   private createBotPlayer(position?: { x: number; y: number }): Player {
     const id = uuidv4();
-    const name = 'Bot';
+    const name = this.generateBotName();
     const botPlayer = new Player({ id, name, type: 'bot' });
 
     // Set bot color to space gray
@@ -34,6 +34,37 @@ export class BotFactory {
     botPlayer.ship.lastPosition = { ...botPlayer.ship.position };
 
     return botPlayer;
+  }
+
+  private generateBotName(): string {
+    const adjectives = [
+      'Crimson',
+      'Nebula',
+      'Quantum',
+      'Cosmic',
+      'Lunar',
+      'Solar',
+      'Galactic',
+      'Star',
+      'Nova',
+      'Meteor',
+    ];
+    const nouns = [
+      'Falcon',
+      'Viper',
+      'Ranger',
+      'Specter',
+      'Comet',
+      'Warden',
+      'Drifter',
+      'Marauder',
+      'Pioneer',
+      'Corsair',
+    ];
+
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adjective} ${noun}`;
   }
 
   private getBotStartingPositions(count: number): Array<{ x: number; y: number }> {

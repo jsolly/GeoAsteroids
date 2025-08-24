@@ -4,7 +4,7 @@ export const STARTING_SCORE = 0;
 export const MULTIPLAYER_ENABLED = import.meta.env.VITE_MULTIPLAYER_ENABLED !== 'false'; // Enable multiplayer by default, can be disabled with VITE_MULTIPLAYER_ENABLED=false
 
 // Bot configuration
-export const DEFAULT_BOT_COUNT = 3; // Default number of bots in multiplayer mode
+export const DEFAULT_BOT_COUNT = 9; // Default number of bots in multiplayer mode
 
 /* EMP Pulse Constants*/
 export const EMP_PULSE_RADIUS = 250; // EMP pulse radius in pixels (focused size)

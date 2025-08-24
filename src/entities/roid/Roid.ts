@@ -124,11 +124,6 @@ class RoidBelt {
 
 export { RoidBelt, Roid };
 
-/**
- * Factory for creating roid belts
- * Always creates regular roid belts
- * Debug functionality is injected by the debug system when needed
- */
 export function createRoidBelt(): RoidBelt {
   return new RoidBelt();
 }

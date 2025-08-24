@@ -1,7 +1,5 @@
-import { DEBUG_ROID_COUNT, ROID_SIZE } from '../constants/entities/roid';
 import { SHIP_COLLISION_DAMAGE } from '../constants/entities/ship';
 import { DEFAULT_BOT_COUNT, EMP_PULSE_RADIUS } from '../constants/game';
-import { BotManager } from '../entities/bot/botManager';
 import type { BotShoot } from '../entities/bot/types';
 import { Player } from '../entities/player/Player';
 import { createRoidBelt, type RoidBelt } from '../entities/roid/Roid';
@@ -16,16 +14,7 @@ import { GameState } from './gameState';
 interface DebugRoidBelt extends RoidBelt {
   debugConfig?: {
     botCount: number;
-    disableMovement: boolean;
-    disableBotMovement: boolean;
-    disableBotGuns: boolean;
-    placeRoidOnBot: boolean;
     debugRoidCount: number;
-    localPlayerInvincible: boolean;
-    drawRoids: boolean;
-
-    disableRoidMovement: boolean;
-    disableBotSpawnProtection: boolean;
   };
 }
 
@@ -146,16 +135,14 @@ class GameController implements GameControllerData {
       .connect()
       .then(() => {
         if (this.currRoidBelt) {
-          // Setup debug roids directly
-          this.setupDebugRoids();
+          // Debug config will be applied if debug mode is enabled
         }
       })
       .catch((error: unknown) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.warn('Failed to connect to multiplayer, continuing with local game:', errorMessage);
 
-        // Setup debug roids even if multiplayer fails
-        this.setupDebugRoids();
+        // Debug config will be applied if debug mode is enabled
       });
 
     window.dispatchEvent(new CustomEvent('gameStart'));
@@ -407,11 +394,7 @@ class GameController implements GameControllerData {
   // Debug mode setup methods
   public enableDebugMode(): void {
     this.debugMode = true;
-
-    // Enable debug mode in collision utilities
-    import('../physics/collision/collisionUtils').then(({ enableDebugMode }) => {
-      enableDebugMode();
-    });
+    this.applyDebugConfig();
   }
 
   public isDebugMode(): boolean {
@@ -421,136 +404,44 @@ class GameController implements GameControllerData {
   private setupDebugMode(): void {
     // Only setup debug mode if explicitly enabled
     if (this.debugMode) {
-      this.setupDebugBots();
+      this.applyDebugConfig();
     }
   }
 
-  private setupDebugBots(): void {
+  private applyDebugConfig(): void {
+    if (!this.debugMode) {
+      return;
+    }
+
     try {
       const debugConfig = this.getDebugConfig();
 
-      // Clear existing bots and create new ones based on debug config
-      this.multiplayerManager.initializeBots(debugConfig.botCount);
-
-      // Configure bot behavior based on settings - only when debug mode is enabled
-      if (this.debugMode && debugConfig.disableBotMovement) {
-        const botManager = BotManager.getInstance();
-        if (botManager?.botMovementSystem) {
-          botManager.botMovementSystem.debugMovementDisabled = true;
-        }
+      // Apply bot count from env var
+      if (debugConfig.botCount !== 1) {
+        this.multiplayerManager.initializeBots(debugConfig.botCount);
       }
-    } catch (error) {
-      console.error('Error setting up debug bots:', error);
-    }
-  }
 
-  private setupDebugRoids(): void {
-    // Setup debug roids if debug mode is enabled
-    if (this.debugMode) {
-      // Wait a bit for the roid belt to be fully initialized
-      setTimeout(() => {
-        try {
-          this.setupDebugRoidsInBelt();
-          this.injectDebugRoidBehavior();
-        } catch (error) {
-          console.error('Error setting up debug roids:', error);
-        }
-      }, 100);
-    }
-  }
-
-  private setupDebugRoidsInBelt(): void {
-    try {
-      const debugConfig = this.getDebugConfig();
-
-      // Override roid count for debug mode - only when debug mode is enabled
-      if (this.debugMode && debugConfig.drawRoids) {
-        // Set debug limits for roid count
+      // Apply roid count from env var
+      if (debugConfig.debugRoidCount !== 10) {
         this.currRoidBelt.setRoidLimits(debugConfig.debugRoidCount, debugConfig.debugRoidCount);
-
-        // Clear existing roids and set the exact count
+        // Clear and recreate roids to match the new count
         this.currRoidBelt.roids = [];
-
-        // Set the total roid count to the debug config value
         for (let i = 0; i < debugConfig.debugRoidCount; i++) {
           this.currRoidBelt.addRoid();
         }
-      } else if (this.debugMode && !debugConfig.drawRoids) {
-        // Clear all roids when drawing is disabled - only in debug mode
-        this.currRoidBelt.roids = [];
-        this.currRoidBelt.setRoidLimits(0, 0);
       }
 
-      // Place roids on bots if configured - only when debug mode is enabled
-      if (this.debugMode && debugConfig.placeRoidOnBot) {
-        this.placeRoidsOnBots();
-      }
+      // Store debug config for any other systems that need it
+      (this.currRoidBelt as DebugRoidBelt).debugConfig = debugConfig;
     } catch (error) {
-      console.error('Error setting up debug roids:', error);
-    }
-  }
-
-  private placeRoidsOnBots(): void {
-    const bots = this.multiplayerManager.getBots();
-    if (bots.size > 0) {
-      let _roidsPlaced = 0;
-      bots.forEach((bot, _botId) => {
-        if (bot?.ship?.position) {
-          const botPosition = bot.ship.position;
-          // Create a roid at the bot's position for collision testing
-          import('../entities/roid/Roid').then(({ Roid }) => {
-            const roid = new Roid(botPosition, Math.ceil(ROID_SIZE / 2)); // Large roid
-            this.currRoidBelt.roids.push(roid);
-            _roidsPlaced++;
-          });
-        }
-      });
-    }
-  }
-
-  private injectDebugRoidBehavior(): void {
-    try {
-      const debugConfig = this.getDebugConfig();
-
-      // Store original methods
-      const originalMoveRoids = this.currRoidBelt.moveRoids.bind(this.currRoidBelt);
-
-      // Override moveRoids method - only when debug mode is enabled
-      this.currRoidBelt.moveRoids = () => {
-        if (
-          this.debugMode &&
-          (this.currRoidBelt as DebugRoidBelt).debugConfig?.disableRoidMovement
-        ) {
-          return; // Don't move roids
-        }
-        return originalMoveRoids.call(this.currRoidBelt);
-      };
-
-      // Add debug config to the roid belt for the overridden methods to access - only when debug mode is enabled
-      if (this.debugMode) {
-        (this.currRoidBelt as DebugRoidBelt).debugConfig = debugConfig;
-      }
-    } catch (error) {
-      console.error('Error injecting debug roid behavior:', error);
+      console.error('Error applying debug config:', error);
     }
   }
 
   private getDebugConfig() {
     return {
       botCount: parseInt(import.meta.env.VITE_DEBUG_BOT_COUNT || '1', 10),
-      disableMovement: import.meta.env.VITE_DEBUG_DISABLE_MOVEMENT === 'true',
-      disableBotMovement: import.meta.env.VITE_DEBUG_DISABLE_BOT_MOVEMENT === 'true',
-      disableBotGuns: import.meta.env.VITE_DEBUG_DISABLE_BOT_GUNS === 'true',
-      placeRoidOnBot: import.meta.env.VITE_DEBUG_PLACE_ROID_ON_BOT === 'true',
-      debugRoidCount: parseInt(
-        import.meta.env.VITE_DEBUG_ROID_COUNT || DEBUG_ROID_COUNT.toString(),
-        10
-      ),
-      localPlayerInvincible: import.meta.env.VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE === 'true',
-      drawRoids: import.meta.env.VITE_DEBUG_DRAW_ROIDS !== 'false',
-
-      disableRoidMovement: import.meta.env.VITE_DEBUG_DISABLE_ROID_MOVEMENT === 'true',
-      disableBotSpawnProtection: import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true',
+      debugRoidCount: parseInt(import.meta.env.VITE_DEBUG_ROID_COUNT || '100', 10),
     };
   }
 }

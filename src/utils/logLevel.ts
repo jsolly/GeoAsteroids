@@ -18,7 +18,9 @@ function getCurrentLogLevel(): LogLevel {
   const envLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL;
 
   if (!envLevel) {
-    return LogLevel.INFO; // Default to info level
+    // Default to DEBUG in development for better visibility, INFO otherwise
+    const isDev = import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
+    return isDev ? LogLevel.DEBUG : LogLevel.INFO;
   }
 
   switch (envLevel.toLowerCase()) {

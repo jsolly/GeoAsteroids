@@ -9,22 +9,6 @@ import type { Ship } from '../../entities/ship/Ship';
 import { getDistance } from '../../utils/mathUtils';
 import { dispatchBotDestroyedEvent, shouldSkipPlayerCollision } from './collisionUtils';
 
-// Debug logging for laser collision issues
-const DEBUG_LASER_COLLISIONS = import.meta.env?.DEV === true;
-
-function logLaserCollision(
-  laser: Laser,
-  target: string,
-  action: string,
-  explodeTime: number
-): void {
-  if (DEBUG_LASER_COLLISIONS) {
-    console.debug(
-      `[LASER_COLLISION] Laser at (${laser.position.x.toFixed(1)}, ${laser.position.y.toFixed(1)}) ${action} ${target}, explodeTime: ${explodeTime}`
-    );
-  }
-}
-
 export function detectLaserHits(
   currRoidBelt: RoidBelt,
   currShip: Ship,
@@ -45,14 +29,11 @@ export function detectLaserHits(
     for (let i = roids.length - 1; i >= 0; i--) {
       // detect hits
       if (isHit(laser, roids[i])) {
-        logLaserCollision(laser, `roid ${i}`, 'hit', laser.explodeTime);
-
         // remove roid and activate laser explosion
         Roid.fxHit.play();
         score = currRoidBelt.destroyRoid(i);
         currShip.updateLaserExplodeTime(j);
 
-        logLaserCollision(laser, `roid ${i}`, 'exploded', currShip.lasers[j].explodeTime);
         break; // This laser is now exploded, move to next
       }
     }
@@ -75,14 +56,11 @@ export function detectLaserHits(
 
         for (let i = roids.length - 1; i >= 0; i--) {
           if (isHit(laser, roids[i])) {
-            logLaserCollision(laser, `roid ${i}`, 'hit (bot)', laser.explodeTime);
-
             Roid.fxHit.play();
             score = currRoidBelt.destroyRoid(i);
             // trigger laser explode like player
             bot.ship.updateLaserExplodeTime(j);
 
-            logLaserCollision(laser, `roid ${i}`, 'exploded (bot)', bot.ship.lasers[j].explodeTime);
             break; // This laser is now exploded, move to next
           }
         }
@@ -113,14 +91,10 @@ export function detectLaserHits(
         }
 
         if (isLaserHitBot(laser, bot)) {
-          logLaserCollision(laser, `bot ${botId}`, 'hit', laser.explodeTime);
-
           // Deal damage to bot using the unified damage system
           bot.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
           currShip.updateLaserExplodeTime(j);
-
-          logLaserCollision(laser, `bot ${botId}`, 'exploded', currShip.lasers[j].explodeTime);
 
           // Add points for destroying a bot (only if bot is actually destroyed)
           if (bot.ship.exploding) {
@@ -184,8 +158,6 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
       const collisionThreshold = player.ship.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
-        logLaserCollision(laser, `player ${player.id}`, 'hit', laser.explodeTime);
-
         // Handle player damage using health system (same as ship system)
         const damage = 15; // Laser damage
         const currentHealth = player.ship.health || 100;
@@ -197,8 +169,6 @@ export function detectLaserPlayerCollisions(currShip: Ship, otherPlayers: Player
 
         // Activate laser explosion
         laser.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-
-        logLaserCollision(laser, `player ${player.id}`, 'exploded', laser.explodeTime);
 
         // Play hit sound
         Roid.fxHit.play();
@@ -266,8 +236,6 @@ export function detectPlayerLaserShipCollisions(localShip: Ship, otherPlayers: P
       const collisionThreshold = localShip.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
-        logLaserCollision(laser, `local ship`, 'hit', laser.explodeTime);
-
         // Handle local ship damage using health system
         const damage = 15; // Player laser damage
         const currentHealth = localShip.health || 100;
@@ -279,8 +247,6 @@ export function detectPlayerLaserShipCollisions(localShip: Ship, otherPlayers: P
 
         // Activate laser explosion using Ship's method
         player.ship.updateLaserExplodeTime(j);
-
-        logLaserCollision(laser, `local ship`, 'exploded', player.ship.lasers[j].explodeTime);
 
         // Play hit sound
         Roid.fxHit.play();

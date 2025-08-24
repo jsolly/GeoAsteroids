@@ -4,7 +4,6 @@ import {
   SHIP_RESPAWN_DELAY_FRAMES,
 } from '../../constants/entities/ship';
 import { FPS, START_LIVES } from '../../constants/game';
-import { logCollisionDetection } from '../../physics/collision/collisionUtils';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
 import { Ship } from '../ship/Ship';
@@ -49,7 +48,6 @@ export class Player {
       const customEvent = event as CustomEvent;
       // Check if this event is from our ship
       if (customEvent.detail?.shipId === this.ship.id) {
-        logCollisionDetection('Ship Exploded Event', 'Ship', this.name, true);
         this.onShipExploded();
       }
     });
@@ -62,8 +60,6 @@ export class Player {
 
   // Direct method called by Ship when it explodes
   onShipExploded(): void {
-    logCollisionDetection('Player Life Lost', 'Ship', this.name, true);
-
     // Decrement lives when ship explodes
     this.lives--;
 
@@ -93,8 +89,10 @@ export class Player {
     this.ship.exploding = false;
     this.ship.explodeTime = 0;
 
-    // Always spawn at a random safe location within the boundary
-    this.ship.position = getRandomPositionWithinBoundary();
+    // Always respawn at a random safe position within the boundary
+    // This applies to ALL collision types: asteroid, laser, ship-to-ship, boundary, etc.
+    const newPosition = getRandomPositionWithinBoundary();
+    this.ship.position = newPosition;
 
     // Reset ship velocity to prevent momentum from previous life
     this.ship.velocity = { x: 0, y: 0 };
