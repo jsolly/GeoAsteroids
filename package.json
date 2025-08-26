@@ -54,7 +54,7 @@
     "@types/ws": "^8.18.1",
     "@vercel/node": "^5.3.6",
     "canvas": "^3.1.2",
-    "concurrently": "^9.1.0",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.2",
