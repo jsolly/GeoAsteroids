@@ -93,10 +93,7 @@ export class Logger {
     context?: Record<string, unknown>,
     error?: Error
   ): void {
-    if (level < this.currentLevel) {
-      return;
-    }
-
+    // Always store log entry regardless of currentLevel
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
@@ -112,7 +109,7 @@ export class Logger {
       this.logs.shift(); // Remove oldest entry
     }
 
-    // Format and output log
+    // Always forward to server for file logging, regardless of currentLevel
     const formattedMessage = this.formatLogMessage(entry);
     this.outputLog(level, formattedMessage);
   }

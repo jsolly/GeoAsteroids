@@ -170,10 +170,14 @@ export function setupConsoleOverride(): void {
     if (!(console as ExtendedConsole)._logLevelOverridden) {
       setupConsoleOverride();
     }
+
+    // Always capture in buffer for file logging, regardless of log level
+    appendToLogBuffer('DEBUG', args);
+
+    // Only display in console if it meets the current log level
     if (shouldLog(LogLevel.DEBUG)) {
       const timestamp = new Date().toISOString();
       originalConsole.debug(`[${timestamp}]`, ...args);
-      appendToLogBuffer('DEBUG', args);
     }
   };
 
@@ -182,10 +186,14 @@ export function setupConsoleOverride(): void {
     if (!(console as ExtendedConsole)._logLevelOverridden) {
       setupConsoleOverride();
     }
+
+    // Always capture in buffer for file logging, regardless of log level
+    appendToLogBuffer('INFO', args);
+
+    // Only display in console if it meets the current log level
     if (shouldLog(LogLevel.INFO)) {
       const timestamp = new Date().toISOString();
       originalConsole.info(`[${timestamp}]`, ...args);
-      appendToLogBuffer('INFO', args);
     }
   };
 
@@ -194,10 +202,14 @@ export function setupConsoleOverride(): void {
     if (!(console as ExtendedConsole)._logLevelOverridden) {
       setupConsoleOverride();
     }
+
+    // Always capture in buffer for file logging, regardless of log level
+    appendToLogBuffer('WARN', args);
+
+    // Only display in console if it meets the current log level
     if (shouldLog(LogLevel.WARN)) {
       const timestamp = new Date().toISOString();
       originalConsole.warn(`[${timestamp}]`, ...args);
-      appendToLogBuffer('WARN', args);
     }
   };
 
@@ -206,10 +218,14 @@ export function setupConsoleOverride(): void {
     if (!(console as ExtendedConsole)._logLevelOverridden) {
       setupConsoleOverride();
     }
+
+    // Always capture in buffer for file logging, regardless of log level
+    appendToLogBuffer('ERROR', args);
+
+    // Only display in console if it meets the current log level
     if (shouldLog(LogLevel.ERROR)) {
       const timestamp = new Date().toISOString();
       originalConsole.error(`[${timestamp}]`, ...args);
-      appendToLogBuffer('ERROR', args);
     }
   };
 

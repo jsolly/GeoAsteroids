@@ -62,7 +62,7 @@ Debug behavior is controlled by constants defined in `src/constants/index.ts` in
 - `DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER` - Clusters remote players together in debug mode (default: false)
 
 #### Logging
-- `VITE_CLIENT_LOG_LEVEL` - Sets the client-side log level (error, warn, info, debug)
+- `VITE_CLIENT_LOG_LEVEL` - Sets the client-side console log level (error, warn, info, debug). **Note**: This only affects what is displayed in the browser console. All logs are still captured and saved to `client.log` regardless of this setting.
 
 #### Multiplayer
 - `VITE_WEBSOCKET_URL` - WebSocket server URL for multiplayer

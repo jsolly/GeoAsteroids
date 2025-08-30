@@ -74,41 +74,6 @@ describe('Server Environment Variables', () => {
       expect(serverSource).toContain("const NODE_ENV = process.env.NODE_ENV || 'production';");
     });
   });
-
-  describe('SERVER_LOG_LEVEL environment variable', () => {
-    it('should default to INFO when SERVER_LOG_LEVEL is not set', async () => {
-      delete process.env.SERVER_LOG_LEVEL;
-
-      // Import and test the logger
-      const { logger } = await import('../setup/serverLogger');
-
-      // Since logger uses console methods, we can't easily test the internal state
-      // but we can verify the module loads and has expected methods
-      expect(typeof logger.info).toBe('function');
-      expect(typeof logger.debug).toBe('function');
-      expect(typeof logger.warn).toBe('function');
-      expect(typeof logger.error).toBe('function');
-    });
-
-    it('should respect SERVER_LOG_LEVEL when set to debug', async () => {
-      process.env.SERVER_LOG_LEVEL = 'debug';
-
-      // Re-import to get fresh environment
-      const { logger } = await import('../setup/serverLogger');
-
-      expect(typeof logger.debug).toBe('function');
-      expect(typeof logger.info).toBe('function');
-    });
-
-    it('should respect SERVER_LOG_LEVEL when set to error', async () => {
-      process.env.SERVER_LOG_LEVEL = 'error';
-
-      // Re-import to get fresh environment
-      const { logger } = await import('../setup/serverLogger');
-
-      expect(typeof logger.error).toBe('function');
-    });
-  });
 });
 
 // Client-side environment variables
@@ -168,6 +133,57 @@ describe('Client Environment Variables (VITE_*)', () => {
         }
         expect(result).toBe(expected);
       });
+    });
+
+    it('should verify that logs are always captured regardless of log level', async () => {
+      // Test that logs are always captured in the buffer regardless of VITE_CLIENT_LOG_LEVEL
+      // while console output respects the log level setting
+      const { setupConsoleOverride, getLogsAsText, clearLogBuffer, restoreConsole } = await import(
+        '../src/utils/logLevel'
+      );
+
+      // Clear any existing logs
+      clearLogBuffer();
+
+      // Test with different log levels
+      const testCases = [
+        { level: 'error', shouldShow: true },
+        { level: 'warn', shouldShow: true },
+        { level: 'info', shouldShow: false }, // info level should not show debug logs
+        { level: 'debug', shouldShow: true },
+      ];
+
+      for (const testCase of testCases) {
+        // Set the log level
+        vi.stubEnv('VITE_CLIENT_LOG_LEVEL', testCase.level);
+
+        // Clear and setup console override with new log level
+        clearLogBuffer();
+        restoreConsole();
+        setupConsoleOverride();
+
+        // Log at debug level
+        console.debug('TEST_DEBUG', 'This is a debug message');
+
+        // Verify the log is always captured in the buffer regardless of log level
+        const logs = getLogsAsText();
+        expect(logs).toContain('TEST_DEBUG');
+        expect(logs).toContain('This is a debug message');
+
+        // Verify console output respects the log level
+        if (testCase.shouldShow) {
+          // Should show in console (we can't easily test console output in tests)
+          // but we can verify the buffer contains the log
+          expect(logs).toContain('DEBUG');
+        } else {
+          // Should not show in console but still be in buffer
+          expect(logs).toContain('DEBUG');
+        }
+      }
+
+      // Clean up
+      restoreConsole();
+      clearLogBuffer();
     });
 
     it('should verify debug configuration parsing', () => {

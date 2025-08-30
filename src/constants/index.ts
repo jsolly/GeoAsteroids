@@ -109,10 +109,10 @@ export const DEBUG = {
 
   // Bot settings
   BOT_COUNT: 1,
-  DISABLE_BOT_MOVEMENT: false,
-  DISABLE_BOT_LASERS: false,
+  DISABLE_BOT_MOVEMENT: true,
+  DISABLE_BOT_LASERS: true,
   DISABLE_BOT_SPAWN_PROTECTION: false,
-  PLACE_BOTS_NEAR_LOCAL_PLAYER: false,
+  PLACE_BOTS_NEAR_LOCAL_PLAYER: true,
 
   // Roid settings
   ROID_COUNT: 100,

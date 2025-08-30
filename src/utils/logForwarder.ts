@@ -78,7 +78,7 @@ function sendChunk(lines: string[]): void {
           // Debug: Closing WebSocket due to error
           // console.debug(
           //   'LOG_FORWARD',
-          //   'Closing WebSocket due to error before connection established'
+          //   'WebSocket connection error before connection established'
           // );
           ws.close();
         }

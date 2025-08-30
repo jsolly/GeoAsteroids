@@ -1,4 +1,4 @@
-// Simple server-side logging utility that respects SERVER_LOG_LEVEL environment variable
+// Simple server-side logging utility
 import fs, { promises as fsPromises } from 'node:fs';
 import path from 'node:path';
 
@@ -9,29 +9,10 @@ export enum ServerLogLevel {
   DEBUG = 3,
 }
 
-function getCurrentLogLevel(): ServerLogLevel {
-  const envLevel = process.env.SERVER_LOG_LEVEL;
-
-  if (!envLevel) {
-    return ServerLogLevel.INFO; // Default to info level
-  }
-
-  switch (envLevel.toLowerCase()) {
-    case 'error':
-      return ServerLogLevel.ERROR;
-    case 'warn':
-      return ServerLogLevel.WARN;
-    case 'info':
-      return ServerLogLevel.INFO;
-    case 'debug':
-      return ServerLogLevel.DEBUG;
-    default:
-      return ServerLogLevel.INFO;
-  }
-}
+const CURRENT_LOG_LEVEL = ServerLogLevel.INFO;
 
 function shouldLog(level: ServerLogLevel): boolean {
-  return level <= getCurrentLogLevel();
+  return level <= CURRENT_LOG_LEVEL;
 }
 
 // File logging support
@@ -184,4 +165,4 @@ export const logger = {
 };
 
 // Export current level for external use
-export const currentLogLevel = getCurrentLogLevel();
+export const currentLogLevel = CURRENT_LOG_LEVEL;
