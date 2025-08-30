@@ -120,13 +120,13 @@ function writeLineToFile(
   try {
     ensureServerLogStream()
       .then((stream) => {
-        stream.write(line + '\n');
+        stream.write(`${line}\n`);
       })
       .catch(async () => {
         // Fallback to appendFile if stream creation failed
         try {
           const filePath = await ensureServerLogPath();
-          await fsPromises.appendFile(filePath, line + '\n', 'utf8');
+          await fsPromises.appendFile(filePath, `${line}\n`, 'utf8');
         } catch {
           // Swallow: logging must never crash the app
         }

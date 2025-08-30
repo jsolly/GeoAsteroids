@@ -318,5 +318,141 @@ export class AsteroidSyncManager {
         })
       );
     });
+
+    this.connectionManager.registerMessageHandler('asteroidCreateBatch', (message) => {
+      const { asteroids } = message.payload as { asteroids: AsteroidData[] };
+      console.debug('MULTIPLAYER', 'Received server asteroid batch creation', {
+        count: asteroids.length,
+      });
+
+      // Process each asteroid in the batch
+      for (const asteroid of asteroids) {
+        console.debug('MULTIPLAYER', 'Processing asteroid from batch', asteroid.id);
+
+        // Create proper Roid object and store in local cache
+        const roid = entityFactory.createRoid({
+          position: asteroid.position,
+          size: asteroid.size,
+        });
+
+        // Validate and override properties with server data
+        if (!asteroid.id || typeof asteroid.id !== 'string') {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid ID received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        // Validate position
+        if (
+          !asteroid.position ||
+          typeof asteroid.position.x !== 'number' ||
+          typeof asteroid.position.y !== 'number' ||
+          !Number.isFinite(asteroid.position.x) ||
+          !Number.isFinite(asteroid.position.y)
+        ) {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid position received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        // Validate velocity
+        if (
+          !asteroid.velocity ||
+          typeof asteroid.velocity.x !== 'number' ||
+          typeof asteroid.velocity.y !== 'number' ||
+          !Number.isFinite(asteroid.velocity.x) ||
+          !Number.isFinite(asteroid.velocity.y)
+        ) {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid velocity received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        // Validate numeric fields
+        if (typeof asteroid.rotation !== 'number' || !Number.isFinite(asteroid.rotation)) {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid rotation received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        if (
+          typeof asteroid.angularVelocity !== 'number' ||
+          !Number.isFinite(asteroid.angularVelocity)
+        ) {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid angularVelocity received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        if (
+          typeof asteroid.health !== 'number' ||
+          !Number.isFinite(asteroid.health) ||
+          asteroid.health < 0
+        ) {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid health received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        if (
+          typeof asteroid.maxHealth !== 'number' ||
+          !Number.isFinite(asteroid.maxHealth) ||
+          asteroid.maxHealth < 0
+        ) {
+          console.warn(
+            'MULTIPLAYER',
+            'Invalid asteroid maxHealth received from server in batch',
+            asteroid
+          );
+          continue;
+        }
+
+        // Ensure health <= maxHealth invariant
+        if (asteroid.health > asteroid.maxHealth) {
+          const originalHealth = asteroid.health;
+          asteroid.health = Math.min(asteroid.health, asteroid.maxHealth);
+          console.warn(
+            'MULTIPLAYER',
+            `Asteroid health ${originalHealth} exceeds maxHealth ${asteroid.maxHealth}, clamped to ${asteroid.health}`,
+            { asteroidId: asteroid.id }
+          );
+        }
+
+        // All validations passed, apply server data
+        roid.id = asteroid.id;
+        roid.velocity = asteroid.velocity;
+        roid.angle = asteroid.rotation;
+        roid.angularVelocity = asteroid.angularVelocity;
+        roid.health = asteroid.health;
+        roid.maxHealth = asteroid.maxHealth;
+
+        this.localAsteroids.set(asteroid.id, roid);
+
+        // Dispatch event so game controller can update the asteroid belt
+        window.dispatchEvent(
+          new CustomEvent('serverAsteroidCreated', {
+            detail: { asteroid },
+          })
+        );
+      }
+    });
   }
 }

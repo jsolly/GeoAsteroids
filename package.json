@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "prune": "ts-prune",
-    "dev": "concurrently --kill-others --prefix-colors \"blue.bold,green.bold\" --prefix \"[{name}]\" --names \"vite,multiplayer\" \"vite\" \"tsx --env-file=.env server.ts\"",
-    "dev:client": "vite",
-    "dev:server": "tsx --env-file=.env server.ts",
+    "dev": "mkdir -p logs && rm -f logs/client.log logs/server.log && touch logs/client.log logs/server.log && concurrently --kill-others --prefix-colors \"blue.bold,green.bold\" --prefix \"[{name}]\" --names \"vite,multiplayer\" \"vite\" \"tsx --env-file=.env server.ts\"",
+    "dev:client": "mkdir -p logs && rm -f logs/client.log && touch logs/client.log && vite",
+    "dev:server": "mkdir -p logs && rm -f logs/server.log && touch logs/server.log && tsx --env-file=.env server.ts",
     "build": "tsc && vite build",
     "start": "vite",
     "watch": "vite build --watch",

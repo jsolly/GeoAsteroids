@@ -191,6 +191,29 @@ export class BotSyncManager {
         // No action needed on client - just informational
       }
     });
+
+    // Handle bot batch creation from server
+    this.connectionManager.registerMessageHandler('botsCreated', (message) => {
+      const { bots } = message.payload as {
+        bots: Array<{
+          botId: string;
+          botName: string;
+          position: { x: number; y: number };
+        }>;
+      };
+
+      console.debug('MULTIPLAYER', 'Received server bot batch creation', { count: bots.length });
+
+      // Process each bot in the batch
+      for (const botData of bots) {
+        if (botData.botId && botData.botName) {
+          // Create remote bot
+          this.createRemoteBot(botData.botId, botData.botName, botData.position);
+        } else {
+          console.warn('MULTIPLAYER', 'Invalid bot data in batch creation', botData);
+        }
+      }
+    });
   }
 
   private syncBotStates(): void {

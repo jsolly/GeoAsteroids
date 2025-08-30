@@ -55,13 +55,14 @@ function sendChunk(lines: string[]): void {
       // Create WebSocket and set up event handlers immediately
       ws = new WebSocket(wsUrl);
 
-      console.debug('LOG_FORWARD', 'WebSocket created', {
-        url: wsUrl,
-        readyState: ws.readyState,
-        connectionEstablished,
-        messageSent,
-        retryCount,
-      });
+      // Debug: WebSocket created
+      // console.debug('LOG_FORWARD', 'WebSocket created', {
+      //   url: wsUrl,
+      //   readyState: ws.readyState,
+      //   connectionEstablished,
+      //   messageSent,
+      //   retryCount,
+      // });
 
       // Handle connection errors - only close if we haven't established connection
       ws.onerror = (error) => {
@@ -74,16 +75,18 @@ function sendChunk(lines: string[]): void {
         });
         // Only close if we haven't established the connection yet
         if (ws && !connectionEstablished && ws.readyState !== WebSocket.CLOSED) {
-          console.debug(
-            'LOG_FORWARD',
-            'Closing WebSocket due to error before connection established'
-          );
+          // Debug: Closing WebSocket due to error
+          // console.debug(
+          //   'LOG_FORWARD',
+          //   'Closing WebSocket due to error before connection established'
+          // );
           ws.close();
         }
       };
 
       ws.onopen = () => {
-        console.debug('LOG_FORWARD', 'WebSocket connection opened', { readyState: ws?.readyState });
+        // Debug: WebSocket connection opened
+        // console.debug('LOG_FORWARD', 'WebSocket connection opened', { readyState: ws?.readyState });
         connectionEstablished = true;
 
         try {
@@ -142,10 +145,11 @@ function sendChunk(lines: string[]): void {
           if (retryCount < maxRetries) {
             retryCount++;
             const delay = baseDelay * 2 ** (retryCount - 1); // Exponential backoff
-            console.debug(
-              'LOG_FORWARD',
-              `Retrying connection in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-            );
+            // Debug: Retrying connection
+            // console.debug(
+            //   'LOG_FORWARD',
+            //   `Retrying connection in ${delay}ms (attempt ${retryCount}/${maxRetries})`
+            // );
 
             setTimeout(() => {
               attemptConnection();
@@ -163,10 +167,11 @@ function sendChunk(lines: string[]): void {
       if (retryCount < maxRetries) {
         retryCount++;
         const delay = baseDelay * 2 ** (retryCount - 1);
-        console.debug(
-          'LOG_FORWARD',
-          `Retrying connection creation in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-        );
+        // Debug: Retrying connection creation
+        // console.debug(
+        //   'LOG_FORWARD',
+        //   `Retrying connection creation in ${delay}ms (attempt ${retryCount}/${maxRetries})`
+        // );
 
         setTimeout(() => {
           attemptConnection();
@@ -188,13 +193,13 @@ export function startClientLogForwarder(): void {
   (window as { __logForwarderEnabled?: boolean }).__logForwarderEnabled = true;
 
   // Emit a startup marker for verification
-  try {
-    const iso = new Date().toISOString();
-    sendChunk([`[${iso}] INFO LOG_FORWARD Forwarder started`]);
+  // try {
+  //   const iso = new Date().toISOString();
+  //   sendChunk([`[${iso}] INFO LOG_FORWARD Forwarder started`]);
 
-    // Also test with a simple log message
-    console.info('LOG_FORWARD', 'This is a test log message to verify forwarding works');
-  } catch {}
+  //   // Also test with a simple log message
+  //   console.info('LOG_FORWARD', 'This is a test log message to verify forwarding works');
+  // } catch {}
 
   // Flush on interval with backpressure limits
   forwardTimer = window.setInterval(() => {
@@ -291,10 +296,11 @@ export function forwardLogToServer(message: string): void {
           if (retryCount < maxRetries) {
             retryCount++;
             const delay = baseDelay * 2 ** (retryCount - 1);
-            console.debug(
-              'LOG_FORWARD',
-              `Retrying forwardLogToServer in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-            );
+            // Debug: Retrying forwardLogToServer
+            // console.debug(
+            //   'LOG_FORWARD',
+            //   `Retrying forwardLogToServer in ${delay}ms (attempt ${retryCount}/${maxRetries})`
+            // );
 
             setTimeout(() => {
               attemptConnection();
@@ -309,10 +315,11 @@ export function forwardLogToServer(message: string): void {
       if (retryCount < maxRetries) {
         retryCount++;
         const delay = baseDelay * 2 ** (retryCount - 1);
-        console.debug(
-          'LOG_FORWARD',
-          `Retrying forwardLogToServer creation in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-        );
+        // Debug: Retrying forwardLogToServer creation
+        // console.debug(
+        //   'LOG_FORWARD',
+        //   `Retrying forwardLogToServer creation in ${delay}ms (attempt ${retryCount}/${maxRetries})`
+        // );
 
         setTimeout(() => {
           attemptConnection();

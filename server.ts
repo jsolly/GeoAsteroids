@@ -600,8 +600,9 @@ wss.on('error', (error) => {
   logger.error('❌ WebSocket server error:', error);
 });
 
-wss.on('headers', (headers) => {
-  logger.debug('📋 WebSocket upgrade headers:', headers);
+wss.on('headers', (_headers) => {
+  // Debug: WebSocket upgrade headers
+  // logger.debug('📋 WebSocket upgrade headers:', _headers);
 });
 
 // Initialize game engine and WebSocket core
@@ -612,11 +613,13 @@ wsCore.startPeriodicGameStateBroadcast();
 // WebSocket connection handling with routing
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const url = req.url;
-  logger.debug('🔌 WebSocket connection request:', { url, headers: req.headers });
+  // Debug: WebSocket connection request details
+  // logger.debug('🔌 WebSocket connection request:', { url, headers: req.headers });
 
   if (url === '/logs') {
     // Handle log client connection
-    logger.debug('📝 Log client connected');
+    // Debug: Log client connected
+    // logger.debug('📝 Log client connected');
     
     ws.on('message', (data) => {
       try {
@@ -624,17 +627,18 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         if (message.type === 'clientLog') {
           // Handle client log message - log it to server console
           const logData = message.data;
-          logger.info(`📝 Client Log [${logData.level}] [${logData.sessionId}]: ${logData.message}`);
+          // Debug: Client log forwarding to server console
+          // logger.info(`📝 Client Log [${logData.level}] [${logData.sessionId}]: ${logData.message}`);
           
           // Optionally log additional metadata
-          if (logData.userAgent || logData.pageUrl) {
-            logger.debug('📝 Client Log Metadata:', {
-              sessionId: logData.sessionId,
-              userAgent: logData.userAgent,
-              pageUrl: logData.pageUrl,
-              timestamp: new Date(message.timestamp).toISOString()
-            });
-          }
+          // if (logData.userAgent || logData.pageUrl) {
+          //   logger.debug('📝 Client Log Metadata:', {
+          //     sessionId: logData.sessionId,
+          //     userAgent: logData.userAgent,
+          //     pageUrl: logData.pageUrl,
+          //     timestamp: new Date(message.timestamp).toISOString()
+          //   });
+          // }
 
           // Persist client logs to logs/client.log
           // Use best-effort write; do not await to avoid blocking WS loop
@@ -648,7 +652,8 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     });
 
     ws.on('close', () => {
-      logger.debug('📝 Log client disconnected');
+      // Debug: Log client disconnected
+      // logger.debug('📝 Log client disconnected');
     });
 
     ws.on('error', (error) => {
@@ -657,11 +662,12 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   } else if (url === '/ws') {
     // Handle gameplay client connection
     logger.info('🔌 New player connected');
-    logger.debug('📍 Connection details:', {
-      url: req.url,
-      headers: req.headers,
-      remoteAddress: req.socket.remoteAddress,
-    });
+    // Debug: Connection details
+    // logger.debug('📍 Connection details:', {
+    //   url: req.url,
+    //   headers: req.headers,
+    //   remoteAddress: req.socket.remoteAddress,
+    // });
 
     ws.on('message', (data) => {
       try {
