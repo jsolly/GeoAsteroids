@@ -7,7 +7,7 @@ import { PlayerManager } from './PlayerManager';
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
   private multiplayerManager: MultiplayerManager;
-  private gameController: GameController | null = null;
+  private gameController: GameController;
   private playerManager: PlayerManager;
   private updateInterval: ReturnType<typeof setInterval> | null = null;
   private readonly UPDATE_FREQUENCY = 60; // 60 FPS
@@ -15,12 +15,11 @@ export class PlayerNetwork {
   private constructor() {
     this.multiplayerManager = MultiplayerManager.getInstance();
     this.playerManager = PlayerManager.getInstance();
+    // Eagerly initialize gameController to prevent race conditions
+    this.gameController = GameController.getInstance();
   }
 
   private getGameController(): GameController {
-    if (!this.gameController) {
-      this.gameController = GameController.getInstance();
-    }
     return this.gameController;
   }
 

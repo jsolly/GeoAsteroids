@@ -70,19 +70,38 @@ export class GameController {
       isMultiplayer = true;
       console.debug('MULTIPLAYER', 'Connected to server, using server-authoritative asteroids');
     } catch (error) {
+      // Explicitly set multiplayer to false on any connection failure
+      isMultiplayer = false;
+
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn('Failed to connect to multiplayer, continuing with local game:', errorMessage);
-      // Create local asteroids as fallback
-      this.currRoidBelt = entityFactory.createRoidBelt();
-      this.debugManager.applyDebugConfig(this.currRoidBelt);
+      const errorType = this.categorizeConnectionError(error);
+
+      console.warn(`Failed to connect to multiplayer (${errorType}):`, errorMessage);
+
+      // Handle different error types appropriately
+      if (this.shouldRetryConnection(errorType)) {
+        // Attempt retry for transient errors
+        const retrySuccess = await this.attemptConnectionRetry(errorType);
+        if (retrySuccess) {
+          isMultiplayer = true;
+          console.debug('MULTIPLAYER', 'Reconnected successfully');
+        } else {
+          this.showConnectionFailureMessage(errorType, 'Retry failed');
+          this.createLocalGame();
+        }
+      } else {
+        // Non-recoverable error - go straight to local game
+        this.showConnectionFailureMessage(errorType, 'Cannot connect');
+        this.createLocalGame();
+      }
     }
 
     // Initialize multiplayer systems if connected
     if (isMultiplayer) {
       this.multiplayerManager.initializeAsteroidSync();
 
-      // Create a minimal asteroid belt for now - server will replace with authoritative asteroids
-      this.currRoidBelt = entityFactory.createRoidBelt();
+      // Create an empty asteroid belt - server will populate with authoritative asteroids
+      this.currRoidBelt = entityFactory.createEmptyRoidBelt();
       this.multiplayerManager.setAsteroidBelt(this.currRoidBelt);
     }
 
@@ -102,90 +121,107 @@ export class GameController {
     window.dispatchEvent(new CustomEvent('gameStart'));
   }
 
+  // Event handler methods for server asteroid synchronization
+  private handleServerAsteroidCreated = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
+    const { asteroid } = customEvent.detail;
+    console.debug('GAME', 'Adding server asteroid to local belt', asteroid.id);
+
+    // Create a proper Roid object from server data
+    const roid = entityFactory.createRoid({
+      position: asteroid.position,
+      size: asteroid.size,
+    });
+
+    // Override properties with server data
+    roid.id = asteroid.id;
+    roid.velocity = asteroid.velocity;
+    roid.angle = asteroid.rotation;
+    roid.angularVelocity = asteroid.angularVelocity;
+    roid.health = asteroid.health;
+    roid.maxHealth = asteroid.maxHealth;
+
+    // Add to current asteroid belt if it exists
+    if (this.currRoidBelt) {
+      this.currRoidBelt.roids.push(roid);
+    }
+  };
+
+  private handleServerAsteroidUpdated = (event: Event): void => {
+    const customEvent = event as CustomEvent<{
+      asteroidId: string;
+      updates: Partial<AsteroidData>;
+    }>;
+    const { asteroidId, updates } = customEvent.detail;
+    console.debug('GAME', 'Updating server asteroid in local belt', asteroidId);
+
+    // Find and update the asteroid in the local belt
+    if (this.currRoidBelt) {
+      const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
+      if (roid && updates) {
+        if (updates.position) {
+          roid.position = updates.position;
+        }
+        if (updates.velocity) {
+          roid.velocity = updates.velocity;
+        }
+        if (updates.size !== undefined) {
+          roid.r = updates.size;
+        }
+        // jaggedness is read-only in Roid class, skip updating it
+        if (updates.rotation !== undefined) {
+          roid.angle = updates.rotation;
+        }
+        if (updates.angularVelocity !== undefined) {
+          roid.angularVelocity = updates.angularVelocity;
+        }
+        if (updates.health !== undefined) {
+          roid.health = updates.health;
+        }
+        if (updates.maxHealth !== undefined) {
+          roid.maxHealth = updates.maxHealth;
+        }
+      }
+    }
+  };
+
+  private handleServerAsteroidDestroyed = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ asteroidId: string }>;
+    const { asteroidId } = customEvent.detail;
+    console.debug('GAME', 'Removing server asteroid from local belt', asteroidId);
+
+    // Remove the asteroid from the local belt
+    if (this.currRoidBelt) {
+      const index = this.currRoidBelt.roids.findIndex((r) => r.id === asteroidId);
+      if (index !== -1) {
+        this.currRoidBelt.roids.splice(index, 1);
+      }
+    }
+  };
+
   private setupServerAsteroidListeners(): void {
     // Listen for server asteroid creation events
-    window.addEventListener('serverAsteroidCreated', (event: Event) => {
-      const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
-      const { asteroid } = customEvent.detail;
-      console.debug('GAME', 'Adding server asteroid to local belt', asteroid.id);
-
-      // Create a proper Roid object from server data
-      const roid = entityFactory.createRoid({
-        position: asteroid.position,
-        size: asteroid.size,
-      });
-
-      // Override properties with server data
-      roid.id = asteroid.id;
-      roid.velocity = asteroid.velocity;
-      roid.angle = asteroid.rotation;
-      roid.angularVelocity = asteroid.angularVelocity;
-      roid.health = asteroid.health;
-      roid.maxHealth = asteroid.maxHealth;
-
-      // Add to current asteroid belt if it exists
-      if (this.currRoidBelt) {
-        this.currRoidBelt.roids.push(roid);
-      }
-    });
+    window.addEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
 
     // Listen for server asteroid update events
-    window.addEventListener('serverAsteroidUpdated', (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        asteroidId: string;
-        updates: Partial<AsteroidData>;
-      }>;
-      const { asteroidId, updates } = customEvent.detail;
-      console.debug('GAME', 'Updating server asteroid in local belt', asteroidId);
-
-      // Find and update the asteroid in the local belt
-      if (this.currRoidBelt) {
-        const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
-        if (roid && updates) {
-          if (updates.position) {
-            roid.position = updates.position;
-          }
-          if (updates.velocity) {
-            roid.velocity = updates.velocity;
-          }
-          if (updates.size !== undefined) {
-            roid.r = updates.size;
-          }
-          // jaggedness is read-only in Roid class, skip updating it
-          if (updates.rotation !== undefined) {
-            roid.angle = updates.rotation;
-          }
-          if (updates.angularVelocity !== undefined) {
-            roid.angularVelocity = updates.angularVelocity;
-          }
-          if (updates.health !== undefined) {
-            roid.health = updates.health;
-          }
-          if (updates.maxHealth !== undefined) {
-            roid.maxHealth = updates.maxHealth;
-          }
-        }
-      }
-    });
+    window.addEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
 
     // Listen for server asteroid destruction events
-    window.addEventListener('serverAsteroidDestroyed', (event: Event) => {
-      const customEvent = event as CustomEvent<{ asteroidId: string }>;
-      const { asteroidId } = customEvent.detail;
-      console.debug('GAME', 'Removing server asteroid from local belt', asteroidId);
+    window.addEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
+  }
 
-      // Remove the asteroid from the local belt
-      if (this.currRoidBelt) {
-        const index = this.currRoidBelt.roids.findIndex((r) => r.id === asteroidId);
-        if (index !== -1) {
-          this.currRoidBelt.roids.splice(index, 1);
-        }
-      }
-    });
+  private cleanupServerAsteroidListeners(): void {
+    // Remove all server asteroid event listeners
+    window.removeEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
+    window.removeEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
+    window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
   }
 
   gameOver(): void {
     this.gameStateManager.updateTextProperties('Game Over', 1.0);
+
+    // Clean up server asteroid listeners to prevent memory leaks
+    this.cleanupServerAsteroidListeners();
 
     // Don't stop the game loop yet - let the text render for a few seconds
     setTimeout(() => {
@@ -293,5 +329,113 @@ export class GameController {
 
   getEmpPulseService(): EMPPulseService {
     return this.empPulseService;
+  }
+
+  // Connection error handling methods
+  private categorizeConnectionError(
+    error: unknown
+  ): 'network' | 'timeout' | 'auth' | 'server' | 'unknown' {
+    if (!(error instanceof Error)) {
+      return 'unknown';
+    }
+
+    const message = error.message.toLowerCase();
+    const code = (error as { code?: string }).code;
+
+    // Network unreachable errors
+    if (
+      code === 'ENOTFOUND' ||
+      code === 'ECONNREFUSED' ||
+      code === 'EHOSTUNREACH' ||
+      code === 'ENETUNREACH' ||
+      message.includes('network') ||
+      message.includes('unreachable')
+    ) {
+      return 'network';
+    }
+
+    // Timeout errors
+    if (code === 'ETIMEDOUT' || code === 'ECONNABORTED' || message.includes('timeout')) {
+      return 'timeout';
+    }
+
+    // Authentication/permission errors
+    if (
+      code === 'EAUTH' ||
+      code === 'EPERM' ||
+      message.includes('auth') ||
+      message.includes('permission') ||
+      message.includes('unauthorized')
+    ) {
+      return 'auth';
+    }
+
+    // Server errors (5xx responses, internal server errors)
+    if (code === 'ESERVER' || message.includes('server') || message.includes('internal')) {
+      return 'server';
+    }
+
+    return 'unknown';
+  }
+
+  private shouldRetryConnection(errorType: string): boolean {
+    // Retry for transient network issues, not for auth or unknown errors
+    return errorType === 'network' || errorType === 'timeout' || errorType === 'server';
+  }
+
+  private async attemptConnectionRetry(errorType: string): Promise<boolean> {
+    const maxRetries = 3;
+    const baseDelay = errorType === 'timeout' ? 2000 : 1000; // Longer delay for timeouts
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.debug(`MULTIPLAYER retry attempt ${attempt}/${maxRetries}`);
+        await new Promise((resolve) => setTimeout(resolve, baseDelay * attempt)); // Exponential backoff
+        await this.multiplayerManager.connect();
+        return true; // Success!
+      } catch (retryError) {
+        const retryErrorType = this.categorizeConnectionError(retryError);
+        console.debug(`MULTIPLAYER retry ${attempt} failed:`, retryErrorType);
+
+        // Don't retry if error type changed to non-retryable
+        if (!this.shouldRetryConnection(retryErrorType)) {
+          break;
+        }
+      }
+    }
+
+    return false; // All retries failed
+  }
+
+  private showConnectionFailureMessage(errorType: string, reason: string): void {
+    let message = '';
+
+    switch (errorType) {
+      case 'network':
+        message = `Network connection failed. ${reason}. Starting offline game.`;
+        break;
+      case 'timeout':
+        message = `Connection timed out. ${reason}. Starting offline game.`;
+        break;
+      case 'auth':
+        message = `Authentication failed. Please check your credentials. Starting offline game.`;
+        break;
+      case 'server':
+        message = `Server error occurred. ${reason}. Starting offline game.`;
+        break;
+      default:
+        message = `Connection failed: ${reason}. Starting offline game.`;
+    }
+
+    // Show user feedback - could be enhanced with toast/modal system
+    console.warn('MULTIPLAYER:', message);
+    // TODO: Implement proper UI feedback (toast/modal with retry button)
+    // this.uiManager.showToast(message, { action: 'Retry', onAction: () => this.retryConnection() });
+  }
+
+  private createLocalGame(): void {
+    console.debug('Creating local game with generated asteroids');
+    this.currRoidBelt = entityFactory.createRoidBelt();
+    this.debugManager.applyDebugConfig(this.currRoidBelt);
   }
 }

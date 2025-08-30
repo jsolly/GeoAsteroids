@@ -17,6 +17,7 @@ export class ConnectionManager {
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
   } = {};
+  private clientId: string;
 
   private constructor() {
     this.state = {
@@ -24,6 +25,8 @@ export class ConnectionManager {
       socket: null,
       reconnectAttempts: 0,
     };
+    // Generate a unique client ID for this session
+    this.clientId = this.generateClientId();
   }
 
   static getInstance(): ConnectionManager {
@@ -31,6 +34,23 @@ export class ConnectionManager {
       ConnectionManager.instance = new ConnectionManager();
     }
     return ConnectionManager.instance;
+  }
+
+  /**
+   * Get the unique client ID for this session
+   */
+  getClientId(): string {
+    return this.clientId;
+  }
+
+  /**
+   * Generate a unique client ID
+   */
+  private generateClientId(): string {
+    // Use a combination of timestamp and random string for uniqueness
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 8);
+    return `client-${timestamp}-${randomPart}`;
   }
 
   /**
@@ -55,7 +75,15 @@ export class ConnectionManager {
           resolve();
         };
 
+        // Track if we've already handled connection failure to prevent race conditions
+        let connectionFailed = false;
+
         this.state.socket.onerror = (error: Event): void => {
+          if (connectionFailed) {
+            return; // Prevent multiple error handling
+          }
+          connectionFailed = true;
+
           console.error('MULTIPLAYER', 'WebSocket error', { error: error.type });
           this.handleConnectionError();
           const connectionError = new Error('WebSocket connection failed');
@@ -63,11 +91,22 @@ export class ConnectionManager {
           reject(connectionError);
         };
 
-        this.state.socket.onclose = (): void => {
-          this.state.isConnected = false;
-          this.state.socket = null;
-          console.debug('MULTIPLAYER', 'Disconnected from server');
-          this.connectionHandlers.onDisconnect?.();
+        this.state.socket.onclose = (event: CloseEvent): void => {
+          // Only handle disconnection if we haven't already failed the connection
+          if (!connectionFailed) {
+            this.state.isConnected = false;
+            this.state.socket = null;
+            console.debug('MULTIPLAYER', 'Disconnected from server', {
+              code: event.code,
+              reason: event.reason,
+              wasClean: event.wasClean,
+            });
+            this.connectionHandlers.onDisconnect?.();
+          } else {
+            // Connection already failed, just clean up state
+            this.state.isConnected = false;
+            this.state.socket = null;
+          }
         };
 
         this.setupMessageHandler();
@@ -166,17 +205,24 @@ export class ConnectionManager {
 
         // Normalize server messages to always expose a `payload` field for handlers
         // Server may send: { type, payload } OR { type, data } OR { type, ...fields }
-        const inferredPayload =
-          raw.payload !== undefined
-            ? raw.payload
-            : raw.data !== undefined
-              ? raw.data
-              : (() => {
-                  const rest: Record<string, unknown> = { ...raw };
-                  delete (rest as Record<string, unknown>).type;
-                  delete (rest as Record<string, unknown>).timestamp;
-                  return Object.keys(rest).length > 0 ? rest : undefined;
-                })();
+        let inferredPayload: unknown;
+
+        if (raw.payload !== undefined) {
+          // Standard format with explicit payload field
+          inferredPayload = raw.payload;
+        } else if (raw.data !== undefined) {
+          // Alternative format with data field
+          inferredPayload = raw.data;
+        } else {
+          // Fallback: use remaining fields as payload (excluding type and timestamp)
+          const payloadFields: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(raw)) {
+            if (key !== 'type' && key !== 'timestamp') {
+              payloadFields[key] = value;
+            }
+          }
+          inferredPayload = Object.keys(payloadFields).length > 0 ? payloadFields : undefined;
+        }
 
         const normalized = {
           type: raw.type,

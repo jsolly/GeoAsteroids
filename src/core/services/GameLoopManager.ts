@@ -141,17 +141,13 @@ export class GameLoopManager {
       drawShipExplosion(ship, ship.color);
       ship.explodeTime--;
 
-      if (ship.explodeTime % 6 === 0) {
+      // Log only when explosion starts (at max time) and ends (at 0)
+      // This reduces noise while still providing useful debugging information
+      if (ship.explodeTime === 0) {
         console.debug(
-          `[EventLoop] handleShipExplosion: Player ${player.id} explosion time remaining: ${ship.explodeTime} frames (${(ship.explodeTime / 60).toFixed(1)}s)`
+          `[EventLoop] handleShipExplosion: Player ${player.id} explosion animation finished`
         );
       }
-    }
-
-    if (ship.explodeTime === 0) {
-      console.debug(
-        `[EventLoop] handleShipExplosion: Player ${player.id} explosion animation finished`
-      );
     }
   }
 

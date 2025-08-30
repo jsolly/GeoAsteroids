@@ -36,7 +36,6 @@ reviews:
     - **Postgres**: use `psycopg` (not `psycopg2`). If `psycopg2` is mentioned, explain why it's deprecated and push for the modern alternative.
     - **Testing**: use Vitest (not Jest). If Jest is mentioned, question why and explain the project's testing strategy.
     - **Test coverage**: ONLY write tests that cover happy paths. No tests for edge cases, no tests for malformed data, no performance tests. If edge case testing is requested, explain why it's not aligned with the project's testing philosophy.
-    - **Dev server**: assume it's already running; do not run `npm run dev`. If the user asks to start the dev server, question why it's not already running.
     - **Command conventions**: prefer non-interactive flags; avoid pagers; use absolute paths when possible. Question any interactive commands that could break automation.
     - **Error handling**: let errors propagate and stop execution rather than implementing fallbacks or defensive programming. If defensive programming is requested, question whether it's masking the real problem.
     - **Validation**: only validate untrusted external input (user data, third-party APIs); do not validate data from APIs you control or data you create internally. If internal validation is requested, question why the data can't be trusted.

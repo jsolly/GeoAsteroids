@@ -6,6 +6,7 @@ import type {
   Position,
   Velocity,
 } from '../../../shared-types';
+import { DEBUG } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
@@ -419,10 +420,17 @@ export class PlayerSyncManager {
         }
 
         if (damageData.isDestroyed) {
-          // Apply damage to trigger explosion if health is 0
+          // Handle ship destruction properly
           if (damageData.remainingHealth === 0) {
-            targetPlayer.ship.takeDamage(0); // This will trigger explosion if health is 0
+            // Ship should be destroyed - ensure health is 0 and trigger explosion
+            targetPlayer.ship.health = 0;
+            targetPlayer.ship.takeDamage(1); // This will trigger explosion since health is already 0
           } else {
+            // Ship is destroyed but has remaining health - this shouldn't happen, but handle gracefully
+            console.warn('MULTIPLAYER', 'Ship marked as destroyed but has remaining health', {
+              playerId: targetPlayer.id,
+              remainingHealth: damageData.remainingHealth,
+            });
             targetPlayer.ship.exploding = true;
           }
         }
@@ -450,8 +458,7 @@ export class PlayerSyncManager {
 
   private getRemotePlayerPosition(): Position {
     const isDebugLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug';
-    const shouldPlaceNearEachOther =
-      isDebugLevel && import.meta.env.VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER === 'true';
+    const shouldPlaceNearEachOther = isDebugLevel && DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER;
 
     if (shouldPlaceNearEachOther) {
       const existingRemotePlayers = this.getRemotePlayers();

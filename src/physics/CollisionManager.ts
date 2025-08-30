@@ -1,6 +1,7 @@
 import type { Laser } from '../entities/laser/Laser';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { isDebugMode } from '../utils/debugUtils';
 import { getGameBoundary } from './boundary';
 import {
   detectBoundaryCollisions,
@@ -47,28 +48,35 @@ export class CollisionManager {
 
     // Skip all collisions if player is in respawn countdown
     if (localPlayer.respawnTimer !== undefined) {
-      console.debug(
-        `[CollisionManager] Player ${localPlayer.id} has respawn timer (${localPlayer.respawnTimer} frames), skipping collisions`
-      );
+      if (isDebugMode()) {
+        console.debug(
+          `[CollisionManager] Player ${localPlayer.id} has respawn timer (${localPlayer.respawnTimer} frames), skipping collisions`
+        );
+      }
       return result;
     }
 
     const ship = localPlayer.ship;
 
-    // Check boundary collisions first
+    // Detect laser hits on roids first (before boundary check to avoid losing scoring)
+    result.laserScore = detectLaserHits(roidBelt, localPlayer, allPlayers);
+
+    // Apply laserScore immediately to prevent loss on boundary collision
+    if (result.laserScore > 0) {
+      localPlayer.score += result.laserScore;
+    }
+
+    // Check boundary collisions
     if (detectBoundaryCollisions(ship)) {
       return result;
     }
 
-    // Detect laser hits on roids
-    result.laserScore = detectLaserHits(roidBelt, localPlayer, allPlayers);
-
     // Detect roid hits on ship
     result.roidScore = detectRoidHits(ship, roidBelt);
 
-    // Update player's individual score for leaderboard
-    if (result.laserScore > 0 || result.roidScore > 0) {
-      localPlayer.score += result.laserScore + result.roidScore;
+    // Update player's individual score for leaderboard (roidScore)
+    if (result.roidScore > 0) {
+      localPlayer.score += result.roidScore;
     }
 
     // Performance optimization: limit processing when there are too many entities

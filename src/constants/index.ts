@@ -45,6 +45,9 @@ export const SHIP = {
   BOT_FRICTION: 2.0, // higher = more friction for bots
   SIZE: 30, // height in pixels
 
+  // Combat
+  MAX_LASERS: 5, // maximum lasers a ship can have at once
+
   // Health
   MAX_HEALTH: 100,
   COLLISION_DAMAGE: 20,
@@ -98,6 +101,29 @@ export const EMP = {
 } as const;
 
 // ============================================================================
+// DEBUG CONFIGURATION
+// ============================================================================
+export const DEBUG = {
+  // Player settings
+  LOCAL_PLAYER_INVINCIBLE: false,
+
+  // Bot settings
+  BOT_COUNT: 1,
+  DISABLE_BOT_MOVEMENT: false,
+  DISABLE_BOT_LASERS: false,
+  DISABLE_BOT_SPAWN_PROTECTION: false,
+  PLACE_BOTS_NEAR_LOCAL_PLAYER: false,
+
+  // Roid settings
+  ROID_COUNT: 100,
+  DISABLE_ROID_MOVEMENT: false,
+  PLACE_ROID_ON_BOT: false,
+
+  // Multiplayer settings
+  PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER: false,
+} as const;
+
+// ============================================================================
 // USER PREFERENCES
 // ============================================================================
 export const PREFERENCES = {
@@ -123,11 +149,22 @@ export const isSoundEnabled = (): boolean => {
   }
 };
 
-// Initialize sound preference checkbox
-if (typeof document !== 'undefined') {
+// Initialize sound preference checkbox after DOM is ready
+function initializeSoundPreference() {
   const soundCheckbox = document.getElementById('soundPref') as HTMLInputElement;
   if (soundCheckbox) {
     soundCheckbox.checked = isSoundEnabled();
+  }
+}
+
+// Run initialization when DOM is ready
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    // DOM not yet ready, wait for DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', initializeSoundPreference);
+  } else {
+    // DOM already ready, initialize immediately
+    initializeSoundPreference();
   }
 }
 
@@ -150,6 +187,7 @@ export const TEXT_SIZE = CANVAS.TEXT_SIZE;
 export const TEXT_FADE_TIME = CANVAS.TEXT_FADE_TIME;
 
 export const TURN_SPEED = SHIP.TURN_SPEED;
+export const SHIP_MAX_LASERS = SHIP.MAX_LASERS;
 export const SHIP_MAX_HEALTH = SHIP.MAX_HEALTH;
 export const SHIP_COLLISION_DAMAGE = SHIP.COLLISION_DAMAGE;
 export const SHIP_HEALTH_REGEN_RATE = SHIP.HEALTH_REGEN_RATE;
@@ -184,3 +222,16 @@ export const EMP_PULSE_DURATION = EMP.DURATION;
 
 export const LOCAL_STORAGE_KEYS = PREFERENCES.LOCAL_STORAGE_KEYS;
 export const soundIsOn = isSoundEnabled;
+
+// Debug constants (for backward compatibility)
+export const DEBUG_LOCAL_PLAYER_INVINCIBLE = DEBUG.LOCAL_PLAYER_INVINCIBLE;
+export const DEBUG_BOT_COUNT = DEBUG.BOT_COUNT;
+export const DEBUG_ROID_COUNT = DEBUG.ROID_COUNT;
+export const DEBUG_DISABLE_BOT_MOVEMENT = DEBUG.DISABLE_BOT_MOVEMENT;
+export const DEBUG_DISABLE_BOT_LASERS = DEBUG.DISABLE_BOT_LASERS;
+export const DEBUG_DISABLE_BOT_SPAWN_PROTECTION = DEBUG.DISABLE_BOT_SPAWN_PROTECTION;
+export const DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER = DEBUG.PLACE_BOTS_NEAR_LOCAL_PLAYER;
+export const DEBUG_DISABLE_ROID_MOVEMENT = DEBUG.DISABLE_ROID_MOVEMENT;
+export const DEBUG_PLACE_ROID_ON_BOT = DEBUG.PLACE_ROID_ON_BOT;
+export const DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER =
+  DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER;

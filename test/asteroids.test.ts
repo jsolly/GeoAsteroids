@@ -52,7 +52,6 @@ test('Destroy Roid', () => {
 test('Move Roids', () => {
   // Mock debug environment to ensure roid movement works
   vi.stubEnv('VITE_CLIENT_LOG_LEVEL', 'info');
-  vi.stubEnv('VITE_DEBUG_DISABLE_ROID_MOVEMENT', 'false');
 
   const testRoidBelt = createRoidBelt();
   testRoidBelt.addRoid();

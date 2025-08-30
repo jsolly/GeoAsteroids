@@ -47,14 +47,19 @@ The following environment variables can be configured:
 
 #### Debug Mode
 - `VITE_CLIENT_LOG_LEVEL=debug` - Automatically enables all debug features and settings
-- `VITE_DEBUG_BOT_COUNT` - Number of bots to spawn in debug mode (default: 1)
-- `VITE_DEBUG_ROID_COUNT` - Alternative roid count control for debug mode
-- `VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE=true` - Makes the local player invincible in debug mode
-- `VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION=true` - Disables bot spawn protection in debug mode
-- `VITE_DEBUG_DISABLE_BOT_MOVEMENT=true` - Disables bot movement when set to 'true'
-- `VITE_DEBUG_DISABLE_BOT_LASERS=false` - Disables bot shooting when set to 'true'
-- `VITE_DEBUG_PLACE_ROID_ON_BOT=false` - Places roids on bots for testing
-- `VITE_DEBUG_DISABLE_ROID_MOVEMENT=true` - Disables roid movement when set to 'true'
+
+Debug behavior is controlled by constants defined in `src/constants/index.ts` in the `DEBUG` section. These can be modified directly in the code:
+
+- `DEBUG.BOT_COUNT` - Number of bots to spawn in debug mode (default: 1)
+- `DEBUG.ROID_COUNT` - Alternative roid count control for debug mode (default: 100)
+- `DEBUG.LOCAL_PLAYER_INVINCIBLE` - Makes the local player invincible in debug mode (default: false)
+- `DEBUG.DISABLE_BOT_SPAWN_PROTECTION` - Disables bot spawn protection in debug mode (default: false)
+- `DEBUG.DISABLE_BOT_MOVEMENT` - Disables bot movement when set to true (default: false)
+- `DEBUG.DISABLE_BOT_LASERS` - Disables bot shooting when set to true (default: false)
+- `DEBUG.PLACE_ROID_ON_BOT` - Places roids on bots for testing (default: false)
+- `DEBUG.DISABLE_ROID_MOVEMENT` - Disables roid movement when set to true (default: false)
+- `DEBUG.PLACE_BOTS_NEAR_LOCAL_PLAYER` - Places bots near the local player in debug mode (default: false)
+- `DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER` - Clusters remote players together in debug mode (default: false)
 
 #### Logging
 - `VITE_CLIENT_LOG_LEVEL` - Sets the client-side log level (error, warn, info, debug)

@@ -6,6 +6,9 @@ export class Sound {
   playing = false;
 
   constructor(src: string, maxStreams: number, vol = 0.05) {
+    // Enforce at least one stream to prevent NaN indexing
+    maxStreams = Math.max(1, maxStreams);
+
     for (let i = 0; i < maxStreams; i++) {
       const audio = new Audio(src);
       audio.volume = vol;
@@ -24,6 +27,12 @@ export class Sound {
 
   async play(): Promise<void> {
     if (soundIsOn()) {
+      // Defensive guard against empty streams array
+      if (this.streams.length === 0) {
+        console.warn('Sound.play() called but no audio streams available');
+        return;
+      }
+
       this.streamNum = (this.streamNum + 1) % this.streams.length;
       const audio = this.streams[this.streamNum];
 
@@ -38,6 +47,12 @@ export class Sound {
   }
 
   stop(): void {
+    // Defensive guard against empty streams array
+    if (this.streams.length === 0) {
+      console.warn('Sound.stop() called but no audio streams available');
+      return;
+    }
+
     this.streams[this.streamNum].pause();
     this.streams[this.streamNum].currentTime = 0;
     this.playing = false;

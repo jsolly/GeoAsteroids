@@ -1,4 +1,5 @@
 import type { Position } from '../../../shared-types';
+import { DEBUG } from '../../constants';
 import {
   getRandomPositionNearPoint,
   getRandomPositionWithinBoundary,
@@ -67,8 +68,7 @@ export class BotFactory {
   ): Array<{ x: number; y: number }> {
     const positions: Array<{ x: number; y: number }> = [];
     const isDebugLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug';
-    const shouldPlaceNearLocalPlayer =
-      isDebugLevel && import.meta.env.VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER === 'true';
+    const shouldPlaceNearLocalPlayer = isDebugLevel && DEBUG.PLACE_BOTS_NEAR_LOCAL_PLAYER;
 
     // Generate positions based on debug configuration
     for (let i = 0; i < count; i++) {

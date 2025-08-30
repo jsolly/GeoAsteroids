@@ -276,19 +276,26 @@ export class BotSyncManager {
         bot.ship.maxHealth = state.maxHealth;
       }
 
-      // Update lasers if provided
+      // Update lasers if provided - properly manage laser lifecycle to prevent leaks
       if (state.lasers) {
-        // Create Laser instances from the received data
-        const laserInstances = state.lasers.map((laserData) => {
-          return new Laser(
+        // Clear existing lasers to prevent memory leaks
+        // Note: We don't call any cleanup methods since Laser class doesn't have explicit cleanup
+        bot.ship.lasers.length = 0;
+
+        // Create new Laser instances from the received data
+        for (const laserData of state.lasers) {
+          const laser = new Laser(
             laserData.position,
             laserData.velocity,
             laserData.distTraveled,
             laserData.explodeTime,
             laserData.hasExploded
           );
-        });
-        bot.ship.lasers = laserInstances;
+          bot.ship.lasers.push(laser);
+        }
+      } else if (state.lasers === null || state.lasers === undefined) {
+        // If server explicitly sends empty/null lasers, clear them
+        bot.ship.lasers.length = 0;
       }
     }
   }

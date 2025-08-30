@@ -1,3 +1,4 @@
+import { DEBUG } from '../../constants';
 import { DEFAULT_BOT_COUNT } from '../../constants/game';
 import type { BotShoot } from '../../entities/bot/types';
 import { entityFactory } from '../../entities/EntityFactory';
@@ -17,6 +18,7 @@ export class PlayerManager {
   private static instance: PlayerManager;
   private multiplayerManager: MultiplayerManager;
   private localPlayer: Player | null = null;
+  private botShootHandler: ((event: Event) => void) | null = null;
 
   private constructor() {
     this.multiplayerManager = MultiplayerManager.getInstance();
@@ -30,8 +32,7 @@ export class PlayerManager {
   }
 
   createLocalPlayer(): Player {
-    const shouldClusterLocals =
-      isDebugMode() && import.meta.env.VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER === 'true';
+    const shouldClusterLocals = isDebugMode() && DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER;
 
     const position = (() => {
       if (shouldClusterLocals) {
@@ -61,9 +62,7 @@ export class PlayerManager {
   }
 
   initializeBots(): void {
-    const botCount = isDebugMode()
-      ? parseInt(import.meta.env.VITE_DEBUG_BOT_COUNT || '1', 10)
-      : DEFAULT_BOT_COUNT;
+    const botCount = isDebugMode() ? DEBUG.BOT_COUNT : DEFAULT_BOT_COUNT;
 
     this.multiplayerManager.initializeBots(botCount);
   }
@@ -117,10 +116,13 @@ export class PlayerManager {
   }
 
   setupBotShootHandler(): void {
-    window.addEventListener('botShoot', (event: Event) => {
+    // Store handler reference for proper cleanup
+    this.botShootHandler = (event: Event) => {
       const botShoot = (event as CustomEvent).detail as BotShoot;
       this.handleBotShoot(botShoot);
-    });
+    };
+
+    window.addEventListener('botShoot', this.botShootHandler);
   }
 
   private handleBotShoot(botShoot: BotShoot): void {
@@ -149,18 +151,57 @@ export class PlayerManager {
     const shipPos = this.getLocalShip().position;
     const shipRadius = this.getLocalShip().r;
 
-    // Calculate distance from laser line to ship center
-    const laserEndX = laserStart.x + laserDirection.x * 1000;
-    const laserEndY = laserStart.y + laserDirection.y * 1000;
+    // Compute laser end point (1000 units along direction)
+    const laserEnd = {
+      x: laserStart.x + laserDirection.x * 1000,
+      y: laserStart.y + laserDirection.y * 1000,
+    };
 
-    const lineCoeffA = laserEndY - laserStart.y;
-    const lineCoeffB = laserStart.x - laserEndX;
-    const lineCoeffC = laserEndX * laserStart.y - laserStart.x * laserEndY;
+    // Compute segment vector
+    const seg = {
+      x: laserEnd.x - laserStart.x,
+      y: laserEnd.y - laserStart.y,
+    };
 
-    const distance =
-      Math.abs(lineCoeffA * shipPos.x + lineCoeffB * shipPos.y + lineCoeffC) /
-      Math.sqrt(lineCoeffA * lineCoeffA + lineCoeffB * lineCoeffB);
+    // Handle zero-length segment (avoid division by zero)
+    const segLengthSquared = seg.x * seg.x + seg.y * seg.y;
+    if (segLengthSquared === 0) {
+      // Treat as point-to-point distance
+      const dx = shipPos.x - laserStart.x;
+      const dy = shipPos.y - laserStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return distance <= shipRadius;
+    }
+
+    // Compute t = ((shipPos - laserStart) · seg) / (seg · seg)
+    const toShip = {
+      x: shipPos.x - laserStart.x,
+      y: shipPos.y - laserStart.y,
+    };
+    let t = (toShip.x * seg.x + toShip.y * seg.y) / segLengthSquared;
+
+    // Clamp t to [0, 1] to stay within segment bounds
+    t = Math.max(0, Math.min(1, t));
+
+    // Compute closest point on segment
+    const closestPoint = {
+      x: laserStart.x + seg.x * t,
+      y: laserStart.y + seg.y * t,
+    };
+
+    // Compute distance from closest point to ship center
+    const dx = shipPos.x - closestPoint.x;
+    const dy = shipPos.y - closestPoint.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
     return distance <= shipRadius;
+  }
+
+  cleanup(): void {
+    // Remove event listeners to prevent memory leaks
+    if (this.botShootHandler) {
+      window.removeEventListener('botShoot', this.botShootHandler);
+      this.botShootHandler = null;
+    }
   }
 }

@@ -56,8 +56,13 @@ export class EMPPulseService {
     const roidsToDestroy: number[] = [];
     const newRoidsToAdd: Roid[] = [];
 
+    // First pass: collect indices and calculate destruction results
     for (let i = roids.length - 1; i >= 0; i--) {
       const roid = roids[i];
+      if (!roid) {
+        continue; // Skip if roid is already removed
+      }
+
       const distance = Math.sqrt(
         (roid.position.x - center.x) ** 2 + (roid.position.y - center.y) ** 2
       );
@@ -70,11 +75,15 @@ export class EMPPulseService {
       }
     }
 
-    // Remove destroyed roids and add new ones
+    // Second pass: remove destroyed roids in descending order to maintain valid indices
     roidsToDestroy.sort((a, b) => b - a);
     for (const index of roidsToDestroy) {
-      roidBelt.roids.splice(index, 1);
+      if (index >= 0 && index < roidBelt.roids.length) {
+        roidBelt.roids.splice(index, 1);
+      }
     }
+
+    // Add new roids from destruction
     roidBelt.roids.push(...newRoidsToAdd);
   }
 

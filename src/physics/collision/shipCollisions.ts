@@ -83,18 +83,16 @@ export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
           // Check if debug system wants to prevent damage
           const shouldApplyDamage = shouldApplyDamageToLocalPlayer(currShip);
 
-          // Deal damage instead of instant death
           if (shouldApplyDamage) {
+            // Deal damage and destroy roid when damage should be applied
             currShip.takeDamage(SHIP_COLLISION_DAMAGE);
-
-            // Only destroy roid and award score when damage is applied
             playSound(Roid.fxHit);
             const result = currRoidBelt.destroyRoid(i);
             score += result.score;
             roidsToDestroy.push(i);
             newRoidsToAdd.push(...result.newRoids);
           }
-          // If shouldApplyDamage is false, skip roid destruction and scoring
+          // If shouldApplyDamage is false, skip the entire collision processing
         }
       }
     }

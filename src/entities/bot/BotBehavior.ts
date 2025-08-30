@@ -1,4 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
+import { DEBUG } from '../../constants';
 import { SHIP_MAX_VELOCITY } from '../../constants/entities/ship';
 import { isDebugMode } from '../../utils/debugUtils';
 import type { Player } from '../player/Player';
@@ -50,7 +51,7 @@ export class BotBehavior {
     }
 
     // Check if bot movement is disabled in debug mode
-    if (isDebugMode() && import.meta.env.VITE_DEBUG_DISABLE_BOT_MOVEMENT === 'true') {
+    if (isDebugMode() && DEBUG.DISABLE_BOT_MOVEMENT) {
       return;
     }
 
@@ -324,7 +325,7 @@ export class BotBehavior {
     }
 
     // Check if bot lasers are disabled in debug mode
-    if (isDebugMode() && import.meta.env.VITE_DEBUG_DISABLE_BOT_LASERS === 'true') {
+    if (isDebugMode() && DEBUG.DISABLE_BOT_LASERS) {
       return false;
     }
 

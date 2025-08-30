@@ -40,6 +40,12 @@ interface VercelResponse {
 class MultiplayerServer {
   private players: Map<string, ConnectedPlayer> = new Map();
   private gameTime: number = 0;
+  private hostId: string | null = null;
+  private rateLimiters = new Map<string, { count: number; resetTime: number }>();
+  private globalRateLimiter = { count: 0, resetTime: Date.now() + 60000 }; // 1 minute window
+  private readonly MAX_INITBOTS_PER_MINUTE = 5;
+  private readonly MAX_INITBOTS_GLOBAL_PER_MINUTE = 20;
+  private readonly MAX_BOT_COUNT = 50;
 
   constructor() {
     // Start game loop for cleanup
@@ -55,6 +61,60 @@ class MultiplayerServer {
       if (now - player.lastUpdate > 5000) {
         this.removePlayer(id);
       }
+    }
+  }
+
+  /**
+   * Check if a client is authorized to initialize bots
+   */
+  private isAuthorizedForInitBots(playerId: string): boolean {
+    // First player to join becomes the host
+    if (this.hostId === null && this.players.size > 0) {
+      this.hostId = Array.from(this.players.keys())[0];
+    }
+
+    return this.hostId === playerId;
+  }
+
+  /**
+   * Check rate limits for initBots requests
+   */
+  private checkRateLimit(playerId: string): { allowed: boolean; error?: string } {
+    const now = Date.now();
+
+    // Check global rate limit
+    if (now >= this.globalRateLimiter.resetTime) {
+      this.globalRateLimiter.count = 0;
+      this.globalRateLimiter.resetTime = now + 60000; // Reset in 1 minute
+    }
+
+    if (this.globalRateLimiter.count >= this.MAX_INITBOTS_GLOBAL_PER_MINUTE) {
+      return { allowed: false, error: 'Global rate limit exceeded' };
+    }
+
+    // Check per-client rate limit
+    const clientLimiter = this.rateLimiters.get(playerId);
+    if (!clientLimiter || now >= clientLimiter.resetTime) {
+      this.rateLimiters.set(playerId, { count: 0, resetTime: now + 60000 });
+    }
+
+    const limiter = this.rateLimiters.get(playerId);
+    if (limiter && limiter.count >= this.MAX_INITBOTS_PER_MINUTE) {
+      return { allowed: false, error: 'Client rate limit exceeded' };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Record a rate limit usage
+   */
+  private recordRateLimitUsage(playerId: string): void {
+    this.globalRateLimiter.count++;
+
+    const limiter = this.rateLimiters.get(playerId);
+    if (limiter) {
+      limiter.count++;
     }
   }
 
@@ -85,6 +145,15 @@ class MultiplayerServer {
   }
 
   private handleClientMessage(message: ClientMessage, ws: WebSocketWithEvents): void {
+    // Find the player ID associated with this WebSocket
+    let playerId: string | null = null;
+    for (const [id, player] of this.players.entries()) {
+      if (player.ws === ws) {
+        playerId = id;
+        break;
+      }
+    }
+
     switch (message.type) {
       case 'join':
         if (this.isPlayerJoinData(message.data)) {
@@ -112,8 +181,12 @@ class MultiplayerServer {
         }
         break;
       case 'initBots':
-        // Handle bot initialization - for now just acknowledge
-        console.debug('Player initialized bots:', message.data);
+        if (this.isInitBotsData(message.data)) {
+          this.handleInitBots(message.data, playerId, ws);
+        } else {
+          console.warn('Invalid initBots data received:', message.data);
+          this.sendError(ws, 'Invalid initBots data format');
+        }
         break;
       default:
         this.sendError(ws, 'Unknown message type');
@@ -162,6 +235,17 @@ class MultiplayerServer {
     );
   }
 
+  private isInitBotsData(data: unknown): data is { botCount: number } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'botCount' in data &&
+      typeof (data as { botCount: unknown }).botCount === 'number' &&
+      Number.isFinite((data as { botCount: number }).botCount) &&
+      (data as { botCount: number }).botCount >= 0
+    );
+  }
+
   private handlePlayerJoin(data: PlayerJoin, ws: WebSocketWithEvents): void {
     const player: ConnectedPlayer = {
       ...data,
@@ -176,6 +260,12 @@ class MultiplayerServer {
     };
 
     this.players.set(data.id, player);
+
+    // Set host if this is the first player
+    if (this.hostId === null) {
+      this.hostId = data.id;
+      console.debug(`initBots: Player ${data.id} is now the host`);
+    }
 
     // Notify all other players about the new player
     this.broadcastToOthers(data.id, {
@@ -229,6 +319,57 @@ class MultiplayerServer {
     });
   }
 
+  private handleInitBots(
+    data: { botCount: number },
+    playerId: string | null,
+    ws: WebSocketWithEvents
+  ): void {
+    // Validate that we have a player ID
+    if (!playerId) {
+      console.warn('initBots: No player ID found for WebSocket connection');
+      this.sendError(ws, 'Unauthorized: Player not found');
+      return;
+    }
+
+    // Check authorization
+    if (!this.isAuthorizedForInitBots(playerId)) {
+      console.warn(`initBots: Player ${playerId} is not authorized (not the host)`);
+      this.sendError(ws, 'Forbidden: Only the host can initialize bots');
+      return;
+    }
+
+    // Check rate limits
+    const rateLimitCheck = this.checkRateLimit(playerId);
+    if (!rateLimitCheck.allowed) {
+      console.warn(`initBots: Rate limit exceeded for player ${playerId}: ${rateLimitCheck.error}`);
+      this.sendError(ws, `Rate limit exceeded: ${rateLimitCheck.error}`);
+      return;
+    }
+
+    // Validate and clamp bot count
+    let botCount = data.botCount;
+    if (botCount > this.MAX_BOT_COUNT) {
+      console.warn(
+        `initBots: Requested bot count ${botCount} exceeds maximum ${this.MAX_BOT_COUNT}, clamping to maximum`
+      );
+      botCount = this.MAX_BOT_COUNT;
+    }
+
+    // Record the rate limit usage
+    this.recordRateLimitUsage(playerId);
+
+    console.debug(
+      `initBots: Player ${playerId} initialized ${botCount} bots (requested: ${data.botCount})`
+    );
+
+    // TODO: Implement bot initialization logic
+    // This could include:
+    // - Creating bot entities
+    // - Broadcasting bot creation to all players
+    // - Setting up bot AI behavior
+    // - Managing bot lifecycle
+  }
+
   private removePlayer(id: string): void {
     const player = this.players.get(id);
     if (player) {
@@ -247,6 +388,20 @@ class MultiplayerServer {
       }
 
       this.players.delete(id);
+
+      // Handle host reassignment if the host left
+      if (this.hostId === id) {
+        const remainingPlayers = Array.from(this.players.keys());
+        if (remainingPlayers.length > 0) {
+          this.hostId = remainingPlayers[0];
+          console.debug(`initBots: Player ${this.hostId} is now the host (previous host left)`);
+        } else {
+          this.hostId = null;
+        }
+      }
+
+      // Clean up rate limiter for this player
+      this.rateLimiters.delete(id);
     }
   }
 

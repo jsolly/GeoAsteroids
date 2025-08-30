@@ -1,4 +1,5 @@
 import { playSound, Sound } from '../../audio/Sound';
+import { SHIP_MAX_LASERS } from '../../constants';
 import { EMP_PULSE_DURATION, FPS } from '../../constants/game';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
@@ -44,8 +45,7 @@ export function canShootAgain(state: ShipCombatState, maxLasers: number): boolea
  * Create and add a laser to the ship's arsenal
  */
 export function shoot(ship: Ship, state: ShipCombatState): void {
-  if (canShootAgain(state, 5)) {
-    // LASER_MAX = 5
+  if (canShootAgain(state, SHIP_MAX_LASERS)) {
     const laser = createLaser(ship);
     state.lasers.push(laser);
     laser.playLaserSound();
@@ -124,7 +124,7 @@ export function canTakeCollisionDamage(state: ShipCombatState, cooldownMs: numbe
 /**
  * Activate EMP pulse
  */
-export function activateEmpPulse(state: ShipCombatState): void {
+export function activateEmpPulse(ship: Ship, state: ShipCombatState): void {
   if (state.empPulseActive) {
     return;
   }
@@ -133,11 +133,11 @@ export function activateEmpPulse(state: ShipCombatState): void {
   state.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
   playSound(fxExplode);
 
-  // Dispatch EMP pulse event
+  // Dispatch EMP pulse event with actual ship position and radius
   const empEvent = new CustomEvent('empPulse', {
     detail: {
-      shipPosition: { x: 0, y: 0 }, // Would need to be passed from ship
-      shipRadius: 0, // Would need to be passed from ship
+      shipPosition: ship.position,
+      shipRadius: ship.r,
     },
   });
 

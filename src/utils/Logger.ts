@@ -126,20 +126,30 @@ export class Logger {
     return `[${timestamp}] ${levelName} [${entry.category}] ${entry.message}${contextStr}${errorStr}`;
   }
 
-  private outputLog(level: LogLevel, message: string): void {
-    switch (level) {
-      case LogLevel.DEBUG:
-        console.debug(message);
-        break;
-      case LogLevel.INFO:
-        console.info(message);
-        break;
-      case LogLevel.WARN:
-        console.warn(message);
-        break;
-      case LogLevel.ERROR:
-        console.error(message);
-        break;
+  private outputLog(_level: LogLevel, message: string): void {
+    // Forwarding is controlled at runtime by the console override/forwarder
+    // Only forward if the forwarder has been started and opted in
+    const forwarderEnabled =
+      typeof window !== 'undefined' &&
+      (window as { __logForwarderEnabled?: boolean }).__logForwarderEnabled === true;
+
+    if (forwarderEnabled) {
+      try {
+        // Import dynamically to avoid circular dependency
+        import('./logForwarder')
+          .then(({ forwardLogToServer }) => {
+            try {
+              forwardLogToServer(message);
+            } catch (forwardError) {
+              console.warn('Failed to forward log to server:', forwardError);
+            }
+          })
+          .catch((importError) => {
+            console.warn('Failed to import log forwarder:', importError);
+          });
+      } catch (error) {
+        console.warn('Log forwarding failed:', error);
+      }
     }
   }
 

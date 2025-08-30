@@ -1,5 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
+import { DEBUG } from '../../constants';
 import {
   ROID_JAGG,
   ROID_POINTS_LRG,
@@ -11,7 +12,7 @@ import {
   ROID_VERTICES,
 } from '../../constants/entities/roid';
 import { FPS, ROID_MAX_COUNT, ROID_MIN_COUNT, ROID_NUM } from '../../constants/game';
-import { spawnRoidFromEdge } from './roidUtils';
+import { spawnRoidFromEdge } from '../../utils/roidSpawn';
 
 class Roid {
   id: string;
@@ -28,7 +29,7 @@ class Roid {
     public position: Position,
     public r: number
   ) {
-    this.id = `roid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.id = crypto.randomUUID();
     this.angle = Math.random() * Math.PI * 2; // in radians
     this.angularVelocity = (Math.random() - 0.5) * 0.1; // Small random rotation
     const speed = (Math.random() * ROID_SPEED) / FPS;
@@ -58,10 +59,12 @@ class RoidBelt {
   maxCount = ROID_MAX_COUNT;
   spawnTimer = 0; // Timer for spawning roids
 
-  constructor() {
-    // Create the base number of roids
-    for (let i = 0; i < this.roidNum; i++) {
-      this.addRoid();
+  constructor(createInitialRoids = true) {
+    if (createInitialRoids) {
+      // Create the base number of roids
+      for (let i = 0; i < this.roidNum; i++) {
+        this.addRoid();
+      }
     }
   }
 
@@ -106,10 +109,7 @@ class RoidBelt {
 
   moveRoids(): void {
     // Check if asteroid movement is disabled in debug mode
-    if (
-      import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug' &&
-      import.meta.env.VITE_DEBUG_DISABLE_ROID_MOVEMENT === 'true'
-    ) {
+    if (import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug' && DEBUG.DISABLE_ROID_MOVEMENT) {
       return;
     }
 

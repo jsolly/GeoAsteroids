@@ -1,3 +1,4 @@
+import { DEBUG } from '../../constants';
 import type { RoidBelt } from '../../entities/roid/Roid';
 import { isDebugMode } from '../../utils/debugUtils';
 
@@ -40,12 +41,15 @@ export class DebugManager {
     try {
       const debugConfig = this.getDebugConfig();
 
-      // Apply roid count from env var
-      if (debugConfig.debugRoidCount !== 10) {
-        roidBelt.setRoidLimits(debugConfig.debugRoidCount, debugConfig.debugRoidCount);
+      // Apply roid count from env var if different from current count
+      const targetRoidCount = debugConfig.debugRoidCount ?? 100; // Default to 100 if not specified
+      const currentRoidCount = roidBelt.roids.length;
+
+      if (targetRoidCount !== currentRoidCount) {
+        roidBelt.setRoidLimits(targetRoidCount, targetRoidCount);
         // Clear and recreate roids to match the new count
         roidBelt.roids = [];
-        for (let i = 0; i < debugConfig.debugRoidCount; i++) {
+        for (let i = 0; i < targetRoidCount; i++) {
           roidBelt.addRoid();
         }
       }
@@ -59,8 +63,8 @@ export class DebugManager {
 
   private getDebugConfig(): DebugConfig {
     return {
-      botCount: parseInt(import.meta.env.VITE_DEBUG_BOT_COUNT || '1', 10),
-      debugRoidCount: parseInt(import.meta.env.VITE_DEBUG_ROID_COUNT || '100', 10),
+      botCount: DEBUG.BOT_COUNT,
+      debugRoidCount: DEBUG.ROID_COUNT,
     };
   }
 }

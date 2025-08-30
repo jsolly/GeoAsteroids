@@ -1,0 +1,61 @@
+import { WebSocket } from 'ws';
+import { GameEngine } from '../core/GameEngine';
+import { MessageHandler } from './MessageHandler';
+import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
+
+export class WebSocketCore {
+  private gameEngine: GameEngine;
+  private messageHandler: MessageHandler;
+  private broadcaster: GameStateBroadcaster;
+
+  constructor(gameEngine: GameEngine) {
+    this.gameEngine = gameEngine;
+    this.broadcaster = new GameStateBroadcaster(gameEngine);
+    this.messageHandler = new MessageHandler(gameEngine, this.broadcaster);
+  }
+
+  public startPeriodicGameStateBroadcast(): void {
+    this.broadcaster.startPeriodicBroadcast();
+  }
+
+  public stopPeriodicGameStateBroadcast(): void {
+    this.broadcaster.stopPeriodicBroadcast();
+  }
+
+  public handleClientMessage(message: any, ws: WebSocket): void {
+    this.messageHandler.handleMessage(message, ws);
+  }
+
+  public sendToWebSocket(ws: WebSocket, message: any): void {
+    this.broadcaster.sendToWebSocket(ws, message);
+  }
+
+  public sendError(ws: WebSocket, message: string): void {
+    this.broadcaster.sendError(ws, message);
+  }
+
+  public broadcastToAll(message: any, excludeId?: string): void {
+    this.broadcaster.broadcastToAll(message, excludeId);
+  }
+
+  public getPlayerCount(): number {
+    return this.gameEngine.getPlayerCount();
+  }
+
+  public getAllPlayers() {
+    return this.gameEngine.getAllPlayers();
+  }
+
+  public removePlayer(id: string) {
+    return this.gameEngine.removePlayer(id);
+  }
+
+  // Convenience methods for external access
+  public getGameEngine(): GameEngine {
+    return this.gameEngine;
+  }
+
+  public getBroadcaster(): GameStateBroadcaster {
+    return this.broadcaster;
+  }
+}

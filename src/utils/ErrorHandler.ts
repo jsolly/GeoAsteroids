@@ -246,22 +246,92 @@ export class ErrorHandler {
   }
 
   /**
-   * Check if error is network-related
+   * Check if error is network-related using comprehensive detection logic
    */
-  private isNetworkError(error: Error): boolean {
-    const networkErrorPatterns = [
+  private isNetworkError(error: unknown): boolean {
+    // Handle non-Error objects
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const errorObj = error as Error & Record<string, unknown>;
+
+    // 1. Check concrete error class instances
+    if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+      // DOMException with network-related names
+      const networkDomExceptions = ['NetworkError', 'TimeoutError', 'AbortError', 'SecurityError'];
+      return error && typeof error.name === 'string' && networkDomExceptions.includes(error.name);
+    }
+
+    if (error instanceof TypeError) {
+      // TypeError often indicates network issues (e.g., failed fetch)
+      return error.message.includes('fetch') || error.message.includes('network');
+    }
+
+    // 2. Check standard error properties
+    const errorName = errorObj.name || '';
+    const errorCode = errorObj.code || errorObj.statusCode || '';
+
+    // Common network error names
+    const networkErrorNames = [
       'NetworkError',
       'TimeoutError',
+      'AbortError',
       'ConnectionError',
-      'WebSocket',
-      'fetch',
-      'network',
-      'connection',
-      'timeout',
+      'WebSocketError',
+      'FetchError',
     ];
 
-    const errorMessage = error.message.toLowerCase();
-    return networkErrorPatterns.some((pattern) => errorMessage.includes(pattern));
+    if (networkErrorNames.includes(errorName)) {
+      return true;
+    }
+
+    // Common network error codes
+    const networkErrorCodes = [
+      'ECONNRESET',
+      'ENOTFOUND',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'ECONNABORTED',
+      'EHOSTUNREACH',
+      'ENETUNREACH',
+      'EPIPE',
+      'ECONNRESET',
+      'ERR_NETWORK',
+      'ERR_CONNECTION_REFUSED',
+      'ERR_CONNECTION_RESET',
+    ];
+
+    if (typeof errorCode === 'string' && networkErrorCodes.includes(errorCode)) {
+      return true;
+    }
+
+    if (typeof errorCode === 'number') {
+      // HTTP status codes indicating network issues
+      const networkStatusCodes = [0, 408, 500, 502, 503, 504, 522, 524];
+      if (networkStatusCodes.includes(errorCode)) {
+        return true;
+      }
+    }
+
+    // 3. Fall back to normalized regex-based message check
+    const errorMessage = (errorObj.message || '').toLowerCase();
+
+    // Use word boundaries for more accurate matching
+    const networkPatterns = [
+      /\bnetwork\b/i,
+      /\bconnection\b/i,
+      /\btimeout\b/i,
+      /\bwebsocket\b/i,
+      /\bfetch\b/i,
+      /\babort\b/i,
+      /\bdisconnected?\b/i,
+      /\bunreachable\b/i,
+      /\breset\b/i,
+      /\brefused\b/i,
+    ];
+
+    return networkPatterns.some((pattern) => pattern.test(errorMessage));
   }
 
   /**

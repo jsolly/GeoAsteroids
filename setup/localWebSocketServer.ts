@@ -1,5 +1,6 @@
 import { type WebSocket, WebSocketServer } from 'ws';
-import { WebSocketCore } from '../server/core';
+import { WebSocketCore } from '../server/communication/WebSocketCore';
+import { GameEngine } from '../server/core/GameEngine';
 import type { ClientMessage } from '../src/multiplayer/types';
 import { logger } from './serverLogger';
 
@@ -13,7 +14,8 @@ class LocalMultiplayerServer {
 
   constructor(port: number = 3001) {
     this.wss = new WebSocketServer({ port });
-    this.wsCore = new WebSocketCore();
+    const gameEngine = new GameEngine();
+    this.wsCore = new WebSocketCore(gameEngine);
     this.wsCore.startPeriodicGameStateBroadcast();
 
     logger.info(`🚀 Local multiplayer server running on ws://localhost:${port}`);

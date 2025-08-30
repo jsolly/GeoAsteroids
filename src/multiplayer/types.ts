@@ -60,7 +60,8 @@ export interface ClientMessage {
     | 'asteroidDestroyed'
     | 'asteroidCreate'
     | 'asteroidUpdate'
-    | 'asteroidDestroy';
+    | 'asteroidDestroy'
+    | 'clientLog';
   id?: string; // Optional ID field for messages that need it
   data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot | unknown; // Flexible payload for custom messages
   timestamp: number;

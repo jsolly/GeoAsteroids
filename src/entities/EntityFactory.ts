@@ -5,8 +5,12 @@ import {
   getRandomPositionNearPoint,
   getRandomPositionWithinBoundary,
 } from '../utils/positionUtils';
+import { spawnRoidFromEdge } from '../utils/roidSpawn';
 import { Player } from './player/Player';
 import { Roid, RoidBelt } from './roid/Roid';
+
+// Constants for entity creation limits
+const MAX_BOTS = 20; // Maximum number of bots allowed
 
 // Entity creation configuration interfaces
 export interface PlayerConfig {
@@ -81,8 +85,33 @@ export class EntityFactory {
 
   // Bot creation methods
   createBots(config: BotConfig): Map<string, Player> {
+    // Validate the incoming config.count
+    if (!Number.isFinite(config.count) || !Number.isInteger(config.count)) {
+      throw new Error(`Bot count must be a finite integer, got: ${config.count}`);
+    }
+
+    if (config.count < 0) {
+      throw new Error(`Bot count cannot be negative, got: ${config.count}`);
+    }
+
+    if (config.count > MAX_BOTS) {
+      throw new Error(`Bot count cannot exceed maximum of ${MAX_BOTS}, got: ${config.count}`);
+    }
+
+    // Handle zero as a no-op
+    if (config.count === 0) {
+      return new Map<string, Player>();
+    }
+
     const bots = new Map<string, Player>();
     const positions = this.generateBotPositions(config);
+
+    // Validate that positions array length matches the count
+    if (positions.length !== config.count) {
+      throw new Error(
+        `Position generation failed: expected ${config.count} positions, got ${positions.length}`
+      );
+    }
 
     for (let i = 0; i < config.count; i++) {
       const position = positions[i];
@@ -104,6 +133,10 @@ export class EntityFactory {
 
   createRoidBelt(): RoidBelt {
     return new RoidBelt();
+  }
+
+  createEmptyRoidBelt(): RoidBelt {
+    return new RoidBelt(false);
   }
 
   // Private helper methods
@@ -214,8 +247,6 @@ export class EntityFactory {
   }
 
   private generateRandomRoidPosition(): Position {
-    // Import the spawn function to avoid circular dependency
-    const { spawnRoidFromEdge } = require('./roid/roidUtils');
     return spawnRoidFromEdge();
   }
 }

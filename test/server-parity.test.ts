@@ -1,12 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import { WebSocketCore } from '../server/core';
+import { WebSocketCore } from '../server/communication/WebSocketCore';
+import { GameEngine } from '../server/core/GameEngine';
 
 describe('Server Message Parity', () => {
   let wsCore: WebSocketCore;
+  let gameEngine: GameEngine;
 
   beforeAll(() => {
-    wsCore = new WebSocketCore();
+    gameEngine = new GameEngine();
+    wsCore = new WebSocketCore(gameEngine);
   });
 
   afterAll(() => {
@@ -37,7 +40,7 @@ describe('Server Message Parity', () => {
 
     // Verify player was added
     expect(wsCore.getPlayerCount()).toBe(1);
-    const player = wsCore.getPlayer('test-id');
+    const player = gameEngine.getPlayer('test-id');
     expect(player).toBeDefined();
     expect(player?.name).toBe('test-name');
 
@@ -88,7 +91,7 @@ describe('Server Message Parity', () => {
     wsCore.handleClientMessage(updateMessage, mockWs);
 
     // Verify player was updated
-    const player = wsCore.getPlayer('update-test-id');
+    const player = gameEngine.getPlayer('update-test-id');
     expect(player).toBeDefined();
     expect(player?.score).toBe(150);
   });
@@ -112,7 +115,7 @@ describe('Server Message Parity', () => {
     wsCore.handleClientMessage(joinMessage, mockWs);
 
     // Verify player was added
-    const player = wsCore.getPlayer('top-level-id');
+    const player = gameEngine.getPlayer('top-level-id');
     expect(player).toBeDefined();
     expect(player?.name).toBe('top-level-name');
 

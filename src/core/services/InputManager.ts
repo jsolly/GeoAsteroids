@@ -37,9 +37,8 @@ export class InputManager {
     });
 
     document.addEventListener('keyup', (ev) => {
-      if (this.gameStateManager.getIsGameRunning()) {
-        keyUp(ev, localPlayer);
-      }
+      // Always handle keyup events regardless of game state to prevent stuck keys
+      keyUp(ev, localPlayer);
     });
 
     // Mouse listeners on canvas

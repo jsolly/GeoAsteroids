@@ -237,20 +237,7 @@ describe('Client Environment Variables (VITE_*)', () => {
       const viteEnvContent = fs.readFileSync('./src/types/vite-env.d.ts', 'utf-8');
 
       // Check that all known VITE_ variables are defined
-      const expectedVars = [
-        'VITE_WEBSOCKET_URL',
-        'VITE_CLIENT_LOG_LEVEL',
-        'VITE_DEBUG_LOCAL_PLAYER_INVINCIBLE',
-        'VITE_DEBUG_BOT_COUNT',
-        'VITE_DEBUG_ROID_COUNT',
-        'VITE_DEBUG_DISABLE_BOT_MOVEMENT',
-        'VITE_DEBUG_DISABLE_BOT_LASERS',
-        'VITE_DEBUG_PLACE_ROID_ON_BOT',
-        'VITE_DEBUG_DISABLE_ROID_MOVEMENT',
-        'VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION',
-        'VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER',
-        'VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER',
-      ];
+      const expectedVars = ['VITE_WEBSOCKET_URL', 'VITE_CLIENT_LOG_LEVEL'];
 
       expectedVars.forEach((varName) => {
         expect(viteEnvContent).toContain(varName);

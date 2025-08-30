@@ -52,6 +52,8 @@ export class RenderEngine {
   private renderStats: RenderStats;
   private performanceThreshold = 16; // 60 FPS threshold in ms
   private frameCount = 0;
+  private frameTimeHistory: number[] = [];
+  private readonly MAX_FRAME_HISTORY = 60; // Keep last 60 frames for averaging (1 second at 60 FPS)
 
   private constructor() {
     this.renderStats = {
@@ -181,10 +183,13 @@ export class RenderEngine {
   }
 
   private renderPlayers(allPlayers: readonly Player[], localShip: Ship): void {
+    // Cache local player reference for efficient lookup
+    const localPlayer = allPlayers.find((p) => p.type === 'local');
+
     for (const player of allPlayers) {
       if (player.ship.exploding) {
-        // Render explosion
-        if (player.id === allPlayers.find((p) => p.type === 'local')?.id) {
+        // Render explosion - use cached local player reference
+        if (player.id === localPlayer?.id) {
           drawShipExplosion(player.ship, player.ship.color);
         } else {
           drawShipExplosionAtPosition(player.ship, localShip.position, player.ship.color);
@@ -255,6 +260,21 @@ export class RenderEngine {
   }
 
   private updatePerformanceStats(frameTime: number): void {
+    // Update frame time history
+    this.frameTimeHistory.push(frameTime);
+
+    // Keep only the most recent frames
+    if (this.frameTimeHistory.length > this.MAX_FRAME_HISTORY) {
+      this.frameTimeHistory.shift();
+    }
+
+    // Calculate true average frame time from history
+    const avgFrameTime =
+      this.frameTimeHistory.length > 0
+        ? this.frameTimeHistory.reduce((sum, time) => sum + time, 0) / this.frameTimeHistory.length
+        : frameTime;
+
+    // Update render stats with current frame time (for immediate feedback)
     this.renderStats.frameTime = frameTime;
 
     // Check for performance issues
@@ -262,13 +282,13 @@ export class RenderEngine {
       this.renderStats.performanceIssues.push(`Frame took ${frameTime.toFixed(2)}ms`);
     }
 
-    // Log performance warnings periodically
+    // Log performance warnings periodically using true average
     if (this.frameCount % 300 === 0) {
       // Every 5 seconds at 60 FPS
-      const avgFrameTime = this.renderStats.frameTime;
       if (avgFrameTime > this.performanceThreshold) {
         logger.warn('RENDER_ENGINE', 'Performance issue detected', {
-          avgFrameTime,
+          avgFrameTime: avgFrameTime.toFixed(2),
+          currentFrameTime: frameTime.toFixed(2),
           drawCalls: this.renderStats.drawCalls,
           entitiesDrawn: this.renderStats.entitiesDrawn,
         });
@@ -310,12 +330,11 @@ export class RenderEngine {
       webgl: !!gl,
       webgl2: !!gl2,
       maxTextureSize:
-        (gl as WebGLRenderingContext)?.getParameter(
-          (gl as WebGLRenderingContext).MAX_TEXTURE_SIZE
-        ) || 0,
+        gl && gl instanceof WebGLRenderingContext ? gl.getParameter(gl.MAX_TEXTURE_SIZE) : 0,
       renderer:
-        (gl as WebGLRenderingContext)?.getParameter((gl as WebGLRenderingContext).RENDERER) ||
-        'unknown',
+        gl && gl instanceof WebGLRenderingContext
+          ? (gl.getParameter(gl.RENDERER) as string)
+          : 'unknown',
     };
   }
 }

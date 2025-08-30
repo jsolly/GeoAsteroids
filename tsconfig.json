@@ -24,10 +24,12 @@
     "src",
     "api",
     "test",
+    "scripts",
     "vitest.config.ts",
     "tsconfig.json",
     "package.json",
     "setup",
+    "server",
     "server.ts"
   ]
 }

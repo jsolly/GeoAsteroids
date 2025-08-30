@@ -7,13 +7,13 @@
 // CORE GEOMETRY TYPES
 // ============================================================================
 export interface Position {
-  readonly x: number;
-  readonly y: number;
+  x: number;
+  y: number;
 }
 
 export interface Velocity {
-  readonly x: number;
-  readonly y: number;
+  x: number;
+  y: number;
 }
 
 export interface Dimensions {
@@ -255,7 +255,7 @@ export interface CustomEventMap {
 }
 
 declare global {
-  interface Window extends CustomEventMap {}
+  interface WindowEventMap extends CustomEventMap {}
 }
 
 // ============================================================================
