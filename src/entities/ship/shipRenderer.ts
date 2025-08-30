@@ -1,6 +1,6 @@
 import { SHIP_SIZE } from '../../constants/entities/ship';
 import { Point } from '../../physics/Point';
-import { canvasManager } from '../../rendering/canvas.ts';
+import { canvasManager } from '../../rendering/canvas';
 import type { Player } from '../player/Player';
 
 import type { Ship } from './Ship';

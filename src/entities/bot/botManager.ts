@@ -93,8 +93,8 @@ export class BotManager {
 
   private updateBotBehavior(): void {
     for (const [, bot] of this.bots.entries()) {
-      // Skip bots that are exploding
-      if (bot.ship.exploding) {
+      // Skip bots that don't have a ship or are exploding
+      if (!bot.ship || bot.ship.exploding) {
         continue;
       }
 

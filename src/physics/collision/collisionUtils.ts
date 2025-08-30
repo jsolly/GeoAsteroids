@@ -1,11 +1,16 @@
 import type { Player } from '../../entities/player/Player';
+import { isBot } from '../../entities/player/playerKinds';
 import type { Ship } from '../../entities/ship/Ship';
 import { isDebugMode } from '../../utils/debugUtils';
 
 // Helper function to check if a player should skip collision detection
 export function shouldSkipPlayerCollision(player: Player): boolean {
   // Only apply debug rules if debug mode is actually enabled via environment
-  if (isDebugMode() && import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true') {
+  if (
+    isDebugMode() &&
+    import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true' &&
+    isBot(player)
+  ) {
     // Only skip if bot is blinking, not if it has spawn protection
     return player.ship.blinkCount > 0;
   }
@@ -27,7 +32,11 @@ export function shouldApplyDamageToLocalPlayer(_ship: Ship): boolean {
 // Helper function to check if a player is invincible
 export function isPlayerInvincible(player: Player): boolean {
   // Only apply debug rules if debug mode is actually enabled via environment
-  if (isDebugMode() && import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true') {
+  if (
+    isDebugMode() &&
+    import.meta.env.VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION === 'true' &&
+    isBot(player)
+  ) {
     // Only consider blinking invincibility, ignore spawn protection
     return player.ship.blinkCount > 0;
   }

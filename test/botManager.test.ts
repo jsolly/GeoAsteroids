@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import { BotManager } from '../src/entities/bot/botManager.ts';
-import { Player } from '../src/entities/player/Player.ts';
+import { BotManager } from '../src/entities/bot/botManager';
+import { Player } from '../src/entities/player/Player';
 
 // Note: Tests now use BotManager singleton without reset
 

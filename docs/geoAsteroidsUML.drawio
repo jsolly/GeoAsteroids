@@ -85,7 +85,7 @@
                 <mxCell id="26" value="distToPoint(targetPoint: Point) number" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#808080;" parent="23" vertex="1">
                     <mxGeometry y="68" width="170" height="26" as="geometry"/>
                 </mxCell>
-                <mxCell id="29" value="&lt;h1&gt;GeoAsteroids UML Diagram&lt;/h1&gt;&lt;p style=&quot;text-align: center&quot;&gt;John Solly&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontColor=#808080;" parent="1" vertex="1">
+                <mxCell id="29" value="&lt;h1&gt;GeoRoids UML Diagram&lt;/h1&gt;&lt;p style=&quot;text-align: center&quot;&gt;John Solly&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontColor=#808080;" parent="1" vertex="1">
                     <mxGeometry x="300" y="10" width="350" height="70" as="geometry"/>
                 </mxCell>
             </root>

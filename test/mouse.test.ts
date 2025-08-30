@@ -10,7 +10,10 @@ import {
 import { canvasManager } from '../src/rendering/canvas';
 
 let player: Player;
-const mockPlay = vi.fn();
+let playSpy: ReturnType<typeof vi.spyOn>;
+let stopSpy: ReturnType<typeof vi.spyOn>;
+let isPlayingStub: ReturnType<typeof vi.spyOn>;
+let testCanvas: HTMLCanvasElement;
 
 beforeEach(() => {
   // Set predictable viewport size used by canvasManager.initialize()
@@ -18,35 +21,52 @@ beforeEach(() => {
   Object.defineProperty(window, 'innerHeight', { value: 600, writable: true });
 
   // Create and mount a canvas element so canvasManager can find it
-  const canvas = document.createElement('canvas');
-  // JSDOM layout: mock bounding rect to align with (0,0)
-  // Width/height will be set by canvasManager.initialize()
-  canvas.getBoundingClientRect = () => ({
-    left: 0,
-    top: 0,
-    width: canvas.width,
-    height: canvas.height,
-    right: 0,
-    bottom: 0,
-    x: 0,
-    y: 0,
-    toJSON: () => ({}),
-  });
-  document.body.appendChild(canvas);
+  testCanvas = document.createElement('canvas');
+  document.body.appendChild(testCanvas);
 
   // Initialize canvas manager
   canvasManager.initialize();
 
-  // Mock thrust sounds
-  Ship.fxThrust.play = mockPlay;
-  Ship.fxThrust.stop = mockPlay;
+  // JSDOM layout: mock bounding rect to align with (0,0)
+  // Set mock after canvasManager.initialize() to ensure it works
+  const canvas = canvasManager.getCanvas();
+  if (canvas) {
+    canvas.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 800,
+      height: 600,
+      right: 800,
+      bottom: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+  }
+
+  // Create spies for thrust sounds to avoid polluting global state
+  playSpy = vi.spyOn(Ship.fxThrust, 'play');
+  stopSpy = vi.spyOn(Ship.fxThrust, 'stop');
+  isPlayingStub = vi.spyOn(Ship.fxThrust, 'isPlaying');
+
+  // Stub isPlaying to return false initially so sounds will play
+  isPlayingStub.mockReturnValue(false);
 
   player = new Player({ id: 'p1', name: 'Tester', type: 'local' });
 });
 
 afterEach(() => {
+  // Restore all spies to clean up global state
+  playSpy.mockRestore();
+  stopSpy.mockRestore();
+  isPlayingStub.mockRestore();
+
+  // Perform DOM-safe cleanup by removing only the test canvas
+  if (testCanvas?.parentNode) {
+    testCanvas.parentNode.removeChild(testCanvas);
+  }
+
   vi.resetAllMocks();
-  document.body.innerHTML = '';
 });
 
 test('mouse move sets ship angle toward cursor', () => {
@@ -85,12 +105,12 @@ test('right click toggles thrust with sound', () => {
   const down = new MouseEvent('mousedown', { button: 2 });
   handleMouseDown(down, player);
   expect(player.ship.thrusting).toBeTruthy();
-  expect(mockPlay).toHaveBeenCalled();
+  expect(playSpy).toHaveBeenCalled();
 
   const up = new MouseEvent('mouseup', { button: 2 });
   handleMouseUp(up, player);
   expect(player.ship.thrusting).toBeFalsy();
-  expect(mockPlay).toHaveBeenCalled();
+  expect(stopSpy).toHaveBeenCalled();
 });
 
 test('preventContextMenu prevents default on right click', () => {

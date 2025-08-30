@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
-import { Sound } from '../../audio/Sound';
+import { playSound, Sound } from '../../audio/Sound';
 import { LASER_MAX } from '../../constants/entities/laser';
 import {
   SHIP_BOT_FRICTION,
@@ -88,12 +88,9 @@ class Ship {
   }
 
   explode(): void {
-    console.debug(
-      `[Ship ${this.id}] explode: Starting explosion, duration: ${SHIP_EXPLODE_DUR_FRAMES} frames`
-    );
     this.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
-    Ship.fxExplode.play();
+    playSound(Ship.fxExplode);
   }
 
   setExploding(): void {
@@ -230,7 +227,7 @@ class Ship {
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
-    Ship.fxExplode.play();
+    playSound(Ship.fxExplode);
 
     const empEvent = new CustomEvent('empPulse', {
       detail: {
@@ -254,22 +251,15 @@ class Ship {
 
   takeDamage(amount: number): void {
     if (this.exploding) {
-      console.debug(`[Ship ${this.id}] takeDamage: Already exploding, ignoring damage`);
       return;
     }
 
-    const healthBefore = this.health;
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
     this.lastDamageTime = FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
-    console.debug(
-      `[Ship ${this.id}] takeDamage: ${amount} damage, health ${healthBefore} -> ${this.health}`
-    );
-
     if (this.health <= 0) {
       this.health = 0;
-      console.debug(`[Ship ${this.id}] takeDamage: Health reached 0, triggering explosion`);
 
       // Ship health reached 0, it should explode
       this.explode();
@@ -326,7 +316,6 @@ class Ship {
     if (this.exploding && this.explodeTime > 0) {
       this.explodeTime--;
       if (this.explodeTime <= 0) {
-        console.debug(`[Ship ${this.id}] updateExplosion: Explosion animation finished`);
         this.exploding = false;
       }
     }

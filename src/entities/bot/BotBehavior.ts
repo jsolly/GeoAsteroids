@@ -54,18 +54,6 @@ export class BotBehavior {
       return;
     }
 
-    // Debug logging to see what's happening
-    if (isDebugMode()) {
-      console.debug('Bot movement debug:', {
-        botId: bot.id,
-        botPosition: bot.ship.position,
-        localPlayerPosition: this.localPlayerPosition,
-        localPlayerAlive: this.localPlayerAlive,
-        roidCount: roids.length,
-        otherPlayerCount: otherPlayers.length,
-      });
-    }
-
     // Choose a movement target: hunt local player if alive, otherwise roam
     let target: Position | undefined;
     if (this.localPlayerAlive) {

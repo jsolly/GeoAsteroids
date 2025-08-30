@@ -17,9 +17,11 @@ export function canTakeCollisionDamage(
 export function calculateHealthAfterDamage(
   currentHealth: number,
   damage: number,
-  _maxHealth: number
+  maxHealth: number
 ): number {
-  return Math.max(0, currentHealth - damage);
+  const afterDamage = currentHealth - damage;
+  // Clamp between 0 and maxHealth
+  return Math.min(maxHealth, Math.max(0, afterDamage));
 }
 
 export function calculateHealthAfterHeal(

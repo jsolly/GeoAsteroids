@@ -26,6 +26,15 @@ export default defineConfig(() => {
       target: 'ESNext',
       modulePreload: false,
     },
+    server: {
+      proxy: {
+        '/ws': {
+          target: 'ws://localhost:3001',
+          ws: true,
+          changeOrigin: true,
+        },
+      },
+    },
     define,
   };
 });

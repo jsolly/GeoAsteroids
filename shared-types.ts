@@ -15,6 +15,7 @@ export interface Velocity {
 // Network update interface - only what needs to be synced
 export interface PlayerUpdate {
   id: string;
+  name: string;
   position: Position;
   velocity: Velocity;
   r: number;
@@ -43,5 +44,6 @@ export interface PlayerShoot {
 // Game state types that might be shared
 export interface GameState {
   players: PlayerUpdate[];
-  // Add other game state properties as needed
+  roids: Array<{ position: Position; size: number; jaggedness: number }>;
+  gameTime: number;
 }

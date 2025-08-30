@@ -7,6 +7,33 @@ import { getGameBoundary } from '../../physics/boundary';
 // Circle boundary type local alias for clarity
 type CircleBoundary = { cx: number; cy: number; radius: number };
 
+// Helper function to project world coordinates to minimap coordinates
+function projectToMiniMap(
+  boundary: CircleBoundary,
+  miniMapX: number,
+  miniMapY: number,
+  miniMapSize: number,
+  worldX: number,
+  worldY: number,
+  tolerance = 10
+): { x: number; y: number } | null {
+  const normalizedX = (worldX - boundary.cx) / boundary.radius;
+  const normalizedY = (worldY - boundary.cy) / boundary.radius;
+
+  const x = miniMapX + miniMapSize / 2 + normalizedX * (miniMapSize / 2);
+  const y = miniMapY + miniMapSize / 2 + normalizedY * (miniMapSize / 2);
+
+  if (
+    x < miniMapX - tolerance ||
+    x > miniMapX + miniMapSize + tolerance ||
+    y < miniMapY - tolerance ||
+    y > miniMapY + miniMapSize + tolerance
+  ) {
+    return null;
+  }
+  return { x, y };
+}
+
 // Helper function to draw the complete mini map
 export function drawMiniMap(
   ctx: CanvasRenderingContext2D,
@@ -30,10 +57,10 @@ export function drawMiniMap(
   ctx.closePath();
   ctx.fillStyle = 'rgba(0, 0, 0, 1.0)'; // Solid black background
   ctx.fill();
+  ctx.clip(); // Clip before stroking to avoid antialias bleeding
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  ctx.clip();
 
   // Calculate scale to fit circle boundary in mini-map (circle to circle)
   const boundaryScale = miniMapSize / 2 / boundary.radius;
@@ -54,11 +81,7 @@ export function drawMiniMap(
   try {
     const gameController = GameController.getInstance();
     const playerNetwork = PlayerNetwork.getInstance();
-    const allPlayers = playerNetwork.getAllPlayers();
-
-    // Filter out local player to avoid drawing it twice (it's drawn above as current ship)
-    const localPlayer = gameController.getCurrPlayer();
-    const otherPlayers = allPlayers.filter((player) => player.id !== localPlayer.id);
+    const otherPlayers = playerNetwork.getOtherPlayers();
 
     for (const player of otherPlayers) {
       drawShipMiniMap(ctx, player.ship, '#ff0000', boundary, miniMapX, miniMapY, miniMapSize);
@@ -82,8 +105,7 @@ export function drawMiniMap(
 // Draw server name and connection status below the minimap
 export function drawServerInfo(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
   try {
-    const multiplayerManager = MultiplayerManager.getInstance();
-    const serverName = multiplayerManager.getServerName();
+    const serverName = MultiplayerManager.getInstance().getServerName();
 
     // Position below the minimap
     const miniMapSize = 160;
@@ -130,30 +152,25 @@ export function drawShipMiniMap(
     return;
   }
 
-  // Convert world coordinates to mini-map coordinates using circle-to-circle mapping
-  const normalizedX = (ship.position.x - boundary.cx) / boundary.radius;
-  const normalizedY = (ship.position.y - boundary.cy) / boundary.radius;
-
-  const miniMapPosX = miniMapX + miniMapSize / 2 + normalizedX * (miniMapSize / 2);
-  const miniMapPosY = miniMapY + miniMapSize / 2 + normalizedY * (miniMapSize / 2);
-
-  // Ensure the ship is within the mini-map bounds (with some tolerance for edge cases)
-  const tolerance = 10; // Allow ships slightly outside the minimap
-  if (
-    miniMapPosX < miniMapX - tolerance ||
-    miniMapPosX > miniMapX + miniMapSize + tolerance ||
-    miniMapPosY < miniMapY - tolerance ||
-    miniMapPosY > miniMapY + miniMapSize + tolerance
-  ) {
-    return; // Don't draw if too far outside mini-map
+  // Convert world coordinates to mini-map coordinates using shared helper
+  const p = projectToMiniMap(
+    boundary,
+    miniMapX,
+    miniMapY,
+    miniMapSize,
+    ship.position.x,
+    ship.position.y,
+    10
+  );
+  if (!p) {
+    return;
   }
 
   // Draw ship dot on mini-map
   ctx.save();
   ctx.fillStyle = color;
-  // Draw small square instead of large circle
   const dotSize = 3; // Small square size
-  ctx.fillRect(miniMapPosX - dotSize / 2, miniMapPosY - dotSize / 2, dotSize, dotSize);
+  ctx.fillRect(p.x - dotSize / 2, p.y - dotSize / 2, dotSize, dotSize);
   ctx.restore();
 }
 
@@ -166,28 +183,24 @@ export function drawRoidMiniMap(
   miniMapY: number,
   miniMapSize: number
 ): void {
-  // Convert world coordinates to mini-map coordinates using circle-to-circle mapping
-  const normalizedX = (roid.position.x - boundary.cx) / boundary.radius;
-  const normalizedY = (roid.position.y - boundary.cy) / boundary.radius;
-
-  const miniMapPosX = miniMapX + miniMapSize / 2 + normalizedX * (miniMapSize / 2);
-  const miniMapPosY = miniMapY + miniMapSize / 2 + normalizedY * (miniMapSize / 2);
-
-  // Ensure the asteroid is within the mini-map bounds (with some tolerance for edge cases)
-  const tolerance = 10; // Allow asteroids slightly outside the minimap
-  if (
-    miniMapPosX < miniMapX - tolerance ||
-    miniMapPosX > miniMapX + miniMapSize + tolerance ||
-    miniMapPosY < miniMapY - tolerance ||
-    miniMapPosY > miniMapY + miniMapSize + tolerance
-  ) {
-    return; // Don't draw if too far outside mini-map
+  // Convert world coordinates to mini-map coordinates using shared helper
+  const p = projectToMiniMap(
+    boundary,
+    miniMapX,
+    miniMapY,
+    miniMapSize,
+    roid.position.x,
+    roid.position.y,
+    10
+  );
+  if (!p) {
+    return;
   }
 
   // Draw asteroid dot on mini-map (smaller than ships, space gray color)
   ctx.save();
   ctx.fillStyle = '#666666'; // Space gray color for asteroids
   const dotSize = 2; // Smaller than ship dots
-  ctx.fillRect(miniMapPosX - dotSize / 2, miniMapPosY - dotSize / 2, dotSize, dotSize);
+  ctx.fillRect(p.x - dotSize / 2, p.y - dotSize / 2, dotSize, dotSize);
   ctx.restore();
 }

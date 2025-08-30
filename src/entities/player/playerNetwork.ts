@@ -7,15 +7,21 @@ import { PlayerManager } from './PlayerManager';
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
   private multiplayerManager: MultiplayerManager;
-  private gameController: GameController;
+  private gameController: GameController | null = null;
   private playerManager: PlayerManager;
   private updateInterval: ReturnType<typeof setInterval> | null = null;
   private readonly UPDATE_FREQUENCY = 60; // 60 FPS
 
   private constructor() {
     this.multiplayerManager = MultiplayerManager.getInstance();
-    this.gameController = GameController.getInstance();
     this.playerManager = PlayerManager.getInstance();
+  }
+
+  private getGameController(): GameController {
+    if (!this.gameController) {
+      this.gameController = GameController.getInstance();
+    }
+    return this.gameController;
   }
 
   public static getInstance(): PlayerNetwork {
@@ -44,30 +50,16 @@ export class PlayerNetwork {
 
   public updatePlayerState(): void {
     // Update local player state for multiplayer (network-only)
-    this.gameController.updateMultiplayerPlayerState();
+    this.getGameController().updateMultiplayerPlayerState();
 
-    // Get all players (remote and bot)
-    const allPlayers = this.getAllPlayers();
-
-    // Update AI data for bots (bot players need roids and other players for decision making)
-    const botPlayers = this.getBotPlayers();
-    if (botPlayers.length > 0) {
-      const roids = this.gameController.getCurrRoidBelt()?.getRoids() || [];
-      const otherPlayers = this.getRemotePlayers(); // Bots need to know about remote players
-      this.multiplayerManager.updateAllPlayerData(roids, otherPlayers);
-    }
-
-    // Only update network-derived counts if connected
-    if (this.multiplayerManager.isConnected) {
-      this.gameController.getGameState().playerCount = allPlayers.length;
-    }
+    // Bot data updates are handled by the multiplayer manager's bot sync manager
   }
 
   // Remote players should not be force-respawned client-side; server/state updates handle respawn.
 
   public getAllPlayers(): Player[] {
     // Get ALL players: local, remote, and bots
-    const localPlayer = this.gameController.getCurrPlayer();
+    const localPlayer = this.getGameController().getCurrPlayer();
     return this.playerManager.getAllPlayersIncludingLocal(localPlayer);
   }
 
@@ -87,7 +79,7 @@ export class PlayerNetwork {
   public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {
     switch (type) {
       case 'local':
-        return [this.gameController.getCurrPlayer()];
+        return [this.getGameController().getCurrPlayer()];
       case 'remote':
         return this.getRemotePlayers();
       case 'bot':
@@ -125,7 +117,7 @@ export class PlayerNetwork {
 
   public getPlayerById(id: string): Player | undefined {
     // Check if it's the local player first
-    const localPlayer = this.gameController.getCurrPlayer();
+    const localPlayer = this.getGameController().getCurrPlayer();
     if (localPlayer.id === id) {
       return localPlayer;
     }
@@ -136,8 +128,8 @@ export class PlayerNetwork {
 
   public getLocalPlayerInfo(): { id: string; name: string } {
     return {
-      id: this.multiplayerManager.localPlayerId,
-      name: this.multiplayerManager.localPlayerName,
+      id: this.multiplayerManager.getLocalPlayerId(),
+      name: this.multiplayerManager.getLocalPlayerName(),
     };
   }
 

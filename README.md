@@ -61,7 +61,6 @@ The following environment variables can be configured:
 
 #### Multiplayer
 - `VITE_WEBSOCKET_URL` - WebSocket server URL for multiplayer
-- `VITE_MULTIPLAYER_ENABLED` - Enable/disable multiplayer (default: true)
 
 #### Build Info
 - `VITE_BUILD_TIME` - Build timestamp (auto-generated)

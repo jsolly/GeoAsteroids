@@ -6,8 +6,8 @@ import type {
   Position,
   Velocity,
 } from '../shared-types';
-import type { BotShoot } from '../src/entities/bot/types.ts';
-import type { ClientMessage, ServerMessage } from '../src/multiplayer/types.ts';
+import type { BotShoot } from '../src/entities/bot/types';
+import type { ClientMessage, ServerMessage } from '../src/multiplayer/types';
 
 type WebSocketWithEvents = WebSocket & {
   on(event: string, listener: (...args: unknown[]) => void): void;
@@ -111,39 +111,50 @@ class MultiplayerServer {
           this.handleBotShoot(message.data);
         }
         break;
+      case 'initBots':
+        // Handle bot initialization - for now just acknowledge
+        console.debug('Player initialized bots:', message.data);
+        break;
       default:
         this.sendError(ws, 'Unknown message type');
     }
   }
 
-  private isPlayerJoinData(
-    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
-  ): data is PlayerJoin {
-    return 'name' in data && 'position' in data;
+  private isPlayerJoinData(data: unknown): data is PlayerJoin {
+    return typeof data === 'object' && data !== null && 'name' in data && 'position' in data;
   }
 
-  private isPlayerLeaveData(
-    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
-  ): data is PlayerLeave {
-    return 'id' in data && Object.keys(data).length === 1;
-  }
-
-  private isPlayerUpdateData(
-    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
-  ): data is PlayerUpdate {
-    return 'position' in data && 'velocity' in data && 'r' in data && 'a' in data;
-  }
-
-  private isPlayerShootData(
-    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
-  ): data is PlayerShoot {
-    return 'laserStart' in data && 'laserDirection' in data && 'id' in data;
-  }
-
-  private isBotShootData(
-    data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot
-  ): data is BotShoot {
+  private isPlayerLeaveData(data: unknown): data is PlayerLeave {
     return (
+      typeof data === 'object' && data !== null && 'id' in data && Object.keys(data).length === 1
+    );
+  }
+
+  private isPlayerUpdateData(data: unknown): data is PlayerUpdate {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'position' in data &&
+      'velocity' in data &&
+      'r' in data &&
+      'angle' in data
+    );
+  }
+
+  private isPlayerShootData(data: unknown): data is PlayerShoot {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'laserStart' in data &&
+      'laserDirection' in data &&
+      'id' in data
+    );
+  }
+
+  private isBotShootData(data: unknown): data is BotShoot {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
       'laserStart' in data &&
       'laserDirection' in data &&
       'botId' in data &&
@@ -168,8 +179,8 @@ class MultiplayerServer {
 
     // Notify all other players about the new player
     this.broadcastToOthers(data.id, {
-      type: 'playerJoin',
-      data: {
+      type: 'playerJoined',
+      payload: {
         id: data.id,
         name: data.name,
         position: data.position,
@@ -194,7 +205,7 @@ class MultiplayerServer {
       // Broadcast update to other players
       this.broadcastToOthers(data.id, {
         type: 'playerUpdate',
-        data,
+        payload: data,
         timestamp: Date.now(),
       });
     }
@@ -204,7 +215,7 @@ class MultiplayerServer {
     // Broadcast shooting to other players
     this.broadcastToOthers(data.id, {
       type: 'playerShoot',
-      data,
+      payload: data,
       timestamp: Date.now(),
     });
   }
@@ -213,7 +224,7 @@ class MultiplayerServer {
     // Handle bot shooting - broadcast to other players
     this.broadcastToOthers(data.targetPlayerId, {
       type: 'botShoot',
-      data,
+      payload: data,
       timestamp: Date.now(),
     });
   }
@@ -223,8 +234,8 @@ class MultiplayerServer {
     if (player) {
       // Notify other players about the departure
       this.broadcastToOthers(id, {
-        type: 'playerLeave',
-        data: { id },
+        type: 'playerLeft',
+        payload: { id },
         timestamp: Date.now(),
       });
 
@@ -261,7 +272,7 @@ class MultiplayerServer {
 
     const gameState: ServerMessage = {
       type: 'gameState',
-      data: {
+      payload: {
         players: Array.from(this.players.values()).map((p) => ({
           id: p.id,
           name: p.name,

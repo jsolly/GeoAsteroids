@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Laser } from '../src/entities/laser/Laser';
 import { Player } from '../src/entities/player/Player';
-import { Ship } from '../src/entities/ship/Ship.ts';
+import { Ship } from '../src/entities/ship/Ship';
 import { detectLaserPlayerCollisions } from '../src/physics/collision/laserCollisions';
 
 // Mock the constants
@@ -36,10 +36,19 @@ vi.mock('../src/constants', () => ({
 vi.mock('../src/entities/roid/Roid.ts', () => ({
   Roid: {
     fxHit: {
-      play: vi.fn(),
+      play: vi.fn().mockResolvedValue(undefined), // Return a resolved promise
     },
   },
 }));
+
+// Mock the playSound function
+vi.mock('../src/audio/Sound.ts', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import('../src/audio/Sound.ts');
+  return {
+    ...actual,
+    playSound: vi.fn(),
+  };
+});
 
 // Mock the bot manager
 vi.mock('../src/entities/bot/botManager.ts', () => ({
@@ -96,7 +105,7 @@ describe('Collision Detection System', () => {
     otherPlayer.score = 0;
     otherPlayer.lastUpdate = Date.now();
     otherPlayer.lives = 3;
-    otherPlayer.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
+    otherPlayer.spawnProtectedUntil = Date.now() - 1000; // Spawn protection expired
     otherPlayer.color = '#ff0000'; // Test color for the other player
 
     // Add laser to ship

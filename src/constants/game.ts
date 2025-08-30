@@ -1,7 +1,7 @@
 export const START_LIVES = 3;
 export const STARTING_SCORE = 0;
 
-export const MULTIPLAYER_ENABLED = import.meta.env.VITE_MULTIPLAYER_ENABLED !== 'false'; // Enable multiplayer by default, can be disabled with VITE_MULTIPLAYER_ENABLED=false
+export const MULTIPLAYER_ENABLED = true; // Multiplayer is always enabled
 
 // Bot configuration
 export const DEFAULT_BOT_COUNT = 9; // Default number of bots in multiplayer mode

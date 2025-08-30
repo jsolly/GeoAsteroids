@@ -1,6 +1,5 @@
-import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import { SHIP_COLLISION_DAMAGE, SHIP_EXPLODE_DUR_FRAMES } from '../../constants/entities/ship';
-import { FPS } from '../../constants/game';
+import { playSound } from '../../audio/Sound';
+import { SHIP_COLLISION_DAMAGE } from '../../constants/entities/ship';
 import type { Player } from '../../entities/player/Player';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
@@ -57,7 +56,7 @@ export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Play
       otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
 
       // Play hit sound
-      Roid.fxHit.play();
+      playSound(Roid.fxHit);
 
       // Other player destroyed - no event needed
 
@@ -69,6 +68,8 @@ export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Play
 
 export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
   let score = 0;
+  const roidsToDestroy: number[] = [];
+  const newRoidsToAdd: Roid[] = [];
 
   // check for roid collisions (when not exploding)
   if (!currShip.exploding) {
@@ -85,17 +86,29 @@ export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
           // Deal damage instead of instant death
           if (shouldApplyDamage) {
             currShip.takeDamage(SHIP_COLLISION_DAMAGE);
+
+            // Only destroy roid and award score when damage is applied
+            playSound(Roid.fxHit);
+            const result = currRoidBelt.destroyRoid(i);
+            score += result.score;
+            roidsToDestroy.push(i);
+            newRoidsToAdd.push(...result.newRoids);
           }
-
-          // Never explode the ship here - let takeDamage handle life loss and respawn
-          // The ship will only explode when it's actually dead (no lives remaining)
-
-          Roid.fxHit.play();
-          score = currRoidBelt.destroyRoid(i);
+          // If shouldApplyDamage is false, skip roid destruction and scoring
         }
       }
     }
   }
+
+  // Remove destroyed roids and add new ones after iteration
+  // Sort indices in descending order to avoid index shifting issues
+  roidsToDestroy.sort((a, b) => b - a);
+  for (const index of roidsToDestroy) {
+    currRoidBelt.roids.splice(index, 1);
+  }
+  // Add new roids
+  currRoidBelt.roids.push(...newRoidsToAdd);
+
   return score;
 }
 
@@ -136,32 +149,18 @@ export function detectShipToShipCollisions(
         continue;
       }
 
-      // REGULAR MODE: Both ships are destroyed
-
-      // Apply damage to the other player first so health bar shows the damage
+      // Ship-to-ship collision: both ships take damage
       player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+      currShip.takeDamage(SHIP_COLLISION_DAMAGE);
 
-      // Now destroy the other player
-      player.ship.exploding = true;
-      player.ship.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
-
-      // Add points for destroying a player
-      score += 200;
-
-      // Check if debug system wants to prevent damage
-      const shouldApplyDamage = shouldApplyDamageToLocalPlayer(currShip);
-
-      // Check collision cooldown before applying damage to player ship
-      if (shouldApplyDamage && currShip.canTakeCollisionDamage()) {
-        // Destroy the current player ship
-        currShip.takeDamage(SHIP_COLLISION_DAMAGE);
-      }
+      // Award points for destroying another player
+      score += 300;
 
       // Never explode the ship here - let takeDamage handle life loss and respawn
       // The ship will only explode when it's actually dead (no lives remaining)
 
       // Play hit sound
-      Roid.fxHit.play();
+      playSound(Roid.fxHit);
 
       // Bot destroyed - no event needed
 
@@ -170,50 +169,7 @@ export function detectShipToShipCollisions(
     }
   }
 
-  // Check for ship-to-ship collisions with other players
-  if (otherPlayers && otherPlayers.length > 0) {
-    for (const player of otherPlayers) {
-      // Skip exploding players
-      if (player.ship.exploding) {
-        continue;
-      }
-
-      // Skip invincible players (blinking)
-      if (player.ship.blinkCount && player.ship.blinkCount > 0) {
-        continue;
-      }
-
-      // Calculate distance between ship centers
-      const distance = getDistance(currShip.position, player.ship.position);
-      const collisionThreshold = currShip.r + player.ship.r;
-
-      if (distance < collisionThreshold) {
-        // REGULAR MODE: Both ships are destroyed
-
-        // Destroy the other player
-        player.ship.exploding = true;
-        player.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
-
-        // Add points for destroying another player
-        score += 300;
-
-        // Check if debug system wants to prevent damage
-        const shouldApplyDamage = shouldApplyDamageToLocalPlayer(currShip);
-
-        // Check collision cooldown before applying damage to current player ship
-        if (shouldApplyDamage && currShip.canTakeCollisionDamage()) {
-          // Destroy the current player ship
-          currShip.takeDamage(SHIP_COLLISION_DAMAGE);
-        }
-
-        // Play hit sound
-        Roid.fxHit.play();
-
-        // Only handle one collision at a time
-        break;
-      }
-    }
-  }
+  // Note: Collision detection with all players (including otherPlayers) is already handled above
 
   return score;
 }
@@ -266,7 +222,7 @@ export function detectPlayerRoidCollisions(
         // and dispatch the shipExploded event, which will trigger respawn logic
 
         // Play hit sound
-        Roid.fxHit.play();
+        playSound(Roid.fxHit);
 
         // Player destroyed - no event needed
 

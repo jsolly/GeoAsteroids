@@ -42,7 +42,7 @@ export class PlayerFactory {
         player.color = '#888888'; // Default bot color
         player.ship.color = player.color;
       }
-      if (!params.shotCooldown) {
+      if (params.shotCooldown === undefined) {
         player.ship.shotCooldown = 500 + Math.random() * 500; // 0.5-1.0 seconds
       }
     }

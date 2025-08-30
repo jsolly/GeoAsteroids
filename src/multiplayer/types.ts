@@ -1,48 +1,52 @@
 import type {
+  GameState,
   PlayerJoin,
   PlayerLeave,
   PlayerShoot,
   PlayerUpdate,
-  Position,
-  Velocity,
 } from '../../shared-types';
 import type { BotShoot } from '../entities/bot/types';
 
-export interface GameState {
-  players: Array<{
-    id: string;
-    name: string;
-    position: Position;
-    velocity: Velocity;
-    r: number;
-    angle: number;
-    lives: number;
-    score: number;
-    exploding: boolean;
-  }>;
-  roids: Array<{
-    position: Position;
-    size: number;
-    jaggedness: number;
-  }>;
-  gameTime: number;
-}
+// Re-export GameState for convenience
+export type { GameState };
 
 export interface ServerMessage {
   type:
-    | 'playerJoin'
-    | 'playerLeave'
+    | 'playerJoined'
+    | 'playerLeft'
     | 'playerUpdate'
     | 'playerShoot'
     | 'gameState'
     | 'botShoot'
-    | 'error';
-  data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | GameState | BotShoot | string;
+    | 'error'
+    | 'botUpdate'
+    | 'botCreate'
+    | 'botRemove'
+    | 'joined';
+  payload:
+    | PlayerJoin
+    | PlayerLeave
+    | PlayerUpdate
+    | PlayerShoot
+    | GameState
+    | BotShoot
+    | string
+    | unknown; // Flexible payload for custom messages
   timestamp: number;
 }
 
 export interface ClientMessage {
-  type: 'join' | 'leave' | 'update' | 'shoot' | 'botShoot';
-  data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot;
+  type:
+    | 'join'
+    | 'leave'
+    | 'update'
+    | 'shoot'
+    | 'botShoot'
+    | 'initBots'
+    | 'botDestroyed'
+    | 'botUpdate'
+    | 'empDestroy';
+  id?: string; // Optional ID field for messages that need it
+  data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot | unknown; // Flexible payload for custom messages
   timestamp: number;
 }

@@ -14,8 +14,9 @@ interface ExtendedConsole extends Console {
 }
 
 function getCurrentLogLevel(): LogLevel {
-  // Get from Vite environment variable
-  const envLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL;
+  // Get from Vite environment variable (safely handle non-Vite contexts)
+  const envLevel = (import.meta as { env?: { VITE_CLIENT_LOG_LEVEL?: string } })?.env
+    ?.VITE_CLIENT_LOG_LEVEL;
 
   if (!envLevel) {
     // Default to DEBUG in development for better visibility, INFO otherwise
@@ -102,32 +103,30 @@ export async function copyLogs(): Promise<void> {
       return;
     }
 
-    // Fallback: create a temporary textarea and select/copy
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-
-    // Modern clipboard fallback - show text to user for manual copy
-    try {
-      // Try to use the modern clipboard API first
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
+    // Fallback: create a temporary textarea and attempt legacy copy; if not permitted, guide manual copy
+    if (typeof document !== 'undefined') {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        const ok = document.execCommand?.('copy');
         document.body.removeChild(textarea);
-        return;
+        if (ok) {
+          return;
+        }
+      } catch {
+        document.body.removeChild(textarea);
       }
-    } catch {
-      // Fall through to manual copy approach
     }
-
-    // Manual copy approach - show text in alert for user to copy
-    document.body.removeChild(textarea);
+    // Last resort: show a truncated preview and print full logs to the console
     alert(
-      `Logs copied to clipboard:\n\n${text.substring(0, 1000)}${text.length > 1000 ? '...' : ''}`
+      `Unable to copy automatically. A truncated preview is shown; full logs are printed to the console.\n\n${text.substring(0, 1000)}${text.length > 1000 ? '...' : ''}`
     );
-    throw new Error('Modern clipboard API not available');
+    throw new Error('Clipboard copy not available');
   } catch (error) {
     // Log the error and fall back to printing the text
     console.warn('Failed to copy logs to clipboard:', error);
@@ -219,12 +218,12 @@ export function setupConsoleOverride(): void {
 }
 
 // Auto-setup console override when this module is imported
-// This ensures the override is applied as soon as possible
 setupConsoleOverride();
 
-// Auto-setup error handlers when this module is imported
-// This ensures error handling is applied as soon as possible
-setupErrorHandlers();
+// Auto-setup error handlers when this module is imported (browser only)
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  setupErrorHandlers();
+}
 
 // Export the current log level for external use
 export const currentLogLevel = getCurrentLogLevel();

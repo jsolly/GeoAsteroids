@@ -6,6 +6,7 @@ import {
   ROID_POINTS_MED,
   ROID_POINTS_SML,
   ROID_SIZE,
+  ROID_SPAWN_TIME,
   ROID_SPEED,
   ROID_VERTICES,
 } from '../../constants/entities/roid';
@@ -43,6 +44,7 @@ class RoidBelt {
   roids: Roid[] = [];
   minCount = ROID_MIN_COUNT;
   maxCount = ROID_MAX_COUNT;
+  spawnTimer = 0; // Timer for spawning roids
 
   constructor() {
     // Create the base number of roids
@@ -56,24 +58,25 @@ class RoidBelt {
     this.roids.push(new Roid(roidPosition, Math.ceil(ROID_SIZE / 2)));
   }
 
-  destroyRoid(i: number): number {
+  destroyRoid(i: number): { score: number; newRoids: Roid[] } {
     const roids = this.roids;
     const r = roids[i];
     let score = 0;
+    const newRoids: Roid[] = [];
 
     // split the roid if applicable, respecting max count
     if (r.r === Math.ceil(ROID_SIZE / 2)) {
       // large roid - only split if we're under the max limit
       if (roids.length + 2 <= this.maxCount) {
-        roids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 4)));
-        roids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 4)));
+        newRoids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 4)));
+        newRoids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 4)));
       }
       score += ROID_POINTS_LRG;
     } else if (r.r === Math.ceil(ROID_SIZE / 4)) {
       // medium roid - only split if we're under the max limit
       if (roids.length + 2 <= this.maxCount) {
-        roids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 8)));
-        roids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 8)));
+        newRoids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 8)));
+        newRoids.push(new Roid(r.position, Math.ceil(ROID_SIZE / 8)));
       }
       score += ROID_POINTS_MED;
     } else {
@@ -81,8 +84,8 @@ class RoidBelt {
       score += ROID_POINTS_SML;
     }
 
-    roids.splice(i, 1);
-    return score;
+    // Note: The caller is responsible for splicing the destroyed roid and adding newRoids
+    return { score, newRoids };
   }
 
   getRoids(): Roid[] {
@@ -109,17 +112,18 @@ class RoidBelt {
   }
 
   spawnRoids(): void {
-    // Only spawn if we're below minimum count and under maximum limit
-    if (this.roids.length < this.minCount && this.roids.length < this.maxCount) {
-      const neededCount = Math.min(
-        this.minCount - this.roids.length, // How many we need to reach minimum
-        this.maxCount - this.roids.length // How many we can add without exceeding maximum
-      );
+    // Update spawn timer
+    this.spawnTimer++;
 
-      // Spawn the needed roids
-      for (let i = 0; i < neededCount; i++) {
-        this.addRoid();
-      }
+    // Only spawn if we're below minimum count, under maximum limit, and timer has elapsed
+    if (
+      this.roids.length < this.minCount &&
+      this.roids.length < this.maxCount &&
+      this.spawnTimer >= ROID_SPAWN_TIME
+    ) {
+      // Spawn one roid at a time with timing
+      this.addRoid();
+      this.spawnTimer = 0; // Reset timer after spawning
     }
   }
 

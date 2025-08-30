@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { ROID_NUM } from '../src/constants/game';
-import { createRoidBelt, Roid } from '../src/entities/roid/Roid.ts';
+import { createRoidBelt, Roid } from '../src/entities/roid/Roid';
 
 test('Roid Creation', () => {
   const roidPoint = { x: 10, y: 20 };
@@ -28,7 +28,11 @@ test('Roid Belt Spawn Roids', () => {
   // Remove some roids to trigger spawning
   testRoidBelt.roids.splice(0, 8); // Remove 8 roids, leaving 2 (below minCount of 5)
 
-  testRoidBelt.spawnRoids();
+  // Spawn roids multiple times to reach minCount
+  for (let i = 0; i < 3 && testRoidBelt.roids.length < 5; i++) {
+    testRoidBelt.spawnTimer = 180; // ROID_SPAWN_TIME
+    testRoidBelt.spawnRoids();
+  }
 
   // Should spawn enough to reach minCount (5)
   expect(testRoidBelt.roids.length).toEqual(5);
@@ -38,7 +42,10 @@ test('Destroy Roid', () => {
   const testRoidBelt = createRoidBelt();
   testRoidBelt.addRoid();
   const roidCount = testRoidBelt.roids.length;
-  testRoidBelt.destroyRoid(0);
+  const result = testRoidBelt.destroyRoid(0);
+  // Manually apply the destruction
+  testRoidBelt.roids.splice(0, 1);
+  testRoidBelt.roids.push(...result.newRoids);
   expect(testRoidBelt.roids.length).toEqual(roidCount + 1); // Roid splits in two
 });
 

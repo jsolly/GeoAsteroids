@@ -1,4 +1,5 @@
 import type { Position } from '../../../shared-types';
+import { playSound } from '../../audio/Sound';
 import { SHIP_SIZE } from '../../constants/entities/ship';
 import type { Player } from '../../entities/player/Player';
 import { Roid } from '../../entities/roid/Roid';
@@ -92,7 +93,7 @@ export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolea
     );
 
     // Play explosion sound
-    Roid.fxHit.play();
+    playSound(Roid.fxHit);
 
     return true;
   }

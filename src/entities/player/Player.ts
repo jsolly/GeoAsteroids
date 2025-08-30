@@ -67,16 +67,9 @@ export class Player {
 
   // Direct method called by Ship when it explodes
   onShipExploded(detail?: { cause?: string }): void {
-    console.debug(
-      `[Player ${this.id}] onShipExploded: Ship exploded, cause: ${detail?.cause || 'unknown'}, lives: ${this.lives}`
-    );
-
     // Decrement lives when ship explodes, but don't go below 0
     if (this.lives > 0) {
       this.lives--;
-      console.debug(
-        `[Player ${this.id}] onShipExploded: Life lost, remaining lives: ${this.lives}`
-      );
     }
 
     if (this.lives > 0) {
@@ -84,20 +77,13 @@ export class Player {
       // Boundary collisions should respawn immediately after the explosion animation
       if (detail?.cause === 'boundary') {
         this.respawnTimer = SHIP_EXPLODE_DUR_FRAMES;
-        console.debug(
-          `[Player ${this.id}] onShipExploded: Boundary collision, respawn timer set to ${SHIP_EXPLODE_DUR_FRAMES} frames (${SHIP_EXPLODE_DUR_FRAMES / 60}s)`
-        );
       } else {
         // For other collisions, wait for explosion to finish, then respawn immediately
         // This provides a smooth experience: explosion animation -> immediate respawn
         this.respawnTimer = SHIP_EXPLODE_DUR_FRAMES;
-        console.debug(
-          `[Player ${this.id}] onShipExploded: Standard collision, respawn timer set to ${this.respawnTimer} frames (${this.respawnTimer / 60}s)`
-        );
       }
     } else {
       // No lives remaining - game over
-      console.debug(`[Player ${this.id}] onShipExploded: No lives remaining, game over`);
       // Dispatch game over event for the game controller to handle
       window.dispatchEvent(
         new CustomEvent('playerGameOver', {
@@ -113,20 +99,14 @@ export class Player {
   }
 
   respawn(): void {
-    console.debug(`[Player ${this.id}] respawn: Starting respawn process`);
-
     // Reset ship explosion state
     this.ship.exploding = false;
     this.ship.explodeTime = 0;
-    console.debug(`[Player ${this.id}] respawn: Reset explosion state`);
 
     // Always respawn at a random safe position within the boundary
     // This applies to ALL collision types: asteroid, laser, ship-to-ship, boundary, etc.
     const newPosition = getRandomPositionWithinBoundary();
     this.ship.position = newPosition;
-    console.debug(
-      `[Player ${this.id}] respawn: Moved to new position: (${newPosition.x.toFixed(1)}, ${newPosition.y.toFixed(1)})`
-    );
 
     // Reset ship velocity to prevent momentum from previous life
     this.ship.velocity = { x: 0, y: 0 };
@@ -138,24 +118,17 @@ export class Player {
     this.ship.blinkCount = Math.ceil(SHIP_INV_DUR_FRAMES / SHIP_INV_BLINK_DUR_FRAMES); // 3 seconds invincibility
     this.ship.spawnProtectionTimer = SHIP_INV_BLINK_DUR_FRAMES; // 0.1 seconds at 60 FPS
     this.ship.blinkOn = true;
-    console.debug(
-      `[Player ${this.id}] respawn: Set invincibility for ${(SHIP_INV_DUR_FRAMES / FPS).toFixed(1)}s, blink count: ${this.ship.blinkCount}`
-    );
 
     // Reset ship health to full
     this.ship.health = this.ship.maxHealth;
     this.ship.lastDamageTime = 0;
     this.ship.healthRegenTimer = 0;
-    console.debug(`[Player ${this.id}] respawn: Reset health to ${this.ship.maxHealth}`);
 
     // Reset respawn timer
     this.respawnTimer = undefined;
 
     // Set spawn protection
     this.spawnProtectedUntil = Date.now() + (SHIP_INV_DUR_FRAMES / FPS) * 1000;
-    console.debug(
-      `[Player ${this.id}] respawn: Respawn complete, spawn protected until ${new Date(this.spawnProtectedUntil).toISOString()}`
-    );
   }
 
   static createPlayer(params: {

@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MultiplayerManager } from '../src/multiplayer/multiplayerManager';
+import type { MultiplayerManager } from '../src/multiplayer/multiplayerManager';
 
 describe('Minimap Server Info', () => {
   let multiplayerManager: MultiplayerManager;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset the singleton instance for each test
     vi.resetModules();
+    const { MultiplayerManager } = await import('../src/multiplayer/multiplayerManager');
     multiplayerManager = MultiplayerManager.getInstance();
   });
 
@@ -34,8 +35,8 @@ describe('Minimap Server Info', () => {
   });
 
   it('should handle missing websocket URL', () => {
-    // Mock missing URL
-    vi.stubEnv('VITE_WEBSOCKET_URL', '');
+    // Mock missing URL by deleting the property
+    delete (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_WEBSOCKET_URL;
 
     const serverName = multiplayerManager.getServerName();
     expect(serverName).toBe('Unknown Server');

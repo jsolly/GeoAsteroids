@@ -31,7 +31,7 @@ class LocalMultiplayerServer {
           // Convert the client message to the format expected by the shared core
           const coreMessage = {
             type: message.type,
-            ...message.data,
+            ...(message.data as Record<string, unknown>),
           };
           this.wsCore.handleClientMessage(coreMessage, ws);
         } catch (error) {

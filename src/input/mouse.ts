@@ -1,3 +1,4 @@
+import { playSound } from '../audio/Sound';
 import type { Player } from '../entities/player/Player';
 import { Ship } from '../entities/ship/Ship';
 import { canvasManager } from '../rendering/canvas';
@@ -19,8 +20,12 @@ export function handleMouseMove(ev: MouseEvent, player: Player): void {
   }
 
   const rect = canvas.getBoundingClientRect();
-  const mouseX = ev.clientX - rect.left;
-  const mouseY = ev.clientY - rect.top;
+
+  // Convert mouse coordinates from CSS pixels to canvas (device) pixels
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mouseX = (ev.clientX - rect.left) * scaleX;
+  const mouseY = (ev.clientY - rect.top) * scaleY;
 
   // Ship is rendered at screen center; compute angle from center to mouse.
   const centerX = canvas.width / 2;
@@ -48,12 +53,21 @@ export function handleMouseDown(ev: MouseEvent, player: Player): void {
     player.ship.thrusting = true;
     // Start thrust sound if not playing (mirrors ArrowUp behavior)
     if (!Ship.fxThrust.isPlaying()) {
-      Ship.fxThrust.play();
+      playSound(Ship.fxThrust);
     }
   }
 }
 
 export function handleMouseUp(ev: MouseEvent, player: Player): void {
+  // Handle right-button release unconditionally to ensure cleanup even for dead/exploding players
+  if (ev.button === 2) {
+    isRightMouseDown = false;
+    player.ship.thrusting = false;
+    Ship.fxThrust.stop();
+    return;
+  }
+
+  // Early return for dead/exploding players (only applies to non-right-button events)
   if (player.isDead || player.ship.exploding) {
     return;
   }
@@ -61,10 +75,6 @@ export function handleMouseUp(ev: MouseEvent, player: Player): void {
   if (ev.button === 0) {
     // Allow next laser shot on release (mirrors Space key previous behavior)
     player.ship.canShoot = true;
-  } else if (ev.button === 2) {
-    isRightMouseDown = false;
-    player.ship.thrusting = false;
-    Ship.fxThrust.stop();
   }
 }
 

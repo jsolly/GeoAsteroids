@@ -1,5 +1,5 @@
 {
-  "name": "geoasteroids-multiplayer-server",
+  "name": "georoids-multiplayer-server",
   "version": "1.0.0",
   "description": "Multiplayer server for GeoRoids game",
   "main": "server.ts",

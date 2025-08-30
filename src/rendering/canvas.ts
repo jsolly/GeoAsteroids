@@ -226,6 +226,12 @@ class CanvasManager {
       for (const player of allPlayers) {
         if (!player.ship.exploding && player.ship.thrusting) {
           if (player.id === currPlayer.id) {
+            // Local player thrusters at screen center (camera follows local player)
+            const screenCenter: Position = {
+              x: CANVAS_DEFAULT_CENTER_X,
+              y: CANVAS_DEFAULT_CENTER_Y,
+            };
+            drawThrusterAtPosition(player.ship, screenCenter);
           } else {
             // Other players' thrusters at their world positions
             drawThrusterAtPosition(player.ship, currShip.position);

@@ -1,5 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
-import { Sound } from '../../audio/Sound';
+import { playSound, Sound } from '../../audio/Sound';
 import { LASER_DIST, LASER_EXPLODE_DUR } from '../../constants/entities/laser';
 import { FPS } from '../../constants/game';
 import { canvasManager } from '../../rendering/canvas';
@@ -44,7 +44,10 @@ export class Laser implements LaserData {
 
   isExpired(): boolean {
     const cvs = canvasManager.getCanvas();
-    return cvs ? this.distTraveled >= LASER_DIST + cvs.width : false;
+    if (!cvs) {
+      return true; // Expire immediately if canvas is unavailable
+    }
+    return this.distTraveled >= LASER_DIST + cvs.width;
   }
 
   shouldBeRemoved(): boolean {
@@ -53,10 +56,10 @@ export class Laser implements LaserData {
   }
 
   playLaserSound(): void {
-    Laser.fxLaser.play();
+    playSound(Laser.fxLaser);
   }
 
   playHitSound(): void {
-    Laser.fxHit.play();
+    playSound(Laser.fxHit);
   }
 }

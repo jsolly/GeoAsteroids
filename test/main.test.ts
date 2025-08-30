@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { GameState } from '../src/core/gameState.ts';
+import { GameState } from '../src/core/gameState';
 
 const gameState = GameState.getInstance();
 

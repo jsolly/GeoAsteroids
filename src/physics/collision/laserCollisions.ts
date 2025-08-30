@@ -4,9 +4,9 @@ import { FPS } from '../../constants/game';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { isRemote } from '../../entities/player/playerKinds';
-import { Roid, type RoidBelt } from '../../entities/roid/Roid';
+import type { Roid, RoidBelt } from '../../entities/roid/Roid';
 import { getDistance } from '../../utils/mathUtils';
-import { shouldSkipPlayerCollision } from './collisionUtils';
+import { shouldApplyDamageToLocalPlayer, shouldSkipPlayerCollision } from './collisionUtils';
 
 export function detectLaserHits(
   currRoidBelt: RoidBelt,
@@ -16,6 +16,8 @@ export function detectLaserHits(
   const currShip = localPlayer.ship;
   const roids = currRoidBelt.roids;
   let score = 0;
+  const roidsToDestroy: number[] = [];
+  const newRoidsToAdd: Roid[] = [];
 
   // Filter out the local player to prevent self-collision
   const otherPlayers = allPlayers
@@ -35,8 +37,11 @@ export function detectLaserHits(
       // detect hits
       if (isHit(laser, roids[i])) {
         // remove roid and activate laser explosion
-        Roid.fxHit.play();
-        score = currRoidBelt.destroyRoid(i);
+        laser.playHitSound();
+        const result = currRoidBelt.destroyRoid(i);
+        score += result.score;
+        roidsToDestroy.push(i);
+        newRoidsToAdd.push(...result.newRoids);
         currShip.updateLaserExplodeTime(j);
 
         break; // This laser is now exploded, move to next
@@ -61,8 +66,14 @@ export function detectLaserHits(
 
         for (let i = roids.length - 1; i >= 0; i--) {
           if (isHit(laser, roids[i])) {
-            Roid.fxHit.play();
-            score = currRoidBelt.destroyRoid(i);
+            laser.playHitSound();
+            // Typically do not credit local score for remote hits.
+            // If you must track global score locally, still accumulate:
+            // score += currRoidBelt.destroyRoid(i);
+            // If scores are per-player, do not mutate local score here and instead attribute to player.
+            const result = currRoidBelt.destroyRoid(i);
+            roidsToDestroy.push(i);
+            newRoidsToAdd.push(...result.newRoids);
             // trigger laser explode like player
             player.ship.updateLaserExplodeTime(j);
 
@@ -106,7 +117,7 @@ export function detectLaserHits(
           }
 
           // Play hit sound
-          Roid.fxHit.play();
+          laser.playHitSound();
 
           // Player destroyed - no event needed
 
@@ -115,6 +126,15 @@ export function detectLaserHits(
       }
     }
   }
+
+  // Remove destroyed roids and add new ones after iteration
+  // Sort indices in descending order to avoid index shifting issues
+  roidsToDestroy.sort((a, b) => b - a);
+  for (const index of roidsToDestroy) {
+    currRoidBelt.roids.splice(index, 1);
+  }
+  // Add new roids
+  currRoidBelt.roids.push(...newRoidsToAdd);
 
   // NOTE: Intentional: bots should not damage other bots with lasers.
   // The following bot-on-bot laser collision handling has been removed to ensure
@@ -158,8 +178,8 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
       // Skip bot players (they're handled by detectLaserHits)
       // Note: This function should only receive human players
 
-      // Skip invincible players (blinking)
-      if (player.ship.blinkCount && player.ship.blinkCount > 0 && player.ship.blinkOn) {
+      // Skip invincible players (blinking or time-based spawn protection)
+      if (shouldSkipPlayerCollision(player)) {
         continue;
       }
 
@@ -179,10 +199,10 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
         }
 
         // Activate laser explosion
-        laser.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+        currShip.updateLaserExplodeTime(j);
 
         // Play hit sound
-        Roid.fxHit.play();
+        laser.playHitSound();
 
         // Award points for player hit (similar to roid destruction)
         score += 50;
@@ -213,7 +233,7 @@ export function detectPlayerLaserShipCollisions(
     return 0;
   }
 
-  let score = 0;
+  // Scoring is handled server-authoritatively; this function only handles collision detection
 
   // Check each player's lasers against the local ship
   for (const player of otherPlayers) {
@@ -234,19 +254,21 @@ export function detectPlayerLaserShipCollisions(
       const collisionThreshold = localShip.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
-        // Handle local ship damage using unified damage system
-        const damage = 15; // Player laser damage
-        // Apply damage via Ship.takeDamage so death triggers 'shipExploded' and respawn flow
-        localShip.takeDamage(damage);
+        // Check if debug system wants to prevent damage to local player
+        const shouldApplyDamage = shouldApplyDamageToLocalPlayer(localShip);
+
+        // Apply unified laser damage
+        if (shouldApplyDamage) {
+          localShip.takeDamage(SHIP_COLLISION_DAMAGE);
+        }
 
         // Activate laser explosion using Ship's method
         player.ship.updateLaserExplodeTime(j);
 
         // Play hit sound
-        Roid.fxHit.play();
+        laser.playHitSound();
 
-        // Award score for player hitting local ship
-        score += 50;
+        // Do not award local score here; attribution belongs to the shooter/server.
 
         // Only handle one hit per laser per frame
         break;
@@ -254,7 +276,7 @@ export function detectPlayerLaserShipCollisions(
     }
   }
 
-  return score;
+  return 0;
 }
 
 export function isHit(laser: Laser, roid: Roid): boolean {

@@ -140,10 +140,7 @@ export class WebSocketCore {
         }
         
         // Handle position if provided by client
-        let joinPosition = { x: 0, y: 0 };
-        if (restData.position && typeof restData.position === 'object') {
-          joinPosition = restData.position;
-        }
+        const joinPosition = this.validatePosition(restData.position) || { x: 0, y: 0 };
         
         this.addPlayer(id as string, name as string, ws, joinPosition);
 
@@ -166,6 +163,16 @@ export class WebSocketCore {
           id as string
         );
         this.broadcastGameState();
+        break;
+
+      case 'initBots':
+        // Handle bot initialization - for now just acknowledge
+        if (!id) {
+          this.sendError(ws, 'Missing player ID for initBots');
+          return;
+        }
+        logger.debug(`Player ${id} initialized ${restData.botCount || 0} bots`);
+        // TODO: Add bot synchronization logic here if needed
         break;
 
       case 'update':
@@ -221,12 +228,12 @@ export class WebSocketCore {
           id,
           name,
           position,
-          velocity: velocity || { x: 0, y: 0 },
-          rotation: rotation || 0,
-          angularVelocity: angularVelocity || 0, // angular velocity, default to 0
-          lives: lives || 3,
+          velocity: velocity ?? { x: 0, y: 0 },
+          rotation: rotation ?? 0,
+          angularVelocity: angularVelocity ?? 0, // angular velocity, default to 0
+          lives: lives ?? 3,
           score,
-          exploding: exploding || false,
+          exploding: exploding ?? false,
         })
         ),
         roids: [], // Empty array for now, can be populated later
@@ -244,5 +251,20 @@ export class WebSocketCore {
         this.broadcastGameState();
       }
     }, 200);
+  }
+
+  private validatePosition(position: any): { x: number; y: number } | null {
+    if (!position || typeof position !== 'object') {
+      return null;
+    }
+
+    const x = typeof position.x === 'number' ? position.x : (typeof position.x === 'string' ? parseFloat(position.x) : NaN);
+    const y = typeof position.y === 'number' ? position.y : (typeof position.y === 'string' ? parseFloat(position.y) : NaN);
+
+    if (isNaN(x) || isNaN(y) || !isFinite(x) || !isFinite(y)) {
+      return null;
+    }
+
+    return { x, y };
   }
 }

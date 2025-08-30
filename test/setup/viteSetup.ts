@@ -1,7 +1,8 @@
 import jsdom from 'jsdom';
+import { vi } from 'vitest';
 
 const { JSDOM } = jsdom;
-import '../../src/utils/logLevel.ts';
+import '../../src/utils/logLevel';
 
 const dom = new JSDOM(
   `<!DOCTYPE html>
@@ -82,6 +83,21 @@ const dom = new JSDOM(
 global.document = dom.window.document;
 global.window = global.document.defaultView as unknown as Window & typeof globalThis;
 
+// Mock localStorage for tests
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  key: vi.fn(),
+  length: 0,
+};
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
 // Silence jsdom "Not implemented: HTMLMediaElement.prototype.play" by stubbing media methods
 type MediaProto = {
   play: () => Promise<void>;
@@ -142,5 +158,11 @@ if (typeof global.window.Audio === 'undefined') {
     }
     pause(): void {}
     load(): void {}
-  } as typeof HTMLAudioElement;
+    addEventListener(): void {}
+    removeEventListener(): void {}
+    volume: number = 1;
+    currentTime: number = 0;
+    duration: number = 0;
+    paused: boolean = true;
+  } as unknown as typeof HTMLAudioElement;
 }

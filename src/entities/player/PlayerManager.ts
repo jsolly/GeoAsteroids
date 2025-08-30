@@ -39,7 +39,7 @@ class PlayerManager {
 
   public getPlayerById(id: string): Player | undefined {
     // Search remotes first
-    const remote = this.multiplayerManager.getRemotePlayers().get(id);
+    const remote = this.multiplayerManager.getRemotePlayers().find((p) => p.id === id);
     if (remote) {
       return remote;
     }
@@ -48,7 +48,7 @@ class PlayerManager {
   }
 
   public getCounts(): { total: number; remoteHumans: number; bots: number } {
-    const remoteHumans = this.multiplayerManager.getRemotePlayerCount();
+    const remoteHumans = this.multiplayerManager.getRemotePlayers().length;
     const bots = this.botManager.getBots().size;
     return { total: remoteHumans + bots, remoteHumans, bots };
   }
