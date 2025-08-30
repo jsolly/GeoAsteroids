@@ -84,20 +84,30 @@ test('Bot Manager Roid Avoidance', () => {
   // Mock roids for testing
   const mockRoids = [
     {
+      id: 'roid_1',
       position: { x: 50, y: 50 },
       r: 20,
       velocity: { x: 0, y: 0 },
       angle: 0,
+      angularVelocity: 0,
       vertices: 8,
       offsets: [1, 1, 1, 1, 1, 1, 1, 1],
+      health: 200,
+      maxHealth: 200,
+      jaggedness: 0.4,
     },
     {
+      id: 'roid_2',
       position: { x: 200, y: 200 },
       r: 15,
       velocity: { x: 0, y: 0 },
       angle: 0,
+      angularVelocity: 0,
       vertices: 6,
       offsets: [1, 1, 1, 1, 1, 1],
+      health: 150,
+      maxHealth: 150,
+      jaggedness: 0.4,
     },
   ];
 

@@ -1,3 +1,4 @@
+import type { AsteroidData } from '../../shared-types';
 import { entityFactory } from '../entities/EntityFactory';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { MultiplayerManager } from '../multiplayer/multiplayerManager';
@@ -47,12 +48,10 @@ export class GameController {
   newGame(): void {
     this.gameStateManager.resetCurrentScore();
 
-    // Create new player and roid belt
+    // Create new player
     this.playerManager.createLocalPlayer();
-    this.currRoidBelt = entityFactory.createRoidBelt();
 
-    // Reset bot initialization flag for new game
-    // This will be handled by PlayerManager when bots are initialized
+    // Note: Asteroid belt creation is now handled in startGame() to support server-authoritative mode
   }
 
   async startGame(): Promise<void> {
@@ -64,16 +63,27 @@ export class GameController {
     // Reset button text to default state
     this.inputManager.resetButtonText();
 
-    // Setup debug mode first to get the correct bot count
-    this.debugManager.applyDebugConfig(this.currRoidBelt);
-
-    // Connect to multiplayer and adjust roids once connected
+    // Try to connect to multiplayer first
+    let isMultiplayer = false;
     try {
       await this.multiplayerManager.connect();
-      // Debug config will be applied if debug mode is enabled
+      isMultiplayer = true;
+      console.debug('MULTIPLAYER', 'Connected to server, using server-authoritative asteroids');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn('Failed to connect to multiplayer, continuing with local game:', errorMessage);
+      // Create local asteroids as fallback
+      this.currRoidBelt = entityFactory.createRoidBelt();
+      this.debugManager.applyDebugConfig(this.currRoidBelt);
+    }
+
+    // Initialize multiplayer systems if connected
+    if (isMultiplayer) {
+      this.multiplayerManager.initializeAsteroidSync();
+
+      // Create a minimal asteroid belt for now - server will replace with authoritative asteroids
+      this.currRoidBelt = entityFactory.createRoidBelt();
+      this.multiplayerManager.setAsteroidBelt(this.currRoidBelt);
     }
 
     // Initialize listeners and bots
@@ -84,7 +94,94 @@ export class GameController {
     // Initialize bots once when the game starts
     this.playerManager.initializeBots();
 
+    // Set up server asteroid event listeners if in multiplayer mode
+    if (isMultiplayer) {
+      this.setupServerAsteroidListeners();
+    }
+
     window.dispatchEvent(new CustomEvent('gameStart'));
+  }
+
+  private setupServerAsteroidListeners(): void {
+    // Listen for server asteroid creation events
+    window.addEventListener('serverAsteroidCreated', (event: Event) => {
+      const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
+      const { asteroid } = customEvent.detail;
+      console.debug('GAME', 'Adding server asteroid to local belt', asteroid.id);
+
+      // Create a proper Roid object from server data
+      const roid = entityFactory.createRoid({
+        position: asteroid.position,
+        size: asteroid.size,
+      });
+
+      // Override properties with server data
+      roid.id = asteroid.id;
+      roid.velocity = asteroid.velocity;
+      roid.angle = asteroid.rotation;
+      roid.angularVelocity = asteroid.angularVelocity;
+      roid.health = asteroid.health;
+      roid.maxHealth = asteroid.maxHealth;
+
+      // Add to current asteroid belt if it exists
+      if (this.currRoidBelt) {
+        this.currRoidBelt.roids.push(roid);
+      }
+    });
+
+    // Listen for server asteroid update events
+    window.addEventListener('serverAsteroidUpdated', (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        asteroidId: string;
+        updates: Partial<AsteroidData>;
+      }>;
+      const { asteroidId, updates } = customEvent.detail;
+      console.debug('GAME', 'Updating server asteroid in local belt', asteroidId);
+
+      // Find and update the asteroid in the local belt
+      if (this.currRoidBelt) {
+        const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
+        if (roid && updates) {
+          if (updates.position) {
+            roid.position = updates.position;
+          }
+          if (updates.velocity) {
+            roid.velocity = updates.velocity;
+          }
+          if (updates.size !== undefined) {
+            roid.r = updates.size;
+          }
+          // jaggedness is read-only in Roid class, skip updating it
+          if (updates.rotation !== undefined) {
+            roid.angle = updates.rotation;
+          }
+          if (updates.angularVelocity !== undefined) {
+            roid.angularVelocity = updates.angularVelocity;
+          }
+          if (updates.health !== undefined) {
+            roid.health = updates.health;
+          }
+          if (updates.maxHealth !== undefined) {
+            roid.maxHealth = updates.maxHealth;
+          }
+        }
+      }
+    });
+
+    // Listen for server asteroid destruction events
+    window.addEventListener('serverAsteroidDestroyed', (event: Event) => {
+      const customEvent = event as CustomEvent<{ asteroidId: string }>;
+      const { asteroidId } = customEvent.detail;
+      console.debug('GAME', 'Removing server asteroid from local belt', asteroidId);
+
+      // Remove the asteroid from the local belt
+      if (this.currRoidBelt) {
+        const index = this.currRoidBelt.roids.findIndex((r) => r.id === asteroidId);
+        if (index !== -1) {
+          this.currRoidBelt.roids.splice(index, 1);
+        }
+      }
+    });
   }
 
   gameOver(): void {

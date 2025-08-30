@@ -14,17 +14,23 @@ import { FPS, ROID_MAX_COUNT, ROID_MIN_COUNT, ROID_NUM } from '../../constants/g
 import { spawnRoidFromEdge } from './roidUtils';
 
 class Roid {
+  id: string;
   angle: number;
+  angularVelocity: number;
   readonly offsets: number[] = [];
   vertices: number;
   velocity: Velocity;
+  health: number;
+  maxHealth: number;
   static fxHit = new Sound('sounds/hit.m4a', 5);
 
   constructor(
     public position: Position,
     public r: number
   ) {
+    this.id = `roid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.angle = Math.random() * Math.PI * 2; // in radians
+    this.angularVelocity = (Math.random() - 0.5) * 0.1; // Small random rotation
     const speed = (Math.random() * ROID_SPEED) / FPS;
     this.velocity = {
       x: speed * (Math.random() < 0.5 ? 1 : -1),
@@ -32,10 +38,16 @@ class Roid {
     };
 
     this.vertices = Math.floor(Math.random() * (ROID_VERTICES + 1) + ROID_VERTICES / 2);
+    this.health = this.r * 10; // Health based on size
+    this.maxHealth = this.r * 10;
 
     for (let i = 0; i < this.vertices; i++) {
       this.offsets.push(Math.random() * ROID_JAGG * 2 + 1 - ROID_JAGG);
     }
+  }
+
+  get jaggedness(): number {
+    return ROID_JAGG;
   }
 }
 

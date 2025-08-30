@@ -13,6 +13,7 @@ import {
   SHIP_THRUST,
 } from '../../constants/entities/ship';
 import { EMP_PULSE_DURATION, FPS, FRICTION } from '../../constants/game';
+import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
@@ -151,6 +152,9 @@ class Ship {
     const laser = this.generateLaser();
     this.lasers.push(laser);
     laser.playLaserSound();
+
+    // Send shooting event to multiplayer system
+    this.sendShootEvent(laser.position, laser.velocity);
   }
 
   moveLasers(): void {
@@ -172,6 +176,16 @@ class Ship {
 
   generateLaser(): Laser {
     return createLaser(this);
+  }
+
+  private sendShootEvent(laserPosition: Position, laserVelocity: Velocity): void {
+    // Only send shooting events for non-bot ships
+    if (!this.isBot) {
+      const multiplayerManager = MultiplayerManager.getInstance();
+      if (multiplayerManager.isConnected) {
+        multiplayerManager.sendShootEvent(laserPosition, laserVelocity);
+      }
+    }
   }
 
   updateFromNetwork(data: {

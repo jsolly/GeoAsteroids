@@ -23,6 +23,15 @@ export interface PlayerUpdate {
   lives: number;
   score: number;
   exploding: boolean;
+  health: number;
+  maxHealth: number;
+  lasers?: Array<{
+    position: Position;
+    velocity: Velocity;
+    distTraveled: number;
+    explodeTime: number;
+    hasExploded: boolean;
+  }>;
 }
 
 export interface PlayerJoin {
@@ -42,8 +51,20 @@ export interface PlayerShoot {
 }
 
 // Game state types that might be shared
+export interface AsteroidData {
+  id: string;
+  position: Position;
+  velocity: Velocity;
+  size: number;
+  jaggedness: number;
+  rotation: number;
+  angularVelocity: number;
+  health: number;
+  maxHealth: number;
+}
+
 export interface GameState {
   players: PlayerUpdate[];
-  roids: Array<{ position: Position; size: number; jaggedness: number }>;
+  asteroids: AsteroidData[];
   gameTime: number;
 }

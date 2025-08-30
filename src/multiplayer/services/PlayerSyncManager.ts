@@ -7,8 +7,13 @@ import type {
   Velocity,
 } from '../../../shared-types';
 import { entityFactory } from '../../entities/EntityFactory';
+import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
+import {
+  getRandomPositionNearPoint,
+  getRandomPositionWithinBoundary,
+} from '../../utils/positionUtils';
 import type { ClientMessage } from '../types';
 import { ConnectionManager } from './ConnectionManager';
 
@@ -79,12 +84,31 @@ export class PlayerSyncManager {
     lives: number;
     score: number;
     exploding: boolean;
+    health?: number;
+    maxHealth?: number;
+    lasers?: Array<{
+      position: Position;
+      velocity: Velocity;
+      distTraveled: number;
+      explodeTime: number;
+      hasExploded: boolean;
+    }>;
   }): void {
     const updateMessage: ClientMessage = {
       type: 'update',
       id: this.state.localPlayerId,
       data: {
-        ...playerState,
+        position: playerState.position,
+        velocity: playerState.velocity,
+        r: playerState.r,
+        angle: playerState.angle,
+        lives: playerState.lives,
+        // Note: Score is now server-authoritative, so we don't send local score updates
+        // The server will broadcast score updates when they change
+        exploding: playerState.exploding,
+        health: playerState.health,
+        maxHealth: playerState.maxHealth,
+        lasers: playerState.lasers,
       },
       timestamp: Date.now(),
     };
@@ -107,13 +131,81 @@ export class PlayerSyncManager {
   }
 
   /**
+   * Send laser damage event for a player
+   */
+  laserDamagePlayer(playerId: string, damage: number): void {
+    const damageMessage: ClientMessage = {
+      type: 'laserDamage',
+      data: {
+        targetPlayerId: playerId,
+        attackerId: this.state.localPlayerId,
+        damage: damage,
+      },
+      timestamp: Date.now(),
+    };
+    this.connectionManager.sendMessage(damageMessage);
+  }
+
+  /**
+   * Send bot damage event for a bot
+   */
+  laserDamageBot(botId: string, damage: number): void {
+    const damageMessage: ClientMessage = {
+      type: 'botDamage',
+      id: this.state.localPlayerId,
+      data: {
+        botId: botId,
+        attackerId: this.state.localPlayerId,
+        damage: damage,
+      },
+      timestamp: Date.now(),
+    };
+    this.connectionManager.sendMessage(damageMessage);
+  }
+
+  /**
+   * Send asteroid destruction event with points
+   */
+  asteroidDestroyed(asteroidId: string, points: number): void {
+    const destroyMessage: ClientMessage = {
+      type: 'asteroidDestroyed',
+      id: this.state.localPlayerId,
+      data: {
+        asteroidId: asteroidId,
+        playerId: this.state.localPlayerId,
+        points: points,
+      },
+      timestamp: Date.now(),
+    };
+    this.connectionManager.sendMessage(destroyMessage);
+  }
+
+  /**
+   * Send shooting event to server
+   */
+  sendShootEvent(laserStart: Position, laserDirection: Velocity): void {
+    const shootMessage: ClientMessage = {
+      type: 'shoot',
+      id: this.state.localPlayerId,
+      data: {
+        laserStart,
+        laserDirection,
+      },
+      timestamp: Date.now(),
+    };
+    this.connectionManager.sendMessage(shootMessage);
+  }
+
+  /**
    * Add a remote player
    */
   addRemotePlayer(playerId: string, playerName: string): Player {
     const color = this.getPlayerColor(playerId);
-    const player = entityFactory.createRemotePlayer(playerId, playerName, { x: 0, y: 0 }, color);
+    const position = this.getRemotePlayerPosition();
+    const player = entityFactory.createRemotePlayer(playerId, playerName, position, color);
     this.state.players.set(playerId, player);
     console.debug('MULTIPLAYER', `Added remote player: ${playerName} (${playerId})`, {
+      position,
       totalKnownPlayers: this.state.players.size,
       remoteCount: this.getRemotePlayers().length,
     });
@@ -158,6 +250,17 @@ export class PlayerSyncManager {
       }
       if (update.lives !== undefined) {
         player.lives = update.lives;
+      }
+      if (update.health !== undefined) {
+        player.ship.health = update.health;
+      }
+      if (update.maxHealth !== undefined) {
+        player.ship.maxHealth = update.maxHealth;
+      }
+
+      // Update lasers if provided
+      if (update.lasers !== undefined) {
+        this.syncRemotePlayerLasers(player, update.lasers);
       }
 
       player.lastUpdate = Date.now();
@@ -285,6 +388,129 @@ export class PlayerSyncManager {
         this.removePlayer(targetPlayerId);
       }
     });
+
+    this.connectionManager.registerMessageHandler('playerShoot', (message) => {
+      const shootData = message.payload as {
+        id: string;
+        laserStart: Position;
+        laserDirection: Velocity;
+      };
+      if (shootData.id !== this.state.localPlayerId) {
+        // Handle remote player shooting event
+        this.handleRemotePlayerShoot(shootData.id, shootData.laserStart, shootData.laserDirection);
+      }
+    });
+
+    this.connectionManager.registerMessageHandler('playerDamaged', (message) => {
+      const damageData = message.payload as {
+        targetPlayerId: string;
+        attackerId: string;
+        damage: number;
+        remainingHealth?: number;
+        isDestroyed: boolean;
+      };
+
+      // Update the target player's health and state
+      const targetPlayer = this.state.players.get(damageData.targetPlayerId);
+      if (targetPlayer) {
+        if (damageData.remainingHealth !== undefined) {
+          targetPlayer.ship.health = damageData.remainingHealth;
+          targetPlayer.ship.maxHealth = targetPlayer.ship.maxHealth || 100; // Ensure maxHealth is set
+        }
+
+        if (damageData.isDestroyed) {
+          // Apply damage to trigger explosion if health is 0
+          if (damageData.remainingHealth === 0) {
+            targetPlayer.ship.takeDamage(0); // This will trigger explosion if health is 0
+          } else {
+            targetPlayer.ship.exploding = true;
+          }
+        }
+      }
+    });
+
+    // Handle dedicated score updates
+    this.connectionManager.registerMessageHandler('scoreUpdate', (message) => {
+      const scoreData = message.payload as {
+        playerId: string;
+        score: number;
+      };
+
+      // Update the player's score
+      const player = this.state.players.get(scoreData.playerId);
+      if (player) {
+        player.score = scoreData.score;
+        console.debug('MULTIPLAYER', 'Score updated from server', {
+          playerId: scoreData.playerId,
+          newScore: scoreData.score,
+        });
+      }
+    });
+  }
+
+  private getRemotePlayerPosition(): Position {
+    const isDebugLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug';
+    const shouldPlaceNearEachOther =
+      isDebugLevel && import.meta.env.VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER === 'true';
+
+    if (shouldPlaceNearEachOther) {
+      const existingRemotePlayers = this.getRemotePlayers();
+
+      if (existingRemotePlayers.length > 0) {
+        // Place new remote player near existing remote players
+        const referencePlayer =
+          existingRemotePlayers[Math.floor(Math.random() * existingRemotePlayers.length)];
+        return getRandomPositionNearPoint(referencePlayer.ship.position, 150);
+      } else {
+        // First remote player, place randomly but not at origin
+        return getRandomPositionWithinBoundary();
+      }
+    } else {
+      // Default behavior: place at origin (will be updated by server)
+      return { x: 0, y: 0 };
+    }
+  }
+
+  private syncRemotePlayerLasers(
+    player: Player,
+    lasers: Array<{
+      position: Position;
+      velocity: Velocity;
+      distTraveled: number;
+      explodeTime: number;
+      hasExploded: boolean;
+    }>
+  ): void {
+    // Create Laser instances from the received data
+    const laserInstances = lasers.map((laserData) => {
+      const laser = new Laser(
+        laserData.position,
+        laserData.velocity,
+        laserData.distTraveled,
+        laserData.explodeTime,
+        laserData.hasExploded
+      );
+      return laser;
+    });
+
+    // Replace the player's lasers with the synchronized ones
+    player.ship.lasers = laserInstances;
+  }
+
+  private handleRemotePlayerShoot(
+    playerId: string,
+    laserStart: Position,
+    laserDirection: Velocity
+  ): void {
+    const player = this.state.players.get(playerId);
+    if (player) {
+      // Create a new laser for the remote player
+      const laser = new Laser(laserStart, laserDirection, 0, 0, false);
+      player.ship.lasers.push(laser);
+
+      // Play laser sound for remote player (optional - might be too noisy)
+      // laser.playLaserSound();
+    }
   }
 
   private getPlayerColor(playerId: string): string {

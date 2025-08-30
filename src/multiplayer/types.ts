@@ -16,13 +16,21 @@ export interface ServerMessage {
     | 'playerLeft'
     | 'playerUpdate'
     | 'playerShoot'
+    | 'playerDamaged'
+    | 'scoreUpdate'
     | 'gameState'
     | 'botShoot'
     | 'error'
     | 'botUpdate'
     | 'botCreate'
     | 'botRemove'
-    | 'joined';
+    | 'botDestroyed'
+    | 'botDamaged'
+    | 'botInitialized'
+    | 'joined'
+    | 'asteroidCreate'
+    | 'asteroidUpdate'
+    | 'asteroidDestroy';
   payload:
     | PlayerJoin
     | PlayerLeave
@@ -45,7 +53,14 @@ export interface ClientMessage {
     | 'initBots'
     | 'botDestroyed'
     | 'botUpdate'
-    | 'empDestroy';
+    | 'botDamage'
+    | 'empDestroy'
+    | 'laserDamage'
+    | 'initAsteroids'
+    | 'asteroidDestroyed'
+    | 'asteroidCreate'
+    | 'asteroidUpdate'
+    | 'asteroidDestroy';
   id?: string; // Optional ID field for messages that need it
   data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot | unknown; // Flexible payload for custom messages
   timestamp: number;

@@ -14,6 +14,7 @@ interface ImportMetaEnv {
   readonly VITE_DEBUG_DISABLE_ROID_MOVEMENT: string;
   readonly VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION: string;
   readonly VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER: string;
+  readonly VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER: string;
 }
 
 interface ImportMeta {

@@ -156,4 +156,68 @@ describe('Server Message Parity', () => {
     expect(errorMessage.data).toBe('Missing player ID');
     expect(errorMessage.timestamp).toBeDefined();
   });
+
+  it('should handle shoot messages', () => {
+    const sentMessages: string[] = [];
+    const mockWs = {
+      readyState: WebSocket.OPEN,
+      send: (data: string) => {
+        sentMessages.push(data);
+      },
+    } as unknown as WebSocket;
+
+    // Add the shooter player
+    const joinMessage = {
+      type: 'join',
+      data: {
+        id: 'shoot-test-id',
+        name: 'shoot-test-name',
+        position: { x: 0, y: 0 },
+      },
+    };
+    wsCore.handleClientMessage(joinMessage, mockWs);
+
+    // Add another player to receive the broadcast
+    const otherPlayerWs = {
+      readyState: WebSocket.OPEN,
+      send: (data: string) => {
+        sentMessages.push(data);
+      },
+    } as unknown as WebSocket;
+
+    const otherJoinMessage = {
+      type: 'join',
+      data: {
+        id: 'other-test-id',
+        name: 'other-test-name',
+        position: { x: 100, y: 100 },
+      },
+    };
+    wsCore.handleClientMessage(otherJoinMessage, otherPlayerWs);
+
+    // Clear previous messages
+    sentMessages.length = 0;
+
+    // Then send a shoot message
+    const shootMessage = {
+      type: 'shoot',
+      id: 'shoot-test-id',
+      data: {
+        laserStart: { x: 10, y: 20 },
+        laserDirection: { x: 1, y: 0 },
+      },
+      timestamp: Date.now(),
+    };
+
+    wsCore.handleClientMessage(shootMessage, mockWs);
+
+    // Verify shoot event was broadcast
+    expect(sentMessages.length).toBe(1);
+    const broadcastMessage = JSON.parse(sentMessages[0]);
+    expect(broadcastMessage.type).toBe('playerShoot');
+    expect(broadcastMessage.data.id).toBe('shoot-test-id');
+    expect(broadcastMessage.data.laserStart).toEqual({ x: 10, y: 20 });
+    expect(broadcastMessage.data.laserDirection).toEqual({ x: 1, y: 0 });
+    expect(broadcastMessage.timestamp).toBeDefined();
+  });
 });

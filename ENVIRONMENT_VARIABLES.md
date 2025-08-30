@@ -81,6 +81,11 @@ These variables are only active when `VITE_CLIENT_LOG_LEVEL=debug`. They provide
 - **Description**: Places bots near the local player for testing
 - **Usage**: `VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER=true`
 
+### VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER
+- **Default**: `false`
+- **Description**: Places remote multiplayer players near each other for testing
+- **Usage**: `VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER=true`
+
 ### VITE_DEBUG_PLACE_ROID_ON_BOT
 - **Default**: `false`
 - **Description**: Places asteroids on bots for testing collision detection

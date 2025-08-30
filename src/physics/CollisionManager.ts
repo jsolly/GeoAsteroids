@@ -6,11 +6,7 @@ import {
   detectBoundaryCollisions,
   detectPlayerBoundaryCollisions,
 } from './collision/boundaryCollisions';
-import {
-  detectLaserHits,
-  detectLaserPlayerCollisions,
-  detectPlayerLaserShipCollisions,
-} from './collision/laserCollisions';
+import { detectLaserHits, detectPlayerLaserShipCollisions } from './collision/laserCollisions';
 import {
   detectAllPlayerCollisions,
   detectPlayerRoidCollisions,
@@ -81,12 +77,8 @@ export class CollisionManager {
     }
 
     if (allPlayers && allPlayers.length > 0) {
-      // Detect laser player collisions
-      result.playerCollisionScore = detectLaserPlayerCollisions(localPlayer, allPlayers);
-
-      if (result.playerCollisionScore > 0) {
-        localPlayer.score += result.playerCollisionScore;
-      }
+      // Note: detectLaserHits already handles laser-player collisions above,
+      // so we don't need to call detectLaserPlayerCollisions again to avoid duplicates
 
       // Detect all other player-related collisions
       detectPlayerBoundaryCollisions(localPlayer, allPlayers);

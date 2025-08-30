@@ -5,9 +5,13 @@ import type { Player } from '../../entities/player/Player';
 
 import type { Ship } from '../../entities/ship/Ship';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
+import { getGameBoundary } from '../../physics/boundary';
 import { shouldApplyDamageToLocalPlayer } from '../../physics/collision/collisionUtils';
 import { isDebugMode } from '../../utils/debugUtils';
-import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import {
+  getRandomPositionNearPoint,
+  getRandomPositionWithinBoundary,
+} from '../../utils/positionUtils';
 
 export class PlayerManager {
   private static instance: PlayerManager;
@@ -26,9 +30,21 @@ export class PlayerManager {
   }
 
   createLocalPlayer(): Player {
+    const shouldClusterLocals =
+      isDebugMode() && import.meta.env.VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER === 'true';
+
+    const position = (() => {
+      if (shouldClusterLocals) {
+        const boundary = getGameBoundary();
+        const center = { x: boundary.cx, y: boundary.cy };
+        return getRandomPositionNearPoint(center, 200);
+      }
+      return getRandomPositionWithinBoundary();
+    })();
+
     this.localPlayer = entityFactory.createLocalPlayer(
       this.multiplayerManager.getLocalPlayerName(),
-      getRandomPositionWithinBoundary()
+      position
     );
     return this.localPlayer;
   }
@@ -59,6 +75,14 @@ export class PlayerManager {
 
     if (this.multiplayerManager.isConnected) {
       const ship = this.localPlayer.ship;
+      const lasers = ship.lasers.map((laser) => ({
+        position: laser.position,
+        velocity: laser.velocity,
+        distTraveled: laser.distTraveled,
+        explodeTime: laser.explodeTime,
+        hasExploded: laser.hasExploded,
+      }));
+
       this.multiplayerManager.updatePlayerState({
         position: ship.position,
         velocity: ship.velocity,
@@ -67,6 +91,9 @@ export class PlayerManager {
         lives: this.localPlayer.lives,
         score: this.localPlayer.score,
         exploding: ship.exploding,
+        health: ship.health,
+        maxHealth: ship.maxHealth,
+        lasers: lasers,
       });
     }
 

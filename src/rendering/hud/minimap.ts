@@ -75,16 +75,41 @@ export function drawMiniMap(
   ctx.stroke();
 
   // Draw current ship on mini map
-  drawShipMiniMap(ctx, ship, '#00ff00', boundary, miniMapX, miniMapY, miniMapSize);
+  const LOCAL_PLAYER_COLOR = '#00ff00';
+  const REMOTE_PLAYER_COLOR = '#00aaff';
+  const BOT_PLAYER_COLOR = '#ff4444';
+
+  drawShipMiniMap(ctx, ship, LOCAL_PLAYER_COLOR, boundary, miniMapX, miniMapY, miniMapSize);
 
   // Draw all other players (bots + remote players) on mini map
   try {
     const gameController = GameController.getInstance();
     const playerNetwork = PlayerNetwork.getInstance();
-    const otherPlayers = playerNetwork.getOtherPlayers();
+    const bots = playerNetwork.getBotPlayers();
+    const remotes = playerNetwork.getRemotePlayers();
 
-    for (const player of otherPlayers) {
-      drawShipMiniMap(ctx, player.ship, '#ff0000', boundary, miniMapX, miniMapY, miniMapSize);
+    for (const player of bots) {
+      drawShipMiniMap(
+        ctx,
+        player.ship,
+        BOT_PLAYER_COLOR,
+        boundary,
+        miniMapX,
+        miniMapY,
+        miniMapSize
+      );
+    }
+
+    for (const player of remotes) {
+      drawShipMiniMap(
+        ctx,
+        player.ship,
+        REMOTE_PLAYER_COLOR,
+        boundary,
+        miniMapX,
+        miniMapY,
+        miniMapSize
+      );
     }
 
     // Draw asteroids on mini map

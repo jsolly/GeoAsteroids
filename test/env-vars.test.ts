@@ -249,6 +249,7 @@ describe('Client Environment Variables (VITE_*)', () => {
         'VITE_DEBUG_DISABLE_ROID_MOVEMENT',
         'VITE_DEBUG_DISABLE_BOT_SPAWN_PROTECTION',
         'VITE_DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER',
+        'VITE_DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER',
       ];
 
       expectedVars.forEach((varName) => {

@@ -1,6 +1,8 @@
 import type { Position } from '../../../shared-types';
 import { BotManager } from '../../entities/bot/botManager';
+import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
+import { playerFactory } from '../../entities/player/PlayerFactory';
 import type { ClientMessage } from '../types';
 import { ConnectionManager } from './ConnectionManager';
 import { PlayerSyncManager } from './PlayerSyncManager';
@@ -29,9 +31,7 @@ export class BotSyncManager {
    * Initialize bots for the game
    */
   initializeBots(count: number): void {
-    this.botManager.createBots(count);
-
-    // Send bot initialization info to server if connected
+    // If connected to server, request server-managed bots
     if (this.connectionManager.isConnected()) {
       const initMessage: ClientMessage = {
         type: 'initBots',
@@ -42,6 +42,11 @@ export class BotSyncManager {
         timestamp: Date.now(),
       };
       this.connectionManager.sendMessage(initMessage);
+      console.debug('MULTIPLAYER', 'Requested server bots', { count });
+    } else {
+      // Fallback to local bots if not connected
+      this.botManager.createBots(count);
+      console.debug('LOCAL', 'Created local bots', { count });
     }
   }
 
@@ -109,48 +114,82 @@ export class BotSyncManager {
 
     // Handle bot updates from server
     this.connectionManager.registerMessageHandler('botUpdate', (message) => {
-      const {
-        botId: _botId,
-        position: _position,
-        velocity: _velocity,
-        angle: _angle,
-        exploding: _exploding,
-      } = message.payload as {
+      const payload = message.payload as {
         botId: string;
+        playerId: string;
         position: { x: number; y: number };
         velocity: { x: number; y: number };
         angle: number;
         exploding: boolean;
+        lives: number;
+        health?: number;
+        maxHealth?: number;
+        lasers?: Array<{
+          position: { x: number; y: number };
+          velocity: { x: number; y: number };
+          distTraveled: number;
+          explodeTime: number;
+          hasExploded: boolean;
+        }>;
       };
-      // TODO: Implement bot state updates
-      // this.botManager.updateBotState(botId, {
-      //   position,
-      //   velocity,
-      //   angle,
-      //   exploding,
-      // });
+
+      // Always update server-owned bots, and update remote player-owned bots
+      if (
+        payload.botId &&
+        (payload.playerId === 'server' ||
+          payload.playerId !== this.playerSyncManager.getLocalPlayerId())
+      ) {
+        // Update remote/server bot state
+        this.updateRemoteBotState(payload.botId, {
+          position: payload.position,
+          velocity: payload.velocity,
+          angle: payload.angle,
+          exploding: payload.exploding,
+          lives: payload.lives,
+          health: payload.health,
+          maxHealth: payload.maxHealth,
+          lasers: payload.lasers,
+        });
+      }
     });
 
     // Handle bot creation from server
     this.connectionManager.registerMessageHandler('botCreated', (message) => {
-      const {
-        botId: _botId,
-        botName: _botName,
-        position: _position,
-      } = message.payload as {
+      const payload = message.payload as {
         botId: string;
         botName: string;
         position: { x: number; y: number };
       };
-      // TODO: Implement individual bot creation
-      // this.botManager.createBot(botId, botName, position);
+
+      if (payload.botId && payload.botName) {
+        // Create remote bot
+        this.createRemoteBot(payload.botId, payload.botName, payload.position);
+      }
     });
 
     // Handle bot destruction from server
     this.connectionManager.registerMessageHandler('botDestroyed', (message) => {
-      const { botId: _botId } = message.payload as { botId: string };
-      // TODO: Implement bot removal
-      // this.botManager.removeBot(botId);
+      const { botId } = message.payload as { botId: string };
+      if (botId) {
+        // Remove remote bot
+        this.removeRemoteBot(botId);
+      }
+    });
+
+    // Handle bot initialization from server
+    this.connectionManager.registerMessageHandler('botInitialized', (message) => {
+      const payload = message.payload as {
+        playerId: string;
+        botCount: number;
+      };
+
+      if (payload.playerId && payload.botCount !== undefined) {
+        console.debug('MULTIPLAYER', 'Player initialized bots', {
+          playerId: payload.playerId,
+          botCount: payload.botCount,
+        });
+        // No action needed on client - just informational
+      }
     });
   }
 
@@ -158,10 +197,18 @@ export class BotSyncManager {
     const bots = this.botManager.getBots();
     const localPlayerId = this.playerSyncManager.getLocalPlayerId();
 
-    // Send updates for all bots controlled by this client
+    // Send updates for all bots controlled by this client (excluding server bots)
     for (const [botId, bot] of bots) {
-      // Only sync bots that this client controls (could be based on ownership)
+      // Only sync bots that this client controls (not server-owned bots)
       if (this.isLocalBot(botId)) {
+        const lasers = bot.ship.lasers.map((laser) => ({
+          position: laser.position,
+          velocity: laser.velocity,
+          distTraveled: laser.distTraveled,
+          explodeTime: laser.explodeTime,
+          hasExploded: laser.hasExploded,
+        }));
+
         const updateMessage: ClientMessage = {
           type: 'botUpdate',
           id: localPlayerId,
@@ -173,6 +220,9 @@ export class BotSyncManager {
             angle: bot.ship.angle,
             exploding: bot.ship.exploding,
             lives: bot.lives,
+            health: bot.ship.health,
+            maxHealth: bot.ship.maxHealth,
+            lasers: lasers,
           },
           timestamp: Date.now(),
         };
@@ -182,8 +232,101 @@ export class BotSyncManager {
   }
 
   private isLocalBot(botId: string): boolean {
-    // Simple ownership logic - could be enhanced with proper ownership tracking
-    // For now, assume all bots are local if not connected to a server
+    // Server-owned bots are not local
+    if (botId.startsWith('server-bot-')) {
+      return false;
+    }
+    // For local bots, assume ownership if not connected or if ID starts with 'local'
     return !this.connectionManager.isConnected() || botId.startsWith('local');
+  }
+
+  private updateRemoteBotState(
+    botId: string,
+    state: {
+      position: { x: number; y: number };
+      velocity: { x: number; y: number };
+      angle: number;
+      exploding: boolean;
+      lives: number;
+      health?: number;
+      maxHealth?: number;
+      lasers?: Array<{
+        position: { x: number; y: number };
+        velocity: { x: number; y: number };
+        distTraveled: number;
+        explodeTime: number;
+        hasExploded: boolean;
+      }>;
+    }
+  ): void {
+    const bot = this.botManager.getBots().get(botId);
+    if (bot) {
+      // Update bot ship state
+      bot.ship.position = state.position;
+      bot.ship.velocity = state.velocity;
+      bot.ship.angle = state.angle;
+      bot.ship.exploding = state.exploding;
+      bot.lives = state.lives;
+
+      // Update health if provided
+      if (state.health !== undefined) {
+        bot.ship.health = state.health;
+      }
+      if (state.maxHealth !== undefined) {
+        bot.ship.maxHealth = state.maxHealth;
+      }
+
+      // Update lasers if provided
+      if (state.lasers) {
+        // Create Laser instances from the received data
+        const laserInstances = state.lasers.map((laserData) => {
+          return new Laser(
+            laserData.position,
+            laserData.velocity,
+            laserData.distTraveled,
+            laserData.explodeTime,
+            laserData.hasExploded
+          );
+        });
+        bot.ship.lasers = laserInstances;
+      }
+    }
+  }
+
+  private createRemoteBot(
+    botId: string,
+    botName: string,
+    position: { x: number; y: number }
+  ): void {
+    // Check if bot already exists
+    const existingBots = this.botManager.getBots();
+    if (existingBots.has(botId)) {
+      console.debug('MULTIPLAYER', 'Bot already exists, skipping creation', { botId });
+      return;
+    }
+
+    // Create a server-owned bot using PlayerFactory
+    const botPlayer = playerFactory.createBotPlayer(botName, position);
+    botPlayer.id = botId; // Override the UUID with server-provided ID
+    botPlayer.type = 'bot'; // Ensure it's marked as a bot
+
+    // Add to bot manager
+    existingBots.set(botId, botPlayer);
+
+    console.debug('MULTIPLAYER', 'Server bot created locally', {
+      botId,
+      botName,
+      position,
+      totalBots: existingBots.size,
+    });
+  }
+
+  private removeRemoteBot(botId: string): void {
+    // Remove bot from local manager
+    const bots = this.botManager.getBots();
+    if (bots.has(botId)) {
+      bots.delete(botId);
+      console.debug('MULTIPLAYER', 'Remote bot removed', botId);
+    }
   }
 }

@@ -1,5 +1,7 @@
 import type { Position, Velocity } from '../../shared-types';
 import type { Player } from '../entities/player/Player';
+import type { Roid, RoidBelt } from '../entities/roid/Roid';
+import { AsteroidSyncManager } from './services/AsteroidSyncManager';
 import { BotSyncManager } from './services/BotSyncManager';
 import { ConnectionManager } from './services/ConnectionManager';
 import { PlayerSyncManager } from './services/PlayerSyncManager';
@@ -13,11 +15,13 @@ export class MultiplayerManager {
   private connectionManager: ConnectionManager;
   private playerSyncManager: PlayerSyncManager;
   private botSyncManager: BotSyncManager;
+  private asteroidSyncManager: AsteroidSyncManager;
 
   private constructor() {
     this.connectionManager = ConnectionManager.getInstance();
     this.playerSyncManager = PlayerSyncManager.getInstance();
     this.botSyncManager = BotSyncManager.getInstance();
+    this.asteroidSyncManager = AsteroidSyncManager.getInstance();
 
     this.setupConnectionHandlers();
   }
@@ -76,6 +80,15 @@ export class MultiplayerManager {
     lives: number;
     score: number;
     exploding: boolean;
+    health?: number;
+    maxHealth?: number;
+    lasers?: Array<{
+      position: Position;
+      velocity: Velocity;
+      distTraveled: number;
+      explodeTime: number;
+      hasExploded: boolean;
+    }>;
   }): void {
     this.playerSyncManager.updatePlayerState(playerState);
   }
@@ -127,6 +140,42 @@ export class MultiplayerManager {
 
   empDestroyBot(botId: string): void {
     this.botSyncManager.empDestroyBot(botId);
+  }
+
+  // Shooting synchronization
+  sendShootEvent(laserStart: Position, laserDirection: Velocity): void {
+    this.playerSyncManager.sendShootEvent(laserStart, laserDirection);
+  }
+
+  // Bot damage synchronization
+  laserDamagePlayer(playerId: string, damage: number): void {
+    this.playerSyncManager.laserDamagePlayer(playerId, damage);
+  }
+
+  laserDamageBot(botId: string, damage: number): void {
+    this.playerSyncManager.laserDamageBot(botId, damage);
+  }
+
+  // Asteroid destruction scoring
+  asteroidDestroyed(asteroidId: string, points: number): void {
+    this.playerSyncManager.asteroidDestroyed(asteroidId, points);
+  }
+
+  // Asteroid synchronization
+  initializeAsteroidSync(): void {
+    this.asteroidSyncManager.initialize();
+  }
+
+  setAsteroidBelt(roidBelt: RoidBelt): void {
+    this.asteroidSyncManager.setAsteroidBelt(roidBelt);
+  }
+
+  syncAsteroidState(asteroid: Roid): void {
+    this.asteroidSyncManager.syncAsteroidState(asteroid);
+  }
+
+  handleAsteroidDestruction(asteroidId: string): void {
+    this.asteroidSyncManager.handleAsteroidDestruction(asteroidId);
   }
 
   private setupConnectionHandlers(): void {
