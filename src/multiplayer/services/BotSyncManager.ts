@@ -32,23 +32,31 @@ export class BotSyncManager {
    * Initialize bots for the game
    */
   initializeBots(count: number): void {
-    // If connected to server, request server-managed bots
-    if (this.connectionManager.isConnected()) {
-      const initMessage: ClientMessage = {
-        type: 'initBots',
-        id: this.playerSyncManager.getLocalPlayerId(),
-        data: {
-          botCount: count,
-        },
-        timestamp: Date.now(),
-      };
-      this.connectionManager.sendMessage(initMessage);
-      logger.debug('MULTIPLAYER', 'Requested server bots', { count });
-    } else {
-      // Fallback to local bots if not connected
-      this.botManager.createBots(count);
-      logger.debug('LOCAL', 'Created local bots', { count });
+    const connectionStatus = this.connectionManager.isConnected();
+
+    logger.debug('MULTIPLAYER', 'Bot initialization called', {
+      count,
+      connectionStatus,
+      willCreateLocalBots: false, // No local fallback - multiplayer only
+    });
+
+    // Only proceed if connected to server - no local fallback
+    if (!connectionStatus) {
+      logger.error('MULTIPLAYER', 'Cannot initialize bots - not connected to server');
+      throw new Error('Multiplayer connection required for bot initialization');
     }
+
+    // Request server bots
+    const initMessage: ClientMessage = {
+      type: 'initBots',
+      id: this.playerSyncManager.getLocalPlayerId(),
+      data: {
+        botCount: count,
+      },
+      timestamp: Date.now(),
+    };
+    this.connectionManager.sendMessage(initMessage);
+    logger.debug('MULTIPLAYER', 'Requested server bots', { count });
   }
 
   /**
@@ -195,19 +203,27 @@ export class BotSyncManager {
 
     // Handle bot batch creation from server
     this.connectionManager.registerMessageHandler('botsCreated', (message) => {
-      const { bots } = message.payload as {
-        bots: Array<{
-          botId: string;
-          botName: string;
-          position: { x: number; y: number };
-        }>;
-      };
+      // Validate payload structure
+      const payload = message.payload as
+        | { bots?: Array<{ botId: string; botName: string; position: { x: number; y: number } }> }
+        | undefined;
+      if (!payload || !Array.isArray(payload.bots)) {
+        logger.warn('MULTIPLAYER', 'Invalid botsCreated message payload', payload);
+        return;
+      }
+
+      const { bots } = payload;
 
       logger.debug('MULTIPLAYER', 'Received server bot batch creation', { count: bots.length });
 
       // Process each bot in the batch
       for (const botData of bots) {
-        if (botData.botId && botData.botName) {
+        if (
+          botData.botId &&
+          botData.botName &&
+          botData.position &&
+          typeof botData.position === 'object'
+        ) {
           // Create remote bot
           this.createRemoteBot(botData.botId, botData.botName, botData.position);
         } else {

@@ -118,7 +118,13 @@ export class MultiplayerManager {
   // UI helper methods
   getServerName(): string {
     // Extract server name from websocket URL or return default
-    const wsUrl = import.meta.env?.VITE_WEBSOCKET_URL || 'ws://localhost:3001/ws';
+    // Compute fallback URL from current page location
+    const computedUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
+        : 'ws://localhost:3001/ws';
+
+    const wsUrl = import.meta.env?.VITE_WEBSOCKET_URL || computedUrl;
     try {
       const url = new URL(wsUrl);
       if (url.hostname === 'localhost') {
@@ -186,12 +192,62 @@ export class MultiplayerManager {
         this.playerSyncManager.joinGame();
       },
       onDisconnect: () => {
-        logger.debug('MULTIPLAYER', 'Disconnected from multiplayer server');
-        // Handle disconnection cleanup if needed
+        logger.warn(
+          'MULTIPLAYER',
+          'Disconnected from multiplayer server - attempting reconnection'
+        );
+
+        // Don't immediately stop the game - try to reconnect first
+        // This allows for temporary network hiccups without disrupting gameplay
+        this.attemptReconnection();
       },
       onError: (error) => {
         logger.error('MULTIPLAYER', 'Connection error:', error);
       },
     });
+  }
+
+  private async attemptReconnection(): Promise<void> {
+    const maxRetries = 5;
+    const baseDelay = 1000; // Start with 1 second delay
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.debug('MULTIPLAYER', `Reconnection attempt ${attempt}/${maxRetries}`);
+
+        // Wait before attempting to reconnect (exponential backoff)
+        await new Promise((resolve) => setTimeout(resolve, baseDelay * attempt));
+
+        // Try to reconnect
+        await this.connectionManager.connect();
+
+        logger.info('MULTIPLAYER', 'Successfully reconnected to server');
+
+        // Re-join the game
+        this.playerSyncManager.joinGame();
+
+        // Dispatch reconnection success event
+        window.dispatchEvent(new CustomEvent('multiplayerReconnected'));
+
+        return; // Success - exit the retry loop
+      } catch (error) {
+        logger.warn('MULTIPLAYER', `Reconnection attempt ${attempt} failed: ${String(error)}`);
+
+        // If this was the last attempt, we need to handle permanent disconnection
+        if (attempt === maxRetries) {
+          logger.error(
+            'MULTIPLAYER',
+            'All reconnection attempts failed - connection permanently lost'
+          );
+
+          // Dispatch permanent disconnection event
+          window.dispatchEvent(
+            new CustomEvent('multiplayerPermanentlyDisconnected', {
+              detail: { reason: 'Reconnection failed after multiple attempts' },
+            })
+          );
+        }
+      }
+    }
   }
 }

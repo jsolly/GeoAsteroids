@@ -33,7 +33,7 @@ test('Roid Creation', () => {
 test('Roid Belt Creation', () => {
   const testRoidBelt = createRoidBelt();
   expect(testRoidBelt).toBeInstanceOf(testRoidBelt.constructor);
-  expect(testRoidBelt.roids.length).toEqual(ROID.INITIAL_COUNT);
+  expect(testRoidBelt.roids.length).toEqual(ROID.INITIAL_ROID_COUNT);
 });
 
 test('Roid Belt Add Roid', () => {

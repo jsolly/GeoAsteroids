@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position } from '../../shared-types';
+import { CANVAS, DEBUG } from '../constants';
 import { generateRandomPlayerColor } from '../utils/colorUtils';
 import {
   getRandomPositionNearPoint,
@@ -206,6 +207,10 @@ export class EntityFactory {
       if (config.debugPlaceNearLocal && config.localPlayerPosition) {
         // Place bots near the local player in debug mode
         positions.push(getRandomPositionNearPoint(config.localPlayerPosition, 200));
+      } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
+        // Place bots near center when debug flag is enabled
+        const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
+        positions.push(getRandomPositionNearPoint(centerPosition, 200));
       } else {
         // Place bots randomly within the boundary (default behavior)
         positions.push(getRandomPositionWithinBoundary());

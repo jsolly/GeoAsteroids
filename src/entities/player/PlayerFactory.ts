@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position } from '../../../shared-types';
-import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import { CANVAS, DEBUG } from '../../constants';
+import {
+  getRandomPositionNearPoint,
+  getRandomPositionWithinBoundary,
+} from '../../utils/positionUtils';
 import { Player } from './Player';
 
 export interface PlayerCreationParams {
@@ -15,7 +19,19 @@ export interface PlayerCreationParams {
 export class PlayerFactory {
   public createPlayer(params: PlayerCreationParams): Player {
     const id = params.id || uuidv4();
-    const position = params.position || getRandomPositionWithinBoundary();
+
+    // Determine position based on debug flag if none provided
+    let position: Position;
+    if (params.position) {
+      position = params.position;
+    } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
+      // Place near center when debug flag is enabled
+      const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
+      position = getRandomPositionNearPoint(centerPosition, 150); // Within 150 pixels of center
+    } else {
+      // Default behavior: random position within boundary
+      position = getRandomPositionWithinBoundary();
+    }
 
     const player = new Player({
       id,

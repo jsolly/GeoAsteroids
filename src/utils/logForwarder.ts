@@ -11,6 +11,11 @@ let messageQueue: string[] = [];
 let reconnectTimer: number | null = null;
 let isConnecting = false; // Prevent multiple simultaneous connection attempts
 let isInitialized = false; // Track if forwarder has been started
+let connectionLock: Promise<void> | null = null;
+
+// Maximum queue size to prevent unbounded memory growth
+const MAX_QUEUE_SIZE = 1000;
+let droppedMessageCount = 0;
 
 function getSessionId(): string {
   if (sessionId) {
@@ -43,70 +48,94 @@ function getLogsWebSocketUrl(): string {
 }
 
 function connectWebSocket(): void {
-  // Prevent multiple simultaneous connection attempts
-  if (isConnecting || (ws && ws.readyState === WebSocket.OPEN)) {
+  // Prevent multiple simultaneous connection attempts using a lock
+  if (connectionLock) {
     return;
   }
 
-  isConnecting = true;
+  connectionLock = (async () => {
+    try {
+      // Double-check connection state after acquiring lock
+      if (isConnecting || (ws && ws.readyState === WebSocket.OPEN)) {
+        return;
+      }
 
-  try {
-    const wsUrl = getLogsWebSocketUrl();
-    logger.info('LOG_FORWARD', 'Attempting to connect to WebSocket', { wsUrl });
+      isConnecting = true;
 
-    ws = new WebSocket(wsUrl);
+      const wsUrl = getLogsWebSocketUrl();
+      logger.info('LOG_FORWARD', 'Attempting to connect to WebSocket', { wsUrl });
 
-    ws.onopen = () => {
-      isConnecting = false;
-      logger.info('LOG_FORWARD', 'WebSocket connected to server');
+      ws = new WebSocket(wsUrl);
 
-      // Send any queued messages
-      while (messageQueue.length > 0) {
-        const message = messageQueue.shift();
-        if (message && ws && ws.readyState === WebSocket.OPEN) {
-          sendLogMessage(message);
+      ws.onopen = () => {
+        isConnecting = false;
+        logger.info('LOG_FORWARD', 'WebSocket connected to server');
+
+        // Send any queued messages
+        while (messageQueue.length > 0) {
+          const message = messageQueue.shift();
+          if (message && ws && ws.readyState === WebSocket.OPEN) {
+            sendLogMessage(message);
+          }
         }
-      }
-    };
+      };
 
-    ws.onclose = (event) => {
-      isConnecting = false;
-      logger.warn('LOG_FORWARD', 'WebSocket disconnected from server', {
-        code: event.code,
-        reason: event.reason,
-      });
+      ws.onclose = (event) => {
+        isConnecting = false;
+        logger.warn('LOG_FORWARD', 'WebSocket disconnected from server', {
+          code: event.code,
+          reason: event.reason,
+        });
 
-      // Only attempt to reconnect if we haven't been stopped
-      if (isInitialized && reconnectTimer === null) {
-        reconnectTimer = window.setTimeout(() => {
-          logger.info('LOG_FORWARD', 'Attempting to reconnect...');
-          reconnectTimer = null;
-          connectWebSocket();
-        }, 5000);
-      }
-    };
+        // Only attempt to reconnect if we haven't been stopped
+        if (isInitialized && reconnectTimer === null) {
+          reconnectTimer = window.setTimeout(() => {
+            logger.info('LOG_FORWARD', 'Attempting to reconnect...');
+            reconnectTimer = null;
+            connectWebSocket();
+          }, 5000);
+        }
+      };
 
-    ws.onerror = (error) => {
+      ws.onerror = (error) => {
+        isConnecting = false;
+        logger.error(
+          'LOG_FORWARD',
+          'WebSocket error',
+          error instanceof Error ? error : new Error(String(error))
+        );
+      };
+    } catch (error) {
       isConnecting = false;
       logger.error(
         'LOG_FORWARD',
-        'WebSocket error',
+        'Failed to create WebSocket',
         error instanceof Error ? error : new Error(String(error))
       );
-    };
-  } catch (error) {
-    isConnecting = false;
-    logger.error(
-      'LOG_FORWARD',
-      'Failed to create WebSocket',
-      error instanceof Error ? error : new Error(String(error))
-    );
-  }
+    } finally {
+      connectionLock = null;
+    }
+  })();
 }
 
 function sendLogMessage(message: string): void {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    // Queue message for later if not connected
+    // Queue message for later if not connected, enforcing maximum size
+    if (messageQueue.length >= MAX_QUEUE_SIZE) {
+      // Drop oldest message to make room
+      messageQueue.shift();
+      droppedMessageCount++;
+
+      // Log warning when messages are dropped
+      if (droppedMessageCount % 100 === 1) {
+        // Log every 100th drop to avoid spam
+        logger.warn(
+          'LOG_FORWARD',
+          `Message queue at capacity, dropped ${droppedMessageCount} messages`
+        );
+      }
+    }
+
     messageQueue.push(message);
     return;
   }

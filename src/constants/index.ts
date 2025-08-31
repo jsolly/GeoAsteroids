@@ -11,8 +11,8 @@ export const GAME = {
   START_LIVES: 3,
   STARTING_SCORE: 0,
 
-  // Multiplayer
-  DEFAULT_BOT_COUNT: 9,
+  // Multiplayer (can be overridden by DEBUG.BOT_COUNT when in debug mode)
+  BOT_COUNT: 9,
 
   // Physics
   FPS: 60,
@@ -84,8 +84,8 @@ export const ROID = {
   POINTS_MEDIUM: 50,
   POINTS_SMALL: 100,
 
-  // Spawning
-  INITIAL_COUNT: 10,
+  // Spawning (can be overridden by DEBUG.INITIAL_ROID_COUNT when in debug mode)
+  INITIAL_ROID_COUNT: 10,
   MIN_COUNT: 5,
   MAX_COUNT: 20,
   SPAWN_TIME_FRAMES: 180, // 3 seconds at 60 FPS
@@ -109,16 +109,21 @@ export const DEBUG = {
   // Player settings
   LOCAL_PLAYER_INVINCIBLE: false,
 
-  // Bot settings
+  // Bot settings (overrides GAME.BOT_COUNT when in debug mode)
   BOT_COUNT: 1,
-  DISABLE_BOT_MOVEMENT: false,
-  DISABLE_BOT_LASERS: false,
+  DISABLE_BOT_MOVEMENT: true,
+  DISABLE_BOT_LASERS: true,
   DISABLE_BOT_SPAWN_PROTECTION: false,
 
-  // Roid settings
-  ROID_COUNT: 100,
-  DISABLE_ROID_MOVEMENT: false,
+  // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)
+  INITIAL_ROID_COUNT: 10,
+  DISABLE_ROID_MOVEMENT: true,
   PLACE_ROID_ON_BOT: false,
+
+  // Roid splitting settings (overrides server-side defaults when in debug mode)
+  MIN_ROID_SIZE: 10,
+  SPLIT_SIZE_RATIO: 0.6,
+  MAX_ROID_COUNT: 50,
 
   // Player positioning settings (Affects local, remote, and bot players)
   PLACE_PLAYERS_NEAR_CENTER: true,
@@ -139,7 +144,7 @@ export const PREFERENCES = {
 export const LOGGING = {
   // Global log level that affects both client and server logging
   // This controls what gets written to both server.log and client.log
-  GLOBAL_LOG_LEVEL: 'info' as 'error' | 'warn' | 'info' | 'debug',
+  GLOBAL_LOG_LEVEL: 'debug' as 'error' | 'warn' | 'info' | 'debug',
 
   // Whether to forward client logs to the server
   FORWARD_TO_SERVER: true,

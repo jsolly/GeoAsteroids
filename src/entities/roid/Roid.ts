@@ -1,6 +1,7 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
-import { DEBUG, GAME, LOGGING, ROID } from '../../constants';
+import { DEBUG, GAME, ROID } from '../../constants';
+import { isDebugMode } from '../../utils/debugUtils';
 import { spawnRoidFromEdge } from '../../utils/roidSpawn';
 
 class Roid {
@@ -42,7 +43,7 @@ class Roid {
 }
 
 class RoidBelt {
-  roidNum = ROID.INITIAL_COUNT;
+  roidNum = isDebugMode() ? DEBUG.INITIAL_ROID_COUNT : ROID.INITIAL_ROID_COUNT;
   roids: Roid[] = [];
   minCount: number = ROID.MIN_COUNT;
   maxCount: number = ROID.MAX_COUNT;
@@ -98,7 +99,7 @@ class RoidBelt {
 
   moveRoids(): void {
     // Check if asteroid movement is disabled in debug mode
-    if (LOGGING.GLOBAL_LOG_LEVEL === 'debug' && DEBUG.DISABLE_ROID_MOVEMENT) {
+    if (DEBUG.DISABLE_ROID_MOVEMENT) {
       return;
     }
 

@@ -38,6 +38,13 @@ export class ConnectionManager {
   }
 
   /**
+   * Get the current WebSocket socket instance
+   */
+  getSocket(): WebSocket | null {
+    return this.state.socket;
+  }
+
+  /**
    * Get the unique client ID for this session
    */
   getClientId(): string {
@@ -64,7 +71,13 @@ export class ConnectionManager {
 
     return new Promise((resolve, reject) => {
       try {
-        const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001/ws';
+        // Compute fallback URL from current page location
+        const computedUrl =
+          typeof window !== 'undefined'
+            ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
+            : 'ws://localhost:3001/ws';
+
+        const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || computedUrl;
         logger.debug('MULTIPLAYER', 'Connecting to WebSocket', { url: wsUrl });
         this.state.socket = new WebSocket(wsUrl);
 

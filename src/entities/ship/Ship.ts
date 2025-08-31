@@ -6,7 +6,6 @@ import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
-
 import { drawThruster } from './shipRenderer';
 
 import {

@@ -1,6 +1,10 @@
-import { GAME, SHIP } from '../../constants';
+import type { Position } from '../../../shared-types';
+import { CANVAS, DEBUG, GAME, SHIP } from '../../constants';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
-import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import {
+  getRandomPositionNearPoint,
+  getRandomPositionWithinBoundary,
+} from '../../utils/positionUtils';
 import { Ship } from '../ship/Ship';
 
 export class Player {
@@ -33,8 +37,7 @@ export class Player {
       isBot: this.type === 'bot',
     });
 
-    this.lives = GAME.START_LIVES;
-    this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
+    this.spawnProtectedUntil = Date.now() + (SHIP.INVINCIBILITY_DURATION_FRAMES / GAME.FPS) * 1000;
 
     // Set up event listeners for ship events
     this.setupShipEventListeners();
@@ -98,9 +101,17 @@ export class Player {
     this.ship.exploding = false;
     this.ship.explodeTime = 0;
 
-    // Always respawn at a random safe position within the boundary
-    // This applies to ALL collision types: asteroid, laser, ship-to-ship, boundary, etc.
-    const newPosition = getRandomPositionWithinBoundary();
+    // Determine respawn position based on debug flag
+    let newPosition: Position;
+    if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
+      // Place near center when debug flag is enabled
+      const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
+      newPosition = getRandomPositionNearPoint(centerPosition, 150); // Within 150 pixels of center
+    } else {
+      // Default behavior: random position within boundary
+      newPosition = getRandomPositionWithinBoundary();
+    }
+
     this.ship.position = newPosition;
 
     // Reset ship velocity to prevent momentum from previous life

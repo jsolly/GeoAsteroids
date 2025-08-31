@@ -30,7 +30,11 @@ export class GameController {
     this.debugManager = DebugManager.getInstance();
     this.multiplayerManager = MultiplayerManager.getInstance();
 
-    this.currRoidBelt = entityFactory.createRoidBelt();
+    // Initialize with empty asteroid belt - will be populated by server
+    this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+
+    // Set up multiplayer disconnection handler
+    this.setupMultiplayerDisconnectionHandler();
 
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
@@ -65,48 +69,34 @@ export class GameController {
     this.inputManager.resetButtonText();
 
     // Try to connect to multiplayer first
-    let isMultiplayer = false;
     try {
       await this.multiplayerManager.connect();
-      isMultiplayer = true;
-      logger.debug('MULTIPLAYER', 'Connected to server, using server-authoritative asteroids');
-    } catch (error) {
-      // Explicitly set multiplayer to false on any connection failure
-      isMultiplayer = false;
 
+      // Add a small delay to ensure WebSocket state is fully established
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      logger.debug('MULTIPLAYER', 'Connected to server, using server-authoritative game state');
+    } catch (error) {
+      // Connection failed - this is a fatal error since we only support multiplayer
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorType = this.categorizeConnectionError(error);
 
-      logger.warn('MULTIPLAYER', `Failed to connect to multiplayer (${errorType}):`, {
-        errorMessage,
-      });
+      logger.error(
+        'MULTIPLAYER',
+        `Failed to connect to multiplayer server (${errorType}): ${errorMessage}`
+      );
 
-      // Handle different error types appropriately
-      if (this.shouldRetryConnection(errorType)) {
-        // Attempt retry for transient errors
-        const retrySuccess = await this.attemptConnectionRetry(errorType);
-        if (retrySuccess) {
-          isMultiplayer = true;
-          logger.debug('MULTIPLAYER', 'Reconnected successfully');
-        } else {
-          this.showConnectionFailureMessage(errorType, 'Retry failed');
-          this.createLocalGame();
-        }
-      } else {
-        // Non-recoverable error - go straight to local game
-        this.showConnectionFailureMessage(errorType, 'Cannot connect');
-        this.createLocalGame();
-      }
+      // Show error message and stop the game - no local fallback
+      this.showConnectionFailureMessage(errorType, 'Cannot connect');
+      throw new Error(`Multiplayer connection failed: ${errorMessage}`);
     }
 
-    // Initialize multiplayer systems if connected
-    if (isMultiplayer) {
-      this.multiplayerManager.initializeAsteroidSync();
+    // Always initialize multiplayer systems - assume multiplayer by default
+    this.multiplayerManager.initializeAsteroidSync();
 
-      // Create an empty asteroid belt - server will populate with authoritative asteroids
-      this.currRoidBelt = entityFactory.createEmptyRoidBelt();
-      this.multiplayerManager.setAsteroidBelt(this.currRoidBelt);
-    }
+    // Create an empty asteroid belt - server will populate with authoritative asteroids
+    this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    this.multiplayerManager.setAsteroidBelt(this.currRoidBelt);
 
     // Initialize listeners and bots
     const localPlayer = this.playerManager.getLocalPlayer();
@@ -116,10 +106,8 @@ export class GameController {
     // Initialize bots once when the game starts
     this.playerManager.initializeBots();
 
-    // Set up server asteroid event listeners if in multiplayer mode
-    if (isMultiplayer) {
-      this.setupServerAsteroidListeners();
-    }
+    // Set up server asteroid event listeners
+    this.setupServerAsteroidListeners();
 
     window.dispatchEvent(new CustomEvent('gameStart'));
   }
@@ -381,53 +369,24 @@ export class GameController {
     return 'unknown';
   }
 
-  private shouldRetryConnection(errorType: string): boolean {
-    // Retry for transient network issues, not for auth or unknown errors
-    return errorType === 'network' || errorType === 'timeout' || errorType === 'server';
-  }
-
-  private async attemptConnectionRetry(errorType: string): Promise<boolean> {
-    const maxRetries = 3;
-    const baseDelay = errorType === 'timeout' ? 2000 : 1000; // Longer delay for timeouts
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        logger.debug('MULTIPLAYER', `retry attempt ${attempt}/${maxRetries}`);
-        await new Promise((resolve) => setTimeout(resolve, baseDelay * attempt)); // Exponential backoff
-        await this.multiplayerManager.connect();
-        return true; // Success!
-      } catch (retryError) {
-        const retryErrorType = this.categorizeConnectionError(retryError);
-        logger.debug('MULTIPLAYER', `retry ${attempt} failed:`, { retryErrorType });
-
-        // Don't retry if error type changed to non-retryable
-        if (!this.shouldRetryConnection(retryErrorType)) {
-          break;
-        }
-      }
-    }
-
-    return false; // All retries failed
-  }
-
   private showConnectionFailureMessage(errorType: string, reason: string): void {
     let message = '';
 
     switch (errorType) {
       case 'network':
-        message = `Network connection failed. ${reason}. Starting offline game.`;
+        message = `Network connection failed. ${reason}.`;
         break;
       case 'timeout':
-        message = `Connection timed out. ${reason}. Starting offline game.`;
+        message = `Connection timed out. ${reason}.`;
         break;
       case 'auth':
-        message = `Authentication failed. Please check your credentials. Starting offline game.`;
+        message = `Authentication failed. Please check your credentials.`;
         break;
       case 'server':
-        message = `Server error occurred. ${reason}. Starting offline game.`;
+        message = `Server error occurred. ${reason}.`;
         break;
       default:
-        message = `Connection failed: ${reason}. Starting offline game.`;
+        message = `Connection failed: ${reason}.`;
     }
 
     // Show user feedback - could be enhanced with toast/modal system
@@ -436,9 +395,40 @@ export class GameController {
     // this.uiManager.showToast(message, { action: 'Retry', onAction: () => this.retryConnection() });
   }
 
-  private createLocalGame(): void {
-    logger.debug('GAME', 'Creating local game with generated asteroids');
-    this.currRoidBelt = entityFactory.createRoidBelt();
-    this.debugManager.applyDebugConfig(this.currRoidBelt);
+  private setupMultiplayerDisconnectionHandler(): void {
+    // Listen for multiplayer disconnection events
+    window.addEventListener('multiplayerDisconnected', (event) => {
+      const customEvent = event as CustomEvent<{ reason: string }>;
+      logger.warn(
+        'MULTIPLAYER',
+        `Multiplayer disconnected: ${customEvent.detail.reason} - attempting reconnection`
+      );
+
+      // Don't stop the game immediately - let the MultiplayerManager handle reconnection
+      // The game continues running while reconnection attempts are made
+    });
+
+    // Listen for successful reconnection
+    window.addEventListener('multiplayerReconnected', () => {
+      logger.info('MULTIPLAYER', 'Successfully reconnected to server - game continues');
+      // Game continues running normally - no action needed
+    });
+
+    // Listen for permanent disconnection (after all reconnection attempts fail)
+    window.addEventListener('multiplayerPermanentlyDisconnected', (event) => {
+      const customEvent = event as CustomEvent<{ reason: string }>;
+      logger.error(
+        'MULTIPLAYER',
+        `Permanently disconnected: ${customEvent.detail.reason} - stopping game`
+      );
+
+      // Only stop the game when reconnection has permanently failed
+      this.gameStateManager.toggleIsGameRunning();
+      toggleScreen('gameArea', false);
+      toggleScreen('start-screen', true);
+
+      // Show permanent disconnection message
+      this.showConnectionFailureMessage('network', 'Connection permanently lost');
+    });
   }
 }

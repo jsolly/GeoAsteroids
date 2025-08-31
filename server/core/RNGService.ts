@@ -5,8 +5,16 @@ export class RNGService {
 
   constructor(serverSeed?: number) {
     // Store the initial seed for reset functionality
-    this.initialSeed = (serverSeed ?? 0x9E3779B9) >>> 0; // Default seed, normalized to unsigned 32-bit
+    this.initialSeed = RNGService.toUint32(serverSeed ?? 0x9E3779B9); // Default seed, normalized to unsigned 32-bit
     this.rngState = this.initialSeed;
+  }
+
+  // Private static method to validate and convert to uint32
+  private static toUint32(n: number): number {
+    if (typeof n !== 'number' || !Number.isFinite(n)) {
+      throw new TypeError('Seed must be a finite number');
+    }
+    return n >>> 0;
   }
 
   // Seeded random number generator (mulberry32)
@@ -46,18 +54,22 @@ export class RNGService {
 
   // Set RNG state
   public setState(state: number): void {
-    this.rngState = state >>> 0; // Ensure unsigned 32-bit
+    this.rngState = RNGService.toUint32(state); // Ensure unsigned 32-bit with validation
   }
 
   // Set a new seed and reset the generator
   public setSeed(seed: number): void {
-    this.initialSeed = seed >>> 0; // Normalize to unsigned 32-bit
+    const normalizedSeed = RNGService.toUint32(seed);
+    if (normalizedSeed === 0) {
+      throw new Error('Seed cannot be 0');
+    }
+    this.initialSeed = normalizedSeed;
     this.rngState = this.initialSeed;
   }
 
   // Create a new RNGService instance with the provided seed or derived from current state
   public fork(seed?: number): RNGService {
     const newSeed = seed !== undefined ? seed : this.random() * 0xFFFFFFFF;
-    return new RNGService(newSeed >>> 0);
+    return new RNGService(RNGService.toUint32(newSeed));
   }
 }

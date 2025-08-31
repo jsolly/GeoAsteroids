@@ -119,7 +119,26 @@ function writeLineToFile(
 
 // Ensure stream is closed on process exit
 if (typeof process !== 'undefined') {
-  const closeStream = () => {
+  const closeStream = async (): Promise<void> => {
+    if (serverLogStream) {
+      try {
+        // Wait for stream to finish writing buffered data
+        await new Promise<void>((resolve, reject) => {
+          serverLogStream?.once('finish', () => resolve());
+          serverLogStream?.once('error', (err) => reject(err));
+          serverLogStream?.end();
+        });
+      } catch {
+        // Ignore errors during shutdown
+      } finally {
+        serverLogStream = null;
+        serverLogStreamPromise = null;
+      }
+    }
+  };
+
+  process.on('exit', () => {
+    // For exit event, we can't use async/await, so just close synchronously
     if (serverLogStream) {
       try {
         serverLogStream.end();
@@ -127,10 +146,17 @@ if (typeof process !== 'undefined') {
       serverLogStream = null;
       serverLogStreamPromise = null;
     }
-  };
-  process.on('exit', closeStream);
-  process.on('SIGINT', closeStream);
-  process.on('SIGTERM', closeStream);
+  });
+
+  process.on('SIGINT', async () => {
+    await closeStream();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    await closeStream();
+    process.exit(0);
+  });
 }
 
 // Simple logging functions

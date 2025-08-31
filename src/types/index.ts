@@ -249,7 +249,7 @@ export interface GameConstants {
   readonly GAME: {
     readonly START_LIVES: number;
     readonly STARTING_SCORE: number;
-    readonly DEFAULT_BOT_COUNT: number;
+    readonly BOT_COUNT: number;
     readonly FPS: number;
     readonly FRICTION: number;
   };
@@ -293,7 +293,7 @@ export interface GameConstants {
     readonly POINTS_LARGE: number;
     readonly POINTS_MEDIUM: number;
     readonly POINTS_SMALL: number;
-    readonly INITIAL_COUNT: number;
+    readonly INITIAL_ROID_COUNT: number;
     readonly MIN_COUNT: number;
     readonly MAX_COUNT: number;
     readonly SPAWN_TIME_FRAMES: number;

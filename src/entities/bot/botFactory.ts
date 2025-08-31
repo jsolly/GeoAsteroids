@@ -1,5 +1,5 @@
 import type { Position } from '../../../shared-types';
-import { DEBUG, LOGGING } from '../../constants';
+import { DEBUG } from '../../constants';
 import { getGameBoundary } from '../../physics/boundary';
 import {
   getRandomPositionNearPoint,
@@ -68,13 +68,12 @@ export class BotFactory {
     _localPlayerPosition?: Position
   ): Array<{ x: number; y: number }> {
     const positions: Array<{ x: number; y: number }> = [];
-    const isDebugLevel = LOGGING.GLOBAL_LOG_LEVEL === 'debug';
-    const shouldPlaceNearCenter = isDebugLevel && DEBUG.PLACE_PLAYERS_NEAR_CENTER;
+    const shouldPlaceNearCenter = DEBUG.PLACE_PLAYERS_NEAR_CENTER;
 
     // Generate positions based on debug configuration
     for (let i = 0; i < count; i++) {
       if (shouldPlaceNearCenter) {
-        // Place bots near the center in debug mode
+        // Place bots near the center when debug flag is enabled
         const boundary = getGameBoundary();
         const center = { x: boundary.cx, y: boundary.cy };
         const position = getRandomPositionNearPoint(center, 200);

@@ -76,6 +76,11 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
                        userAgent.includes('httpie') ||
                        acceptHeader.includes('application/json');
     
+    // Derive base URLs from request headers
+    const host = req.headers.host || `localhost:${PORT}`;
+    const protocol = req.headers['x-forwarded-proto'] || ((req.socket as any).encrypted ? 'https' : 'http');
+    const wsProtocol = protocol === 'https' ? 'wss' : 'ws';
+    
     if (prefersJson) {
       // Return structured JSON for API/debugging
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -91,12 +96,12 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
         },
         websockets: {
           game: {
-            endpoint: `ws://localhost:${PORT}/ws`,
+            endpoint: `${wsProtocol}://${host}/ws`,
             status: 'available',
             description: 'Gameplay WebSocket for multiplayer functionality'
           },
           logs: {
-            endpoint: `ws://localhost:${PORT}/logs`,
+            endpoint: `${wsProtocol}://${host}/logs`,
             status: 'available',
             description: 'Log forwarding WebSocket for client logs'
           }
@@ -107,10 +112,10 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
           activeLogClients: 0 // You could track this if needed
         },
         endpoints: {
-          health: `http://localhost:${PORT}/health`,
-          status: `http://localhost:${PORT}/status`,
-          gameWs: `ws://localhost:${PORT}/ws`,
-          logWs: `ws://localhost:${PORT}/logs`
+          health: `${protocol}://${host}/health`,
+          status: `${protocol}://${host}/status`,
+          gameWs: `${wsProtocol}://${host}/ws`,
+          logWs: `${wsProtocol}://${host}/logs`
         },
         version: {
           node: process.version,
@@ -219,9 +224,9 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
         </div>
         
         <div class="section">
-            <h2>Connection Details</h2>
-            <div id="connectionDetails">
-                <div class="log info">No connections established</div>
+            <h2>Server Health</h2>
+            <div id="serverHealth">
+                <div class="log info">Checking server health...</div>
             </div>
         </div>
         
@@ -231,125 +236,119 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
         </div>
         
         <div class="section">
-            <h2>Server Health</h2>
-            <div id="serverHealth">Checking...</div>
+            <h2>Connection Details</h2>
+            <div id="connectionDetails">
+                <div class="log info">Connection details will appear here</div>
+            </div>
         </div>
     </div>
 
     <script>
+        // Compute endpoints from current page location
+        const wsBase = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host;
+        
         let gameWs = null;
         let logWs = null;
         let messageCount = 0;
         
-        function addLog(message, type = 'info') {
-            const logDiv = document.getElementById('messageLog');
-            const logEntry = document.createElement('div');
-            logEntry.className = \`log \${type}\`;
-            logEntry.textContent = \`[\${new Date().toISOString()}] \${message}\`;
-            logDiv.appendChild(logEntry);
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
-        
-        function updateStatus(elementId, status, className) {
-            const element = document.getElementById(elementId);
-            element.textContent = status;
-            element.className = \`metric-value \${className}\`;
-        }
-        
-        function updateOverallStatus() {
-            const overallStatusDiv = document.getElementById('overallStatus');
-            const gameConnected = gameWs && gameWs.readyState === WebSocket.OPEN;
-            const logConnected = logWs && logWs.readyState === WebSocket.OPEN;
+        function addLog(message, level = 'info') {
+            const logDiv = document.createElement('div');
+            logDiv.className = \`log \${level}\`;
+            logDiv.textContent = \`[\${new Date().toISOString()}] \${message}\`;
+            document.getElementById('messageLog').appendChild(logDiv);
+            messageCount++;
             
-            let statusClass, statusIcon, statusText;
-            
-            if (gameConnected && logConnected) {
-                statusClass = 'connected';
-                statusIcon = '✅';
-                statusText = 'Both WebSockets Connected - All Systems Go!';
-            } else if (gameConnected || logConnected) {
-                statusClass = 'partial';
-                statusIcon = '⚠️';
-                statusText = \`Partial Connection - Game: \${gameConnected ? 'Connected' : 'Disconnected'}, Logs: \${logConnected ? 'Connected' : 'Disconnected'}\`;
-            } else {
-                statusClass = 'disconnected';
-                statusIcon = '❌';
-                statusText = 'Both WebSockets Disconnected';
+            // Keep only last 100 messages
+            if (messageCount > 100) {
+                document.getElementById('messageLog').removeChild(
+                    document.getElementById('messageLog').firstChild
+                );
+                messageCount--;
             }
-            
-            overallStatusDiv.innerHTML = \`
-                <div class="status-indicator \${statusClass}">
-                    <span class="status-icon">\${statusIcon}</span>
-                    <span class="status-text">\${statusText}</span>
-                </div>
-            \`;
         }
         
         function updateConnectionDetails() {
-            const detailsDiv = document.getElementById('connectionDetails');
-            detailsDiv.innerHTML = '';
+            const gameStatus = gameWs ? gameWs.readyState : WebSocket.CONNECTING;
+            const logStatus = logWs ? logWs.readyState : WebSocket.CONNECTING;
             
-            if (gameWs && gameWs.readyState === WebSocket.OPEN) {
-                const gameInfo = document.createElement('div');
-                gameInfo.className = 'log info';
-                gameInfo.textContent = \`Game WebSocket: OPEN (readyState: \${gameWs.readyState})\`;
-                detailsDiv.appendChild(gameInfo);
+            let overallStatus = 'disconnected';
+            if (gameStatus === WebSocket.OPEN && logStatus === WebSocket.OPEN) {
+                overallStatus = 'connected';
+            } else if (gameStatus === WebSocket.OPEN || logStatus === WebSocket.OPEN) {
+                overallStatus = 'partial';
             }
             
-            if (logWs && logWs.readyState === WebSocket.OPEN) {
-                const logInfo = document.createElement('div');
-                logInfo.className = 'log info';
-                logInfo.textContent = \`Log WebSocket: OPEN (readyState: \${logWs.readyState})\`;
-                detailsDiv.appendChild(logInfo);
-            }
+            // Update status indicators
+            document.getElementById('gameStatus').textContent = 
+                gameStatus === WebSocket.OPEN ? 'Connected' : 
+                gameStatus === WebSocket.CONNECTING ? 'Connecting' : 'Disconnected';
+            document.getElementById('gameStatus').className = 
+                \`metric-value \${gameStatus === WebSocket.OPEN ? 'connected' : 
+                  gameStatus === WebSocket.CONNECTING ? 'connecting' : 'disconnected'}\`;
             
-            if (!gameWs && !logWs) {
-                const noConn = document.createElement('div');
-                noConn.className = 'log info';
-                noConn.textContent = 'No connections established';
-                detailsDiv.appendChild(noConn);
-            }
+            document.getElementById('logStatus').textContent = 
+                logStatus === WebSocket.OPEN ? 'Connected' : 
+                logStatus === WebSocket.CONNECTING ? 'Connecting' : 'Disconnected';
+            document.getElementById('logStatus').className = 
+                \`metric-value \${logStatus === WebSocket.OPEN ? 'connected' : 
+                  logStatus === WebSocket.CONNECTING ? 'connecting' : 'disconnected'}\`;
             
-            updateOverallStatus();
+            // Update overall status
+            const overallElement = document.getElementById('overallStatus');
+            overallElement.innerHTML = \`
+                <div class="status-indicator \${overallStatus}">
+                    <span class="status-icon">\${overallStatus === 'connected' ? '✅' : 
+                                               overallStatus === 'partial' ? '⚠️' : '❌'}</span>
+                    <span class="status-text">\${overallStatus === 'connected' ? 'Both WebSockets Connected' : 
+                                               overallStatus === 'partial' ? 'One WebSocket Connected' : 'Both WebSockets Disconnected'}</span>
+                </div>
+            \`;
+            
+            // Update button states
+            document.getElementById('connectGameBtn').disabled = gameStatus === WebSocket.OPEN;
+            document.getElementById('disconnectGameBtn').disabled = gameStatus !== WebSocket.OPEN;
+            document.getElementById('connectLogsBtn').disabled = logStatus === WebSocket.OPEN;
+            document.getElementById('disconnectLogsBtn').disabled = logStatus !== WebSocket.OPEN;
+            document.getElementById('testLogBtn').disabled = logStatus !== WebSocket.OPEN;
+            
+            // Update connection details
+            document.getElementById('connectionDetails').innerHTML = \`
+                <div class="log info">Game WebSocket: \${gameWs ? \`\${wsBase}/ws (\${gameWs.readyState === WebSocket.OPEN ? 'OPEN' : 
+                                                                                    gameWs.readyState === WebSocket.CONNECTING ? 'CONNECTING' : 
+                                                                                    gameWs.readyState === WebSocket.CLOSING ? 'CLOSING' : 'CLOSED'})\` : 'Not connected'}</div>
+                <div class="log info">Log WebSocket: \${logWs ? \`\${wsBase}/logs (\${logWs.readyState === WebSocket.OPEN ? 'OPEN' : 
+                                                                                   logWs.readyState === WebSocket.CONNECTING ? 'CONNECTING' : 
+                                                                                   logWs.readyState === WebSocket.CLOSING ? 'CLOSING' : 'CLOSED'})\` : 'Not connected'}</div>
+            \`;
         }
         
         function connectGame() {
-            try {
-                gameWs = new WebSocket('ws://localhost:3001/ws');
-                
-                gameWs.onopen = function() {
-                    addLog('Game WebSocket connected', 'info');
-                    updateStatus('gameStatus', 'Connected', 'connected');
-                    document.getElementById('connectGameBtn').disabled = true;
-                    document.getElementById('disconnectGameBtn').disabled = false;
-                    updateConnectionDetails();
-                };
-                
-                gameWs.onmessage = function(event) {
-                    messageCount++;
-                    addLog(\`Game message received: \${event.data}\`, 'info');
-                };
-                
-                gameWs.onclose = function(event) {
-                    addLog(\`Game WebSocket closed: \${event.code} - \${event.reason}\`, 'warn');
-                    updateStatus('gameStatus', 'Disconnected', 'disconnected');
-                    document.getElementById('connectGameBtn').disabled = false;
-                    document.getElementById('disconnectGameBtn').disabled = true;
-                    gameWs = null;
-                    updateConnectionDetails();
-                };
-                
-                gameWs.onerror = function(error) {
-                    addLog(\`Game WebSocket error: \${JSON.stringify(error)}\`, 'error');
-                    updateStatus('gameStatus', 'Error', 'error');
-                };
-                
-                addLog('Connecting to game WebSocket...', 'info');
-                updateStatus('gameStatus', 'Connecting', 'connecting');
-                
-            } catch (error) {
-                addLog(\`Failed to create game WebSocket: \${error.message}\`, 'error');
+            if (gameWs && gameWs.readyState === WebSocket.OPEN) {
+                addLog('Game WebSocket already connected', 'warn');
+                return;
             }
+            
+            addLog('Connecting to game WebSocket...', 'info');
+            gameWs = new WebSocket(\`\${wsBase}/ws\`);
+            
+            gameWs.onopen = function() {
+                addLog('Game WebSocket connected', 'info');
+                updateConnectionDetails();
+            };
+            
+            gameWs.onclose = function(event) {
+                addLog(\`Game WebSocket disconnected: \${event.code} - \${event.reason}\`, 'warn');
+                gameWs = null;
+                updateConnectionDetails();
+            };
+            
+            gameWs.onerror = function(error) {
+                addLog(\`Game WebSocket error: \${error}\`, 'error');
+            };
+            
+            gameWs.onmessage = function(event) {
+                addLog(\`Game message received: \${event.data}\`, 'info');
+            };
         }
         
         function disconnectGame() {
@@ -359,44 +358,32 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
         }
         
         function connectLogs() {
-            try {
-                logWs = new WebSocket('ws://localhost:3001/logs');
-                
-                logWs.onopen = function() {
-                    addLog('Log WebSocket connected', 'info');
-                    updateStatus('logStatus', 'Connected', 'connected');
-                    document.getElementById('connectLogsBtn').disabled = true;
-                    document.getElementById('disconnectLogsBtn').disabled = false;
-                    document.getElementById('testLogBtn').disabled = false;
-                    updateConnectionDetails();
-                };
-                
-                logWs.onmessage = function(event) {
-                    messageCount++;
-                    addLog(\`Log message received: \${event.data}\`, 'info');
-                };
-                
-                logWs.onclose = function(event) {
-                    addLog(\`Log WebSocket closed: \${event.code} - \${event.reason}\`, 'warn');
-                    updateStatus('logStatus', 'Disconnected', 'disconnected');
-                    document.getElementById('connectLogsBtn').disabled = false;
-                    document.getElementById('disconnectLogsBtn').disabled = true;
-                    document.getElementById('testLogBtn').disabled = true;
-                    logWs = null;
-                    updateConnectionDetails();
-                };
-                
-                logWs.onerror = function(error) {
-                    addLog(\`Log WebSocket error: \${JSON.stringify(error)}\`, 'error');
-                    updateStatus('logStatus', 'Error', 'error');
-                };
-                
-                addLog('Connecting to log WebSocket...', 'info');
-                updateStatus('logStatus', 'Connecting', 'connecting');
-                
-            } catch (error) {
-                addLog(\`Failed to create log WebSocket: \${error.message}\`, 'error');
+            if (logWs && logWs.readyState === WebSocket.OPEN) {
+                addLog('Log WebSocket already connected', 'warn');
+                return;
             }
+            
+            addLog('Connecting to log WebSocket...', 'info');
+            logWs = new WebSocket(\`\${wsBase}/logs\`);
+            
+            logWs.onopen = function() {
+                addLog('Log WebSocket connected', 'info');
+                updateConnectionDetails();
+            };
+            
+            logWs.onclose = function(event) {
+                addLog(\`Log WebSocket disconnected: \${event.code} - \${event.reason}\`, 'warn');
+                logWs = null;
+                updateConnectionDetails();
+            };
+            
+            logWs.onerror = function(error) {
+                addLog(\`Log WebSocket error: \${error}\`, 'error');
+            };
+            
+            logWs.onmessage = function(event) {
+                addLog(\`Log message received: \${event.data}\`, 'info');
+            };
         }
         
         function disconnectLogs() {
@@ -453,7 +440,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
         }
         
         function checkServerHealth() {
-            fetch('http://localhost:3001/health')
+            fetch('/health')
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('serverHealth').innerHTML = \`
@@ -477,7 +464,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
             button.textContent = 'Sending...';
             button.disabled = true;
 
-            fetch('http://localhost:3001/test-server-log', {
+            fetch('/test-server-log', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -510,7 +497,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
 
             try {
                 // Create a WebSocket connection to send a test log message directly to the server
-                const ws = new WebSocket('ws://localhost:3001/logs');
+                const ws = new WebSocket(\`\${wsBase}/logs\`);
                 
                 ws.onopen = function() {
                     try {

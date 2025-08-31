@@ -150,19 +150,21 @@ export class GameEngine {
     return false;
   }
 
-  public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): boolean {
-    const asteroid = this.asteroidManager.getAsteroid(asteroidId);
-    if (!asteroid) {
-      return false;
+  public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {
+    // Use the new destroyAsteroid method that handles splitting
+    const result = this.asteroidManager.destroyAsteroid(asteroidId);
+    if (!result.destroyed) {
+      return { success: false, newAsteroids: [] };
     }
-
-    // Remove the asteroid
-    this.asteroidManager.removeAsteroid(asteroidId);
 
     // Award points to the player
     this.playerManager.awardPoints(playerId, points);
 
-    return true;
+    // Return success status and any new asteroids created from splitting
+    return { 
+      success: true, 
+      newAsteroids: result.newAsteroids 
+    };
   }
 
   // Game state

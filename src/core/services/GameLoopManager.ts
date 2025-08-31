@@ -88,7 +88,8 @@ export class GameLoopManager {
     }
 
     currRoidBelt.moveRoids();
-    currRoidBelt.spawnRoids();
+    // Disable local asteroid spawning in multiplayer mode - server is authoritative
+    // currRoidBelt.spawnRoids();
   }
 
   private handleShipState(player: Player): void {

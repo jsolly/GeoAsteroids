@@ -61,7 +61,7 @@ export class PlayerManager {
   }
 
   initializeBots(): void {
-    const botCount = isDebugMode() ? DEBUG.BOT_COUNT : GAME.DEFAULT_BOT_COUNT;
+    const botCount = isDebugMode() ? DEBUG.BOT_COUNT : GAME.BOT_COUNT;
 
     this.multiplayerManager.initializeBots(botCount);
   }

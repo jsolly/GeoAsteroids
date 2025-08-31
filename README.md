@@ -56,7 +56,7 @@ Debug behavior is controlled by constants defined in `src/constants/index.ts`:
 **Debug Configuration:**
 - `DEBUG.ENABLED` - Master switch for all debug features (default: false)
 - `DEBUG.BOT_COUNT` - Number of bots to spawn in debug mode (default: 1)
-- `DEBUG.ROID_COUNT` - Alternative roid count control for debug mode (default: 100)
+- `DEBUG.INITIAL_ROID_COUNT` - Alternative roid count control for debug mode (default: 100)
 - `DEBUG.LOCAL_PLAYER_INVINCIBLE` - Makes the local player invincible in debug mode (default: false)
 - `DEBUG.DISABLE_BOT_SPAWN_PROTECTION` - Disables bot spawn protection in debug mode (default: false)
 - `DEBUG.DISABLE_BOT_MOVEMENT` - Disables bot movement when set to true (default: false)

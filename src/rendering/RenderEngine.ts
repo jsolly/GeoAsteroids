@@ -199,8 +199,13 @@ export class RenderEngine {
         drawShipAtPosition(player.ship, localShip.position);
       }
 
-      // Render thruster if thrusting
-      if (!player.ship.exploding && player.ship.thrusting) {
+      // Render thruster if thrusting (local player thruster handled by Ship.applyVelocity())
+      if (
+        !player.ship.exploding &&
+        player.ship.thrusting &&
+        localPlayer &&
+        player.id !== localPlayer.id
+      ) {
         drawThrusterAtPosition(player.ship, localShip.position);
       }
 

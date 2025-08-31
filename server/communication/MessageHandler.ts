@@ -221,14 +221,19 @@ export class MessageHandler {
   }
 
   private handleAsteroidDestroyed(ws: WebSocket, data: any): void {
+    console.log('DEBUG: handleAsteroidDestroyed called with data:', data);
+    
     if (!data.asteroidId || !data.playerId || data.points === undefined) {
+      console.log('DEBUG: Missing required fields for asteroidDestroyed');
       this.broadcaster.sendError(ws, 'Missing required fields for asteroidDestroyed');
       return;
     }
 
-    const success = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
+    console.log('DEBUG: Calling gameEngine.handleAsteroidDestruction');
+    const result = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
+    console.log('DEBUG: handleAsteroidDestruction result:', result);
 
-    if (success) {
+    if (result.success) {
       // Broadcast score update
       const player = this.gameEngine.getPlayer(data.playerId);
       if (player) {
@@ -237,6 +242,16 @@ export class MessageHandler {
 
       // Broadcast asteroid destruction
       this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
+
+      // Broadcast new asteroids created from splitting if any
+      if (result.newAsteroids.length > 0) {
+        console.log('DEBUG: Broadcasting new asteroids from splitting:', result.newAsteroids);
+        this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
+      } else {
+        console.log('DEBUG: No new asteroids created from splitting');
+      }
+    } else {
+      console.log('DEBUG: handleAsteroidDestruction failed');
     }
   }
 
