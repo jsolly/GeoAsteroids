@@ -107,31 +107,34 @@ export class ClientLogger {
       ? `${rendered} ${userAgent ? `(ua:${userAgent})` : ''} ${pageUrl ? `(url:${pageUrl})` : ''}`.trim()
       : rendered;
 
-    try {
-      const stream = await ClientLogger.ensureClientLogStream();
-      // Use callback to handle write errors without throwing
-      stream.write(withMeta + '\n', 'utf8', (error) => {
-        if (error) {
-          logger.warn('Failed to write to client log stream:', error);
-          // Reset stream on write error
-          if (ClientLogger.clientLogStream) {
-            ClientLogger.clientLogStream.end();
-            ClientLogger.clientLogStream = null;
-          }
-          // Fall back to appendFile
-          ClientLogger.appendClientLogFallback(withMeta).catch((fallbackError) => {
-            logger.warn('Failed to append to client.log via fallback:', fallbackError);
-          });
-        }
-      });
-    } catch (error) {
-      logger.warn('Failed to get client log stream, using fallback:', error);
-      // Fall back to appendFile if stream is unavailable
+    // Use setImmediate to prevent blocking the WebSocket event loop
+    setImmediate(async () => {
       try {
-        await ClientLogger.appendClientLogFallback(withMeta);
-      } catch (fallbackError) {
-        logger.warn('Failed to append to client.log via fallback:', fallbackError);
+        const stream = await ClientLogger.ensureClientLogStream();
+        // Use callback to handle write errors without throwing
+        stream.write(withMeta + '\n', 'utf8', (error) => {
+          if (error) {
+            logger.warn('Failed to write to client log stream:', error);
+            // Reset stream on write error
+            if (ClientLogger.clientLogStream) {
+              ClientLogger.clientLogStream.end();
+              ClientLogger.clientLogStream = null;
+            }
+            // Fall back to appendFile
+            ClientLogger.appendClientLogFallback(withMeta).catch((fallbackError) => {
+              logger.warn('Failed to append to client.log via fallback:', fallbackError);
+            });
+          }
+        });
+      } catch (error) {
+        logger.warn('Failed to get client log stream, using fallback:', error);
+        // Fall back to appendFile if stream is unavailable
+        try {
+          await ClientLogger.appendClientLogFallback(withMeta);
+        } catch (fallbackError) {
+          logger.warn('Failed to append to client.log via fallback:', fallbackError);
+        }
       }
-    }
+    });
   }
 }

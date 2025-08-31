@@ -1,6 +1,5 @@
 import { playSound, Sound } from '../../audio/Sound';
-import { SHIP_MAX_LASERS } from '../../constants';
-import { EMP_PULSE_DURATION, FPS } from '../../constants/game';
+import { EMP, GAME, SHIP } from '../../constants';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
 import type { Ship } from './Ship';
@@ -45,7 +44,7 @@ export function canShootAgain(state: ShipCombatState, maxLasers: number): boolea
  * Create and add a laser to the ship's arsenal
  */
 export function shoot(ship: Ship, state: ShipCombatState): void {
-  if (canShootAgain(state, SHIP_MAX_LASERS)) {
+  if (canShootAgain(state, SHIP.MAX_LASERS)) {
     const laser = createLaser(ship);
     state.lasers.push(laser);
     laser.playLaserSound();
@@ -73,7 +72,7 @@ export function updateLasers(state: ShipCombatState): void {
  */
 export function takeDamage(state: ShipCombatState, amount: number): boolean {
   state.health = calculateHealthAfterDamage(state.health, amount, state.maxHealth);
-  state.lastDamageTime = FPS;
+  state.lastDamageTime = GAME.FPS;
   state.healthRegenTimer = calculateHealthRegenDelayFrames();
 
   if (state.health <= 0) {
@@ -130,7 +129,7 @@ export function activateEmpPulse(ship: Ship, state: ShipCombatState): void {
   }
 
   state.empPulseActive = true;
-  state.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
+  state.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
   playSound(fxExplode);
 
   // Dispatch EMP pulse event with actual ship position and radius

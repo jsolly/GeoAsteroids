@@ -1,5 +1,5 @@
 import { playSound } from '../../audio/Sound';
-import { SHIP_COLLISION_DAMAGE } from '../../constants/entities/ship';
+import { SHIP } from '../../constants';
 import type { Player } from '../../entities/player/Player';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
@@ -49,11 +49,11 @@ export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Play
 
       // Deal damage to local ship
       if (shouldApplyDamage) {
-        localShip.takeDamage(SHIP_COLLISION_DAMAGE);
+        localShip.takeDamage(SHIP.COLLISION_DAMAGE);
       }
 
       // Apply damage to other player via unified system (will explode and dispatch event if lethal)
-      otherPlayer.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+      otherPlayer.ship.takeDamage(SHIP.COLLISION_DAMAGE);
 
       // Play hit sound
       playSound(Roid.fxHit);
@@ -85,7 +85,7 @@ export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
 
           if (shouldApplyDamage) {
             // Deal damage and destroy roid when damage should be applied
-            currShip.takeDamage(SHIP_COLLISION_DAMAGE);
+            currShip.takeDamage(SHIP.COLLISION_DAMAGE);
             playSound(Roid.fxHit);
             const result = currRoidBelt.destroyRoid(i);
             score += result.score;
@@ -148,8 +148,8 @@ export function detectShipToShipCollisions(
       }
 
       // Ship-to-ship collision: both ships take damage
-      player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
-      currShip.takeDamage(SHIP_COLLISION_DAMAGE);
+      player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
+      currShip.takeDamage(SHIP.COLLISION_DAMAGE);
 
       // Award points for destroying another player
       score += 300;
@@ -214,7 +214,7 @@ export function detectPlayerRoidCollisions(
       if (distance < collisionThreshold) {
         // Deal damage to player instead of instant death
         // Use takeDamage to properly trigger explosion events and respawn logic
-        player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+        player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
 
         // If player health reaches 0, takeDamage will handle the explosion
         // and dispatch the shipExploded event, which will trigger respawn logic

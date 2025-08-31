@@ -46,10 +46,15 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 The following environment variables can be configured:
 
 #### Debug Mode
-- `VITE_CLIENT_LOG_LEVEL=debug` - Automatically enables all debug features and settings
+Debug behavior is controlled by constants defined in `src/constants/index.ts`:
 
-Debug behavior is controlled by constants defined in `src/constants/index.ts` in the `DEBUG` section. These can be modified directly in the code:
+**Logging Configuration:**
+- `LOGGING.GLOBAL_LOG_LEVEL` - Sets the global log level (error, warn, info, debug). This controls what gets written to both `server.log` and `client.log`.
+- `LOGGING.FORWARD_TO_SERVER` - Whether to forward client logs to the server (default: true).
+- `LOGGING.WRITE_TO_CONSOLE` - Whether to write logs to browser console (default: true).
 
+**Debug Configuration:**
+- `DEBUG.ENABLED` - Master switch for all debug features (default: false)
 - `DEBUG.BOT_COUNT` - Number of bots to spawn in debug mode (default: 1)
 - `DEBUG.ROID_COUNT` - Alternative roid count control for debug mode (default: 100)
 - `DEBUG.LOCAL_PLAYER_INVINCIBLE` - Makes the local player invincible in debug mode (default: false)
@@ -58,11 +63,11 @@ Debug behavior is controlled by constants defined in `src/constants/index.ts` in
 - `DEBUG.DISABLE_BOT_LASERS` - Disables bot shooting when set to true (default: false)
 - `DEBUG.PLACE_ROID_ON_BOT` - Places roids on bots for testing (default: false)
 - `DEBUG.DISABLE_ROID_MOVEMENT` - Disables roid movement when set to true (default: false)
-- `DEBUG.PLACE_BOTS_NEAR_LOCAL_PLAYER` - Places bots near the local player in debug mode (default: false)
-- `DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER` - Clusters remote players together in debug mode (default: false)
+- `DEBUG.PLACE_PLAYERS_NEAR_CENTER` - Places all players (local, remote, bots) near the center in debug mode (default: true)
 
-#### Logging
-- `VITE_CLIENT_LOG_LEVEL` - Sets the client-side console log level (error, warn, info, debug). **Note**: This only affects what is displayed in the browser console. All logs are still captured and saved to `client.log` regardless of this setting.
+**Note**: To enable debug mode, you need to set both:
+1. `LOGGING.GLOBAL_LOG_LEVEL` to `'debug'` in `src/constants/index.ts`
+2. `DEBUG.ENABLED` to `true` in the same file
 
 #### Multiplayer
 - `VITE_WEBSOCKET_URL` - WebSocket server URL for multiplayer

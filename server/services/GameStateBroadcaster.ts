@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import { GameEngine } from '../core/GameEngine';
+import { logger } from '../../setup/serverLogger';
 
 export class GameStateBroadcaster {
   private gameEngine: GameEngine;
@@ -229,12 +230,12 @@ export class GameStateBroadcaster {
         try {
           player.ws.send(messageStr);
         } catch (error) {
-          console.error(`Failed to send message to player ${player.id} (readyState: ${player.ws.readyState}):`, error);
+          logger.error(`Failed to send message to player ${player.id} (readyState: ${player.ws.readyState})`, error);
           // For unrecoverable errors, close the connection and remove the player
           try {
             player.ws.close();
           } catch (closeError) {
-            console.error(`Failed to close WebSocket for player ${player.id}:`, closeError);
+            logger.error(`Failed to close WebSocket for player ${player.id}`, closeError);
           }
           // Remove the player from the game engine
           this.gameEngine.removePlayer(player.id);

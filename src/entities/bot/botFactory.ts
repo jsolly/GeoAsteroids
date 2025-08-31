@@ -1,5 +1,6 @@
 import type { Position } from '../../../shared-types';
-import { DEBUG } from '../../constants';
+import { DEBUG, LOGGING } from '../../constants';
+import { getGameBoundary } from '../../physics/boundary';
 import {
   getRandomPositionNearPoint,
   getRandomPositionWithinBoundary,
@@ -64,17 +65,19 @@ export class BotFactory {
 
   private getBotStartingPositions(
     count: number,
-    localPlayerPosition?: Position
+    _localPlayerPosition?: Position
   ): Array<{ x: number; y: number }> {
     const positions: Array<{ x: number; y: number }> = [];
-    const isDebugLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug';
-    const shouldPlaceNearLocalPlayer = isDebugLevel && DEBUG.PLACE_BOTS_NEAR_LOCAL_PLAYER;
+    const isDebugLevel = LOGGING.GLOBAL_LOG_LEVEL === 'debug';
+    const shouldPlaceNearCenter = isDebugLevel && DEBUG.PLACE_PLAYERS_NEAR_CENTER;
 
     // Generate positions based on debug configuration
     for (let i = 0; i < count; i++) {
-      if (shouldPlaceNearLocalPlayer && localPlayerPosition) {
-        // Place bots near the local player in debug mode
-        const position = getRandomPositionNearPoint(localPlayerPosition, 200);
+      if (shouldPlaceNearCenter) {
+        // Place bots near the center in debug mode
+        const boundary = getGameBoundary();
+        const center = { x: boundary.cx, y: boundary.cy };
+        const position = getRandomPositionNearPoint(center, 200);
         positions.push(position);
       } else {
         // Place bots randomly within the boundary (default behavior)

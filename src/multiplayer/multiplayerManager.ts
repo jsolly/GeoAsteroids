@@ -1,6 +1,7 @@
 import type { Position, Velocity } from '../../shared-types';
 import type { Player } from '../entities/player/Player';
 import type { Roid, RoidBelt } from '../entities/roid/Roid';
+import { logger } from '../utils/Logger';
 import { AsteroidSyncManager } from './services/AsteroidSyncManager';
 import { BotSyncManager } from './services/BotSyncManager';
 import { ConnectionManager } from './services/ConnectionManager';
@@ -181,15 +182,15 @@ export class MultiplayerManager {
   private setupConnectionHandlers(): void {
     this.connectionManager.setConnectionHandlers({
       onConnect: () => {
-        console.debug('MULTIPLAYER', 'Connected to multiplayer server');
+        logger.debug('MULTIPLAYER', 'Connected to multiplayer server');
         this.playerSyncManager.joinGame();
       },
       onDisconnect: () => {
-        console.debug('MULTIPLAYER', 'Disconnected from multiplayer server');
+        logger.debug('MULTIPLAYER', 'Disconnected from multiplayer server');
         // Handle disconnection cleanup if needed
       },
       onError: (error) => {
-        console.error('MULTIPLAYER', 'Connection error:', error);
+        logger.error('MULTIPLAYER', 'Connection error:', error);
       },
     });
   }

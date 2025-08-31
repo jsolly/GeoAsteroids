@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { LASER_MAX } from '../src/constants/entities/laser';
+import { LASER } from '../src/constants';
 import { Ship } from '../src/entities/ship/Ship';
 
 let mockShip: Ship;
@@ -45,7 +45,7 @@ test('Ship Cannot Shoot', () => {
     distTraveled: 0,
     explodeTime: 0,
   };
-  mockShip.lasers = Array(LASER_MAX).fill(mockLaser) as typeof mockShip.lasers;
+  mockShip.lasers = Array(LASER.MAX_COUNT).fill(mockLaser) as typeof mockShip.lasers;
   mockShip.canShoot = false; // ensure flag + capacity both block shooting
   expect(mockShip.canShoot).toBeFalsy();
 });

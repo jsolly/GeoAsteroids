@@ -6,15 +6,14 @@ import type {
   Position,
   Velocity,
 } from '../../../shared-types';
-import { DEBUG } from '../../constants';
+import { DEBUG, LOGGING } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
+import { getGameBoundary } from '../../physics/boundary';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
-import {
-  getRandomPositionNearPoint,
-  getRandomPositionWithinBoundary,
-} from '../../utils/positionUtils';
+import { logger } from '../../utils/Logger';
+import { getRandomPositionNearPoint } from '../../utils/positionUtils';
 import type { ClientMessage } from '../types';
 import { ConnectionManager } from './ConnectionManager';
 
@@ -67,7 +66,7 @@ export class PlayerSyncManager {
       },
       timestamp: Date.now(),
     };
-    console.debug('MULTIPLAYER', 'Joining game with local player', {
+    logger.debug('MULTIPLAYER', 'Joining game with local player', {
       id: this.state.localPlayerId,
       name: this.state.localPlayerName,
     });
@@ -205,7 +204,7 @@ export class PlayerSyncManager {
     const position = this.getRemotePlayerPosition();
     const player = entityFactory.createRemotePlayer(playerId, playerName, position, color);
     this.state.players.set(playerId, player);
-    console.debug('MULTIPLAYER', `Added remote player: ${playerName} (${playerId})`, {
+    logger.debug('MULTIPLAYER', `Added remote player: ${playerName} (${playerId})`, {
       position,
       totalKnownPlayers: this.state.players.size,
       remoteCount: this.getRemotePlayers().length,
@@ -220,7 +219,7 @@ export class PlayerSyncManager {
     const player = this.state.players.get(playerId);
     if (player) {
       this.state.players.delete(playerId);
-      console.debug('MULTIPLAYER', `Removed player: ${player.name} (${playerId})`, {
+      logger.debug('MULTIPLAYER', `Removed player: ${player.name} (${playerId})`, {
         totalKnownPlayers: this.state.players.size,
         remoteCount: this.getRemotePlayers().length,
       });
@@ -312,7 +311,7 @@ export class PlayerSyncManager {
 
   private setupMessageHandlers(): void {
     this.connectionManager.registerMessageHandler('error', (message) => {
-      console.error('MULTIPLAYER', 'Server error:', message.payload);
+      logger.error('MULTIPLAYER', `Server error: ${String(message.payload)}`);
     });
 
     // Handle the "joined" message sent by server when player successfully joins
@@ -323,7 +322,7 @@ export class PlayerSyncManager {
       if (!payload) {
         return;
       }
-      console.debug('MULTIPLAYER', 'Successfully joined game', {
+      logger.debug('MULTIPLAYER', 'Successfully joined game', {
         id: payload.id,
         name: payload.name,
       });
@@ -373,7 +372,7 @@ export class PlayerSyncManager {
       if (update.id !== this.state.localPlayerId) {
         const exists = this.state.players.has(update.id);
         if (!exists) {
-          console.debug('MULTIPLAYER', 'Received update for unknown player, creating stub', {
+          logger.debug('MULTIPLAYER', 'Received update for unknown player, creating stub', {
             id: update.id,
           });
           this.addRemotePlayer(update.id, `Player_${update.id.slice(0, 4)}`);
@@ -427,7 +426,7 @@ export class PlayerSyncManager {
             targetPlayer.ship.takeDamage(1); // This will trigger explosion since health is already 0
           } else {
             // Ship is destroyed but has remaining health - this shouldn't happen, but handle gracefully
-            console.warn('MULTIPLAYER', 'Ship marked as destroyed but has remaining health', {
+            logger.warn('MULTIPLAYER', 'Ship marked as destroyed but has remaining health', {
               playerId: targetPlayer.id,
               remainingHealth: damageData.remainingHealth,
             });
@@ -448,7 +447,7 @@ export class PlayerSyncManager {
       const player = this.state.players.get(scoreData.playerId);
       if (player) {
         player.score = scoreData.score;
-        console.debug('MULTIPLAYER', 'Score updated from server', {
+        logger.debug('MULTIPLAYER', 'Score updated from server', {
           playerId: scoreData.playerId,
           newScore: scoreData.score,
         });
@@ -457,21 +456,13 @@ export class PlayerSyncManager {
   }
 
   private getRemotePlayerPosition(): Position {
-    const isDebugLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL === 'debug';
-    const shouldPlaceNearEachOther = isDebugLevel && DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER;
+    const isDebugLevel = LOGGING.GLOBAL_LOG_LEVEL === 'debug';
+    const shouldPlaceNearCenter = isDebugLevel && DEBUG.PLACE_PLAYERS_NEAR_CENTER;
 
-    if (shouldPlaceNearEachOther) {
-      const existingRemotePlayers = this.getRemotePlayers();
-
-      if (existingRemotePlayers.length > 0) {
-        // Place new remote player near existing remote players
-        const referencePlayer =
-          existingRemotePlayers[Math.floor(Math.random() * existingRemotePlayers.length)];
-        return getRandomPositionNearPoint(referencePlayer.ship.position, 150);
-      } else {
-        // First remote player, place randomly but not at origin
-        return getRandomPositionWithinBoundary();
-      }
+    if (shouldPlaceNearCenter) {
+      const boundary = getGameBoundary();
+      const center = { x: boundary.cx, y: boundary.cy };
+      return getRandomPositionNearPoint(center, 200);
     } else {
       // Default behavior: place at origin (will be updated by server)
       return { x: 0, y: 0 };

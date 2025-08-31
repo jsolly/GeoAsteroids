@@ -1,10 +1,9 @@
 import { playSound } from '../audio/Sound';
-import { TURN_SPEED } from '../constants/entities/ship';
-import { FPS } from '../constants/game';
+import { GAME, SHIP } from '../constants';
 import type { Player } from '../entities/player/Player';
 import { Ship } from '../entities/ship/Ship';
 
-const TURN_SPEED_RAD_PER_FRAME = (TURN_SPEED * Math.PI) / (180 * FPS);
+const TURN_SPEED_RAD_PER_FRAME = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
 
 interface KeyStates {
   ArrowLeft: boolean;

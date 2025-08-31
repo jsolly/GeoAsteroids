@@ -1,13 +1,16 @@
-// Client log forwarder: streams console buffer lines to server via WebSocket
-// Minimal, self-contained, avoids extra deps and heavy coupling
+// Client log forwarder: streams individual log messages to server via WebSocket
+// Used by Logger.ts for structured logging
 
-import { getLogsAsText } from './logLevel';
+import { logger } from './Logger';
 
 type ClientLogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
-let forwardTimer: number | null = null;
-let lastSentLength = 0;
 let sessionId: string | null = null;
+let ws: WebSocket | null = null;
+let messageQueue: string[] = [];
+let reconnectTimer: number | null = null;
+let isConnecting = false; // Prevent multiple simultaneous connection attempts
+let isInitialized = false; // Track if forwarder has been started
 
 function getSessionId(): string {
   if (sessionId) {
@@ -39,302 +42,133 @@ function getLogsWebSocketUrl(): string {
   }
 }
 
-function sendChunk(lines: string[]): void {
-  let ws: WebSocket | null = null;
-  let connectionEstablished = false;
-  let messageSent = false;
-  let retryCount = 0;
-  const maxRetries = 3;
-  const baseDelay = 1000; // 1 second base delay
-
-  const attemptConnection = () => {
-    try {
-      // Always use logs endpoint for client log forwarding
-      const wsUrl = getLogsWebSocketUrl();
-
-      // Create WebSocket and set up event handlers immediately
-      ws = new WebSocket(wsUrl);
-
-      // Debug: WebSocket created
-      // console.debug('LOG_FORWARD', 'WebSocket created', {
-      //   url: wsUrl,
-      //   readyState: ws.readyState,
-      //   connectionEstablished,
-      //   messageSent,
-      //   retryCount,
-      // });
-
-      // Handle connection errors - only close if we haven't established connection
-      ws.onerror = (error) => {
-        console.warn('LOG_FORWARD', 'WebSocket connection error', {
-          error,
-          readyState: ws?.readyState,
-          connectionEstablished,
-          messageSent,
-          retryCount,
-        });
-        // Only close if we haven't established the connection yet
-        if (ws && !connectionEstablished && ws.readyState !== WebSocket.CLOSED) {
-          // Debug: Closing WebSocket due to error
-          // console.debug(
-          //   'LOG_FORWARD',
-          //   'WebSocket connection error before connection established'
-          // );
-          ws.close();
-        }
-      };
-
-      ws.onopen = () => {
-        // Debug: WebSocket connection opened
-        // console.debug('LOG_FORWARD', 'WebSocket connection opened', { readyState: ws?.readyState });
-        connectionEstablished = true;
-
-        try {
-          const sid = getSessionId();
-          const ua = navigator.userAgent;
-          const pageUrl = location.href;
-
-          for (const raw of lines) {
-            // Parse our buffer line format: [ISO] LEVEL rest
-            const match = raw.match(/^\[(.*?)\]\s+(DEBUG|INFO|WARN|ERROR)\s+(.*)$/);
-            const level: ClientLogLevel = (match?.[2] as ClientLogLevel) || 'INFO';
-            const message = match?.[3] || raw;
-
-            // Send as one message per line to keep server simple
-            ws?.send(
-              JSON.stringify({
-                type: 'clientLog',
-                timestamp: Date.now(),
-                data: {
-                  sessionId: sid,
-                  level,
-                  line: raw,
-                  message,
-                  userAgent: ua,
-                  pageUrl,
-                },
-              })
-            );
-          }
-
-          messageSent = true;
-
-          // Close after sending to avoid long-lived extra socket
-          // Add a small delay to ensure message is sent
-          setTimeout(() => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.close();
-            }
-          }, 100);
-        } catch (sendError) {
-          console.warn('LOG_FORWARD', 'Failed to send log messages', { error: sendError });
-          // Close socket on send error
-          if (ws && ws.readyState !== WebSocket.CLOSED) {
-            ws.close();
-          }
-        }
-      };
-
-      // Handle connection close
-      ws.onclose = () => {
-        // Only log if we didn't successfully send the message
-        if (!messageSent) {
-          console.warn('LOG_FORWARD', 'WebSocket closed before message could be sent');
-
-          // Retry connection if we haven't exceeded max retries
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const delay = baseDelay * 2 ** (retryCount - 1); // Exponential backoff
-            // Debug: Retrying connection
-            // console.debug(
-            //   'LOG_FORWARD',
-            //   `Retrying connection in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-            // );
-
-            setTimeout(() => {
-              attemptConnection();
-            }, delay);
-          } else {
-            console.warn('LOG_FORWARD', 'Max retries exceeded, giving up on this log chunk');
-          }
-        }
-      };
-    } catch (error) {
-      // Best-effort; log locally
-      console.warn('LOG_FORWARD', 'Failed to create WebSocket for client log chunk', { error });
-
-      // Retry on creation failure if we haven't exceeded max retries
-      if (retryCount < maxRetries) {
-        retryCount++;
-        const delay = baseDelay * 2 ** (retryCount - 1);
-        // Debug: Retrying connection creation
-        // console.debug(
-        //   'LOG_FORWARD',
-        //   `Retrying connection creation in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-        // );
-
-        setTimeout(() => {
-          attemptConnection();
-        }, delay);
-      }
-    }
-  };
-
-  // Start the connection attempt
-  attemptConnection();
-}
-
-export function startClientLogForwarder(): void {
-  if (forwardTimer !== null) {
+function connectWebSocket(): void {
+  // Prevent multiple simultaneous connection attempts
+  if (isConnecting || (ws && ws.readyState === WebSocket.OPEN)) {
     return;
   }
 
-  // Set global flag so Logger can use it
-  (window as { __logForwarderEnabled?: boolean }).__logForwarderEnabled = true;
+  isConnecting = true;
 
-  // Emit a startup marker for verification
-  // try {
-  //   const iso = new Date().toISOString();
-  //   sendChunk([`[${iso}] INFO LOG_FORWARD Forwarder started`]);
+  try {
+    const wsUrl = getLogsWebSocketUrl();
+    logger.info('LOG_FORWARD', 'Attempting to connect to WebSocket', { wsUrl });
 
-  //   // Also test with a simple log message
-  //   console.info('LOG_FORWARD', 'This is a test log message to verify forwarding works');
-  // } catch {}
+    ws = new WebSocket(wsUrl);
 
-  // Flush on interval with backpressure limits
-  forwardTimer = window.setInterval(() => {
-    const text = getLogsAsText();
-    if (!text) {
-      return;
-    }
-    const allLines = text.split('\n');
+    ws.onopen = () => {
+      isConnecting = false;
+      logger.info('LOG_FORWARD', 'WebSocket connected to server');
 
-    if (allLines.length <= lastSentLength) {
-      return;
-    }
+      // Send any queued messages
+      while (messageQueue.length > 0) {
+        const message = messageQueue.shift();
+        if (message && ws && ws.readyState === WebSocket.OPEN) {
+          sendLogMessage(message);
+        }
+      }
+    };
 
-    const newLines = allLines.slice(lastSentLength);
-    // Cap per batch to keep payloads small
-    const batch = newLines.slice(0, 200);
-    lastSentLength += batch.length;
+    ws.onclose = (event) => {
+      isConnecting = false;
+      logger.warn('LOG_FORWARD', 'WebSocket disconnected from server', {
+        code: event.code,
+        reason: event.reason,
+      });
 
-    if (batch.length > 0) {
-      sendChunk(batch);
-    }
-  }, 2000);
+      // Only attempt to reconnect if we haven't been stopped
+      if (isInitialized && reconnectTimer === null) {
+        reconnectTimer = window.setTimeout(() => {
+          logger.info('LOG_FORWARD', 'Attempting to reconnect...');
+          reconnectTimer = null;
+          connectWebSocket();
+        }, 5000);
+      }
+    };
+
+    ws.onerror = (error) => {
+      isConnecting = false;
+      logger.error(
+        'LOG_FORWARD',
+        'WebSocket error',
+        error instanceof Error ? error : new Error(String(error))
+      );
+    };
+  } catch (error) {
+    isConnecting = false;
+    logger.error(
+      'LOG_FORWARD',
+      'Failed to create WebSocket',
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+}
+
+function sendLogMessage(message: string): void {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    // Queue message for later if not connected
+    messageQueue.push(message);
+    return;
+  }
+
+  try {
+    const sid = getSessionId();
+    const ua = navigator.userAgent;
+    const pageUrl = location.href;
+
+    // Parse the message to extract log level and content
+    const levelMatch = message.match(/\[.*?\]\s+(\w+)\s+\[.*?\]/);
+    const level: ClientLogLevel = (levelMatch?.[1] as ClientLogLevel) || 'INFO';
+
+    ws.send(
+      JSON.stringify({
+        type: 'clientLog',
+        timestamp: Date.now(),
+        data: {
+          sessionId: sid,
+          level,
+          line: message,
+          message,
+          userAgent: ua,
+          pageUrl,
+        },
+      })
+    );
+  } catch (error) {
+    logger.warn('LOG_FORWARD', 'Failed to send log message', { error });
+  }
+}
+
+// Start the log forwarder (establishes WebSocket connection)
+export function startClientLogForwarder(): void {
+  // Prevent multiple initializations
+  if (isInitialized) {
+    return;
+  }
+
+  isInitialized = true;
+  logger.info('LOG_FORWARD', 'startClientLogForwarder called, attempting to connect...');
+  connectWebSocket();
+}
+
+// Stop the log forwarder
+export function stopClientLogForwarder(): void {
+  isInitialized = false;
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+
+  messageQueue = [];
 }
 
 // Direct forwarding function for Logger to use
 export function forwardLogToServer(message: string): void {
-  let ws: WebSocket | null = null;
-  let messageSent = false;
-  let connectionEstablished = false;
-  let retryCount = 0;
-  const maxRetries = 2; // Fewer retries for single messages
-  const baseDelay = 500; // Shorter delay for single messages
-
-  const attemptConnection = () => {
-    try {
-      const wsUrl = getLogsWebSocketUrl();
-      ws = new WebSocket(wsUrl);
-
-      ws.onerror = (error) => {
-        console.warn('LOG_FORWARD', 'WebSocket connection error in forwardLogToServer', { error });
-        if (ws && !connectionEstablished && ws.readyState !== WebSocket.CLOSED) {
-          ws.close();
-        }
-      };
-
-      ws.onopen = () => {
-        connectionEstablished = true;
-
-        try {
-          const sid = getSessionId();
-          const ua = navigator.userAgent;
-          const pageUrl = location.href;
-
-          ws?.send(
-            JSON.stringify({
-              type: 'clientLog',
-              timestamp: Date.now(),
-              data: {
-                sessionId: sid,
-                level: 'INFO',
-                line: message,
-                message,
-                userAgent: ua,
-                pageUrl,
-              },
-            })
-          );
-
-          messageSent = true;
-
-          // Close after sending to avoid long-lived extra socket
-          // Add a small delay to ensure message is sent
-          setTimeout(() => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.close();
-            }
-          }, 100);
-        } catch (sendError) {
-          console.warn('LOG_FORWARD', 'Failed to send log message', { error: sendError });
-          if (ws && ws.readyState !== WebSocket.CLOSED) {
-            ws.close();
-          }
-        }
-      };
-
-      ws.onclose = () => {
-        if (!messageSent) {
-          console.warn(
-            'LOG_FORWARD',
-            'WebSocket closed before message could be sent in forwardLogToServer'
-          );
-
-          // Retry connection if we haven't exceeded max retries
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const delay = baseDelay * 2 ** (retryCount - 1);
-            // Debug: Retrying forwardLogToServer
-            // console.debug(
-            //   'LOG_FORWARD',
-            //   `Retrying forwardLogToServer in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-            // );
-
-            setTimeout(() => {
-              attemptConnection();
-            }, delay);
-          }
-        }
-      };
-    } catch (_error) {
-      // Best-effort; ignore errors
-
-      // Retry on creation failure if we haven't exceeded max retries
-      if (retryCount < maxRetries) {
-        retryCount++;
-        const delay = baseDelay * 2 ** (retryCount - 1);
-        // Debug: Retrying forwardLogToServer creation
-        // console.debug(
-        //   'LOG_FORWARD',
-        //   `Retrying forwardLogToServer creation in ${delay}ms (attempt ${retryCount}/${maxRetries})`
-        // );
-
-        setTimeout(() => {
-          attemptConnection();
-        }, delay);
-      }
-    }
-  };
-
-  // Start the connection attempt
-  attemptConnection();
-}
-
-export function stopClientLogForwarder(): void {
-  if (forwardTimer !== null) {
-    clearInterval(forwardTimer);
-    forwardTimer = null;
-  }
+  sendLogMessage(message);
 }

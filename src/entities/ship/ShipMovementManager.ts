@@ -1,6 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
-import { SHIP_BOT_FRICTION, SHIP_MAX_VELOCITY, SHIP_THRUST } from '../../constants/entities/ship';
-import { FPS, FRICTION } from '../../constants/game';
+import { GAME, SHIP } from '../../constants';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 
 export interface ShipMovementState {
@@ -19,8 +18,8 @@ export interface ShipMovementState {
 export function applyVelocity(state: ShipMovementState): void {
   if (state.thrusting) {
     const thrust: Velocity = {
-      x: (Math.cos(state.angle) * SHIP_THRUST) / FPS,
-      y: (-Math.sin(state.angle) * SHIP_THRUST) / FPS,
+      x: (Math.cos(state.angle) * SHIP.THRUST) / GAME.FPS,
+      y: (-Math.sin(state.angle) * SHIP.THRUST) / GAME.FPS,
     };
     state.velocity = addVectors(state.velocity, thrust);
 
@@ -28,8 +27,8 @@ export function applyVelocity(state: ShipMovementState): void {
     const currentSpeed = Math.sqrt(
       state.velocity.x * state.velocity.x + state.velocity.y * state.velocity.y
     );
-    if (currentSpeed > SHIP_MAX_VELOCITY) {
-      const scale = SHIP_MAX_VELOCITY / currentSpeed;
+    if (currentSpeed > SHIP.MAX_VELOCITY) {
+      const scale = SHIP.MAX_VELOCITY / currentSpeed;
       state.velocity.x *= scale;
       state.velocity.y *= scale;
     }
@@ -38,8 +37,8 @@ export function applyVelocity(state: ShipMovementState): void {
     // Note: drawThruster would need to be called from the Ship class since it has rendering context
   } else {
     // Use bot-specific friction if this is a bot ship
-    const frictionCoeff = state.isBot ? SHIP_BOT_FRICTION : FRICTION;
-    state.velocity = multiplyVelocity(state.velocity, 1 - frictionCoeff / FPS);
+    const frictionCoeff = state.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
+    state.velocity = multiplyVelocity(state.velocity, 1 - frictionCoeff / GAME.FPS);
     state.thrusterActive = false;
   }
 }

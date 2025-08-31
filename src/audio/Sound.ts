@@ -1,4 +1,5 @@
 import { LOCAL_STORAGE_KEYS, soundIsOn } from '../constants/user-preferences';
+import { logger } from '../utils/Logger';
 
 export class Sound {
   streamNum = 0;
@@ -29,7 +30,7 @@ export class Sound {
     if (soundIsOn()) {
       // Defensive guard against empty streams array
       if (this.streams.length === 0) {
-        console.warn('Sound.play() called but no audio streams available');
+        logger.warn('SOUND', 'Sound.play() called but no audio streams available');
         return;
       }
 
@@ -40,7 +41,11 @@ export class Sound {
         await audio.play();
         this.playing = true;
       } catch (error) {
-        console.error('Failed to play audio:', error);
+        logger.error(
+          'SOUND',
+          'Failed to play audio',
+          error instanceof Error ? error : new Error(String(error))
+        );
         this.playing = false;
       }
     }
@@ -49,7 +54,7 @@ export class Sound {
   stop(): void {
     // Defensive guard against empty streams array
     if (this.streams.length === 0) {
-      console.warn('Sound.stop() called but no audio streams available');
+      logger.warn('SOUND', 'Sound.stop() called but no audio streams available');
       return;
     }
 

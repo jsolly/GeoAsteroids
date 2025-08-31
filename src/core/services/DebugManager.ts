@@ -1,6 +1,7 @@
 import { DEBUG } from '../../constants';
 import type { RoidBelt } from '../../entities/roid/Roid';
 import { isDebugMode } from '../../utils/debugUtils';
+import { logger } from '../../utils/Logger';
 
 interface DebugConfig {
   botCount: number;
@@ -24,8 +25,9 @@ export class DebugManager {
   }
 
   enableDebugMode(): void {
-    console.warn(
-      'enableDebugMode() is deprecated - debug mode is now controlled via VITE_CLIENT_LOG_LEVEL=debug'
+    logger.warn(
+      'DEBUG',
+      'enableDebugMode() is deprecated - debug mode is now controlled via LOGGING.GLOBAL_LOG_LEVEL=debug'
     );
   }
 
@@ -57,7 +59,11 @@ export class DebugManager {
       // Store debug config for any other systems that need it
       (roidBelt as DebugRoidBelt).debugConfig = debugConfig;
     } catch (error) {
-      console.error('Error applying debug config:', error);
+      logger.error(
+        'DEBUG',
+        'Error applying debug config',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 

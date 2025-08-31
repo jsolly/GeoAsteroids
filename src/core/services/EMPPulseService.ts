@@ -1,4 +1,4 @@
-import { EMP_PULSE_RADIUS } from '../../constants/game';
+import { EMP } from '../../constants';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Roid, RoidBelt } from '../../entities/roid/Roid';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
@@ -117,7 +117,7 @@ export class EMPPulseService {
     roidBelt: RoidBelt,
     scoreCallback: (points: number) => void
   ): void {
-    this.destroyRoidsInRadius(center, EMP_PULSE_RADIUS, roidBelt, scoreCallback);
-    this.destroyBotsInRadius(center, EMP_PULSE_RADIUS, scoreCallback);
+    this.destroyRoidsInRadius(center, EMP.RADIUS, roidBelt, scoreCallback);
+    this.destroyBotsInRadius(center, EMP.RADIUS, scoreCallback);
   }
 }

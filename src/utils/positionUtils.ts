@@ -1,5 +1,5 @@
 import type { Position } from '../../shared-types';
-import { SHIP_SIZE } from '../constants/entities/ship';
+import { SHIP } from '../constants';
 import { getGameBoundary } from '../physics/boundary';
 
 /**
@@ -8,7 +8,7 @@ import { getGameBoundary } from '../physics/boundary';
  */
 export function getRandomPositionWithinBoundary(): Position {
   const boundary = getGameBoundary();
-  const shipRadius = SHIP_SIZE / 2;
+  const shipRadius = SHIP.SIZE / 2;
 
   // Generate a random point inside the circle ensuring full ship radius fits
   const maxR = boundary.radius - shipRadius;
@@ -25,7 +25,7 @@ export function getRandomPositionWithinBoundary(): Position {
  */
 export function getRandomPositionNearPoint(center: Position, maxDistance: number = 200): Position {
   const boundary = getGameBoundary();
-  const shipRadius = SHIP_SIZE / 2;
+  const shipRadius = SHIP.SIZE / 2;
 
   // Generate a random angle and distance from the center
   const angle = Math.random() * 2 * Math.PI;

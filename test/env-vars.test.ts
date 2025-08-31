@@ -97,93 +97,19 @@ describe('Client Environment Variables (VITE_*)', () => {
       });
     });
 
-    it('should verify VITE_CLIENT_LOG_LEVEL parsing logic', () => {
-      // Test the log level parsing logic from logLevel.ts
-      const testCases = [
-        { input: 'debug', expected: 3 },
-        { input: 'info', expected: 2 },
-        { input: 'warn', expected: 1 },
-        { input: 'error', expected: 0 },
-        { input: 'invalid', expected: 2 }, // defaults to info
-        { input: undefined, expected: 3 }, // defaults to debug in dev
-      ];
-
-      testCases.forEach(({ input, expected }) => {
-        let result: number;
-        if (!input) {
-          result = 3; // debug default
-        } else {
-          switch (input.toLowerCase()) {
-            case 'error':
-              result = 0;
-              break;
-            case 'warn':
-              result = 1;
-              break;
-            case 'info':
-              result = 2;
-              break;
-            case 'debug':
-              result = 3;
-              break;
-            default:
-              result = 2;
-              break;
-          }
-        }
-        expect(result).toBe(expected);
-      });
-    });
-
-    it('should verify that logs are always captured regardless of log level', async () => {
-      // Test that logs are always captured in the buffer regardless of VITE_CLIENT_LOG_LEVEL
-      // while console output respects the log level setting
-      const { setupConsoleOverride, getLogsAsText, clearLogBuffer, restoreConsole } = await import(
-        '../src/utils/logLevel'
+    it('should verify WebSocket log forwarding infrastructure is available', async () => {
+      // Test that the log forwarding infrastructure is properly set up
+      const { startClientLogForwarder, stopClientLogForwarder } = await import(
+        '../src/utils/logForwarder'
       );
 
-      // Clear any existing logs
-      clearLogBuffer();
+      // Verify the functions exist and are callable
+      expect(typeof startClientLogForwarder).toBe('function');
+      expect(typeof stopClientLogForwarder).toBe('function');
 
-      // Test with different log levels
-      const testCases = [
-        { level: 'error', shouldShow: true },
-        { level: 'warn', shouldShow: true },
-        { level: 'info', shouldShow: false }, // info level should not show debug logs
-        { level: 'debug', shouldShow: true },
-      ];
-
-      for (const testCase of testCases) {
-        // Set the log level
-        vi.stubEnv('VITE_CLIENT_LOG_LEVEL', testCase.level);
-
-        // Clear and setup console override with new log level
-        clearLogBuffer();
-        restoreConsole();
-        setupConsoleOverride();
-
-        // Log at debug level
-        console.debug('TEST_DEBUG', 'This is a debug message');
-
-        // Verify the log is always captured in the buffer regardless of log level
-        const logs = getLogsAsText();
-        expect(logs).toContain('TEST_DEBUG');
-        expect(logs).toContain('This is a debug message');
-
-        // Verify console output respects the log level
-        if (testCase.shouldShow) {
-          // Should show in console (we can't easily test console output in tests)
-          // but we can verify the buffer contains the log
-          expect(logs).toContain('DEBUG');
-        } else {
-          // Should not show in console but still be in buffer
-          expect(logs).toContain('DEBUG');
-        }
-      }
-
-      // Clean up
-      restoreConsole();
-      clearLogBuffer();
+      // Test that we can start and stop the forwarder without errors
+      expect(() => startClientLogForwarder()).not.toThrow();
+      expect(() => stopClientLogForwarder()).not.toThrow();
     });
 
     it('should verify debug configuration parsing', () => {
@@ -253,7 +179,7 @@ describe('Client Environment Variables (VITE_*)', () => {
       const viteEnvContent = fs.readFileSync('./src/types/vite-env.d.ts', 'utf-8');
 
       // Check that all known VITE_ variables are defined
-      const expectedVars = ['VITE_WEBSOCKET_URL', 'VITE_CLIENT_LOG_LEVEL'];
+      const expectedVars = ['VITE_WEBSOCKET_URL'];
 
       expectedVars.forEach((varName) => {
         expect(viteEnvContent).toContain(varName);

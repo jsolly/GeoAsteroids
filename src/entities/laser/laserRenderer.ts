@@ -1,5 +1,4 @@
-import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import { FPS } from '../../constants/game';
+import { GAME, LASER } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import type { Laser } from './Laser';
 
@@ -66,7 +65,7 @@ export function drawLaserExplosion(
     return;
   }
 
-  const maxExplodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+  const maxExplodeTime = Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
   const explosionProgress = 1 - laser.explodeTime / maxExplodeTime;
   const radius = 8 * (1 + explosionProgress * 2);
 

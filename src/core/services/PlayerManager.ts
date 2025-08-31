@@ -1,5 +1,4 @@
-import { DEBUG } from '../../constants';
-import { DEFAULT_BOT_COUNT } from '../../constants/game';
+import { DEBUG, GAME } from '../../constants';
 import type { BotShoot } from '../../entities/bot/types';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
@@ -32,10 +31,10 @@ export class PlayerManager {
   }
 
   createLocalPlayer(): Player {
-    const shouldClusterLocals = isDebugMode() && DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER;
+    const shouldPlaceNearCenter = isDebugMode() && DEBUG.PLACE_PLAYERS_NEAR_CENTER;
 
     const position = (() => {
-      if (shouldClusterLocals) {
+      if (shouldPlaceNearCenter) {
         const boundary = getGameBoundary();
         const center = { x: boundary.cx, y: boundary.cy };
         return getRandomPositionNearPoint(center, 200);
@@ -62,7 +61,7 @@ export class PlayerManager {
   }
 
   initializeBots(): void {
-    const botCount = isDebugMode() ? DEBUG.BOT_COUNT : DEFAULT_BOT_COUNT;
+    const botCount = isDebugMode() ? DEBUG.BOT_COUNT : GAME.DEFAULT_BOT_COUNT;
 
     this.multiplayerManager.initializeBots(botCount);
   }

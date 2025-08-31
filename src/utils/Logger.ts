@@ -1,36 +1,23 @@
 /**
- * Centralized Logging System
- * Provides consistent logging across the application
+ * Simplified Logging System
+ * Forwards logs directly to server via WebSocket for file logging
  */
 
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3,
-  NONE = 4,
-}
+import { LOGGING } from '../constants';
+// Logging system with automatic server forwarding
+import { LogLevel } from './logLevel';
 
-export interface LogEntry {
-  readonly timestamp: Date;
-  readonly level: LogLevel;
-  readonly category: string;
-  readonly message: string;
-  readonly context?: Record<string, unknown>;
-  readonly error?: Error;
-}
-
-export class Logger {
+class Logger {
   private static instance: Logger;
-  private currentLevel: LogLevel = LogLevel.INFO;
-  private logs: LogEntry[] = [];
-  private maxLogs: number = 1000;
+  private currentLevel: LogLevel;
+  private static isForwarderInitialized = false;
 
   private constructor() {
+    this.currentLevel = LogLevel.INFO;
     this.initializeLogLevel();
   }
 
-  static getInstance(): Logger {
+  public static getInstance(): Logger {
     if (!Logger.instance) {
       Logger.instance = new Logger();
     }
@@ -39,8 +26,8 @@ export class Logger {
 
   private initializeLogLevel(): void {
     if (typeof window !== 'undefined') {
-      const envLevel = import.meta.env.VITE_CLIENT_LOG_LEVEL;
-      switch (envLevel?.toLowerCase()) {
+      const configLevel = LOGGING.GLOBAL_LOG_LEVEL;
+      switch (configLevel?.toLowerCase()) {
         case 'debug':
           this.currentLevel = LogLevel.DEBUG;
           break;
@@ -52,9 +39,6 @@ export class Logger {
           break;
         case 'error':
           this.currentLevel = LogLevel.ERROR;
-          break;
-        case 'none':
-          this.currentLevel = LogLevel.NONE;
           break;
         default:
           this.currentLevel = LogLevel.INFO;
@@ -93,115 +77,77 @@ export class Logger {
     context?: Record<string, unknown>,
     error?: Error
   ): void {
-    // Always store log entry regardless of currentLevel
-    const entry: LogEntry = {
-      timestamp: new Date(),
-      level,
-      category,
-      message,
-      context,
-      error,
-    };
-
-    // Store log entry
-    this.logs.push(entry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift(); // Remove oldest entry
+    // Only log if it meets the current level threshold
+    if (level < this.currentLevel) {
+      return;
     }
 
-    // Always forward to server for file logging, regardless of currentLevel
-    const formattedMessage = this.formatLogMessage(entry);
-    this.outputLog(level, formattedMessage);
-  }
+    // Format the log message
+    const formattedMessage = this.formatLogMessage(level, category, message, context, error);
 
-  private formatLogMessage(entry: LogEntry): string {
-    const timestamp = entry.timestamp.toISOString();
-    const levelName = LogLevel[entry.level];
-    const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : '';
-    const errorStr = entry.error ? ` Error: ${entry.error.message}` : '';
+    // Write to console if enabled
+    if (LOGGING.WRITE_TO_CONSOLE) {
+      this.writeToConsole(level, formattedMessage);
+    }
 
-    return `[${timestamp}] ${levelName} [${entry.category}] ${entry.message}${contextStr}${errorStr}`;
-  }
-
-  private outputLog(_level: LogLevel, message: string): void {
-    // Forwarding is controlled at runtime by the console override/forwarder
-    // Only forward if the forwarder has been started and opted in
-    const forwarderEnabled =
-      typeof window !== 'undefined' &&
-      (window as { __logForwarderEnabled?: boolean }).__logForwarderEnabled === true;
-
-    if (forwarderEnabled) {
-      try {
-        // Import dynamically to avoid circular dependency
-        import('./logForwarder')
-          .then(({ forwardLogToServer }) => {
-            try {
-              forwardLogToServer(message);
-            } catch (forwardError) {
-              console.warn('Failed to forward log to server:', forwardError);
-            }
-          })
-          .catch((importError) => {
-            console.warn('Failed to import log forwarder:', importError);
-          });
-      } catch (error) {
-        console.warn('Log forwarding failed:', error);
-      }
+    // Forward to server if enabled
+    if (LOGGING.FORWARD_TO_SERVER) {
+      this.forwardToServer(formattedMessage);
     }
   }
 
-  getLogs(level?: LogLevel): LogEntry[] {
-    if (level === undefined) {
-      return [...this.logs];
-    }
-    return this.logs.filter((log) => log.level >= level);
-  }
-
-  clearLogs(): void {
-    this.logs = [];
-  }
-
-  getRecentLogs(count: number = 50): LogEntry[] {
-    return this.logs.slice(-count);
-  }
-
-  // Performance monitoring
-  time(label: string): () => void {
-    const start = performance.now();
-    return () => {
-      const end = performance.now();
-      const duration = end - start;
-      this.debug('PERFORMANCE', `${label} took ${duration.toFixed(2)}ms`);
-    };
-  }
-
-  // Error boundary helper
-  withErrorHandling<T>(
-    operation: () => T,
+  private formatLogMessage(
+    level: LogLevel,
     category: string,
-    operationName: string,
-    fallback?: T
-  ): T | undefined {
+    message: string,
+    context?: Record<string, unknown>,
+    error?: Error
+  ): string {
+    const timestamp = new Date().toISOString();
+    const levelName = LogLevel[level];
+    const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+    const errorStr = error ? ` Error: ${error.message}` : '';
+
+    return `[${timestamp}] ${levelName} [${category}] ${message}${contextStr}${errorStr}`;
+  }
+
+  private forwardToServer(message: string): void {
     try {
-      return operation();
-    } catch (error) {
-      this.error(category, `${operationName} failed`, error as Error);
-      return fallback;
+      // Import and forward directly - lazy initialize on first use
+      import('./logForwarder')
+        .then(({ forwardLogToServer, startClientLogForwarder }) => {
+          // Lazy initialize the forwarder only once
+          if (!Logger.isForwarderInitialized) {
+            startClientLogForwarder();
+            Logger.isForwarderInitialized = true;
+          }
+          forwardLogToServer(message);
+        })
+        .catch(() => {
+          // Silently fail if forwarder unavailable
+        });
+    } catch {
+      // Silently fail if import fails
+    }
+  }
+
+  private writeToConsole(level: LogLevel, message: string): void {
+    switch (level) {
+      case LogLevel.ERROR:
+        console.error(message);
+        break;
+      case LogLevel.WARN:
+        console.warn(message);
+        break;
+      case LogLevel.INFO:
+        console.info(message);
+        break;
+      case LogLevel.DEBUG:
+        console.debug(message);
+        break;
     }
   }
 }
 
 // Export singleton instance
 export const logger = Logger.getInstance();
-
-// Convenience functions for common use cases
-export const log = {
-  debug: (category: string, message: string, context?: Record<string, unknown>) =>
-    logger.debug(category, message, context),
-  info: (category: string, message: string, context?: Record<string, unknown>) =>
-    logger.info(category, message, context),
-  warn: (category: string, message: string, context?: Record<string, unknown>) =>
-    logger.warn(category, message, context),
-  error: (category: string, message: string, error?: Error, context?: Record<string, unknown>) =>
-    logger.error(category, message, error, context),
-};

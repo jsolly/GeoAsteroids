@@ -1,6 +1,4 @@
-import { LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import { SHIP_COLLISION_DAMAGE } from '../../constants/entities/ship';
-import { FPS } from '../../constants/game';
+import { GAME, LASER, SHIP } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { isBot, isRemote } from '../../entities/player/playerKinds';
@@ -55,13 +53,13 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
 
       if (distance < collisionThreshold) {
         // Apply damage to player using unified damage system
-        player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+        player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
 
         // Remote players are server-authoritative; do not dispatch client-side respawn logic.
         // Show explosion visuals client-side and let server send updated state/position.
         if (isRemote(player)) {
           player.ship.exploding = true;
-          player.ship.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+          player.ship.explodeTime = Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
         }
 
         // Activate laser explosion
@@ -125,7 +123,7 @@ export function detectPlayerLaserShipCollisions(
 
         // Apply unified laser damage
         if (shouldApplyDamage) {
-          localShip.takeDamage(SHIP_COLLISION_DAMAGE);
+          localShip.takeDamage(SHIP.COLLISION_DAMAGE);
         }
 
         // Activate laser explosion using Ship's method
@@ -305,20 +303,20 @@ export function detectLaserHits(
             // For remote players, only notify server - don't apply damage locally
             const multiplayerManager = MultiplayerManager.getInstance();
             if (multiplayerManager.isConnected) {
-              multiplayerManager.laserDamagePlayer(player.id, SHIP_COLLISION_DAMAGE);
+              multiplayerManager.laserDamagePlayer(player.id, SHIP.COLLISION_DAMAGE);
             }
           } else if (isBot(player)) {
             // For bots, apply damage locally and notify server
-            player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+            player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
 
             // Notify server of bot damage for synchronization
             const multiplayerManager = MultiplayerManager.getInstance();
             if (multiplayerManager.isConnected) {
-              multiplayerManager.laserDamageBot(player.id, SHIP_COLLISION_DAMAGE);
+              multiplayerManager.laserDamageBot(player.id, SHIP.COLLISION_DAMAGE);
             }
           } else {
             // For local player, apply damage locally
-            player.ship.takeDamage(SHIP_COLLISION_DAMAGE);
+            player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
           }
 
           currShip.updateLaserExplodeTime(j);

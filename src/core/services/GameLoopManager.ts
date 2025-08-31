@@ -1,5 +1,4 @@
-import { SHIP_INV_BLINK_DUR_FRAMES } from '../../constants/entities/ship';
-import { EMP_PULSE_DURATION, EMP_PULSE_RADIUS, FPS } from '../../constants/game';
+import { EMP, GAME, SHIP } from '../../constants';
 import { BotManager } from '../../entities/bot/botManager';
 import type { Player } from '../../entities/player/Player';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
@@ -10,6 +9,7 @@ import {
 } from '../../entities/ship/shipRenderer';
 import { CollisionManager } from '../../physics/CollisionManager';
 import { canvasManager } from '../../rendering/canvas';
+import { logger } from '../../utils/Logger';
 import { GameController } from '../gameController';
 
 export class GameLoopManager {
@@ -101,9 +101,11 @@ export class GameLoopManager {
       ship.updateEmpPulse();
 
       if (wasExploding !== ship.exploding) {
-        console.debug(
-          `[EventLoop] handleShipState: Player ${player.id} ship exploding state changed: ${wasExploding} -> ${ship.exploding}`
-        );
+        logger.debug('EVENT_LOOP', 'Player ship exploding state changed', {
+          playerId: player.id,
+          wasExploding,
+          nowExploding: ship.exploding,
+        });
       }
 
       if (!ship.exploding) {
@@ -113,15 +115,15 @@ export class GameLoopManager {
 
         // Draw EMP pulse effect if active
         if (ship.empPulseActive) {
-          const empAlpha = ship.empPulseTime / (EMP_PULSE_DURATION * FPS);
-          drawEmpPulse(ship, EMP_PULSE_RADIUS, empAlpha);
+          const empAlpha = ship.empPulseTime / (EMP.DURATION * GAME.FPS);
+          drawEmpPulse(ship, EMP.RADIUS, empAlpha);
         }
 
         if (ship.blinkCount > 0) {
           ship.spawnProtectionTimer--;
 
           if (ship.spawnProtectionTimer === 0) {
-            ship.spawnProtectionTimer = SHIP_INV_BLINK_DUR_FRAMES;
+            ship.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
             ship.blinkCount--;
           }
         }
@@ -129,7 +131,11 @@ export class GameLoopManager {
         this.handleShipExplosion(player);
       }
     } catch (error: unknown) {
-      console.error('EVENT_LOOP', 'Error in ship state handling', { error });
+      logger.error(
+        'EVENT_LOOP',
+        'Error in ship state handling',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -144,9 +150,7 @@ export class GameLoopManager {
       // Log only when explosion starts (at max time) and ends (at 0)
       // This reduces noise while still providing useful debugging information
       if (ship.explodeTime === 0) {
-        console.debug(
-          `[EventLoop] handleShipExplosion: Player ${player.id} explosion animation finished`
-        );
+        logger.debug('EVENT_LOOP', 'Player explosion animation finished', { playerId: player.id });
       }
     }
   }
@@ -185,7 +189,11 @@ export class GameLoopManager {
       this.gameController.updateCurrScore(collisionResult.roidScore);
       this.gameController.updateCurrScore(collisionResult.playerCollisionScore);
     } catch (error: unknown) {
-      console.error('EVENT_LOOP', 'Error in collision handling', { error });
+      logger.error(
+        'EVENT_LOOP',
+        'Error in collision handling',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 }

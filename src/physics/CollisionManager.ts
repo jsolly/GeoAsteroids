@@ -2,6 +2,7 @@ import type { Laser } from '../entities/laser/Laser';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { isDebugMode } from '../utils/debugUtils';
+import { logger } from '../utils/Logger';
 import { getGameBoundary } from './boundary';
 import {
   detectBoundaryCollisions,
@@ -49,9 +50,10 @@ export class CollisionManager {
     // Skip all collisions if player is in respawn countdown
     if (localPlayer.respawnTimer !== undefined) {
       if (isDebugMode()) {
-        console.debug(
-          `[CollisionManager] Player ${localPlayer.id} has respawn timer (${localPlayer.respawnTimer} frames), skipping collisions`
-        );
+        logger.debug('COLLISION', 'Player has respawn timer, skipping collisions', {
+          playerId: localPlayer.id,
+          respawnTimer: localPlayer.respawnTimer,
+        });
       }
       return result;
     }
@@ -108,24 +110,22 @@ export class CollisionManager {
   ): boolean {
     const roidCount = roidBelt.roids.length;
     if (roidCount > 500) {
-      console.warn(
-        `Too many roids detected: ${roidCount}. Limiting collision checks to prevent slowdown.`
-      );
+      logger.warn('COLLISION', 'Too many roids detected, limiting collision checks', { roidCount });
       return true;
     }
 
     const laserCount = ship.lasers.length;
     if (laserCount > 200) {
-      console.warn(
-        `Too many lasers detected: ${laserCount}. Limiting collision checks to prevent slowdown.`
-      );
+      logger.warn('COLLISION', 'Too many lasers detected, limiting collision checks', {
+        laserCount,
+      });
       return true;
     }
 
     if (allPlayers && allPlayers.length > 50) {
-      console.warn(
-        `Too many entities detected: ${allPlayers.length}. Limiting collision checks to prevent slowdown.`
-      );
+      logger.warn('COLLISION', 'Too many entities detected, limiting collision checks', {
+        playerCount: allPlayers.length,
+      });
       return true;
     }
 

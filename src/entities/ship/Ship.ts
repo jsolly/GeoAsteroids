@@ -1,18 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
-import { LASER_MAX } from '../../constants/entities/laser';
-import {
-  SHIP_BOT_FRICTION,
-  SHIP_EXPLODE_DUR_FRAMES,
-  SHIP_INV_BLINK_DUR_FRAMES,
-  SHIP_INV_DUR_FRAMES,
-  SHIP_MAX_HEALTH,
-  SHIP_MAX_VELOCITY,
-  SHIP_SIZE,
-  SHIP_THRUST,
-} from '../../constants/entities/ship';
-import { EMP_PULSE_DURATION, FPS, FRICTION } from '../../constants/game';
+import { EMP, GAME, LASER, SHIP } from '../../constants';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
@@ -33,10 +22,12 @@ class Ship {
   id: string = uuidv4(); // Unique identifier for event handling
   position: Position = { x: 0, y: 0 };
   velocity: Velocity = { x: 0, y: 0 };
-  r: number = SHIP_SIZE / 2;
+  r: number = SHIP.SIZE / 2;
   angle: number = (90 / 180) * Math.PI;
-  blinkCount: number = Math.ceil(SHIP_INV_DUR_FRAMES / SHIP_INV_BLINK_DUR_FRAMES);
-  spawnProtectionTimer: number = SHIP_INV_BLINK_DUR_FRAMES;
+  blinkCount: number = Math.ceil(
+    SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
+  );
+  spawnProtectionTimer: number = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
   canShoot = true;
 
   exploding = false;
@@ -46,8 +37,8 @@ class Ship {
   thrusting = false;
   empPulseActive = false;
   empPulseTime = 0;
-  health: number = SHIP_MAX_HEALTH;
-  maxHealth: number = SHIP_MAX_HEALTH;
+  health: number = SHIP.MAX_HEALTH;
+  maxHealth: number = SHIP.MAX_HEALTH;
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
@@ -89,7 +80,7 @@ class Ship {
   }
 
   explode(): void {
-    this.explodeTime = SHIP_EXPLODE_DUR_FRAMES;
+    this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
     playSound(Ship.fxExplode);
   }
@@ -101,8 +92,8 @@ class Ship {
   applyVelocity(): void {
     if (this.thrusting) {
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP_THRUST) / FPS,
-        y: (-Math.sin(this.angle) * SHIP_THRUST) / FPS,
+        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
+        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -110,8 +101,8 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > SHIP_MAX_VELOCITY) {
-        const scale = SHIP_MAX_VELOCITY / currentSpeed;
+      if (currentSpeed > SHIP.MAX_VELOCITY) {
+        const scale = SHIP.MAX_VELOCITY / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }
@@ -119,8 +110,8 @@ class Ship {
       drawThruster(this);
     } else {
       // Use bot-specific friction if this is a bot ship
-      const frictionCoeff = this.isBot ? SHIP_BOT_FRICTION : FRICTION;
-      this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / FPS);
+      const frictionCoeff = this.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
+      this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / GAME.FPS);
     }
   }
 
@@ -135,7 +126,7 @@ class Ship {
   }
 
   canShootAgain(): boolean {
-    if (this.canShoot && this.lasers.length < LASER_MAX) {
+    if (this.canShoot && this.lasers.length < LASER.MAX_COUNT) {
       return true;
     }
     this.canShoot = false;
@@ -240,7 +231,7 @@ class Ship {
     }
 
     this.empPulseActive = true;
-    this.empPulseTime = Math.ceil(EMP_PULSE_DURATION * FPS);
+    this.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
     playSound(Ship.fxExplode);
 
     const empEvent = new CustomEvent('empPulse', {
@@ -269,7 +260,7 @@ class Ship {
     }
 
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
-    this.lastDamageTime = FPS;
+    this.lastDamageTime = GAME.FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
     if (this.health <= 0) {
@@ -340,7 +331,7 @@ class Ship {
       this.spawnProtectionTimer--;
       if (this.spawnProtectionTimer <= 0) {
         this.blinkCount--;
-        this.spawnProtectionTimer = SHIP_INV_BLINK_DUR_FRAMES;
+        this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
         this.setBlinkOn();
       }
     }

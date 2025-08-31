@@ -1,4 +1,5 @@
 import { canvasManager } from '../rendering/canvas';
+import { logger } from '../utils/Logger';
 import { GameController } from './gameController';
 import { GameLoopManager } from './services/GameLoopManager';
 
@@ -31,7 +32,11 @@ window.addEventListener('gameStart', () => {
     try {
       gameLoopManager.updateGame();
     } catch (error) {
-      console.error('EVENT_LOOP', 'Error in game loop', { error });
+      logger.error(
+        'EVENT_LOOP',
+        'Error in game loop',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
 
     window.requestAnimationFrame(gameLoop);

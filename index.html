@@ -3,15 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Immediate console override to ensure logging filtering is active from the start -->
-    <script>
-      // Set up temporary console filtering until the proper module system loads
-      // This provides immediate protection while modules are loading
-      const originalConsole = { debug: console.debug, info: console.info, warn: console.warn, error: console.error };
-      
-      // Allow all logs to pass through - the module system will handle filtering
-    </script>
-    <script defer type="module" src="/src/utils/consoleOverride.ts"></script>
     <script defer type="module" src="/src/core/eventLoop.ts"></script>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css"

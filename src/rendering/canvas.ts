@@ -6,7 +6,6 @@ import {
   CANVAS_INTERNAL_WIDTH,
 } from '../constants/canvas';
 import type { Player } from '../entities/player/Player';
-
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
@@ -18,6 +17,7 @@ import {
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
+import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
 import { drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
@@ -218,7 +218,11 @@ class CanvasManager {
         }
       }
     } catch (error: unknown) {
-      console.error('Error drawing game:', error);
+      logger.error(
+        'RENDERING',
+        'Error drawing game',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
 
     // Draw thrusters for all players (including bots) at their world positions
@@ -239,7 +243,11 @@ class CanvasManager {
         }
       }
     } catch (error: unknown) {
-      console.error('Error drawing thrusters:', error);
+      logger.error(
+        'RENDERING',
+        'Error drawing thrusters',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
 
     // Draw ship (if not exploding, this will be handled by handleShipState)

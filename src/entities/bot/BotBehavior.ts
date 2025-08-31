@@ -1,6 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
-import { DEBUG } from '../../constants';
-import { SHIP_MAX_VELOCITY } from '../../constants/entities/ship';
+import { DEBUG, SHIP } from '../../constants';
 import { isDebugMode } from '../../utils/debugUtils';
 import type { Player } from '../player/Player';
 import { isBot } from '../player/playerKinds';
@@ -95,8 +94,8 @@ export class BotBehavior {
     const thrustAngleThreshold = 2.0; // ~115 degrees
 
     const speed = Math.hypot(bot.ship.velocity.x, bot.ship.velocity.y);
-    const lowerSpeed = SHIP_MAX_VELOCITY * 0.6; // turn on below this
-    const upperSpeed = SHIP_MAX_VELOCITY * 0.8; // turn off above this
+    const lowerSpeed = SHIP.MAX_VELOCITY * 0.6; // turn on below this
+    const upperSpeed = SHIP.MAX_VELOCITY * 0.8; // turn off above this
 
     let desiredThrust = bot.ship.thrusting;
 

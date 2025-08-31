@@ -1,7 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
-import { LASER_DIST, LASER_EXPLODE_DUR } from '../../constants/entities/laser';
-import { FPS } from '../../constants/game';
+import { GAME, LASER } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
 
@@ -38,7 +37,7 @@ export class Laser implements LaserData {
   }
 
   updateExplodeTime(): void {
-    this.explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);
+    this.explodeTime = Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
     this.hasExploded = true;
   }
 
@@ -47,7 +46,7 @@ export class Laser implements LaserData {
     if (!cvs) {
       return true; // Expire immediately if canvas is unavailable
     }
-    return this.distTraveled >= LASER_DIST + cvs.width;
+    return this.distTraveled >= LASER.TRAVEL_DISTANCE_RATIO + cvs.width;
   }
 
   shouldBeRemoved(): boolean {

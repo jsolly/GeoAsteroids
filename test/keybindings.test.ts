@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { TURN_SPEED } from '../src/constants/entities/ship';
-import { FPS } from '../src/constants/game';
+import { GAME, SHIP } from '../src/constants';
 import { Player } from '../src/entities/player/Player';
 import { Ship } from '../src/entities/ship/Ship';
 import { keyDown, keys, keyUp } from '../src/input/keybindings';
@@ -77,7 +76,10 @@ test('keyDown - Space starts thrust and plays sound', () => {
 
 test('keyDown - ArrowLeft', () => {
   pressKey('ArrowLeft');
-  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(((TURN_SPEED / 180) * Math.PI) / FPS, 10);
+  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(
+    ((SHIP.TURN_SPEED / 180) * Math.PI) / GAME.FPS,
+    10
+  );
 });
 
 test('keyDown - ArrowUp', () => {
@@ -88,7 +90,10 @@ test('keyDown - ArrowUp', () => {
 
 test('keyDown - ArrowRight', () => {
   pressKey('ArrowRight');
-  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(((-TURN_SPEED / 180) * Math.PI) / FPS, 10);
+  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(
+    ((-SHIP.TURN_SPEED / 180) * Math.PI) / GAME.FPS,
+    10
+  );
 });
 
 test('keyUp - Space stops thrust and stops sound', async () => {
@@ -169,13 +174,19 @@ test('thrust persists when one of multiple thrust keys is released', () => {
 test('keyUp - ArrowLeft with ArrowRight still down', () => {
   pressKey('ArrowRight');
   releaseKey('ArrowLeft');
-  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(((-TURN_SPEED / 180) * Math.PI) / FPS, 10);
+  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(
+    ((-SHIP.TURN_SPEED / 180) * Math.PI) / GAME.FPS,
+    10
+  );
 });
 
 test('keyUp - ArrowRight with ArrowLeft still down', () => {
   pressKey('ArrowLeft');
   releaseKey('ArrowRight');
-  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(((TURN_SPEED / 180) * Math.PI) / FPS, 10);
+  expect(mockPlayer.ship.angularVelocity).toBeCloseTo(
+    ((SHIP.TURN_SPEED / 180) * Math.PI) / GAME.FPS,
+    10
+  );
 });
 
 test('keyDown - non-specified key', () => {

@@ -1,6 +1,5 @@
 import type { Position } from '../../../shared-types';
-import { SHIP_HEALTH_REGEN_DELAY, SHIP_HEALTH_REGEN_RATE } from '../../constants/entities/ship';
-import { FPS } from '../../constants/game';
+import { GAME, SHIP } from '../../constants';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
 export function canTakeCollisionDamage(
@@ -33,11 +32,11 @@ export function calculateHealthAfterHeal(
 }
 
 export function calculateHealthRegenPerFrame(): number {
-  return SHIP_HEALTH_REGEN_RATE / FPS;
+  return SHIP.HEALTH_REGEN_RATE / GAME.FPS;
 }
 
 export function calculateHealthRegenDelayFrames(): number {
-  return Math.ceil(SHIP_HEALTH_REGEN_DELAY * FPS);
+  return Math.ceil(SHIP.HEALTH_REGEN_DELAY * GAME.FPS);
 }
 
 export function shouldStartHealthRegeneration(

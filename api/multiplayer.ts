@@ -1,3 +1,4 @@
+import { logger } from '../setup/serverLogger';
 import type {
   PlayerJoin,
   PlayerLeave,
@@ -128,7 +129,7 @@ class MultiplayerServer {
         const message: ClientMessage = JSON.parse(String(data)) as ClientMessage;
         this.handleClientMessage(message, ws);
       } catch (error) {
-        console.error('Failed to parse client message:', error);
+        logger.error('MULTIPLAYER', 'Failed to parse client message', error as Error);
         this.sendError(ws, 'Invalid message format');
       }
     });
@@ -184,7 +185,7 @@ class MultiplayerServer {
         if (this.isInitBotsData(message.data)) {
           this.handleInitBots(message.data, playerId, ws);
         } else {
-          console.warn('Invalid initBots data received:', message.data);
+          logger.warn('MULTIPLAYER', 'Invalid initBots data received', { data: message.data });
           this.sendError(ws, 'Invalid initBots data format');
         }
         break;
@@ -264,7 +265,7 @@ class MultiplayerServer {
     // Set host if this is the first player
     if (this.hostId === null) {
       this.hostId = data.id;
-      console.debug(`initBots: Player ${data.id} is now the host`);
+      logger.debug('MULTIPLAYER', 'Player became host', { playerId: data.id });
     }
 
     // Notify all other players about the new player
@@ -326,14 +327,14 @@ class MultiplayerServer {
   ): void {
     // Validate that we have a player ID
     if (!playerId) {
-      console.warn('initBots: No player ID found for WebSocket connection');
+      logger.warn('MULTIPLAYER', 'No player ID found for WebSocket connection');
       this.sendError(ws, 'Unauthorized: Player not found');
       return;
     }
 
     // Check authorization
     if (!this.isAuthorizedForInitBots(playerId)) {
-      console.warn(`initBots: Player ${playerId} is not authorized (not the host)`);
+      logger.warn('MULTIPLAYER', 'Player not authorized to initialize bots', { playerId });
       this.sendError(ws, 'Forbidden: Only the host can initialize bots');
       return;
     }
@@ -341,7 +342,10 @@ class MultiplayerServer {
     // Check rate limits
     const rateLimitCheck = this.checkRateLimit(playerId);
     if (!rateLimitCheck.allowed) {
-      console.warn(`initBots: Rate limit exceeded for player ${playerId}: ${rateLimitCheck.error}`);
+      logger.warn('MULTIPLAYER', 'Rate limit exceeded for initBots', {
+        playerId,
+        error: rateLimitCheck.error,
+      });
       this.sendError(ws, `Rate limit exceeded: ${rateLimitCheck.error}`);
       return;
     }
@@ -349,18 +353,21 @@ class MultiplayerServer {
     // Validate and clamp bot count
     let botCount = data.botCount;
     if (botCount > this.MAX_BOT_COUNT) {
-      console.warn(
-        `initBots: Requested bot count ${botCount} exceeds maximum ${this.MAX_BOT_COUNT}, clamping to maximum`
-      );
+      logger.warn('MULTIPLAYER', 'Requested bot count exceeds maximum, clamping', {
+        requested: botCount,
+        maximum: this.MAX_BOT_COUNT,
+      });
       botCount = this.MAX_BOT_COUNT;
     }
 
     // Record the rate limit usage
     this.recordRateLimitUsage(playerId);
 
-    console.debug(
-      `initBots: Player ${playerId} initialized ${botCount} bots (requested: ${data.botCount})`
-    );
+    logger.debug('MULTIPLAYER', 'Player initialized bots', {
+      playerId,
+      botCount,
+      requested: data.botCount,
+    });
 
     // TODO: Implement bot initialization logic
     // This could include:
@@ -384,7 +391,7 @@ class MultiplayerServer {
       try {
         player.ws.close();
       } catch (error) {
-        console.error('Error closing WebSocket:', error);
+        logger.error('MULTIPLAYER', 'Error closing WebSocket', error as Error);
       }
 
       this.players.delete(id);
@@ -394,7 +401,10 @@ class MultiplayerServer {
         const remainingPlayers = Array.from(this.players.keys());
         if (remainingPlayers.length > 0) {
           this.hostId = remainingPlayers[0];
-          console.debug(`initBots: Player ${this.hostId} is now the host (previous host left)`);
+          logger.debug('MULTIPLAYER', 'Host reassigned after previous host left', {
+            newHostId: this.hostId,
+            previousHostId: id,
+          });
         } else {
           this.hostId = null;
         }
@@ -411,7 +421,9 @@ class MultiplayerServer {
         try {
           player.ws.send(JSON.stringify(message));
         } catch (error) {
-          console.error(`Failed to send message to player ${id}:`, error);
+          logger.error('MULTIPLAYER', 'Failed to send message to player', error as Error, {
+            playerId: id,
+          });
           // Remove player if we can't send to them
           this.removePlayer(id);
         }
@@ -448,7 +460,9 @@ class MultiplayerServer {
     try {
       player.ws.send(JSON.stringify(gameState));
     } catch (error) {
-      console.error(`Failed to send game state to player ${playerId}:`, error);
+      logger.error('MULTIPLAYER', 'Failed to send game state to player', error as Error, {
+        playerId,
+      });
     }
   }
 
@@ -462,7 +476,9 @@ class MultiplayerServer {
         })
       );
     } catch (error) {
-      console.error('Failed to send error message:', error);
+      logger.error('MULTIPLAYER', 'Failed to send error message', error as Error, {
+        message,
+      });
     }
   }
 

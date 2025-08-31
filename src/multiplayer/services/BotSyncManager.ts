@@ -3,6 +3,7 @@ import { BotManager } from '../../entities/bot/botManager';
 import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { playerFactory } from '../../entities/player/PlayerFactory';
+import { logger } from '../../utils/Logger';
 import type { ClientMessage } from '../types';
 import { ConnectionManager } from './ConnectionManager';
 import { PlayerSyncManager } from './PlayerSyncManager';
@@ -42,11 +43,11 @@ export class BotSyncManager {
         timestamp: Date.now(),
       };
       this.connectionManager.sendMessage(initMessage);
-      console.debug('MULTIPLAYER', 'Requested server bots', { count });
+      logger.debug('MULTIPLAYER', 'Requested server bots', { count });
     } else {
       // Fallback to local bots if not connected
       this.botManager.createBots(count);
-      console.debug('LOCAL', 'Created local bots', { count });
+      logger.debug('LOCAL', 'Created local bots', { count });
     }
   }
 
@@ -109,7 +110,7 @@ export class BotSyncManager {
 
   private setupMessageHandlers(): void {
     this.connectionManager.registerMessageHandler('error', (message) => {
-      console.error('MULTIPLAYER', 'Server error:', message.payload);
+      logger.error('MULTIPLAYER', `Server error: ${String(message.payload)}`);
     });
 
     // Handle bot updates from server
@@ -184,7 +185,7 @@ export class BotSyncManager {
       };
 
       if (payload.playerId && payload.botCount !== undefined) {
-        console.debug('MULTIPLAYER', 'Player initialized bots', {
+        logger.debug('MULTIPLAYER', 'Player initialized bots', {
           playerId: payload.playerId,
           botCount: payload.botCount,
         });
@@ -202,7 +203,7 @@ export class BotSyncManager {
         }>;
       };
 
-      console.debug('MULTIPLAYER', 'Received server bot batch creation', { count: bots.length });
+      logger.debug('MULTIPLAYER', 'Received server bot batch creation', { count: bots.length });
 
       // Process each bot in the batch
       for (const botData of bots) {
@@ -210,7 +211,7 @@ export class BotSyncManager {
           // Create remote bot
           this.createRemoteBot(botData.botId, botData.botName, botData.position);
         } else {
-          console.warn('MULTIPLAYER', 'Invalid bot data in batch creation', botData);
+          logger.warn('MULTIPLAYER', 'Invalid bot data in batch creation', botData);
         }
       }
     });
@@ -331,7 +332,7 @@ export class BotSyncManager {
     // Check if bot already exists
     const existingBots = this.botManager.getBots();
     if (existingBots.has(botId)) {
-      console.debug('MULTIPLAYER', 'Bot already exists, skipping creation', { botId });
+      logger.debug('MULTIPLAYER', 'Bot already exists, skipping creation', { botId });
       return;
     }
 
@@ -343,7 +344,7 @@ export class BotSyncManager {
     // Add to bot manager
     existingBots.set(botId, botPlayer);
 
-    console.debug('MULTIPLAYER', 'Server bot created locally', {
+    logger.debug('MULTIPLAYER', 'Server bot created locally', {
       botId,
       botName,
       position,
@@ -356,7 +357,7 @@ export class BotSyncManager {
     const bots = this.botManager.getBots();
     if (bots.has(botId)) {
       bots.delete(botId);
-      console.debug('MULTIPLAYER', 'Remote bot removed', botId);
+      logger.debug('MULTIPLAYER', 'Remote bot removed', { botId });
     }
   }
 }

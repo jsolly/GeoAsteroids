@@ -1,3 +1,5 @@
+import { logger } from '../utils/Logger';
+
 export const LOCAL_STORAGE_KEYS = {
   soundOn: 'soundOn',
 };
@@ -15,7 +17,7 @@ export function soundIsOn(): boolean {
     return soundPref === 'true';
   } catch (error) {
     // Handle cases where localStorage access fails (e.g., private browsing mode)
-    console.warn('Failed to access localStorage for sound preference:', error);
+    logger.warn('UTILS', `Failed to access localStorage for sound preference: ${String(error)}`);
     return false; // Default to sound off if access fails
   }
 }

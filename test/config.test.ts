@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 
-import { ROID_NUM } from '../src/constants/game';
+import { ROID } from '../src/constants';
 import { LOCAL_STORAGE_KEYS, soundIsOn } from '../src/constants/user-preferences';
 
 beforeEach(() => {
@@ -22,5 +22,5 @@ test('Sound Off', () => {
 });
 
 test('ROID_NUM constant', () => {
-  expect(ROID_NUM).toBe(10);
+  expect(ROID.INITIAL_COUNT).toBe(10);
 });

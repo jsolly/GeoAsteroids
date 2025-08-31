@@ -1,6 +1,7 @@
-import { SHIP_SIZE } from '../../constants/entities/ship';
+import { SHIP } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
+import { logger } from '../../utils/Logger';
 import type { Player } from '../player/Player';
 
 import type { Ship } from './Ship';
@@ -61,7 +62,7 @@ function createComplementaryColor(
 
     // Validate hex color format
     if (hex.length !== 6 && hex.length !== 3) {
-      console.warn('Invalid hex color format, using fallback:', baseColor);
+      logger.warn('RENDERING', `Invalid hex color format, using fallback: ${baseColor}`);
       hue = 0;
       saturation = 100;
       lightness = 50;
@@ -109,7 +110,7 @@ function createComplementaryColor(
     }
   } else {
     // Fallback to red if color format is not recognized
-    console.warn('Unrecognized color format, using fallback:', baseColor);
+    logger.warn('RENDERING', `Unrecognized color format, using fallback: ${baseColor}`);
     hue = 0;
     saturation = 100;
     lightness = 50;
@@ -294,7 +295,7 @@ export function drawLocalPlayerShip(player: Player): void {
   );
 
   ctx.strokeStyle = ship.color;
-  ctx.lineWidth = SHIP_SIZE / 20;
+  ctx.lineWidth = SHIP.SIZE / 20;
   ctx.beginPath();
   ctx.moveTo(nose.x, nose.y);
   ctx.lineTo(rearLeft.x, rearLeft.y);
@@ -449,17 +450,17 @@ export function drawLasers(
     if (laser.explodeTime === 0) {
       ctx.fillStyle = color || 'salmon';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 3, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, SHIP.SIZE / 3, 0, Math.PI * 2, false);
       ctx.fill();
     } else {
       // draw explosion
       ctx.fillStyle = 'orangered';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 2, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, SHIP.SIZE / 2, 0, Math.PI * 2, false);
       ctx.fill();
       ctx.fillStyle = color || 'salmon';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP_SIZE / 3, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, SHIP.SIZE / 3, 0, Math.PI * 2, false);
       ctx.fill();
     }
   }
@@ -543,7 +544,7 @@ export function drawShipAtPosition(
 
   // Draw ship body (triangle)
   ctx.strokeStyle = shipColor;
-  ctx.lineWidth = SHIP_SIZE / 20;
+  ctx.lineWidth = SHIP.SIZE / 20;
   ctx.beginPath();
   ctx.moveTo(nose.x, nose.y);
   ctx.lineTo(rearLeft.x, rearLeft.y);

@@ -104,23 +104,25 @@ export const EMP = {
 // DEBUG CONFIGURATION
 // ============================================================================
 export const DEBUG = {
+  // Master switch for debug features
+  ENABLED: true,
+
   // Player settings
   LOCAL_PLAYER_INVINCIBLE: false,
 
   // Bot settings
   BOT_COUNT: 1,
-  DISABLE_BOT_MOVEMENT: true,
-  DISABLE_BOT_LASERS: true,
+  DISABLE_BOT_MOVEMENT: false,
+  DISABLE_BOT_LASERS: false,
   DISABLE_BOT_SPAWN_PROTECTION: false,
-  PLACE_BOTS_NEAR_LOCAL_PLAYER: true,
 
   // Roid settings
   ROID_COUNT: 100,
   DISABLE_ROID_MOVEMENT: false,
   PLACE_ROID_ON_BOT: false,
 
-  // Multiplayer settings
-  PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER: false,
+  // Player positioning settings (Affects local, remote, and bot players)
+  PLACE_PLAYERS_NEAR_CENTER: true,
 } as const;
 
 // ============================================================================
@@ -130,6 +132,21 @@ export const PREFERENCES = {
   LOCAL_STORAGE_KEYS: {
     SOUND_ON: 'soundOn',
   } as const,
+} as const;
+
+// ============================================================================
+// LOGGING CONFIGURATION
+// ============================================================================
+export const LOGGING = {
+  // Global log level that affects both client and server logging
+  // This controls what gets written to both server.log and client.log
+  GLOBAL_LOG_LEVEL: 'info' as 'error' | 'warn' | 'info' | 'debug',
+
+  // Whether to forward client logs to the server
+  FORWARD_TO_SERVER: true,
+
+  // Whether to write logs to browser console
+  WRITE_TO_CONSOLE: false,
 } as const;
 
 // ============================================================================
@@ -144,7 +161,8 @@ export const isSoundEnabled = (): boolean => {
     const soundPref = localStorage.getItem(PREFERENCES.LOCAL_STORAGE_KEYS.SOUND_ON);
     return soundPref === 'true';
   } catch (error) {
-    console.warn('Failed to access localStorage for sound preference:', error);
+    // Use console.warn instead of logger to avoid circular dependency
+    console.warn('UTILS', `Failed to access localStorage for sound preference: ${String(error)}`);
     return false;
   }
 };
@@ -167,71 +185,3 @@ if (typeof document !== 'undefined') {
     initializeSoundPreference();
   }
 }
-
-// ============================================================================
-// LEGACY EXPORTS (for backward compatibility)
-// ============================================================================
-// These can be gradually removed as code is updated to use the new structure
-export const START_LIVES = GAME.START_LIVES;
-export const STARTING_SCORE = GAME.STARTING_SCORE;
-export const MULTIPLAYER_ENABLED = GAME.MULTIPLAYER_ENABLED;
-export const DEFAULT_BOT_COUNT = GAME.DEFAULT_BOT_COUNT;
-export const FPS = GAME.FPS;
-export const FRICTION = GAME.FRICTION;
-
-export const CANVAS_INTERNAL_WIDTH = CANVAS.INTERNAL_WIDTH;
-export const CANVAS_INTERNAL_HEIGHT = CANVAS.INTERNAL_HEIGHT;
-export const CANVAS_DEFAULT_CENTER_X = CANVAS.DEFAULT_CENTER_X;
-export const CANVAS_DEFAULT_CENTER_Y = CANVAS.DEFAULT_CENTER_Y;
-export const TEXT_SIZE = CANVAS.TEXT_SIZE;
-export const TEXT_FADE_TIME = CANVAS.TEXT_FADE_TIME;
-
-export const TURN_SPEED = SHIP.TURN_SPEED;
-export const SHIP_MAX_LASERS = SHIP.MAX_LASERS;
-export const SHIP_MAX_HEALTH = SHIP.MAX_HEALTH;
-export const SHIP_COLLISION_DAMAGE = SHIP.COLLISION_DAMAGE;
-export const SHIP_HEALTH_REGEN_RATE = SHIP.HEALTH_REGEN_RATE;
-export const SHIP_HEALTH_REGEN_DELAY = SHIP.HEALTH_REGEN_DELAY;
-export const SHIP_THRUST = SHIP.THRUST;
-export const SHIP_MAX_VELOCITY = SHIP.MAX_VELOCITY;
-export const SHIP_BOT_FRICTION = SHIP.BOT_FRICTION;
-export const SHIP_SIZE = SHIP.SIZE;
-export const SHIP_EXPLODE_DUR_FRAMES = SHIP.EXPLODE_DURATION_FRAMES;
-export const SHIP_INV_DUR_FRAMES = SHIP.INVINCIBILITY_DURATION_FRAMES;
-export const SHIP_INV_BLINK_DUR_FRAMES = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
-
-export const LASER_SPEED = LASER.SPEED;
-export const LASER_MAX = LASER.MAX_COUNT;
-export const LASER_DIST = LASER.TRAVEL_DISTANCE_RATIO;
-export const LASER_EXPLODE_DUR = LASER.EXPLODE_DURATION;
-
-export const ROID_SPEED = ROID.SPEED;
-export const ROID_SIZE = ROID.SIZE;
-export const ROID_VERTICES = ROID.VERTICES;
-export const ROID_JAGG = ROID.JAGGEDNESS;
-export const ROID_POINTS_LRG = ROID.POINTS_LARGE;
-export const ROID_POINTS_MED = ROID.POINTS_MEDIUM;
-export const ROID_POINTS_SML = ROID.POINTS_SMALL;
-export const ROID_SPAWN_TIME = ROID.SPAWN_TIME_FRAMES;
-export const ROID_NUM = ROID.INITIAL_COUNT;
-export const ROID_MIN_COUNT = ROID.MIN_COUNT;
-export const ROID_MAX_COUNT = ROID.MAX_COUNT;
-
-export const EMP_PULSE_RADIUS = EMP.RADIUS;
-export const EMP_PULSE_DURATION = EMP.DURATION;
-
-export const LOCAL_STORAGE_KEYS = PREFERENCES.LOCAL_STORAGE_KEYS;
-export const soundIsOn = isSoundEnabled;
-
-// Debug constants (for backward compatibility)
-export const DEBUG_LOCAL_PLAYER_INVINCIBLE = DEBUG.LOCAL_PLAYER_INVINCIBLE;
-export const DEBUG_BOT_COUNT = DEBUG.BOT_COUNT;
-export const DEBUG_ROID_COUNT = DEBUG.ROID_COUNT;
-export const DEBUG_DISABLE_BOT_MOVEMENT = DEBUG.DISABLE_BOT_MOVEMENT;
-export const DEBUG_DISABLE_BOT_LASERS = DEBUG.DISABLE_BOT_LASERS;
-export const DEBUG_DISABLE_BOT_SPAWN_PROTECTION = DEBUG.DISABLE_BOT_SPAWN_PROTECTION;
-export const DEBUG_PLACE_BOTS_NEAR_LOCAL_PLAYER = DEBUG.PLACE_BOTS_NEAR_LOCAL_PLAYER;
-export const DEBUG_DISABLE_ROID_MOVEMENT = DEBUG.DISABLE_ROID_MOVEMENT;
-export const DEBUG_PLACE_ROID_ON_BOT = DEBUG.PLACE_ROID_ON_BOT;
-export const DEBUG_PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER =
-  DEBUG.PLACE_REMOTE_PLAYERS_NEAR_EACH_OTHER;

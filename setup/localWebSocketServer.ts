@@ -18,14 +18,14 @@ class LocalMultiplayerServer {
     this.wsCore = new WebSocketCore(gameEngine);
     this.wsCore.startPeriodicGameStateBroadcast();
 
-    logger.info(`🚀 Local multiplayer server running on ws://localhost:${port}`);
+    logger.info('MULTIPLAYER', 'Local multiplayer server started', { port });
 
     this.setupWebSocketServer();
   }
 
   private setupWebSocketServer(): void {
     this.wss.on('connection', (ws: WebSocketWithEvents) => {
-      logger.info('🔌 New player connected');
+      logger.info('MULTIPLAYER', 'New player connected');
 
       ws.on('message', (data: unknown) => {
         try {
@@ -38,7 +38,7 @@ class LocalMultiplayerServer {
           this.wsCore.handleClientMessage(coreMessage, ws);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          logger.error('Failed to parse client message:', errorMessage);
+          logger.error('MULTIPLAYER', 'Failed to parse client message', new Error(errorMessage));
           this.wsCore.sendError(ws, 'Invalid message format');
         }
       });
@@ -47,7 +47,10 @@ class LocalMultiplayerServer {
         // Find and remove the player
         for (const player of this.wsCore.getAllPlayers()) {
           if (player.ws === ws) {
-            logger.info(`👋 Player ${player.name} (${player.id}) disconnected`);
+            logger.info('MULTIPLAYER', 'Player disconnected', {
+              playerName: player.name,
+              playerId: player.id,
+            });
             this.wsCore.removePlayer(player.id);
             break;
           }
@@ -56,13 +59,15 @@ class LocalMultiplayerServer {
 
       ws.on('error', (error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('❌ WebSocket error:', errorMessage);
+        logger.error('MULTIPLAYER', 'WebSocket error', new Error(errorMessage));
       });
     });
   }
 
   public getStats(): void {
-    logger.info(`📊 Server Stats - Players: ${this.wsCore.getPlayerCount()}`);
+    logger.info('MULTIPLAYER', 'Server stats', {
+      playerCount: this.wsCore.getPlayerCount(),
+    });
   }
 }
 
@@ -74,13 +79,13 @@ setInterval(() => server.getStats(), 10000);
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  logger.info('\n🛑 Shutting down multiplayer server...');
+  logger.info('MULTIPLAYER', 'Shutting down multiplayer server (SIGINT)');
   server.wss.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  logger.info('\n🛑 Shutting down multiplayer server...');
+  logger.info('MULTIPLAYER', 'Shutting down multiplayer server (SIGTERM)');
   server.wss.close();
   process.exit(0);
 });

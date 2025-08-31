@@ -1,9 +1,4 @@
-import {
-  SHIP_EXPLODE_DUR_FRAMES,
-  SHIP_INV_BLINK_DUR_FRAMES,
-  SHIP_INV_DUR_FRAMES,
-} from '../../constants/entities/ship';
-import { FPS, START_LIVES } from '../../constants/game';
+import { GAME, SHIP } from '../../constants';
 import { generateRandomPlayerColor } from '../../utils/colorUtils';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
 import { Ship } from '../ship/Ship';
@@ -15,7 +10,7 @@ export class Player {
   ship: Ship;
   score: number = 0;
   lastUpdate: number = Date.now();
-  lives: number = START_LIVES;
+  lives: number = GAME.START_LIVES;
   respawnTimer?: number; // Timer for respawning after death (in frames)
   spawnProtectedUntil: number; // Timestamp (ms) until which the player is invincible
   color: string; // Player's unique color for lasers and other visual elements
@@ -38,7 +33,7 @@ export class Player {
       isBot: this.type === 'bot',
     });
 
-    this.lives = START_LIVES;
+    this.lives = GAME.START_LIVES;
     this.spawnProtectedUntil = Date.now() + 3000; // 3 seconds spawn protection
 
     // Set up event listeners for ship events
@@ -76,11 +71,11 @@ export class Player {
       // Player still has lives; set respawn timer based on explosion cause
       // Boundary collisions should respawn immediately after the explosion animation
       if (detail?.cause === 'boundary') {
-        this.respawnTimer = SHIP_EXPLODE_DUR_FRAMES;
+        this.respawnTimer = SHIP.EXPLODE_DURATION_FRAMES;
       } else {
         // For other collisions, wait for explosion to finish, then respawn immediately
         // This provides a smooth experience: explosion animation -> immediate respawn
-        this.respawnTimer = SHIP_EXPLODE_DUR_FRAMES;
+        this.respawnTimer = SHIP.EXPLODE_DURATION_FRAMES;
       }
     } else {
       // No lives remaining - game over
@@ -115,8 +110,10 @@ export class Player {
     this.ship.angle = (90 / 180) * Math.PI;
 
     // Give ship temporary invincibility (blinking effect)
-    this.ship.blinkCount = Math.ceil(SHIP_INV_DUR_FRAMES / SHIP_INV_BLINK_DUR_FRAMES); // 3 seconds invincibility
-    this.ship.spawnProtectionTimer = SHIP_INV_BLINK_DUR_FRAMES; // 0.1 seconds at 60 FPS
+    this.ship.blinkCount = Math.ceil(
+      SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
+    ); // 3 seconds invincibility
+    this.ship.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES; // 0.1 seconds at 60 FPS
     this.ship.blinkOn = true;
 
     // Reset ship health to full
@@ -128,7 +125,7 @@ export class Player {
     this.respawnTimer = undefined;
 
     // Set spawn protection
-    this.spawnProtectedUntil = Date.now() + (SHIP_INV_DUR_FRAMES / FPS) * 1000;
+    this.spawnProtectedUntil = Date.now() + (SHIP.INVINCIBILITY_DURATION_FRAMES / GAME.FPS) * 1000;
   }
 
   static createPlayer(params: {

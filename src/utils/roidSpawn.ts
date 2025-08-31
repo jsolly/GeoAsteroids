@@ -1,5 +1,5 @@
 import type { Position } from '../../shared-types';
-import { ROID_SIZE } from '../constants/entities/roid';
+import { ROID } from '../constants';
 import { getGameBoundary } from '../physics/boundary';
 
 /**
@@ -15,7 +15,7 @@ export function spawnRoidFromEdge(): Position {
 
   // Generate random distance from center, ensuring roid fits within boundary
   // Subtract ROID_SIZE to keep the entire roid within the boundary
-  const maxDistance = Math.max(0, boundary.radius - ROID_SIZE); // Clamp to prevent negative
+  const maxDistance = Math.max(0, boundary.radius - ROID.SIZE); // Clamp to prevent negative
   const distance = Math.random() * maxDistance;
 
   // Convert polar coordinates to cartesian coordinates

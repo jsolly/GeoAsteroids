@@ -1,15 +1,16 @@
 import type { Position } from '../../../shared-types';
 import { playSound } from '../../audio/Sound';
-import { SHIP_SIZE } from '../../constants/entities/ship';
+import { SHIP } from '../../constants';
 import type { Player } from '../../entities/player/Player';
 import { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
+import { logger } from '../../utils/Logger';
 
 import { getGameBoundary } from '../boundary';
 
 export function isShipOutOfBounds(shipPosition: Position): boolean {
   const boundary = getGameBoundary();
-  const shipRadius = SHIP_SIZE / 2;
+  const shipRadius = SHIP.SIZE / 2;
 
   // Distance from center to ship center
   const dx = shipPosition.x - boundary.cx;
@@ -53,35 +54,38 @@ export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolea
   // Handle single ship
   const ship = shipOrPlayers;
   if (ship.exploding) {
-    console.debug(
-      `[Boundary] detectBoundaryCollisions: Ship ${ship.id} already exploding, skipping`
-    );
+    logger.debug('BOUNDARY', 'Ship already exploding, skipping boundary collision', {
+      shipId: ship.id,
+    });
     return false;
   }
 
   // BOUNDARY IS THE ULTIMATE KILLER - ignores all invincibility!
   // No spawn protection, no blinking protection - if you hit the boundary, you die!
   if (isShipOutOfBounds(ship.position)) {
-    console.debug(
-      `[Boundary] detectBoundaryCollisions: Ship ${ship.id} out of bounds at (${ship.position.x.toFixed(1)}, ${ship.position.y.toFixed(1)})`
-    );
+    logger.debug('BOUNDARY', 'Ship out of bounds', {
+      shipId: ship.id,
+      position: { x: ship.position.x, y: ship.position.y },
+    });
 
     // Store position where collision occurred for event
     const collisionPosition = { x: ship.position.x, y: ship.position.y };
 
     // Ship is out of bounds, trigger explosion (same as any other collision)
-    console.debug(`[Boundary] detectBoundaryCollisions: Ship ${ship.id} triggering explosion`);
+    logger.debug('BOUNDARY', 'Ship triggering explosion due to boundary collision', {
+      shipId: ship.id,
+    });
     ship.explode();
 
     // Set health to 0 to trigger respawn (same as other collision types)
     ship.health = 0;
-    console.debug(`[Boundary] detectBoundaryCollisions: Ship ${ship.id} health set to 0`);
+    logger.debug('BOUNDARY', 'Ship health set to 0 due to boundary collision', { shipId: ship.id });
 
     // Dispatch shipExploded event so Player.onShipExploded() gets called
     // This triggers the normal respawn process which will handle repositioning
-    console.debug(
-      `[Boundary] detectBoundaryCollisions: Ship ${ship.id} dispatching shipExploded event with cause: boundary`
-    );
+    logger.debug('BOUNDARY', 'Ship dispatching shipExploded event with cause: boundary', {
+      shipId: ship.id,
+    });
     window.dispatchEvent(
       new CustomEvent('shipExploded', {
         detail: {

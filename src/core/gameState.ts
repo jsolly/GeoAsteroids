@@ -1,4 +1,4 @@
-import { STARTING_SCORE } from '../constants/game';
+import { GAME } from '../constants';
 
 interface GameStateData {
   getCurrentScore(): number;
@@ -15,7 +15,7 @@ interface GameStateData {
 
 class GameState implements GameStateData {
   private static instance: GameState;
-  private currentScore = STARTING_SCORE;
+  private currentScore = GAME.STARTING_SCORE;
   private textAlpha = 1;
   private text = '';
   private isGameRunning = false;
@@ -40,7 +40,7 @@ class GameState implements GameStateData {
   }
 
   resetCurrentScore(): void {
-    this.currentScore = STARTING_SCORE;
+    this.currentScore = GAME.STARTING_SCORE;
   }
 
   getTextAlpha(): number {

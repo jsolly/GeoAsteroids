@@ -1,3 +1,4 @@
+import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 
 export interface ConnectionState {
@@ -64,13 +65,13 @@ export class ConnectionManager {
     return new Promise((resolve, reject) => {
       try {
         const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001/ws';
-        console.debug('MULTIPLAYER', 'Connecting to WebSocket', { url: wsUrl });
+        logger.debug('MULTIPLAYER', 'Connecting to WebSocket', { url: wsUrl });
         this.state.socket = new WebSocket(wsUrl);
 
         this.state.socket.onopen = (): void => {
           this.state.isConnected = true;
           this.state.reconnectAttempts = 0;
-          console.debug('MULTIPLAYER', 'Connected to server');
+          logger.debug('MULTIPLAYER', 'Connected to server');
           this.connectionHandlers.onConnect?.();
           resolve();
         };
@@ -84,7 +85,7 @@ export class ConnectionManager {
           }
           connectionFailed = true;
 
-          console.error('MULTIPLAYER', 'WebSocket error', { error: error.type });
+          logger.error('MULTIPLAYER', `WebSocket error: ${error.type}`);
           this.handleConnectionError();
           const connectionError = new Error('WebSocket connection failed');
           this.connectionHandlers.onError?.(connectionError);
@@ -96,7 +97,7 @@ export class ConnectionManager {
           if (!connectionFailed) {
             this.state.isConnected = false;
             this.state.socket = null;
-            console.debug('MULTIPLAYER', 'Disconnected from server', {
+            logger.debug('MULTIPLAYER', 'Disconnected from server', {
               code: event.code,
               reason: event.reason,
               wasClean: event.wasClean,
@@ -112,9 +113,7 @@ export class ConnectionManager {
         this.setupMessageHandler();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('MULTIPLAYER', 'Failed to connect to multiplayer server', {
-          error: errorMessage,
-        });
+        logger.error('MULTIPLAYER', `Failed to connect to multiplayer server: ${errorMessage}`);
         this.handleConnectionError();
         const connectionError = new Error(errorMessage);
         this.connectionHandlers.onError?.(connectionError);
@@ -142,17 +141,20 @@ export class ConnectionManager {
       try {
         // Avoid spamming logs for high-frequency updates
         if (message.type !== 'update') {
-          console.debug('MULTIPLAYER', 'Sending client message', {
+          logger.debug('MULTIPLAYER', 'Sending client message', {
             type: message.type,
             data: message.data,
           });
         }
         this.state.socket.send(JSON.stringify(message));
       } catch (error) {
-        console.error('MULTIPLAYER', 'Failed to send message', { error, message });
+        logger.error(
+          'MULTIPLAYER',
+          `Failed to send message: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     } else {
-      console.warn('MULTIPLAYER', 'Cannot send message - not connected');
+      logger.warn('MULTIPLAYER', 'Cannot send message - not connected');
     }
   }
 
@@ -236,15 +238,13 @@ export class ConnectionManager {
         if (handler) {
           handler(normalized);
         } else {
-          console.warn('MULTIPLAYER', 'No handler for message type', normalized.type);
+          logger.warn('MULTIPLAYER', 'No handler for message type', { type: normalized.type });
         }
       } catch (error) {
-        console.error(
+        logger.error(
           'MULTIPLAYER',
-          'Failed to parse server message:',
-          error,
-          'Raw data:',
-          event.data
+          `Failed to parse server message: ${String(event.data)}`,
+          error instanceof Error ? error : new Error(String(error))
         );
         // Ignore malformed messages
       }
@@ -257,18 +257,21 @@ export class ConnectionManager {
 
     if (this.state.reconnectAttempts < this.maxReconnectAttempts) {
       this.state.reconnectAttempts++;
-      console.debug(
+      logger.debug(
         'MULTIPLAYER',
         `Attempting reconnection ${this.state.reconnectAttempts}/${this.maxReconnectAttempts}`
       );
 
       setTimeout(() => {
         this.connect().catch((error) => {
-          console.error('MULTIPLAYER', 'Reconnection failed', { error });
+          logger.error(
+            'MULTIPLAYER',
+            `Reconnection failed: ${error instanceof Error ? error.message : String(error)}`
+          );
         });
       }, this.reconnectDelay * this.state.reconnectAttempts);
     } else {
-      console.error('MULTIPLAYER', 'Max reconnection attempts reached');
+      logger.error('MULTIPLAYER', 'Max reconnection attempts reached');
     }
   }
 }

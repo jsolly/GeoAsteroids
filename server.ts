@@ -595,6 +595,47 @@ const wss = new WebSocketServer({
   // Don't specify path here - we'll handle routing manually
 });
 
+// Connection rate limiting to prevent abuse
+const connectionAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_CONNECTIONS_PER_MINUTE = 10;
+const CONNECTION_WINDOW_MS = 60000; // 1 minute
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const attempts = connectionAttempts.get(ip);
+  
+  if (!attempts) {
+    connectionAttempts.set(ip, { count: 1, lastAttempt: now });
+    return false;
+  }
+  
+  // Reset if outside window
+  if (now - attempts.lastAttempt > CONNECTION_WINDOW_MS) {
+    connectionAttempts.set(ip, { count: 1, lastAttempt: now });
+    return false;
+  }
+  
+  // Check if over limit
+  if (attempts.count >= MAX_CONNECTIONS_PER_MINUTE) {
+    return true;
+  }
+  
+  // Increment count
+  attempts.count++;
+  attempts.lastAttempt = now;
+  return false;
+}
+
+// Clean up old rate limit entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, attempts] of connectionAttempts.entries()) {
+    if (now - attempts.lastAttempt > CONNECTION_WINDOW_MS) {
+      connectionAttempts.delete(ip);
+    }
+  }
+}, CONNECTION_WINDOW_MS);
+
 // Add error handling for WebSocket server
 wss.on('error', (error) => {
   logger.error('❌ WebSocket server error:', error);
@@ -613,33 +654,30 @@ wsCore.startPeriodicGameStateBroadcast();
 // WebSocket connection handling with routing
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const url = req.url;
+  const clientIp = req.socket.remoteAddress || 'unknown';
+  
+  // Rate limiting check
+  if (isRateLimited(clientIp)) {
+    logger.warn(`🚫 Rate limited connection attempt from ${clientIp}`);
+    ws.close(1008, 'Rate limit exceeded');
+    return;
+  }
+  
   // Debug: WebSocket connection request details
   // logger.debug('🔌 WebSocket connection request:', { url, headers: req.headers });
 
   if (url === '/logs') {
     // Handle log client connection
     // Debug: Log client connected
-    // logger.debug('📝 Log client connected');
+    logger.info('📝 Log client connected');
     
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(String(data));
         if (message.type === 'clientLog') {
-          // Handle client log message - log it to server console
+          // Handle client log message
           const logData = message.data;
-          // Debug: Client log forwarding to server console
-          // logger.info(`📝 Client Log [${logData.level}] [${logData.sessionId}]: ${logData.message}`);
           
-          // Optionally log additional metadata
-          // if (logData.userAgent || logData.pageUrl) {
-          //   logger.debug('📝 Client Log Metadata:', {
-          //     sessionId: logData.sessionId,
-          //     userAgent: logData.userAgent,
-          //     pageUrl: logData.pageUrl,
-          //     timestamp: new Date(message.timestamp).toISOString()
-          //   });
-          // }
-
           // Persist client logs to logs/client.log
           // Use best-effort write; do not await to avoid blocking WS loop
           ClientLogger.logClientMessage(logData).catch((error) => {
@@ -653,7 +691,7 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
     ws.on('close', () => {
       // Debug: Log client disconnected
-      // logger.debug('📝 Log client disconnected');
+      logger.info('📝 Log client disconnected');
     });
 
     ws.on('error', (error) => {

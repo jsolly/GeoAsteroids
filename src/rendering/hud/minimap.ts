@@ -3,6 +3,7 @@ import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
 import { getGameBoundary } from '../../physics/boundary';
+import { logger } from '../../utils/Logger';
 
 // Circle boundary type local alias for clarity
 type CircleBoundary = { cx: number; cy: number; radius: number };
@@ -121,7 +122,11 @@ export function drawMiniMap(
       }
     }
   } catch (error: unknown) {
-    console.error('Error drawing mini map:', error);
+    logger.error(
+      'RENDERING',
+      'Error drawing mini map',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 
   ctx.restore();
@@ -159,7 +164,11 @@ export function drawServerInfo(ctx: CanvasRenderingContext2D, canvas: HTMLCanvas
 
     ctx.restore();
   } catch (error: unknown) {
-    console.error('Error drawing server info:', error);
+    logger.error(
+      'RENDERING',
+      'Error drawing server info',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 

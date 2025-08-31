@@ -3,6 +3,7 @@ import { entityFactory } from '../entities/EntityFactory';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { MultiplayerManager } from '../multiplayer/multiplayerManager';
 import { toggleScreen } from '../ui/uiUtils';
+import { logger } from '../utils/Logger';
 import { DebugManager } from './services/DebugManager';
 import { EMPPulseService } from './services/EMPPulseService';
 import { GameStateManager } from './services/GameStateManager';
@@ -68,7 +69,7 @@ export class GameController {
     try {
       await this.multiplayerManager.connect();
       isMultiplayer = true;
-      console.debug('MULTIPLAYER', 'Connected to server, using server-authoritative asteroids');
+      logger.debug('MULTIPLAYER', 'Connected to server, using server-authoritative asteroids');
     } catch (error) {
       // Explicitly set multiplayer to false on any connection failure
       isMultiplayer = false;
@@ -76,7 +77,9 @@ export class GameController {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorType = this.categorizeConnectionError(error);
 
-      console.warn(`Failed to connect to multiplayer (${errorType}):`, errorMessage);
+      logger.warn('MULTIPLAYER', `Failed to connect to multiplayer (${errorType}):`, {
+        errorMessage,
+      });
 
       // Handle different error types appropriately
       if (this.shouldRetryConnection(errorType)) {
@@ -84,7 +87,7 @@ export class GameController {
         const retrySuccess = await this.attemptConnectionRetry(errorType);
         if (retrySuccess) {
           isMultiplayer = true;
-          console.debug('MULTIPLAYER', 'Reconnected successfully');
+          logger.debug('MULTIPLAYER', 'Reconnected successfully');
         } else {
           this.showConnectionFailureMessage(errorType, 'Retry failed');
           this.createLocalGame();
@@ -125,7 +128,7 @@ export class GameController {
   private handleServerAsteroidCreated = (event: Event): void => {
     const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
     const { asteroid } = customEvent.detail;
-    console.debug('GAME', 'Adding server asteroid to local belt', asteroid.id);
+    logger.debug('GAME', 'Adding server asteroid to local belt', { asteroidId: asteroid.id });
 
     // Create a proper Roid object from server data
     const roid = entityFactory.createRoid({
@@ -153,7 +156,7 @@ export class GameController {
       updates: Partial<AsteroidData>;
     }>;
     const { asteroidId, updates } = customEvent.detail;
-    console.debug('GAME', 'Updating server asteroid in local belt', asteroidId);
+    logger.debug('GAME', 'Updating server asteroid in local belt', { asteroidId });
 
     // Find and update the asteroid in the local belt
     if (this.currRoidBelt) {
@@ -188,7 +191,7 @@ export class GameController {
   private handleServerAsteroidDestroyed = (event: Event): void => {
     const customEvent = event as CustomEvent<{ asteroidId: string }>;
     const { asteroidId } = customEvent.detail;
-    console.debug('GAME', 'Removing server asteroid from local belt', asteroidId);
+    logger.debug('GAME', 'Removing server asteroid from local belt', { asteroidId });
 
     // Remove the asteroid from the local belt
     if (this.currRoidBelt) {
@@ -389,13 +392,13 @@ export class GameController {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.debug(`MULTIPLAYER retry attempt ${attempt}/${maxRetries}`);
+        logger.debug('MULTIPLAYER', `retry attempt ${attempt}/${maxRetries}`);
         await new Promise((resolve) => setTimeout(resolve, baseDelay * attempt)); // Exponential backoff
         await this.multiplayerManager.connect();
         return true; // Success!
       } catch (retryError) {
         const retryErrorType = this.categorizeConnectionError(retryError);
-        console.debug(`MULTIPLAYER retry ${attempt} failed:`, retryErrorType);
+        logger.debug('MULTIPLAYER', `retry ${attempt} failed:`, { retryErrorType });
 
         // Don't retry if error type changed to non-retryable
         if (!this.shouldRetryConnection(retryErrorType)) {
@@ -428,13 +431,13 @@ export class GameController {
     }
 
     // Show user feedback - could be enhanced with toast/modal system
-    console.warn('MULTIPLAYER:', message);
+    logger.warn('MULTIPLAYER', message);
     // TODO: Implement proper UI feedback (toast/modal with retry button)
     // this.uiManager.showToast(message, { action: 'Retry', onAction: () => this.retryConnection() });
   }
 
   private createLocalGame(): void {
-    console.debug('Creating local game with generated asteroids');
+    logger.debug('GAME', 'Creating local game with generated asteroids');
     this.currRoidBelt = entityFactory.createRoidBelt();
     this.debugManager.applyDebugConfig(this.currRoidBelt);
   }
