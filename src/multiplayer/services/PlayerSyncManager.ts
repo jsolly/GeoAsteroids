@@ -15,6 +15,7 @@ import { generateRandomPlayerColor } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { getRandomPositionNearPoint } from '../../utils/positionUtils';
 import type { ClientMessage } from '../types';
+import { BotSyncManager } from './BotSyncManager';
 import { ConnectionManager } from './ConnectionManager';
 
 export interface PlayerSyncState {
@@ -309,6 +310,18 @@ export class PlayerSyncManager {
     return this.state.localPlayerId;
   }
 
+  /**
+   * Get the bot sync manager instance
+   */
+  getBotSyncManager(): BotSyncManager | null {
+    try {
+      return BotSyncManager.getInstance();
+    } catch (error) {
+      logger.warn('MULTIPLAYER', 'BotSyncManager not available', { error: String(error) });
+      return null;
+    }
+  }
+
   private setupMessageHandlers(): void {
     this.connectionManager.registerMessageHandler('error', (message) => {
       logger.error('MULTIPLAYER', `Server error: ${String(message.payload)}`);
@@ -348,8 +361,23 @@ export class PlayerSyncManager {
     // Initial state sync from server (periodic broadcast)
     this.connectionManager.registerMessageHandler('gameState', (message) => {
       const state = message.payload as
-        | { players?: Array<{ id: string; name?: string }> }
+        | {
+            players?: Array<{ id: string; name?: string }>;
+            bots?: Array<{
+              id: string;
+              name: string;
+              position: { x: number; y: number };
+              velocity: { x: number; y: number };
+              angle: number;
+              exploding: boolean;
+              lives: number;
+              health: number;
+              maxHealth: number;
+            }>;
+          }
         | undefined;
+
+      // Process player updates
       const players = state?.players ?? [];
       for (const p of players) {
         if (!p?.id) {
@@ -360,6 +388,19 @@ export class PlayerSyncManager {
         }
         if (!this.state.players.has(p.id)) {
           this.addRemotePlayer(p.id, p.name ?? `Player_${p.id.slice(0, 4)}`);
+        }
+      }
+
+      // Process bot updates for health synchronization
+      const bots = state?.bots ?? [];
+      for (const bot of bots) {
+        if (!bot?.id) {
+          continue;
+        }
+        // Update bot health through the bot sync manager
+        const botSyncManager = this.getBotSyncManager();
+        if (botSyncManager) {
+          botSyncManager.syncBotHealthFromGameState(bot.id, bot.health, bot.maxHealth);
         }
       }
     });

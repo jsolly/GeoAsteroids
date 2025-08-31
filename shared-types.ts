@@ -63,8 +63,21 @@ export interface AsteroidData {
   maxHealth: number;
 }
 
+export interface BotData {
+  id: string;
+  name: string;
+  position: Position;
+  velocity: Velocity;
+  angle: number;
+  exploding: boolean;
+  lives: number;
+  health: number;
+  maxHealth: number;
+}
+
 export interface GameState {
   players: PlayerUpdate[];
+  bots: BotData[];
   asteroids: AsteroidData[];
   gameTime: number;
 }

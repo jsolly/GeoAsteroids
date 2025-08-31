@@ -209,9 +209,10 @@ export class MessageHandler {
 
     const isDestroyed = this.gameEngine.handleBotDamage(data.botId, data.attackerId, data.damage);
 
-    if (isDestroyed) {
-      this.broadcaster.broadcastBotUpdate(data.botId);
+    // Always broadcast bot update after damage to ensure health synchronization
+    this.broadcaster.broadcastBotUpdate(data.botId);
 
+    if (isDestroyed) {
       // Broadcast score update for attacker
       const attacker = this.gameEngine.getPlayer(data.attackerId);
       if (attacker) {

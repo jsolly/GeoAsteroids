@@ -67,6 +67,29 @@ export class BotSyncManager {
   }
 
   /**
+   * Sync bot health from periodic game state updates
+   * This ensures all clients have consistent bot health values
+   */
+  syncBotHealthFromGameState(botId: string, health: number, maxHealth: number): void {
+    const bot = this.botManager.getBots().get(botId);
+    if (bot) {
+      // Only update if the health values are different to avoid unnecessary updates
+      if (bot.ship.health !== health || bot.ship.maxHealth !== maxHealth) {
+        logger.debug('MULTIPLAYER', 'Syncing bot health from game state', {
+          botId,
+          oldHealth: bot.ship.health,
+          newHealth: health,
+          oldMaxHealth: bot.ship.maxHealth,
+          newMaxHealth: maxHealth,
+        });
+
+        bot.ship.health = health;
+        bot.ship.maxHealth = maxHealth;
+      }
+    }
+  }
+
+  /**
    * Update local player position for all bots
    */
   updateLocalPlayerForBots(localPlayerPosition: Position, isAlive: boolean): void {

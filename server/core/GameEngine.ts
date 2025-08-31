@@ -183,6 +183,17 @@ export class GameEngine {
         health: player.health ?? 100,
         maxHealth: player.maxHealth ?? 100,
       })),
+      bots: this.botManager.getAllBots().map(bot => ({
+        id: bot.id,
+        name: bot.name,
+        position: bot.position,
+        velocity: bot.velocity,
+        angle: bot.angle,
+        exploding: bot.exploding,
+        lives: bot.lives,
+        health: bot.health,
+        maxHealth: bot.maxHealth,
+      })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
     };
