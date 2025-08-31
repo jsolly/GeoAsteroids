@@ -20,13 +20,6 @@ export function isShipOutOfBounds(shipPosition: Position): boolean {
   return distance + shipRadius > boundary.radius;
 }
 
-// Kept for API compatibility, circular boundary has no sides
-export function getBoundaryCollisionSide(
-  _shipPosition: Position
-): 'top' | 'right' | 'bottom' | 'left' | null {
-  return null;
-}
-
 // Boundary collision detection functions
 export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolean {
   // Handle array of players

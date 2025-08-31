@@ -184,22 +184,6 @@ export interface NetworkPlayerShoot {
   readonly laserDirection: Velocity;
 }
 
-// ============================================================================
-// GAME STATE TYPES
-// ============================================================================
-export interface GameStateData {
-  getCurrentScore(): number;
-  updateCurrentScore(points: number): void;
-  updateTextProperties(text: string, alpha: number): void;
-  updateTextAlpha(alpha: number): void;
-  toggleIsGameRunning(): void;
-  updateText(text: string): void;
-  resetCurrentScore(): void;
-  getTextAlpha(): number;
-  getText(): string;
-  getIsGameRunning(): boolean;
-}
-
 export interface GameConfiguration {
   readonly lives: number;
   readonly fps: number;
@@ -265,7 +249,6 @@ export interface GameConstants {
   readonly GAME: {
     readonly START_LIVES: number;
     readonly STARTING_SCORE: number;
-    readonly MULTIPLAYER_ENABLED: boolean;
     readonly DEFAULT_BOT_COUNT: number;
     readonly FPS: number;
     readonly FRICTION: number;

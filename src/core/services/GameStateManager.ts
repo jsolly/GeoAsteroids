@@ -50,8 +50,4 @@ export class GameStateManager {
   updateTextAlpha(alpha: number): void {
     this.textAlpha = alpha;
   }
-
-  updateText(text: string): void {
-    this.text = text;
-  }
 }

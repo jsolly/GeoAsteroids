@@ -12,7 +12,6 @@ export const GAME = {
   STARTING_SCORE: 0,
 
   // Multiplayer
-  MULTIPLAYER_ENABLED: true,
   DEFAULT_BOT_COUNT: 9,
 
   // Physics

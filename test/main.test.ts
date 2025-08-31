@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
-import { GameState } from '../src/core/gameState';
+import { GameStateManager } from '../src/core/services/GameStateManager';
 
-const gameState = GameState.getInstance();
+const gameState = GameStateManager.getInstance();
 
 // Test that getCurrentScore returns initial score
 test('getCurrentScore - initial', () => {
