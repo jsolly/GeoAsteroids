@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GAME } from '../src/constants';
-import { Player } from '../src/entities/player/Player';
-import { playerFactory } from '../src/entities/player/PlayerFactory';
-import { Ship } from '../src/entities/ship/Ship';
+import { GAME } from '../../src/constants';
+import { Player } from '../../src/entities/player/Player';
+import { playerFactory } from '../../src/entities/player/PlayerFactory';
+import { Ship } from '../../src/entities/ship/Ship';
 import {
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
   shouldStartHealthRegeneration,
-} from '../src/entities/ship/shipUtils';
+} from '../../src/entities/ship/shipUtils';
 
 describe('Health Regeneration', () => {
   let ship: Ship;

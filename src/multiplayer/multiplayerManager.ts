@@ -164,6 +164,10 @@ export class MultiplayerManager {
     this.playerSyncManager.laserDamagePlayer(playerId, damage);
   }
 
+  collisionDamagePlayer(targetPlayerId: string, attackerId: string, damage: number): void {
+    this.playerSyncManager.collisionDamagePlayer(targetPlayerId, attackerId, damage);
+  }
+
   laserDamageBot(botId: string, damage: number): void {
     this.playerSyncManager.laserDamageBot(botId, damage);
   }

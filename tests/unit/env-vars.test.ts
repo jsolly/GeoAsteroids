@@ -22,7 +22,7 @@ describe('Server Environment Variables', () => {
     it('should default to 3001 when PORT is not set', async () => {
       delete process.env.PORT;
       // Import server.ts to check PORT usage
-      const serverModule = await import('../server.ts');
+      const serverModule = await import('../../server.ts');
       expect(serverModule).toBeDefined();
 
       // Since we can't easily test the actual server startup without mocking,
@@ -36,7 +36,7 @@ describe('Server Environment Variables', () => {
     it('should use custom PORT when set', async () => {
       process.env.PORT = '8080';
       // Import server.ts to check PORT usage
-      const serverModule = await import('../server.ts');
+      const serverModule = await import('../../server.ts');
       expect(serverModule).toBeDefined();
 
       // Verify the pattern supports custom PORT
@@ -51,7 +51,7 @@ describe('Server Environment Variables', () => {
     it('should default to production when NODE_ENV is not set', async () => {
       delete process.env.NODE_ENV;
 
-      const serverModule = await import('../server.ts');
+      const serverModule = await import('../../server.ts');
       expect(serverModule).toBeDefined();
 
       // Verify the pattern supports NODE_ENV
@@ -64,7 +64,7 @@ describe('Server Environment Variables', () => {
     it('should use custom NODE_ENV when set', async () => {
       process.env.NODE_ENV = 'development';
 
-      const serverModule = await import('../server.ts');
+      const serverModule = await import('../../server.ts');
       expect(serverModule).toBeDefined();
 
       // Verify the pattern supports custom NODE_ENV
@@ -100,7 +100,7 @@ describe('Client Environment Variables (VITE_*)', () => {
     it('should verify WebSocket log forwarding infrastructure is available', async () => {
       // Test that the log forwarding infrastructure is properly set up
       const { startClientLogForwarder, stopClientLogForwarder } = await import(
-        '../src/utils/logForwarder'
+        '../../src/utils/logForwarder.ts'
       );
 
       // Verify the functions exist and are callable
@@ -147,7 +147,7 @@ describe('Client Environment Variables (VITE_*)', () => {
 
   describe('Build-time environment variables', () => {
     it('should have VITE_BUILD_TIME injected at build time', async () => {
-      const { getBuildInfo } = await import('../src/utils/buildInfo');
+      const { getBuildInfo } = await import('../../src/utils/buildInfo.ts');
 
       const buildInfo = getBuildInfo();
       expect(buildInfo.buildTime).toBeDefined();
@@ -155,7 +155,7 @@ describe('Client Environment Variables (VITE_*)', () => {
     });
 
     it('should have VITE_COMMIT_HASH injected at build time', async () => {
-      const { getBuildInfo } = await import('../src/utils/buildInfo');
+      const { getBuildInfo } = await import('../../src/utils/buildInfo.ts');
 
       const buildInfo = getBuildInfo();
       expect(buildInfo.commitHash).toBeDefined();
@@ -163,7 +163,7 @@ describe('Client Environment Variables (VITE_*)', () => {
     });
 
     it('should have MODE environment variable', async () => {
-      const { getBuildInfo } = await import('../src/utils/buildInfo');
+      const { getBuildInfo } = await import('../../src/utils/buildInfo.ts');
 
       const buildInfo = getBuildInfo();
       expect(buildInfo.environment).toBeDefined();
@@ -209,7 +209,7 @@ describe('Client Environment Variables (VITE_*)', () => {
     });
 
     it('should verify debug mode detection works', async () => {
-      const { isDebugMode } = await import('../src/utils/debugUtils');
+      const { isDebugMode } = await import('../../src/utils/debugUtils.ts');
 
       // Test that the function exists and returns a boolean
       expect(typeof isDebugMode).toBe('function');
@@ -244,7 +244,7 @@ describe('Environment Variable Integration', () => {
   });
 
   it('should verify build configuration includes environment variables', async () => {
-    const { getBuildInfo } = await import('../src/utils/buildInfo');
+    const { getBuildInfo } = await import('../../src/utils/buildInfo.ts');
 
     const buildInfo = getBuildInfo();
 
@@ -256,7 +256,7 @@ describe('Environment Variable Integration', () => {
   });
 
   it('should verify debug utilities work correctly', async () => {
-    const { isDebugMode } = await import('../src/utils/debugUtils');
+    const { isDebugMode } = await import('../../src/utils/debugUtils.ts');
 
     // Test that debug utilities are available and functional
     expect(typeof isDebugMode).toBe('function');

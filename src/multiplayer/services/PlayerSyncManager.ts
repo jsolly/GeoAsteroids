@@ -149,6 +149,23 @@ export class PlayerSyncManager {
   }
 
   /**
+   * Send collision damage event for a player, including the attacker id.
+   * targetPlayerId: who takes damage; attackerId: who caused it.
+   */
+  collisionDamagePlayer(targetPlayerId: string, attackerId: string, damage: number): void {
+    const damageMessage: ClientMessage = {
+      type: 'collisionDamage',
+      data: {
+        targetPlayerId,
+        attackerId,
+        damage: damage,
+      },
+      timestamp: Date.now(),
+    };
+    this.connectionManager.sendMessage(damageMessage);
+  }
+
+  /**
    * Send bot damage event for a bot
    */
   laserDamageBot(botId: string, damage: number): void {
@@ -563,6 +580,35 @@ export class PlayerSyncManager {
         logger.warn('MULTIPLAYER', 'Received damage for unknown player', {
           targetPlayerId: damageData.targetPlayerId,
           damage: damageData.damage,
+        });
+      }
+
+      // Also update local player immediately if they are the target
+      if (
+        damageData.targetPlayerId === this.state.localPlayerId &&
+        damageData.remainingHealth !== undefined
+      ) {
+        import('../../core/services/PlayerManager').then(({ PlayerManager }) => {
+          const playerManager = PlayerManager.getInstance();
+          try {
+            const localPlayer = playerManager.getLocalPlayer();
+            const prev = localPlayer.ship.health;
+            localPlayer.ship.health = damageData.remainingHealth as number;
+            if (damageData.isDestroyed) {
+              localPlayer.ship.health = 0;
+              localPlayer.ship.exploding = true;
+              localPlayer.ship.explodeTime = Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
+            }
+            logger.debug('MULTIPLAYER', 'Applied immediate local health from damage event', {
+              oldHealth: prev,
+              newHealth: localPlayer.ship.health,
+              reason: 'playerDamaged server event',
+            });
+          } catch (error) {
+            logger.warn('MULTIPLAYER', 'Could not apply local health from damage event', {
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
         });
       }
     });

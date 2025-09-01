@@ -49,7 +49,8 @@ export const SHIP = {
 
   // Health
   MAX_HEALTH: 100,
-  COLLISION_DAMAGE: 20,
+  COLLISION_DAMAGE: 20, // Instant damage for roid collisions
+  PLAYER_COLLISION_DAMAGE_PER_SECOND: 20, // Damage per second for player collisions
   HEALTH_REGEN_RATE: 1, // per second
   HEALTH_REGEN_DELAY: 5, // seconds
 

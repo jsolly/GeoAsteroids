@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import { WebSocketCore } from '../server/communication/WebSocketCore';
-import { GameEngine } from '../server/core/GameEngine';
+import { WebSocketCore } from '../../server/communication/WebSocketCore';
+import { GameEngine } from '../../server/core/GameEngine';
 
 describe('Server Message Parity', () => {
   let wsCore: WebSocketCore;

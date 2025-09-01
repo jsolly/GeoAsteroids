@@ -51,6 +51,12 @@ class Ship {
   color: string = '#ffffff'; // Ship color for rendering
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
 
+  // Player collision damage-over-time tracking
+  isCollidingWithPlayer: boolean = false;
+  playerCollisionStartTime: number = 0;
+  lastPlayerCollisionDamageTime: number = 0;
+  collidingPlayerId?: string;
+
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
   static fxExplode = new Sound('sounds/explode.m4a', 5);
 
@@ -296,6 +302,65 @@ class Ship {
     return canTakeCollisionDamage(this.lastCollisionTime, cooldownMs);
   }
 
+  startPlayerCollision(collidingPlayerId?: string): void {
+    if (!this.isCollidingWithPlayer) {
+      this.isCollidingWithPlayer = true;
+      this.playerCollisionStartTime = Date.now();
+      this.lastPlayerCollisionDamageTime = Date.now();
+    }
+    if (collidingPlayerId) {
+      this.collidingPlayerId = collidingPlayerId;
+    }
+  }
+
+  stopPlayerCollision(): void {
+    this.isCollidingWithPlayer = false;
+    this.playerCollisionStartTime = 0;
+    this.lastPlayerCollisionDamageTime = 0;
+    this.collidingPlayerId = undefined;
+  }
+
+  updatePlayerCollisionDamage(): void {
+    if (!this.isCollidingWithPlayer || this.exploding) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastDamage = now - this.lastPlayerCollisionDamageTime;
+    const damageInterval = 1000 / SHIP.PLAYER_COLLISION_DAMAGE_PER_SECOND; // e.g., 20 DPS => 50ms per damage
+
+    if (timeSinceLastDamage >= damageInterval) {
+      // Apply local damage only in single-player or when not connected; otherwise server-authoritative
+      const multiplayerManager = MultiplayerManager.getInstance();
+      if (multiplayerManager.isConnected && this.collidingPlayerId) {
+        const myPlayerId = multiplayerManager.getLocalPlayerId();
+        if (myPlayerId) {
+          logger.debug('COLLISION', 'Sending collision damage', {
+            from: myPlayerId,
+            to: this.collidingPlayerId,
+            toIsBot: this.collidingPlayerId.startsWith('server-bot-'),
+            damage: 1,
+          });
+          // Send damage to both participants with proper attacker attribution
+          MultiplayerManager.getInstance().collisionDamagePlayer(
+            myPlayerId,
+            this.collidingPlayerId,
+            1
+          );
+          MultiplayerManager.getInstance().collisionDamagePlayer(
+            this.collidingPlayerId,
+            myPlayerId,
+            1
+          );
+        }
+      } else {
+        logger.debug('COLLISION', 'Applying local collision damage', { damage: 1 });
+        this.takeDamage(1, 'player');
+      }
+      this.lastPlayerCollisionDamageTime = now;
+    }
+  }
+
   heal(amount: number): void {
     if (this.exploding) {
       return;
@@ -339,6 +404,9 @@ class Ship {
         }
       }
     }
+
+    // Update player collision damage-over-time
+    this.updatePlayerCollisionDamage();
   }
 
   updateExplosion(): void {

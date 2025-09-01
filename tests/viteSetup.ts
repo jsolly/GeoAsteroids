@@ -2,7 +2,7 @@ import jsdom from 'jsdom';
 import { vi } from 'vitest';
 
 const { JSDOM } = jsdom;
-import '../../src/utils/logLevel';
+import '../src/utils/logLevel';
 
 const dom = new JSDOM(
   `<!DOCTYPE html>

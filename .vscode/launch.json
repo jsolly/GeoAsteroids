@@ -1,9 +1,8 @@
 {
   "version": "0.2.0",
-  "configurations": [
-    
+    "configurations": [
     {
-      "type": "pwa-node",
+      "type": "node",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "request": "launch",

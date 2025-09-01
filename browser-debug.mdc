@@ -1,0 +1,193 @@
+# Browser Testing and Debugging Framework
+
+## Overview
+GeoAsteroids includes a comprehensive browser testing framework using Selenium WebDriver for automated testing of game mechanics, multiplayer functionality, and debugging client-server communication.
+
+## Quick Start
+
+### Prerequisites
+- Node.js 22+ installed
+- Chrome browser installed
+- Development server running
+
+### 1. Start the Development Server
+```bash
+npm run dev
+```
+
+### 2. Run Tests
+```bash
+# Run all tests
+tsx test/scripts/test-runner.ts
+
+# Run specific test
+tsx test/scripts/test-runner.ts boundary
+tsx test/scripts/test-runner.ts local-bot-kill
+tsx test/scripts/test-runner.ts multiplayer-sync
+
+# Available test names:
+# - boundary: Boundary collision testing
+# - local-bot-kill: Local player killing bots
+# - local-roid-shoot: Local player shooting asteroids
+# - bot-laser-local: Bot lasers killing local player
+# - bot-laser-remote: Bot lasers killing remote player
+# - multiplayer-connection: WebSocket connection testing
+# - multiplayer-sync: Player synchronization testing
+# - roid-bot-collision: Asteroid-bot collision testing
+# - roid-remote-collision: Asteroid-remote player collision
+# - roid-local-kill: Asteroid killing local player
+```
+
+## Test Categories
+
+### Boundary Tests (`test/scripts/scenarios/boundary/`)
+- **BoundaryHitsLocalPlayerTest**: Tests player boundary collisions and wrapping behavior
+- **Features**: Boundary detection, collision effects, position wrapping
+
+### Local Player Tests (`test/scripts/scenarios/local-player/`)
+- **LocalPlayerKillsBotTest**: Tests local player combat against bots
+- **LocalPlayerShootsRoidTest**: Tests asteroid destruction mechanics
+- **Features**: Combat mechanics, collision detection, scoring
+
+### Remote Player Tests (`test/scripts/scenarios/remote-player/`)
+- **BotLasersKillLocalPlayerTest**: Tests bot laser damage to local player
+- **BotLasersKillRemotePlayerTest**: Tests bot laser damage to remote players
+- **MultiplayerConnectionTest**: Tests WebSocket connections and communication
+- **MultiplayerSyncTest**: Tests player state synchronization
+- **Features**: Multiplayer networking, damage propagation, sync accuracy
+
+### Asteroid Tests (`test/scripts/scenarios/roid/`)
+- **RoidCollisionKillsBotPlayerTest**: Tests asteroid-bot collisions
+- **RoidCollisionKillsRemotePlayerTest**: Tests asteroid-remote player collisions
+- **RoidKillsLocalPlayerTest**: Tests asteroid-local player collisions
+- **Features**: Collision physics, damage systems, destruction mechanics
+
+## Framework Architecture
+
+### Core Utilities (`test/scripts/utils/`)
+- **WebDriverManager**: Handles Chrome WebDriver setup, browser automation, and JavaScript execution
+- **GameActions**: Provides game-specific input simulation (movement, shooting, controls)
+- **BaseTestRunner**: Abstract base class with WebDriver integration and common test patterns
+
+### Test Execution
+- **Test Runner**: `test/scripts/test-runner.ts` - Executes all tests with proper cleanup
+- **Individual Tests**: Each test file can be run standalone with `tsx`
+- **Parallel Execution**: Tests run sequentially to avoid browser conflicts
+
+## Advanced Usage
+
+### Custom Test Development
+```typescript
+import { BaseTestRunner } from './scenarios/BaseTestRunner';
+
+export class CustomTest extends BaseTestRunner {
+  protected getTestName(): string {
+    return 'Custom Test Name';
+  }
+
+  protected async executeTest(): Promise<void> {
+    // Your test logic here - WebDriver and GameActions are already available
+    await this.gameActions.moveInCircle(3);
+
+    // Custom assertions and checks
+    const result = await this.webDriverManager.executeScript(`
+      // Your JavaScript code here
+      if (window.gameController) {
+        return window.gameController.getGameState();
+      }
+      return null;
+    `);
+
+    // Add your test assertions here
+    if (!result) {
+      throw new Error('Game state not available');
+    }
+  }
+}
+```
+
+### Direct Test Execution
+```typescript
+// Run a specific test file directly
+tsx test/scripts/scenarios/boundary/BoundaryHitsLocalPlayerTest.ts
+
+// Or create a standalone test
+import { WebDriverManager } from '../utils/WebDriverManager';
+import { GameActions } from '../utils/GameActions';
+
+async function customTest() {
+  const driver = new WebDriverManager();
+  const actions = new GameActions(driver);
+
+  await driver.initialize();
+  await driver.openDevServer();
+
+  // Your test logic
+  await actions.moveUp(200);
+  await actions.shoot(50);
+
+  await driver.close();
+}
+```
+
+## Log Analysis
+
+### After Running Tests
+1. **Client Logs**: `/logs/client.log` - Game events, player actions, client-side errors
+2. **Server Logs**: `/logs/server.log` - Server state, multiplayer events, network communication
+3. **Browser Console**: JavaScript errors, WebSocket messages, game state changes
+
+### Common Debug Scenarios
+- **Multiplayer Issues**: Check WebSocket connection status and message handling
+- **Collision Problems**: Verify collision detection systems and physics calculations
+- **Respawn Failures**: Monitor death state transitions and timer management
+- **Input Lag**: Test input responsiveness and game loop performance
+
+## Configuration
+
+### Test Timeouts
+- **Boundary Tests**: 20 seconds (BoundaryHitsLocalPlayerTest)
+- **Combat Tests**: 25 seconds (LocalPlayerKillsBotTest, LocalPlayerShootsRoidTest)
+- **Damage Tests**: 30 seconds (BotLasersKillLocalPlayerTest, RoidCollisionKillsBotPlayerTest)
+- **Multiplayer Tests**: 30 seconds (MultiplayerConnectionTest, MultiplayerSyncTest)
+
+### Browser Options
+- **Headless Mode**: Enabled by default for automated testing
+- **Chrome Options**: Optimized with disabled GPU acceleration and sandbox
+- **Window Size**: 1200x800 pixels for consistent testing
+- **ChromeDriver**: Auto-managed via npm package
+
+## Troubleshooting
+
+### Common Issues
+1. **Dev Server Not Running**: Start with `npm run dev` (runs on http://localhost:5173)
+2. **ChromeDriver Issues**: Ensure Chrome browser is installed and compatible
+3. **WebDriver Errors**: Check that no other Chrome instances are running
+4. **Test Timeouts**: Increase timeout values in constructor for slower systems
+5. **Game Not Loaded**: Tests wait for #game-canvas element to appear
+
+### Performance Tips
+- Run tests sequentially to avoid browser conflicts
+- Ensure adequate system RAM for concurrent dev server + browser
+- Close other Chrome instances before running tests
+- Monitor system resources during test execution
+- Tests automatically clean up browser instances
+
+## Integration with Development
+
+### Workflow Integration
+1. **Feature Testing**: Run specific tests during development (`tsx test/scripts/test-runner.ts boundary`)
+2. **Regression Testing**: Run full test suite before commits (`tsx test/scripts/test-runner.ts`)
+3. **Debug Integration**: Use test scripts to reproduce issues and verify fixes
+4. **Performance Monitoring**: Track test execution times for optimization
+
+### Continuous Integration
+- Tests run in headless Chrome for CI/CD compatibility
+- Detailed logging to `/logs/client.log` and `/logs/server.log`
+- Structured test results with success/failure status and timing
+- Automated cleanup prevents resource leaks
+- Framework designed for automated test execution
+description:
+globs:
+alwaysApply: true
+---

@@ -50,6 +50,7 @@ export interface ClientMessage {
     | 'leave'
     | 'update'
     | 'shoot'
+    | 'collisionDamage'
     | 'botShoot'
     | 'initBots'
     | 'botDestroyed'

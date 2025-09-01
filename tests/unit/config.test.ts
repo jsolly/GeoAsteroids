@@ -1,7 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 
-import { ROID } from '../src/constants';
-import { LOCAL_STORAGE_KEYS, soundIsOn } from '../src/constants/user-preferences';
+import { ROID } from '../../src/constants';
+import { LOCAL_STORAGE_KEYS, soundIsOn } from '../../src/constants/user-preferences';
 
 beforeEach(() => {
   localStorage.clear();

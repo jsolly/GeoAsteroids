@@ -1,25 +1,39 @@
----
-description: Debugging and testing rules for browser-based game
-globs:
-alwaysApply: true
----
 
 ## Testing and Debugging
-**Use selenium-probe for log inspection**: When debugging client-server communication or investigating game state issues, run the selenium probe script to automatically start the game and generate logs for analysis.
+**Use test scripts for log inspection**: When debugging client-server communication or investigating game state issues, use the comprehensive test framework in `test/scripts/` to automatically start the game and generate logs for analysis.
 
 **Workflow**:
 1. Start the dev server (`npm run dev`)
-2. Run selenium probe: `npx tsx scripts/selenium-probe.ts`
-3. Wait for probe completion (~4s)
+2. Run quick test: `cd test/scripts && ./quick-test.sh [category]`
+3. Wait for test completion (~4s)
 4. Inspect logs in `/logs/client.log` and `/logs/server.log`
 
-**What the probe does**:
-- Opens dev server (tries ports 5173/5174)
-- Clicks multiplayer start button
-- Handles name input modal if present
-- Performs basic game inputs (movement, shooting)
-- Emits test log message
-- Allows log forwarding to complete
+**What the test framework provides**:
+- **WebDriverManager**: Automated browser control with Chrome/Selenium
+- **GameActions**: Comprehensive game input simulation (movement, shooting, thrust)
+- **Test Categories**: Organized testing by functionality:
+  - `collisions`: Asteroid collision detection and physics
+  - `respawn`: Player respawn mechanics and timing
+  - `gameplay`: Core game mechanics and controls
+  - `multiplayer`: Connection, synchronization, and network issues
+- **Automated Setup**: Opens dev server, handles multiplayer startup, name input
+- **Log Generation**: Consistent test scenarios with comprehensive logging
+
+**Quick Commands**:
+```bash
+# Run all tests
+cd test/scripts && ./quick-test.sh
+
+# Run specific category
+cd test/scripts && ./quick-test.sh multiplayer
+cd test/scripts && ./quick-test.sh respawn
+cd test/scripts && ./quick-test.sh collisions
+cd test/scripts && ./quick-test.sh gameplay
+
+# Run individual test suites
+npx tsx run-all-tests.ts
+npx tsx run-all-tests.ts multiplayer
+```
 
 **Use cases**:
 - Debug multiplayer connection issues
@@ -27,5 +41,9 @@ alwaysApply: true
 - Verify log forwarding between client/server
 - Test game startup flow automation
 - Generate consistent test scenarios for log analysis
+- Validate collision detection and physics
+- Test respawn mechanics and timing
+
+**Note**: The test framework runs headless Chrome and automatically cleans up. Ensure chromedriver is available or system Chrome is accessible. All test utilities are now centralized in `test/scripts/` for better organization and maintainability.
 
 **Note**: The probe runs headless Chrome and automatically cleans up. Ensure chromedriver is available or system Chrome is accessible.

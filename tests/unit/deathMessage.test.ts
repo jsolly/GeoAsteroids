@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player } from '../src/entities/player/Player';
+import { Player } from '../../src/entities/player/Player';
 
 describe('Death Message System', () => {
   beforeEach(() => {

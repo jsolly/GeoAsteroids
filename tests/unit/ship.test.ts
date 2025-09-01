@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { LASER } from '../src/constants';
-import { Ship } from '../src/entities/ship/Ship';
+import { LASER } from '../../src/constants';
+import { Ship } from '../../src/entities/ship/Ship';
 
 let mockShip: Ship;
 

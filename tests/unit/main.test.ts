@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { GameStateManager } from '../src/core/services/GameStateManager';
+import { GameStateManager } from '../../src/core/services/GameStateManager';
 
 const gameState = GameStateManager.getInstance();
 

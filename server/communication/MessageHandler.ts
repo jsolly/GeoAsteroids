@@ -52,6 +52,10 @@ export class MessageHandler {
           this.handleLaserDamage(ws, restData);
           break;
 
+        case 'collisionDamage':
+          this.handleCollisionDamage(ws, restData);
+          break;
+
         case 'botDamage':
           this.handleBotDamage(ws, restData);
           break;
@@ -199,6 +203,72 @@ export class MessageHandler {
         
         // Broadcast player killed event to notify the killer
         this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetPlayer.name, data.attackerId);
+      }
+    }
+  }
+
+  private handleCollisionDamage(ws: WebSocket, data: any): void {
+    console.log('SERVER: Received collision damage', data);
+
+    if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
+      this.broadcaster.sendError(ws, 'Missing required fields for collisionDamage');
+      return;
+    }
+
+    let isDestroyed = false;
+    let remainingHealth = 0;
+    let targetName = '';
+
+    // Check if target is a bot or player
+    if (data.targetPlayerId.startsWith('server-bot-')) {
+      // Target is a bot
+      isDestroyed = this.gameEngine.handleBotDamage(data.targetPlayerId, data.attackerId, data.damage);
+      const targetBot = this.gameEngine.getBot(data.targetPlayerId);
+      if (targetBot) {
+        remainingHealth = targetBot.health;
+        targetName = targetBot.name;
+        // Always broadcast bot update after damage
+        this.broadcaster.broadcastBotUpdate(data.targetPlayerId);
+      }
+    } else {
+      // Target is a player
+      isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
+      const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
+      if (targetPlayer) {
+        remainingHealth = targetPlayer.health ?? 0;
+        targetName = targetPlayer.name;
+        this.broadcaster.broadcastPlayerDamaged(
+          data.targetPlayerId,
+          data.attackerId,
+          data.damage,
+          remainingHealth,
+          isDestroyed
+        );
+      }
+    }
+
+    console.log('SERVER: Applied collision damage', {
+      targetPlayerId: data.targetPlayerId,
+      targetType: data.targetPlayerId.startsWith('server-bot-') ? 'bot' : 'player',
+      attackerId: data.attackerId,
+      damage: data.damage,
+      remainingHealth,
+      isDestroyed
+    });
+
+    // Handle destruction for both players and bots
+    if (isDestroyed) {
+      const attacker = this.gameEngine.getPlayer(data.attackerId);
+      if (attacker) {
+        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
+      }
+
+      if (data.targetPlayerId.startsWith('server-bot-')) {
+        // Bot was destroyed
+        console.log('SERVER: Bot destroyed by collision', { botId: data.targetPlayerId, attackerId: data.attackerId });
+      } else {
+        // Player was destroyed
+        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
       }
     }
   }

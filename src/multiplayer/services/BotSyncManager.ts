@@ -166,6 +166,13 @@ export class BotSyncManager {
         }>;
       };
 
+      logger.debug('MULTIPLAYER', 'Received botUpdate', {
+        botId: payload.botId,
+        health: payload.health,
+        maxHealth: payload.maxHealth,
+        playerId: payload.playerId,
+      });
+
       // Always update server-owned bots, and update remote player-owned bots
       if (
         payload.botId &&
@@ -337,6 +344,13 @@ export class BotSyncManager {
       if (state.health !== undefined && state.health !== bot.ship.health) {
         const currentHealth = bot.ship.health;
         bot.ship.health = state.health;
+
+        logger.debug('MULTIPLAYER', 'Bot health updated from server', {
+          botId,
+          oldHealth: currentHealth,
+          newHealth: state.health,
+          healthChanged: state.health < currentHealth,
+        });
 
         // If server health is lower than current (damage), reset regeneration timers
         if (state.health < currentHealth) {

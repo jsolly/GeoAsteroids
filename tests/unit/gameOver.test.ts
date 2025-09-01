@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GameController } from '../src/core/gameController';
-import { Player } from '../src/entities/player/Player';
+import { GameController } from '../../src/core/gameController';
+import { Player } from '../../src/entities/player/Player';
 
 // Mock the multiplayer manager
-vi.mock('../src/multiplayer/multiplayerManager', () => ({
+vi.mock('../../src/multiplayer/multiplayerManager', () => ({
   MultiplayerManager: {
     getInstance: vi.fn(() => ({
       connect: vi.fn().mockResolvedValue(undefined),
@@ -17,7 +17,7 @@ vi.mock('../src/multiplayer/multiplayerManager', () => ({
 }));
 
 // Mock the entity factory
-vi.mock('../src/entities/EntityFactory', () => ({
+vi.mock('../../src/entities/EntityFactory', () => ({
   entityFactory: {
     createEmptyRoidBelt: vi.fn(() => ({
       roids: [],

@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import type { Position, AsteroidData } from '../../shared-types';
 import { PlayerManager, ConnectedPlayer } from './PlayerManager';
-import { AsteroidManager } from './AsteroidManager';
+import { AsteroidManager } from './AsteroidManager.ts';
 import { BotManager, ServerBot } from './BotManager';
 import { RNGService } from './RNGService';
 import {
@@ -147,7 +147,11 @@ export class GameEngine {
 
     // Award points to attacker for destroying a player
     if ((damagedPlayer.health ?? 0) <= 0 && damagedPlayer.exploding) {
-      this.playerManager.awardPoints(attackerId, 200);
+      // Only award points if attacker is a valid, different player
+      const attackerIsValidPlayer = !!attackerId && attackerId !== targetPlayerId && !!this.playerManager.getPlayer(attackerId);
+      if (attackerIsValidPlayer) {
+        this.playerManager.awardPoints(attackerId, 200);
+      }
       
       // Set respawn timer for the destroyed player
       const respawnDelay = 180; // 3 seconds at 60 FPS (explosion duration + message display)
@@ -257,25 +261,20 @@ export class GameEngine {
         this.botHealthRegenerationState.set(bot.id, regenState);
       }
 
-      // Update damage cooldown timer
-      if (regenState.lastDamageTime > 0) {
-        regenState.lastDamageTime--;
+      // Update damage cooldown timer (increment elapsed time)
+      if (regenState.lastDamageTime >= 0) {
+        regenState.lastDamageTime++;
       }
 
       // Check if health regeneration should start
       if (shouldStartHealthRegeneration(regenState.lastDamageTime, bot.health, bot.maxHealth)) {
-        if (regenState.healthRegenTimer <= 0) {
-          // Regenerate health
-          const regenAmount = calculateHealthRegenPerFrame();
-          const newHealth = calculateHealthAfterHeal(bot.health, regenAmount, bot.maxHealth);
+        // Regenerate health
+        const regenAmount = calculateHealthRegenPerFrame();
+        const newHealth = calculateHealthAfterHeal(bot.health, regenAmount, bot.maxHealth);
 
-          if (newHealth > bot.health) {
-            // Update bot health in the manager
-            this.botManager.updateBot(bot.id, { health: newHealth });
-          }
-        } else {
-          // Decrement regeneration delay timer
-          regenState.healthRegenTimer--;
+        if (newHealth > bot.health) {
+          // Update bot health in the manager
+          this.botManager.updateBot(bot.id, { health: newHealth });
         }
       }
     }

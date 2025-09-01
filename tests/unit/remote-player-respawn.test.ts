@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player } from '../src/entities/player/Player';
+import { Player } from '../../src/entities/player/Player';
 
 // Mock dependencies
-vi.mock('../src/entities/EntityFactory', () => ({
+vi.mock('../../src/entities/EntityFactory', () => ({
   entityFactory: {
     createShip: vi.fn(),
   },

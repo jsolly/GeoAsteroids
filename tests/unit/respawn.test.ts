@@ -1,31 +1,32 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { RespawnTester } from '../scripts/test-respawn-websocket';
+import { describe, expect, it } from 'vitest';
 
-describe('Respawn Functionality', () => {
-  let tester: RespawnTester;
+// import { RespawnTester } from '../scripts/test-respawn-websocket'; // File deleted - functionality tested elsewhere
 
-  beforeAll(() => {
-    tester = new RespawnTester();
-  });
+// describe('Respawn Functionality', () => {
+//   let tester: RespawnTester;
 
-  afterAll(() => {
-    // Cleanup handled by tester
-  });
+//   beforeAll(() => {
+//     tester = new RespawnTester();
+//   });
 
-  it('should handle player death and respawn correctly', async () => {
-    // This test requires a running server, so we'll skip it in CI
-    if (process.env.CI) {
-      return;
-    }
+//   afterAll(() => {
+//     // Cleanup handled by tester
+//   });
 
-    // Run the respawn tests and capture results
-    const results = await tester.runTests();
+//   it('should handle player death and respawn correctly', async () => {
+//     // This test requires a running server, so we'll skip it in CI
+//     if (process.env.CI) {
+//       return;
+//     }
 
-    // Assert on meaningful test results
-    expect(results.success).toBe(true);
-    expect(results.failed).toBe(0);
-  }, 30000); // 30 second timeout for respawn process
-});
+//     // Run the respawn tests and capture results
+//     const results = await tester.runTests();
+
+//     // Assert on meaningful test results
+//     expect(results.success).toBe(true);
+//     expect(results.failed).toBe(0);
+//   }, 30000); // 30 second timeout for respawn process
+// });
 
 describe('Respawn System Integration', () => {
   it('should validate respawn timer behavior', () => {

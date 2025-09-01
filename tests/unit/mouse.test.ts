@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { Player } from '../src/entities/player/Player';
-import { Ship } from '../src/entities/ship/Ship';
+import { Player } from '../../src/entities/player/Player';
+import { Ship } from '../../src/entities/ship/Ship';
 import {
   handleMouseDown,
   handleMouseMove,
   handleMouseUp,
   preventContextMenu,
-} from '../src/input/mouse';
-import { canvasManager } from '../src/rendering/canvas';
+} from '../../src/input/mouse';
+import { canvasManager } from '../../src/rendering/canvas';
 
 let player: Player;
 let playSpy: ReturnType<typeof vi.spyOn>;

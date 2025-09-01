@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Laser } from '../src/entities/laser/Laser';
-import { Player } from '../src/entities/player/Player';
-import type { Roid, RoidBelt } from '../src/entities/roid/Roid';
-import { Ship } from '../src/entities/ship/Ship';
-import { CollisionManager } from '../src/physics/CollisionManager';
+import { Laser } from '../../src/entities/laser/Laser.ts';
+import { Player } from '../../src/entities/player/Player.ts';
+import type { Roid, RoidBelt } from '../../src/entities/roid/Roid.ts';
+import { Ship } from '../../src/entities/ship/Ship.ts';
+import { CollisionManager } from '../../src/physics/CollisionManager.ts';
 
 // Mock the constants
-vi.mock('../src/constants', () => ({
+vi.mock('../../src/constants', () => ({
   DEBUG: false,
   LASER_EXPLODE_DUR: 0.1,
   FPS: 60,
@@ -61,7 +61,7 @@ vi.mock('../../multiplayer/multiplayerManager', () => ({
 }));
 
 // Mock the sound effects
-vi.mock('../src/entities/roid/Roid.ts', () => ({
+vi.mock('../../src/entities/roid/Roid.ts', () => ({
   Roid: {
     fxHit: {
       play: vi.fn(),
@@ -70,8 +70,8 @@ vi.mock('../src/entities/roid/Roid.ts', () => ({
 }));
 
 // Mock the playSound function
-vi.mock('../src/audio/Sound.ts', async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import('../src/audio/Sound.ts');
+vi.mock('../../src/audio/Sound.ts', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import('../../src/audio/Sound.ts');
   return {
     ...actual,
     playSound: vi.fn(),

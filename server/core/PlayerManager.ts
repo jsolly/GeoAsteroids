@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
-import { calculateHealthAfterHeal, calculateHealthRegenPerFrame, shouldStartHealthRegeneration, calculateHealthRegenDelayFrames } from '../../src/entities/ship/shipUtils';
+import { calculateHealthAfterHeal, calculateHealthRegenPerFrame, shouldStartHealthRegeneration } from '../../shared/constants/health';
 
 export interface ConnectedPlayer {
   id: string;
@@ -98,13 +98,13 @@ export class PlayerManager {
     if (!regenState) {
       regenState = {
         lastDamageTime: 0, // Start at 0 (no time elapsed since damage)
-        healthRegenTimer: calculateHealthRegenDelayFrames()
+        healthRegenTimer: 0
       };
       this.playerHealthRegenerationState.set(playerId, regenState);
     } else {
       // Reset timers on new damage
       regenState.lastDamageTime = 0; // Reset to 0 (no time elapsed since damage)
-      regenState.healthRegenTimer = calculateHealthRegenDelayFrames();
+      regenState.healthRegenTimer = 0;
     }
   }
 
@@ -134,18 +134,13 @@ export class PlayerManager {
 
       // Check if health regeneration should start
       if (shouldStartHealthRegeneration(regenState.lastDamageTime, player.health || 100, player.maxHealth || 100)) {
-        if (regenState.healthRegenTimer <= 0) {
-          // Regenerate health
-          const regenAmount = calculateHealthRegenPerFrame();
-          const newHealth = calculateHealthAfterHeal(player.health || 100, regenAmount, player.maxHealth || 100);
+        // Regenerate health
+        const regenAmount = calculateHealthRegenPerFrame();
+        const newHealth = calculateHealthAfterHeal(player.health || 100, regenAmount, player.maxHealth || 100);
 
-          if (newHealth > (player.health || 100)) {
-            // Update player health
-            this.updatePlayer(player.id, { health: newHealth });
-          }
-        } else {
-          // Decrement regeneration delay timer
-          regenState.healthRegenTimer--;
+        if (newHealth > (player.health || 100)) {
+          // Update player health
+          this.updatePlayer(player.id, { health: newHealth });
         }
       }
     }

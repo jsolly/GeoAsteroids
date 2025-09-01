@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Ship } from '../src/entities/ship/Ship';
-import { getGameBoundary } from '../src/physics/boundary';
+import type { Ship } from '../../src/entities/ship/Ship';
+import { getGameBoundary } from '../../src/physics/boundary';
 import {
   detectBoundaryCollisions,
   isShipOutOfBounds,
-} from '../src/physics/collision/boundaryCollisions';
-import { getRandomPositionWithinBoundary } from '../src/utils/positionUtils';
+} from '../../src/physics/collision/boundaryCollisions';
+import { getRandomPositionWithinBoundary } from '../../src/utils/positionUtils';
 
 describe('Boundary System', () => {
   it('should create a circular boundary with correct values', () => {
@@ -73,7 +73,7 @@ describe('Boundary System', () => {
 
     it('should set random respawn positions for bots hitting boundary', async () => {
       // Import Player to create a test bot
-      const { Player } = await import('../src/entities/player/Player');
+      const { Player } = await import('../../src/entities/player/Player');
 
       // Create a mock bot
       const bot = new Player({ id: 'test-bot', name: 'TestBot', type: 'bot' });

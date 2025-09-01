@@ -3,6 +3,8 @@ import { SHIP } from '../../constants';
 import type { Player } from '../../entities/player/Player';
 import { Roid, type RoidBelt } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
+import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
+import { logger } from '../../utils/Logger';
 import { getDistance } from '../../utils/mathUtils';
 
 import { shouldApplyDamageToLocalPlayer, shouldSkipPlayerCollision } from './collisionUtils';
@@ -26,6 +28,9 @@ export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Play
     return; // Skip if local ship is exploding or invincible
   }
 
+  // Track current collisions and manage damage-over-time
+  const currentlyCollidingPlayers = new Set<string>();
+
   for (const otherPlayer of otherPlayers) {
     // Skip exploding other players
     if (otherPlayer.ship.exploding) {
@@ -42,26 +47,45 @@ export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Play
     const collisionThreshold = localShip.r + otherPlayer.ship.r;
 
     if (distance < collisionThreshold) {
-      // Local player collision with other player
+      // We are currently colliding with this player
+      currentlyCollidingPlayers.add(otherPlayer.id);
 
-      // Check if debug system wants to prevent damage
-      const shouldApplyDamage = shouldApplyDamageToLocalPlayer(localShip);
-
-      // Deal damage to local ship
-      if (shouldApplyDamage) {
-        localShip.takeDamage(SHIP.COLLISION_DAMAGE, 'player', otherPlayer.name);
+      // Start collision damage if not already active
+      if (!localShip.isCollidingWithPlayer || localShip.collidingPlayerId !== otherPlayer.id) {
+        logger.debug('COLLISION', 'Starting collision damage', {
+          localPlayer: localPlayer.id,
+          remotePlayer: otherPlayer.id,
+          remotePlayerType: otherPlayer.type,
+          remotePlayerIsBot: otherPlayer.id.startsWith('server-bot-'),
+        });
+        localShip.startPlayerCollision(otherPlayer.id);
+        // For remote players, we don't start collision on their ship locally
+        // since they handle their own collision detection on their client
       }
 
-      // Apply damage to other player via unified system (will explode and dispatch event if lethal)
-      otherPlayer.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'player', localPlayer.name);
+      // Play hit sound (only once when collision starts with this player)
+      if (!localShip.isCollidingWithPlayer || localShip.collidingPlayerId !== otherPlayer.id) {
+        playSound(Roid.fxHit);
+      }
+    }
+  }
 
-      // Play hit sound
-      playSound(Roid.fxHit);
-
-      // Other player destroyed - no event needed
-
-      // Only handle one collision per frame
-      break;
+  // Stop collision damage if we're no longer colliding with the tracked player
+  if (currentlyCollidingPlayers.size === 0 && localShip.isCollidingWithPlayer) {
+    logger.debug('COLLISION', 'Stopping collision damage - no longer colliding', {
+      localPlayer: localPlayer.id,
+      previouslyCollidingWith: localShip.collidingPlayerId,
+    });
+    localShip.stopPlayerCollision();
+  } else if (currentlyCollidingPlayers.size > 0 && localShip.collidingPlayerId) {
+    // Check if we're still colliding with the currently tracked player
+    if (!currentlyCollidingPlayers.has(localShip.collidingPlayerId)) {
+      logger.debug('COLLISION', 'Stopping collision damage - switched collision target', {
+        localPlayer: localPlayer.id,
+        previouslyCollidingWith: localShip.collidingPlayerId,
+        nowCollidingWith: Array.from(currentlyCollidingPlayers)[0],
+      });
+      localShip.stopPlayerCollision();
     }
   }
 }
@@ -84,8 +108,23 @@ export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
           const shouldApplyDamage = shouldApplyDamageToLocalPlayer(currShip);
 
           if (shouldApplyDamage) {
-            // Deal damage and destroy roid when damage should be applied
-            currShip.takeDamage(SHIP.COLLISION_DAMAGE, 'asteroid');
+            // Deal damage via server when connected; otherwise apply locally
+            const multiplayerManager = MultiplayerManager.getInstance();
+            if (multiplayerManager.isConnected) {
+              const myPlayerId = multiplayerManager.getLocalPlayerId();
+              if (myPlayerId) {
+                // Use collisionDamage with attacker=self to avoid point awards
+                multiplayerManager.collisionDamagePlayer(
+                  myPlayerId,
+                  myPlayerId,
+                  SHIP.COLLISION_DAMAGE
+                );
+              } else {
+                currShip.takeDamage(SHIP.COLLISION_DAMAGE, 'asteroid');
+              }
+            } else {
+              currShip.takeDamage(SHIP.COLLISION_DAMAGE, 'asteroid');
+            }
             playSound(Roid.fxHit);
             const result = currRoidBelt.destroyRoid(i);
             score += result.score;

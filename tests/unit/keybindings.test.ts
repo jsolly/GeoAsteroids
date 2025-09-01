@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { GAME, SHIP } from '../src/constants';
-import { Player } from '../src/entities/player/Player';
-import { Ship } from '../src/entities/ship/Ship';
-import { keyDown, keys, keyUp } from '../src/input/keybindings';
+import { GAME, SHIP } from '../../src/constants';
+import { Player } from '../../src/entities/player/Player';
+import { Ship } from '../../src/entities/ship/Ship';
+import { keyDown, keys, keyUp } from '../../src/input/keybindings';
 
 // Extend global interface for test-specific properties
 declare global {

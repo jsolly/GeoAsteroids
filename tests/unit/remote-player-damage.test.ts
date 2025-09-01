@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SHIP } from '../src/constants';
-import { Laser } from '../src/entities/laser/Laser';
-import { Player } from '../src/entities/player/Player';
-import { detectLaserPlayerCollisions } from '../src/physics/collision/laserCollisions';
+import { SHIP } from '../../src/constants';
+import { Laser } from '../../src/entities/laser/Laser';
+import { Player } from '../../src/entities/player/Player';
+import { detectLaserPlayerCollisions } from '../../src/physics/collision/laserCollisions';
 
 // Create mock functions
 const mockLaserDamagePlayer = vi.fn();
 
 // Mock the multiplayer manager
-vi.mock('../src/multiplayer/multiplayerManager', () => ({
+vi.mock('../../src/multiplayer/multiplayerManager', () => ({
   MultiplayerManager: {
     getInstance: vi.fn(() => ({
       isConnected: true,
@@ -18,7 +18,7 @@ vi.mock('../src/multiplayer/multiplayerManager', () => ({
 }));
 
 // Mock the laser methods to avoid issues
-vi.mock('../src/entities/laser/Laser', () => ({
+vi.mock('../../src/entities/laser/Laser', () => ({
   Laser: vi
     .fn()
     .mockImplementation((position, velocity, distTraveled, explodeTime, hasExploded) => ({

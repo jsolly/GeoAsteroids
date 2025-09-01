@@ -1,10 +1,10 @@
 import { expect, test, vi } from 'vitest';
-import { ROID } from '../src/constants';
-import { createRoidBelt, Roid } from '../src/entities/roid/Roid';
+import { ROID } from '../../src/constants';
+import { createRoidBelt, Roid } from '../../src/entities/roid/Roid';
 
 // Mock the constants to ensure roid movement works in tests
-vi.mock('../src/constants', async () => {
-  const actual = await vi.importActual('../src/constants');
+vi.mock('../../src/constants', async () => {
+  const actual = await vi.importActual('../../src/constants');
   return {
     ...actual,
     LOGGING: { GLOBAL_LOG_LEVEL: 'info' },

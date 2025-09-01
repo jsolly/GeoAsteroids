@@ -23,7 +23,7 @@
   "include": [
     "src",
     "api",
-    "test",
+    "tests",
     "scripts",
     "vitest.config.ts",
     "tsconfig.json",

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Laser } from '../src/entities/laser/Laser';
-import { Player } from '../src/entities/player/Player';
-import { Ship } from '../src/entities/ship/Ship';
-import { detectLaserPlayerCollisions } from '../src/physics/collision/laserCollisions';
+import { Laser } from '../../src/entities/laser/Laser.ts';
+import { Player } from '../../src/entities/player/Player.ts';
+import { Ship } from '../../src/entities/ship/Ship.ts';
+import { detectLaserPlayerCollisions } from '../../src/physics/collision/laserCollisions.ts';
 
 // Mock the constants
-vi.mock('../src/constants', () => ({
+vi.mock('../../src/constants', () => ({
   DEBUG: false,
   LASER_EXPLODE_DUR: 0.1,
   FPS: 60,
@@ -29,6 +29,40 @@ vi.mock('../src/constants', () => ({
   SHIP_EXPLODE_DUR_FRAMES: 18,
   getCVS: () => ({}),
   soundIsOn: () => true,
+  LOGGING: {
+    GLOBAL_LOG_LEVEL: 'info',
+    FORWARD_TO_SERVER: true,
+    WRITE_TO_CONSOLE: false,
+  },
+  SHIP: {
+    TURN_SPEED: 450,
+    THRUST: 5,
+    MAX_VELOCITY: 8,
+    BOT_FRICTION: 2.0,
+    SIZE: 30,
+    MAX_LASERS: 5,
+    MAX_HEALTH: 100,
+    COLLISION_DAMAGE: 20,
+    PLAYER_COLLISION_DAMAGE_PER_SECOND: 20,
+    HEALTH_REGEN_RATE: 1,
+    HEALTH_REGEN_DELAY: 5,
+    EXPLODE_DURATION_FRAMES: 18,
+    INVINCIBILITY_DURATION_FRAMES: 180,
+    INVINCIBILITY_BLINK_DURATION_FRAMES: 6,
+  },
+  GAME: {
+    START_LIVES: 3,
+    STARTING_SCORE: 0,
+    BOT_COUNT: 9,
+    FPS: 60,
+    FRICTION: 0.6,
+  },
+  LASER: {
+    SPEED: 300,
+    MAX_COUNT: 200,
+    TRAVEL_DISTANCE_RATIO: 0.6,
+    EXPLODE_DURATION: 0.1,
+  },
   SHIP_COLLISION_DAMAGE: 20,
 }));
 
@@ -42,8 +76,8 @@ vi.mock('../src/entities/roid/Roid.ts', () => ({
 }));
 
 // Mock the playSound function
-vi.mock('../src/audio/Sound.ts', async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import('../src/audio/Sound.ts');
+vi.mock('../../src/audio/Sound.ts', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import('../../src/audio/Sound.ts');
   return {
     ...actual,
     playSound: vi.fn(),
@@ -360,7 +394,9 @@ vi.mock('../src/entities/roid/Roid.ts', () => ({
 describe('Bot-Roid Collision System', () => {
   it('should apply damage to bots when hitting roids', async () => {
     // Import the function after mocking
-    const { detectPlayerRoidCollisions } = await import('../src/physics/collision/shipCollisions');
+    const { detectPlayerRoidCollisions } = await import(
+      '../../src/physics/collision/shipCollisions.ts'
+    );
 
     // Create a mock bot with minimal required properties
     const mockBot = {
@@ -414,7 +450,7 @@ describe('Bot-Roid Collision System', () => {
     detectPlayerRoidCollisions(
       mockLocalPlayer,
       bots,
-      mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
+      mockRoidBelt as unknown as import('../../src/entities/roid/Roid.ts').RoidBelt
     );
 
     // Verify damage was applied
@@ -425,7 +461,9 @@ describe('Bot-Roid Collision System', () => {
 
   it('should trigger bot explosion when health reaches 0', async () => {
     // Import the function after mocking
-    const { detectPlayerRoidCollisions } = await import('../src/physics/collision/shipCollisions');
+    const { detectPlayerRoidCollisions } = await import(
+      '../../src/physics/collision/shipCollisions.ts'
+    );
 
     // Create a mock bot with low health
     const mockBot = {
@@ -490,7 +528,7 @@ describe('Bot-Roid Collision System', () => {
     detectPlayerRoidCollisions(
       mockLocalPlayer,
       bots,
-      mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
+      mockRoidBelt as unknown as import('../../src/entities/roid/Roid.ts').RoidBelt
     );
 
     // Verify explosion was triggered
@@ -503,7 +541,9 @@ describe('Bot-Roid Collision System', () => {
 
   it('should skip invincible bots (blinking)', async () => {
     // Import the function after mocking
-    const { detectPlayerRoidCollisions } = await import('../src/physics/collision/shipCollisions');
+    const { detectPlayerRoidCollisions } = await import(
+      '../../src/physics/collision/shipCollisions.ts'
+    );
 
     // Create a mock bot that is blinking (invincible)
     const mockBot = {
@@ -547,7 +587,7 @@ describe('Bot-Roid Collision System', () => {
     detectPlayerRoidCollisions(
       mockLocalPlayer,
       bots,
-      mockRoidBelt as unknown as import('../src/entities/roid/Roid').RoidBelt
+      mockRoidBelt as unknown as import('../../src/entities/roid/Roid.ts').RoidBelt
     );
 
     // Verify no damage was applied
@@ -557,7 +597,9 @@ describe('Bot-Roid Collision System', () => {
 
   it('should handle ship-to-ship collision with immediate explosion stop', async () => {
     // Import the function after mocking
-    const { detectShipToShipCollisions } = await import('../src/physics/collision/shipCollisions');
+    const { detectShipToShipCollisions } = await import(
+      '../../src/physics/collision/shipCollisions.ts'
+    );
 
     // Create two players that will collide
     const player1 = Player.createPlayer({

@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CANVAS, GAME, SHIP } from '../src/constants';
-import { Laser } from '../src/entities/laser/Laser';
-import { Player } from '../src/entities/player/Player';
-import { Roid } from '../src/entities/roid/Roid';
-import { Ship } from '../src/entities/ship/Ship';
-import { CollisionManager } from '../src/physics/CollisionManager';
-import { detectPlayerLaserShipCollisions } from '../src/physics/collision/laserCollisions';
-import { detectAllPlayerCollisions, detectRoidHits } from '../src/physics/collision/shipCollisions';
+import { CANVAS, GAME, SHIP } from '../../src/constants';
+import { Laser } from '../../src/entities/laser/Laser';
+import { Player } from '../../src/entities/player/Player';
+import { Roid } from '../../src/entities/roid/Roid';
+import { Ship } from '../../src/entities/ship/Ship';
+import { CollisionManager } from '../../src/physics/CollisionManager';
+import { detectPlayerLaserShipCollisions } from '../../src/physics/collision/laserCollisions';
+import {
+  detectAllPlayerCollisions,
+  detectRoidHits,
+} from '../../src/physics/collision/shipCollisions';
 
 // Mock window events for testing
 const mockDispatchEvent = vi.fn();
@@ -16,7 +19,7 @@ Object.defineProperty(window, 'dispatchEvent', {
 });
 
 // Mock debug mode to be disabled for testing
-vi.mock('../src/utils/debugUtils', () => ({
+vi.mock('../../src/utils/debugUtils', () => ({
   isDebugMode: () => false,
 }));
 
@@ -196,8 +199,17 @@ describe('Ship Damage, Explosion, and Respawn', () => {
       player.ship.r = 15;
       otherShip.r = 15;
 
-      // Simulate collision detection
+      // Simulate collision detection for both players (mutual collision)
       detectAllPlayerCollisions(player, [otherPlayer]);
+      detectAllPlayerCollisions(otherPlayer, [player]);
+
+      // Reset collision damage timers to allow immediate damage
+      player.ship.lastPlayerCollisionDamageTime = 0;
+      otherPlayer.ship.lastPlayerCollisionDamageTime = 0;
+
+      // Apply collision damage directly (since ships don't have a main update method)
+      player.ship.updatePlayerCollisionDamage();
+      otherPlayer.ship.updatePlayerCollisionDamage();
 
       expect(player.ship.health).toBeLessThan(initialHealth);
       expect(otherPlayer.ship.health).toBeLessThan(otherShip.maxHealth);
