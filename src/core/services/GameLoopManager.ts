@@ -214,17 +214,10 @@ export class GameLoopManager {
       // Get all players for collision detection
       const allPlayers = this.playerNetwork.getAllPlayers();
 
-      // Use unified collision detection
-      const collisionResult = this.collisionManager.detectAllCollisions(
-        player,
-        currRoidBelt,
-        allPlayers
-      );
+      // Run unified collision detection for side-effects (explosions, timers)
+      this.collisionManager.detectAllCollisions(player, currRoidBelt, allPlayers);
 
-      // Update game score with collision results
-      this.gameController.updateCurrScore(collisionResult.laserScore);
-      this.gameController.updateCurrScore(collisionResult.roidScore);
-      this.gameController.updateCurrScore(collisionResult.playerCollisionScore);
+      // Scores are server-authoritative; do not mutate local score here
     } catch (error: unknown) {
       logger.error(
         'EVENT_LOOP',

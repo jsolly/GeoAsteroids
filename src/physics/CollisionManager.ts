@@ -15,11 +15,7 @@ import {
   detectRoidHits,
 } from './collision/shipCollisions';
 
-export interface CollisionResult {
-  laserScore: number;
-  roidScore: number;
-  playerCollisionScore: number;
-}
+export type CollisionResult = Record<string, never>;
 
 export class CollisionManager {
   private static instance: CollisionManager;
@@ -41,11 +37,7 @@ export class CollisionManager {
     roidBelt: RoidBelt,
     allPlayers?: Player[]
   ): CollisionResult {
-    const result: CollisionResult = {
-      laserScore: 0,
-      roidScore: 0,
-      playerCollisionScore: 0,
-    };
+    const result: CollisionResult = {};
 
     // Skip all collisions if player is in respawn countdown
     if (localPlayer.respawnTimer !== undefined) {
@@ -61,7 +53,7 @@ export class CollisionManager {
     const ship = localPlayer.ship;
 
     // Detect laser hits on roids first (before boundary check to avoid losing scoring)
-    result.laserScore = detectLaserHits(roidBelt, localPlayer, allPlayers);
+    detectLaserHits(roidBelt, localPlayer, allPlayers);
 
     // Server handles all scoring in multiplayer mode
 
@@ -71,7 +63,7 @@ export class CollisionManager {
     }
 
     // Detect roid hits on ship
-    result.roidScore = detectRoidHits(ship, roidBelt);
+    detectRoidHits(ship, roidBelt);
 
     // Server handles all scoring in multiplayer mode
 
