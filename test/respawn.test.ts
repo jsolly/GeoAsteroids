@@ -18,21 +18,27 @@ describe('Respawn Functionality', () => {
       return;
     }
 
-    // Run the respawn tests
-    await tester.runTests();
+    // Run the respawn tests and capture results
+    const results = await tester.runTests();
 
-    // The test results are printed by the tester
-    // In a real test environment, we'd capture and assert on the results
-    expect(true).toBe(true); // Placeholder assertion
+    // Assert on meaningful test results
+    expect(results.success).toBe(true);
+    expect(results.failed).toBe(0);
   }, 30000); // 30 second timeout for respawn process
 });
 
 describe('Respawn System Integration', () => {
   it('should validate respawn timer behavior', () => {
-    // Test the respawn timer logic
-    const respawnDelay = 180; // 3 seconds at 60 FPS
+    // Test the respawn timer logic with actual calculation
+    const FPS = 60;
+    const respawnDelaySeconds = 3;
+    const respawnDelay = respawnDelaySeconds * FPS; // 3 seconds at 60 FPS
     expect(respawnDelay).toBe(180);
     expect(respawnDelay).toBeGreaterThan(0);
+
+    // Test edge cases
+    expect(0 * FPS).toBe(0); // Zero seconds
+    expect(1 * FPS).toBe(60); // One second
   });
 
   it('should validate respawn state transitions', () => {

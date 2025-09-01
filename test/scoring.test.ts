@@ -48,7 +48,7 @@ vi.mock('../src/constants', () => ({
 }));
 
 // Mock the MultiplayerManager
-vi.mock('../src/multiplayer/multiplayerManager.ts', () => ({
+vi.mock('../../multiplayer/multiplayerManager', () => ({
   MultiplayerManager: {
     getInstance: vi.fn(() => ({
       isConnected: true, // Multiplayer mode only

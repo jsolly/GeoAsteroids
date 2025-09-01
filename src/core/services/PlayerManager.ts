@@ -1,4 +1,4 @@
-import { DEBUG, GAME } from '../../constants';
+import { DEBUG, GAME, SHIP } from '../../constants';
 import type { BotShoot } from '../../entities/bot/types';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
@@ -141,7 +141,7 @@ export class PlayerManager {
 
       // Apply bot laser damage
       if (shouldApplyDamage) {
-        ship.takeDamage(20, 'laser', botShoot.botId); // Bot laser damage
+        ship.takeDamage(SHIP.COLLISION_DAMAGE, 'laser', botShoot.botId); // Bot laser damage
       }
     }
   }

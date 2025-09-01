@@ -1,5 +1,4 @@
 import type { Position } from '../../../shared-types';
-import { GAME } from '../../constants';
 import { BotManager } from '../../entities/bot/botManager';
 import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
@@ -333,44 +332,16 @@ export class BotSyncManager {
       bot.ship.exploding = state.exploding;
       bot.lives = state.lives;
 
-      // Update health if provided, but only if it's actually different
-      // This prevents server updates from interfering with local health regeneration
+      // Update health if provided and different from current health
+      // Treat server health as authoritative
       if (state.health !== undefined && state.health !== bot.ship.health) {
         const currentHealth = bot.ship.health;
+        bot.ship.health = state.health;
 
-        // Accept server health updates if they represent:
-        // 1. Damage (lower health) - OR
-        // 2. Full health (regeneration completed) - OR
-        // 3. Small regeneration increases (within reasonable bounds)
-        const isDamage = state.health < currentHealth;
-        const isFullHealth = state.health === bot.ship.maxHealth;
-        const isSmallRegeneration =
-          state.health > currentHealth &&
-          state.health <= currentHealth + 2 && // Allow up to 2 health points of regeneration
-          state.health < bot.ship.maxHealth; // But not full health
-
-        if (isDamage || isFullHealth || isSmallRegeneration) {
-          bot.ship.health = state.health;
-
-          // If the server health is lower than current (damage), reset regeneration timers
-          // This ensures the bot starts regenerating from the new (damaged) health value
-          if (isDamage) {
-            bot.ship.lastDamageTime = GAME.FPS; // Reset damage cooldown
-            bot.ship.healthRegenTimer = calculateHealthRegenDelayFrames();
-          }
-        } else if (state.health > currentHealth) {
-          // Reject large regeneration jumps that might be erroneous
-          logger.debug(
-            'MULTIPLAYER',
-            'Ignoring server health update - large regeneration jump detected',
-            {
-              botId,
-              serverHealth: state.health,
-              currentHealth,
-              maxHealth: bot.ship.maxHealth,
-              difference: state.health - currentHealth,
-            }
-          );
+        // If server health is lower than current (damage), reset regeneration timers
+        if (state.health < currentHealth) {
+          bot.ship.lastDamageTime = 0; // Reset to 0 (no time elapsed since damage)
+          bot.ship.healthRegenTimer = calculateHealthRegenDelayFrames();
         }
       }
       if (state.maxHealth !== undefined) {

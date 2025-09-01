@@ -8,6 +8,12 @@
 import WebSocket from 'ws';
 import { logger } from '../setup/serverLogger';
 
+// Test configuration constants
+const DEATH_CHECK_MAX = 10; // Maximum iterations to check for player death
+const RESPAWN_TIMEOUT_MAX = 100; // Maximum iterations to wait for respawn completion
+const CONNECTION_TIMEOUT_MS = 5000; // Connection timeout in milliseconds
+const CHECK_INTERVAL_MS = 100; // Interval between state checks in milliseconds
+
 interface GameState {
   players: Array<{
     id: string;
@@ -36,7 +42,7 @@ class RespawnTester {
     this.testPlayerId = `test-player-${Date.now()}`;
   }
 
-  async runTests(): Promise<void> {
+  async runTests(): Promise<{ success: boolean; failed: number; total: number }> {
     logger.info('🧪 Starting respawn functionality tests...');
     
     try {
@@ -56,6 +62,16 @@ class RespawnTester {
     } finally {
       this.disconnect();
     }
+
+    const passed = this.testResults.filter(r => r.success).length;
+    const total = this.testResults.length;
+    const failed = total - passed;
+
+    return {
+      success: failed === 0,
+      failed,
+      total
+    };
   }
 
   private async connectToServer(): Promise<void> {
@@ -77,7 +93,20 @@ class RespawnTester {
       });
       
       // Timeout after 5 seconds
-      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+      const timeoutId = setTimeout(() => {
+        // Clean up WebSocket before rejecting
+        if (this.ws) {
+          this.ws.removeAllListeners();
+          this.ws.close();
+          this.ws = null;
+        }
+        reject(new Error('Connection timeout'));
+      }, CONNECTION_TIMEOUT_MS);
+      
+      // Store timeout ID so other resolution paths can clear it
+      this.ws.on('open', () => {
+        clearTimeout(timeoutId);
+      });
     });
   }
 
@@ -101,7 +130,7 @@ class RespawnTester {
             return;
           }
         }
-        setTimeout(checkJoined, 100);
+        setTimeout(checkJoined, CHECK_INTERVAL_MS);
       };
       checkJoined();
     });
@@ -139,7 +168,7 @@ class RespawnTester {
           return;
         }
         
-        if (this.gameStates.length > 10) {
+        if (this.gameStates.length > DEATH_CHECK_MAX) {
           this.testResults.push({
             success: false,
             message: 'Player death not detected within timeout'
@@ -148,7 +177,7 @@ class RespawnTester {
           return;
         }
         
-        setTimeout(checkDeath, 100);
+        setTimeout(checkDeath, CHECK_INTERVAL_MS);
       };
       checkDeath();
     });
@@ -196,7 +225,7 @@ class RespawnTester {
         }
         
         // Timeout after 10 seconds
-        if (this.gameStates.length > 100) {
+        if (this.gameStates.length > RESPAWN_TIMEOUT_MAX) {
           this.testResults.push({
             success: false,
             message: 'Respawn not completed within timeout'
@@ -205,7 +234,7 @@ class RespawnTester {
           return;
         }
         
-        setTimeout(checkRespawn, 100);
+        setTimeout(checkRespawn, CHECK_INTERVAL_MS);
       };
       checkRespawn();
     });

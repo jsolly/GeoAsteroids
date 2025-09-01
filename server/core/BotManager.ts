@@ -1,8 +1,6 @@
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
-
-// Constants for explosion timing (matching client-side)
-const SHIP_EXPLODE_DURATION_FRAMES = 60; // 1 second at 60 FPS
+import { SHIP } from '../../src/constants';
 
 export interface ServerBot {
   id: string;
@@ -125,7 +123,7 @@ export class BotManager {
     // If bot is destroyed, set exploding state
     if (bot.health <= 0 && wasAlive) {
       bot.exploding = true;
-      bot.explodeTime = SHIP_EXPLODE_DURATION_FRAMES; // Set explosion timer
+              bot.explodeTime = SHIP.EXPLODE_DURATION_FRAMES; // Set explosion timer
     }
 
     bot.lastUpdate = Date.now();

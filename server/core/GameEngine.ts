@@ -4,38 +4,13 @@ import { PlayerManager, ConnectedPlayer } from './PlayerManager';
 import { AsteroidManager } from './AsteroidManager';
 import { BotManager, ServerBot } from './BotManager';
 import { RNGService } from './RNGService';
-
-// Import health regeneration utilities from client-side
-const GAME = { FPS: 60 };
-const SHIP = {
-  HEALTH_REGEN_RATE: 1, // per second
-  HEALTH_REGEN_DELAY: 5, // seconds
-  MAX_HEALTH: 100
-};
-
-function calculateHealthRegenPerFrame(): number {
-  return SHIP.HEALTH_REGEN_RATE / GAME.FPS;
-}
-
-function calculateHealthRegenDelayFrames(): number {
-  return Math.ceil(SHIP.HEALTH_REGEN_DELAY * GAME.FPS);
-}
-
-function shouldStartHealthRegeneration(
-  lastDamageTime: number,
-  currentHealth: number,
-  maxHealth: number
-): boolean {
-  return lastDamageTime <= 0 && currentHealth < maxHealth;
-}
-
-function calculateHealthAfterHeal(
-  currentHealth: number,
-  healAmount: number,
-  maxHealth: number
-): number {
-  return Math.min(currentHealth + healAmount, maxHealth);
-}
+import {
+  GAME_FPS,
+  calculateHealthRegenPerFrame,
+  calculateHealthRegenDelayFrames,
+  shouldStartHealthRegeneration,
+  calculateHealthAfterHeal
+} from '../../shared/constants/health';
 
 export class GameEngine {
   private playerManager: PlayerManager;
@@ -192,7 +167,7 @@ export class GameEngine {
 
     // Initialize or reset health regeneration state for this bot
     this.botHealthRegenerationState.set(botId, {
-      lastDamageTime: GAME.FPS, // Reset damage cooldown
+                  lastDamageTime: GAME_FPS, // Reset damage cooldown
       healthRegenTimer: calculateHealthRegenDelayFrames() // Reset regen delay
     });
 

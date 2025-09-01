@@ -97,13 +97,13 @@ export class PlayerManager {
     let regenState = this.playerHealthRegenerationState.get(playerId);
     if (!regenState) {
       regenState = {
-        lastDamageTime: 60, // 1 second at 60 FPS
+        lastDamageTime: 0, // Start at 0 (no time elapsed since damage)
         healthRegenTimer: calculateHealthRegenDelayFrames()
       };
       this.playerHealthRegenerationState.set(playerId, regenState);
     } else {
       // Reset timers on new damage
-      regenState.lastDamageTime = 60; // 1 second at 60 FPS
+      regenState.lastDamageTime = 0; // Reset to 0 (no time elapsed since damage)
       regenState.healthRegenTimer = calculateHealthRegenDelayFrames();
     }
   }
@@ -127,9 +127,9 @@ export class PlayerManager {
         this.playerHealthRegenerationState.set(player.id, regenState);
       }
 
-      // Update damage cooldown timer
-      if (regenState.lastDamageTime > 0) {
-        regenState.lastDamageTime--;
+      // Update damage cooldown timer (increment elapsed time)
+      if (regenState.lastDamageTime >= 0) {
+        regenState.lastDamageTime++;
       }
 
       // Check if health regeneration should start
@@ -240,10 +240,12 @@ export class PlayerManager {
   }
 
   private generateRandomPosition(): Position {
-    // Generate position within game boundary (assuming 800x600 canvas)
+    // Generate position within game boundary
+    const GAME_WIDTH = 800;
+    const GAME_HEIGHT = 600;
     return {
-      x: Math.random() * 800,
-      y: Math.random() * 600
+      x: Math.random() * GAME_WIDTH,
+      y: Math.random() * GAME_HEIGHT
     };
   }
 

@@ -104,19 +104,17 @@ describe('Remote Player Respawn', () => {
     // Create a mock handleAllPlayerRespawns function that mimics the real logic
     const players = [localPlayer, remotePlayer];
     players.forEach((player) => {
-      // Only handle respawns for local players and bots
-      // Remote players are respawned by the server
-      if (player.type === 'remote') {
-        return;
-      }
-
       if (player.respawnTimer !== undefined) {
         if (player.respawnTimer > 0) {
           player.respawnTimer--;
         }
 
         if (player.respawnTimer === 0) {
-          player.respawn();
+          // Only respawn local/bot players (not remote)
+          if (player.type !== 'remote') {
+            player.respawn();
+          }
+          // Clear respawn timer for all player types
           player.respawnTimer = undefined;
         }
       }

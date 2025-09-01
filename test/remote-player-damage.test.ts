@@ -87,7 +87,7 @@ describe('Remote Player Damage - Server Authority', () => {
     expect(remotePlayer.ship.health).toBe(100);
   });
 
-  it('should award points for local player hits', () => {
+  it('should not award points for local player hits (server handles scoring)', () => {
     // Create a local player to hit
     const otherLocalPlayer = Player.createPlayer({
       id: 'other-local',
