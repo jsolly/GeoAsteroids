@@ -330,7 +330,7 @@ class Ship {
     const damageInterval = 1000 / SHIP.PLAYER_COLLISION_DAMAGE_PER_SECOND; // e.g., 20 DPS => 50ms per damage
 
     if (timeSinceLastDamage >= damageInterval) {
-      // Apply local damage only in single-player or when not connected; otherwise server-authoritative
+      // Apply local damage only when not connected to server; otherwise server-authoritative
       const multiplayerManager = MultiplayerManager.getInstance();
       if (multiplayerManager.isConnected && this.collidingPlayerId) {
         const myPlayerId = multiplayerManager.getLocalPlayerId();
