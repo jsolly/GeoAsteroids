@@ -6,7 +6,8 @@ import type {
   Position,
   Velocity,
 } from '../../../shared-types';
-import { DEBUG, LOGGING } from '../../constants';
+import { DEBUG, GAME, LASER, LOGGING, SHIP } from '../../constants';
+import { GameController } from '../../core/gameController';
 import { entityFactory } from '../../entities/EntityFactory';
 import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
@@ -362,7 +363,15 @@ export class PlayerSyncManager {
     this.connectionManager.registerMessageHandler('gameState', (message) => {
       const state = message.payload as
         | {
-            players?: Array<{ id: string; name?: string }>;
+            players?: Array<{
+              id: string;
+              name?: string;
+              health?: number;
+              maxHealth?: number;
+              exploding?: boolean;
+              score?: number;
+              respawnTimer?: number;
+            }>;
             bots?: Array<{
               id: string;
               name: string;
@@ -383,25 +392,90 @@ export class PlayerSyncManager {
         if (!p?.id) {
           continue;
         }
+
         if (p.id === this.state.localPlayerId) {
+          // Update local player health from server (server-authoritative)
+          this.updateLocalPlayerHealthFromServer(p);
           continue;
         }
+
+        // Create remote player if it doesn't exist
         if (!this.state.players.has(p.id)) {
           this.addRemotePlayer(p.id, p.name ?? `Player_${p.id.slice(0, 4)}`);
         }
+
+        // Update existing remote player from server state
+        const remotePlayer = this.state.players.get(p.id);
+        if (remotePlayer) {
+          const oldHealth = remotePlayer.ship.health;
+          const oldMaxHealth = remotePlayer.ship.maxHealth;
+          const oldExploding = remotePlayer.ship.exploding;
+          const oldScore = remotePlayer.score;
+
+          if (p.health !== undefined) {
+            remotePlayer.ship.health = p.health;
+          }
+          if (p.maxHealth !== undefined) {
+            remotePlayer.ship.maxHealth = p.maxHealth;
+          }
+          if (p.exploding !== undefined) {
+            remotePlayer.ship.exploding = p.exploding;
+          }
+          if (p.score !== undefined) {
+            remotePlayer.score = p.score;
+          }
+          if (p.respawnTimer !== undefined) {
+            remotePlayer.respawnTimer = p.respawnTimer;
+          }
+
+          // Log health changes for debugging
+          if (p.health !== undefined && p.health !== oldHealth) {
+            logger.debug('MULTIPLAYER', 'Remote player health updated from game state', {
+              playerId: p.id,
+              oldHealth,
+              newHealth: p.health,
+              oldMaxHealth,
+              newMaxHealth: p.maxHealth,
+            });
+          }
+
+          // Log exploding changes for debugging
+          if (p.exploding !== undefined && p.exploding !== oldExploding) {
+            logger.debug('MULTIPLAYER', 'Remote player exploding state updated from game state', {
+              playerId: p.id,
+              oldExploding,
+              newExploding: p.exploding,
+            });
+
+            // Check if remote player just started exploding (died)
+            if (p.exploding && !oldExploding) {
+              this.handleRemotePlayerDeath(remotePlayer);
+            }
+          }
+
+          // Log score changes for debugging
+          if (p.score !== undefined && p.score !== oldScore) {
+            logger.debug('MULTIPLAYER', 'Remote player score updated from game state', {
+              playerId: p.id,
+              oldScore,
+              newScore: p.score,
+            });
+          }
+        }
       }
 
-      // Process bot updates for health synchronization
+      // Process bot updates for health synchronization using the same acceptance rules
       const bots = state?.bots ?? [];
       for (const bot of bots) {
         if (!bot?.id) {
           continue;
         }
-        // Update bot health through the bot sync manager
         const botSyncManager = this.getBotSyncManager();
-        if (botSyncManager) {
-          botSyncManager.syncBotHealthFromGameState(bot.id, bot.health, bot.maxHealth);
+        if (!botSyncManager) {
+          continue;
         }
+        // Delegate to BotSyncManager which contains the regen/damage acceptance logic
+        botSyncManager.syncBotHealthFromGameState(bot.id, bot.health, bot.maxHealth);
       }
     });
 
@@ -454,26 +528,63 @@ export class PlayerSyncManager {
       // Update the target player's health and state
       const targetPlayer = this.state.players.get(damageData.targetPlayerId);
       if (targetPlayer) {
+        const oldHealth = targetPlayer.ship.health;
+
         if (damageData.remainingHealth !== undefined) {
           targetPlayer.ship.health = damageData.remainingHealth;
           targetPlayer.ship.maxHealth = targetPlayer.ship.maxHealth || 100; // Ensure maxHealth is set
         }
 
         if (damageData.isDestroyed) {
-          // Handle ship destruction properly
-          if (damageData.remainingHealth === 0) {
-            // Ship should be destroyed - ensure health is 0 and trigger explosion
-            targetPlayer.ship.health = 0;
-            targetPlayer.ship.takeDamage(1); // This will trigger explosion since health is already 0
-          } else {
-            // Ship is destroyed but has remaining health - this shouldn't happen, but handle gracefully
-            logger.warn('MULTIPLAYER', 'Ship marked as destroyed but has remaining health', {
-              playerId: targetPlayer.id,
-              remainingHealth: damageData.remainingHealth,
-            });
-            targetPlayer.ship.exploding = true;
-          }
+          // For remote players, trust the server's state completely
+          targetPlayer.ship.health = 0;
+          targetPlayer.ship.exploding = true;
+          targetPlayer.ship.explodeTime = Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
+
+          // Trigger death event for remote player
+          this.handleRemotePlayerDeath(targetPlayer);
+
+          logger.debug('MULTIPLAYER', 'Remote player destroyed by server', {
+            playerId: targetPlayer.id,
+            oldHealth,
+            newHealth: targetPlayer.ship.health,
+            remainingHealth: damageData.remainingHealth,
+          });
+        } else {
+          logger.debug('MULTIPLAYER', 'Remote player damaged by server', {
+            playerId: targetPlayer.id,
+            oldHealth,
+            newHealth: targetPlayer.ship.health,
+            damage: damageData.damage,
+            remainingHealth: damageData.remainingHealth,
+          });
         }
+      } else {
+        logger.warn('MULTIPLAYER', 'Received damage for unknown player', {
+          targetPlayerId: damageData.targetPlayerId,
+          damage: damageData.damage,
+        });
+      }
+    });
+
+    // Handle player killed events
+    this.connectionManager.registerMessageHandler('playerKilled', (message) => {
+      const killData = message.payload as {
+        targetPlayerId: string;
+        targetPlayerName: string;
+        attackerId: string;
+      };
+
+      // Check if the local player was the attacker
+      if (killData.attackerId === this.state.localPlayerId) {
+        const gameController = GameController.getInstance();
+        gameController.setKillMessage(killData.targetPlayerName);
+
+        logger.debug('MULTIPLAYER', 'Local player killed another player', {
+          targetPlayerId: killData.targetPlayerId,
+          targetPlayerName: killData.targetPlayerName,
+          attackerId: killData.attackerId,
+        });
       }
     });
 
@@ -491,6 +602,27 @@ export class PlayerSyncManager {
         logger.debug('MULTIPLAYER', 'Score updated from server', {
           playerId: scoreData.playerId,
           newScore: scoreData.score,
+        });
+      }
+
+      // Also update local player score if this is for the local player
+      if (scoreData.playerId === this.state.localPlayerId) {
+        // Import PlayerManager to update local player score
+        import('../../core/services/PlayerManager').then(({ PlayerManager }) => {
+          const playerManager = PlayerManager.getInstance();
+          try {
+            const localPlayer = playerManager.getLocalPlayer();
+            localPlayer.score = scoreData.score;
+            logger.debug('MULTIPLAYER', 'Local player score updated from server', {
+              playerId: scoreData.playerId,
+              newScore: scoreData.score,
+            });
+          } catch (error) {
+            logger.warn('MULTIPLAYER', 'Could not update local player score', {
+              playerId: scoreData.playerId,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
         });
       }
     });
@@ -552,6 +684,31 @@ export class PlayerSyncManager {
     }
   }
 
+  private handleRemotePlayerDeath(player: Player): void {
+    // Set respawn timer for remote player to hide them during respawn period
+    // This matches the behavior of local players and bots
+    const messageDisplayFrames = 120; // 2 seconds at 60 FPS
+    player.respawnTimer = SHIP.EXPLODE_DURATION_FRAMES + messageDisplayFrames;
+
+    // Dispatch a custom event for remote player death
+    // This will allow the GameController to detect when a remote player dies
+    window.dispatchEvent(
+      new CustomEvent('remotePlayerDied', {
+        detail: {
+          playerId: player.id,
+          playerName: player.name,
+          deathCause: 'laser', // Assume laser death for now
+        },
+      })
+    );
+
+    logger.debug('MULTIPLAYER', 'Remote player death detected', {
+      playerId: player.id,
+      playerName: player.name,
+      respawnTimer: player.respawnTimer,
+    });
+  }
+
   private getPlayerColor(playerId: string): string {
     let color = this.state.playerColors.get(playerId);
     if (!color) {
@@ -559,5 +716,102 @@ export class PlayerSyncManager {
       this.state.playerColors.set(playerId, color);
     }
     return color;
+  }
+
+  private updateLocalPlayerHealthFromServer(serverPlayerData: {
+    id: string;
+    name?: string;
+    health?: number;
+    maxHealth?: number;
+    exploding?: boolean;
+    score?: number;
+    respawnTimer?: number;
+  }): void {
+    // Import PlayerManager to update local player health
+    import('../../core/services/PlayerManager').then(({ PlayerManager }) => {
+      const playerManager = PlayerManager.getInstance();
+      try {
+        const localPlayer = playerManager.getLocalPlayer();
+        if (!localPlayer) {
+          return;
+        }
+
+        const oldHealth = localPlayer.ship.health;
+        const oldMaxHealth = localPlayer.ship.maxHealth;
+        const oldExploding = localPlayer.ship.exploding;
+        const oldScore = localPlayer.score;
+        const oldRespawnTimer = localPlayer.respawnTimer;
+
+        // Update health from server (server-authoritative)
+        if (serverPlayerData.health !== undefined) {
+          localPlayer.ship.health = serverPlayerData.health;
+        }
+        if (serverPlayerData.maxHealth !== undefined) {
+          localPlayer.ship.maxHealth = serverPlayerData.maxHealth;
+        }
+        if (serverPlayerData.exploding !== undefined) {
+          localPlayer.ship.exploding = serverPlayerData.exploding;
+        }
+        if (serverPlayerData.score !== undefined) {
+          localPlayer.score = serverPlayerData.score;
+        }
+        if (serverPlayerData.respawnTimer !== undefined) {
+          localPlayer.respawnTimer = serverPlayerData.respawnTimer;
+        }
+
+        // Log health changes for debugging
+        if (serverPlayerData.health !== undefined && serverPlayerData.health !== oldHealth) {
+          logger.debug('MULTIPLAYER', 'Local player health updated from server game state', {
+            playerId: serverPlayerData.id,
+            oldHealth,
+            newHealth: serverPlayerData.health,
+            oldMaxHealth,
+            newMaxHealth: serverPlayerData.maxHealth,
+          });
+        }
+
+        // Log exploding changes for debugging
+        if (
+          serverPlayerData.exploding !== undefined &&
+          serverPlayerData.exploding !== oldExploding
+        ) {
+          logger.debug(
+            'MULTIPLAYER',
+            'Local player exploding state updated from server game state',
+            {
+              playerId: serverPlayerData.id,
+              oldExploding,
+              newExploding: serverPlayerData.exploding,
+            }
+          );
+        }
+
+        // Log score changes for debugging
+        if (serverPlayerData.score !== undefined && serverPlayerData.score !== oldScore) {
+          logger.debug('MULTIPLAYER', 'Local player score updated from server game state', {
+            playerId: serverPlayerData.id,
+            oldScore,
+            newScore: serverPlayerData.score,
+          });
+        }
+
+        // Log respawn timer changes for debugging
+        if (
+          serverPlayerData.respawnTimer !== undefined &&
+          serverPlayerData.respawnTimer !== oldRespawnTimer
+        ) {
+          logger.debug('MULTIPLAYER', 'Local player respawn timer updated from server game state', {
+            playerId: serverPlayerData.id,
+            oldRespawnTimer,
+            newRespawnTimer: serverPlayerData.respawnTimer,
+          });
+        }
+      } catch (error) {
+        logger.warn('MULTIPLAYER', 'Could not update local player health from server', {
+          playerId: serverPlayerData.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
+import { calculateHealthAfterHeal, calculateHealthRegenPerFrame, shouldStartHealthRegeneration, calculateHealthRegenDelayFrames } from '../../src/entities/ship/shipUtils';
 
 export interface ConnectedPlayer {
   id: string;
@@ -17,10 +18,19 @@ export interface ConnectedPlayer {
   ws: WebSocket;
   // Backward compatibility property
   a?: number;
+  respawnTimer?: number; // Added for respawn logic
+}
+
+interface PlayerHealthRegenerationState {
+  lastDamageTime: number;
+  healthRegenTimer: number;
 }
 
 export class PlayerManager {
   private players = new Map<string, ConnectedPlayer>();
+  private playerHealthRegenerationState = new Map<string, PlayerHealthRegenerationState>();
+
+
 
   public addPlayer(id: string, name: string, ws: WebSocket, position?: Position): ConnectedPlayer {
     const player: ConnectedPlayer = {
@@ -66,14 +76,79 @@ export class PlayerManager {
       if (updates.exploding !== undefined) updateData.exploding = updates.exploding;
       if (updates.health !== undefined) updateData.health = updates.health;
       if (updates.maxHealth !== undefined) updateData.maxHealth = updates.maxHealth;
+      if (updates.respawnTimer !== undefined) updateData.respawnTimer = updates.respawnTimer; // Added for respawn logic
 
       // Backward compatibility for old 'a' property (maps to angularVelocity; 'r' refers to ship radius)
       if (updates.a !== undefined) updateData.angularVelocity = updates.a;
+
+      // Track damage for regeneration
+      if (updates.health !== undefined && updates.health < (player.health ?? 100)) {
+        this.handlePlayerDamage(id);
+      }
 
       Object.assign(player, updateData);
       player.lastUpdate = Date.now();
     }
     return player;
+  }
+
+  private handlePlayerDamage(playerId: string): void {
+    // Get or initialize health regeneration state for this player
+    let regenState = this.playerHealthRegenerationState.get(playerId);
+    if (!regenState) {
+      regenState = {
+        lastDamageTime: 60, // 1 second at 60 FPS
+        healthRegenTimer: calculateHealthRegenDelayFrames()
+      };
+      this.playerHealthRegenerationState.set(playerId, regenState);
+    } else {
+      // Reset timers on new damage
+      regenState.lastDamageTime = 60; // 1 second at 60 FPS
+      regenState.healthRegenTimer = calculateHealthRegenDelayFrames();
+    }
+  }
+
+  public updatePlayerHealthRegeneration(): void {
+    const players = this.getAllPlayers();
+
+    for (const player of players) {
+      if (player.exploding || (player.health ?? 100) <= 0) {
+        continue; // Skip exploding or dead players
+      }
+
+      // Get or initialize health regeneration state for this player
+      let regenState = this.playerHealthRegenerationState.get(player.id);
+      if (!regenState) {
+        // Initialize state for players that haven't been damaged yet
+        regenState = {
+          lastDamageTime: 0,
+          healthRegenTimer: 0
+        };
+        this.playerHealthRegenerationState.set(player.id, regenState);
+      }
+
+      // Update damage cooldown timer
+      if (regenState.lastDamageTime > 0) {
+        regenState.lastDamageTime--;
+      }
+
+      // Check if health regeneration should start
+      if (shouldStartHealthRegeneration(regenState.lastDamageTime, player.health || 100, player.maxHealth || 100)) {
+        if (regenState.healthRegenTimer <= 0) {
+          // Regenerate health
+          const regenAmount = calculateHealthRegenPerFrame();
+          const newHealth = calculateHealthAfterHeal(player.health || 100, regenAmount, player.maxHealth || 100);
+
+          if (newHealth > (player.health || 100)) {
+            // Update player health
+            this.updatePlayer(player.id, { health: newHealth });
+          }
+        } else {
+          // Decrement regeneration delay timer
+          regenState.healthRegenTimer--;
+        }
+      }
+    }
   }
 
   public getPlayer(id: string): ConnectedPlayer | undefined {
@@ -134,5 +209,58 @@ export class PlayerManager {
     player.score += points;
     player.lastUpdate = Date.now();
     return player;
+  }
+
+  public respawnPlayer(playerId: string): ConnectedPlayer | null {
+    const player = this.players.get(playerId);
+    if (!player) {
+      return null;
+    }
+
+    // Reset explosion state
+    player.exploding = false;
+    
+    // Reset health to full
+    player.health = player.maxHealth || 100;
+    
+    // Generate new random position
+    const newPosition = this.generateRandomPosition();
+    player.position = newPosition;
+    
+    // Reset velocity and rotation
+    player.velocity = { x: 0, y: 0 };
+    player.rotation = 0;
+    player.angularVelocity = 0;
+    
+    // Clear respawn timer
+    player.respawnTimer = undefined;
+    
+    player.lastUpdate = Date.now();
+    return player;
+  }
+
+  private generateRandomPosition(): Position {
+    // Generate position within game boundary (assuming 800x600 canvas)
+    return {
+      x: Math.random() * 800,
+      y: Math.random() * 600
+    };
+  }
+
+  public updatePlayerRespawns(): void {
+    const players = this.getAllPlayers();
+
+    for (const player of players) {
+      if (player.respawnTimer !== undefined) {
+        if (player.respawnTimer > 0) {
+          player.respawnTimer--;
+        }
+
+        if (player.respawnTimer === 0) {
+          // Respawn the player
+          this.respawnPlayer(player.id);
+        }
+      }
+    }
   }
 }

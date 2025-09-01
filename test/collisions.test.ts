@@ -70,6 +70,19 @@ vi.mock('../src/core/gameController.ts', () => ({
   },
 }));
 
+// Mock the MultiplayerManager
+vi.mock('../src/multiplayer/multiplayerManager.ts', () => ({
+  MultiplayerManager: {
+    getInstance: vi.fn(() => ({
+      isConnected: true, // Multiplayer mode only
+      laserDamagePlayer: vi.fn(),
+      laserDamageBot: vi.fn(),
+      handleAsteroidDestruction: vi.fn(),
+      asteroidDestroyed: vi.fn(),
+    })),
+  },
+}));
+
 describe('Collision Detection System', () => {
   // Helper function to create fresh test objects for each test
   function createTestObjects() {
@@ -133,9 +146,10 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
-      expect(score).toBe(50); // Should award 50 points for player hit
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
       expect(laser.explodeTime).toBeGreaterThan(0); // Laser should explode
-      expect(otherPlayer.ship.health).toBe(80); // Player should take 20 damage (100 - 20)
+      // For remote players, damage should be handled by server, not locally
+      expect(otherPlayer.ship.health).toBe(100); // Health should not change locally
     });
 
     it('should not detect collision when player is exploding', () => {
@@ -201,9 +215,9 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer, otherPlayer2]);
 
-      expect(score).toBe(50); // Should only hit the first player
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(80);
+      expect(otherPlayer.ship.health).toBe(100); // Remote players don't take local damage
       expect(otherPlayer2.ship.health).toBe(100); // Second player should not be hit
     });
 
@@ -213,11 +227,11 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
-      expect(score).toBe(50);
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(0);
-      expect(otherPlayer.lives).toBe(2); // Should lose a life
-      expect(otherPlayer.ship.exploding).toBe(true); // Should start exploding
+      expect(otherPlayer.ship.health).toBe(10); // Remote players don't take local damage
+      expect(otherPlayer.lives).toBe(3); // Should not lose a life locally
+      expect(otherPlayer.ship.exploding).toBe(false); // Should not start exploding locally
     });
 
     it('should handle player permanent death when no lives remaining', () => {
@@ -227,11 +241,11 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
-      expect(score).toBe(50);
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(0);
+      expect(otherPlayer.ship.health).toBe(10); // Remote players don't take local damage
       expect(otherPlayer.lives).toBe(0);
-      expect(otherPlayer.ship.exploding).toBe(true); // Should be exploding
+      expect(otherPlayer.ship.exploding).toBe(false); // Should not be exploding locally
     });
 
     it('should handle all player types', () => {
@@ -241,9 +255,9 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
-      expect(score).toBe(50); // Should hit the human player
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(80);
+      expect(otherPlayer.ship.health).toBe(100); // Remote players don't take local damage
     });
 
     it('should handle collision threshold correctly', () => {
@@ -267,9 +281,9 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
-      expect(score).toBe(50); // Should collide
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
       expect(laser.explodeTime).toBeGreaterThan(0);
-      expect(otherPlayer.ship.health).toBe(80);
+      expect(otherPlayer.ship.health).toBe(100); // Remote players don't take local damage
     });
   });
 
@@ -311,10 +325,10 @@ describe('Collision Detection System', () => {
 
       const score = detectLaserPlayerCollisions(localPlayer, [otherPlayer]);
 
-      expect(score).toBe(50); // Only one laser should hit (one hit per player per frame)
-      expect(laser.explodeTime).toBe(0); // First laser should not explode (second laser processed first)
-      expect(laser2.explodeTime).toBeGreaterThan(0); // Second laser should explode (processed first due to reverse iteration)
-      expect(otherPlayer.ship.health).toBe(80); // 100 - 20 = 80 (only one hit)
+      expect(score).toBe(0); // Server handles all points in multiplayer mode
+      expect(laser.explodeTime).toBeGreaterThan(0); // First laser should explode
+      expect(laser2.explodeTime).toBeGreaterThan(0); // Second laser should also explode
+      expect(otherPlayer.ship.health).toBe(100); // Remote players don't take local damage
     });
   });
 
@@ -539,5 +553,54 @@ describe('Bot-Roid Collision System', () => {
     // Verify no damage was applied
     expect(mockBot.ship.health).toBe(100); // Health unchanged
     expect(mockBot.ship.lastDamageTime).toBe(0); // No damage time set
+  });
+
+  it('should handle ship-to-ship collision with immediate explosion stop', async () => {
+    // Import the function after mocking
+    const { detectShipToShipCollisions } = await import('../src/physics/collision/shipCollisions');
+
+    // Create two players that will collide
+    const player1 = Player.createPlayer({
+      id: 'player1',
+      name: 'Player1',
+      type: 'local',
+      position: { x: 100, y: 100 },
+    });
+
+    const player2 = Player.createPlayer({
+      id: 'player2',
+      name: 'Player2',
+      type: 'bot',
+      position: { x: 105, y: 105 }, // Close enough to collide
+    });
+
+    // Set both ships to low health so they'll explode on collision
+    player1.ship.health = 10;
+    player2.ship.health = 10;
+
+    // Mock window.dispatchEvent to capture explosion events
+    const mockDispatchEvent = vi.spyOn(window, 'dispatchEvent');
+
+    // Simulate ship-to-ship collision
+    const score = detectShipToShipCollisions(player1.ship, [player2], player1);
+
+    // Verify that only one explosion event was dispatched
+    const explosionEvents = mockDispatchEvent.mock.calls.filter(
+      (call) => call[0].type === 'shipExploded'
+    );
+
+    // Should have exactly one explosion event (from the first ship that explodes)
+    expect(explosionEvents.length).toBe(1);
+
+    // Verify that one of the ships exploded
+    const ship1Exploded = player1.ship.exploding;
+    const ship2Exploded = player2.ship.exploding;
+
+    // Only one ship should have exploded (the first one that took damage)
+    expect(ship1Exploded || ship2Exploded).toBe(true);
+    expect(ship1Exploded && ship2Exploded).toBe(false);
+
+    // Verify that the collision detection stopped after the first explosion
+    expect(score).toBe(300); // Should award points for the destruction
   });
 });

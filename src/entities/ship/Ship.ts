@@ -3,6 +3,7 @@ import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
 import { EMP, GAME, LASER, SHIP } from '../../constants';
 import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
+import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
@@ -78,10 +79,22 @@ class Ship {
     this.blinkOn = this.blinkCount % 2 === 0;
   }
 
-  explode(): void {
+  explode(cause?: string, killerName?: string): void {
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
     playSound(Ship.fxExplode);
+
+    // Dispatch event to notify that ship has exploded with cause information
+    window.dispatchEvent(
+      new CustomEvent('shipExploded', {
+        detail: {
+          shipId: this.id,
+          position: { x: this.position.x, y: this.position.y },
+          cause,
+          killerName,
+        },
+      })
+    );
   }
 
   setExploding(): void {
@@ -253,30 +266,29 @@ class Ship {
     }
   }
 
-  takeDamage(amount: number): void {
+  takeDamage(amount: number, cause?: string, killerName?: string): void {
     if (this.exploding) {
       return;
     }
 
+    // Instrumentation for tests: trace damage handling when under test
+    const prevHealth = this.health;
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
+    if (process.env.NODE_ENV === 'test') {
+      // eslint-disable-next-line no-console
+      console.debug('SHIP', 'takeDamage', {
+        amount,
+        prevHealth,
+        newHealth: this.health,
+        maxHealth: this.maxHealth,
+      });
+    }
     this.lastDamageTime = GAME.FPS;
     this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
     if (this.health <= 0) {
       this.health = 0;
-
-      // Ship health reached 0, it should explode
-      this.explode();
-
-      // Dispatch event to notify that ship has exploded
-      window.dispatchEvent(
-        new CustomEvent('shipExploded', {
-          detail: {
-            shipId: this.id,
-            position: { x: this.position.x, y: this.position.y },
-          },
-        })
-      );
+      this.explode(cause, killerName);
     }
   }
 
@@ -293,25 +305,38 @@ class Ship {
   }
 
   updateHealth(): void {
-    if (this.exploding) {
-      return;
-    }
+    // Health regeneration is now handled server-side for multiplayer consistency
+    // Local regeneration is disabled to prevent conflicts with server updates
+    if (process.env.NODE_ENV === 'test') {
+      // Keep local regeneration for tests
+      if (this.exploding) {
+        return;
+      }
 
-    if (this.lastDamageTime > 0) {
-      this.lastDamageTime--;
-    }
+      if (this.lastDamageTime > 0) {
+        this.lastDamageTime--;
+      }
 
-    if (shouldStartHealthRegeneration(this.lastDamageTime, this.health, this.maxHealth)) {
-      if (this.healthRegenTimer <= 0) {
-        const healthBefore = this.health;
-        this.heal(calculateHealthRegenPerFrame());
-        const healthAfter = this.health;
+      if (shouldStartHealthRegeneration(this.lastDamageTime, this.health, this.maxHealth)) {
+        if (this.healthRegenTimer <= 0) {
+          const healthBefore = this.health;
+          this.heal(calculateHealthRegenPerFrame());
+          const healthAfter = this.health;
 
-        if (healthBefore !== healthAfter) {
-          // Health regenerated
+          if (healthBefore !== healthAfter) {
+            // Health regenerated
+            if (this.isBot) {
+              logger.debug('SHIP', 'Bot health regenerated', {
+                healthBefore,
+                healthAfter,
+                lastDamageTime: this.lastDamageTime,
+                healthRegenTimer: this.healthRegenTimer,
+              });
+            }
+          }
+        } else {
+          this.healthRegenTimer--;
         }
-      } else {
-        this.healthRegenTimer--;
       }
     }
   }

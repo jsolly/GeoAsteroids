@@ -90,6 +90,10 @@ export function drawMiniMap(
     const remotes = playerNetwork.getRemotePlayers();
 
     for (const player of bots) {
+      // Skip players who are in respawn period
+      if (player.respawnTimer !== undefined) {
+        continue;
+      }
       drawShipMiniMap(
         ctx,
         player.ship,
@@ -102,6 +106,10 @@ export function drawMiniMap(
     }
 
     for (const player of remotes) {
+      // Skip players who are in respawn period
+      if (player.respawnTimer !== undefined) {
+        continue;
+      }
       drawShipMiniMap(
         ctx,
         player.ship,

@@ -44,8 +44,8 @@ class MultiplayerServer {
   private hostId: string | null = null;
   private rateLimiters = new Map<string, { count: number; resetTime: number }>();
   private globalRateLimiter = { count: 0, resetTime: Date.now() + 60000 }; // 1 minute window
-  private readonly MAX_INITBOTS_PER_MINUTE = 5;
-  private readonly MAX_INITBOTS_GLOBAL_PER_MINUTE = 20;
+  private readonly MAX_INITBOTS_PER_MINUTE = 20; // Increased from 5 to 20
+  private readonly MAX_INITBOTS_GLOBAL_PER_MINUTE = 100; // Increased from 20 to 100
   private readonly MAX_BOT_COUNT = 50;
 
   constructor() {

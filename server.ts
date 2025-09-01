@@ -584,7 +584,7 @@ const wss = new WebSocketServer({
 
 // Connection rate limiting to prevent abuse
 const connectionAttempts = new Map<string, { count: number; lastAttempt: number }>();
-const MAX_CONNECTIONS_PER_MINUTE = 10;
+const MAX_CONNECTIONS_PER_MINUTE = 50; // Increased from 10 to 50
 const CONNECTION_WINDOW_MS = 60000; // 1 minute
 
 function isRateLimited(ip: string): boolean {
@@ -635,6 +635,8 @@ wss.on('headers', (_headers) => {
 
 // Initialize game engine and WebSocket core
 const gameEngine = new GameEngine();
+// Ensure server-side game loop (including bot regen) runs
+gameEngine.startGameLoop();
 const wsCore = new WebSocketCore(gameEngine);
 wsCore.startPeriodicGameStateBroadcast();
 

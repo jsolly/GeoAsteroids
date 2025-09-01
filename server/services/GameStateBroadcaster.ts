@@ -93,6 +93,20 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message);
   }
 
+  public broadcastPlayerKilled(targetPlayerId: string, targetPlayerName: string, attackerId: string): void {
+    const message = {
+      type: 'playerKilled',
+      data: {
+        targetPlayerId,
+        targetPlayerName,
+        attackerId,
+      },
+      timestamp: Date.now(),
+    };
+
+    this.broadcastToAll(message);
+  }
+
   public broadcastScoreUpdate(playerId: string, score: number): void {
     const message = {
       type: 'scoreUpdate',

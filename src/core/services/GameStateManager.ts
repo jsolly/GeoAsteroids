@@ -5,6 +5,11 @@ export class GameStateManager {
   private text = '';
   private isGameRunning = false;
 
+  // Kill message system
+  private killMessage = '';
+  private killMessageTimer = 0;
+  private readonly KILL_MESSAGE_DURATION_FRAMES = 120; // 2 seconds at 60 FPS
+
   private constructor() {}
 
   static getInstance(): GameStateManager {
@@ -49,5 +54,33 @@ export class GameStateManager {
 
   updateTextAlpha(alpha: number): void {
     this.textAlpha = alpha;
+  }
+
+  // Kill message methods
+  setKillMessage(playerName: string): void {
+    this.killMessage = `You killed ${playerName}`;
+    this.killMessageTimer = this.KILL_MESSAGE_DURATION_FRAMES;
+  }
+
+  clearKillMessage(): void {
+    this.killMessage = '';
+    this.killMessageTimer = 0;
+  }
+
+  getKillMessage(): string {
+    return this.killMessage;
+  }
+
+  hasKillMessage(): boolean {
+    return this.killMessageTimer > 0;
+  }
+
+  updateKillMessageTimer(): void {
+    if (this.killMessageTimer > 0) {
+      this.killMessageTimer--;
+      if (this.killMessageTimer <= 0) {
+        this.killMessage = '';
+      }
+    }
   }
 }

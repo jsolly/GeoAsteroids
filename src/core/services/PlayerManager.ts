@@ -126,9 +126,11 @@ export class PlayerManager {
 
   private handleBotShoot(botShoot: BotShoot): void {
     const ship = this.getLocalShip();
+    const player = this.getLocalPlayer();
 
     // Check if ship is invincible
-    if (ship.blinkCount > 0 || ship.exploding) {
+    // Also skip while awaiting respawn so no damage/events accrue
+    if (ship.blinkCount > 0 || ship.exploding || player.respawnTimer !== undefined) {
       return;
     }
 
@@ -139,7 +141,7 @@ export class PlayerManager {
 
       // Apply bot laser damage
       if (shouldApplyDamage) {
-        ship.takeDamage(20); // Bot laser damage
+        ship.takeDamage(20, 'laser', botShoot.botId); // Bot laser damage
       }
     }
   }

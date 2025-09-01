@@ -274,6 +274,47 @@ export function drawThrusterAtPosition(ship: Ship, shipPosition: { x: number; y:
   }
 }
 
+// Helper function to draw player name under ship
+export function drawPlayerName(
+  name: string,
+  x: number,
+  y: number,
+  shipRadius: number,
+  color: string = '#ffffff'
+): void {
+  const ctx = canvasManager.getContext();
+  if (!ctx) {
+    return;
+  }
+
+  // Position name below the ship
+  const nameY = y + shipRadius + 20;
+
+  // Set text style
+  ctx.fillStyle = color;
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  // Add a subtle background for better readability
+  const textMetrics = ctx.measureText(name);
+  const textWidth = textMetrics.width;
+  const textHeight = 14; // Approximate height for 12px font
+  const padding = 4;
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(
+    x - textWidth / 2 - padding,
+    nameY - padding,
+    textWidth + padding * 2,
+    textHeight + padding * 2
+  );
+
+  // Draw the name text
+  ctx.fillStyle = color;
+  ctx.fillText(name, x, nameY);
+}
+
 export function drawLocalPlayerShip(player: Player): void {
   const ship = player.ship;
 
@@ -340,6 +381,9 @@ export function drawLocalPlayerShip(player: Player): void {
   ctx.font = '10px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenCenter.x, barY - 12);
+
+  // Draw player name under ship
+  drawPlayerName(player.name, screenCenter.x, screenCenter.y, ship.r, player.color);
 
   // Draw targeting line for better aiming
   drawTargetingLine(screenCenter.x, screenCenter.y, ship.angle, ship.r, 300, ship.color, 0.7);
@@ -513,7 +557,8 @@ export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): v
 export function drawShipAtPosition(
   ship: Ship,
   shipPosition: { x: number; y: number },
-  color?: string
+  color?: string,
+  playerName?: string
 ): void {
   const ctx = canvasManager.getContext();
   const cvs = canvasManager.getCanvas();
@@ -579,6 +624,11 @@ export function drawShipAtPosition(
   ctx.font = '10px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenX, barY - 12);
+
+  // Draw player name under ship if provided
+  if (playerName) {
+    drawPlayerName(playerName, screenX, screenY, ship.r, shipColor);
+  }
 }
 
 // Helper function to draw player health bar in the HUD

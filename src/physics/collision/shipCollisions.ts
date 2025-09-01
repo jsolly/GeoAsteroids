@@ -49,11 +49,11 @@ export function detectAllPlayerCollisions(localPlayer: Player, allPlayers?: Play
 
       // Deal damage to local ship
       if (shouldApplyDamage) {
-        localShip.takeDamage(SHIP.COLLISION_DAMAGE);
+        localShip.takeDamage(SHIP.COLLISION_DAMAGE, 'player', otherPlayer.name);
       }
 
       // Apply damage to other player via unified system (will explode and dispatch event if lethal)
-      otherPlayer.ship.takeDamage(SHIP.COLLISION_DAMAGE);
+      otherPlayer.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'player', localPlayer.name);
 
       // Play hit sound
       playSound(Roid.fxHit);
@@ -85,7 +85,7 @@ export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
 
           if (shouldApplyDamage) {
             // Deal damage and destroy roid when damage should be applied
-            currShip.takeDamage(SHIP.COLLISION_DAMAGE);
+            currShip.takeDamage(SHIP.COLLISION_DAMAGE, 'asteroid');
             playSound(Roid.fxHit);
             const result = currRoidBelt.destroyRoid(i);
             score += result.score;
@@ -113,6 +113,7 @@ export function detectRoidHits(currShip: Ship, currRoidBelt: RoidBelt): number {
 export function detectShipToShipCollisions(
   currShip: Ship,
   otherPlayers: Player[],
+  localPlayer: Player,
   additionalPlayers?: Player[]
 ): number {
   let score = 0;
@@ -148,14 +149,30 @@ export function detectShipToShipCollisions(
       }
 
       // Ship-to-ship collision: both ships take damage
-      player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
-      currShip.takeDamage(SHIP.COLLISION_DAMAGE);
+      player.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'player', localPlayer.name);
+
+      // Check if the other ship exploded, and if so, stop processing
+      if (player.ship.exploding) {
+        // Award points for destroying another player
+        score += 300;
+        // Play hit sound
+        playSound(Roid.fxHit);
+        break;
+      }
+
+      currShip.takeDamage(SHIP.COLLISION_DAMAGE, 'player', player.name);
+
+      // Check if current ship exploded, and if so, stop processing
+      if (currShip.exploding) {
+        // Award points for destroying another player
+        score += 300;
+        // Play hit sound
+        playSound(Roid.fxHit);
+        break;
+      }
 
       // Award points for destroying another player
       score += 300;
-
-      // Never explode the ship here - let takeDamage handle life loss and respawn
-      // The ship will only explode when it's actually dead (no lives remaining)
 
       // Play hit sound
       playSound(Roid.fxHit);
@@ -214,7 +231,7 @@ export function detectPlayerRoidCollisions(
       if (distance < collisionThreshold) {
         // Deal damage to player instead of instant death
         // Use takeDamage to properly trigger explosion events and respawn logic
-        player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
+        player.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'asteroid');
 
         // If player health reaches 0, takeDamage will handle the explosion
         // and dispatch the shipExploded event, which will trigger respawn logic

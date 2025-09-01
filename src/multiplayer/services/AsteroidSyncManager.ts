@@ -1,6 +1,8 @@
 import type { AsteroidData } from '../../../shared-types';
+import { DEBUG, ROID } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Roid, RoidBelt } from '../../entities/roid/Roid';
+import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage } from '../types';
 import { ConnectionManager } from './ConnectionManager';
@@ -41,16 +43,21 @@ export class AsteroidSyncManager {
 
     // If connected to server, request server-managed asteroids
     if (this.connectionManager.isConnected()) {
+      // Use debug-aware asteroid count instead of current belt length
+      const requestedAsteroidCount = isDebugMode()
+        ? DEBUG.INITIAL_ROID_COUNT
+        : ROID.INITIAL_ROID_COUNT;
+
       const initMessage: ClientMessage = {
         type: 'initAsteroids',
         id: this.connectionManager.getClientId(),
         data: {
-          asteroidCount: roidBelt.roids.length,
+          asteroidCount: requestedAsteroidCount,
         },
         timestamp: Date.now(),
       };
       this.connectionManager.sendMessage(initMessage);
-      logger.debug('MULTIPLAYER', 'Requested server asteroids', { count: roidBelt.roids.length });
+      logger.debug('MULTIPLAYER', 'Requested server asteroids', { count: requestedAsteroidCount });
     }
   }
 

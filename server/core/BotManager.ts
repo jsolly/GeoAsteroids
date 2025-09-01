@@ -1,6 +1,9 @@
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
 
+// Constants for explosion timing (matching client-side)
+const SHIP_EXPLODE_DURATION_FRAMES = 60; // 1 second at 60 FPS
+
 export interface ServerBot {
   id: string;
   name: string;
@@ -8,6 +11,7 @@ export interface ServerBot {
   velocity: Velocity;
   angle: number;
   exploding: boolean;
+  explodeTime: number; // Add explosion timer
   lives: number;
   health: number;
   maxHealth: number;
@@ -51,6 +55,7 @@ export class BotManager {
         velocity: { x: 0, y: 0 },
         angle,
         exploding: false,
+        explodeTime: 0, // Initialize explosion timer
         lives: 3,
         health: 100,
         maxHealth: 100,
@@ -120,6 +125,7 @@ export class BotManager {
     // If bot is destroyed, set exploding state
     if (bot.health <= 0 && wasAlive) {
       bot.exploding = true;
+      bot.explodeTime = SHIP_EXPLODE_DURATION_FRAMES; // Set explosion timer
     }
 
     bot.lastUpdate = Date.now();
@@ -132,6 +138,26 @@ export class BotManager {
       this.bots.delete(botId);
     }
     return bot;
+  }
+
+  /**
+   * Update explosion timers for all bots
+   * Returns array of bot IDs that finished exploding and should be removed
+   */
+  public updateExplosions(): string[] {
+    const finishedExploding: string[] = [];
+
+    for (const [botId, bot] of this.bots) {
+      if (bot.exploding && bot.explodeTime > 0) {
+        bot.explodeTime--;
+        if (bot.explodeTime <= 0) {
+          bot.exploding = false;
+          finishedExploding.push(botId);
+        }
+      }
+    }
+
+    return finishedExploding;
   }
 
   public clearBots(): void {

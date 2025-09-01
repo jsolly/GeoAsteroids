@@ -36,6 +36,9 @@ export class GameController {
     // Set up multiplayer disconnection handler
     this.setupMultiplayerDisconnectionHandler();
 
+    // Set up game over handler
+    this.setupGameOverHandler();
+
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
       (window as { gameController?: GameController }).gameController = this;
@@ -208,8 +211,9 @@ export class GameController {
     window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
   }
 
-  gameOver(): void {
-    this.gameStateManager.updateTextProperties('Game Over', 1.0);
+  gameOver(deathCause?: string): void {
+    const gameOverText = deathCause ? `Game Over: You were killed by ${deathCause}` : 'Game Over';
+    this.gameStateManager.updateTextProperties(gameOverText, 1.0);
 
     // Clean up server asteroid listeners to prevent memory leaks
     this.cleanupServerAsteroidListeners();
@@ -221,7 +225,98 @@ export class GameController {
       import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });
-    }, 2500);
+    }, 3500); // Increased time to read the death message
+  }
+
+  private setupGameOverHandler(): void {
+    // Listen for player death events (both life loss and game over)
+    window.addEventListener('playerDied', (event) => {
+      const customEvent = event as CustomEvent<{
+        playerId: string;
+        deathCause: string;
+        isGameOver: boolean;
+      }>;
+
+      // Only handle events for local player
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (customEvent.detail.playerId === localPlayer?.id) {
+        const { deathCause, isGameOver } = customEvent.detail;
+
+        if (isGameOver) {
+          // Final death - show game over message
+          logger.info('GAME', `Game over - killed by: ${deathCause}`);
+          this.gameOver(deathCause);
+        } else {
+          // Life loss - death message is handled by GameLoopManager during respawn
+          logger.info('GAME', `Life lost - killed by: ${deathCause}`);
+        }
+      } else {
+        // Handle other player deaths - check if local player killed them
+        const { deathCause } = customEvent.detail;
+        if (deathCause.includes('laser') && deathCause.includes(localPlayer?.name || '')) {
+          // Extract the killed player's name from the death cause
+          // The death cause format is typically "PlayerName's laser" or similar
+          const deathCauseText = deathCause.toLowerCase();
+          const localPlayerName = localPlayer?.name.toLowerCase() || '';
+
+          // Check if this death was caused by the local player's laser
+          if (deathCauseText.includes(localPlayerName) && deathCauseText.includes('laser')) {
+            // Get the killed player's name from the event
+            const killedPlayerId = customEvent.detail.playerId;
+
+            // Try to find the player in the multiplayer manager (remote players and bots)
+            const multiplayerManager = this.multiplayerManager;
+            const remotePlayers = multiplayerManager.getRemotePlayers();
+            const botPlayers = this.playerManager.getBots();
+
+            // Check remote players first
+            let killedPlayer = remotePlayers.find((p) => p.id === killedPlayerId);
+
+            // If not found in remote players, check bots
+            if (!killedPlayer) {
+              killedPlayer = botPlayers.get(killedPlayerId);
+            }
+
+            if (killedPlayer) {
+              this.setKillMessage(killedPlayer.name);
+            }
+          }
+        }
+      }
+    });
+
+    // Keep the old game over handler for backward compatibility
+    window.addEventListener('playerGameOver', (event) => {
+      const customEvent = event as CustomEvent<{
+        playerId: string;
+        deathCause: string;
+      }>;
+
+      // Only handle game over for local player
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (customEvent.detail.playerId === localPlayer?.id) {
+        logger.info('GAME', `Game over - killed by: ${customEvent.detail.deathCause}`);
+        this.gameOver(customEvent.detail.deathCause);
+      }
+    });
+
+    // Listen for remote player deaths
+    window.addEventListener('remotePlayerDied', (event) => {
+      const customEvent = event as CustomEvent<{
+        playerId: string;
+        playerName: string;
+        deathCause: string;
+      }>;
+
+      // Set kill message for remote player death
+      this.setKillMessage(customEvent.detail.playerName);
+
+      logger.debug('GAME', 'Remote player killed', {
+        playerId: customEvent.detail.playerId,
+        playerName: customEvent.detail.playerName,
+        deathCause: customEvent.detail.deathCause,
+      });
+    });
   }
 
   // Getters for current game state
@@ -265,6 +360,15 @@ export class GameController {
 
   getText(): string {
     return this.gameStateManager.getText();
+  }
+
+  // Kill message methods
+  setKillMessage(playerName: string): void {
+    this.gameStateManager.setKillMessage(playerName);
+  }
+
+  updateKillMessageTimer(): void {
+    this.gameStateManager.updateKillMessageTimer();
   }
 
   getIsGameRunning(): boolean {

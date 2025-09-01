@@ -132,21 +132,20 @@ export class MessageHandler {
       return;
     }
 
-    const player = this.gameEngine.updatePlayer(id, data);
+    // Server-authoritative health: ignore client-sent health fields
+    const sanitizedData: any = { ...data };
+    delete (sanitizedData as any).health;
+    delete (sanitizedData as any).maxHealth;
+
+    const player = this.gameEngine.updatePlayer(id, sanitizedData);
     if (!player) {
       return; // Player not found
     }
 
     // Include laser data if provided
-    const updateData: any = { ...data };
-    if (data.lasers !== undefined) {
-      updateData.lasers = data.lasers;
-    }
-    if (data.health !== undefined) {
-      updateData.health = data.health;
-    }
-    if (data.maxHealth !== undefined) {
-      updateData.maxHealth = data.maxHealth;
+    const updateData: any = { ...sanitizedData };
+    if (sanitizedData.lasers !== undefined) {
+      updateData.lasers = sanitizedData.lasers;
     }
 
     this.broadcaster.broadcastPlayerUpdate(id, updateData);
@@ -197,6 +196,9 @@ export class MessageHandler {
         if (attacker) {
           this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
         }
+        
+        // Broadcast player killed event to notify the killer
+        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetPlayer.name, data.attackerId);
       }
     }
   }
@@ -264,7 +266,7 @@ export class MessageHandler {
 
     // Only create asteroids if they don't already exist
     if (this.gameEngine.getAsteroidCount() === 0) {
-      const asteroidCount = Math.min(data.asteroidCount || 10, 20);
+      const asteroidCount = data.asteroidCount || 10;
       const asteroids = this.gameEngine.createAsteroids(asteroidCount);
       this.broadcaster.broadcastAsteroidCreation(asteroids);
       logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids`);

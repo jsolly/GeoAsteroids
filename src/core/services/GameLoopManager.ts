@@ -35,7 +35,8 @@ export class GameLoopManager {
     const currShip = this.gameController.getCurrShip();
     const currPlayer = this.gameController.getCurrPlayer();
     const currRoidBelt = this.gameController.getCurrRoidBelt();
-    const currScore = this.gameController.getCurrScore();
+    // Use the local player's score instead of GameStateManager score for consistency
+    const currScore = currPlayer.score;
     const textAlpha = this.gameController.getTextAlpha();
     const text = this.gameController.getText();
 
@@ -46,6 +47,9 @@ export class GameLoopManager {
     const botManager = BotManager.getInstance();
     botManager.updateBotsInGameLoop();
 
+    // Update kill message timer
+    this.gameController.updateKillMessageTimer();
+
     const allPlayers = this.playerNetwork.getAllPlayers();
     const otherPlayers = this.playerNetwork.getOtherPlayers();
 
@@ -55,6 +59,7 @@ export class GameLoopManager {
       ship.setBlinkOn();
       ship.updateInvincibility();
       ship.updateExplosion();
+      // Do not regenerate health client-side for non-local players (server authoritative)
     }
 
     // Handle all player respawn timers
@@ -76,7 +81,8 @@ export class GameLoopManager {
     this.handleCollision(currPlayer);
 
     // Handle ship movement and updates
-    if (!currShip.exploding && currPlayer.lives > 0) {
+    // Do not move the local ship during respawn countdown
+    if (!currShip.exploding && currPlayer.lives > 0 && currPlayer.respawnTimer === undefined) {
       currShip.move();
     }
 
@@ -110,8 +116,11 @@ export class GameLoopManager {
       }
 
       if (!ship.exploding) {
-        if (ship.blinkOn) {
-          drawLocalPlayerShip(player);
+        // Do not render the local ship during the respawn countdown window
+        if (player.respawnTimer === undefined) {
+          if (ship.blinkOn) {
+            drawLocalPlayerShip(player);
+          }
         }
 
         // Draw EMP pulse effect if active
@@ -161,10 +170,37 @@ export class GameLoopManager {
       if (player.respawnTimer !== undefined) {
         if (player.respawnTimer > 0) {
           player.respawnTimer--;
+
+          // Show death message with backdrop during respawn delay
+          // Only show message after explosion animation is complete
+          // Only show death messages for local player, not bots or remote players
+          const messageDisplayFrames = 120; // 2 seconds at 60 FPS
+          if (
+            player.respawnTimer <= messageDisplayFrames &&
+            player.deathCause &&
+            player.type === 'local'
+          ) {
+            // Update game state to show death message
+            const gameStateManager = this.gameController.getGameStateManager();
+            const alpha = Math.min(1.0, (messageDisplayFrames - player.respawnTimer) / 30); // Fade in over 0.5 seconds
+            gameStateManager.updateTextProperties(`You were killed by ${player.deathCause}`, alpha);
+          }
         }
 
         if (player.respawnTimer === 0) {
-          player.respawn();
+          // Clear the death message before respawning (only for local player)
+          if (player.type === 'local') {
+            const gameStateManager = this.gameController.getGameStateManager();
+            gameStateManager.updateTextAlpha(0);
+          }
+
+          // Only respawn local players and bots locally
+          // Remote players are respawned by the server
+          if (player.type !== 'remote') {
+            player.respawn();
+          }
+
+          // Clear respawn timer for all player types
           player.respawnTimer = undefined;
         }
       }

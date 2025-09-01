@@ -27,6 +27,8 @@ export default defineConfig(() => {
       modulePreload: false,
     },
     server: {
+      port: 5173,
+      strictPort: true, // Fail if port is not available
       proxy: {
         '/ws': {
           target: 'ws://localhost:3001',

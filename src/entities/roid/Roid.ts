@@ -43,7 +43,7 @@ class Roid {
 }
 
 class RoidBelt {
-  roidNum = isDebugMode() ? DEBUG.INITIAL_ROID_COUNT : ROID.INITIAL_ROID_COUNT;
+  roidNum: number = isDebugMode() ? DEBUG.INITIAL_ROID_COUNT : ROID.INITIAL_ROID_COUNT;
   roids: Roid[] = [];
   minCount: number = ROID.MIN_COUNT;
   maxCount: number = ROID.MAX_COUNT;

@@ -18,7 +18,7 @@ import { GameError } from '../types';
 import { errorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
-import { drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
+import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap, drawServerInfo } from './hud/minimap';
@@ -33,6 +33,7 @@ export interface RenderFrame {
   readonly allPlayers: readonly Player[];
   readonly showLeaderboard: boolean;
   readonly showMinimap: boolean;
+  readonly debugMode: boolean;
 }
 
 export interface RenderStats {
@@ -187,6 +188,11 @@ export class RenderEngine {
     const localPlayer = allPlayers.find((p) => p.type === 'local');
 
     for (const player of allPlayers) {
+      // Skip rendering players who are in respawn period
+      if (player.respawnTimer !== undefined) {
+        continue;
+      }
+
       if (player.ship.exploding) {
         // Render explosion - use cached local player reference
         if (player.id === localPlayer?.id) {
@@ -196,7 +202,7 @@ export class RenderEngine {
         }
       } else {
         // Render ship
-        drawShipAtPosition(player.ship, localShip.position);
+        drawShipAtPosition(player.ship, localShip.position, player.ship.color, player.name);
       }
 
       // Render thruster if thrusting (local player thruster handled by Ship.applyVelocity())
@@ -223,7 +229,8 @@ export class RenderEngine {
 
     // Render other players' lasers
     for (const otherPlayer of allPlayers) {
-      if (otherPlayer.id !== player.id) {
+      // Skip rendering lasers for players in respawn period
+      if (otherPlayer.id !== player.id && otherPlayer.respawnTimer === undefined) {
         drawLasers(otherPlayer.ship, otherPlayer.ship.color, player.ship.position);
         this.renderStats.drawCalls++;
       }
@@ -235,8 +242,17 @@ export class RenderEngine {
       return;
     }
 
-    const { score, textAlpha, text, lives, allPlayers, player, showLeaderboard, showMinimap } =
-      frame;
+    const {
+      score,
+      textAlpha,
+      text,
+      lives,
+      allPlayers,
+      player,
+      showLeaderboard,
+      showMinimap,
+      debugMode,
+    } = frame;
 
     // Render HUD elements
     drawScoreOverlay(this.ctx, this.canvas, score);
@@ -254,6 +270,10 @@ export class RenderEngine {
       drawMiniMap(this.ctx, this.canvas, player.ship);
       drawServerInfo(this.ctx, this.canvas);
     }
+
+    // Render debug information
+    const roidCount = frame.roidBelt.roids.length;
+    drawDebugInfo(this.ctx, this.canvas, roidCount, debugMode);
 
     this.renderStats.drawCalls += 4; // Base HUD elements
   }

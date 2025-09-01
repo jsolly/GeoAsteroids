@@ -110,20 +110,20 @@ export const DEBUG = {
   LOCAL_PLAYER_INVINCIBLE: false,
 
   // Bot settings (overrides GAME.BOT_COUNT when in debug mode)
-  BOT_COUNT: 1,
+  BOT_COUNT: 5,
   DISABLE_BOT_MOVEMENT: true,
   DISABLE_BOT_LASERS: true,
   DISABLE_BOT_SPAWN_PROTECTION: false,
 
   // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)
-  INITIAL_ROID_COUNT: 10,
+  INITIAL_ROID_COUNT: 50,
   DISABLE_ROID_MOVEMENT: true,
   PLACE_ROID_ON_BOT: false,
 
   // Roid splitting settings (overrides server-side defaults when in debug mode)
   MIN_ROID_SIZE: 10,
   SPLIT_SIZE_RATIO: 0.6,
-  MAX_ROID_COUNT: 50,
+  MAX_ROID_COUNT: 200,
 
   // Player positioning settings (Affects local, remote, and bot players)
   PLACE_PLAYERS_NEAR_CENTER: true,

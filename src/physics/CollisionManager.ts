@@ -63,10 +63,7 @@ export class CollisionManager {
     // Detect laser hits on roids first (before boundary check to avoid losing scoring)
     result.laserScore = detectLaserHits(roidBelt, localPlayer, allPlayers);
 
-    // Apply laserScore immediately to prevent loss on boundary collision
-    if (result.laserScore > 0) {
-      localPlayer.score += result.laserScore;
-    }
+    // Server handles all scoring in multiplayer mode
 
     // Check boundary collisions
     if (detectBoundaryCollisions(ship)) {
@@ -76,9 +73,11 @@ export class CollisionManager {
     // Detect roid hits on ship
     result.roidScore = detectRoidHits(ship, roidBelt);
 
-    // Update player's individual score for leaderboard (roidScore)
-    if (result.roidScore > 0) {
-      localPlayer.score += result.roidScore;
+    // Server handles all scoring in multiplayer mode
+
+    // Stop processing if ship is now exploding (from roid collision)
+    if (ship.exploding) {
+      return result;
     }
 
     // Performance optimization: limit processing when there are too many entities
@@ -92,8 +91,26 @@ export class CollisionManager {
 
       // Detect all other player-related collisions
       detectPlayerBoundaryCollisions(localPlayer, allPlayers);
+
+      // Stop processing if ship is now exploding (from player boundary collision)
+      if (ship.exploding) {
+        return result;
+      }
+
       detectAllPlayerCollisions(localPlayer, allPlayers);
+
+      // Stop processing if ship is now exploding (from player collision)
+      if (ship.exploding) {
+        return result;
+      }
+
       detectPlayerLaserShipCollisions(localPlayer, allPlayers);
+
+      // Stop processing if ship is now exploding (from laser collision)
+      if (ship.exploding) {
+        return result;
+      }
+
       detectPlayerRoidCollisions(localPlayer, allPlayers, roidBelt);
     }
 

@@ -45,7 +45,7 @@ export interface Damageable {
   health: number;
   readonly maxHealth: number;
   readonly lastDamageTime: number;
-  takeDamage(amount: number): boolean;
+  takeDamage(amount: number, cause?: string, killerName?: string): boolean;
   heal(amount: number): void;
 }
 
@@ -139,6 +139,7 @@ export interface Roid extends BaseEntity {
 }
 
 export interface RoidBelt {
+  roidNum: number;
   readonly roids: Roid[];
   readonly minCount: number;
   readonly maxCount: number;
@@ -222,11 +223,17 @@ export type RequiredKeys<T, K extends keyof T> = T & Required<Pick<T, K>>;
 // ============================================================================
 export interface CustomEventMap {
   gameStart: CustomEvent<undefined>;
-  playerGameOver: CustomEvent<{ playerId: string }>;
+  playerDied: CustomEvent<{
+    playerId: string;
+    deathCause: string;
+    isGameOver: boolean;
+  }>;
+  playerGameOver: CustomEvent<{ playerId: string; deathCause: string }>;
   shipExploded: CustomEvent<{
     shipId?: string;
     position?: Position;
     cause?: string;
+    killerName?: string;
   }>;
   empPulse: CustomEvent<{
     shipPosition: Position;

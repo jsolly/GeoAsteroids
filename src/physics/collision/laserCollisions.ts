@@ -1,4 +1,4 @@
-import { GAME, LASER, SHIP } from '../../constants';
+import { SHIP } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { isBot, isRemote } from '../../entities/player/playerKinds';
@@ -22,7 +22,7 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
     return 0;
   }
 
-  let score = 0;
+  const score = 0;
 
   // Check each laser for player hits
   for (let j = currShip.lasers.length - 1; j >= 0; j--) {
@@ -53,14 +53,16 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
       const collisionThreshold = player.ship.r + 2; // Laser radius is small, use 2 pixels
 
       if (distance < collisionThreshold) {
-        // Apply damage to player using unified damage system
-        player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
-
-        // Remote players are server-authoritative; do not dispatch client-side respawn logic.
-        // Show explosion visuals client-side and let server send updated state/position.
+        // Handle different player types appropriately
         if (isRemote(player)) {
-          player.ship.exploding = true;
-          player.ship.explodeTime = Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
+          // For remote players, only notify server - don't apply damage locally
+          const multiplayerManager = MultiplayerManager.getInstance();
+          if (multiplayerManager.isConnected) {
+            multiplayerManager.laserDamagePlayer(player.id, SHIP.COLLISION_DAMAGE);
+          }
+        } else {
+          // For local players and bots, apply damage locally
+          player.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'laser', localPlayer.name);
         }
 
         // Activate laser explosion
@@ -70,7 +72,11 @@ export function detectLaserPlayerCollisions(localPlayer: Player, allPlayers?: Pl
         laser.playHitSound();
 
         // Award points for player hit (similar to roid destruction)
-        score += 50;
+        // Server handles all points in multiplayer mode
+        logger.debug('COLLISION', 'Player hit - server will award points', {
+          playerId: player.id,
+          playerType: isRemote(player) ? 'remote' : 'local',
+        });
 
         // Only handle one hit per laser per frame
         break;
@@ -124,7 +130,7 @@ export function detectPlayerLaserShipCollisions(
 
         // Apply unified laser damage
         if (shouldApplyDamage) {
-          localShip.takeDamage(SHIP.COLLISION_DAMAGE);
+          localShip.takeDamage(SHIP.COLLISION_DAMAGE, 'laser', player.name);
         }
 
         // Activate laser explosion using Ship's method
@@ -215,12 +221,7 @@ export function detectLaserHits(
 
         // Notify server of asteroid destruction with points
         const multiplayerManager = MultiplayerManager.getInstance();
-        if (multiplayerManager.isConnected) {
-          multiplayerManager.asteroidDestroyed(destroyedRoid.id, result.score);
-        } else {
-          // No local fallback - multiplayer connection required
-          logger.warn('COLLISION', 'Cannot score asteroid destruction - not connected to server');
-        }
+        multiplayerManager.asteroidDestroyed(destroyedRoid.id, result.score);
 
         break; // This laser is now exploded, move to next
       }
@@ -265,9 +266,7 @@ export function detectLaserHits(
 
               // Notify multiplayer manager of asteroid destruction
               const multiplayerManager = MultiplayerManager.getInstance();
-              if (multiplayerManager.isConnected) {
-                multiplayerManager.handleAsteroidDestruction(destroyedRoid.id);
-              }
+              multiplayerManager.handleAsteroidDestruction(destroyedRoid.id);
 
               break; // This laser is now exploded, move to next
             }
@@ -303,27 +302,34 @@ export function detectLaserHits(
           if (isRemote(player)) {
             // For remote players, only notify server - don't apply damage locally
             const multiplayerManager = MultiplayerManager.getInstance();
-            if (multiplayerManager.isConnected) {
-              multiplayerManager.laserDamagePlayer(player.id, SHIP.COLLISION_DAMAGE);
-            }
+            logger.debug('COLLISION', 'Sending laser damage to remote player', {
+              playerId: player.id,
+              damage: SHIP.COLLISION_DAMAGE,
+              playerHealth: player.ship.health,
+            });
+            multiplayerManager.laserDamagePlayer(player.id, SHIP.COLLISION_DAMAGE);
           } else if (isBot(player)) {
             // For bots, apply damage locally and notify server
-            player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
+            player.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'laser', localPlayer.name);
 
             // Notify server of bot damage for synchronization
             const multiplayerManager = MultiplayerManager.getInstance();
-            if (multiplayerManager.isConnected) {
-              multiplayerManager.laserDamageBot(player.id, SHIP.COLLISION_DAMAGE);
-            }
+            multiplayerManager.laserDamageBot(player.id, SHIP.COLLISION_DAMAGE);
           } else {
             // For local player, apply damage locally
-            player.ship.takeDamage(SHIP.COLLISION_DAMAGE);
+            player.ship.takeDamage(SHIP.COLLISION_DAMAGE, 'laser', localPlayer.name);
           }
 
           currShip.updateLaserExplodeTime(j);
 
-          // Note: Player/bot destruction points are now calculated server-side
-          // No local fallback - multiplayer connection required
+          // Server handles all points in multiplayer mode
+          logger.debug('COLLISION', 'Player/bot hit - server will award points', {
+            playerId: player.id,
+            playerType: isBot(player) ? 'bot' : 'player',
+          });
+
+          // Note: Kill message will be set when the player actually dies
+          // This is handled in the playerDied event listener
 
           // Play hit sound
           laser.playHitSound();

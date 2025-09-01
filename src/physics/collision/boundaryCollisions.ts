@@ -61,33 +61,11 @@ export function detectBoundaryCollisions(shipOrPlayers: Ship | Player[]): boolea
       position: { x: ship.position.x, y: ship.position.y },
     });
 
-    // Store position where collision occurred for event
-    const collisionPosition = { x: ship.position.x, y: ship.position.y };
-
-    // Ship is out of bounds, trigger explosion (same as any other collision)
+    // Ship is out of bounds, trigger explosion with cause
     logger.debug('BOUNDARY', 'Ship triggering explosion due to boundary collision', {
       shipId: ship.id,
     });
-    ship.explode();
-
-    // Set health to 0 to trigger respawn (same as other collision types)
-    ship.health = 0;
-    logger.debug('BOUNDARY', 'Ship health set to 0 due to boundary collision', { shipId: ship.id });
-
-    // Dispatch shipExploded event so Player.onShipExploded() gets called
-    // This triggers the normal respawn process which will handle repositioning
-    logger.debug('BOUNDARY', 'Ship dispatching shipExploded event with cause: boundary', {
-      shipId: ship.id,
-    });
-    window.dispatchEvent(
-      new CustomEvent('shipExploded', {
-        detail: {
-          shipId: ship.id,
-          cause: 'boundary',
-          position: collisionPosition, // Use the position where collision occurred
-        },
-      })
-    );
+    ship.takeDamage(ship.health, 'boundary');
 
     // Play explosion sound
     playSound(Roid.fxHit);

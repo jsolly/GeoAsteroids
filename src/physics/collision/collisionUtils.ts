@@ -17,13 +17,18 @@ export function shouldSkipPlayerCollision(player: Player): boolean {
 }
 
 // Helper function to check if damage should be applied to local player
-export function shouldApplyDamageToLocalPlayer(_ship: Ship): boolean {
+export function shouldApplyDamageToLocalPlayer(ship: Ship): boolean {
+  // Check for regular invincibility (blinking after respawn)
+  if (ship.blinkCount > 0) {
+    return false; // No damage when invincible
+  }
+
   // Only apply debug rules if debug mode is actually enabled via environment
   if (isDebugMode() && DEBUG.LOCAL_PLAYER_INVINCIBLE) {
     return false; // No damage in debug invincibility mode
   }
 
-  return true; // Always apply damage in normal mode
+  return true; // Apply damage in normal mode
 }
 
 // Helper function to check if a player is invincible

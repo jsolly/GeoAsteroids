@@ -17,9 +17,10 @@ import {
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
 import { Point } from '../physics/Point';
+import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
-import { drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
+import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap, drawServerInfo } from './hud/minimap';
@@ -203,6 +204,14 @@ class CanvasManager {
     // Draw all players (including bots) using unified rendering
     try {
       for (const player of allPlayers) {
+        // Skip players who are in respawn period or have 0 health and are not exploding
+        if (
+          player.respawnTimer !== undefined ||
+          (player.ship.health <= 0 && !player.ship.exploding)
+        ) {
+          continue;
+        }
+
         if (player.ship.exploding) {
           // Draw explosion animation for exploding ships
           if (player.id === currPlayer.id) {
@@ -214,7 +223,7 @@ class CanvasManager {
           }
         } else {
           // All players use the same ship rendering with world coordinates
-          drawShipAtPosition(player.ship, currShip.position);
+          drawShipAtPosition(player.ship, currShip.position, player.ship.color, player.name);
         }
       }
     } catch (error: unknown) {
@@ -228,6 +237,14 @@ class CanvasManager {
     // Draw thrusters for all players (including bots) at their world positions
     try {
       for (const player of allPlayers) {
+        // Skip players who are in respawn period or have 0 health and are not exploding
+        if (
+          player.respawnTimer !== undefined ||
+          (player.ship.health <= 0 && !player.ship.exploding)
+        ) {
+          continue;
+        }
+
         if (!player.ship.exploding && player.ship.thrusting) {
           if (player.id === currPlayer.id) {
           } else {
@@ -255,6 +272,14 @@ class CanvasManager {
       if (player.id === currPlayer.id) {
         continue;
       }
+      // Skip players who are in respawn period or have 0 health and are not exploding
+      if (
+        player.respawnTimer !== undefined ||
+        (player.ship.health <= 0 && !player.ship.exploding)
+      ) {
+        continue;
+      }
+
       drawLasers(player.ship, player.ship.color, currShip.position);
     }
 
@@ -276,6 +301,10 @@ class CanvasManager {
     if (allPlayers.length > 1) {
       drawLeaderboard(ctx, canvas, allPlayers, currPlayer.id);
     }
+
+    // Draw debug information
+    const roidCount = currRoidBelt.roids.length;
+    drawDebugInfo(ctx, canvas, roidCount, isDebugMode());
   }
 
   // Helper method to draw mini map with all players

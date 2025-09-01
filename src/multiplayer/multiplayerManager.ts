@@ -119,10 +119,15 @@ export class MultiplayerManager {
   getServerName(): string {
     // Extract server name from websocket URL or return default
     // Compute fallback URL from current page location
-    const computedUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
-        : 'ws://localhost:3001/ws';
+    let computedUrl = 'ws://localhost:3001/ws'; // Default fallback
+
+    if (typeof window !== 'undefined') {
+      // Only use window.location if it has a valid host
+      const host = window.location.host;
+      if (host && host.trim() !== '' && window.location.protocol.startsWith('http')) {
+        computedUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/ws`;
+      }
+    }
 
     const wsUrl = import.meta.env?.VITE_WEBSOCKET_URL || computedUrl;
     try {

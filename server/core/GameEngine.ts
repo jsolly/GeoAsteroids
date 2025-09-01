@@ -5,6 +5,38 @@ import { AsteroidManager } from './AsteroidManager';
 import { BotManager, ServerBot } from './BotManager';
 import { RNGService } from './RNGService';
 
+// Import health regeneration utilities from client-side
+const GAME = { FPS: 60 };
+const SHIP = {
+  HEALTH_REGEN_RATE: 1, // per second
+  HEALTH_REGEN_DELAY: 5, // seconds
+  MAX_HEALTH: 100
+};
+
+function calculateHealthRegenPerFrame(): number {
+  return SHIP.HEALTH_REGEN_RATE / GAME.FPS;
+}
+
+function calculateHealthRegenDelayFrames(): number {
+  return Math.ceil(SHIP.HEALTH_REGEN_DELAY * GAME.FPS);
+}
+
+function shouldStartHealthRegeneration(
+  lastDamageTime: number,
+  currentHealth: number,
+  maxHealth: number
+): boolean {
+  return lastDamageTime <= 0 && currentHealth < maxHealth;
+}
+
+function calculateHealthAfterHeal(
+  currentHealth: number,
+  healAmount: number,
+  maxHealth: number
+): number {
+  return Math.min(currentHealth + healAmount, maxHealth);
+}
+
 export class GameEngine {
   private playerManager: PlayerManager;
   private asteroidManager: AsteroidManager;
@@ -12,6 +44,12 @@ export class GameEngine {
   private rngService: RNGService;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
+
+  // Bot health regeneration state
+  private botHealthRegenerationState: Map<string, {
+    lastDamageTime: number;
+    healthRegenTimer: number;
+  }> = new Map();
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -26,11 +64,15 @@ export class GameEngine {
       return; // Already running
     }
 
-    // Start game loop for cleanup (10 FPS)
+    // Start game loop for cleanup and updates (60 FPS for health regeneration)
     this.gameLoopInterval = setInterval(() => {
       this.gameTime++;
       this.cleanupStalePlayers();
-    }, 100);
+      this.updatePlayerHealthRegeneration();
+      this.updateBotHealthRegeneration();
+      this.updateBotExplosions();
+      this.updatePlayerRespawns();
+    }, 1000 / 60); // 60 FPS
   }
 
   public stopGameLoop(): void {
@@ -116,6 +158,8 @@ export class GameEngine {
   }
 
   public removeBot(botId: string): ServerBot | undefined {
+    // Clean up health regeneration state
+    this.botHealthRegenerationState.delete(botId);
     return this.botManager.removeBot(botId);
   }
 
@@ -129,6 +173,11 @@ export class GameEngine {
     // Award points to attacker for destroying a player
     if ((damagedPlayer.health ?? 0) <= 0 && damagedPlayer.exploding) {
       this.playerManager.awardPoints(attackerId, 200);
+      
+      // Set respawn timer for the destroyed player
+      const respawnDelay = 180; // 3 seconds at 60 FPS (explosion duration + message display)
+      this.playerManager.updatePlayer(targetPlayerId, { respawnTimer: respawnDelay });
+      
       return true; // Player was destroyed
     }
 
@@ -141,9 +190,17 @@ export class GameEngine {
       return false;
     }
 
+    // Initialize or reset health regeneration state for this bot
+    this.botHealthRegenerationState.set(botId, {
+      lastDamageTime: GAME.FPS, // Reset damage cooldown
+      healthRegenTimer: calculateHealthRegenDelayFrames() // Reset regen delay
+    });
+
     // Award points to attacker for destroying a bot
     if (damagedBot.health <= 0 && damagedBot.exploding) {
       this.playerManager.awardPoints(attackerId, 50);
+      // Clean up health regeneration state for destroyed bot
+      this.botHealthRegenerationState.delete(botId);
       return true; // Bot was destroyed
     }
 
@@ -182,6 +239,7 @@ export class GameEngine {
         exploding: player.exploding ?? false,
         health: player.health ?? 100,
         maxHealth: player.maxHealth ?? 100,
+        respawnTimer: player.respawnTimer,
       })),
       bots: this.botManager.getAllBots().map(bot => ({
         id: bot.id,
@@ -197,6 +255,70 @@ export class GameEngine {
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
     };
+  }
+
+  // Player health regeneration
+  private updatePlayerHealthRegeneration(): void {
+    this.playerManager.updatePlayerHealthRegeneration();
+  }
+
+  // Bot health regeneration
+  private updateBotHealthRegeneration(): void {
+    const bots = this.botManager.getAllBots();
+
+    for (const bot of bots) {
+      if (bot.exploding || bot.health <= 0) {
+        continue; // Skip exploding or dead bots
+      }
+
+      // Get or initialize health regeneration state for this bot
+      let regenState = this.botHealthRegenerationState.get(bot.id);
+      if (!regenState) {
+        // Initialize state for bots that haven't been damaged yet
+        regenState = {
+          lastDamageTime: 0,
+          healthRegenTimer: 0
+        };
+        this.botHealthRegenerationState.set(bot.id, regenState);
+      }
+
+      // Update damage cooldown timer
+      if (regenState.lastDamageTime > 0) {
+        regenState.lastDamageTime--;
+      }
+
+      // Check if health regeneration should start
+      if (shouldStartHealthRegeneration(regenState.lastDamageTime, bot.health, bot.maxHealth)) {
+        if (regenState.healthRegenTimer <= 0) {
+          // Regenerate health
+          const regenAmount = calculateHealthRegenPerFrame();
+          const newHealth = calculateHealthAfterHeal(bot.health, regenAmount, bot.maxHealth);
+
+          if (newHealth > bot.health) {
+            // Update bot health in the manager
+            this.botManager.updateBot(bot.id, { health: newHealth });
+          }
+        } else {
+          // Decrement regeneration delay timer
+          regenState.healthRegenTimer--;
+        }
+      }
+    }
+  }
+
+  // Bot explosion updates
+  private updateBotExplosions(): void {
+    const finishedExploding = this.botManager.updateExplosions();
+    
+    // Remove bots that finished exploding
+    for (const botId of finishedExploding) {
+      this.botManager.removeBot(botId);
+    }
+  }
+
+  // Player respawn updates
+  private updatePlayerRespawns(): void {
+    this.playerManager.updatePlayerRespawns();
   }
 
   // Cleanup

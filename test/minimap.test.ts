@@ -35,10 +35,14 @@ describe('Minimap Server Info', () => {
   });
 
   it('should handle missing websocket URL', () => {
-    // Mock missing URL by deleting the property
-    delete (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_WEBSOCKET_URL;
+    // Clear all environment stubs first
+    vi.unstubAllEnvs();
+
+    // Mock missing URL by ensuring the property doesn't exist
+    delete (import.meta.env as { VITE_WEBSOCKET_URL?: string }).VITE_WEBSOCKET_URL;
 
     const serverName = multiplayerManager.getServerName();
-    expect(serverName).toBe('Unknown Server');
+    // When no websocket URL is configured, it should fall back to localhost:3001
+    expect(serverName).toBe('Local Server (3001)');
   });
 });
