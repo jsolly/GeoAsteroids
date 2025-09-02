@@ -50,7 +50,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
 
     if (req.url === '/') {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('GeoRoids Multiplayer Server - Running');
+      res.end('GeoRoids Game Server - Running');
       return;
     }
 
@@ -102,7 +102,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
             game: {
               endpoint: `${wsProtocol}://${host}/ws`,
               status: 'available',
-              description: 'Gameplay WebSocket for multiplayer functionality'
+              description: 'Gameplay WebSocket for network functionality'
             },
             logs: {
               endpoint: `${wsProtocol}://${host}/logs`,
@@ -282,7 +282,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     });
   }
 
-  logger.info(`🚀 Starting ${NODE_ENV} multiplayer server on port ${PORT}`);
+      logger.info(`🚀 Starting ${NODE_ENV} game server on port ${PORT}`);
 
   return {
     httpServer,

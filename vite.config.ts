@@ -18,6 +18,9 @@ export default defineConfig(() => {
   }
   define['import.meta.env.VITE_COMMIT_HASH'] = JSON.stringify(commitHash);
 
+  // Set WebSocket URL for local development
+  define['import.meta.env.VITE_WEBSOCKET_URL'] = JSON.stringify('ws://localhost:3001/ws');
+
   return {
     resolve: {
       extensions: ['.ts'],
@@ -34,6 +37,7 @@ export default defineConfig(() => {
           target: 'ws://localhost:3001',
           ws: true,
           changeOrigin: true,
+          secure: false,
         },
       },
     },

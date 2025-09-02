@@ -54,9 +54,9 @@ describe('Server Message Parity', () => {
     expect(joinedMessage).toBeTruthy();
 
     const parsedJoined = JSON.parse(joinedMessage as string);
-    expect(parsedJoined.id).toBe('test-id');
-    expect(parsedJoined.name).toBe('test-name');
-    expect(parsedJoined.position).toBeDefined();
+    expect(parsedJoined.data.id).toBe('test-id');
+    expect(parsedJoined.data.name).toBe('test-name');
+    expect(parsedJoined.data.position).toBeDefined();
   });
 
   it('should handle update messages with nested data payloads', () => {
@@ -129,8 +129,8 @@ describe('Server Message Parity', () => {
     expect(joinedMessage).toBeTruthy();
 
     const parsedJoined = JSON.parse(joinedMessage as string);
-    expect(parsedJoined.id).toBe('top-level-id');
-    expect(parsedJoined.name).toBe('top-level-name');
+    expect(parsedJoined.data.id).toBe('top-level-id');
+    expect(parsedJoined.data.name).toBe('top-level-name');
   });
 
   it('should send standardized error messages', () => {

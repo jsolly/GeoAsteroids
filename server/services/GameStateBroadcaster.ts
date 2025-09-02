@@ -44,10 +44,13 @@ export class GameStateBroadcaster {
   public broadcastPlayerJoined(playerId: string, playerName: string, position: { x: number; y: number }): void {
     const message = {
       type: 'playerJoined',
-      id: playerId,
-      name: playerName,
-      position,
-    };
+      data: {
+        id: playerId,
+        name: playerName,
+        position,
+      },
+      timestamp: Date.now(),
+    } as const;
 
     this.broadcastToAll(message, playerId);
   }

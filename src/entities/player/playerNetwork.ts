@@ -1,19 +1,19 @@
 import type { Position } from '../../../shared-types';
 import { GameController } from '../../core/gameController';
-import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
+import { NetworkManager } from '../../network/networkManager';
 import type { Player } from './Player';
 import { PlayerManager } from './PlayerManager';
 
 export class PlayerNetwork {
   private static instance: PlayerNetwork;
-  private multiplayerManager: MultiplayerManager;
+  private networkManager: NetworkManager;
   private gameController: GameController;
   private playerManager: PlayerManager;
   private updateInterval: ReturnType<typeof setInterval> | null = null;
   private readonly UPDATE_FREQUENCY = 60; // 60 FPS
 
   private constructor() {
-    this.multiplayerManager = MultiplayerManager.getInstance();
+    this.networkManager = NetworkManager.getInstance();
     this.playerManager = PlayerManager.getInstance();
     // Eagerly initialize gameController to prevent race conditions
     this.gameController = GameController.getInstance();
@@ -48,10 +48,10 @@ export class PlayerNetwork {
   }
 
   public updatePlayerState(): void {
-    // Update local player state for multiplayer (network-only)
-    this.getGameController().updateMultiplayerPlayerState();
+    // Update local player state for network (network-only)
+    this.getGameController().updateNetworkPlayerState();
 
-    // Bot data updates are handled by the multiplayer manager's bot sync manager
+    // Bot data updates are handled by the network manager's bot sync manager
   }
 
   // Remote players should not be force-respawned client-side; server/state updates handle respawn.
@@ -59,16 +59,15 @@ export class PlayerNetwork {
   public getAllPlayers(): Player[] {
     // Get ALL players: local, remote, and bots
     const localPlayer = this.getGameController().getCurrPlayer();
-    return this.playerManager.getAllPlayersIncludingLocal(localPlayer);
+    if (localPlayer) {
+      return this.playerManager.getAllPlayersIncludingLocal(localPlayer);
+    }
+    return this.playerManager.getNonLocalPlayers();
   }
 
   public getOtherPlayers(): Player[] {
     // Return all non-local players via unified manager
     return this.playerManager.getNonLocalPlayers();
-  }
-
-  public getBotPlayers(): Player[] {
-    return this.playerManager.getBotPlayers();
   }
 
   public getRemotePlayers(): Player[] {
@@ -77,12 +76,14 @@ export class PlayerNetwork {
 
   public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {
     switch (type) {
-      case 'local':
-        return [this.getGameController().getCurrPlayer()];
+      case 'local': {
+        const localPlayer = this.getGameController().getCurrPlayer();
+        return localPlayer ? [localPlayer] : [];
+      }
       case 'remote':
         return this.getRemotePlayers();
       case 'bot':
-        return this.getBotPlayers();
+        return []; // Bots are now server-controlled
       default:
         return [];
     }
@@ -117,7 +118,7 @@ export class PlayerNetwork {
   public getPlayerById(id: string): Player | undefined {
     // Check if it's the local player first
     const localPlayer = this.getGameController().getCurrPlayer();
-    if (localPlayer.id === id) {
+    if (localPlayer && localPlayer.id === id) {
       return localPlayer;
     }
 
@@ -127,8 +128,8 @@ export class PlayerNetwork {
 
   public getLocalPlayerInfo(): { id: string; name: string } {
     return {
-      id: this.multiplayerManager.getLocalPlayerId(),
-      name: this.multiplayerManager.getLocalPlayerName(),
+      id: this.networkManager.getLocalPlayerId(),
+      name: this.networkManager.getLocalPlayerName(),
     };
   }
 
@@ -140,7 +141,7 @@ export class PlayerNetwork {
   } {
     const counts = this.playerManager.getCounts();
     return {
-      connected: this.multiplayerManager.isConnected,
+      connected: this.networkManager.isConnected,
       playerCount: counts.total + 1, // include local
       remoteHumanCount: counts.remoteHumans,
       botCount: counts.bots,

@@ -10,7 +10,7 @@ Mouse Input Handling
 let isRightMouseDown = false;
 
 export function handleMouseMove(ev: MouseEvent, player: Player): void {
-  if (player.isDead || player.ship.exploding) {
+  if (player.lives <= 0 || player.ship.exploding) {
     return;
   }
 
@@ -41,7 +41,7 @@ export function handleMouseMove(ev: MouseEvent, player: Player): void {
 }
 
 export function handleMouseDown(ev: MouseEvent, player: Player): void {
-  if (player.isDead || player.ship.exploding) {
+  if (player.lives <= 0 || player.ship.exploding) {
     return;
   }
 
@@ -68,7 +68,7 @@ export function handleMouseUp(ev: MouseEvent, player: Player): void {
   }
 
   // Early return for dead/exploding players (only applies to non-right-button events)
-  if (player.isDead || player.ship.exploding) {
+  if (player.lives <= 0 || player.ship.exploding) {
     return;
   }
 

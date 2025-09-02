@@ -14,8 +14,10 @@ import {
   drawShipAtPosition,
   drawShipExplosion,
   drawShipExplosionAtPosition,
+  drawThruster,
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
+import { NetworkManager } from '../network/networkManager';
 import { Point } from '../physics/Point';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
@@ -192,38 +194,45 @@ class CanvasManager {
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw fiery boundary
+    // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
 
     // Draw roids
     const roids = currRoidBelt.getRoids();
     if (roids.length > 0) {
+      logger.debug('RENDERING', `Rendering ${roids.length} asteroids`);
       drawRoidsRelative(currShip, roids);
+    } else {
+      logger.debug('RENDERING', 'No asteroids to render');
     }
 
     // Draw all players (including bots) using unified rendering
     try {
+      const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        // Skip players who are in respawn period or have 0 health and are not exploding
-        if (
-          player.respawnTimer !== undefined ||
-          (player.ship.health <= 0 && !player.ship.exploding)
-        ) {
+        // Skip players who have 0 health and are not exploding
+        if (player.ship.health <= 0 && !player.ship.exploding) {
           continue;
         }
 
         if (player.ship.exploding) {
           // Draw explosion animation for exploding ships
           if (player.id === currPlayer.id) {
-            // Local player explosion at screen center
-            drawShipExplosion(player.ship, player.ship.color);
+            // Local player explosion using local state
+            drawShipExplosion(currShip, currShip.color);
           } else {
             // Other players' explosions at their world positions
             drawShipExplosionAtPosition(player.ship, currShip.position, player.ship.color);
           }
         } else {
-          // All players use the same ship rendering with world coordinates
-          drawShipAtPosition(player.ship, currShip.position, player.ship.color, player.name);
+          // Draw local player using local state, others at world positions
+          if (player.id === localId) {
+            // Local player ship at world position (viewport will center it)
+            drawShipAtPosition(currShip, currShip.position, currShip.color, currPlayer.name);
+          } else {
+            // Other players at world coordinates
+            drawShipAtPosition(player.ship, currShip.position, player.ship.color, player.name);
+          }
         }
       }
     } catch (error: unknown) {
@@ -236,21 +245,33 @@ class CanvasManager {
 
     // Draw thrusters for all players (including bots) at their world positions
     try {
+      const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        // Skip players who are in respawn period or have 0 health and are not exploding
-        if (
-          player.respawnTimer !== undefined ||
-          (player.ship.health <= 0 && !player.ship.exploding)
-        ) {
+        // Skip players who have 0 health and are not exploding
+        if (player.ship.health <= 0 && !player.ship.exploding) {
           continue;
         }
 
         if (!player.ship.exploding && player.ship.thrusting) {
-          if (player.id === currPlayer.id) {
+          if (player.id === localId) {
+            // Local player thruster using local state
+            logger.debug('RENDERING', 'Drawing local player thruster', {
+              thrusting: currShip.thrusting,
+              blinkOn: currShip.blinkOn,
+              exploding: currShip.exploding,
+            });
+            drawThruster(currShip);
           } else {
             // Other players' thrusters at their world positions
             drawThrusterAtPosition(player.ship, currShip.position);
           }
+        } else if (player.id === localId) {
+          // Debug: log why local player thruster is not being drawn
+          logger.debug('RENDERING', 'Local player thruster not drawn', {
+            thrusting: currShip.thrusting,
+            blinkOn: currShip.blinkOn,
+            exploding: currShip.exploding,
+          });
         }
       }
     } catch (error: unknown) {
@@ -261,22 +282,19 @@ class CanvasManager {
       );
     }
 
-    // Draw ship (if not exploding, this will be handled by handleShipState)
-    // The ship drawing is handled separately in the event loop for blinking effects
+    // Local player ship is already drawn in the main player loop above
 
     // Draw ship lasers (local ship uses self as reference)
     drawLasers(currShip);
 
     // Draw other players' lasers using local ship position for viewport transform
     for (const player of allPlayers) {
-      if (player.id === currPlayer.id) {
+      const localId = NetworkManager.getInstance().getLocalPlayerId();
+      if (player.id === localId) {
         continue;
       }
-      // Skip players who are in respawn period or have 0 health and are not exploding
-      if (
-        player.respawnTimer !== undefined ||
-        (player.ship.health <= 0 && !player.ship.exploding)
-      ) {
+      // Skip players who have 0 health and are not exploding
+      if (player.ship.health <= 0 && !player.ship.exploding) {
         continue;
       }
 

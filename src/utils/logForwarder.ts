@@ -39,7 +39,7 @@ function getLogsWebSocketUrl(): string {
     const isSecure = typeof location !== 'undefined' && location.protocol === 'https:';
     const protocol = isSecure ? 'wss' : 'ws';
     const host = typeof location !== 'undefined' ? location.hostname : 'localhost';
-    // The multiplayer server listens on 3001 in local/dev; use that port consistently
+    // The game server listens on 3001 in local/dev; use that port consistently
     const port = 3001;
     return `${protocol}://${host}:${port}/logs`;
   } catch {

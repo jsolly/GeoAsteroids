@@ -2,6 +2,7 @@ import { playSound } from '../audio/Sound';
 import { GAME, SHIP } from '../constants';
 import type { Player } from '../entities/player/Player';
 import { Ship } from '../entities/ship/Ship';
+import { logger } from '../utils/Logger';
 
 const TURN_SPEED_RAD_PER_FRAME = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
 
@@ -41,8 +42,20 @@ function updateThrustFromKeys(player: Player): void {
   const shouldThrust = pressed.has('Space') || pressed.has('ArrowUp');
   const currentlyThrusting = player.ship.thrusting;
 
+  logger.debug('KEYBINDINGS', 'updateThrustFromKeys', {
+    pressedKeys: Array.from(pressed),
+    shouldThrust,
+    currentlyThrusting,
+    hasSpace: pressed.has('Space'),
+    hasArrowUp: pressed.has('ArrowUp'),
+  });
+
   // Only update if the aggregate state has changed
   if (shouldThrust !== currentlyThrusting) {
+    logger.debug('KEYBINDINGS', 'Updating thrust state', {
+      from: currentlyThrusting,
+      to: shouldThrust,
+    });
     player.ship.thrusting = shouldThrust;
     if (shouldThrust) {
       if (!thrustSoundActive) {
@@ -53,11 +66,21 @@ function updateThrustFromKeys(player: Player): void {
       Ship.fxThrust.stop();
       thrustSoundActive = false;
     }
+  } else {
+    logger.debug('KEYBINDINGS', 'Thrust state unchanged', {
+      thrusting: shouldThrust,
+    });
   }
 }
 
 export function keyDown(ev: KeyboardEvent, player: Player): void {
-  if (!player.isDead && !player.ship.exploding) {
+  logger.debug('KEYBINDINGS', 'KeyDown called', {
+    key: ev.code,
+    playerLives: player.lives,
+    shipExploding: player.ship.exploding,
+  });
+
+  if (player.lives > 0 && !player.ship.exploding) {
     if (ev.code in keys) {
       keys[ev.code] = true;
     }
@@ -72,12 +95,15 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         player.ship.empPulse();
         break;
       case 'ArrowLeft':
+        logger.debug('KEYBINDINGS', 'Setting left rotation');
         player.ship.angularVelocity = TURN_SPEED_RAD_PER_FRAME;
         break;
       case 'ArrowUp':
+        logger.debug('KEYBINDINGS', 'Setting thrust');
         updateThrustFromKeys(player);
         break;
       case 'ArrowRight':
+        logger.debug('KEYBINDINGS', 'Setting right rotation');
         player.ship.angularVelocity = -TURN_SPEED_RAD_PER_FRAME;
         break;
     }
@@ -85,6 +111,12 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
 }
 
 export function keyUp(ev: KeyboardEvent, player: Player): void {
+  logger.debug('KEYBINDINGS', 'KeyUp called', {
+    key: ev.code,
+    playerLives: player.lives,
+    shipExploding: player.ship.exploding,
+  });
+
   // Always update keys state first
   if (ev.code in keys) {
     keys[ev.code] = false;
@@ -93,6 +125,11 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
   // Update per-player pressed keys set
   getPressedKeysForPlayer(player).delete(ev.code);
 
+  logger.debug('KEYBINDINGS', 'After key removal', {
+    remainingKeys: Array.from(getPressedKeysForPlayer(player)),
+    globalKeys: { ...keys },
+  });
+
   // Always handle Space key release to ensure thrust cleanup even if player cannot act
   if (ev.code === 'Space') {
     updateThrustFromKeys(player);
@@ -100,7 +137,7 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
   }
 
   // Then check if player can respond to key events
-  if (!player.isDead && !player.ship.exploding) {
+  if (player.lives > 0 && !player.ship.exploding) {
     switch (ev.code) {
       case 'Space':
         // Already handled above to ensure cleanup regardless of state

@@ -2,7 +2,6 @@ import { SHIP } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import { logger } from '../../utils/Logger';
-import type { Player } from '../player/Player';
 
 import type { Ship } from './Ship';
 
@@ -249,12 +248,30 @@ export function drawThruster(ship: Ship): void {
     return;
   }
 
+  logger.debug('THRUSTER', 'drawThruster called', {
+    exploding: ship.exploding,
+    blinkOn: ship.blinkOn,
+    thrusting: ship.thrusting,
+  });
+
   if (!ship.exploding && ship.blinkOn) {
     // Ship is always drawn at screen center (viewport transformation)
     const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
 
+    logger.debug('THRUSTER', 'Drawing thruster at screen center', {
+      x: screenCenter.x,
+      y: screenCenter.y,
+      angle: ship.angle,
+      radius: ship.r,
+    });
+
     // Use the generic thruster function
     drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r);
+  } else {
+    logger.debug('THRUSTER', 'Thruster not drawn - conditions not met', {
+      exploding: ship.exploding,
+      blinkOn: ship.blinkOn,
+    });
   }
 }
 
@@ -313,80 +330,6 @@ export function drawPlayerName(
   // Draw the name text
   ctx.fillStyle = color;
   ctx.fillText(name, x, nameY);
-}
-
-export function drawLocalPlayerShip(player: Player): void {
-  const ship = player.ship;
-
-  const ctx = canvasManager.getContext();
-  const cvs = canvasManager.getCanvas();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  // Ship is always drawn at screen center (viewport transformation)
-  const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
-
-  // Use the shared ship triangle calculation function for consistency
-  const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
-    screenCenter.x,
-    screenCenter.y,
-    ship.r,
-    ship.angle
-  );
-
-  ctx.strokeStyle = ship.color;
-  ctx.lineWidth = SHIP.SIZE / 20;
-  ctx.beginPath();
-  ctx.moveTo(nose.x, nose.y);
-  ctx.lineTo(rearLeft.x, rearLeft.y);
-  ctx.lineTo(rearRight.x, rearRight.y);
-  ctx.closePath();
-  ctx.stroke();
-
-  // Draw health bar above ship
-  const barWidth = ship.r * 2.5;
-  const barHeight = 6;
-  const barY = screenCenter.y - ship.r - 15;
-
-  // Health percentage
-  const healthPercent = ship.health / ship.maxHealth;
-  const currentWidth = barWidth * healthPercent;
-
-  // Background (empty health bar)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(screenCenter.x - barWidth / 2, barY, barWidth, barHeight);
-
-  // Health bar color based on health level
-  let healthColor: string;
-  if (healthPercent > 0.6) {
-    healthColor = '#00ff00'; // Green for high health
-  } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00'; // Yellow for medium health
-  } else {
-    healthColor = '#ff0000'; // Red for low health
-  }
-
-  // Current health
-  ctx.fillStyle = healthColor;
-  ctx.fillRect(screenCenter.x - barWidth / 2, barY, currentWidth, barHeight);
-
-  // Border
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(screenCenter.x - barWidth / 2, barY, barWidth, barHeight);
-
-  // Health text
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '10px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenCenter.x, barY - 12);
-
-  // Draw player name under ship
-  drawPlayerName(player.name, screenCenter.x, screenCenter.y, ship.r, player.color);
-
-  // Draw targeting line for better aiming
-  drawTargetingLine(screenCenter.x, screenCenter.y, ship.angle, ship.r, 300, ship.color, 0.7);
 }
 
 export function drawShipExplosion(ship: Ship, color?: string): void {

@@ -387,7 +387,7 @@ a {
 
 
 
-#start-multiplayer.active-mode {
+#start-game.active-mode {
   background-color: #0dcaf0 !important;
   border-color: #fff !important;
   box-shadow: 0 0 25px rgba(13, 202, 240, 0.6);
@@ -463,6 +463,47 @@ a {
   }
 }
 
+/* Nickname input styling */
+.game-modes .form-label {
+  color: #f0f0f0;
+  font-size: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  display: block;
+  text-align: center;
+}
+
+.game-modes .form-control {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 1em;
+  padding: 0.6em 0.8em;
+  transition: all 0.3s ease;
+  text-align: center;
+  backdrop-filter: blur(5px);
+  margin-bottom: 1em;
+}
+
+.game-modes .form-control:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.game-modes .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.game-modes .form-control:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
 /* Modal styling */
 .modal {
   background-color: rgba(0, 0, 0, 0.9);
@@ -471,8 +512,8 @@ a {
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Multiplayer Name Modal specific styling */
-#multiplayerNameModal {
+/* Player Name Modal specific styling */
+#playerNameModal {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -483,7 +524,7 @@ a {
   min-width: 280px;
 }
 
-#multiplayerNameModal .modal-content {
+#playerNameModal .modal-content {
   background: linear-gradient(135deg, #1a1a2e, #16213e);
   border-radius: 15px;
   padding: 2em;
@@ -491,19 +532,19 @@ a {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-#multiplayerNameModal h3 {
+#playerNameModal h3 {
   color: #4fc3f7;
   margin-bottom: 1em;
   font-size: 1.5em;
 }
 
-#multiplayerNameModal p {
+#playerNameModal p {
   color: #ffffff;
   margin-bottom: 1.5em;
   font-size: 1.1em;
 }
 
-#multiplayerNameInput {
+#playerNameInput {
   width: 100%;
   padding: 0.8em;
   margin-bottom: 1.5em;
@@ -515,13 +556,13 @@ a {
   transition: border-color 0.3s ease;
 }
 
-#multiplayerNameInput:focus {
+#playerNameInput:focus {
   outline: none;
   border-color: #4fc3f7;
   box-shadow: 0 0 10px rgba(79, 195, 247, 0.3);
 }
 
-#multiplayerNameInput::placeholder {
+#playerNameInput::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -600,4 +641,28 @@ a {
 
 .build-info:hover {
   opacity: 1;
+}
+
+
+
+/* Style for default nickname */
+.game-modes .form-control.default-nickname {
+  border-color: rgba(79, 195, 247, 0.6);
+  background-color: rgba(79, 195, 247, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 8px rgba(79, 195, 247, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.game-modes .form-control.default-nickname::after {
+  content: '✨ Generated';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8em;
+  color: rgba(79, 195, 247, 0.8);
+  pointer-events: none;
+  opacity: 0.7;
 }

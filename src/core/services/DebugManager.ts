@@ -20,12 +20,12 @@ export class DebugManager {
   }
 
   isDebugMode(): boolean {
-    return false; // Debug mode disabled in multiplayer-only mode
+    return false; // Debug mode disabled in network-only mode
   }
 
   applyDebugConfig(_roidBelt: unknown): void {
-    // Disabled in multiplayer mode - server is authoritative for all game content
-    logger.debug('DEBUG', 'Debug config disabled - multiplayer mode uses server authority');
+    // Disabled in network mode - server is authoritative for all game content
+    logger.debug('DEBUG', 'Debug config disabled - network mode uses server authority');
     return;
   }
 }

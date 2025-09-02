@@ -188,8 +188,8 @@ export class RenderEngine {
     const localPlayer = allPlayers.find((p) => p.type === 'local');
 
     for (const player of allPlayers) {
-      // Skip rendering players who are in respawn period
-      if (player.respawnTimer !== undefined) {
+      // Skip rendering players who have 0 health and are not exploding
+      if (player.ship.health <= 0 && !player.ship.exploding) {
         continue;
       }
 
@@ -229,8 +229,11 @@ export class RenderEngine {
 
     // Render other players' lasers
     for (const otherPlayer of allPlayers) {
-      // Skip rendering lasers for players in respawn period
-      if (otherPlayer.id !== player.id && otherPlayer.respawnTimer === undefined) {
+      // Skip rendering lasers for players who have 0 health and are not exploding
+      if (
+        otherPlayer.id !== player.id &&
+        !(otherPlayer.ship.health <= 0 && !otherPlayer.ship.exploding)
+      ) {
         drawLasers(otherPlayer.ship, otherPlayer.ship.color, player.ship.position);
         this.renderStats.drawCalls++;
       }

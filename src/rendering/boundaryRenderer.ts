@@ -1,5 +1,6 @@
 import type { Position } from '../../shared-types';
 import { getGameBoundary } from '../physics/boundary';
+import { logger } from '../utils/Logger';
 import { canvasManager } from './canvas';
 
 export function drawFieryBoundary(shipPosition: Position): void {
@@ -7,15 +8,31 @@ export function drawFieryBoundary(shipPosition: Position): void {
   const cvs = canvasManager.getCanvas();
 
   if (!ctx || !cvs) {
+    logger.warn('BOUNDARY_RENDERER', 'Canvas or context not available');
     return;
   }
 
   const boundary = getGameBoundary();
 
+  // Debug logging
+  logger.debug('BOUNDARY_RENDERER', 'Drawing boundary', {
+    shipPosition,
+    boundary,
+    canvasSize: { width: cvs.width, height: cvs.height },
+  });
+
   // Convert world coordinates to screen coordinates
   const centerX = cvs.width / 2 - shipPosition.x + boundary.cx;
   const centerY = cvs.height / 2 - shipPosition.y + boundary.cy;
   const radius = boundary.radius;
+
+  // Debug logging for screen coordinates
+  logger.debug('BOUNDARY_RENDERER', 'Screen coordinates', {
+    centerX,
+    centerY,
+    radius,
+    shipPosition,
+  });
 
   // Create fiery effect with multiple layers
   const time = Date.now() * 0.005; // Animation speed
@@ -47,4 +64,6 @@ export function drawFieryBoundary(shipPosition: Position): void {
 
   // Reset shadow
   ctx.shadowBlur = 0;
+
+  logger.debug('BOUNDARY_RENDERER', 'Boundary drawn successfully');
 }

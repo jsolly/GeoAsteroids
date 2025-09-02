@@ -29,10 +29,21 @@
 
         <!-- Game Mode Selection -->
         <div class="game-modes">
+          <div class="mb-3">
+            <label for="playerNameInput" class="form-label">Your Nickname</label>
+            <input
+              type="text"
+              id="playerNameInput"
+              maxlength="20"
+              placeholder="Crimson Falcon"
+              class="form-control"
+            />
+
+          </div>
           <ul class="nav flex-column">
             <li class="nav-item">
-              <button id="start-multiplayer" class="btn btn-lg btn-success">
-                🎮 Play
+              <button id="start-game" class="btn btn-lg btn-success">
+                Enter Game
               </button>
             </li>
           </ul>
@@ -65,24 +76,7 @@
 
 
 
-      <!-- Multiplayer Name Input Modal -->
-      <div id="multiplayerNameModal" class="modal" style="display: none">
-        <div class="modal-content">
-          <h3>🌐 Enter Your Name</h3>
-          <p>Choose a name to display to other players:</p>
-          <input
-            type="text"
-            id="multiplayerNameInput"
-            maxlength="15"
-            placeholder="Enter your name (max 15 characters)"
-            class="form-control"
-          />
-          <div class="modal-buttons">
-            <button id="confirmNameButton" class="btn btn-primary">Start Multiplayer</button>
-            <button id="cancelNameButton" class="btn btn-secondary">Cancel</button>
-          </div>
-        </div>
-      </div>
+
 
 
     </div>

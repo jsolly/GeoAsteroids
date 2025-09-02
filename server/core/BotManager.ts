@@ -1,6 +1,7 @@
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
 import { SHIP } from '../../src/constants';
+import { logger } from '../../setup/serverLogger';
 
 export interface ServerBot {
   id: string;
@@ -181,5 +182,72 @@ export class BotManager {
 
   public isCreating(): boolean {
     return this.isCreatingBots;
+  }
+
+  /**
+   * Update bot movement and AI behavior
+   */
+  public updateBotMovement(): void {
+    const bots = Array.from(this.bots.values());
+    
+    // Debug logging - only log every 60 frames (once per second) to reduce spam
+    if (bots.length > 0 && Math.random() < 0.016) { // ~1/60 chance
+      logger.info('🤖', `Updating movement for ${bots.length} bots`);
+    }
+    
+    for (const bot of bots) {
+      if (bot.exploding || bot.health <= 0) {
+        continue; // Skip exploding or dead bots
+      }
+
+      // Simple AI: randomly change direction and apply thrust
+      if (Math.random() < 0.05) { // Increased from 2% to 5% chance per frame to change direction
+        bot.angle += (Math.random() - 0.5) * 0.5; // Increased rotation amount from 0.3 to 0.5
+      }
+
+      // Occasionally make more dramatic direction changes
+      if (Math.random() < 0.01) { // 1% chance per frame for dramatic change
+        bot.angle += (Math.random() - 0.5) * Math.PI; // Full 180-degree turn possibility
+      }
+
+      // Apply thrust in current direction
+      const thrust = {
+        x: (Math.cos(bot.angle) * 2.0) / 60, // Increased thrust from 0.5 to 2.0
+        y: (-Math.sin(bot.angle) * 2.0) / 60,
+      };
+
+      bot.velocity.x += thrust.x;
+      bot.velocity.y += thrust.y;
+
+      // Cap velocity to prevent excessive speed
+      const currentSpeed = Math.sqrt(bot.velocity.x * bot.velocity.x + bot.velocity.y * bot.velocity.y);
+      const maxSpeed = 8; // Increased max speed from 3 to 8
+      if (currentSpeed > maxSpeed) {
+        const scale = maxSpeed / currentSpeed;
+        bot.velocity.x *= scale;
+        bot.velocity.y *= scale;
+      }
+
+      // Update position based on velocity
+      bot.position.x += bot.velocity.x;
+      bot.position.y += bot.velocity.y;
+
+      // Debug logging for position changes
+      if (Math.abs(bot.velocity.x) > 0.01 || Math.abs(bot.velocity.y) > 0.01) {
+        logger.debug('🤖', `Bot ${bot.name} moved: pos(${bot.position.x.toFixed(2)}, ${bot.position.y.toFixed(2)}) vel(${bot.velocity.x.toFixed(3)}, ${bot.velocity.y.toFixed(3)})`);
+      }
+
+      // Wrap around boundaries (assuming 2000x2000 game area)
+      if (bot.position.x < 0) bot.position.x = 2000;
+      if (bot.position.x > 2000) bot.position.x = 0;
+      if (bot.position.y < 0) bot.position.y = 2000;
+      if (bot.position.y > 2000) bot.position.y = 0;
+
+      // Add some friction to prevent infinite acceleration
+      bot.velocity.x *= 0.99;
+      bot.velocity.y *= 0.99;
+
+      bot.lastUpdate = Date.now();
+    }
   }
 }

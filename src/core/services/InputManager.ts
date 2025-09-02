@@ -6,6 +6,7 @@ import {
   handleMouseUp,
   preventContextMenu,
 } from '../../input/mouse';
+import { logger } from '../../utils/Logger';
 import { GameStateManager } from './GameStateManager';
 
 export class InputManager {
@@ -29,14 +30,28 @@ export class InputManager {
       return;
     }
 
+    logger.debug('INPUT', 'Initializing InputManager listeners for player', {
+      playerName: localPlayer.name,
+    });
+
     // Keyboard listeners
     document.addEventListener('keydown', (ev) => {
+      logger.debug('INPUT', 'Key down event', {
+        key: ev.code,
+        gameRunning: this.gameStateManager.getIsGameRunning(),
+      });
       if (this.gameStateManager.getIsGameRunning()) {
         keyDown(ev, localPlayer);
+      } else {
+        logger.warn('INPUT', 'Key down ignored - game not running', { key: ev.code });
       }
     });
 
     document.addEventListener('keyup', (ev) => {
+      logger.debug('INPUT', 'Key up event', {
+        key: ev.code,
+        gameRunning: this.gameStateManager.getIsGameRunning(),
+      });
       // Always handle keyup events regardless of game state to prevent stuck keys
       keyUp(ev, localPlayer);
     });
@@ -67,10 +82,10 @@ export class InputManager {
   }
 
   resetButtonText(): void {
-    const multiplayerBtn = document.getElementById('start-multiplayer') as HTMLButtonElement;
+    const gameBtn = document.getElementById('start-game') as HTMLButtonElement;
 
-    if (multiplayerBtn) {
-      multiplayerBtn.innerText = '🌐 Start Multiplayer Game';
+    if (gameBtn) {
+      gameBtn.innerText = '🌐 Start Game';
     }
   }
 }

@@ -11,7 +11,7 @@ export const GAME = {
   START_LIVES: 3,
   STARTING_SCORE: 0,
 
-  // Multiplayer (can be overridden by DEBUG.BOT_COUNT when in debug mode)
+  // Network (can be overridden by DEBUG.BOT_COUNT when in debug mode)
   BOT_COUNT: 9,
 
   // Physics
@@ -105,20 +105,20 @@ export const EMP = {
 // ============================================================================
 export const DEBUG = {
   // Master switch for debug features
-  ENABLED: true,
+  ENABLED: false,
 
   // Player settings
   LOCAL_PLAYER_INVINCIBLE: false,
 
   // Bot settings (overrides GAME.BOT_COUNT when in debug mode)
-  BOT_COUNT: 5,
-  DISABLE_BOT_MOVEMENT: true,
-  DISABLE_BOT_LASERS: true,
+  BOT_COUNT: 1,
+  DISABLE_BOT_MOVEMENT: false,
+  DISABLE_BOT_LASERS: false,
   DISABLE_BOT_SPAWN_PROTECTION: false,
 
   // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)
-  INITIAL_ROID_COUNT: 50,
-  DISABLE_ROID_MOVEMENT: true,
+  INITIAL_ROID_COUNT: 20,
+  DISABLE_ROID_MOVEMENT: false,
   PLACE_ROID_ON_BOT: false,
 
   // Roid splitting settings (overrides server-side defaults when in debug mode)

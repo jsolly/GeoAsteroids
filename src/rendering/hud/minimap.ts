@@ -1,7 +1,7 @@
 import { GameController } from '../../core/gameController';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
-import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
+
 import { getGameBoundary } from '../../physics/boundary';
 import { logger } from '../../utils/Logger';
 
@@ -78,7 +78,6 @@ export function drawMiniMap(
   // Draw current ship on mini map
   const LOCAL_PLAYER_COLOR = '#00ff00';
   const REMOTE_PLAYER_COLOR = '#00aaff';
-  const BOT_PLAYER_COLOR = '#ff4444';
 
   drawShipMiniMap(ctx, ship, LOCAL_PLAYER_COLOR, boundary, miniMapX, miniMapY, miniMapSize);
 
@@ -86,28 +85,13 @@ export function drawMiniMap(
   try {
     const gameController = GameController.getInstance();
     const playerNetwork = PlayerNetwork.getInstance();
-    const bots = playerNetwork.getBotPlayers();
     const remotes = playerNetwork.getRemotePlayers();
 
-    for (const player of bots) {
-      // Skip players who are in respawn period
-      if (player.respawnTimer !== undefined) {
-        continue;
-      }
-      drawShipMiniMap(
-        ctx,
-        player.ship,
-        BOT_PLAYER_COLOR,
-        boundary,
-        miniMapX,
-        miniMapY,
-        miniMapSize
-      );
-    }
+    // Bots are now server-controlled, so we don't draw them here
 
     for (const player of remotes) {
-      // Skip players who are in respawn period
-      if (player.respawnTimer !== undefined) {
+      // Skip players who have 0 health and are not exploding
+      if (player.ship.health <= 0 && !player.ship.exploding) {
         continue;
       }
       drawShipMiniMap(
@@ -143,7 +127,8 @@ export function drawMiniMap(
 // Draw server name and connection status below the minimap
 export function drawServerInfo(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
   try {
-    const serverName = MultiplayerManager.getInstance().getServerName();
+    // Server name is no longer available since we simplified the network manager
+    const serverName = 'Game Server';
 
     // Position below the minimap
     const miniMapSize = 160;

@@ -1,10 +1,8 @@
 import { canvasManager } from '../rendering/canvas';
 import { logger } from '../utils/Logger';
 import { GameController } from './gameController';
-import { GameLoopManager } from './services/GameLoopManager';
 
 const gameController = GameController.getInstance();
-const gameLoopManager = GameLoopManager.getInstance();
 
 // Initialize canvas with proper scaling after DOM is loaded
 if (document.readyState === 'loading') {
@@ -19,21 +17,22 @@ if (document.readyState === 'loading') {
   setupMainMenuUpdates();
 })();
 
-// Main game loop event handler
+// Game loop with updates and rendering
 window.addEventListener('gameStart', () => {
-  // Set up bot shoot handler
-  gameController.getPlayerManager().setupBotShootHandler();
-
   function gameLoop(): void {
     if (!gameController.getIsGameRunning()) {
       return;
     }
 
     try {
-      gameLoopManager.updateGame();
+      // Update game state first
+      gameController.updateGame();
+
+      // Then render the current game state
+      gameController.renderGame();
     } catch (error) {
       logger.error(
-        'EVENT_LOOP',
+        'GAME_LOOP',
         'Error in game loop',
         error instanceof Error ? error : new Error(String(error))
       );

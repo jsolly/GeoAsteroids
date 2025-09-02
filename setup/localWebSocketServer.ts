@@ -1,31 +1,31 @@
 import { type WebSocket, WebSocketServer } from 'ws';
 import { WebSocketCore } from '../server/communication/WebSocketCore';
 import { GameEngine } from '../server/core/GameEngine';
-import type { ClientMessage } from '../src/multiplayer/types';
+import type { ClientMessage } from '../src/network/types';
 import { logger } from './serverLogger';
 
 type WebSocketWithEvents = WebSocket & {
   on(event: string, listener: (...args: unknown[]) => void): void;
 };
 
-class LocalMultiplayerServer {
+class LocalGameServer {
   private wsCore: WebSocketCore;
   public wss: WebSocketServer;
 
   constructor(port: number = 3001) {
-    this.wss = new WebSocketServer({ port });
+    this.wss = new WebSocketServer({ port, path: '/ws' });
     const gameEngine = new GameEngine();
     this.wsCore = new WebSocketCore(gameEngine);
     this.wsCore.startPeriodicGameStateBroadcast();
 
-    logger.info('MULTIPLAYER', 'Local multiplayer server started', { port });
+    logger.info('NETWORK', 'Local game server started', { port, path: '/ws' });
 
     this.setupWebSocketServer();
   }
 
   private setupWebSocketServer(): void {
     this.wss.on('connection', (ws: WebSocketWithEvents) => {
-      logger.info('MULTIPLAYER', 'New player connected');
+      logger.info('NETWORK', 'New player connected');
 
       ws.on('message', (data: unknown) => {
         try {
@@ -38,7 +38,7 @@ class LocalMultiplayerServer {
           this.wsCore.handleClientMessage(coreMessage, ws);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          logger.error('MULTIPLAYER', 'Failed to parse client message', new Error(errorMessage));
+          logger.error('NETWORK', 'Failed to parse client message', new Error(errorMessage));
           this.wsCore.sendError(ws, 'Invalid message format');
         }
       });
@@ -47,7 +47,7 @@ class LocalMultiplayerServer {
         // Find and remove the player
         for (const player of this.wsCore.getAllPlayers()) {
           if (player.ws === ws) {
-            logger.info('MULTIPLAYER', 'Player disconnected', {
+            logger.info('NETWORK', 'Player disconnected', {
               playerName: player.name,
               playerId: player.id,
             });
@@ -59,33 +59,33 @@ class LocalMultiplayerServer {
 
       ws.on('error', (error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('MULTIPLAYER', 'WebSocket error', new Error(errorMessage));
+        logger.error('NETWORK', 'WebSocket error', new Error(errorMessage));
       });
     });
   }
 
   public getStats(): void {
-    logger.info('MULTIPLAYER', 'Server stats', {
+    logger.info('NETWORK', 'Server stats', {
       playerCount: this.wsCore.getPlayerCount(),
     });
   }
 }
 
 // Start the server
-const server = new LocalMultiplayerServer(3001);
+const server = new LocalGameServer(3001);
 
 // Log stats every 10 seconds
 setInterval(() => server.getStats(), 10000);
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  logger.info('MULTIPLAYER', 'Shutting down multiplayer server (SIGINT)');
+  logger.info('NETWORK', 'Shutting down game server (SIGINT)');
   server.wss.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  logger.info('MULTIPLAYER', 'Shutting down multiplayer server (SIGTERM)');
+  logger.info('NETWORK', 'Shutting down game server (SIGTERM)');
   server.wss.close();
   process.exit(0);
 });

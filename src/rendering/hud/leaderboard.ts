@@ -7,7 +7,7 @@ interface LeaderboardEntry {
   isCurrentPlayer?: boolean;
 }
 
-// Helper function to draw multiplayer leaderboard
+// Helper function to draw network leaderboard
 export function drawLeaderboard(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,

@@ -1,7 +1,7 @@
 {
-  "name": "georoids-multiplayer-server",
+  "name": "georoids-game-server",
   "version": "1.0.0",
-  "description": "Multiplayer server for GeoRoids game",
+      "description": "Game server for GeoRoids",
   "main": "server.ts",
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
-    "multiplayer",
+    "network",
     "game",
     "websocket",
     "roids"

@@ -107,27 +107,37 @@ export class MessageHandler {
   }
 
   private handleJoin(ws: WebSocket, id: string, name: string, data: any): void {
+    logger.debug('🔌 Handling join message', { id, name, data });
+    
     if (!id || !name) {
+      logger.warn('❌ Missing player ID or name for join', { id, name });
       this.broadcaster.sendError(ws, 'Missing player ID or name');
       return;
     }
 
     // Handle position if provided by client
     const joinPosition = this.gameEngine.validatePosition(data.position) || { x: 0, y: 0 };
+    logger.debug('📍 Player join position', { id, position: joinPosition });
 
     this.gameEngine.addPlayer(id, name, ws, joinPosition);
+    logger.info('✅ Player added to game engine', { id, name });
 
     // Send confirmation to the joining player
     this.broadcaster.sendToWebSocket(ws, {
       type: 'joined',
-      id,
-      name,
-      position: joinPosition,
+      data: {
+        id,
+        name,
+        position: joinPosition,
+      },
+      timestamp: Date.now(),
     });
+    logger.debug('📤 Sent joined confirmation', { id, name });
 
     // Broadcast to all other players
     this.broadcaster.broadcastPlayerJoined(id, name, joinPosition);
     this.broadcaster.broadcastGameState();
+    logger.debug('📢 Broadcasted player joined and game state', { id, name });
   }
 
   private handlePlayerUpdate(ws: WebSocket, id: string, data: any): void {
@@ -140,6 +150,14 @@ export class MessageHandler {
     const sanitizedData: any = { ...data };
     delete (sanitizedData as any).health;
     delete (sanitizedData as any).maxHealth;
+
+    // Normalize client fields to server schema
+    if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {
+      sanitizedData.rotation = sanitizedData.angle;
+    }
+    if (sanitizedData.a !== undefined && sanitizedData.angularVelocity === undefined) {
+      sanitizedData.angularVelocity = sanitizedData.a;
+    }
 
     const player = this.gameEngine.updatePlayer(id, sanitizedData);
     if (!player) {
@@ -208,8 +226,6 @@ export class MessageHandler {
   }
 
   private handleCollisionDamage(ws: WebSocket, data: any): void {
-    console.log('SERVER: Received collision damage', data);
-
     if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
       this.broadcaster.sendError(ws, 'Missing required fields for collisionDamage');
       return;
@@ -247,15 +263,6 @@ export class MessageHandler {
       }
     }
 
-    console.log('SERVER: Applied collision damage', {
-      targetPlayerId: data.targetPlayerId,
-      targetType: data.targetPlayerId.startsWith('server-bot-') ? 'bot' : 'player',
-      attackerId: data.attackerId,
-      damage: data.damage,
-      remainingHealth,
-      isDestroyed
-    });
-
     // Handle destruction for both players and bots
     if (isDestroyed) {
       const attacker = this.gameEngine.getPlayer(data.attackerId);
@@ -265,7 +272,6 @@ export class MessageHandler {
 
       if (data.targetPlayerId.startsWith('server-bot-')) {
         // Bot was destroyed
-        console.log('SERVER: Bot destroyed by collision', { botId: data.targetPlayerId, attackerId: data.attackerId });
       } else {
         // Player was destroyed
         this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
@@ -294,17 +300,12 @@ export class MessageHandler {
   }
 
   private handleAsteroidDestroyed(ws: WebSocket, data: any): void {
-    console.log('DEBUG: handleAsteroidDestroyed called with data:', data);
-    
     if (!data.asteroidId || !data.playerId || data.points === undefined) {
-      console.log('DEBUG: Missing required fields for asteroidDestroyed');
       this.broadcaster.sendError(ws, 'Missing required fields for asteroidDestroyed');
       return;
     }
 
-    console.log('DEBUG: Calling gameEngine.handleAsteroidDestruction');
     const result = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
-    console.log('DEBUG: handleAsteroidDestruction result:', result);
 
     if (result.success) {
       // Broadcast score update
@@ -318,13 +319,8 @@ export class MessageHandler {
 
       // Broadcast new asteroids created from splitting if any
       if (result.newAsteroids.length > 0) {
-        console.log('DEBUG: Broadcasting new asteroids from splitting:', result.newAsteroids);
         this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
-      } else {
-        console.log('DEBUG: No new asteroids created from splitting');
       }
-    } else {
-      console.log('DEBUG: handleAsteroidDestruction failed');
     }
   }
 
@@ -334,24 +330,23 @@ export class MessageHandler {
       return;
     }
 
-    // Only create asteroids if they don't already exist
-    if (this.gameEngine.getAsteroidCount() === 0) {
+    const currentAsteroidCount = this.gameEngine.getAsteroidCount();
+    
+    // If no asteroids exist, create them
+    if (currentAsteroidCount === 0) {
       const asteroidCount = data.asteroidCount || 10;
       const asteroids = this.gameEngine.createAsteroids(asteroidCount);
       this.broadcaster.broadcastAsteroidCreation(asteroids);
       logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids`);
     } else {
-      logger.debug(`Player ${id} requested asteroid initialization but asteroids already exist: ${this.gameEngine.getAsteroidCount()} asteroids`);
-    }
-
-    // Send current asteroid state to the requesting player
-    const asteroids = this.gameEngine.getAllAsteroids();
-    for (const asteroid of asteroids) {
+      // Asteroids already exist, just send them to the requesting player
+      const existingAsteroids = this.gameEngine.getAllAsteroids();
       this.broadcaster.sendToWebSocket(ws, {
-        type: 'asteroidCreate',
-        data: { asteroid },
+        type: 'asteroidCreateBatch',
+        asteroids: existingAsteroids,
         timestamp: Date.now(),
       });
+      logger.debug(`Player ${id} requested asteroid initialization - sent existing ${currentAsteroidCount} asteroids`);
     }
   }
 

@@ -1,8 +1,6 @@
 import { canvasManager } from '../../rendering/canvas';
-import { spawnRoidFromEdge as spawnFromEdge } from '../../utils/roidSpawn';
-
-// Re-export for backward compatibility
-export const spawnRoidFromEdge = spawnFromEdge;
+// This file is no longer needed since roidSpawn was removed
+// The functionality has been moved to the server
 
 export function calculateSpawnCount(): number {
   const cvs = canvasManager.getCanvas();

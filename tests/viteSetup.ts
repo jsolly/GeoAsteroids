@@ -16,9 +16,9 @@ const dom = new JSDOM(
             
           </li>
           <li class="nav-item">
-            <button id="start-multiplayer" class="btn btn-lg btn-info">
-              Multiplayer 🌐
-            </button>
+                    <button id="start-game" class="btn btn-lg btn-info">
+          Game 🌐
+        </button>
           </li>
           <li class="nav-item">
             <input

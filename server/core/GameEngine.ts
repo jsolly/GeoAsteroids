@@ -4,6 +4,7 @@ import { PlayerManager, ConnectedPlayer } from './PlayerManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { BotManager, ServerBot } from './BotManager';
 import { RNGService } from './RNGService';
+import { logger } from '../../setup/serverLogger';
 import {
   GAME_FPS,
   calculateHealthRegenPerFrame,
@@ -19,6 +20,7 @@ export class GameEngine {
   private rngService: RNGService;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
+  private isPaused = false; // Track if game is paused due to no players
 
   // Bot health regeneration state
   private botHealthRegenerationState: Map<string, {
@@ -31,6 +33,8 @@ export class GameEngine {
     this.playerManager = new PlayerManager();
     this.asteroidManager = new AsteroidManager(this.rngService);
     this.botManager = new BotManager(this.rngService);
+
+    // Don't initialize pause state yet - will be called after initialization
   }
 
   // Game loop management
@@ -41,12 +45,18 @@ export class GameEngine {
 
     // Start game loop for cleanup and updates (60 FPS for health regeneration)
     this.gameLoopInterval = setInterval(() => {
+      // Always increment game time, even when paused, to maintain consistency
       this.gameTime++;
-      this.cleanupStalePlayers();
-      this.updatePlayerHealthRegeneration();
-      this.updateBotHealthRegeneration();
-      this.updateBotExplosions();
-      this.updatePlayerRespawns();
+      
+      // Only update game state if not paused
+      if (!this.isPaused) {
+        this.cleanupStalePlayers();
+        this.updatePlayerHealthRegeneration();
+        this.updateBotHealthRegeneration();
+        this.updateBotExplosions();
+        this.updatePlayerRespawns();
+        this.updateBotMovement();
+      }
     }, 1000 / 60); // 60 FPS
   }
 
@@ -57,13 +67,34 @@ export class GameEngine {
     }
   }
 
+  // Pause/resume functionality
+  public updatePauseState(): void {
+    const playerCount = this.playerManager.getPlayerCount();
+    
+    if (playerCount === 0 && !this.isPaused) {
+      this.isPaused = true;
+      logger.info('🔄 Game paused - no players online');
+    } else if (playerCount > 0 && this.isPaused) {
+      this.isPaused = false;
+      logger.info('▶️ Game resumed - players are back online');
+    }
+  }
+
+  public isGamePaused(): boolean {
+    return this.isPaused;
+  }
+
   // Player operations
   public addPlayer(id: string, name: string, ws: WebSocket, position?: Position): ConnectedPlayer {
-    return this.playerManager.addPlayer(id, name, ws, position);
+    const player = this.playerManager.addPlayer(id, name, ws, position);
+    this.updatePauseState();
+    return player;
   }
 
   public removePlayer(id: string): ConnectedPlayer | undefined {
-    return this.playerManager.removePlayer(id);
+    const player = this.playerManager.removePlayer(id);
+    this.updatePauseState();
+    return player;
   }
 
   public updatePlayer(id: string, updates: Partial<ConnectedPlayer>): ConnectedPlayer | undefined {
@@ -233,6 +264,7 @@ export class GameEngine {
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
+      isPaused: this.isPaused,
     };
   }
 
@@ -293,6 +325,11 @@ export class GameEngine {
   // Player respawn updates
   private updatePlayerRespawns(): void {
     this.playerManager.updatePlayerRespawns();
+  }
+
+  // Bot movement updates
+  private updateBotMovement(): void {
+    this.botManager.updateBotMovement();
   }
 
   // Cleanup

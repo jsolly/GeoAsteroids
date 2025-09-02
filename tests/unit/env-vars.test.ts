@@ -84,7 +84,7 @@ describe('Client Environment Variables (VITE_*)', () => {
 
   describe('Environment Variable Logic Verification', () => {
     it('should verify VITE_WEBSOCKET_URL fallback logic works', () => {
-      // Test the fallback logic used in ConnectionManager and MultiplayerManager
+      // Test the fallback logic used in ConnectionManager and NetworkManager
       const testCases = [
         { input: undefined, expected: 'ws://localhost:3001/ws' },
         { input: 'ws://custom-server:9000/ws', expected: 'ws://custom-server:9000/ws' },
@@ -190,20 +190,12 @@ describe('Client Environment Variables (VITE_*)', () => {
       const fs = await import('node:fs');
 
       const connectionManager = fs.readFileSync(
-        './src/multiplayer/services/ConnectionManager.ts',
+        './src/network/services/ConnectionManager.ts',
         'utf-8'
       );
       // Check for the new computed fallback URL pattern
       expect(connectionManager).toContain('import.meta.env.VITE_WEBSOCKET_URL || computedUrl');
-      expect(connectionManager).toContain("window.location.protocol === 'https:' ? 'wss:' : 'ws:'");
-
-      const multiplayerManager = fs.readFileSync(
-        './src/multiplayer/multiplayerManager.ts',
-        'utf-8'
-      );
-      // Check for the new computed fallback URL pattern
-      expect(multiplayerManager).toContain('import.meta.env?.VITE_WEBSOCKET_URL || computedUrl');
-      expect(multiplayerManager).toContain(
+      expect(connectionManager).toContain(
         "window.location.protocol === 'https:' ? 'wss:' : 'ws:'"
       );
     });

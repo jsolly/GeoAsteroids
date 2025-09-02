@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
 import { EMP, GAME, LASER, SHIP } from '../../constants';
-import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
+import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
@@ -42,7 +42,7 @@ class Ship {
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
-  blinkOn: boolean = true; // Start blinking when invincible
+  blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
   shotCooldown: number = 2000;
   thrusterActive: boolean = false;
@@ -50,6 +50,16 @@ class Ship {
   lastRotation?: number; // Track previous rotation for movement analysis
   color: string = '#ffffff'; // Ship color for rendering
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
+
+  // Server-authoritative smoothing targets (for remote/bot ships)
+  targetPosition?: Position;
+  targetVelocity?: Velocity;
+  targetAngle?: number;
+  lastServerUpdateMs: number = 0;
+  interpolationT: number = 0; // 0..1 blend factor toward target
+  // Smoothing controls
+  private static readonly INTERPOLATION_RATE = 0.15; // higher => faster catch-up
+  private static readonly ANGLE_INTERPOLATION_RATE = 0.2;
 
   // Player collision damage-over-time tracking
   isCollidingWithPlayer: boolean = false;
@@ -66,6 +76,9 @@ class Ship {
     color?: string;
     isBot?: boolean;
   }) {
+    // Initialize blinkOn based on initial blinkCount
+    this.blinkOn = this.blinkCount % 2 === 0;
+
     // Apply optional overrides for bot-specific configuration
     if (options?.position) {
       this.position = options.position;
@@ -162,7 +175,7 @@ class Ship {
     this.lasers.push(laser);
     laser.playLaserSound();
 
-    // Send shooting event to multiplayer system
+    // Send shooting event to network system
     this.sendShootEvent(laser.position, laser.velocity);
   }
 
@@ -190,9 +203,27 @@ class Ship {
   private sendShootEvent(laserPosition: Position, laserVelocity: Velocity): void {
     // Only send shooting events for non-bot ships
     if (!this.isBot) {
-      const multiplayerManager = MultiplayerManager.getInstance();
-      if (multiplayerManager.isConnected) {
-        multiplayerManager.sendShootEvent(laserPosition, laserVelocity);
+      const networkManager = NetworkManager.getInstance();
+      if (networkManager.isConnected) {
+        // Send shoot event to server
+        networkManager.updatePlayerState({
+          position: this.position,
+          velocity: this.velocity,
+          r: this.r,
+          angle: this.angle,
+          lives: 0, // This will be updated by server
+          score: 0, // This will be updated by server
+          exploding: this.exploding,
+          lasers: [
+            {
+              position: laserPosition,
+              velocity: laserVelocity,
+              distTraveled: 0,
+              explodeTime: 0,
+              hasExploded: false,
+            },
+          ],
+        });
       }
     }
   }
@@ -205,26 +236,44 @@ class Ship {
     lives?: number;
     exploding?: boolean;
   }): void {
-    // Use Object.assign for efficient bulk assignment
-    const updates: Partial<Ship> = {};
+    // Local player uses immediate state; bots/remote ships use smoothing targets
+    if (this.isBot) {
+      // Bots: set targets and smooth toward them
+      if (data.position) {
+        this.targetPosition = { x: data.position.x, y: data.position.y };
+      }
+      if (data.velocity) {
+        this.targetVelocity = { x: data.velocity.x, y: data.velocity.y };
+      }
+      if (data.angle !== undefined) {
+        this.targetAngle = data.angle;
+      }
+      if (data.exploding !== undefined) {
+        this.exploding = data.exploding;
+      }
+      if (data.r !== undefined) {
+        this.r = data.r;
+      }
+      this.lastServerUpdateMs = performance.now ? performance.now() : Date.now();
+      return;
+    }
 
+    // Non-bot ships: assign immediately (existing behavior)
     if (data.position) {
-      updates.position = data.position;
+      this.position = data.position;
     }
     if (data.velocity) {
-      updates.velocity = data.velocity;
+      this.velocity = data.velocity;
     }
     if (data.r !== undefined) {
-      updates.r = data.r;
+      this.r = data.r;
     }
     if (data.angle !== undefined) {
-      updates.angle = data.angle;
+      this.angle = data.angle;
     }
     if (data.exploding !== undefined) {
-      updates.exploding = data.exploding;
+      this.exploding = data.exploding;
     }
-
-    Object.assign(this, updates);
   }
 
   getNetworkData(): {
@@ -331,9 +380,9 @@ class Ship {
 
     if (timeSinceLastDamage >= damageInterval) {
       // Apply local damage only when not connected to server; otherwise server-authoritative
-      const multiplayerManager = MultiplayerManager.getInstance();
-      if (multiplayerManager.isConnected && this.collidingPlayerId) {
-        const myPlayerId = multiplayerManager.getLocalPlayerId();
+      const networkManager = NetworkManager.getInstance();
+      if (networkManager.isConnected && this.collidingPlayerId) {
+        const myPlayerId = networkManager.getLocalPlayerId();
         if (myPlayerId) {
           logger.debug('COLLISION', 'Sending collision damage', {
             from: myPlayerId,
@@ -341,17 +390,16 @@ class Ship {
             toIsBot: this.collidingPlayerId.startsWith('server-bot-'),
             damage: 1,
           });
-          // Send damage to both participants with proper attacker attribution
-          MultiplayerManager.getInstance().collisionDamagePlayer(
-            myPlayerId,
-            this.collidingPlayerId,
-            1
-          );
-          MultiplayerManager.getInstance().collisionDamagePlayer(
-            this.collidingPlayerId,
-            myPlayerId,
-            1
-          );
+          // Send collision event to server
+          networkManager.updatePlayerState({
+            position: this.position,
+            velocity: this.velocity,
+            r: this.r,
+            angle: this.angle,
+            lives: 0, // This will be updated by server
+            score: 0, // This will be updated by server
+            exploding: this.exploding,
+          });
         }
       } else {
         logger.debug('COLLISION', 'Applying local collision damage', { damage: 1 });
@@ -370,7 +418,7 @@ class Ship {
   }
 
   updateHealth(): void {
-    // Health regeneration is now handled server-side for multiplayer consistency
+    // Health regeneration is now handled server-side for network consistency
     // Local regeneration is disabled to prevent conflicts with server updates
     if (process.env.NODE_ENV === 'test') {
       // Keep local regeneration for tests
@@ -426,6 +474,96 @@ class Ship {
         this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
         this.setBlinkOn();
       }
+    }
+  }
+
+  // Main update method called each frame
+  update(): void {
+    if (this.exploding) {
+      this.updateExplosion();
+      return;
+    }
+
+    // Update invincibility and blinking
+    this.updateInvincibility();
+
+    // Update health
+    this.updateHealth();
+
+    // Apply movement
+    this.updateMovement();
+
+    // Update EMP pulse
+    this.updateEmpPulse();
+
+    // Update lasers
+    this.moveLasers();
+  }
+
+  // Update ship movement (position, velocity, rotation)
+  private updateMovement(): void {
+    // For bots, blend client position toward server target (client-side smoothing)
+    if (this.isBot) {
+      this.stepInterpolation();
+      return;
+    }
+
+    // Apply angular velocity to rotation
+    this.angle += this.angularVelocity;
+
+    // Apply thrust if thrusting
+    if (this.thrusting) {
+      const thrust: Velocity = {
+        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
+        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
+      };
+      this.velocity = addVectors(this.velocity, thrust);
+
+      // Cap velocity to prevent excessive speed
+      const currentSpeed = Math.sqrt(
+        this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
+      );
+      if (currentSpeed > SHIP.MAX_VELOCITY) {
+        const scale = SHIP.MAX_VELOCITY / currentSpeed;
+        this.velocity.x *= scale;
+        this.velocity.y *= scale;
+      }
+    } else {
+      // Apply friction
+      this.velocity = multiplyVelocity(this.velocity, 1 - GAME.FRICTION / GAME.FPS);
+    }
+
+    // Update position based on velocity
+    this.position = addPositionAndVelocity(this.position, this.velocity);
+  }
+
+  // Smoothly approach target state for non-local ships
+  private stepInterpolation(): void {
+    if (this.targetPosition) {
+      const rate = Ship.INTERPOLATION_RATE;
+      const dx = this.targetPosition.x - this.position.x;
+      const dy = this.targetPosition.y - this.position.y;
+      this.position = { x: this.position.x + dx * rate, y: this.position.y + dy * rate };
+    }
+
+    if (this.targetVelocity) {
+      const rate = Ship.INTERPOLATION_RATE;
+      const dvx = this.targetVelocity.x - this.velocity.x;
+      const dvy = this.targetVelocity.y - this.velocity.y;
+      this.velocity = { x: this.velocity.x + dvx * rate, y: this.velocity.y + dvy * rate };
+    }
+
+    if (this.targetAngle !== undefined) {
+      const rate = Ship.ANGLE_INTERPOLATION_RATE;
+      // Shortest angle interpolation
+      let delta = this.targetAngle - this.angle;
+      while (delta > Math.PI) {
+        delta -= 2 * Math.PI;
+      }
+      while (delta < -Math.PI) {
+        delta += 2 * Math.PI;
+      }
+      this.angle += delta * rate;
     }
   }
 }

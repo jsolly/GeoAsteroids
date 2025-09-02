@@ -9,7 +9,7 @@ import { ClientLogger } from './server/services/ClientLogger';
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'production';
 
-logger.info(`🚀 Starting ${NODE_ENV} multiplayer server on port ${PORT}`);
+logger.info(`🚀 Starting ${NODE_ENV} game server on port ${PORT}`);
 
 // Create HTTP server for health checks
 const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -44,7 +44,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
     );
   } else if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('GeoRoids Multiplayer Server - Running');
+    res.end('GeoRoids Game Server - Running');
   } else if (req.url === '/ws') {
     // Handle WebSocket upgrade
     res.writeHead(426, { 'Content-Type': 'text/plain' });
@@ -98,7 +98,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
           game: {
             endpoint: `${wsProtocol}://${host}/ws`,
             status: 'available',
-            description: 'Gameplay WebSocket for multiplayer functionality'
+            description: 'Gameplay WebSocket for network functionality'
           },
           logs: {
             endpoint: `${wsProtocol}://${host}/logs`,
@@ -582,6 +582,10 @@ const wss = new WebSocketServer({
   // Don't specify path here - we'll handle routing manually
 });
 
+// NOTE: Do not manually handle 'upgrade' when passing { server: httpServer } to WebSocketServer.
+// The ws library attaches its own upgrade handler. Manually calling handleUpgrade here can
+// result in 'server.handleUpgrade() was called more than once with the same socket'.
+
 // Connection rate limiting to prevent abuse
 const connectionAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_CONNECTIONS_PER_MINUTE = 50; // Increased from 10 to 50
@@ -637,6 +641,32 @@ wss.on('headers', (_headers) => {
 const gameEngine = new GameEngine();
 // Ensure server-side game loop (including bot regen) runs
 gameEngine.startGameLoop();
+
+// Initialize the game world with asteroids and bots
+logger.info('🌍 Initializing game world...');
+try {
+  const asteroids = gameEngine.createAsteroids(10);
+  logger.info(`☄️ Created ${asteroids.length} asteroids`);
+} catch (error) {
+  logger.error('❌ Failed to create asteroids:', error);
+}
+
+try {
+  const bots = gameEngine.createBots(3);
+  if (bots) {
+    logger.info(`🤖 Created ${bots.length} bots`);
+  } else {
+    logger.warn('⚠️ Bot creation returned null');
+  }
+} catch (error) {
+  logger.error('❌ Failed to create bots:', error);
+}
+
+logger.info('✅ Game world initialization complete');
+
+// Initialize pause state now that everything is set up
+gameEngine.updatePauseState();
+
 const wsCore = new WebSocketCore(gameEngine);
 wsCore.startPeriodicGameStateBroadcast();
 

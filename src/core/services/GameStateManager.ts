@@ -1,3 +1,5 @@
+import { logger } from '../../utils/Logger';
+
 export class GameStateManager {
   private static instance: GameStateManager;
   private currentScore = 0;
@@ -50,6 +52,7 @@ export class GameStateManager {
 
   toggleIsGameRunning(): void {
     this.isGameRunning = !this.isGameRunning;
+    logger.debug('GAME_STATE', 'Game state toggled', { isGameRunning: this.isGameRunning });
   }
 
   updateTextAlpha(alpha: number): void {

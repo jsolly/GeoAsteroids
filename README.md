@@ -69,16 +69,16 @@ Debug behavior is controlled by constants defined in `src/constants/index.ts`:
 1. `LOGGING.GLOBAL_LOG_LEVEL` to `'debug'` in `src/constants/index.ts`
 2. `DEBUG.ENABLED` to `true` in the same file
 
-#### Multiplayer
-- `VITE_WEBSOCKET_URL` - WebSocket server URL for multiplayer
+#### Network
+- `VITE_WEBSOCKET_URL` - WebSocket server URL for network
 
 #### Build Info
 - `VITE_BUILD_TIME` - Build timestamp (auto-generated)
 - `VITE_COMMIT_HASH` - Git commit hash (auto-generated)
 
-### Multiplayer Development Setup
+### Network Development Setup
 
-For local multiplayer development, use the following commands:
+For local network development, use the following commands:
 
 ```shell
 # Run all development servers (Vite + WebSocket)
@@ -86,7 +86,7 @@ npm run dev:full
 
 # Run individual servers
 npm run dev              # Vite dev server (port 5173)
-npm run dev:multiplayer  # WebSocket server (port 3001)
+npm run dev:network  # WebSocket server (port 3001)
 ```
 
 
@@ -97,6 +97,16 @@ npm run dev:multiplayer  # WebSocket server (port 3001)
 ```shell
 npm run test
 ```
+
+#### Browser Tests
+
+For end-to-end testing with actual browser automation:
+
+```shell
+npm run test:browser
+```
+
+This runs tests using Selenium WebDriver to control the game in a real Chrome browser.
 
 ### Linting (with Biome)
 

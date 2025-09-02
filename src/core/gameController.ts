@@ -1,40 +1,36 @@
 import type { AsteroidData } from '../../shared-types';
 import { entityFactory } from '../entities/EntityFactory';
+import { PlayerManager } from '../entities/player/PlayerManager';
+import { PlayerNetwork } from '../entities/player/playerNetwork';
 import type { RoidBelt } from '../entities/roid/Roid';
-import { MultiplayerManager } from '../multiplayer/multiplayerManager';
+import { NetworkManager } from '../network/networkManager';
+import { canvasManager } from '../rendering/canvas';
 import { toggleScreen } from '../ui/uiUtils';
 import { logger } from '../utils/Logger';
-import { DebugManager } from './services/DebugManager';
-import { EMPPulseService } from './services/EMPPulseService';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
-import { PlayerManager } from './services/PlayerManager';
 
 export class GameController {
   private static instance: GameController;
 
   private gameStateManager: GameStateManager;
   private playerManager: PlayerManager;
-  private empPulseService: EMPPulseService;
   private inputManager: InputManager;
-  private debugManager: DebugManager;
-  private multiplayerManager: MultiplayerManager;
+  private networkManager: NetworkManager;
 
   private currRoidBelt: RoidBelt;
 
   private constructor() {
     this.gameStateManager = GameStateManager.getInstance();
     this.playerManager = PlayerManager.getInstance();
-    this.empPulseService = EMPPulseService.getInstance();
     this.inputManager = InputManager.getInstance();
-    this.debugManager = DebugManager.getInstance();
-    this.multiplayerManager = MultiplayerManager.getInstance();
+    this.networkManager = NetworkManager.getInstance();
 
     // Initialize with empty asteroid belt - will be populated by server
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
 
-    // Set up multiplayer disconnection handler
-    this.setupMultiplayerDisconnectionHandler();
+    // Set up network disconnection handler
+    this.setupNetworkDisconnectionHandler();
 
     // Set up game over handler
     this.setupGameOverHandler();
@@ -53,17 +49,22 @@ export class GameController {
   }
 
   // Game lifecycle methods
-  newGame(): void {
+  newGame(playerName?: string): void {
     this.gameStateManager.resetCurrentScore();
 
     // Create new player
     this.playerManager.createLocalPlayer();
 
+    // Set the player name if provided
+    if (playerName) {
+      this.playerManager.setPlayerName(playerName);
+    }
+
     // Note: Asteroid belt creation is now handled in startGame() to support server-authoritative mode
   }
 
-  async startGame(): Promise<void> {
-    this.newGame();
+  async startGame(playerName?: string): Promise<void> {
+    this.newGame(playerName);
     toggleScreen('start-screen', false);
     toggleScreen('gameArea', true);
     this.gameStateManager.toggleIsGameRunning();
@@ -71,46 +72,43 @@ export class GameController {
     // Reset button text to default state
     this.inputManager.resetButtonText();
 
-    // Try to connect to multiplayer first
+    // Try to connect to network first
     try {
-      await this.multiplayerManager.connect();
+      await this.networkManager.connect();
 
       // Add a small delay to ensure WebSocket state is fully established
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      logger.debug('MULTIPLAYER', 'Connected to server, using server-authoritative game state');
+      logger.debug('NETWORK', 'Connected to server, using server-authoritative game state');
     } catch (error) {
-      // Connection failed - this is a fatal error since we only support multiplayer
+      // Connection failed - this is a fatal error since we only support networked play
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorType = this.categorizeConnectionError(error);
 
-      logger.error(
-        'MULTIPLAYER',
-        `Failed to connect to multiplayer server (${errorType}): ${errorMessage}`
-      );
+      logger.error('NETWORK', `Failed to connect to game server (${errorType}): ${errorMessage}`);
 
       // Show error message and stop the game - no local fallback
       this.showConnectionFailureMessage(errorType, 'Cannot connect');
-      throw new Error(`Multiplayer connection failed: ${errorMessage}`);
+      throw new Error(`Network connection failed: ${errorMessage}`);
     }
 
-    // Always initialize multiplayer systems - assume multiplayer by default
-    this.multiplayerManager.initializeAsteroidSync();
+    // Always initialize network systems - assume networked by default
+    this.networkManager.initializeAsteroidSync();
 
     // Create an empty asteroid belt - server will populate with authoritative asteroids
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
-    this.multiplayerManager.setAsteroidBelt(this.currRoidBelt);
 
-    // Initialize listeners and bots
+    // Initialize listeners
     const localPlayer = this.playerManager.getLocalPlayer();
-    this.inputManager.initializeListeners(localPlayer);
-    this.playerManager.setupBotShootHandler();
-
-    // Initialize bots once when the game starts
-    this.playerManager.initializeBots();
+    if (localPlayer) {
+      this.inputManager.initializeListeners(localPlayer);
+    }
 
     // Set up server asteroid event listeners
     this.setupServerAsteroidListeners();
+
+    // Begin sending continuous local player updates to server
+    PlayerNetwork.getInstance().startNetworkUpdates();
 
     window.dispatchEvent(new CustomEvent('gameStart'));
   }
@@ -120,6 +118,14 @@ export class GameController {
     const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
     const { asteroid } = customEvent.detail;
     logger.debug('GAME', 'Adding server asteroid to local belt', { asteroidId: asteroid.id });
+
+    // Check if asteroid already exists to prevent duplicates
+    if (this.currRoidBelt) {
+      const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
+      if (existingRoid) {
+        return; // Skip duplicate
+      }
+    }
 
     // Create a proper Roid object from server data
     const roid = entityFactory.createRoid({
@@ -138,6 +144,12 @@ export class GameController {
     // Add to current asteroid belt if it exists
     if (this.currRoidBelt) {
       this.currRoidBelt.roids.push(roid);
+      logger.info(
+        'GAME',
+        `Added asteroid ${asteroid.id} to belt. Total asteroids: ${this.currRoidBelt.roids.length}`
+      );
+    } else {
+      logger.error('GAME', 'No asteroid belt available for adding asteroid');
     }
   };
 
@@ -188,6 +200,8 @@ export class GameController {
     if (this.currRoidBelt) {
       const index = this.currRoidBelt.roids.findIndex((r) => r.id === asteroidId);
       if (index !== -1) {
+        // Clear pending destruction flag before removing
+        this.currRoidBelt.roids[index].pendingDestruction = false;
         this.currRoidBelt.roids.splice(index, 1);
       }
     }
@@ -264,18 +278,12 @@ export class GameController {
             // Get the killed player's name from the event
             const killedPlayerId = customEvent.detail.playerId;
 
-            // Try to find the player in the multiplayer manager (remote players and bots)
-            const multiplayerManager = this.multiplayerManager;
-            const remotePlayers = multiplayerManager.getRemotePlayers();
-            const botPlayers = this.playerManager.getBots();
+            // Try to find the player in the network manager (remote players only)
+            const networkManager = this.networkManager;
+            const remotePlayers = networkManager.getRemotePlayers();
 
-            // Check remote players first
-            let killedPlayer = remotePlayers.find((p) => p.id === killedPlayerId);
-
-            // If not found in remote players, check bots
-            if (!killedPlayer) {
-              killedPlayer = botPlayers.get(killedPlayerId);
-            }
+            // Check remote players
+            const killedPlayer = remotePlayers.find((p) => p.id === killedPlayerId);
 
             if (killedPlayer) {
               this.setKillMessage(killedPlayer.name);
@@ -379,38 +387,17 @@ export class GameController {
     this.gameStateManager.toggleIsGameRunning();
   }
 
-  // Multiplayer methods
+  // Network methods
   setPlayerName(name: string): void {
     this.playerManager.setPlayerName(name);
   }
 
-  updateMultiplayerPlayerState(): void {
-    this.playerManager.updateMultiplayerState();
+  updateNetworkPlayerState(): void {
+    this.playerManager.updateNetworkState();
   }
 
-  getBots() {
-    return this.playerManager.getBots();
-  }
-
-  getMultiplayerManager(): MultiplayerManager {
-    return this.multiplayerManager;
-  }
-
-  // EMP pulse handling
-  triggerEmpPulse(): void {
-    const shipPosition = this.getCurrShip().position;
-    this.empPulseService.triggerEmpPulse(shipPosition, this.currRoidBelt, (points) => {
-      this.updateCurrScore(points);
-    });
-  }
-
-  // Debug methods
-  enableDebugMode(): void {
-    this.debugManager.enableDebugMode();
-  }
-
-  isDebugMode(): boolean {
-    return this.debugManager.isDebugMode();
+  getNetworkManager(): NetworkManager {
+    return this.networkManager;
   }
 
   // Getters for service access (for backward compatibility and testing)
@@ -420,10 +407,6 @@ export class GameController {
 
   getPlayerManager(): PlayerManager {
     return this.playerManager;
-  }
-
-  getEmpPulseService(): EMPPulseService {
-    return this.empPulseService;
   }
 
   // Connection error handling methods
@@ -494,35 +477,35 @@ export class GameController {
     }
 
     // Show user feedback - could be enhanced with toast/modal system
-    logger.warn('MULTIPLAYER', message);
+    logger.warn('NETWORK', message);
     // TODO: Implement proper UI feedback (toast/modal with retry button)
     // this.uiManager.showToast(message, { action: 'Retry', onAction: () => this.retryConnection() });
   }
 
-  private setupMultiplayerDisconnectionHandler(): void {
-    // Listen for multiplayer disconnection events
-    window.addEventListener('multiplayerDisconnected', (event) => {
+  private setupNetworkDisconnectionHandler(): void {
+    // Listen for network disconnection events
+    window.addEventListener('networkDisconnected', (event) => {
       const customEvent = event as CustomEvent<{ reason: string }>;
       logger.warn(
-        'MULTIPLAYER',
-        `Multiplayer disconnected: ${customEvent.detail.reason} - attempting reconnection`
+        'NETWORK',
+        `Network disconnected: ${customEvent.detail.reason} - attempting reconnection`
       );
 
-      // Don't stop the game immediately - let the MultiplayerManager handle reconnection
+      // Don't stop the game immediately - let the NetworkManager handle reconnection
       // The game continues running while reconnection attempts are made
     });
 
     // Listen for successful reconnection
-    window.addEventListener('multiplayerReconnected', () => {
-      logger.info('MULTIPLAYER', 'Successfully reconnected to server - game continues');
+    window.addEventListener('networkReconnected', () => {
+      logger.info('NETWORK', 'Successfully reconnected to server - game continues');
       // Game continues running normally - no action needed
     });
 
     // Listen for permanent disconnection (after all reconnection attempts fail)
-    window.addEventListener('multiplayerPermanentlyDisconnected', (event) => {
+    window.addEventListener('networkPermanentlyDisconnected', (event) => {
       const customEvent = event as CustomEvent<{ reason: string }>;
       logger.error(
-        'MULTIPLAYER',
+        'NETWORK',
         `Permanently disconnected: ${customEvent.detail.reason} - stopping game`
       );
 
@@ -534,5 +517,55 @@ export class GameController {
       // Show permanent disconnection message
       this.showConnectionFailureMessage('network', 'Connection permanently lost');
     });
+  }
+
+  // Update game state (movement, physics, etc.)
+  updateGame(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+
+    // Update local player ship
+    logger.debug('GAME_LOOP', 'Updating ship', {
+      shipPosition: currPlayer.ship.position,
+      shipAngle: currPlayer.ship.angle,
+    });
+    currPlayer.ship.update();
+
+    // Update asteroids
+    if (this.currRoidBelt) {
+      this.currRoidBelt.roids.forEach((roid) => {
+        roid.move();
+      });
+    }
+
+    // Update game state manager
+    this.gameStateManager.updateKillMessageTimer();
+  }
+
+  // Simple render method - no game logic, just rendering
+  renderGame(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+
+    // Use NetworkManager's player list which has the correct names from server
+    const allPlayers = this.networkManager.getAllPlayers();
+    const currScore = currPlayer.score;
+    const textAlpha = this.gameStateManager.getTextAlpha();
+    const text = this.gameStateManager.getText();
+
+    // Render the current game state
+    canvasManager.drawGame(
+      currPlayer,
+      this.currRoidBelt,
+      currScore,
+      textAlpha,
+      text,
+      currPlayer.lives,
+      allPlayers
+    );
   }
 }

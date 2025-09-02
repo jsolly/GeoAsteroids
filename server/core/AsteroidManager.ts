@@ -74,7 +74,12 @@ export class AsteroidManager {
   }
 
   public createAsteroids(count: number, bounds = { width: 2000, height: 2000 }): AsteroidData[] {
-    // Clear existing asteroids
+    // If we already have asteroids, return them instead of recreating
+    if (this.asteroids.size > 0) {
+      return Array.from(this.asteroids.values());
+    }
+
+    // Clear existing asteroids only if we're creating new ones
     this.asteroids.clear();
 
     // Reset RNG for deterministic asteroid generation
@@ -97,7 +102,7 @@ export class AsteroidManager {
         size: this.rng.random() * 40 + 20, // Size between 20 and 60
         jaggedness: this.rng.random() * 0.5 + 0.5, // Jaggedness between 0.5 and 1.0
         rotation: this.rng.random() * Math.PI * 2,
-        angularVelocity: (this.rng.random() - 0.5) * 2, // Angular velocity between -1 and 1
+        angularVelocity: (this.rng.random() - 0.5) * 0.01, // Angular velocity between -0.005 and 0.005 (matches client)
         health: healthValue,
         maxHealth: healthValue,
       };
@@ -105,7 +110,7 @@ export class AsteroidManager {
       this.asteroids.set(asteroidId, asteroid);
       newAsteroids.push(asteroid);
     }
-
+    
     return newAsteroids;
   }
 
@@ -125,15 +130,11 @@ export class AsteroidManager {
    * @returns Object containing the destroyed asteroid and any new asteroids created
    */
   public destroyAsteroid(asteroidId: string): { destroyed: AsteroidData | undefined; newAsteroids: AsteroidData[] } {
-    console.log('DEBUG: destroyAsteroid called for asteroidId:', asteroidId);
     
     const destroyed = this.asteroids.get(asteroidId);
     if (!destroyed) {
-      console.log('DEBUG: Asteroid not found:', asteroidId);
       return { destroyed: undefined, newAsteroids: [] };
     }
-
-    console.log('DEBUG: Destroying asteroid:', { id: destroyed.id, size: destroyed.size, currentCount: this.asteroids.size });
 
     // Remove the destroyed asteroid
     this.asteroids.delete(asteroidId);
@@ -142,7 +143,6 @@ export class AsteroidManager {
 
     // Check if asteroid is large enough to split and we're under the limit
     if (destroyed.size > this.minAsteroidSize * 2 && this.asteroids.size + 2 <= this.maxAsteroidCount) {
-      console.log('DEBUG: Asteroid is large enough to split, creating new asteroids');
       
       // Create two smaller asteroids
       for (let i = 0; i < 2; i++) {
@@ -165,20 +165,16 @@ export class AsteroidManager {
           size: newSize,
           jaggedness: Math.max(0.3, destroyed.jaggedness * 0.8), // Slightly less jagged
           rotation: this.rng.random() * Math.PI * 2,
-          angularVelocity: (this.rng.random() - 0.5) * 2,
+          angularVelocity: (this.rng.random() - 0.5) * 0.01, // Angular velocity between -0.005 and 0.005 (matches client)
           health: Math.floor(newSize * 0.8), // Health proportional to size
           maxHealth: Math.floor(newSize * 0.8)
         };
 
-        console.log('DEBUG: Created new asteroid:', { id: newAsteroid.id, size: newAsteroid.size });
         newAsteroids.push(newAsteroid);
         this.asteroids.set(newAsteroid.id, newAsteroid);
       }
-    } else {
-      console.log('DEBUG: Asteroid not split - size:', destroyed.size, 'minSize:', this.minAsteroidSize * 2, 'currentCount:', this.asteroids.size, 'maxCount:', this.maxAsteroidCount);
     }
 
-    console.log('DEBUG: destroyAsteroid result:', { destroyed: destroyed.id, newAsteroids: newAsteroids.length });
     return { destroyed, newAsteroids };
   }
 }

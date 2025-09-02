@@ -75,6 +75,31 @@ export interface BotData {
   maxHealth: number;
 }
 
+// Server game state structure (what the server actually sends)
+export interface ServerPlayerData {
+  id: string;
+  name: string;
+  position: Position;
+  velocity: Velocity;
+  rotation: number;
+  angularVelocity: number;
+  lives: number;
+  score: number;
+  exploding: boolean;
+  health: number;
+  maxHealth: number;
+  respawnTimer?: number;
+}
+
+export interface ServerGameState {
+  players: ServerPlayerData[];
+  bots: BotData[];
+  asteroids: AsteroidData[];
+  gameTime: number;
+  isPaused: boolean;
+}
+
+// Legacy GameState interface for backward compatibility
 export interface GameState {
   players: PlayerUpdate[];
   bots: BotData[];

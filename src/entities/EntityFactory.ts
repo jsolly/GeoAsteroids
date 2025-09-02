@@ -6,7 +6,7 @@ import {
   getRandomPositionNearPoint,
   getRandomPositionWithinBoundary,
 } from '../utils/positionUtils';
-import { spawnRoidFromEdge } from '../utils/roidSpawn';
+
 import { Player } from './player/Player';
 import { Roid, RoidBelt } from './roid/Roid';
 
@@ -252,7 +252,8 @@ export class EntityFactory {
   }
 
   private generateRandomRoidPosition(): Position {
-    return spawnRoidFromEdge();
+    // Generate random position within boundary since roidSpawn was removed
+    return getRandomPositionWithinBoundary();
   }
 }
 

@@ -1,15 +1,13 @@
-import { MultiplayerManager } from '../../multiplayer/multiplayerManager';
-import { BotManager } from '../bot/botManager';
-import type { Player } from './Player';
+import { NetworkManager } from '../../network/networkManager';
+import { logger } from '../../utils/Logger';
+import { Player } from './Player';
 
 class PlayerManager {
   private static instance: PlayerManager;
-  private multiplayerManager: MultiplayerManager;
-  private botManager: BotManager;
+  private networkManager: NetworkManager;
 
   private constructor() {
-    this.multiplayerManager = MultiplayerManager.getInstance();
-    this.botManager = BotManager.getInstance();
+    this.networkManager = NetworkManager.getInstance();
   }
 
   public static getInstance(): PlayerManager {
@@ -20,37 +18,66 @@ class PlayerManager {
   }
 
   public getNonLocalPlayers(): Player[] {
-    const remotes = Array.from(this.multiplayerManager.getRemotePlayers().values());
-    const bots = Array.from(this.botManager.getBots().values());
-    return [...remotes, ...bots];
+    return this.networkManager.getRemotePlayers();
   }
 
   public getAllPlayersIncludingLocal(local: Player): Player[] {
     return [local, ...this.getNonLocalPlayers()];
   }
 
-  public getBotPlayers(): Player[] {
-    return Array.from(this.botManager.getBots().values());
-  }
-
   public getRemotePlayers(): Player[] {
-    return Array.from(this.multiplayerManager.getRemotePlayers().values());
+    return this.networkManager.getRemotePlayers();
   }
 
   public getPlayerById(id: string): Player | undefined {
-    // Search remotes first
-    const remote = this.multiplayerManager.getRemotePlayers().find((p) => p.id === id);
-    if (remote) {
-      return remote;
-    }
-    // Then bots
-    return this.botManager.getBots().get(id);
+    return this.networkManager.getPlayer(id);
   }
 
   public getCounts(): { total: number; remoteHumans: number; bots: number } {
-    const remoteHumans = this.multiplayerManager.getRemotePlayers().length;
-    const bots = this.botManager.getBots().size;
-    return { total: remoteHumans + bots, remoteHumans, bots };
+    const remoteHumans = this.networkManager.getRemotePlayers().length;
+    // Bots are now server-controlled, so we don't track them here
+    return { total: remoteHumans, remoteHumans, bots: 0 };
+  }
+
+  // Local player management
+  private localPlayer: Player | null = null;
+
+  public createLocalPlayer(): Player {
+    const player = new Player({
+      id: 'local',
+      name: 'Player',
+      type: 'local',
+    });
+    this.localPlayer = player;
+    return player;
+  }
+
+  public getLocalPlayer(): Player | null {
+    return this.localPlayer;
+  }
+
+  public getLocalShip() {
+    return this.localPlayer?.ship;
+  }
+
+  public setPlayerName(name: string): void {
+    logger.debug('PLAYER', `Setting player name: ${name}`);
+    if (this.localPlayer) {
+      logger.debug(
+        'PLAYER',
+        `Updating local player name from '${this.localPlayer.name}' to '${name}'`
+      );
+      this.localPlayer.name = name;
+    } else {
+      logger.warn('PLAYER', 'Cannot set player name - no local player exists');
+    }
+    this.networkManager.setLocalPlayerName(name);
+  }
+
+  public updateNetworkState(): void {
+    if (this.localPlayer) {
+      this.networkManager.updatePlayerState(this.localPlayer.getStateForNetwork());
+    }
   }
 }
 

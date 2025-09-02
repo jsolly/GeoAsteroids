@@ -2,7 +2,7 @@ import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
 import { DEBUG, GAME, ROID } from '../../constants';
 import { isDebugMode } from '../../utils/debugUtils';
-import { spawnRoidFromEdge } from '../../utils/roidSpawn';
+import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
 
 class Roid {
   id: string;
@@ -13,6 +13,7 @@ class Roid {
   velocity: Velocity;
   health: number;
   maxHealth: number;
+  pendingDestruction: boolean = false; // Track asteroids waiting for server confirmation
   static fxHit = new Sound('sounds/hit.m4a', 5);
 
   constructor(
@@ -21,7 +22,7 @@ class Roid {
   ) {
     this.id = crypto.randomUUID();
     this.angle = Math.random() * Math.PI * 2; // in radians
-    this.angularVelocity = (Math.random() - 0.5) * 0.1; // Small random rotation
+    this.angularVelocity = (Math.random() - 0.5) * 0.01; // Much smaller random rotation
     const speed = (Math.random() * ROID.SPEED) / GAME.FPS;
     this.velocity = {
       x: speed * (Math.random() < 0.5 ? 1 : -1),
@@ -39,6 +40,17 @@ class Roid {
 
   get jaggedness(): number {
     return ROID.JAGGEDNESS;
+  }
+
+  // Move the roid based on its velocity
+  move(): void {
+    this.position = {
+      x: this.position.x + this.velocity.x,
+      y: this.position.y + this.velocity.y,
+    };
+
+    // Update rotation
+    this.angle += this.angularVelocity;
   }
 }
 
@@ -59,7 +71,8 @@ class RoidBelt {
   }
 
   addRoid(): void {
-    const roidPosition = spawnRoidFromEdge();
+    // Generate random position within boundary since roidSpawn was removed
+    const roidPosition = getRandomPositionWithinBoundary();
     this.roids.push(new Roid(roidPosition, Math.ceil(ROID.SIZE / 2)));
   }
 

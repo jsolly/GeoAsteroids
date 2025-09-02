@@ -5,7 +5,6 @@ import type {
   PlayerShoot,
   PlayerUpdate,
 } from '../../shared-types';
-import type { BotShoot } from '../entities/bot/types';
 
 // Re-export GameState for convenience
 export type { GameState };
@@ -20,27 +19,19 @@ export interface ServerMessage {
     | 'playerKilled'
     | 'scoreUpdate'
     | 'gameState'
-    | 'botShoot'
     | 'error'
-    | 'botUpdate'
-    | 'botCreate'
-    | 'botRemove'
-    | 'botDestroyed'
-    | 'botDamaged'
-    | 'botInitialized'
     | 'joined'
     | 'asteroidCreate'
+    | 'asteroidCreateBatch'
     | 'asteroidUpdate'
     | 'asteroidDestroy';
-  payload:
-    | PlayerJoin
-    | PlayerLeave
-    | PlayerUpdate
-    | PlayerShoot
-    | GameState
-    | BotShoot
-    | string
-    | unknown; // Flexible payload for custom messages
+  // Prefer `data`; accept `payload` temporarily during transition
+  data?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | GameState | string | unknown;
+  payload?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | GameState | string | unknown;
+  // Some messages historically included top-level fields (id/name/position). Keep them optional to avoid type errors during migration.
+  id?: string;
+  name?: string;
+  position?: unknown;
   timestamp: number;
 }
 
@@ -51,11 +42,7 @@ export interface ClientMessage {
     | 'update'
     | 'shoot'
     | 'collisionDamage'
-    | 'botShoot'
-    | 'initBots'
-    | 'botDestroyed'
-    | 'botUpdate'
-    | 'botDamage'
+    | 'asteroidDamage'
     | 'empDestroy'
     | 'laserDamage'
     | 'playerKilled'
@@ -66,6 +53,6 @@ export interface ClientMessage {
     | 'asteroidDestroy'
     | 'clientLog';
   id?: string; // Optional ID field for messages that need it
-  data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | BotShoot | unknown; // Flexible payload for custom messages
+  data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | unknown; // Flexible payload for custom messages
   timestamp: number;
 }

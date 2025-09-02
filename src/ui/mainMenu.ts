@@ -5,110 +5,178 @@ import { setSound } from '../audio/Sound';
 import { GameController } from '../core/gameController';
 import { getBuildInfoString } from '../utils/buildInfo';
 import { attachEventListener, getElementById } from '../utils/dom';
+import { logger } from '../utils/Logger';
 import { toggleScreen } from './uiUtils';
 
 // toggleScreen lives in uiUtils
 
 // UI element references
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
-
-const startMultiplayerBtn = getElementById<HTMLButtonElement>('start-multiplayer');
-
-// Multiplayer name input elements
-const multiplayerNameModal = getElementById<HTMLElement>('multiplayerNameModal');
-const multiplayerNameInput = getElementById<HTMLInputElement>('multiplayerNameInput');
-const confirmNameButton = getElementById<HTMLButtonElement>('confirmNameButton');
-const cancelNameButton = getElementById<HTMLButtonElement>('cancelNameButton');
+const startGameBtn = getElementById<HTMLButtonElement>('start-game');
+const playerNameInput = getElementById<HTMLInputElement>('playerNameInput');
 
 // Helper function to get game controller instance
 function getGameController() {
   return GameController.getInstance();
 }
 
-// Multiplayer is now the only mode - always enabled
+// Generate fun, space-themed nicknames
+function generateFunNickname(): string {
+  const adjectives = [
+    'Crimson',
+    'Nebula',
+    'Quantum',
+    'Cosmic',
+    'Lunar',
+    'Solar',
+    'Galactic',
+    'Star',
+    'Nova',
+    'Meteor',
+    'Stellar',
+    'Astral',
+    'Celestial',
+    'Orbital',
+    'Interstellar',
+    'Void',
+    'Ethereal',
+    'Mystic',
+    'Shadow',
+    'Phantom',
+    'Blazing',
+    'Frozen',
+    'Thunder',
+    'Lightning',
+    'Storm',
+    'Titan',
+    'Dragon',
+    'Phoenix',
+    'Wolf',
+    'Eagle',
+    'Cyber',
+    'Neon',
+    'Digital',
+    'Pixel',
+    'Retro',
+    'Future',
+    'Time',
+    'Space',
+    'Dimension',
+    'Reality',
+  ];
 
-// Set up multiplayer button - this is now the only game mode
-attachEventListener(startMultiplayerBtn, 'click', () => {
-  showMultiplayerNameModal();
+  const nouns = [
+    'Falcon',
+    'Viper',
+    'Ranger',
+    'Specter',
+    'Comet',
+    'Warden',
+    'Drifter',
+    'Marauder',
+    'Pioneer',
+    'Corsair',
+    'Guardian',
+    'Sentinel',
+    'Hunter',
+    'Warrior',
+    'Knight',
+    'Mage',
+    'Archer',
+    'Assassin',
+    'Paladin',
+    'Rogue',
+    'Blade',
+    'Sword',
+    'Shield',
+    'Armor',
+    'Helmet',
+    'Crown',
+    'Throne',
+    'Tower',
+    'Castle',
+    'Fortress',
+    'Storm',
+    'Thunder',
+    'Lightning',
+    'Fire',
+    'Ice',
+    'Wind',
+    'Earth',
+    'Water',
+    'Light',
+    'Dark',
+  ];
+
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  return `${adjective} ${noun}`;
+}
+
+// Set up game button - directly start game with nickname input
+attachEventListener(startGameBtn, 'click', () => {
+  startGameWithName();
 });
 
-// Function to show multiplayer name input modal
-function showMultiplayerNameModal(): void {
-  if (multiplayerNameModal && multiplayerNameInput) {
-    const gameController = getGameController();
-    multiplayerNameModal.style.display = 'block';
+// Function to start game with the entered name
+function startGameWithName(): void {
+  let playerName = '';
 
-    // Pre-fill with last used name if available
-    const existing = gameController.getMultiplayerManager().getLocalPlayerName();
-    if (existing) {
-      multiplayerNameInput.value = existing;
-    } else {
-      multiplayerNameInput.value = '';
-    }
+  logger.debug('UI', 'startGameWithName called');
+  logger.debug('UI', `Input value: ${playerNameInput?.value}`);
+  logger.debug('UI', `Input value trimmed: ${playerNameInput?.value.trim()}`);
 
-    multiplayerNameInput.focus();
-  }
-}
-
-// Function to hide multiplayer name input modal
-function hideMultiplayerNameModal(): void {
-  if (multiplayerNameModal) {
-    multiplayerNameModal.style.display = 'none';
-  }
-}
-
-// Function to start multiplayer with the entered name
-function startMultiplayerWithName(): void {
-  if (multiplayerNameInput?.value.trim()) {
-    const playerNameRaw = multiplayerNameInput.value.trim();
+  if (playerNameInput?.value.trim()) {
+    const playerNameRaw = playerNameInput.value.trim();
 
     // Apply name validation
     const MAX_LEN = 20;
-    const playerName = playerNameRaw.slice(0, MAX_LEN);
+    const validatedName = playerNameRaw.slice(0, MAX_LEN);
 
     // Validate player name (alphanumeric only)
-    const validatedName = playerName.replace(/[^A-Za-z0-9]/g, '');
+    playerName = validatedName.replace(/[^A-Za-z0-9]/g, '');
 
-    if (validatedName) {
-      // Set the player name in the game controller
-      const gameController = getGameController();
-      gameController.setPlayerName(validatedName);
+    logger.debug('UI', `Using user-entered name: ${playerName}`);
+  }
 
-      // Hide the modal
-      hideMultiplayerNameModal();
+  // If no valid name entered, use the pre-generated nickname
+  if (!playerName) {
+    playerName = generatedNickname;
+    logger.debug('UI', `Using pre-generated nickname: ${playerName}`);
 
-      // Update button state
-      startMultiplayerBtn?.classList.add('active-mode');
-
-      // Start the game
-      gameController.startGame();
-    } else {
-      // Show error feedback for invalid name
-      multiplayerNameInput?.focus();
-      // Optionally add visual feedback here
+    // Update the input field to show the nickname
+    if (playerNameInput) {
+      playerNameInput.value = playerName;
+      playerNameInput.classList.add('default-nickname');
     }
   } else {
-    // Show error or focus the input
-    multiplayerNameInput?.focus();
-  }
-}
-
-// Set up confirm name button in multiplayer modal
-if (confirmNameButton) {
-  attachEventListener(confirmNameButton, 'click', startMultiplayerWithName);
-}
-
-// Set up cancel name button in multiplayer modal
-if (cancelNameButton) {
-  attachEventListener(cancelNameButton, 'click', hideMultiplayerNameModal);
-}
-
-// Set up multiplayer name input in multiplayer modal
-if (multiplayerNameInput) {
-  attachEventListener(multiplayerNameInput, 'keydown', (ev) => {
-    if ((ev as KeyboardEvent).key === 'Enter') {
-      startMultiplayerWithName();
+    // Remove default nickname styling if user entered a custom name
+    if (playerNameInput) {
+      playerNameInput.classList.remove('default-nickname');
     }
+  }
+
+  logger.debug('UI', `Final player name: ${playerName}`);
+  logger.debug('UI', `About to call getGameController().startGame(${playerName})`);
+
+  // Update button state
+  startGameBtn?.classList.add('active-mode');
+
+  // Start the game (this will set the player name)
+  getGameController().startGame(playerName);
+}
+
+// Set up player name input to allow Enter key to start game
+if (playerNameInput) {
+  attachEventListener(playerNameInput, 'keydown', (ev) => {
+    if ((ev as KeyboardEvent).key === 'Enter') {
+      startGameWithName();
+    }
+  });
+
+  // Clear default nickname styling when user starts typing
+  attachEventListener(playerNameInput, 'input', () => {
+    playerNameInput.classList.remove('default-nickname');
   });
 }
 
@@ -140,3 +208,12 @@ function displayBuildInfo(): void {
 
 // Initialize build info display
 displayBuildInfo();
+
+// Generate a nickname once and use it consistently
+const generatedNickname = generateFunNickname();
+
+// Set the generated nickname as placeholder
+if (playerNameInput) {
+  playerNameInput.placeholder = generatedNickname;
+  logger.debug('UI', `Set placeholder nickname: ${generatedNickname}`);
+}
