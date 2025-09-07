@@ -121,6 +121,12 @@ class Ship {
   }
 
   applyVelocity(): void {
+    logger.debug('SHIP', 'applyVelocity called', {
+      thrusting: this.thrusting,
+      shipId: this.id,
+      isBot: this.isBot,
+    });
+
     if (this.thrusting) {
       const thrust: Velocity = {
         x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,

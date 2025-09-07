@@ -18,7 +18,9 @@ class PlayerManager {
   }
 
   public getNonLocalPlayers(): Player[] {
-    return this.networkManager.getRemotePlayers();
+    // Return all players except the local player (includes bots and remote players)
+    const allPlayers = this.networkManager.getAllPlayers();
+    return allPlayers.filter((p) => p.type !== 'local');
   }
 
   public getAllPlayersIncludingLocal(local: Player): Player[] {
@@ -34,9 +36,10 @@ class PlayerManager {
   }
 
   public getCounts(): { total: number; remoteHumans: number; bots: number } {
-    const remoteHumans = this.networkManager.getRemotePlayers().length;
-    // Bots are now server-controlled, so we don't track them here
-    return { total: remoteHumans, remoteHumans, bots: 0 };
+    const allPlayers = this.networkManager.getAllPlayers();
+    const remoteHumans = allPlayers.filter((p) => p.type === 'remote').length;
+    const bots = allPlayers.filter((p) => p.type === 'bot').length;
+    return { total: allPlayers.length, remoteHumans, bots };
   }
 
   // Local player management

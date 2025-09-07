@@ -105,13 +105,13 @@ export const EMP = {
 // ============================================================================
 export const DEBUG = {
   // Master switch for debug features
-  ENABLED: false,
+  ENABLED: true,
 
   // Player settings
   LOCAL_PLAYER_INVINCIBLE: false,
 
   // Bot settings (overrides GAME.BOT_COUNT when in debug mode)
-  BOT_COUNT: 1,
+  BOT_COUNT: 3,
   DISABLE_BOT_MOVEMENT: false,
   DISABLE_BOT_LASERS: false,
   DISABLE_BOT_SPAWN_PROTECTION: false,

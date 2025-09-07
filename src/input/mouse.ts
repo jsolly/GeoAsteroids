@@ -2,12 +2,32 @@ import { playSound } from '../audio/Sound';
 import type { Player } from '../entities/player/Player';
 import { Ship } from '../entities/ship/Ship';
 import { canvasManager } from '../rendering/canvas';
+import { getPressedKeysForPlayer } from './keybindings';
 
 /* =============
 Mouse Input Handling
 ============= */
 
 let isRightMouseDown = false;
+
+// Helper function to update thrust state including mouse input
+function updateThrustFromAllInputs(player: Player): void {
+  const pressed = getPressedKeysForPlayer(player);
+  const shouldThrust = pressed.has('Space') || pressed.has('ArrowUp') || isRightMouseDown;
+  const currentlyThrusting = player.ship.thrusting;
+
+  // Only update if the aggregate state has changed
+  if (shouldThrust !== currentlyThrusting) {
+    player.ship.thrusting = shouldThrust;
+    if (shouldThrust) {
+      if (!Ship.fxThrust.isPlaying()) {
+        playSound(Ship.fxThrust);
+      }
+    } else {
+      Ship.fxThrust.stop();
+    }
+  }
+}
 
 export function handleMouseMove(ev: MouseEvent, player: Player): void {
   if (player.lives <= 0 || player.ship.exploding) {
@@ -50,11 +70,7 @@ export function handleMouseDown(ev: MouseEvent, player: Player): void {
     player.ship.shoot();
   } else if (ev.button === 2) {
     isRightMouseDown = true;
-    player.ship.thrusting = true;
-    // Start thrust sound if not playing (mirrors ArrowUp behavior)
-    if (!Ship.fxThrust.isPlaying()) {
-      playSound(Ship.fxThrust);
-    }
+    updateThrustFromAllInputs(player);
   }
 }
 
@@ -62,8 +78,7 @@ export function handleMouseUp(ev: MouseEvent, player: Player): void {
   // Handle right-button release unconditionally to ensure cleanup even for dead/exploding players
   if (ev.button === 2) {
     isRightMouseDown = false;
-    player.ship.thrusting = false;
-    Ship.fxThrust.stop();
+    updateThrustFromAllInputs(player);
     return;
   }
 

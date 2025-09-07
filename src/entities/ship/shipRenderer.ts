@@ -252,9 +252,13 @@ export function drawThruster(ship: Ship): void {
     exploding: ship.exploding,
     blinkOn: ship.blinkOn,
     thrusting: ship.thrusting,
+    shipId: ship.id,
+    shipPosition: ship.position,
+    shipAngle: ship.angle,
+    shipRadius: ship.r,
   });
 
-  if (!ship.exploding && ship.blinkOn) {
+  if (!ship.exploding && ship.thrusting) {
     // Ship is always drawn at screen center (viewport transformation)
     const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
 
@@ -270,7 +274,7 @@ export function drawThruster(ship: Ship): void {
   } else {
     logger.debug('THRUSTER', 'Thruster not drawn - conditions not met', {
       exploding: ship.exploding,
-      blinkOn: ship.blinkOn,
+      thrusting: ship.thrusting,
     });
   }
 }
@@ -281,7 +285,7 @@ export function drawThrusterAtPosition(ship: Ship, shipPosition: { x: number; y:
     return;
   }
 
-  if (!ship.exploding && ship.blinkOn) {
+  if (!ship.exploding && ship.thrusting) {
     // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
     const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
     const screenY = ship.position.y - shipPosition.y + cvs.height / 2;

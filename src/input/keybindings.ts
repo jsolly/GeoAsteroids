@@ -27,7 +27,7 @@ let thrustSoundActive = false;
 // Track pressed keys per-player to avoid cross-player/global interference (e.g., parallel tests)
 const playerPressedKeys = new WeakMap<Player, Set<string>>();
 
-function getPressedKeysForPlayer(player: Player): Set<string> {
+export function getPressedKeysForPlayer(player: Player): Set<string> {
   let set = playerPressedKeys.get(player);
   if (!set) {
     set = new Set<string>();
@@ -37,7 +37,7 @@ function getPressedKeysForPlayer(player: Player): Set<string> {
 }
 
 // Helper function to update thrust state based on aggregate key state
-function updateThrustFromKeys(player: Player): void {
+export function updateThrustFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
   const shouldThrust = pressed.has('Space') || pressed.has('ArrowUp');
   const currentlyThrusting = player.ship.thrusting;
@@ -48,6 +48,8 @@ function updateThrustFromKeys(player: Player): void {
     currentlyThrusting,
     hasSpace: pressed.has('Space'),
     hasArrowUp: pressed.has('ArrowUp'),
+    playerId: player.id,
+    playerName: player.name,
   });
 
   // Only update if the aggregate state has changed

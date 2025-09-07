@@ -19,7 +19,8 @@
 
 ## Technology Constraints
 - **Icons**: Only Heroicons via `@heroicons/react`
-- **Testing**: Vitest only; happy path coverage only
+- **Testing**: Vitest only; happy path coverage only. Do not use Jest.
+- **Linting/Formatting**: Biome only (No Prettier or ESLint)
 - **Styling**: Tailwind utilities preferred over custom CSS
 - **Error handling**: Let errors propagate; avoid defensive programming
 - **Validation**: Only for untrusted external input

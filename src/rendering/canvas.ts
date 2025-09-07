@@ -217,7 +217,7 @@ class CanvasManager {
 
         if (player.ship.exploding) {
           // Draw explosion animation for exploding ships
-          if (player.id === currPlayer.id) {
+          if (player.id === localId) {
             // Local player explosion using local state
             drawShipExplosion(currShip, currShip.color);
           } else {
@@ -252,9 +252,9 @@ class CanvasManager {
           continue;
         }
 
-        if (!player.ship.exploding && player.ship.thrusting) {
-          if (player.id === localId) {
-            // Local player thruster using local state
+        if (player.id === localId) {
+          // Local player - use local ship state
+          if (!currShip.exploding && currShip.thrusting) {
             logger.debug('RENDERING', 'Drawing local player thruster', {
               thrusting: currShip.thrusting,
               blinkOn: currShip.blinkOn,
@@ -262,16 +262,19 @@ class CanvasManager {
             });
             drawThruster(currShip);
           } else {
+            // Debug: log why local player thruster is not being drawn
+            logger.debug('RENDERING', 'Local player thruster not drawn', {
+              thrusting: currShip.thrusting,
+              blinkOn: currShip.blinkOn,
+              exploding: currShip.exploding,
+            });
+          }
+        } else {
+          // Other players - use their ship state
+          if (!player.ship.exploding && player.ship.thrusting) {
             // Other players' thrusters at their world positions
             drawThrusterAtPosition(player.ship, currShip.position);
           }
-        } else if (player.id === localId) {
-          // Debug: log why local player thruster is not being drawn
-          logger.debug('RENDERING', 'Local player thruster not drawn', {
-            thrusting: currShip.thrusting,
-            blinkOn: currShip.blinkOn,
-            exploding: currShip.exploding,
-          });
         }
       }
     } catch (error: unknown) {
