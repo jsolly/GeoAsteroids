@@ -31,7 +31,7 @@ npm run test:integration:component # component integration
 npx vitest run tests/unit/path/to.test.ts        # OK for unit tests only
 ```
 
-**Never run `npx vitest` directly for integration tests** — the runner script enforces single-instance execution. Multiple Vitest forks open multiple WebSocket clients to `:3001`, hit the connection rate limiter, and fail. The `vitest.config.ts` is hard-coded to `singleFork`, `concurrent: false`, `maxConcurrency: 1`, `fileParallelism: false` — don't relax these.
+**Use `./scripts/test-runner.sh` for integration tests** — it enforces single-instance execution. Running `npx vitest` directly opens multiple Vitest forks, each spawning a WebSocket client to `:3001`, which hits the connection rate limiter and fails. The `vitest.config.ts` is hard-coded to `singleFork`, `concurrent: false`, `maxConcurrency: 1`, `fileParallelism: false`; keep those settings.
 
 ## Architecture
 
@@ -77,7 +77,7 @@ Filter with grep prefixes: `[KEYBINDINGS]`, `[GAME_LOOP]`, `[RENDERING]`, `[NETW
 - `tests/unit/` — pure, fast. Run via `npm run test`.
 - `tests/integration/server/` — vitest against server modules directly.
 - `tests/integration/component/` — vitest with jsdom against client modules.
-- `tests/integration/browser/` — Selenium/Playwright driving a real browser. Organized by scenario: `sanity/`, `laser/`, `collision/`, `roid/`. Each test is **scenario-named**, not technical (e.g. `bots-explode-and-respawn-after-asteroid-collision.test.ts`). Screenshots land in `tests/integration/browser/screenshots/`.
+- `tests/integration/browser/` — Selenium/Playwright driving a real browser. Organized by scenario: `sanity/`, `laser/`, `collision/`, `roid/`. **Name each test for the user scenario it describes**, not the function under test — e.g. `bots-explode-and-respawn-after-asteroid-collision.test.ts` (what happens) over `test-bot-collision.test.ts` (what's tested). Screenshots land in `tests/integration/browser/screenshots/`.
 
 Integration tests boot the dev servers if not already running. If a test hangs or fails strangely, run `npm run dev:kill` then re-run.
 
