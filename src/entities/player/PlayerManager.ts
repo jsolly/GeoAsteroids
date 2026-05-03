@@ -1,6 +1,7 @@
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
-import { Player } from './Player';
+import { entityFactory } from '../EntityFactory';
+import type { Player } from './Player';
 
 class PlayerManager {
   private static instance: PlayerManager;
@@ -46,11 +47,8 @@ class PlayerManager {
   private localPlayer: Player | null = null;
 
   public createLocalPlayer(): Player {
-    const player = new Player({
-      id: 'local',
-      name: 'Player',
-      type: 'local',
-    });
+    // Use EntityFactory to ensure proper positioning based on DEBUG settings
+    const player = entityFactory.createLocalPlayer('Player');
     this.localPlayer = player;
     return player;
   }

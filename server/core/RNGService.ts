@@ -31,12 +31,23 @@ export class RNGService {
     this.rngState = this.initialSeed;
   }
 
-  // Get random position within bounds
-  public randomPosition(bounds: { width: number; height: number }): { x: number; y: number } {
-    return {
-      x: this.random() * bounds.width - bounds.width / 2,
-      y: this.random() * bounds.height - bounds.height / 2,
-    };
+  // Get random position within bounds (supports both rectangular and circular)
+  public randomPosition(bounds: { width?: number; height?: number; radius?: number }): { x: number; y: number } {
+    if (bounds.radius) {
+      // Circular boundary
+      const angle = this.random() * Math.PI * 2;
+      const radius = this.random() * bounds.radius * 0.8; // Stay within 80% of boundary
+      return {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+      };
+    } else {
+      // Rectangular boundary (legacy support)
+      return {
+        x: this.random() * bounds.width! - bounds.width! / 2,
+        y: this.random() * bounds.height! - bounds.height! / 2,
+      };
+    }
   }
 
   // Get random velocity

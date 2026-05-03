@@ -1,0 +1,237 @@
+import { expect, test, describe, beforeEach, vi, afterEach } from 'vitest';
+import { CollisionManager } from '../../../src/physics/collision/CollisionManager';
+import { Ship } from '../../../src/entities/ship/Ship';
+import { Roid } from '../../../src/entities/roid/Roid';
+import { NetworkManager } from '../../../src/network/networkManager';
+import { DAMAGE, DEBUG } from '../../../src/constants';
+
+// Mock NetworkManager
+const mockSendMessage = vi.fn();
+const mockGetLocalPlayerId = vi.fn(() => 'local-player-123');
+
+vi.mock('../../../src/network/networkManager', () => ({
+  NetworkManager: {
+    getInstance: vi.fn(() => ({
+      isConnected: true,
+      getLocalPlayerId: mockGetLocalPlayerId,
+      sendMessage: mockSendMessage,
+    })),
+  },
+}));
+
+// Mock logger
+vi.mock('../../../src/utils/Logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock collision detection
+vi.mock('../../../src/physics/collision/collisionDetection', () => ({
+  checkShipCollision: vi.fn(),
+}));
+
+describe('Local Player Roid Collision Damage', () => {
+  let collisionManager: CollisionManager;
+  let networkManager: any;
+  let localPlayer: { ship: Ship; id: string; type: 'local' };
+  let localShip: Ship;
+  let roid: Roid;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    
+    // Create collision manager
+    collisionManager = CollisionManager.getInstance();
+    
+    // Get mocked network manager
+    networkManager = NetworkManager.getInstance();
+    
+    // Create local player ship
+    localShip = new Ship();
+    localShip.id = 'local-player-123';
+    localShip.position = { x: 400, y: 300 };
+    localShip.r = 15; // Ship radius
+    
+    // Create local player object
+    localPlayer = { ship: localShip, id: 'local-player-123', type: 'local' as const };
+    
+    // Create roid positioned on the local player (as per DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER)
+    roid = new Roid({ x: 400, y: 300 }, 25);
+    // Override the random velocity to keep it stationary for testing
+    roid.velocity = { x: 0, y: 0 };
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Collision Detection', () => {
+    test('detects collision between local player and roid', () => {
+      // Verify the roid is positioned on the local player
+      expect(roid.position.x).toBe(localShip.position.x);
+      expect(roid.position.y).toBe(localShip.position.y);
+      
+      // Check that they should be colliding (overlapping radii)
+      const distance = Math.sqrt(
+        Math.pow(roid.position.x - localShip.position.x, 2) + 
+        Math.pow(roid.position.y - localShip.position.y, 2)
+      );
+      expect(distance).toBe(0); // Same position
+      expect(distance).toBeLessThan(localShip.r + roid.r); // Should be colliding
+    });
+
+    test('collision manager detects ship-asteroid collision', async () => {
+      // Mock the collision detection to return true
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      console.log('Before collision check:');
+      console.log('  Ship ID:', localShip.id);
+      console.log('  Roid ID:', roid.id);
+      console.log('  Ship position:', localShip.position);
+      console.log('  Roid position:', roid.position);
+      console.log('  Local player ID:', 'local-player-123');
+
+      // Check collision
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+      
+      console.log('After collision check:');
+      console.log('  Health:', localShip.health);
+      console.log('  Network manager calls:', mockSendMessage.mock.calls.length);
+      
+      // Verify instant damage was applied (like laser hit)
+      expect(localShip.health).toBe(75); // 100 - 25 (LASER_HIT damage)
+      
+      // Verify both collision damage and asteroid destruction messages were sent
+      expect(mockSendMessage).toHaveBeenCalledWith({
+        type: 'collisionDamage',
+        data: {
+          targetPlayerId: 'local-player-123',
+          attackerId: 'asteroid',
+          damage: 25, // LASER_HIT damage
+        },
+      });
+
+      expect(mockSendMessage).toHaveBeenCalledWith({
+        type: 'asteroidDestroyed',
+        data: {
+          asteroidId: roid.id,
+          playerId: 'local-player-123',
+          points: expect.any(Number),
+        },
+      });
+    });
+  });
+
+  describe('Instant Damage System', () => {
+    test('asteroid collision applies instant damage like laser hit', async () => {
+      // Mock the collision detection to return true
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      const initialHealth = localShip.health;
+      
+      // Check collision
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+      
+      // Verify instant damage was applied
+      expect(localShip.health).toBe(initialHealth - DAMAGE.LASER_HIT);
+      
+      // Verify both messages were sent
+      expect(mockSendMessage).toHaveBeenCalledTimes(2);
+    });
+
+    test('asteroid collision triggers asteroid splitting', async () => {
+      // Mock the collision detection to return true
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      // Check collision
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+      
+      // Verify asteroid destruction message was sent (triggers splitting on server)
+      expect(mockSendMessage).toHaveBeenCalledWith({
+        type: 'asteroidDestroyed',
+        data: {
+          asteroidId: roid.id,
+          playerId: 'local-player-123',
+          points: expect.any(Number),
+        },
+      });
+    });
+  });
+
+  describe('Debug Settings Impact', () => {
+    test('debug settings place roids on local player', () => {
+      expect(DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER).toBe(true);
+      expect(DEBUG.LOCAL_PLAYER.INVINCIBLE).toBe(false);
+    });
+
+    test('local player is not invincible in debug mode', () => {
+      expect(DEBUG.LOCAL_PLAYER.INVINCIBLE).toBe(false);
+      // This means the local player should take damage from roids
+    });
+  });
+
+  describe('Damage Constants', () => {
+    test('asteroid collision uses laser hit damage', () => {
+      expect(DAMAGE.LASER_HIT).toBe(25);
+      
+      // Asteroid collisions now use the same damage as laser hits
+      expect(DAMAGE.LASER_HIT).toBe(25);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    test('local player does not take damage while exploding', async () => {
+      localShip.exploding = true;
+      
+      // Mock the collision detection to return true
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      const initialHealth = localShip.health;
+      
+      // Check collision - should be ignored due to exploding state
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+      
+      // Should not take damage while exploding
+      expect(localShip.health).toBe(initialHealth);
+      expect(networkManager.sendMessage).not.toHaveBeenCalled();
+    });
+
+    test('collision detection works correctly', async () => {
+      // Mock the collision detection to return false
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(false);
+
+      const initialHealth = localShip.health;
+      
+      // Check collision - should not trigger
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+      
+      // Should not take damage when not colliding
+      expect(localShip.health).toBe(initialHealth);
+      expect(networkManager.sendMessage).not.toHaveBeenCalled();
+    });
+
+    test('handles missing local player ID gracefully', async () => {
+      networkManager.getLocalPlayerId.mockReturnValue(null);
+      
+      // Mock the collision detection to return true
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      // Check collision
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+      
+      // Should still apply local damage but not send network messages
+      expect(localShip.health).toBe(75); // 100 - 25 damage
+      expect(networkManager.sendMessage).not.toHaveBeenCalled();
+    });
+  });
+});

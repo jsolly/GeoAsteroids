@@ -8,19 +8,21 @@ class Roid {
   id: string;
   angle: number;
   angularVelocity: number;
-  readonly offsets: number[] = [];
+  offsets: number[] = [];
   vertices: number;
   velocity: Velocity;
   health: number;
   maxHealth: number;
   pendingDestruction: boolean = false; // Track asteroids waiting for server confirmation
+  private _jaggedness: number = ROID.JAGGEDNESS; // Store jaggedness value
   static fxHit = new Sound('sounds/hit.m4a', 5);
 
   constructor(
     public position: Position,
-    public r: number
+    public r: number,
+    id?: string
   ) {
-    this.id = crypto.randomUUID();
+    this.id = id || crypto.randomUUID();
     this.angle = Math.random() * Math.PI * 2; // in radians
     this.angularVelocity = (Math.random() - 0.5) * 0.01; // Much smaller random rotation
     const speed = (Math.random() * ROID.SPEED) / GAME.FPS;
@@ -33,13 +35,28 @@ class Roid {
     this.health = this.r * 10; // Health based on size
     this.maxHealth = this.r * 10;
 
-    for (let i = 0; i < this.vertices; i++) {
-      this.offsets.push(Math.random() * ROID.JAGGEDNESS * 2 + 1 - ROID.JAGGEDNESS);
-    }
+    this.generateShape();
   }
 
   get jaggedness(): number {
-    return ROID.JAGGEDNESS;
+    return this._jaggedness;
+  }
+
+  set jaggedness(value: number) {
+    this._jaggedness = value;
+  }
+
+  // Generate the shape based on current jaggedness
+  private generateShape(): void {
+    this.offsets.length = 0; // Clear existing offsets
+    for (let i = 0; i < this.vertices; i++) {
+      this.offsets.push(Math.random() * this._jaggedness * 2 + 1 - this._jaggedness);
+    }
+  }
+
+  // Regenerate shape (public method for external use)
+  regenerateShape(): void {
+    this.generateShape();
   }
 
   // Move the roid based on its velocity
@@ -55,7 +72,7 @@ class Roid {
 }
 
 class RoidBelt {
-  roidNum: number = isDebugMode() ? DEBUG.INITIAL_ROID_COUNT : ROID.INITIAL_ROID_COUNT;
+  roidNum: number = isDebugMode() ? DEBUG.ROIDS.INITIAL_COUNT : ROID.INITIAL_ROID_COUNT;
   roids: Roid[] = [];
   minCount: number = ROID.MIN_COUNT;
   maxCount: number = ROID.MAX_COUNT;
@@ -73,37 +90,26 @@ class RoidBelt {
   addRoid(): void {
     // Generate random position within boundary since roidSpawn was removed
     const roidPosition = getRandomPositionWithinBoundary();
-    this.roids.push(new Roid(roidPosition, Math.ceil(ROID.SIZE / 2)));
+    const size = DEBUG.ROIDS.ALL_LARGE ? ROID.SIZE : Math.ceil(ROID.SIZE / 2);
+    this.roids.push(new Roid(roidPosition, size));
   }
 
   destroyRoid(i: number): { score: number; newRoids: Roid[] } {
     const roids = this.roids;
     const r = roids[i];
     let score = 0;
-    const newRoids: Roid[] = [];
 
-    // split the roid if applicable, respecting max count
-    if (r.r === Math.ceil(ROID.SIZE / 2)) {
-      // large roid - only split if we're under the max limit
-      if (roids.length + 2 <= this.maxCount) {
-        newRoids.push(new Roid(r.position, Math.ceil(ROID.SIZE / 4)));
-        newRoids.push(new Roid(r.position, Math.ceil(ROID.SIZE / 4)));
-      }
+    // Award points based on size (server handles all splitting logic)
+    if (r.r >= 40) {
       score += ROID.POINTS_LARGE;
-    } else if (r.r === Math.ceil(ROID.SIZE / 4)) {
-      // medium roid - only split if we're under the max limit
-      if (roids.length + 2 <= this.maxCount) {
-        newRoids.push(new Roid(r.position, Math.ceil(ROID.SIZE / 8)));
-        newRoids.push(new Roid(r.position, Math.ceil(ROID.SIZE / 8)));
-      }
+    } else if (r.r >= 20) {
       score += ROID.POINTS_MEDIUM;
     } else {
-      // small roid - no splitting, just destroy
       score += ROID.POINTS_SMALL;
     }
 
-    // Note: The caller is responsible for splicing the destroyed roid and adding newRoids
-    return { score, newRoids };
+    // Client never creates new roids - server handles all splitting via network messages
+    return { score, newRoids: [] };
   }
 
   getRoids(): Roid[] {
@@ -112,7 +118,7 @@ class RoidBelt {
 
   moveRoids(): void {
     // Check if asteroid movement is disabled in debug mode
-    if (DEBUG.DISABLE_ROID_MOVEMENT) {
+    if (!DEBUG.ROIDS.MOVEMENT) {
       return;
     }
 
@@ -136,8 +142,10 @@ class RoidBelt {
       this.roids.length < this.maxCount &&
       this.spawnTimer >= ROID.SPAWN_TIME_FRAMES
     ) {
-      // Spawn one roid at a time with timing
-      this.addRoid();
+      // Spawn roids until we reach minCount or maxCount
+      while (this.roids.length < this.minCount && this.roids.length < this.maxCount) {
+        this.addRoid();
+      }
       this.spawnTimer = 0; // Reset timer after spawning
     }
   }

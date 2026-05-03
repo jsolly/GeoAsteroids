@@ -1,13 +1,4 @@
-import type {
-  GameState,
-  PlayerJoin,
-  PlayerLeave,
-  PlayerShoot,
-  PlayerUpdate,
-} from '../../shared-types';
-
-// Re-export GameState for convenience
-export type { GameState };
+import type { PlayerJoin, PlayerLeave, PlayerShoot, PlayerUpdate } from '../../shared-types';
 
 export interface ServerMessage {
   type:
@@ -24,10 +15,13 @@ export interface ServerMessage {
     | 'asteroidCreate'
     | 'asteroidCreateBatch'
     | 'asteroidUpdate'
-    | 'asteroidDestroy';
+    | 'asteroidDestroy'
+    | 'botCreated'
+    | 'botUpdate'
+    | 'botDestroyed';
   // Prefer `data`; accept `payload` temporarily during transition
-  data?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | GameState | string | unknown;
-  payload?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | GameState | string | unknown;
+  data?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
+  payload?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
   // Some messages historically included top-level fields (id/name/position). Keep them optional to avoid type errors during migration.
   id?: string;
   name?: string;

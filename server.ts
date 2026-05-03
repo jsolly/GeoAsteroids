@@ -642,15 +642,11 @@ const gameEngine = new GameEngine();
 // Ensure server-side game loop (including bot regen) runs
 gameEngine.startGameLoop();
 
-// Initialize the game world with asteroids and bots
+// Initialize the game world with bots only
+// Asteroids will be created when the first player joins
 logger.info('🌍 Initializing game world...');
-try {
-  const asteroids = gameEngine.createAsteroids(10);
-  logger.info(`☄️ Created ${asteroids.length} asteroids`);
-} catch (error) {
-  logger.error('❌ Failed to create asteroids:', error);
-}
 
+// Create bots first so we can get their positions for asteroid placement
 try {
   const bots = gameEngine.createBots(3);
   if (bots) {
@@ -662,7 +658,7 @@ try {
   logger.error('❌ Failed to create bots:', error);
 }
 
-logger.info('✅ Game world initialization complete');
+logger.info('✅ Game world initialization complete - asteroids will be created when first player joins');
 
 // Initialize pause state now that everything is set up
 gameEngine.updatePauseState();

@@ -343,4 +343,3 @@ export class ValidationError extends GameError {
 // ============================================================================
 // RE-EXPORT SHARED TYPES
 // ============================================================================
-export type { GameState } from '../../shared-types';

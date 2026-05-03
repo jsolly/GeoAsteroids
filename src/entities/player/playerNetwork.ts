@@ -70,23 +70,18 @@ export class PlayerNetwork {
     return this.playerManager.getNonLocalPlayers();
   }
 
-  public getRemotePlayers(): Player[] {
-    return this.playerManager.getRemotePlayers();
+  public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {
+    // Unified method to get players by type
+    const allPlayers = this.getAllPlayers();
+    return allPlayers.filter((player) => player.type === type);
   }
 
-  public getPlayersByType(type: 'local' | 'remote' | 'bot'): Player[] {
-    switch (type) {
-      case 'local': {
-        const localPlayer = this.getGameController().getCurrPlayer();
-        return localPlayer ? [localPlayer] : [];
-      }
-      case 'remote':
-        return this.getRemotePlayers();
-      case 'bot':
-        return []; // Bots are now server-controlled
-      default:
-        return [];
-    }
+  public getRemotePlayers(): Player[] {
+    return this.getPlayersByType('remote');
+  }
+
+  public getBotPlayers(): Player[] {
+    return this.getPlayersByType('bot');
   }
 
   public isPlayerNearby(

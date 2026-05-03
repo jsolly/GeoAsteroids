@@ -586,6 +586,15 @@ export function drawPlayerHealthBar(health: number, maxHealth: number): void {
     return;
   }
 
+  // Debug logging for health bar values
+  if (health !== maxHealth) {
+    logger.debug('HEALTH_BAR', 'Drawing health bar with non-full health', {
+      health,
+      maxHealth,
+      healthPercent: health / maxHealth,
+    });
+  }
+
   const barWidth = 200;
   const barHeight = 20;
   const barX = canvas.width - barWidth - 20;

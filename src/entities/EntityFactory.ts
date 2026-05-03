@@ -1,12 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position } from '../../shared-types';
+import type { Position, Velocity } from '../../shared-types';
 import { CANVAS, DEBUG } from '../constants';
+import { MockPlayerInput } from '../input/MockPlayerInput';
 import { generateRandomPlayerColor } from '../utils/colorUtils';
 import {
+  getRandomPositionNearBoundary,
   getRandomPositionNearPoint,
   getRandomPositionWithinBoundary,
 } from '../utils/positionUtils';
-
+import { Laser } from './laser/Laser';
 import { Player } from './player/Player';
 import { Roid, RoidBelt } from './roid/Roid';
 
@@ -32,6 +34,7 @@ export interface BotConfig {
 export interface RoidConfig {
   position?: Position;
   size?: number;
+  id?: string;
 }
 
 /**
@@ -129,7 +132,7 @@ export class EntityFactory {
   createRoid(config: RoidConfig = {}): Roid {
     const position = config.position || this.generateRandomRoidPosition();
     const size = config.size || 15; // Default medium size
-    return new Roid(position, size);
+    return new Roid(position, size, config.id);
   }
 
   createRoidBelt(): RoidBelt {
@@ -140,6 +143,23 @@ export class EntityFactory {
     return new RoidBelt(false);
   }
 
+  // Laser creation method
+  createLaser(config: {
+    position: Position;
+    velocity: Velocity;
+    distTraveled: number;
+    explodeTime: number;
+    hasExploded: boolean;
+  }): Laser {
+    return new Laser(
+      config.position,
+      config.velocity,
+      config.distTraveled,
+      config.explodeTime,
+      config.hasExploded
+    );
+  }
+
   // Private helper methods
   private instantiatePlayer(config: PlayerConfig): Player {
     const id = config.id || uuidv4();
@@ -147,12 +167,27 @@ export class EntityFactory {
       id,
       name: config.name,
       type: config.type,
+      input: new MockPlayerInput(),
     });
   }
 
   private applyPlayerConfiguration(player: Player, config: PlayerConfig): void {
-    // Set position
-    const position = config.position || getRandomPositionWithinBoundary();
+    // Set position based on debug flags if none provided
+    // Priority: PLACE_PLAYERS_NEAR_BOUNDARY > PLACE_PLAYERS_NEAR_CENTER > default
+    let position: Position;
+    if (config.position) {
+      position = config.position;
+    } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
+      // Place near boundary when debug flag is enabled
+      position = getRandomPositionNearBoundary();
+    } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
+      // Place near center when debug flag is enabled
+      const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
+      position = getRandomPositionNearPoint(centerPosition, 150);
+    } else {
+      // Default behavior: random position within boundary
+      position = getRandomPositionWithinBoundary();
+    }
     player.ship.position = position;
 
     // Apply customizations
@@ -193,8 +228,12 @@ export class EntityFactory {
   }
 
   private applyRemoteConfiguration(player: Player, config: PlayerConfig): void {
-    // Remote players get random colors if not specified
-    if (!config.color) {
+    // Remote players use the color provided by the server
+    if (config.color) {
+      player.color = config.color;
+      player.ship.color = config.color;
+    } else {
+      // Fallback to random color if no color provided (shouldn't happen with proper server sync)
       player.color = generateRandomPlayerColor();
       player.ship.color = player.color;
     }
@@ -207,6 +246,9 @@ export class EntityFactory {
       if (config.debugPlaceNearLocal && config.localPlayerPosition) {
         // Place bots near the local player in debug mode
         positions.push(getRandomPositionNearPoint(config.localPlayerPosition, 200));
+      } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
+        // Place bots near boundary when debug flag is enabled
+        positions.push(getRandomPositionNearBoundary());
       } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
         // Place bots near center when debug flag is enabled
         const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };

@@ -3,7 +3,8 @@ import { GameEngine } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
-import type { ServerBot } from '../core/BotManager';
+import { DEBUG } from '../../src/constants';
+import type { GameEntity } from '../core/EntityManager';
 
 export class MessageHandler {
   private gameEngine: GameEngine;
@@ -25,8 +26,18 @@ export class MessageHandler {
     delete (restData as any).id;
     delete (restData as any).name;
     
-    // Don't delete data field for clientLog messages as they need the nested structure
-    if (type !== 'clientLog') {
+    // Debug logging for join messages
+    if (type === 'join') {
+      console.log('🔌 SERVER: Raw message:', JSON.stringify(message, null, 2));
+      console.log('🔌 SERVER: Message keys:', Object.keys(message));
+      console.log('🔌 SERVER: Message.data type:', typeof message.data);
+      console.log('🔌 SERVER: Message.data value:', message.data);
+      console.log('🔌 SERVER: Payload:', JSON.stringify(payload, null, 2));
+      console.log('🔌 SERVER: RestData before processing:', JSON.stringify(restData, null, 2));
+    }
+    
+    // Don't delete data field for clientLog and join messages as they need the nested structure
+    if (type !== 'clientLog' && type !== 'join') {
       delete (restData as any).data;
     }
 
@@ -108,6 +119,12 @@ export class MessageHandler {
 
   private handleJoin(ws: WebSocket, id: string, name: string, data: any): void {
     logger.debug('🔌 Handling join message', { id, name, data });
+    console.log('🔌 SERVER: Handling join message', { id, name, data });
+    console.log('🔌 SERVER: Data details:', {
+      name: data.name,
+      color: data.color,
+      position: data.position
+    });
     
     if (!id || !name) {
       logger.warn('❌ Missing player ID or name for join', { id, name });
@@ -116,10 +133,18 @@ export class MessageHandler {
     }
 
     // Handle position if provided by client
-    const joinPosition = this.gameEngine.validatePosition(data.position) || { x: 0, y: 0 };
+    console.log('🔌 SERVER: Raw position from client:', data.position);
+    console.log('🔌 SERVER: Position type:', typeof data.position);
+    console.log('🔌 SERVER: Position keys:', data.position ? Object.keys(data.position) : 'null');
+    const validatedPosition = this.gameEngine.validatePosition(data.position);
+    console.log('🔌 SERVER: Validated position:', validatedPosition);
+    const joinPosition = validatedPosition || { x: 0, y: 0 };
+    const joinColor = data.color || '#00ff00'; // Default to green if no color provided
+    console.log('🔌 SERVER: Final position:', joinPosition);
     logger.debug('📍 Player join position', { id, position: joinPosition });
+    logger.debug('🎨 Player join color', { id, color: joinColor });
 
-    this.gameEngine.addPlayer(id, name, ws, joinPosition);
+    this.gameEngine.addPlayer(id, name, ws, joinPosition, joinColor);
     logger.info('✅ Player added to game engine', { id, name });
 
     // Send confirmation to the joining player
@@ -174,6 +199,7 @@ export class MessageHandler {
   }
 
   private handlePlayerShoot(ws: WebSocket, id: string, data: any): void {
+    logger.debug('DEBUG: Server received shoot message', { id, data });
     if (!id) {
       this.broadcaster.sendError(ws, 'Missing player ID for shoot');
       return;
@@ -226,6 +252,7 @@ export class MessageHandler {
   }
 
   private handleCollisionDamage(ws: WebSocket, data: any): void {
+    console.log('DEBUG: handleCollisionDamage called with data:', data);
     if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
       this.broadcaster.sendError(ws, 'Missing required fields for collisionDamage');
       return;
@@ -325,6 +352,7 @@ export class MessageHandler {
   }
 
   private handleInitAsteroids(ws: WebSocket, id: string, data: any): void {
+    console.log('🪨 SERVER: Handling initAsteroids message', { id, data });
     if (!id) {
       this.broadcaster.sendError(ws, 'Missing player ID for initAsteroids');
       return;
@@ -332,12 +360,31 @@ export class MessageHandler {
 
     const currentAsteroidCount = this.gameEngine.getAsteroidCount();
     
-    // If no asteroids exist, create them
-    if (currentAsteroidCount === 0) {
+    // Always create new asteroids in test mode, or if no asteroids exist
+    const isTestMode = DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER;
+    logger.debug('Asteroid creation check:', { currentAsteroidCount, isTestMode, shouldCreate: currentAsteroidCount === 0 || isTestMode, DEBUG_AVAILABLE: !!DEBUG });
+    if (currentAsteroidCount === 0 || isTestMode) {
       const asteroidCount = data.asteroidCount || 10;
-      const asteroids = this.gameEngine.createAsteroids(asteroidCount);
+      
+      // Get current entity positions for roid placement
+      const allEntities = this.gameEngine.entityManager.getAllEntities();
+      const humanPlayers = allEntities.filter(entity => entity.type === 'human');
+      const bots = allEntities.filter(entity => entity.type === 'bot');
+      
+      console.log('🪨 SERVER: Available entities for asteroid placement:', {
+        allEntities: allEntities.length,
+        humanPlayers: humanPlayers.length,
+        bots: bots.length,
+        humanPlayerPositions: humanPlayers.map(p => p.position),
+        botPositions: bots.map(b => b.position)
+      });
+      
+      const playerPositions = humanPlayers.map(player => player.position);
+      const botPositions = bots.map(bot => bot.position);
+      
+      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: 3100 }, botPositions, playerPositions);
       this.broadcaster.broadcastAsteroidCreation(asteroids);
-      logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids`);
+      logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids with ${playerPositions.length} player positions and ${botPositions.length} bot positions`);
     } else {
       // Asteroids already exist, just send them to the requesting player
       const existingAsteroids = this.gameEngine.getAllAsteroids();
@@ -370,7 +417,7 @@ export class MessageHandler {
     this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
   }
 
-  private sendBotStateToSocket(ws: WebSocket, bot: ServerBot): void {
+  private sendBotStateToSocket(ws: WebSocket, bot: GameEntity): void {
     this.broadcaster.sendToWebSocket(ws, {
       type: 'botCreated',
       data: {
@@ -419,7 +466,7 @@ export class MessageHandler {
       logger.debug(`Player ${id} requested bot initialization but bots already exist or creation in progress`);
 
       // Send current bot state if bots already exist
-      const existingBots = this.gameEngine.getAllBots();
+      const existingBots = this.gameEngine.entityManager.getBots();
       for (const bot of existingBots) {
         this.sendBotStateToSocket(ws, bot);
       }

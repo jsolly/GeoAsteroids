@@ -3,10 +3,13 @@ import type {
   PlayerJoin,
   PlayerLeave,
   PlayerUpdate,
+  Position,
   ServerGameState,
+  Velocity,
 } from '../../../shared-types';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
+import { PlayerManager } from '../../entities/player/PlayerManager';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 
@@ -137,6 +140,17 @@ export class ConnectionManager {
     return this.localPlayerId;
   }
 
+  private getLocalPlayerColor(): string {
+    // Get the local player's color from the player manager
+    const playerManager = PlayerManager.getInstance();
+    const localPlayer = playerManager.getLocalPlayer();
+    return localPlayer?.color || '#00ff00'; // Fallback to green if not found
+  }
+
+  private getLocalPlayerPosition(): { x: number; y: number } {
+    return { x: 400, y: 300 };
+  }
+
   getAllPlayers(): Player[] {
     return Array.from(this.allPlayers.values());
   }
@@ -164,6 +178,27 @@ export class ConnectionManager {
     this.state.socket.send(JSON.stringify(message));
   }
 
+  // Send shoot event to server
+  sendShootEvent(laserPosition: Position, laserVelocity: Velocity): void {
+    if (!this.state.isConnected || !this.state.socket) {
+      logger.debug('NETWORK', 'Cannot send shoot event - not connected or no socket');
+      return;
+    }
+
+    const message: ClientMessage = {
+      type: 'shoot',
+      id: this.localPlayerId,
+      data: {
+        laserStart: laserPosition,
+        laserDirection: laserVelocity,
+      },
+      timestamp: Date.now(),
+    };
+
+    logger.debug('NETWORK', 'Sending shoot message to server', { message });
+    this.state.socket.send(JSON.stringify(message));
+  }
+
   // Initialize asteroid sync
   initializeAsteroidSync(): void {
     if (!this.state.isConnected || !this.state.socket) {
@@ -173,16 +208,29 @@ export class ConnectionManager {
 
     logger.debug('NETWORK', `Initializing asteroid sync with player name: ${this.localPlayerName}`);
 
+    // Get the player's current position
+    const playerPosition = this.getLocalPlayerPosition();
+
     // First join the game
     const joinMessage: ClientMessage = {
       type: 'join',
       id: this.clientId,
-      data: { name: this.localPlayerName },
+      data: {
+        name: this.localPlayerName,
+        color: this.getLocalPlayerColor(),
+        position: playerPosition,
+      },
       timestamp: Date.now(),
     };
 
     logger.debug('NETWORK', 'Sending join message', { message: joinMessage });
-    this.state.socket.send(JSON.stringify(joinMessage));
+    const jsonString = JSON.stringify(joinMessage);
+    this.state.socket.send(jsonString);
+
+    // Initialize asteroids after joining
+    setTimeout(() => {
+      this.initializeAsteroids();
+    }, 100); // Small delay to ensure join message is processed
   }
 
   // Initialize asteroids after joining
@@ -206,6 +254,16 @@ export class ConnectionManager {
 
     this.state.socket.send(JSON.stringify(message));
     logger.debug('NETWORK', 'Sent initAsteroids message', { message });
+  }
+
+  // Send a generic message to the server
+  sendMessage(message: Record<string, unknown>): void {
+    if (!this.state.isConnected || !this.state.socket) {
+      return;
+    }
+
+    this.state.socket.send(JSON.stringify(message));
+    logger.debug('NETWORK', 'Sent message', { message });
   }
 
   private handleServerMessage(message: ServerMessage): void {
@@ -236,106 +294,126 @@ export class ConnectionManager {
       case 'asteroidDestroy':
         this.handleAsteroidDestroyed(data as { asteroidId: string });
         break;
+      case 'botCreated':
+        this.handleBotCreated(data as { botId: string; botName: string; position: Position });
+        break;
+      case 'botUpdate':
+        this.handleBotUpdated(
+          data as {
+            botId: string;
+            playerId: string;
+            position: Position;
+            velocity: Velocity;
+            angle: number;
+            exploding: boolean;
+            thrusting?: boolean;
+            color: string;
+            lives: number;
+            health: number;
+            maxHealth: number;
+          }
+        );
+        break;
+      case 'botDestroyed':
+        this.handleBotDestroyed(data as { botId: string });
+        break;
+      case 'playerShoot':
+        this.handlePlayerShoot(
+          data as {
+            id: string;
+            laserStart: Position;
+            laserDirection: Velocity;
+          }
+        );
+        break;
+      case 'playerUpdate':
+        // Handle player update messages (currently just log them)
+        logger.debug('NETWORK', 'Received player update', { data });
+        break;
+      case 'playerDamaged':
+        this.handlePlayerDamaged(
+          data as {
+            targetPlayerId: string;
+            attackerId: string;
+            damage: number;
+            remainingHealth: number;
+            isDestroyed: boolean;
+          }
+        );
+        break;
+      case 'error':
+        // Handle error messages from server
+        logger.warn('NETWORK', 'Server error', { error: data });
+        break;
       default:
         logger.debug('NETWORK', 'Unhandled server message type', { type: message.type });
     }
   }
 
   private handleGameState(data: ServerGameState): void {
-    // Update local game state from server
-    if (data.players) {
-      this.allPlayers.clear();
+    // Update local game state from server using unified entity system
+    if (data.entities) {
+      // Update entities in place - no clearing to prevent bot disappearance!
+      for (const entityData of data.entities) {
+        const existing = this.allPlayers.get(entityData.id);
 
-      // Create player objects from server data
-      for (const playerData of data.players) {
-        // Use clientId to identify local player, since localPlayerId might not be set yet
-        const isLocalPlayer =
-          playerData.id === this.clientId || playerData.id === this.localPlayerId;
+        if (existing) {
+          // Debug logging for health updates
+          if (entityData.health !== undefined && existing.ship.health !== entityData.health) {
+            logger.debug('GAME_STATE_UPDATE', 'Health update from server', {
+              entityId: entityData.id,
+              entityName: entityData.name,
+              oldHealth: existing.ship.health,
+              newHealth: entityData.health,
+              isLocalPlayer: entityData.id === this.localPlayerId,
+            });
+          }
 
-        // For local player, preserve the existing name if we have one
-        const playerName =
-          isLocalPlayer && this.localPlayerName ? this.localPlayerName : playerData.name;
+          // Update existing entity
+          existing.updateFromServer({
+            position: entityData.position,
+            velocity: entityData.velocity,
+            angle: entityData.angle,
+            lives: entityData.lives,
+            score: entityData.score,
+            exploding: entityData.exploding,
+            thrusting: entityData.thrusting,
+            color: entityData.color,
+            health: entityData.health,
+            maxHealth: entityData.maxHealth,
+            respawnTimer: entityData.respawnTimer,
+          });
+        } else {
+          // Create new entity
+          const isLocalPlayer =
+            entityData.id === this.clientId || entityData.id === this.localPlayerId;
+          const entityName =
+            isLocalPlayer && this.localPlayerName ? this.localPlayerName : entityData.name;
 
-        logger.debug('NETWORK', `Creating player from server data`, {
-          id: playerData.id,
-          serverName: playerData.name,
-          finalName: playerName,
-          isLocalPlayer,
-          clientId: this.clientId,
-          localPlayerId: this.localPlayerId,
-          localPlayerName: this.localPlayerName,
-        });
+          const entity = entityFactory.createPlayer({
+            id: entityData.id,
+            name: entityName,
+            type: isLocalPlayer ? 'local' : entityData.type === 'bot' ? 'bot' : 'remote',
+            color: entityData.color,
+          });
 
-        const player = entityFactory.createPlayer({
-          id: playerData.id,
-          name: playerName,
-          type: isLocalPlayer ? 'local' : 'remote',
-        });
+          // Update entity state from server data
+          entity.updateFromServer({
+            position: entityData.position,
+            velocity: entityData.velocity,
+            angle: entityData.angle,
+            lives: entityData.lives,
+            score: entityData.score,
+            exploding: entityData.exploding,
+            thrusting: entityData.thrusting,
+            color: entityData.color,
+            health: entityData.health,
+            maxHealth: entityData.maxHealth,
+            respawnTimer: entityData.respawnTimer,
+          });
 
-        // Update player state from server data
-        if (playerData.position) {
-          player.ship.position = playerData.position;
+          this.allPlayers.set(entity.id, entity);
         }
-        if (playerData.velocity) {
-          player.ship.velocity = playerData.velocity;
-        }
-        // Server sends 'rotation', client uses 'angle'
-        if (playerData.rotation !== undefined) {
-          player.ship.angle = playerData.rotation;
-        }
-        if (playerData.lives !== undefined) {
-          player.lives = playerData.lives;
-        }
-        if (playerData.score !== undefined) {
-          player.score = playerData.score;
-        }
-        if (playerData.exploding !== undefined) {
-          player.ship.exploding = playerData.exploding;
-        }
-        if (playerData.health !== undefined) {
-          player.ship.health = playerData.health;
-        }
-        if (playerData.maxHealth !== undefined) {
-          player.ship.maxHealth = playerData.maxHealth;
-        }
-
-        this.allPlayers.set(player.id, player);
-      }
-    }
-
-    // Handle bots if present
-    if (data.bots) {
-      for (const botData of data.bots) {
-        const bot = entityFactory.createPlayer({
-          id: botData.id,
-          name: botData.name,
-          type: 'bot',
-        });
-
-        // Update bot state from server data
-        if (botData.position) {
-          bot.ship.position = botData.position;
-        }
-        if (botData.velocity) {
-          bot.ship.velocity = botData.velocity;
-        }
-        if (botData.angle !== undefined) {
-          bot.ship.angle = botData.angle;
-        }
-        if (botData.exploding !== undefined) {
-          bot.ship.exploding = botData.exploding;
-        }
-        if (botData.lives !== undefined) {
-          bot.lives = botData.lives;
-        }
-        if (botData.health !== undefined) {
-          bot.ship.health = botData.health;
-        }
-        if (botData.maxHealth !== undefined) {
-          bot.ship.maxHealth = botData.maxHealth;
-        }
-
-        this.allPlayers.set(bot.id, bot);
       }
     }
 
@@ -366,26 +444,14 @@ export class ConnectionManager {
     if (data.id) {
       this.localPlayerId = data.id;
     }
-
-    // Now that we're joined, initialize asteroids
-    this.initializeAsteroids();
+    setTimeout(() => {
+      this.initializeAsteroids();
+    }, 100);
   }
 
   private handlePlayerJoined(data: PlayerJoin): void {
     logger.info('NETWORK', 'Player joined', data as unknown as Record<string, unknown>);
-
-    // Create player object from server data
-    const player = entityFactory.createPlayer({
-      id: data.id,
-      name: data.name,
-      type: 'remote',
-    });
-
-    if (data.position) {
-      player.ship.position = data.position;
-    }
-
-    this.allPlayers.set(player.id, player);
+    // Player handling is now done through unified entity system in handleGameState
   }
 
   private handlePlayerLeft(data: PlayerLeave): void {
@@ -406,12 +472,12 @@ export class ConnectionManager {
   private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
     if (data.asteroids && Array.isArray(data.asteroids)) {
       for (const asteroid of data.asteroids) {
-        window.dispatchEvent(
-          new CustomEvent('serverAsteroidCreated', {
-            detail: { asteroid },
-          })
-        );
+        const event = new CustomEvent('serverAsteroidCreated', {
+          detail: { asteroid },
+        });
+        window.dispatchEvent(event);
       }
+    } else {
     }
   }
 
@@ -435,5 +501,116 @@ export class ConnectionManager {
         detail: { asteroidId: data.asteroidId },
       })
     );
+  }
+
+  private handleBotCreated(data: { botId: string; botName: string; position: Position }): void {
+    logger.debug('NETWORK', 'Bot created', { botId: data.botId, botName: data.botName });
+    // Bot handling is now done through unified entity system in handleGameState
+  }
+
+  private handleBotUpdated(data: {
+    botId: string;
+    playerId: string;
+    position: Position;
+    velocity: Velocity;
+    angle: number;
+    exploding: boolean;
+    thrusting?: boolean;
+    color: string;
+    lives: number;
+    health: number;
+    maxHealth: number;
+  }): void {
+    logger.debug('NETWORK', 'Bot updated', {
+      botId: data.botId,
+      health: data.health,
+      exploding: data.exploding,
+    });
+    // Bot handling is now done through unified entity system in handleGameState
+  }
+
+  private handleBotDestroyed(data: { botId: string }): void {
+    logger.debug('NETWORK', 'Bot destroyed', { botId: data.botId });
+
+    if (data.botId) {
+      this.allPlayers.delete(data.botId);
+    }
+  }
+
+  private handlePlayerShoot(data: {
+    id: string;
+    laserStart: Position;
+    laserDirection: Velocity;
+  }): void {
+    logger.debug('NETWORK', 'Client received playerShoot message', data);
+    logger.debug('NETWORK', 'Player shot laser', {
+      playerId: data.id,
+      laserStart: data.laserStart,
+      laserDirection: data.laserDirection,
+    });
+
+    const player = this.allPlayers.get(data.id);
+    if (!player) {
+      logger.debug('NETWORK', 'Player not found for laser shot', { playerId: data.id });
+      logger.warn('NETWORK', 'Received laser shot for unknown player', { playerId: data.id });
+      return;
+    }
+
+    // Create a laser for the remote player
+    const laser = entityFactory.createLaser({
+      position: data.laserStart,
+      velocity: data.laserDirection,
+      distTraveled: 0,
+      explodeTime: 0,
+      hasExploded: false,
+    });
+
+    // Add the laser to the player's ship
+    player.ship.lasers.push(laser);
+    logger.debug('NETWORK', 'Added laser to remote player', {
+      playerId: data.id,
+      laserCount: player.ship.lasers.length,
+    });
+  }
+
+  private handlePlayerDamaged(data: {
+    targetPlayerId: string;
+    attackerId: string;
+    damage: number;
+    remainingHealth: number;
+    isDestroyed: boolean;
+  }): void {
+    logger.debug('NETWORK', 'Player damaged', {
+      targetPlayerId: data.targetPlayerId,
+      attackerId: data.attackerId,
+      damage: data.damage,
+      remainingHealth: data.remainingHealth,
+      isDestroyed: data.isDestroyed,
+    });
+
+    // Find the target player
+    const targetPlayer = this.allPlayers.get(data.targetPlayerId);
+    if (!targetPlayer) {
+      logger.warn('NETWORK', 'Player not found for damage', {
+        targetPlayerId: data.targetPlayerId,
+      });
+      return;
+    }
+
+    // Apply authoritative health from server first
+    const prevHealth = targetPlayer.ship.health;
+    targetPlayer.ship.health = data.remainingHealth;
+
+    // Only call client-side takeDamage for visual feedback when health stays above 0
+    if (data.remainingHealth > 0 && data.damage > 0) {
+      targetPlayer.ship.takeDamage(0, data.attackerId); // trigger timers/sounds without double-reducing health
+    }
+
+    // If the player was destroyed, trigger explosion exactly once
+    if (data.isDestroyed) {
+      if (!targetPlayer.ship.exploding) {
+        targetPlayer.ship.explode(data.attackerId);
+      }
+    }
   }
 }

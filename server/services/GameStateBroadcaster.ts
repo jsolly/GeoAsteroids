@@ -15,12 +15,12 @@ export class GameStateBroadcaster {
       return; // Already running
     }
 
-    // Periodic game state broadcast (5 FPS)
+    // Periodic game state broadcast (30 FPS for smooth bot movement)
     this.broadcastInterval = setInterval(() => {
       if (this.gameEngine.getPlayerCount() > 0) {
         this.broadcastGameState();
       }
-    }, 200);
+    }, 1000 / 30); // 30 FPS (33.33ms) for smooth bot movement
   }
 
   public stopPeriodicBroadcast(): void {
@@ -132,6 +132,10 @@ export class GameStateBroadcaster {
       timestamp: Date.now(),
     };
 
+    console.log('🪨 SERVER: Broadcasting asteroid creation batch', { 
+      asteroidCount: asteroids.length,
+      asteroidIds: asteroids.map(a => a.id)
+    });
     this.broadcastToAll(message);
   }
 
@@ -185,6 +189,8 @@ export class GameStateBroadcaster {
           velocity: bot.velocity,
           angle: bot.angle,
           exploding: bot.exploding,
+          thrusting: bot.thrusting,
+          color: bot.color,
           lives: bot.lives,
           health: bot.health,
           maxHealth: bot.maxHealth,
@@ -236,14 +242,14 @@ export class GameStateBroadcaster {
 
   public broadcastToAll(message: any, excludeId?: string): void {
     const messageStr = JSON.stringify(message);
-    const players = this.gameEngine.getAllPlayers();
+    const humanPlayers = this.gameEngine.entityManager.getHumanPlayers();
 
-    for (const player of players) {
+    for (const player of humanPlayers) {
       if (excludeId && player.id === excludeId) {
         continue;
       }
 
-      if (player.ws.readyState === WebSocket.OPEN) {
+      if (player.ws && player.ws.readyState === WebSocket.OPEN) {
         try {
           player.ws.send(messageStr);
         } catch (error) {

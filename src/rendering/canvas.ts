@@ -210,11 +210,6 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        // Skip players who have 0 health and are not exploding
-        if (player.ship.health <= 0 && !player.ship.exploding) {
-          continue;
-        }
-
         if (player.ship.exploding) {
           // Draw explosion animation for exploding ships
           if (player.id === localId) {
@@ -247,8 +242,8 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        // Skip players who have 0 health and are not exploding
-        if (player.ship.health <= 0 && !player.ship.exploding) {
+        // Skip players who are exploding (truly dead)
+        if (player.ship.exploding) {
           continue;
         }
 
@@ -296,8 +291,8 @@ class CanvasManager {
       if (player.id === localId) {
         continue;
       }
-      // Skip players who have 0 health and are not exploding
-      if (player.ship.health <= 0 && !player.ship.exploding) {
+      // Skip players who are exploding (truly dead)
+      if (player.ship.exploding) {
         continue;
       }
 

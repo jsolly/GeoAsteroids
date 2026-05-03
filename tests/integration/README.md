@@ -1,22 +1,60 @@
 # Integration Tests for GeoAsteroids
 
-This directory contains automated browser tests using **Vitest** with **Playwright** for end-to-end testing.
+This directory contains integration tests organized by test type and requirements.
 
 ## Directory Structure
 
 ```
 tests/integration/
-├── sanity.test.ts              # Main test file
-├── utils/                       # Utility classes and helpers
-│   ├── index.ts                # Exports all utilities
+├── browser/                     # Browser-based integration tests
+│   ├── sanity.test.ts          # End-to-end browser tests
+│   ├── screenshots/            # Screenshots from visual regression tests
+│   └── README.md               # Browser test documentation
+├── server/                      # Server-side integration tests
+│   ├── server-parity.test.ts   # WebSocket communication tests
+│   ├── server-pause.test.ts    # Server pause/resume tests
+│   └── README.md               # Server test documentation
+├── entities/                    # Entity-based integration tests
+│   ├── roid/                   # Asteroid entity tests
+│   │   ├── roidSplitting.test.ts
+│   │   └── laserCollisionManager.test.ts
+│   ├── local-player/           # Local player entity tests
+│   │   ├── localPlayerRoidCollisions.test.ts
+│   │   └── ship.test.ts
+│   ├── remote-player/          # Remote player entity tests
+│   │   └── laserPlayerCollisions.test.ts
+│   ├── bot-player/             # Bot player entity tests
+│   │   ├── botAsteroidCollisions.test.ts
+│   │   └── healthRegeneration.test.ts
+│   ├── input/                  # Input handling tests
+│   │   ├── keybindings.test.ts
+│   │   └── mouse.test.ts
+│   └── README.md               # Entity test documentation
+├── utils/                       # Shared utility classes and helpers
 │   ├── browser-manager.ts      # Browser lifecycle management
 │   ├── screenshot-manager.ts   # Screenshot handling and cleanup
 │   ├── game-interactions.ts    # Game-specific interactions
+│   ├── health-checker.ts       # Server health checking
 │   └── test-config.ts          # Test configuration constants
-├── screenshots/                 # Screenshots taken during tests (auto-cleared)
-│   └── .gitkeep                # Ensures directory is tracked
 └── README.md                   # This file
 ```
+
+## Test Categories
+
+### Browser Tests (`/browser/`)
+- **End-to-end tests**: Full game functionality tests that run in a real browser
+- **Visual regression tests**: Tests that capture screenshots and verify UI behavior
+- **User interaction tests**: Tests that simulate real user interactions
+
+### Server Tests (`/server/`)
+- **WebSocket communication tests**: Tests server-client message handling
+- **Game engine tests**: Tests server-side game logic and state management
+- **Server API tests**: Tests server endpoints and responses
+
+### Entity Tests (`/entities/`)
+- **Entity-based tests**: Tests organized by game entities (roids, players, bots, input)
+- **Mock-based integration tests**: Tests that use mocks for external dependencies
+- **Cross-entity interaction tests**: Tests how different entities interact with each other
 
 ## Architecture
 
@@ -25,6 +63,7 @@ The tests are organized using a modular utility-based architecture:
 - **`BrowserManager`**: Handles browser setup, teardown, and page management
 - **`ScreenshotManager`**: Manages screenshot cleanup, naming, and storage
 - **`GameInteractions`**: Encapsulates common game interactions and assertions
+- **`HealthChecker`**: Verifies server health before running tests
 - **`TestConfig`**: Centralizes test configuration and constants
 
 ## Prerequisites
@@ -49,11 +88,18 @@ The tests are organized using a modular utility-based architecture:
 ## Running Tests
 
 ```bash
-# Run all tests
-npm test
+# Run all integration tests
+npm run test:integration
 
-# Run just the integration tests
-npm test tests/integration/
+# Run specific test categories
+npm run test:integration:browser    # Browser-based tests
+npm run test:integration:server     # Server-side tests  
+npm run test:integration:entities   # Entity-based tests
+
+# Run specific test files
+npm run test:integration -- browser/sanity.test.ts
+npm run test:integration -- server/server-parity.test.ts
+npm run test:integration -- entities/roid/roidSplitting.test.ts
 
 # Run with UI
 npm run test:ui
@@ -82,7 +128,7 @@ npm run test:ui
 
 - **Auto-clear**: Screenshots are automatically cleared before each test run
 - **Timestamped**: Each screenshot includes a timestamp for easy identification
-- **Organized**: Screenshots are saved in `tests/integration/screenshots/`
+- **Organized**: Screenshots are saved in `tests/integration/browser/screenshots/`
 - **Naming**: Format: `{test-name}-{timestamp}.png`
 
 ## Utility Classes

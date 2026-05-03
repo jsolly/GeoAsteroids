@@ -71,6 +71,7 @@ export class NetworkManager {
     lives: number;
     score: number;
     exploding: boolean;
+    thrusting?: boolean;
     health?: number;
     maxHealth?: number;
     lasers?: Array<{
@@ -92,9 +93,18 @@ export class NetworkManager {
     this.connectionManager.sendPlayerState(fullPlayerState);
   }
 
+  sendShootEvent(laserPosition: Position, laserVelocity: Velocity): void {
+    this.connectionManager.sendShootEvent(laserPosition, laserVelocity);
+  }
+
   // Initialize asteroid sync - server is authoritative
   initializeAsteroidSync(): void {
     this.connectionManager.initializeAsteroidSync();
+  }
+
+  // Send a generic message to the server
+  sendMessage(message: Record<string, unknown>): void {
+    this.connectionManager.sendMessage(message);
   }
 
   private setupConnectionHandlers(): void {

@@ -2,6 +2,7 @@ import { playSound } from '../audio/Sound';
 import type { Player } from '../entities/player/Player';
 import { Ship } from '../entities/ship/Ship';
 import { canvasManager } from '../rendering/canvas';
+import { logger } from '../utils/Logger';
 import { getPressedKeysForPlayer } from './keybindings';
 
 /* =============
@@ -61,12 +62,20 @@ export function handleMouseMove(ev: MouseEvent, player: Player): void {
 }
 
 export function handleMouseDown(ev: MouseEvent, player: Player): void {
+  logger.debug('MOUSE', 'Mouse down event', {
+    button: ev.button,
+    playerId: player.id,
+    lives: player.lives,
+    exploding: player.ship.exploding,
+  });
   if (player.lives <= 0 || player.ship.exploding) {
+    logger.debug('MOUSE', 'Mouse down ignored - player dead or exploding', { playerId: player.id });
     return;
   }
 
   // 0: left, 2: right
   if (ev.button === 0) {
+    logger.debug('MOUSE', 'Left mouse click - shooting', { playerId: player.id });
     player.ship.shoot();
   } else if (ev.button === 2) {
     isRightMouseDown = true;

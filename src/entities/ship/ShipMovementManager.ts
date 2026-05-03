@@ -9,7 +9,7 @@ export interface ShipMovementState {
   angularVelocity: number;
   thrusting: boolean;
   thrusterActive: boolean;
-  isBot: boolean;
+  frictionCoefficient: number; // Player-specific friction instead of hardcoded bot logic
 }
 
 /**
@@ -36,9 +36,8 @@ export function applyVelocity(state: ShipMovementState): void {
     state.thrusterActive = true;
     // Note: drawThruster would need to be called from the Ship class since it has rendering context
   } else {
-    // Use bot-specific friction if this is a bot ship
-    const frictionCoeff = state.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
-    state.velocity = multiplyVelocity(state.velocity, 1 - frictionCoeff / GAME.FPS);
+    // Use player-specific friction coefficient
+    state.velocity = multiplyVelocity(state.velocity, 1 - state.frictionCoefficient / GAME.FPS);
     state.thrusterActive = false;
   }
 }

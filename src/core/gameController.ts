@@ -4,6 +4,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
+import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { toggleScreen } from '../ui/uiUtils';
 import { logger } from '../utils/Logger';
@@ -17,6 +18,7 @@ export class GameController {
   private playerManager: PlayerManager;
   private inputManager: InputManager;
   private networkManager: NetworkManager;
+  private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
 
@@ -25,6 +27,7 @@ export class GameController {
     this.playerManager = PlayerManager.getInstance();
     this.inputManager = InputManager.getInstance();
     this.networkManager = NetworkManager.getInstance();
+    this.collisionManager = CollisionManager.getInstance();
 
     // Initialize with empty asteroid belt - will be populated by server
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
@@ -64,6 +67,7 @@ export class GameController {
   }
 
   async startGame(playerName?: string): Promise<void> {
+    logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
     this.newGame(playerName);
     toggleScreen('start-screen', false);
     toggleScreen('gameArea', true);
@@ -91,8 +95,6 @@ export class GameController {
       this.showConnectionFailureMessage(errorType, 'Cannot connect');
       throw new Error(`Network connection failed: ${errorMessage}`);
     }
-
-    // Always initialize network systems - assume networked by default
     this.networkManager.initializeAsteroidSync();
 
     // Create an empty asteroid belt - server will populate with authoritative asteroids
@@ -101,7 +103,13 @@ export class GameController {
     // Initialize listeners
     const localPlayer = this.playerManager.getLocalPlayer();
     if (localPlayer) {
+      logger.debug('GAME_CONTROLLER', 'Initializing input listeners for local player', {
+        playerId: localPlayer.id,
+        playerName: localPlayer.name,
+      });
       this.inputManager.initializeListeners(localPlayer);
+    } else {
+      logger.warn('GAME_CONTROLLER', 'No local player found, cannot initialize input listeners');
     }
 
     // Set up server asteroid event listeners
@@ -119,6 +127,18 @@ export class GameController {
     const { asteroid } = customEvent.detail;
     logger.debug('GAME', 'Adding server asteroid to local belt', { asteroidId: asteroid.id });
 
+    // Clear local asteroids only once when receiving the first server asteroid (server-authoritative)
+    if (
+      this.currRoidBelt &&
+      this.currRoidBelt.roids.length > 0 &&
+      !this.currRoidBelt.roids.some((r) => r.id.startsWith('server-asteroid-'))
+    ) {
+      logger.debug('GAME', 'Clearing local asteroids, server is authoritative', {
+        localAsteroidCount: this.currRoidBelt.roids.length,
+      });
+      this.currRoidBelt.roids.length = 0;
+    }
+
     // Check if asteroid already exists to prevent duplicates
     if (this.currRoidBelt) {
       const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
@@ -127,19 +147,25 @@ export class GameController {
       }
     }
 
-    // Create a proper Roid object from server data
+    // Create a proper Roid object from server data with server ID
     const roid = entityFactory.createRoid({
       position: asteroid.position,
       size: asteroid.size,
+      id: asteroid.id,
     });
 
     // Override properties with server data
-    roid.id = asteroid.id;
     roid.velocity = asteroid.velocity;
     roid.angle = asteroid.rotation;
     roid.angularVelocity = asteroid.angularVelocity;
     roid.health = asteroid.health;
     roid.maxHealth = asteroid.maxHealth;
+
+    // Override shape properties to match server exactly
+    roid.jaggedness = asteroid.jaggedness;
+    roid.vertices = asteroid.vertices;
+    roid.offsets.length = 0; // Clear existing offsets
+    roid.offsets.push(...asteroid.offsets); // Copy server offsets
 
     // Add to current asteroid belt if it exists
     if (this.currRoidBelt) {
@@ -533,15 +559,130 @@ export class GameController {
     });
     currPlayer.ship.update();
 
+    // Update all bot ships
+    const allPlayers = this.networkManager.getAllPlayers();
+    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
+    for (const botPlayer of botPlayers) {
+      if (botPlayer.ship) {
+        botPlayer.ship.update();
+      }
+    }
+
     // Update asteroids
     if (this.currRoidBelt) {
-      this.currRoidBelt.roids.forEach((roid) => {
-        roid.move();
-      });
+      this.currRoidBelt.moveRoids();
     }
+
+    // Check laser collisions with asteroids and bots
+    this.checkLaserCollisions();
+
+    // Check ship collisions with asteroids
+    this.checkShipAsteroidCollisions();
+
+    // Check ship collisions with other ships
+    this.checkShipShipCollisions();
+
+    // Check bot collisions with asteroids
+    this.checkBotAsteroidCollisions();
+
+    // Check boundary collisions for ships
+    this.checkBoundaryCollisions();
 
     // Update game state manager
     this.gameStateManager.updateKillMessageTimer();
+  }
+
+  // Check laser collisions with asteroids and bots
+  private checkLaserCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer || !this.currRoidBelt) {
+      return;
+    }
+
+    // Get all players (including bots) from network manager
+    const allPlayers = this.networkManager.getAllPlayers();
+    const bots = allPlayers.filter((player) => player.type === 'bot').map((player) => player.ship);
+
+    // Check collisions for local player's lasers
+    this.collisionManager.checkLaserCollisions(
+      currPlayer.ship.lasers,
+      this.currRoidBelt.roids,
+      bots.map((bot) => ({ ship: bot, id: bot.id, type: 'bot' as const })),
+      currPlayer.id
+    );
+  }
+
+  // Check boundary collisions for ships
+  private checkBoundaryCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+
+    // Get all players (including bots) from network manager
+    const allPlayers = this.networkManager.getAllPlayers();
+    const allShips = allPlayers.map((player) => player.ship).filter((ship) => ship);
+
+    // Check boundary collisions for all ships
+    this.collisionManager.checkBoundaryCollisions(allShips, currPlayer.id);
+  }
+
+  // Check ship collisions with asteroids
+  private checkShipAsteroidCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer || !this.currRoidBelt) {
+      return;
+    }
+
+    // Check asteroid collisions for local player
+    logger.debug('COLLISION', 'Checking ship-asteroid collisions', {
+      shipPos: currPlayer.ship.position,
+      shipRadius: currPlayer.ship.r,
+      asteroidCount: this.currRoidBelt.roids.length,
+      localPlayerId: currPlayer.id,
+    });
+    this.collisionManager.checkPlayerAsteroidCollisions(currPlayer, this.currRoidBelt.roids);
+  }
+
+  // Check ship collisions with other ships
+  private checkShipShipCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+
+    // Get all players (including bots) from network manager
+    const allPlayers = this.networkManager.getAllPlayers();
+    const otherShips = allPlayers
+      .filter((player) => player.id !== currPlayer.id)
+      .map((player) => player.ship);
+
+    // Check ship-to-ship collisions
+    this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);
+  }
+
+  // Check bot collisions with asteroids
+  private checkBotAsteroidCollisions(): void {
+    if (!this.currRoidBelt) {
+      return;
+    }
+
+    // Get all players (including bots) from network manager
+    const allPlayers = this.networkManager.getAllPlayers();
+    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
+
+    // Check asteroid collisions for each bot
+    for (const botPlayer of botPlayers) {
+      if (botPlayer.ship && !botPlayer.ship.exploding) {
+        logger.debug('COLLISION', 'Checking bot-asteroid collisions', {
+          botId: botPlayer.id,
+          botPos: botPlayer.ship.position,
+          botRadius: botPlayer.ship.r,
+          asteroidCount: this.currRoidBelt.roids.length,
+        });
+        this.collisionManager.checkPlayerAsteroidCollisions(botPlayer, this.currRoidBelt.roids);
+      }
+    }
   }
 
   // Simple render method - no game logic, just rendering

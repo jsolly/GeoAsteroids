@@ -11,7 +11,7 @@ export const GAME = {
   START_LIVES: 3,
   STARTING_SCORE: 0,
 
-  // Network (can be overridden by DEBUG.BOT_COUNT when in debug mode)
+  // Network (can be overridden by DEBUG.BOT_PLAYER.COUNT when in debug mode)
   BOT_COUNT: 9,
 
   // Physics
@@ -49,8 +49,6 @@ export const SHIP = {
 
   // Health
   MAX_HEALTH: 100,
-  COLLISION_DAMAGE: 20, // Instant damage for roid collisions
-  PLAYER_COLLISION_DAMAGE_PER_SECOND: 20, // Damage per second for player collisions
   HEALTH_REGEN_RATE: 1, // per second
   HEALTH_REGEN_DELAY: 5, // seconds
 
@@ -58,6 +56,21 @@ export const SHIP = {
   EXPLODE_DURATION_FRAMES: 18, // 0.3 seconds
   INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds
   INVINCIBILITY_BLINK_DURATION_FRAMES: 6, // 0.1 seconds
+} as const;
+
+// ============================================================================
+// DAMAGE CONFIGURATION
+// ============================================================================
+export const DAMAGE = {
+  // Instant damage (applied immediately)
+  LASER_HIT: 25, // Damage dealt by a single laser hit
+  BOUNDARY_COLLISION: 100, // Instant kill when hitting game boundary
+
+  // Damage over time (applied per second while colliding)
+  PLAYER_COLLISION_PER_SECOND: 20, // Damage per second when colliding with another player
+
+  // Damage intervals (calculated from DPS)
+  PLAYER_COLLISION_INTERVAL_MS: 50, // 1000ms / 20 DPS = 50ms per damage tick
 } as const;
 
 // ============================================================================
@@ -85,7 +98,7 @@ export const ROID = {
   POINTS_MEDIUM: 50,
   POINTS_SMALL: 100,
 
-  // Spawning (can be overridden by DEBUG.INITIAL_ROID_COUNT when in debug mode)
+  // Spawning (can be overridden by DEBUG.ROIDS.INITIAL_COUNT when in debug mode)
   INITIAL_ROID_COUNT: 10,
   MIN_COUNT: 5,
   MAX_COUNT: 20,
@@ -107,27 +120,37 @@ export const DEBUG = {
   // Master switch for debug features
   ENABLED: true,
 
-  // Player settings
-  LOCAL_PLAYER_INVINCIBLE: false,
+  // Local player settings
+  LOCAL_PLAYER: {
+    INVINCIBLE: false,
+    SPAWN_PROTECTION: true,
+  },
 
-  // Bot settings (overrides GAME.BOT_COUNT when in debug mode)
-  BOT_COUNT: 3,
-  DISABLE_BOT_MOVEMENT: false,
-  DISABLE_BOT_LASERS: false,
-  DISABLE_BOT_SPAWN_PROTECTION: false,
+  // Remote player settings
+  REMOTE_PLAYER: {
+    // Add remote player specific settings here as needed
+  },
+
+  // Bot player settings
+  BOT_PLAYER: {
+    COUNT: 2, // Reduced for better performance during development (overrides GAME.BOT_COUNT when in debug mode)
+    MOVEMENT: true,
+    LASERS: false,
+    SPAWN_PROTECTION: false,
+  },
 
   // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)
-  INITIAL_ROID_COUNT: 20,
-  DISABLE_ROID_MOVEMENT: false,
-  PLACE_ROID_ON_BOT: false,
-
-  // Roid splitting settings (overrides server-side defaults when in debug mode)
-  MIN_ROID_SIZE: 10,
-  SPLIT_SIZE_RATIO: 0.6,
-  MAX_ROID_COUNT: 200,
+  ROIDS: {
+    INITIAL_COUNT: 20, // Overrides ROID.INITIAL_ROID_COUNT
+    MOVEMENT: false,
+    PLACE_ON_BOT: false,
+    PLACE_ON_LOCAL_PLAYER: true,
+    ALL_LARGE: true, // Force all generated roids to be large size
+  },
 
   // Player positioning settings (Affects local, remote, and bot players)
-  PLACE_PLAYERS_NEAR_CENTER: true,
+  PLACE_PLAYERS_NEAR_CENTER: false,
+  PLACE_PLAYERS_NEAR_BOUNDARY: true,
 } as const;
 
 // ============================================================================
@@ -151,7 +174,7 @@ export const LOGGING = {
   FORWARD_TO_SERVER: true,
 
   // Whether to write logs to browser console
-  WRITE_TO_CONSOLE: false,
+  WRITE_TO_CONSOLE: true,
 } as const;
 
 // ============================================================================

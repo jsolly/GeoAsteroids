@@ -157,9 +157,10 @@ export function drawDebugInfo(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
-  // Draw debug info in top-left corner
-  ctx.fillText(`DEBUG MODE`, 10, 10);
-  ctx.fillText(`Asteroids: ${roidCount}`, 10, 30);
+  // Draw debug info in bottom-left corner
+  const canvasHeight = _canvas.height;
+  ctx.fillText(`DEBUG MODE`, 10, canvasHeight - 40);
+  ctx.fillText(`Asteroids: ${roidCount}`, 10, canvasHeight - 20);
 
   ctx.restore();
 }

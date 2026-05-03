@@ -4,8 +4,9 @@ import { join } from 'path';
 export class ScreenshotManager {
   private readonly screenshotsDir: string;
 
-  constructor(testDir: string) {
-    this.screenshotsDir = join(testDir, 'screenshots');
+  constructor(_testDir: string) {
+    // Use centralized screenshots directory under browser tests
+    this.screenshotsDir = join(process.cwd(), 'tests', 'integration', 'browser', 'screenshots');
   }
 
   /**

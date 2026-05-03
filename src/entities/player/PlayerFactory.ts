@@ -1,7 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position } from '../../../shared-types';
 import { CANVAS, DEBUG } from '../../constants';
+import { MockPlayerInput } from '../../input/MockPlayerInput';
 import {
+  getRandomPositionNearBoundary,
   getRandomPositionNearPoint,
   getRandomPositionWithinBoundary,
 } from '../../utils/positionUtils';
@@ -20,10 +22,14 @@ export class PlayerFactory {
   public createPlayer(params: PlayerCreationParams): Player {
     const id = params.id || uuidv4();
 
-    // Determine position based on debug flag if none provided
+    // Determine position based on debug flags if none provided
+    // Priority: PLACE_PLAYERS_NEAR_BOUNDARY > PLACE_PLAYERS_NEAR_CENTER > default
     let position: Position;
     if (params.position) {
       position = params.position;
+    } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
+      // Place near boundary when debug flag is enabled
+      position = getRandomPositionNearBoundary();
     } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
       // Place near center when debug flag is enabled
       const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
@@ -37,6 +43,7 @@ export class PlayerFactory {
       id,
       name: params.name,
       type: params.type,
+      input: new MockPlayerInput(),
     });
 
     // Set position

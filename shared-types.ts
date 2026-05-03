@@ -38,6 +38,7 @@ export interface PlayerJoin {
   id: string;
   name: string;
   position: Position;
+  color: string;
 }
 
 export interface PlayerLeave {
@@ -61,6 +62,8 @@ export interface AsteroidData {
   angularVelocity: number;
   health: number;
   maxHealth: number;
+  vertices: number;
+  offsets: number[];
 }
 
 export interface BotData {
@@ -70,6 +73,8 @@ export interface BotData {
   velocity: Velocity;
   angle: number;
   exploding: boolean;
+  thrusting: boolean;
+  color: string;
   lives: number;
   health: number;
   maxHealth: number;
@@ -86,23 +91,33 @@ export interface ServerPlayerData {
   lives: number;
   score: number;
   exploding: boolean;
+  thrusting: boolean;
+  color: string;
   health: number;
   maxHealth: number;
   respawnTimer?: number;
 }
 
 export interface ServerGameState {
-  players: ServerPlayerData[];
-  bots: BotData[];
+  entities: ServerEntityData[];
   asteroids: AsteroidData[];
   gameTime: number;
   isPaused: boolean;
 }
 
-// Legacy GameState interface for backward compatibility
-export interface GameState {
-  players: PlayerUpdate[];
-  bots: BotData[];
-  asteroids: AsteroidData[];
-  gameTime: number;
+export interface ServerEntityData {
+  id: string;
+  name: string;
+  type: 'human' | 'bot';
+  position: Position;
+  velocity: Velocity;
+  angle: number;
+  exploding: boolean;
+  thrusting: boolean;
+  color: string;
+  lives: number;
+  score: number;
+  health: number;
+  maxHealth: number;
+  respawnTimer?: number;
 }

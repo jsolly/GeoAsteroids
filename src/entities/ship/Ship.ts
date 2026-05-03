@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
-import { EMP, GAME, LASER, SHIP } from '../../constants';
+import { DAMAGE, EMP, GAME, LASER, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
@@ -24,10 +24,8 @@ class Ship {
   velocity: Velocity = { x: 0, y: 0 };
   r: number = SHIP.SIZE / 2;
   angle: number = (90 / 180) * Math.PI;
-  blinkCount: number = Math.ceil(
-    SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-  );
-  spawnProtectionTimer: number = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+  blinkCount: number = 0;
+  spawnProtectionTimer: number = 0;
   canShoot = true;
 
   exploding = false;
@@ -48,8 +46,11 @@ class Ship {
   thrusterActive: boolean = false;
   lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
+  lastThrusting?: boolean; // Track previous thruster state for network updates
   color: string = '#ffffff'; // Ship color for rendering
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
+  frictionCoefficient: number = GAME.FRICTION; // Player-specific friction coefficient
+  isLocalPlayer: boolean = false; // Track if this is the local player
 
   // Server-authoritative smoothing targets (for remote/bot ships)
   targetPosition?: Position;
@@ -75,7 +76,25 @@ class Ship {
     shotCooldown?: number;
     color?: string;
     isBot?: boolean;
+    isLocalPlayer?: boolean;
+    frictionCoefficient?: number;
   }) {
+    // Set initial spawn protection for local players to prevent immediate collisions
+    if (options?.isLocalPlayer) {
+      this.blinkCount = Math.ceil(
+        SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
+      );
+      this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+      this.setBlinkOn();
+
+      logger.debug('SPAWN_PROTECTION', 'Initial spawn protection set for local player', {
+        shipId: this.id,
+        blinkCount: this.blinkCount,
+        spawnProtectionTimer: this.spawnProtectionTimer,
+        position: this.position,
+      });
+    }
+
     // Initialize blinkOn based on initial blinkCount
     this.blinkOn = this.blinkCount % 2 === 0;
 
@@ -91,6 +110,12 @@ class Ship {
     }
     if (options?.isBot !== undefined) {
       this.isBot = options.isBot;
+    }
+    if (options?.isLocalPlayer !== undefined) {
+      this.isLocalPlayer = options.isLocalPlayer;
+    }
+    if (options?.frictionCoefficient !== undefined) {
+      this.frictionCoefficient = options.frictionCoefficient;
     }
   }
 
@@ -126,6 +151,12 @@ class Ship {
       shipId: this.id,
       isBot: this.isBot,
     });
+
+    // Check if thruster state changed and send network update
+    if (this.lastThrusting !== this.thrusting) {
+      this.sendThrusterEvent();
+      this.lastThrusting = this.thrusting;
+    }
 
     if (this.thrusting) {
       const thrust: Velocity = {
@@ -171,8 +202,17 @@ class Ship {
   }
 
   shoot(): void {
+    logger.debug('SHIP', 'Shoot method called', {
+      canShoot: this.canShoot,
+      laserCount: this.lasers.length,
+    });
     if (this.canShootAgain()) {
       this.fireLaser();
+    } else {
+      logger.debug('SHIP', 'Cannot shoot - cooldown or max lasers reached', {
+        canShoot: this.canShoot,
+        laserCount: this.lasers.length,
+      });
     }
   }
 
@@ -180,6 +220,9 @@ class Ship {
     const laser = this.generateLaser();
     this.lasers.push(laser);
     laser.playLaserSound();
+
+    // Set canShoot to false to prevent rapid firing
+    this.canShoot = false;
 
     // Send shooting event to network system
     this.sendShootEvent(laser.position, laser.velocity);
@@ -211,7 +254,23 @@ class Ship {
     if (!this.isBot) {
       const networkManager = NetworkManager.getInstance();
       if (networkManager.isConnected) {
-        // Send shoot event to server
+        // Send dedicated shoot event to server
+        logger.debug('SHIP', 'Sending shoot event', { laserPosition, laserVelocity });
+        networkManager.sendShootEvent(laserPosition, laserVelocity);
+      } else {
+        logger.debug('SHIP', 'Network not connected, cannot send shoot event');
+      }
+    } else {
+      logger.debug('SHIP', 'Bot ship, not sending shoot event');
+    }
+  }
+
+  private sendThrusterEvent(): void {
+    // Only send thruster events for non-bot ships
+    if (!this.isBot) {
+      const networkManager = NetworkManager.getInstance();
+      if (networkManager.isConnected) {
+        // Send thruster state to server
         networkManager.updatePlayerState({
           position: this.position,
           velocity: this.velocity,
@@ -220,15 +279,7 @@ class Ship {
           lives: 0, // This will be updated by server
           score: 0, // This will be updated by server
           exploding: this.exploding,
-          lasers: [
-            {
-              position: laserPosition,
-              velocity: laserVelocity,
-              distTraveled: 0,
-              explodeTime: 0,
-              hasExploded: false,
-            },
-          ],
+          thrusting: this.thrusting,
         });
       }
     }
@@ -241,6 +292,9 @@ class Ship {
     angle?: number;
     lives?: number;
     exploding?: boolean;
+    thrusting?: boolean;
+    health?: number;
+    maxHealth?: number;
   }): void {
     // Local player uses immediate state; bots/remote ships use smoothing targets
     if (this.isBot) {
@@ -259,6 +313,23 @@ class Ship {
       }
       if (data.r !== undefined) {
         this.r = data.r;
+      }
+      if (data.thrusting !== undefined) {
+        this.thrusting = data.thrusting;
+      }
+      if (data.health !== undefined) {
+        this.health = data.health;
+      }
+      if (data.maxHealth !== undefined) {
+        this.maxHealth = data.maxHealth;
+      }
+      // Bots get spawn protection from server data
+      if (data.health !== undefined && data.health > 0) {
+        this.blinkCount = Math.ceil(
+          SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
+        );
+        this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+        this.setBlinkOn();
       }
       this.lastServerUpdateMs = performance.now ? performance.now() : Date.now();
       return;
@@ -280,6 +351,23 @@ class Ship {
     if (data.exploding !== undefined) {
       this.exploding = data.exploding;
     }
+    if (data.thrusting !== undefined) {
+      this.thrusting = data.thrusting;
+    }
+    if (data.health !== undefined) {
+      this.health = data.health;
+    }
+    if (data.maxHealth !== undefined) {
+      this.maxHealth = data.maxHealth;
+    }
+    // If we receive health data from server and we're not a bot, set spawn protection
+    if (!this.isBot && data.health !== undefined && data.health > 0) {
+      this.blinkCount = Math.ceil(
+        SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
+      );
+      this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+      this.setBlinkOn();
+    }
   }
 
   getNetworkData(): {
@@ -288,6 +376,7 @@ class Ship {
     r: number;
     angle: number;
     exploding: boolean;
+    thrusting: boolean;
   } {
     return {
       position: { x: this.position.x, y: this.position.y },
@@ -295,6 +384,7 @@ class Ship {
       r: this.r,
       angle: this.angle,
       exploding: this.exploding,
+      thrusting: this.thrusting,
     };
   }
 
@@ -382,7 +472,7 @@ class Ship {
 
     const now = Date.now();
     const timeSinceLastDamage = now - this.lastPlayerCollisionDamageTime;
-    const damageInterval = 1000 / SHIP.PLAYER_COLLISION_DAMAGE_PER_SECOND; // e.g., 20 DPS => 50ms per damage
+    const damageInterval = DAMAGE.PLAYER_COLLISION_INTERVAL_MS;
 
     if (timeSinceLastDamage >= damageInterval) {
       // Apply local damage only when not connected to server; otherwise server-authoritative
@@ -424,38 +514,34 @@ class Ship {
   }
 
   updateHealth(): void {
-    // Health regeneration is now handled server-side for network consistency
-    // Local regeneration is disabled to prevent conflicts with server updates
-    if (process.env.NODE_ENV === 'test') {
-      // Keep local regeneration for tests
-      if (this.exploding) {
-        return;
-      }
+    // Client-side health regeneration for better responsiveness
+    if (this.exploding) {
+      return;
+    }
 
-      if (this.lastDamageTime > 0) {
-        this.lastDamageTime--;
-      }
+    if (this.lastDamageTime > 0) {
+      this.lastDamageTime--;
+    }
 
-      if (shouldStartHealthRegeneration(this.lastDamageTime, this.health, this.maxHealth)) {
-        if (this.healthRegenTimer <= 0) {
-          const healthBefore = this.health;
-          this.heal(calculateHealthRegenPerFrame());
-          const healthAfter = this.health;
+    if (shouldStartHealthRegeneration(this.lastDamageTime, this.health, this.maxHealth)) {
+      if (this.healthRegenTimer <= 0) {
+        const healthBefore = this.health;
+        this.heal(calculateHealthRegenPerFrame());
+        const healthAfter = this.health;
 
-          if (healthBefore !== healthAfter) {
-            // Health regenerated
-            if (this.isBot) {
-              logger.debug('SHIP', 'Bot health regenerated', {
-                healthBefore,
-                healthAfter,
-                lastDamageTime: this.lastDamageTime,
-                healthRegenTimer: this.healthRegenTimer,
-              });
-            }
+        if (healthBefore !== healthAfter) {
+          // Health regenerated
+          if (this.isBot) {
+            logger.debug('SHIP', 'Bot health regenerated', {
+              healthBefore,
+              healthAfter,
+              lastDamageTime: this.lastDamageTime,
+              healthRegenTimer: this.healthRegenTimer,
+            });
           }
-        } else {
-          this.healthRegenTimer--;
         }
+      } else {
+        this.healthRegenTimer--;
       }
     }
 
@@ -479,7 +565,24 @@ class Ship {
         this.blinkCount--;
         this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
         this.setBlinkOn();
+
+        // Debug logging for blinking updates
+        if (this.isLocalPlayer) {
+          logger.debug('BLINK_UPDATE', 'Blinking state changed', {
+            shipId: this.id,
+            blinkCount: this.blinkCount,
+            blinkOn: this.blinkOn,
+            spawnProtectionTimer: this.spawnProtectionTimer,
+          });
+        }
       }
+    } else if (this.isLocalPlayer) {
+      // Debug logging when spawn protection is complete
+      logger.debug('SPAWN_PROTECTION', 'Spawn protection complete', {
+        shipId: this.id,
+        blinkCount: this.blinkCount,
+        canCollide: true,
+      });
     }
   }
 
@@ -535,8 +638,8 @@ class Ship {
         this.velocity.y *= scale;
       }
     } else {
-      // Apply friction
-      this.velocity = multiplyVelocity(this.velocity, 1 - GAME.FRICTION / GAME.FPS);
+      // Apply player-specific friction
+      this.velocity = multiplyVelocity(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
     }
 
     // Update position based on velocity

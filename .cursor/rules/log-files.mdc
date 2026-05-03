@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+## Log Files
+- Client-side logs: `/logs/client.log`
+- Server-side logs: `/logs/server.log`

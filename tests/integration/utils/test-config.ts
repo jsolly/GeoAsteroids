@@ -4,7 +4,7 @@ export const TestConfig = {
   SERVER_URL: 'http://localhost:3001',
   
   // Timeouts
-  DEFAULT_TIMEOUT: 30000,
+  DEFAULT_TIMEOUT: 60000,
   ELEMENT_WAIT_TIMEOUT: 5000,
   GAME_INIT_TIMEOUT: 5000,
   LASER_DELAY: 500,

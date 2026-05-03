@@ -143,10 +143,30 @@ export function createServerInstance(options: CreateServerOptions = {}) {
 
   // Rate limiting
   const connectionAttempts = new Map<string, { count: number; lastAttempt: number }>();
-  const MAX_CONNECTIONS_PER_MINUTE = 50;
+  // More lenient rate limiting for testing and development
+  const isTestEnvironment = NODE_ENV === 'test' || process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+  const isDevelopmentEnvironment = NODE_ENV === 'development' || process.env.NODE_ENV === 'development';
+  const shouldDisableRateLimit = isTestEnvironment || isDevelopmentEnvironment;
+  const MAX_CONNECTIONS_PER_MINUTE = shouldDisableRateLimit ? 10000 : 50; // Much higher limit for tests and dev
+  
+  // Debug logging for environment detection
+  if (shouldDisableRateLimit) {
+    logger.info('🧪 Development/Test environment detected - rate limiting disabled', {
+      NODE_ENV,
+      VITEST: process.env.VITEST,
+      NODE_ENV_ENV: process.env.NODE_ENV,
+      isTestEnvironment,
+      isDevelopmentEnvironment
+    });
+  }
   const CONNECTION_WINDOW_MS = 60000;
 
   function isRateLimited(ip: string): boolean {
+    // Skip rate limiting entirely in test or development environment
+    if (shouldDisableRateLimit) {
+      return false;
+    }
+    
     const now = Date.now();
     const attempts = connectionAttempts.get(ip);
     if (!attempts) {
@@ -158,6 +178,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       return false;
     }
     if (attempts.count >= MAX_CONNECTIONS_PER_MINUTE) {
+      logger.warn(`🚫 Rate limited connection attempt from ${ip} (${attempts.count}/${MAX_CONNECTIONS_PER_MINUTE})`);
       return true;
     }
     attempts.count++;
@@ -222,9 +243,14 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       logger.info('🔌 New player connected');
       ws.on('message', (data) => {
         try {
-          const message = JSON.parse(String(data));
+          const rawData = String(data);
+          console.log('🔌 SERVER: Raw WebSocket data:', rawData);
+          const message = JSON.parse(rawData);
+          console.log('🔌 SERVER: Parsed message:', JSON.stringify(message, null, 2));
+          logger.debug('SERVER: Received WebSocket message', { type: message.type, id: message.id });
           wsCore.handleClientMessage(message, ws);
         } catch (error) {
+          console.log('❌ SERVER: Failed to parse message:', error);
           wsCore.sendError(ws, 'Invalid message format');
         }
       });

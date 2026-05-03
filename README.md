@@ -55,14 +55,15 @@ Debug behavior is controlled by constants defined in `src/constants/index.ts`:
 
 **Debug Configuration:**
 - `DEBUG.ENABLED` - Master switch for all debug features (default: false)
-- `DEBUG.BOT_COUNT` - Number of bots to spawn in debug mode (default: 1)
-- `DEBUG.INITIAL_ROID_COUNT` - Alternative roid count control for debug mode (default: 100)
-- `DEBUG.LOCAL_PLAYER_INVINCIBLE` - Makes the local player invincible in debug mode (default: false)
-- `DEBUG.DISABLE_BOT_SPAWN_PROTECTION` - Disables bot spawn protection in debug mode (default: false)
-- `DEBUG.DISABLE_BOT_MOVEMENT` - Disables bot movement when set to true (default: false)
-- `DEBUG.DISABLE_BOT_LASERS` - Disables bot shooting when set to true (default: false)
-- `DEBUG.PLACE_ROID_ON_BOT` - Places roids on bots for testing (default: false)
-- `DEBUG.DISABLE_ROID_MOVEMENT` - Disables roid movement when set to true (default: false)
+- `DEBUG.LOCAL_PLAYER.INVINCIBLE` - Makes the local player invincible in debug mode (default: false)
+- `DEBUG.LOCAL_PLAYER.SPAWN_PROTECTION` - Enables local player spawn protection in debug mode (default: true)
+- `DEBUG.BOT_PLAYER.COUNT` - Number of bots to spawn in debug mode (default: 1)
+- `DEBUG.BOT_PLAYER.SPAWN_PROTECTION` - Enables bot spawn protection in debug mode (default: false)
+- `DEBUG.BOT_PLAYER.MOVEMENT` - Enables bot movement when set to true (default: false)
+- `DEBUG.BOT_PLAYER.LASERS` - Enables bot shooting when set to true (default: false)
+- `DEBUG.ROIDS.INITIAL_COUNT` - Alternative roid count control for debug mode (default: 100)
+- `DEBUG.ROIDS.PLACE_ON_BOT` - Places roids on bots for testing (default: false)
+- `DEBUG.ROIDS.MOVEMENT` - Enables roid movement when set to true (default: false)
 - `DEBUG.PLACE_PLAYERS_NEAR_CENTER` - Places all players (local, remote, bots) near the center in debug mode (default: true)
 
 **Note**: To enable debug mode, you need to set both:

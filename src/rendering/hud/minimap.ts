@@ -85,24 +85,18 @@ export function drawMiniMap(
   try {
     const gameController = GameController.getInstance();
     const playerNetwork = PlayerNetwork.getInstance();
-    const remotes = playerNetwork.getRemotePlayers();
+    const otherPlayers = playerNetwork.getOtherPlayers(); // Gets all non-local players including bots
 
-    // Bots are now server-controlled, so we don't draw them here
-
-    for (const player of remotes) {
-      // Skip players who have 0 health and are not exploding
-      if (player.ship.health <= 0 && !player.ship.exploding) {
+    for (const player of otherPlayers) {
+      // Skip players who are exploding (truly dead)
+      if (player.ship.exploding) {
         continue;
       }
-      drawShipMiniMap(
-        ctx,
-        player.ship,
-        REMOTE_PLAYER_COLOR,
-        boundary,
-        miniMapX,
-        miniMapY,
-        miniMapSize
-      );
+
+      // Use different colors for different player types
+      const color = player.type === 'bot' ? '#ff6600' : REMOTE_PLAYER_COLOR; // Orange for bots, blue for remote players
+
+      drawShipMiniMap(ctx, player.ship, color, boundary, miniMapX, miniMapY, miniMapSize);
     }
 
     // Draw asteroids on mini map

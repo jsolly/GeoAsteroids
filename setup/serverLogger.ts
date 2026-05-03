@@ -9,7 +9,7 @@ export enum ServerLogLevel {
   DEBUG = 3,
 }
 
-const CURRENT_LOG_LEVEL = ServerLogLevel.INFO;
+const CURRENT_LOG_LEVEL = ServerLogLevel.DEBUG;
 
 function shouldLog(level: ServerLogLevel): boolean {
   return level <= CURRENT_LOG_LEVEL;
