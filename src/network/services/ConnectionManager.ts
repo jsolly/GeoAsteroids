@@ -598,7 +598,6 @@ export class ConnectionManager {
     }
 
     // Apply authoritative health from server first
-    const prevHealth = targetPlayer.ship.health;
     targetPlayer.ship.health = data.remainingHealth;
 
     // Only call client-side takeDamage for visual feedback when health stays above 0

@@ -175,7 +175,7 @@ export class GameEngine {
   public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
     console.log('DEBUG: handlePlayerDamage called', { targetPlayerId, attackerId, damage });
     // Ignore damage if player is already in respawn countdown or already at 0 health
-    const existing = this.entityManager.getPlayer(targetPlayerId);
+    const existing = this.getPlayer(targetPlayerId);
     if (!existing) {
       console.log('DEBUG: damagedPlayer is null');
       return false;

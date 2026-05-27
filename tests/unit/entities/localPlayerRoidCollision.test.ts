@@ -103,8 +103,8 @@ describe('Local Player Roid Collision Damage', () => {
       console.log('  Health:', localShip.health);
       console.log('  Network manager calls:', mockSendMessage.mock.calls.length);
       
-      // Verify instant damage was applied (like laser hit)
-      expect(localShip.health).toBe(75); // 100 - 25 (LASER_HIT damage)
+      // Server applies damage; client only sends network messages
+      expect(localShip.health).toBe(100);
       
       // Verify both collision damage and asteroid destruction messages were sent
       expect(mockSendMessage).toHaveBeenCalledWith({
@@ -127,8 +127,8 @@ describe('Local Player Roid Collision Damage', () => {
     });
   });
 
-  describe('Instant Damage System', () => {
-    test('asteroid collision applies instant damage like laser hit', async () => {
+  describe('Server-Authoritative Damage', () => {
+    test('asteroid collision sends damage to server without applying locally', async () => {
       // Mock the collision detection to return true
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
@@ -138,8 +138,8 @@ describe('Local Player Roid Collision Damage', () => {
       // Check collision
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
       
-      // Verify instant damage was applied
-      expect(localShip.health).toBe(initialHealth - DAMAGE.LASER_HIT);
+      // Server applies damage; client only sends network messages
+      expect(localShip.health).toBe(initialHealth);
       
       // Verify both messages were sent
       expect(mockSendMessage).toHaveBeenCalledTimes(2);
@@ -173,7 +173,7 @@ describe('Local Player Roid Collision Damage', () => {
 
     test('local player is not invincible in debug mode', () => {
       expect(DEBUG.LOCAL_PLAYER.INVINCIBLE).toBe(false);
-      // This means the local player should take damage from roids
+      // Damage is applied by the server after the client sends collisionDamage
     });
   });
 
@@ -229,8 +229,8 @@ describe('Local Player Roid Collision Damage', () => {
       // Check collision
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
       
-      // Should still apply local damage but not send network messages
-      expect(localShip.health).toBe(75); // 100 - 25 damage
+      // Server applies damage; without a server player ID the client sends nothing
+      expect(localShip.health).toBe(100);
       expect(networkManager.sendMessage).not.toHaveBeenCalled();
     });
   });
