@@ -102,3 +102,28 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 - **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
 - **Fleet updates:** `./scripts/update-agents-subtree.sh`
 - **Snapshot:** After first successful cloud boot, `./scripts/pin-cloud-snapshot.sh` per `docs/cloud-agents.md` → Snapshot bootstrap (agent-run)
+
+## Cursor Cloud specific instructions
+
+### Services
+
+| Service | Port | Health / URL |
+|---------|------|----------------|
+| Vite (client + `/ws` proxy) | 5173 | `curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/` → `200` |
+| Game server (HTTP + WS) | 3001 | `curl http://localhost:3001/health` |
+
+Start both with `npm run dev` (`./scripts/dev-server.sh`). Status: `npm run dev:check`. Stop: `npm run dev:kill`. If integration tests hang or rate-limit, kill then restart dev before re-running `./scripts/test-runner.sh`.
+
+### Browser integration (one-time per VM)
+
+Playwright Chromium is **not** installed by the update script. After first boot, run once:
+
+`npx playwright install chromium`
+
+### Lint / tests (reference)
+
+See **Commands** above. Browser E2E must use `./scripts/test-runner.sh` (never raw `npx vitest` on `tests/integration/`). As of May 2026, `npm run check:lint` may report a pre-existing Biome `organizeImports` issue in `src/entities/roid/roid.ts` (export order); typecheck and unit tests still pass.
+
+### Hello-world smoke
+
+With dev servers up: open `http://localhost:5173`, click Play, thrust (arrow keys) and fire (Space). Or run `./scripts/test-runner.sh tests/integration/browser/sanity/game-initializes-with-arena-and-hud.test.ts`.
