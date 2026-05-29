@@ -17,8 +17,10 @@ dist/*
 # Logs
 /logs
 
-# Environment Variables
-.env*
+# Environment Variables (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
 # Cursor: track cloud config and rules; ignore other local editor state
 .cursor/*
 !.cursor/environment.json

@@ -35,12 +35,14 @@ They do **not** see `~/.agents/`, `~/.cursor/skills/`, or local symlinks outside
 
 ```json
 {
-  "install": "npm ci || npm install",
+  "install": "npm ci || npm install && (test -f .env || cp .env.example .env)",
   "terminals": [
     { "name": "dev", "command": "npm run dev" }
   ]
 }
 ```
+
+On first boot, install copies `.env.example` → `.env` if needed. `scripts/dev-server.sh` does the same before starting `tsx --env-file=.env`.
 
 The install step previously failed when `@biomejs/biome` pointed at an expired pkg.pr.new URL — now pinned to the npm registry.
 

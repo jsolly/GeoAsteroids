@@ -47,6 +47,21 @@ fi
 
 echo "✅ Cleanup complete, starting dev servers..."
 
+# tsx --env-file requires the file to exist; bootstrap from .env.example on fresh clones
+if [ ! -f .env ]; then
+    if [ -f .env.example ]; then
+        echo "📋 Creating .env from .env.example..."
+        cp .env.example .env
+    else
+        echo "📋 Creating default .env..."
+        cat > .env <<'EOF'
+NODE_ENV=development
+PORT=3001
+VITEST=false
+EOF
+    fi
+fi
+
 # Create logs directory
 mkdir -p logs
 rm -f logs/client.log logs/server.log

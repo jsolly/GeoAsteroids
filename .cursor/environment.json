@@ -1,5 +1,5 @@
 {
-  "install": "npm ci || npm install",
+  "install": "npm ci || npm install && (test -f .env || cp .env.example .env)",
   "terminals": [
     {
       "name": "dev",
