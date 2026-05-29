@@ -1,0 +1,27 @@
+import { test, expect } from 'vitest';
+import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
+import { GameInteractions } from '../../utils/game-interactions';
+import { TestConfig } from '../../utils/test-config';
+
+const { browserManager } = createBrowserScenarioHooks(__dirname);
+
+test('spawn protection prevents damage', async () => {
+  const page = browserManager.getCurrentPage();
+  if (!page) throw new Error('Page not available');
+
+  const game = new GameInteractions(page);
+  await game.bootSinglePlayerGame();
+
+  expect(await game.isServerSpawnProtected()).toBe(true);
+  await game.applyLaserDamageToLocal(1, 25);
+  await page.waitForTimeout(400);
+  expect(await game.getShipHealth()).toBe(100);
+
+  await game.waitForCombatReady();
+  expect(await game.isServerSpawnProtected()).toBe(false);
+
+  await game.applyLaserDamageToLocal(1, 25);
+  await expect
+    .poll(() => game.getShipHealth(), { timeout: 5000, message: 'damage should apply after protection ends' })
+    .toBe(75);
+}, TestConfig.DEFAULT_TIMEOUT);

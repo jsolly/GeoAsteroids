@@ -17,6 +17,19 @@ export class Player {
   deathCause?: string; // What killed the player (asteroid, boundary, player name, etc.)
   input: PlayerInput; // Unified input system for all player types
 
+  // For the local player: from the moment it dies until it is confirmed alive
+  // again, trust the server for position (so the respawn point is adopted).
+  // While alive it predicts locally and ignores the lagging server echo.
+  private adoptServerPosition = false;
+
+  /** Last health value accepted from the server (local player regen guard). */
+  private lastServerHealthEcho?: number;
+
+  // Server-authoritative spawn-protection countdown (frames). While > 0 the
+  // server ignores all incoming damage. Mirrored from the gameState so callers
+  // (notably tests) can tell exactly when the player becomes vulnerable.
+  serverSpawnProtectionTimer = 0;
+
   // Interpolation state for smooth movement (disabled for now to fix popping issue)
   // private targetPosition?: Position;
   // private targetVelocity?: Position;
@@ -61,19 +74,52 @@ export class Player {
     health?: number;
     maxHealth?: number;
     respawnTimer?: number;
+    spawnProtectionTimer?: number;
   }): void {
-    // Update all players directly for now (disable interpolation to fix popping issue)
-    if (data.position) {
+    this.serverSpawnProtectionTimer = data.spawnProtectionTimer ?? 0;
+    // The local player predicts its own ship for responsiveness: while alive it
+    // owns its position/velocity/angle and must NOT snap to the (lagging) server
+    // echo. Remote players and bots are always server-driven.
+    //
+    // The exception is the death→respawn window: once the local player dies we
+    // latch `adoptServerPosition` so every server update (including the respawn
+    // reposition) is adopted, and only release the latch after we've adopted a
+    // position while alive again. This makes respawn placement deterministic
+    // regardless of the exact ordering of health/position broadcasts.
+    const isLocal = this.type === 'local';
+    if (isLocal) {
+      const deadOrExploding =
+        this.ship.health <= 0 || this.ship.exploding || data.respawnTimer !== undefined;
+      if (deadOrExploding) {
+        this.adoptServerPosition = true;
+      }
+    }
+    const acceptServerTransform = !isLocal || this.adoptServerPosition;
+
+    if (data.position && acceptServerTransform) {
       this.ship.position = data.position;
     }
-    if (data.velocity) {
+    if (data.velocity && acceptServerTransform) {
       this.ship.velocity = data.velocity;
     }
-    if (data.angle !== undefined) {
+    if (data.angle !== undefined && acceptServerTransform) {
       this.ship.angle = data.angle;
     }
+
     if (data.lives !== undefined) {
+      const prevLives = this.lives;
       this.lives = data.lives;
+      if (isLocal && prevLives > this.lives) {
+        window.dispatchEvent(
+          new CustomEvent('playerDied', {
+            detail: {
+              playerId: this.id,
+              deathCause: this.deathCause ?? data.deathCause ?? 'unknown',
+              isGameOver: this.lives <= 0,
+            },
+          })
+        );
+      }
     }
     if (data.score !== undefined) {
       this.score = data.score;
@@ -81,7 +127,9 @@ export class Player {
     if (data.exploding !== undefined) {
       this.ship.exploding = data.exploding;
     }
-    if (data.thrusting !== undefined) {
+    // Thrusting is client-owned for the local player (keyboard/mouse input).
+    // The server echo lacks thrusting when updates omit it, which flickers the flame.
+    if (data.thrusting !== undefined && this.type !== 'local') {
       this.ship.thrusting = data.thrusting;
     }
     if (data.color !== undefined) {
@@ -95,14 +143,39 @@ export class Player {
       const wasDead = this.ship.health <= 0;
       const wasExploding = this.ship.exploding;
       const oldHealth = this.ship.health;
-      this.ship.health = data.health;
+      const serverHealth = data.health;
 
-      // Debug logging for health updates
-      if (oldHealth !== data.health) {
+      // Local player health regen runs client-side; the server echo can lag
+      // behind regen progress. Accept authoritative damage and respawn heals,
+      // but don't let a stale server snapshot rewind regen.
+      if (isLocal && !wasDead && !wasExploding) {
+        if (serverHealth >= this.ship.maxHealth) {
+          this.ship.health = serverHealth;
+          this.lastServerHealthEcho = serverHealth;
+        } else if (
+          this.lastServerHealthEcho === undefined ||
+          serverHealth < this.lastServerHealthEcho
+        ) {
+          this.ship.health = serverHealth;
+          this.lastServerHealthEcho = serverHealth;
+        }
+      } else if (isLocal && (wasDead || wasExploding) && serverHealth >= this.ship.maxHealth) {
+        this.ship.health = serverHealth;
+        this.lastServerHealthEcho = serverHealth;
+      } else if (!isLocal) {
+        this.ship.health = serverHealth;
+      } else if (isLocal && serverHealth > this.ship.health) {
+        this.ship.health = serverHealth;
+        this.lastServerHealthEcho = serverHealth;
+      }
+
+      const newHealth = this.ship.health;
+
+      if (oldHealth !== newHealth) {
         logger.debug('HEALTH_UPDATE', 'Health changed', {
           playerId: this.id,
           oldHealth,
-          newHealth: data.health,
+          newHealth,
           wasDead,
           wasExploding,
           exploding: this.ship.exploding,
@@ -110,7 +183,6 @@ export class Player {
         });
       }
 
-      // If health reaches 0, trigger explosion
       if (this.ship.health <= 0 && oldHealth > 0) {
         logger.debug('HEALTH_UPDATE', 'Health reached 0, triggering explosion', {
           playerId: this.id,
@@ -159,19 +231,37 @@ export class Player {
     }
     // Handle respawn timer from server
     if (data.respawnTimer !== undefined) {
-      // When respawnTimer is 0, the server has respawned the player
-      if (data.respawnTimer === 0 && this.ship.health <= 0) {
+      // When respawnTimer is 0, the server has finished the countdown. Remote
+      // entities still need local visual reset; the local player must wait for
+      // authoritative health + position in gameState (calling respawn() here
+      // would mark the ship alive at the death location before reposition).
+      if (data.respawnTimer === 0 && this.ship.health <= 0 && !isLocal) {
         logger.debug('RESPAWN', 'Player respawned by server', {
           playerId: this.id,
           newHealth: data.health,
           newPosition: data.position,
         });
-        // Call respawn method to reset local state
         this.respawn();
       }
     }
 
+    // Resume local prediction once the server confirms the respawn is complete.
+    if (
+      isLocal &&
+      this.adoptServerPosition &&
+      this.ship.health > 0 &&
+      !this.ship.exploding &&
+      data.respawnTimer === undefined
+    ) {
+      this.adoptServerPosition = false;
+    }
+
     this.lastUpdate = Date.now();
+  }
+
+  /** Record authoritative health from a direct damage event (not gameState echo). */
+  syncServerHealthEcho(health: number): void {
+    this.lastServerHealthEcho = health;
   }
 
   // Respawn method implementation
@@ -314,6 +404,7 @@ export class Player {
     lives: number;
     score: number;
     exploding: boolean;
+    thrusting: boolean;
     health?: number;
     maxHealth?: number;
   } {
@@ -325,6 +416,7 @@ export class Player {
       lives: this.lives,
       score: this.score,
       exploding: this.ship.exploding,
+      thrusting: this.ship.thrusting,
       health: this.ship.health,
       maxHealth: this.ship.maxHealth,
     };

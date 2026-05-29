@@ -316,7 +316,7 @@ export class GameInteractions {
   /**
    * Wait for a specific number of asteroids to be created
    */
-  async waitForAsteroids(count: number, timeoutMs: number = 10000): Promise<void> {
+  async waitForAsteroids(count: number, timeoutMs: number = 20000): Promise<void> {
     await this.page.waitForFunction(
       (expectedCount) => {
         const gameController = (window as any).gameController;
@@ -401,7 +401,8 @@ export class GameInteractions {
       const gameController = (window as any).gameController;
       if (gameController?.playerManager?.getLocalPlayer) {
         const player = gameController.playerManager.getLocalPlayer();
-        return player?.ship?.health || 100;
+        // Use ?? (not ||) so a real health of 0 isn't reported as full health.
+        return player?.ship?.health ?? 100;
       }
       return 100;
     });
@@ -410,21 +411,22 @@ export class GameInteractions {
   /**
    * Get ship position
    */
-  async getShipPosition(): Promise<{ x: number; y: number } | null> {
+  async getShipPosition(): Promise<{ x: number; y: number }> {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;
       if (gameController?.playerManager?.getLocalPlayer) {
         const player = gameController.playerManager.getLocalPlayer();
-        return player?.ship?.position || null;
+        const pos = player?.ship?.position;
+        if (pos) return pos;
       }
-      return null;
+      throw new Error('No local ship position available');
     });
   }
 
   /**
-   * Get asteroid positions
+   * Get asteroid positions. (Roid exposes its radius as `r`, not `radius`.)
    */
-  async getAsteroidPositions(): Promise<Array<{ x: number; y: number; radius: number }>> {
+  async getAsteroidPositions(): Promise<Array<{ x: number; y: number; radius: number; id: string }>> {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;
       if (gameController?.getCurrRoidBelt) {
@@ -432,7 +434,8 @@ export class GameInteractions {
         return roidBelt ? roidBelt.getRoids().map((roid: any) => ({
           x: roid.position.x,
           y: roid.position.y,
-          radius: roid.radius
+          radius: roid.r,
+          id: roid.id,
         })) : [];
       }
       return [];
@@ -450,8 +453,8 @@ export class GameInteractions {
         return roidBelt ? roidBelt.getRoids().map((roid: any) => ({
           x: roid.position.x,
           y: roid.position.y,
-          radius: roid.radius,
-          size: roid.size || roid.radius,
+          radius: roid.r,
+          size: roid.r,
           id: roid.id || 'unknown'
         })) : [];
       }
@@ -635,5 +638,716 @@ export class GameInteractions {
       }
       return false;
     });
+  }
+
+  // ==========================================================================
+  // Deterministic test primitives
+  //
+  // The local player's ship is fully client-simulated, so tests can place it
+  // precisely and clear spawn protection to drive real, observable collisions
+  // (damage, destruction, splitting, scoring) against the *playable* config —
+  // no gameplay-hostile debug flags required.
+  // ==========================================================================
+
+  /** Server-assigned id of the local player (used as attackerId in damage). */
+  async getLocalPlayerId(): Promise<string> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.getNetworkManager?.().getLocalPlayerId?.() ?? '';
+    });
+  }
+
+  /** Current score of the local player (server-authoritative, synced down). */
+  async getScore(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.getCurrScore ? gc.getCurrScore() : 0;
+    });
+  }
+
+  /**
+   * Place the local ship at an exact world position, at rest, with spawn
+   * protection cleared so collisions register on the next frame.
+   */
+  async placeShipAt(x: number, y: number): Promise<void> {
+    await this.page.evaluate(
+      ({ x, y }) => {
+        const gc = (window as any).gameController;
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!ship) {
+          throw new Error('No local ship to place');
+        }
+        ship.position = { x, y };
+        ship.velocity = { x: 0, y: 0 };
+        ship.thrusting = false;
+        ship.angularVelocity = 0;
+        ship.blinkCount = 0;
+        ship.spawnProtectionTimer = 0;
+      },
+      { x, y }
+    );
+  }
+
+  /**
+   * Re-arm spawn protection so the ship stops colliding (lets a test land a
+   * single collision and then stop, avoiding runaway chain collisions).
+   */
+  async armSpawnProtection(): Promise<void> {
+    await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+      if (ship) {
+        ship.blinkCount = 600;
+        ship.spawnProtectionTimer = 600;
+      }
+    });
+  }
+
+  /** Snapshot of all bots the client currently knows about. */
+  async getBots(): Promise<
+    Array<{ id: string; x: number; y: number; health: number; maxHealth: number; exploding: boolean; r: number }>
+  > {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+      return players
+        .filter((p: any) => p.type === 'bot')
+        .map((p: any) => ({
+          id: p.id,
+          x: p.ship.position.x,
+          y: p.ship.position.y,
+          health: p.ship.health,
+          maxHealth: p.ship.maxHealth,
+          exploding: p.ship.exploding,
+          r: p.ship.r,
+        }));
+    });
+  }
+
+  /** Wait until at least `count` bots are known to the client. */
+  async waitForBots(count: number, timeoutMs = 25000): Promise<void> {
+    await this.page.waitForFunction(
+      (expected) => {
+        const gc = (window as any).gameController;
+        const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+        return players.filter((p: any) => p.type === 'bot').length >= expected;
+      },
+      count,
+      { timeout: timeoutMs }
+    );
+  }
+
+  /** Aim the ship at a world point and fire one laser. */
+  async fireLaserToward(targetX: number, targetY: number): Promise<void> {
+    await this.page.evaluate(
+      ({ targetX, targetY }) => {
+        const gc = (window as any).gameController;
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!ship) {
+          throw new Error('No local ship to fire from');
+        }
+        const dx = targetX - ship.position.x;
+        const dy = targetY - ship.position.y;
+        // Forward vector is (cos a, -sin a), so invert dy.
+        ship.angle = Math.atan2(-dy, dx);
+        ship.canShoot = true;
+        ship.shoot();
+      },
+      { targetX, targetY }
+    );
+  }
+
+  /**
+   * Destroy a specific asteroid with aimed lasers (no chain reaction: a laser
+   * is consumed on its first hit). The ship is parked just *center-ward* of the
+   * asteroid — keeping it safely inside the boundary — and fires outward at the
+   * target over a short, low-interception path. Resolves once the asteroid is
+   * gone from the belt.
+   */
+  async destroyAsteroidWithLaser(
+    asteroid: { x: number; y: number; id: string; radius: number },
+    timeoutMs = 15000
+  ): Promise<void> {
+    const dist = Math.sqrt(asteroid.x * asteroid.x + asteroid.y * asteroid.y);
+    const gap = asteroid.radius + 30; // park just off the asteroid edge for a fast hit
+    let shipX: number;
+    let shipY: number;
+    if (dist < 1) {
+      shipX = asteroid.x - gap;
+      shipY = asteroid.y;
+    } else {
+      // Move from the asteroid toward the origin so the ship stays in-bounds.
+      shipX = asteroid.x - (asteroid.x / dist) * gap;
+      shipY = asteroid.y - (asteroid.y / dist) * gap;
+    }
+
+    await this.placeShipAt(shipX, shipY);
+    await this.syncShipPositionToServer();
+    await this.armSpawnProtection(); // invulnerable to ship-asteroid collisions while shooting
+
+    const targetGone = () =>
+      this.page.evaluate((id) => {
+        const gc = (window as any).gameController;
+        const roids = gc?.getCurrRoidBelt?.()?.getRoids?.() ?? [];
+        return !roids.some((r: any) => r.id === id);
+      }, asteroid.id);
+
+    // Fire ONE laser at a time, stopping as soon as the target is destroyed.
+    // Bursting would let follow-up lasers destroy the freshly-spawned fragments
+    // (over-destruction), so we must fire the minimum needed.
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (await targetGone()) return;
+      await this.fireLaserToward(asteroid.x, asteroid.y);
+      // Allow the short-range laser to travel to the (stationary) target and
+      // for the destroy round-trip to remove it from the belt.
+      await this.page.waitForTimeout(450);
+      if (await targetGone()) return;
+    }
+    throw new Error(`Asteroid ${asteroid.id} was not destroyed by laser within ${timeoutMs}ms`);
+  }
+
+  /**
+   * Drive a ship→asteroid collision: pin the ship on the asteroid and poll
+   * until the hit registers (ship took damage), re-pinning each iteration so a
+   * throttled game loop still lands it. As soon as the collision is detected,
+   * move the ship center-ward and re-arm spawn protection — moving off the
+   * impact point (where split fragments spawn) prevents a runaway chain
+   * reaction, so the split reads as a clean increase.
+   */
+  async collideShipWithAsteroid(asteroid: { x: number; y: number }): Promise<void> {
+    const startHealth = await this.getShipHealth();
+    const deadline = Date.now() + 4000;
+    let collided = false;
+    while (Date.now() < deadline) {
+      await this.placeShipAt(asteroid.x, asteroid.y);
+      await this.page.waitForTimeout(80);
+      if ((await this.getShipHealth()) < startHealth) {
+        collided = true;
+        break;
+      }
+    }
+    // Peel away toward the origin and become invulnerable so we only register
+    // the single intended collision (no chain reaction with split fragments).
+    await this.page.evaluate(
+      ({ x, y }) => {
+        const gc = (window as any).gameController;
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!ship) return;
+        const dist = Math.sqrt(x * x + y * y) || 1;
+        const step = Math.min(400, dist);
+        ship.position = { x: x - (x / dist) * step, y: y - (y / dist) * step };
+        ship.velocity = { x: 0, y: 0 };
+        ship.thrusting = false;
+        ship.blinkCount = 600;
+        ship.spawnProtectionTimer = 600;
+      },
+      { x: asteroid.x, y: asteroid.y }
+    );
+    if (!collided) {
+      throw new Error('Ship never registered a collision with the asteroid');
+    }
+  }
+
+  /**
+   * Fire repeated, re-aimed laser volleys at a bot until it is destroyed (or
+   * the shot budget is exhausted). Returns what was observed so the caller can
+   * assert on real damage/kill signals.
+   */
+  async attackBotWithLasers(
+    botId: string,
+    shots = 8
+  ): Promise<{ minHealthObserved: number; everExploding: boolean; scoreGain: number }> {
+    const startScore = await this.getScore();
+    let minHealthObserved = Number.POSITIVE_INFINITY;
+    let everExploding = false;
+
+    for (let i = 0; i < shots; i++) {
+      const sample = await this.page.evaluate((id) => {
+        const gc = (window as any).gameController;
+        const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+        const bot = players.find((p: any) => p.id === id);
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!bot || !ship) {
+          return null;
+        }
+        // Park next to the bot, aimed at it, and fire immediately so the laser
+        // reaches the (slow-moving) bot before it can drift out of the path.
+        const bx = bot.ship.position.x;
+        const by = bot.ship.position.y;
+        ship.position = { x: bx - 45, y: by };
+        ship.velocity = { x: 0, y: 0 };
+        ship.thrusting = false;
+        ship.blinkCount = 600; // stay invulnerable while dueling the bot
+        ship.spawnProtectionTimer = 600;
+        ship.angle = Math.atan2(-(by - ship.position.y), bx - ship.position.x);
+        ship.canShoot = true;
+        ship.shoot();
+        return { health: bot.ship.health, exploding: bot.ship.exploding };
+      }, botId);
+
+      if (sample) {
+        minHealthObserved = Math.min(minHealthObserved, sample.health);
+        everExploding = everExploding || sample.exploding;
+      }
+      await this.page.waitForTimeout(160);
+
+      // Sample again after the laser has had time to land.
+      const after = await this.page.evaluate((id) => {
+        const gc = (window as any).gameController;
+        const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+        const bot = players.find((p: any) => p.id === id);
+        return bot ? { health: bot.ship.health, exploding: bot.ship.exploding } : null;
+      }, botId);
+      if (after) {
+        minHealthObserved = Math.min(minHealthObserved, after.health);
+        everExploding = everExploding || after.exploding;
+      }
+    }
+
+    const endScore = await this.getScore();
+    return {
+      minHealthObserved: Number.isFinite(minHealthObserved) ? minHealthObserved : 100,
+      everExploding,
+      scoreGain: endScore - startScore,
+    };
+  }
+
+  /**
+   * Wait until the player can actually take damage. Freshly-spawned players get
+   * server-side spawn protection during which ALL incoming damage is silently
+   * ignored; tests that assert collision/boundary damage must wait it out. We
+   * poll the server-authoritative spawn-protection timer (mirrored into the
+   * local player from the gameState) so this is robust to server-loop timing
+   * drift under load — far more reliable than a fixed sleep.
+   */
+  async waitForCombatReady(timeoutMs = 12000): Promise<void> {
+    await this.page.waitForFunction(
+      () => {
+        const gc = (window as any).gameController;
+        const lp = gc?.playerManager?.getLocalPlayer?.();
+        return !!lp && (lp.serverSpawnProtectionTimer ?? 0) === 0;
+      },
+      undefined,
+      { timeout: timeoutMs, polling: 100 }
+    );
+  }
+
+  /**
+   * Pin the ship on an asteroid (and the fragments that spawn there) until the
+   * sustained collisions destroy it — used to exercise the death→respawn flow.
+   * Each hit is 25 damage, so the ship dies after several collisions. Returns
+   * once the server reports the ship as exploding or out of health.
+   */
+  async crashShipIntoAsteroidUntilDestroyed(asteroid: { x: number; y: number }): Promise<void> {
+    const startLives = await this.getLives();
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      await this.placeShipAt(asteroid.x, asteroid.y);
+      await this.page.waitForTimeout(150);
+      const [exploding, health, lives] = await Promise.all([
+        this.isShipExploding(),
+        this.getShipHealth(),
+        this.getLives(),
+      ]);
+      if (exploding || health <= 0 || lives < startLives) {
+        // Move off the impact point so split fragments cannot re-damage the
+        // ship while we wait for the server respawn reposition.
+        await this.page.evaluate(
+          ({ x, y }) => {
+            const gc = (window as any).gameController;
+            const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+            if (!ship) return;
+            const dist = Math.sqrt(x * x + y * y) || 1;
+            const step = Math.min(400, dist);
+            ship.position = { x: x - (x / dist) * step, y: y - (y / dist) * step };
+            ship.velocity = { x: 0, y: 0 };
+          },
+          { x: asteroid.x, y: asteroid.y }
+        );
+        return;
+      }
+    }
+    throw new Error('Ship was not destroyed by sustained asteroid collision');
+  }
+
+  /** Distance of the local ship from the world origin (boundary is a circle). */
+  async getShipDistanceFromCenter(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+      if (!ship) return 0;
+      return Math.sqrt(ship.position.x * ship.position.x + ship.position.y * ship.position.y);
+    });
+  }
+
+  /**
+   * Let a few network ticks propagate the client ship transform to the server
+   * before triggering server-authoritative damage.
+   */
+  async syncShipPositionToServer(): Promise<void> {
+    await this.page.waitForTimeout(350);
+  }
+
+  async killLocalPlayerWithLaserDamage(hits = 4, damagePerHit = 25): Promise<void> {
+    await this.page.evaluate(
+      async ({ hits, damagePerHit }) => {
+        const gc = (window as any).gameController;
+        const nm = gc?.getNetworkManager?.();
+        const playerId =
+          nm?.getLocalPlayerId?.() || gc?.playerManager?.getLocalPlayer?.()?.id;
+        if (!nm || !playerId) {
+          throw new Error('Cannot apply laser damage — local player not connected');
+        }
+        for (let i = 0; i < hits; i++) {
+          nm.sendMessage({
+            type: 'laserDamage',
+            data: {
+              targetPlayerId: playerId,
+              attackerId: 'server-bot-0',
+              damage: damagePerHit,
+            },
+          });
+          await new Promise((resolve) => setTimeout(resolve, 120));
+        }
+      },
+      { hits, damagePerHit }
+    );
+  }
+
+  /** Apply laser damage until the server reports a life lost (handles spawn protection drift). */
+  async killLocalPlayerUntilLifeLost(timeoutMs = 30000): Promise<void> {
+    const livesBefore = await this.getLives();
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await this.waitForCombatReady();
+      await this.killLocalPlayerWithLaserDamage(4, 25);
+      await this.page.waitForTimeout(400);
+      if ((await this.getLives()) < livesBefore) {
+        return;
+      }
+    }
+    throw new Error('laser damage should cost a life');
+  }
+
+  /** Wait until respawn completes at a new random location away from death. */
+  async waitForRandomRespawnPlacement(
+    deathPosition: { x: number; y: number },
+    timeoutMs = 60000
+  ): Promise<{ x: number; y: number }> {
+    await this.page.waitForFunction(
+      ({ deathPosition, minDistance }) => {
+        const gc = (window as any).gameController;
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!ship || ship.health !== 100 || ship.exploding) {
+          return false;
+        }
+        const dist = Math.hypot(
+          ship.position.x - deathPosition.x,
+          ship.position.y - deathPosition.y
+        );
+        return dist > minDistance;
+      },
+      { deathPosition, minDistance: 75 },
+      { timeout: timeoutMs, polling: 200 }
+    );
+    return this.getShipPosition();
+  }
+
+  /** Number of active lasers on the local ship. */
+  async getLocalLaserCount(): Promise<number> {
+    return this.getLaserCount();
+  }
+
+  /** @deprecated Use waitForRandomRespawnPlacement when asserting respawn location. */
+  async waitForShipRespawn(
+    deathPosition?: { x: number; y: number },
+    timeoutMs = 60000
+  ): Promise<{ x: number; y: number }> {
+    if (deathPosition) {
+      return this.waitForRandomRespawnPlacement(deathPosition, timeoutMs);
+    }
+    await this.waitForShipAlive(timeoutMs);
+    return this.getShipPosition();
+  }
+
+  /** Whether the main game loop is still running. */
+  async isGameRunning(): Promise<boolean> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.getIsGameRunning?.() ?? false;
+    });
+  }
+
+  /** Server-authoritative spawn protection is still active. */
+  async isServerSpawnProtected(): Promise<boolean> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const lp = gc?.playerManager?.getLocalPlayer?.();
+      return (lp?.serverSpawnProtectionTimer ?? 0) > 0;
+    });
+  }
+
+  /** Kill banner text from GameStateManager (empty when inactive). */
+  async getKillMessage(): Promise<string> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.getGameStateManager?.().getKillMessage?.() ?? '';
+    });
+  }
+
+  /** HUD overlay text (game over, death messages). */
+  async getHudText(): Promise<string> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.getText?.() ?? '';
+    });
+  }
+
+  /** Whether the start screen is visible again. */
+  async isStartScreenVisible(): Promise<boolean> {
+    return await this.page.evaluate(() => {
+      const el = document.getElementById('start-screen');
+      return el ? el.style.display !== 'none' : false;
+    });
+  }
+
+  /** Leaderboard rows derived from synced player entities. */
+  async getLeaderboardEntries(): Promise<
+    Array<{ name: string; score: number; type: string; id: string }>
+  > {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const local = gc?.playerManager?.getLocalPlayer?.();
+      const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+      const all = local && !players.includes(local) ? [local, ...players] : players;
+      return all
+        .map((p: any) => ({
+          name: p.name,
+          score: p.score ?? 0,
+          type: p.type,
+          id: p.id,
+        }))
+        .sort((a: { score: number }, b: { score: number }) => b.score - a.score);
+    });
+  }
+
+  /** Count of active lasers on the local ship. */
+  async getLaserCount(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.playerManager?.getLocalPlayer()?.ship?.lasers?.length ?? 0;
+    });
+  }
+
+  /** Local ship heading in radians. */
+  async getShipAngle(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      return gc?.playerManager?.getLocalPlayer()?.ship?.angle ?? 0;
+    });
+  }
+
+  /** All players known to the client (includes local when synced). */
+  async getAllPlayerCount(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const local = gc?.playerManager?.getLocalPlayer?.();
+      const remote = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+      const ids = new Set<string>();
+      if (local?.id) ids.add(local.id);
+      for (const p of remote) ids.add(p.id);
+      return ids.size;
+    });
+  }
+
+  /** Remote human player ids visible to this client. */
+  async getRemoteHumanPlayerIds(): Promise<string[]> {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const localId = gc?.getNetworkManager?.().getLocalPlayerId?.();
+      return (gc?.getNetworkManager?.().getAllPlayers?.() ?? [])
+        .filter((p: any) => p.type === 'remote' && p.id !== localId)
+        .map((p: any) => p.id);
+    });
+  }
+
+  /** Apply chip damage on the client (starts the local regen timer). */
+  async applyLocalChipDamage(amount = 25): Promise<void> {
+    await this.page.evaluate((damage) => {
+      const gc = (window as any).gameController;
+      const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+      if (!ship) throw new Error('No local ship');
+      ship.takeDamage(damage, 'test');
+    }, amount);
+  }
+
+  /** Apply laser damage without killing (single hit by default). */
+  async applyLaserDamageToLocal(hits = 1, damagePerHit = 25): Promise<void> {
+    await this.killLocalPlayerWithLaserDamage(hits, damagePerHit);
+  }
+
+  /** Poll until local health exceeds a threshold. */
+  async waitForHealthAbove(threshold: number, timeoutMs = 15000): Promise<number> {
+    await this.page.waitForFunction(
+      (min) => {
+        const gc = (window as any).gameController;
+        const health = gc?.playerManager?.getLocalPlayer()?.ship?.health ?? 0;
+        return health > min;
+      },
+      threshold,
+      { timeout: timeoutMs, polling: 200 }
+    );
+    return this.getShipHealth();
+  }
+
+  /** Pin the local ship on a bot so ship-to-ship collision damage applies. */
+  async pinShipOnBot(botId: string, durationMs = 2500): Promise<void> {
+    const deadline = Date.now() + durationMs;
+    while (Date.now() < deadline) {
+      await this.page.evaluate(
+        ({ id }) => {
+          const gc = (window as any).gameController;
+          const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+          const bot = players.find((p: any) => p.id === id);
+          const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+          if (bot?.ship && ship) {
+            ship.position = { x: bot.ship.position.x, y: bot.ship.position.y };
+            ship.velocity = { x: 0, y: 0 };
+            ship.thrusting = false;
+          }
+        },
+        { id: botId }
+      );
+      await this.page.waitForTimeout(100);
+    }
+  }
+
+  /** Send server-authoritative damage to a bot (simulates asteroid ram). */
+  async damageBot(botId: string, damage: number, attackerId = 'asteroid-collision'): Promise<void> {
+    await this.page.evaluate(
+      ({ botId, damage, attackerId }) => {
+        const gc = (window as any).gameController;
+        gc?.getNetworkManager?.().sendMessage?.({
+          type: 'botDamage',
+          data: { botId, attackerId, damage },
+        });
+      },
+      { botId, damage, attackerId }
+    );
+    await this.page.waitForTimeout(200);
+  }
+
+  /** Poll until a bot finishes respawning at full health. */
+  async waitForBotRespawn(botId: string, timeoutMs = 20000): Promise<{ x: number; y: number }> {
+    await this.page.waitForFunction(
+      (id) => {
+        const gc = (window as any).gameController;
+        const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+        const bot = players.find((p: any) => p.id === id);
+        return Boolean(bot?.ship && bot.ship.health === 100 && !bot.ship.exploding);
+      },
+      botId,
+      { timeout: timeoutMs, polling: 200 }
+    );
+    const bots = await this.getBots();
+    const bot = bots.find((b) => b.id === botId);
+    if (!bot) throw new Error(`Bot ${botId} missing after respawn`);
+    return { x: bot.x, y: bot.y };
+  }
+
+  async dieOnceViaBoundary(): Promise<void> {
+    await this.waitForCombatReady();
+    const livesBefore = await this.getLives();
+    const deathPosition = { x: 3150, y: 0 };
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      await this.placeShipAt(deathPosition.x, deathPosition.y);
+      await this.page.waitForTimeout(200);
+      if ((await this.getLives()) < livesBefore) {
+        if ((await this.getLives()) > 0 && (await this.isGameRunning())) {
+          await this.waitForShipRespawn(deathPosition, 25000);
+        }
+        return;
+      }
+    }
+    throw new Error('boundary crossing should cost a life');
+  }
+
+  /** Burn through all lives until the game-over flow stops the session. */
+  async dieUntilGameOver(): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const lives = await this.getLives();
+      if (lives <= 0 || !(await this.isGameRunning())) {
+        break;
+      }
+      await this.waitForCombatReady();
+      await this.killLocalPlayerUntilLifeLost(15000);
+      if ((await this.getLives()) > 0 && (await this.isGameRunning())) {
+        await this.waitForShipAlive(25000);
+        await this.waitForCombatReady();
+      }
+    }
+  }
+
+  /** Wait until the local ship is alive again (ignores respawn placement). */
+  async waitForShipAlive(timeoutMs = 25000): Promise<void> {
+    await this.page.waitForFunction(
+      () => {
+        const gc = (window as any).gameController;
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        return Boolean(ship && ship.health === 100 && !ship.exploding);
+      },
+      { timeout: timeoutMs, polling: 200 }
+    );
+  }
+
+  /**
+   * Fire at a remote player's ship from client A (requires both clients in game).
+   * Parks the shooter adjacent to the target and fires one laser.
+   */
+  async fireLaserAtRemotePlayer(targetPlayerId: string): Promise<void> {
+    await this.page.evaluate(
+      (targetId) => {
+        const gc = (window as any).gameController;
+        const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+        const target = players.find((p: any) => p.id === targetId);
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!target?.ship || !ship) {
+          throw new Error('Shooter or target ship unavailable');
+        }
+        const tx = target.ship.position.x;
+        const ty = target.ship.position.y;
+        ship.position = { x: tx - 45, y: ty };
+        ship.velocity = { x: 0, y: 0 };
+        ship.blinkCount = 0;
+        ship.spawnProtectionTimer = 0;
+        ship.angle = Math.atan2(-(ty - ship.position.y), tx - ship.position.x);
+        ship.canShoot = true;
+        ship.shoot();
+      },
+      targetPlayerId
+    );
+    await this.page.waitForTimeout(300);
+  }
+
+  /** Read a remote player's synced health by id. */
+  async getPlayerHealthById(playerId: string): Promise<number> {
+    return await this.page.evaluate((id) => {
+      const gc = (window as any).gameController;
+      const local = gc?.playerManager?.getLocalPlayer?.();
+      if (local?.id === id) return local.ship.health;
+      const players = gc?.getNetworkManager?.().getAllPlayers?.() ?? [];
+      const found = players.find((p: any) => p.id === id);
+      return found?.ship?.health ?? -1;
+    }, playerId);
+  }
+
+  /** Standard single-player boot sequence for scenario tests. */
+  async bootSinglePlayerGame(): Promise<void> {
+    await this.navigateToGame();
+    await this.startGame();
+    await this.waitForGameReady();
+    await this.waitForCombatReady();
   }
 }

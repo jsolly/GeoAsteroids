@@ -67,6 +67,14 @@ export class GameEngine {
     } else if (humanPlayerCount > 0 && this.isPaused) {
       this.isPaused = false;
       logger.info('▶️ Game resumed - human players are back online');
+      // Bots were cleared by resetGameState() while paused. Recreate them so
+      // there are always opponents whenever a human is actively playing.
+      if (this.entityManager.getBotCount() === 0) {
+        const bots = this.createBots(3);
+        if (bots) {
+          logger.info(`🤖 Recreated ${bots.length} bots on resume`);
+        }
+      }
     }
   }
 
@@ -276,6 +284,7 @@ export class GameEngine {
         health: entity.health,
         maxHealth: entity.maxHealth,
         respawnTimer: entity.respawnTimer,
+        spawnProtectionTimer: entity.spawnProtectionTimer,
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,

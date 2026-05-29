@@ -47,30 +47,46 @@ afterEach(async () => {
   await browserManager.closePage();
 });
 
+// Scenario: destroying asteroids of different sizes awards points, and the
+// player's score climbs with each kill.
 test('scoring works correctly for different roid sizes', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
-  
-  const gameInteractions = new GameInteractions(page);
 
-  await gameInteractions.navigateToGame();
-  await gameInteractions.waitForGameToLoad();
+  const game = new GameInteractions(page);
 
-  const initialScore = await gameInteractions.getPlayerScore();
+  await game.navigateToGame();
+  await game.waitForGameToLoad();
+  await game.waitForGameReady();
+  await game.waitForAsteroids(2);
 
-  // Enable debug settings
-  await gameInteractions.enableDebugSettings({
-    PLACE_ON_LOCAL_PLAYER: true,
-    INITIAL_COUNT: 3,
-  });
+  const initialScore = await game.getScore();
+  expect(initialScore).toBe(0);
 
-  await gameInteractions.waitForAsteroids(3);
+  // Destroy a large asteroid — score must rise.
+  const large = (await game.getAsteroidPositions()).find((a) => a.radius >= 40);
+  expect(large).toBeTruthy();
+  if (!large) return;
+  await game.destroyAsteroidWithLaser(large);
 
-  // Collide with asteroids
-  await gameInteractions.moveShipToAsteroids();
-  await gameInteractions.waitForAsteroidSplitting();
+  await expect
+    .poll(() => game.getScore(), { timeout: 8000, message: 'score should increase after first kill' })
+    .toBeGreaterThan(initialScore);
 
-  // Check that score increased
-  const finalScore = await gameInteractions.getPlayerScore();
-  expect(finalScore).toBeGreaterThan(initialScore);
+  const scoreAfterLarge = await game.getScore();
+
+  // Destroy one of the resulting medium fragments — score must rise again.
+  await expect
+    .poll(async () => (await game.getAsteroidPositions()).some((a) => a.radius >= 25 && a.radius < 40), {
+      timeout: 8000,
+    })
+    .toBe(true);
+  const medium = (await game.getAsteroidPositions()).find((a) => a.radius >= 25 && a.radius < 40);
+  expect(medium).toBeTruthy();
+  if (!medium) return;
+  await game.destroyAsteroidWithLaser(medium);
+
+  await expect
+    .poll(() => game.getScore(), { timeout: 8000, message: 'score should increase after second kill' })
+    .toBeGreaterThan(scoreAfterLarge);
 }, TestConfig.DEFAULT_TIMEOUT);

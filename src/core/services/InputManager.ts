@@ -1,4 +1,4 @@
-import type { Player } from '../../entities/player/Player';
+import { PlayerManager } from '../../entities/player/PlayerManager';
 import { keyDown, keyUp } from '../../input/keybindings';
 import {
   handleMouseDown,
@@ -25,17 +25,21 @@ export class InputManager {
     return InputManager.instance;
   }
 
-  initializeListeners(localPlayer: Player): void {
+  initializeListeners(): void {
     if (this.listenersInitialized) {
       return;
     }
 
-    logger.debug('INPUT', 'Initializing InputManager listeners for player', {
-      playerName: localPlayer.name,
-    });
+    logger.debug('INPUT', 'Initializing InputManager listeners');
+
+    const getLocalPlayer = () => PlayerManager.getInstance().getLocalPlayer();
 
     // Keyboard listeners
     document.addEventListener('keydown', (ev) => {
+      const localPlayer = getLocalPlayer();
+      if (!localPlayer) {
+        return;
+      }
       logger.debug('INPUT', 'Key down event', {
         key: ev.code,
         gameRunning: this.gameStateManager.getIsGameRunning(),
@@ -48,6 +52,10 @@ export class InputManager {
     });
 
     document.addEventListener('keyup', (ev) => {
+      const localPlayer = getLocalPlayer();
+      if (!localPlayer) {
+        return;
+      }
       logger.debug('INPUT', 'Key up event', {
         key: ev.code,
         gameRunning: this.gameStateManager.getIsGameRunning(),
@@ -60,23 +68,34 @@ export class InputManager {
     const canvas = document.querySelector('canvas');
     if (canvas) {
       canvas.addEventListener('mousemove', (ev) => {
-        if (this.gameStateManager.getIsGameRunning()) {
+        const localPlayer = getLocalPlayer();
+        if (localPlayer && this.gameStateManager.getIsGameRunning()) {
           handleMouseMove(ev, localPlayer);
         }
       });
       canvas.addEventListener('mousedown', (ev) => {
-        if (this.gameStateManager.getIsGameRunning()) {
+        const localPlayer = getLocalPlayer();
+        if (localPlayer && this.gameStateManager.getIsGameRunning()) {
           handleMouseDown(ev, localPlayer);
         }
       });
       canvas.addEventListener('mouseup', (ev) => {
-        if (this.gameStateManager.getIsGameRunning()) {
+        const localPlayer = getLocalPlayer();
+        if (localPlayer && this.gameStateManager.getIsGameRunning()) {
           handleMouseUp(ev, localPlayer);
         }
       });
       // Prevent default context menu for right-click thrust
       canvas.addEventListener('contextmenu', preventContextMenu);
     }
+
+    // Reset shoot cooldown if the mouse is released outside the canvas
+    document.addEventListener('mouseup', (ev) => {
+      const localPlayer = getLocalPlayer();
+      if (localPlayer && ev.button === 0) {
+        localPlayer.ship.canShoot = true;
+      }
+    });
 
     this.listenersInitialized = true;
   }

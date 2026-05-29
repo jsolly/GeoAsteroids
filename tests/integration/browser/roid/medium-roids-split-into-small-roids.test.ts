@@ -47,33 +47,53 @@ afterEach(async () => {
   await browserManager.closePage();
 });
 
+// Scenario: a medium asteroid (produced by splitting a large one) itself
+// splits into small fragments when destroyed.
 test('medium roids split into small roids', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
-  
-  const gameInteractions = new GameInteractions(page);
 
-  await gameInteractions.navigateToGame();
-  await gameInteractions.waitForGameToLoad();
+  const game = new GameInteractions(page);
 
-  // Enable debug settings to create medium-sized roids
-  await gameInteractions.enableDebugSettings({
-    PLACE_ON_LOCAL_PLAYER: true,
-    INITIAL_COUNT: 2,
-    ALL_LARGE: false, // This should create medium-sized roids
-  });
+  await game.navigateToGame();
+  await game.waitForGameToLoad();
+  await game.waitForGameReady();
+  await game.waitForAsteroids(1);
 
-  await gameInteractions.waitForAsteroids(2);
+  // Step 1: break a large asteroid to produce medium fragments.
+  const initial = await game.getAsteroidPositions();
+  const large = initial.find((a) => a.radius >= 40);
+  expect(large, 'expected a large asteroid to break first').toBeTruthy();
+  if (!large) return;
+  await game.destroyAsteroidWithLaser(large);
 
-  const initialCount = await gameInteractions.getAsteroidCount();
+  // Step 2: find one of the resulting medium fragments (25 ≤ r < 40).
+  await expect
+    .poll(
+      async () => (await game.getAsteroidPositions()).some((a) => a.radius >= 25 && a.radius < 40),
+      { timeout: 8000, message: 'expected a medium fragment to exist' }
+    )
+    .toBe(true);
 
-  // Collide with medium roids
-  await gameInteractions.moveShipToAsteroids();
-  
-  // Wait for asteroid count to change due to splitting
-  await gameInteractions.waitForAsteroidCountChange(initialCount);
+  const afterLarge = await game.getAsteroidPositions();
+  const medium = afterLarge.find((a) => a.radius >= 25 && a.radius < 40);
+  expect(medium).toBeTruthy();
+  if (!medium) return;
 
-  // Check that we now have more asteroids due to splitting
-  const finalCount = await gameInteractions.getAsteroidCount();
-  expect(finalCount).toBeGreaterThan(initialCount);
+  const countBeforeMediumSplit = afterLarge.length;
+
+  // Step 3: destroy the medium fragment — it should split into small pieces.
+  await game.destroyAsteroidWithLaser(medium);
+
+  await expect
+    .poll(() => game.getAsteroidCount(), {
+      timeout: 8000,
+      message: 'medium asteroid should split into more pieces',
+    })
+    .toBeGreaterThan(countBeforeMediumSplit);
+
+  // The medium produced small fragments (r < 25).
+  const sizes = await game.getAsteroidSizes();
+  const smallFragments = sizes.filter((r) => r < 25);
+  expect(smallFragments.length, 'expected small fragments after the medium split').toBeGreaterThan(0);
 }, TestConfig.DEFAULT_TIMEOUT);

@@ -54,22 +54,23 @@ describe('Server pause functionality', () => {
     expect(gameEngine.getAsteroidCount()).toBe(20);
   });
 
-  it('should pause game when all players leave', () => {
+  it('should pause and reset the world when all players leave', () => {
     // Remove the player
     const removedPlayer = gameEngine.removePlayer('test-player');
-    
+
     expect(removedPlayer).toBeDefined();
     expect(gameEngine.isGamePaused()).toBe(true);
-    
-    // Asteroids should still exist
-    expect(gameEngine.getAsteroidCount()).toBe(20);
+
+    // When the last human leaves, the world resets so the next player starts
+    // fresh: asteroids are cleared.
+    expect(gameEngine.getAsteroidCount()).toBe(0);
   });
 
-  it('should return existing asteroids when requested again', () => {
-    // Request asteroids again - should return existing ones
+  it('should create a fresh asteroid field when a new player initializes one', () => {
+    // With the world reset, requesting asteroids creates a brand-new field.
     const asteroids = gameEngine.createAsteroids(10);
-    
-    // Should return existing asteroids, not create new ones
+
+    // DEBUG.ROIDS.INITIAL_COUNT (20) overrides the requested count.
     expect(asteroids.length).toBe(20);
     expect(gameEngine.getAsteroidCount()).toBe(20);
   });

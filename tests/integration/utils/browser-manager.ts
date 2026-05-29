@@ -3,16 +3,26 @@ import { chromium, Browser, Page } from 'playwright';
 export class BrowserManager {
   private browser: Browser | null = null;
   private page: Page | null = null;
+  private pages: Page[] = [];
 
   async initialize(): Promise<void> {
-    this.browser = await chromium.launch({ 
+    this.browser = await chromium.launch({
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-dev-shm-usage',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
-      ]
+        '--disable-features=VizDisplayCompositor',
+        // Keep the game loop (requestAnimationFrame) and timers running at full
+        // speed even when the headless page is treated as backgrounded. Without
+        // these, Chromium throttles rAF to ~1fps under load, which starves the
+        // client-side collision/boundary checks and makes placement-based tests
+        // flaky in long suite runs.
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-ipc-flooding-protection',
+      ],
     });
   }
 
@@ -21,26 +31,36 @@ export class BrowserManager {
       throw new Error('Browser not initialized. Call initialize() first.');
     }
 
-    this.page = await this.browser.newPage();
-    await this.page.setViewportSize({ width: 1920, height: 1080 });
+    const page = await this.browser.newPage();
+    this.page = page;
+    this.pages.push(page);
+    await page.setViewportSize({ width: 1920, height: 1080 });
     
     // Set user agent for consistent behavior
-    await this.page.setExtraHTTPHeaders({
+    await page.setExtraHTTPHeaders({
       'User-Agent': 'GeoAsteroids-Test-Bot/1.0'
     });
 
-    return this.page;
+    // Keep the page foregrounded so the game loop is not throttled.
+    await page.bringToFront();
+
+    return page;
   }
 
   async closePage(): Promise<void> {
-    if (this.page) {
-      await this.page.close();
-      this.page = null;
+    await this.closeAllPages();
+  }
+
+  async closeAllPages(): Promise<void> {
+    for (const page of this.pages) {
+      await page.close().catch(() => {});
     }
+    this.pages = [];
+    this.page = null;
   }
 
   async cleanup(): Promise<void> {
-    await this.closePage();
+    await this.closeAllPages();
     if (this.browser) {
       await this.browser.close();
       this.browser = null;

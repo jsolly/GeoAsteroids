@@ -120,4 +120,5 @@ export interface ServerEntityData {
   health: number;
   maxHealth: number;
   respawnTimer?: number;
+  spawnProtectionTimer?: number;
 }

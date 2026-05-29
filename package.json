@@ -19,6 +19,8 @@
     "test:integration": "./scripts/test-runner.sh tests/integration/ --reporter=verbose",
     "test:integration:run": "./scripts/test-runner.sh tests/integration/ --reporter=verbose",
     "test:integration:browser": "./scripts/test-runner.sh tests/integration/browser/ --reporter=verbose",
+    "test:integration:browser:e2e": "./scripts/test-runner.sh tests/integration/browser/e2e/ --reporter=verbose",
+    "test:integration:browser:sanity": "./scripts/test-runner.sh tests/integration/browser/sanity/ --reporter=verbose",
     "test:integration:server": "vitest run tests/integration/server/",
     "test:integration:component": "vitest run tests/integration/component/",
     "check:ts": "tsc --noEmit",

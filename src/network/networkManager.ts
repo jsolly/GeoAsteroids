@@ -84,7 +84,7 @@ export class NetworkManager {
   }): void {
     // Add required fields for PlayerUpdate
     const fullPlayerState = {
-      id: this.getLocalPlayerId(),
+      id: this.getLocalPlayerId() || this.connectionManager.getClientId(),
       name: this.getLocalPlayerName(),
       health: playerState.health ?? 100, // Default to 100 if not provided
       maxHealth: playerState.maxHealth ?? 100, // Default to 100 if not provided

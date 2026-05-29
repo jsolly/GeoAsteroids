@@ -1,4 +1,4 @@
-import { test, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { test, beforeAll, afterAll, beforeEach, afterEach, expect } from 'vitest';
 import { BrowserManager } from '../../utils/browser-manager';
 import { ScreenshotManager } from '../../utils/screenshot-manager';
 import { GameInteractions } from '../../utils/game-interactions';
@@ -47,41 +47,31 @@ afterEach(async () => {
   await browserManager.closePage();
 });
 
-// Test: Laser collision with bots
+// Scenario: a player's lasers that strike a bot reduce the bot's health.
 test('laser hits and damages bots', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
-  
+
   const game = new GameInteractions(page);
-  
-  // Navigate and start the game
+
   await game.navigateToGame();
   await game.startGame();
   await game.waitForGameInitialization(TestConfig.GAME_INIT_TIMEOUT);
-  
-  // Verify game elements
+  await game.waitForGameReady();
   await game.verifyGameCanvas();
-  await game.verifyGameArea();
-  
-  // Move ship to get closer to bots
-  await game.moveShip('right', 200);
-  await game.moveShip('up', 100);
-  
-  // Fire lasers at bots
-  await game.fireLasers(3, 300); // Fire 3 lasers with 300ms delay
-  
-  // Wait for potential bot damage
-  await page.waitForTimeout(1500);
-  
-  // Take a screenshot for debugging
+
+  // Find a bot and fire on it at close range.
+  await game.waitForBots(1);
+  const target = (await game.getBots())[0];
+  expect(target).toBeTruthy();
+
+  const result = await game.attackBotWithLasers(target.id, 10);
+
   const screenshotPath = screenshotManager.getScreenshotPath(
     screenshotManager.getTimestampedFilename('laser-bot-collision-test')
   );
   await page.screenshot({ path: screenshotPath });
-  
-  // Verify lasers were fired (basic check)
-  // In a real implementation, you might check for:
-  // - Bot health reduction
-  // - Score increase
-  // - Visual feedback of hits
+
+  // The bot's health dropped below full as a direct result of being shot.
+  expect(result.minHealthObserved, 'laser fire should damage the bot').toBeLessThan(100);
 }, TestConfig.DEFAULT_TIMEOUT);

@@ -48,41 +48,44 @@ afterEach(async () => {
   await browserManager.closePage();
 });
 
+// Scenario: a player that crosses the circular world boundary is destroyed,
+// loses a life, and respawns back inside the playfield.
 test('player explodes when hitting boundary', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
-  
+
   const game = new GameInteractions(page);
 
-  // Navigate to game and start
   await game.navigateToGame();
   await game.startGame();
   await game.waitForGameInitialization(TestConfig.GAME_INIT_TIMEOUT);
+  await game.waitForGameReady();
 
-  // Get initial ship position
-  const initialPosition = await game.getShipPosition();
-  console.log('Initial ship position:', initialPosition);
+  const initialLives = await game.getLives();
+  expect(initialLives).toBe(3);
 
-  // Move ship to the boundary by thrusting and turning right
-  console.log('Moving ship to boundary...');
-  
-  // First turn the ship to face right
-  await game.moveShip('right', 500); // Turn right
-  
-  // Then thrust forward for a long time to reach the boundary
-  await game.moveShip('up', 8000); // Thrust forward for 8 seconds
-  
-  // Check if ship is still alive (should be dead if boundary collision works)
-  const finalPosition = await game.getShipPosition();
-  console.log('Final ship position:', finalPosition);
-  
-  // Check if ship is exploding or has died
-  const isExploding = await game.isShipExploding();
-  const lives = await game.getLives();
-  
-  console.log('Ship exploding:', isExploding);
-  console.log('Lives remaining:', lives);
-  
-  // The ship should have hit the boundary and exploded
-  expect(isExploding || lives < 3).toBe(true);
+  // Wait out spawn protection so the boundary hit is fatal immediately.
+  await game.waitForCombatReady();
+
+  // Place the ship just outside the circular boundary (radius 3100). The
+  // client's boundary check should detect this and report a fatal hit.
+  await game.placeShipAt(3150, 0);
+
+  // The player loses a life from the boundary collision.
+  await expect
+    .poll(() => game.getLives(), { timeout: 8000, message: 'crossing the boundary should cost a life' })
+    .toBeLessThan(initialLives);
+
+  // After the death/respawn cycle the player is returned inside the boundary
+  // (a respawn places them within 80% of the radius) and is alive again.
+  await expect
+    .poll(() => game.getShipDistanceFromCenter(), {
+      timeout: 12000,
+      message: 'player should respawn inside the boundary',
+    })
+    .toBeLessThan(3100);
+
+  await expect
+    .poll(() => game.getShipHealth(), { timeout: 12000, message: 'player should respawn with health' })
+    .toBeGreaterThan(0);
 }, TestConfig.DEFAULT_TIMEOUT);

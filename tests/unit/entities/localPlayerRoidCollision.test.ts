@@ -166,8 +166,10 @@ describe('Local Player Roid Collision Damage', () => {
   });
 
   describe('Debug Settings Impact', () => {
-    test('debug settings place roids on local player', () => {
-      expect(DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER).toBe(true);
+    test('roids are not spawned on the local player during normal play', () => {
+      // Spawning roids directly on the player instantly kills them, so this
+      // collision-testing aid is disabled by default in the playable build.
+      expect(DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER).toBe(false);
       expect(DEBUG.LOCAL_PLAYER.INVINCIBLE).toBe(false);
     });
 

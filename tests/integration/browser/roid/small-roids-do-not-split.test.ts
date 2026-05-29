@@ -47,33 +47,56 @@ afterEach(async () => {
   await browserManager.closePage();
 });
 
+// Scenario: a small asteroid is destroyed outright — it does NOT split into
+// even smaller pieces (unlike large and medium asteroids).
 test('small roids do not split', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
-  
-  const gameInteractions = new GameInteractions(page);
 
-  await gameInteractions.navigateToGame();
-  await gameInteractions.waitForGameToLoad();
+  const game = new GameInteractions(page);
 
-  // Enable debug settings to create small roids (disable ALL_LARGE)
-  await gameInteractions.enableDebugSettings({
-    PLACE_ON_LOCAL_PLAYER: true,
-    INITIAL_COUNT: 3,
-    ALL_LARGE: false, // This should create small roids
-  });
+  await game.navigateToGame();
+  await game.waitForGameToLoad();
+  await game.waitForGameReady();
+  await game.waitForAsteroids(1);
 
-  await gameInteractions.waitForAsteroids(3);
+  // Break a large asteroid (→ mediums), then a medium (→ smalls).
+  const large = (await game.getAsteroidPositions()).find((a) => a.radius >= 40);
+  expect(large).toBeTruthy();
+  if (!large) return;
+  await game.destroyAsteroidWithLaser(large);
 
-  const initialCount = await gameInteractions.getAsteroidCount();
+  await expect
+    .poll(async () => (await game.getAsteroidPositions()).some((a) => a.radius >= 25 && a.radius < 40), {
+      timeout: 8000,
+    })
+    .toBe(true);
+  const medium = (await game.getAsteroidPositions()).find((a) => a.radius >= 25 && a.radius < 40);
+  expect(medium).toBeTruthy();
+  if (!medium) return;
+  await game.destroyAsteroidWithLaser(medium);
 
-  // Collide with small roids
-  await gameInteractions.moveShipToAsteroids();
-  
-  // Wait for asteroid destruction (no splitting should occur)
-  await gameInteractions.waitForAsteroidDestruction();
+  // A small fragment (r < 25) now exists and is below the split threshold.
+  await expect
+    .poll(async () => (await game.getAsteroidPositions()).some((a) => a.radius < 25), { timeout: 8000 })
+    .toBe(true);
+  const small = (await game.getAsteroidPositions()).find((a) => a.radius < 25);
+  expect(small).toBeTruthy();
+  if (!small) return;
 
-  // Check that count decreased (no splitting)
-  const finalCount = await gameInteractions.getAsteroidCount();
-  expect(finalCount).toBeLessThan(initialCount);
+  // Wait out spawn protection so the collision actually destroys the small roid.
+  await game.waitForCombatReady();
+
+  const countBeforeSmallDestroy = await game.getAsteroidCount();
+
+  // Destroying the small asteroid removes it WITHOUT creating new fragments,
+  // so the total count strictly decreases (a split would have increased it).
+  await game.collideShipWithAsteroid(small);
+
+  await expect
+    .poll(() => game.getAsteroidCount(), {
+      timeout: 8000,
+      message: 'destroying a small asteroid should reduce the count (no split)',
+    })
+    .toBeLessThan(countBeforeSmallDestroy);
 }, TestConfig.DEFAULT_TIMEOUT);

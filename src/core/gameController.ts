@@ -53,8 +53,6 @@ export class GameController {
 
   // Game lifecycle methods
   newGame(playerName?: string): void {
-    this.gameStateManager.resetCurrentScore();
-
     // Create new player
     this.playerManager.createLocalPlayer();
 
@@ -101,13 +99,9 @@ export class GameController {
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
 
     // Initialize listeners
-    const localPlayer = this.playerManager.getLocalPlayer();
-    if (localPlayer) {
-      logger.debug('GAME_CONTROLLER', 'Initializing input listeners for local player', {
-        playerId: localPlayer.id,
-        playerName: localPlayer.name,
-      });
-      this.inputManager.initializeListeners(localPlayer);
+    if (this.playerManager.getLocalPlayer()) {
+      logger.debug('GAME_CONTROLLER', 'Initializing input listeners');
+      this.inputManager.initializeListeners();
     } else {
       logger.warn('GAME_CONTROLLER', 'No local player found, cannot initialize input listeners');
     }
@@ -370,13 +364,10 @@ export class GameController {
     return this.currRoidBelt.roids.length;
   }
 
-  // Score management
-  updateCurrScore(points: number): void {
-    this.gameStateManager.updateCurrentScore(points);
-  }
-
+  // Score management — the server is authoritative; the local player's entity
+  // score is synced from the server's gameState broadcast.
   getCurrScore(): number {
-    return this.gameStateManager.getCurrentScore();
+    return this.playerManager.getLocalPlayer()?.score ?? 0;
   }
 
   // Text display methods
@@ -601,14 +592,24 @@ export class GameController {
 
     // Get all players (including bots) from network manager
     const allPlayers = this.networkManager.getAllPlayers();
-    const bots = allPlayers.filter((player) => player.type === 'bot').map((player) => player.ship);
+    const laserTargets = allPlayers
+      .filter((player) => player.type === 'bot' || player.type === 'remote')
+      .map((player) => ({
+        ship: player.ship,
+        id: player.id,
+        type: player.type as 'bot' | 'remote',
+      }));
 
-    // Check collisions for local player's lasers
+    // Attribute kills to the server-assigned player id (set at join time), not
+    // currPlayer.id which only becomes the server id once the first gameState
+    // reconciles the local player — asteroids can arrive before that.
+    const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
+
     this.collisionManager.checkLaserCollisions(
       currPlayer.ship.lasers,
       this.currRoidBelt.roids,
-      bots.map((bot) => ({ ship: bot, id: bot.id, type: 'bot' as const })),
-      currPlayer.id
+      laserTargets,
+      attackerId
     );
   }
 
@@ -619,12 +620,11 @@ export class GameController {
       return;
     }
 
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const allShips = allPlayers.map((player) => player.ship).filter((ship) => ship);
-
-    // Check boundary collisions for all ships
-    this.collisionManager.checkBoundaryCollisions(allShips, currPlayer.id);
+    // Only check the locally-controlled ship. The network player list holds
+    // server-synced copies (which lag at 30 FPS) rather than the predicted
+    // local ship, and boundary damage is always attributed to the local
+    // player. Bots are kept in-bounds server-side; remote players self-report.
+    this.collisionManager.checkBoundaryCollisions([currPlayer.ship], currPlayer.id);
   }
 
   // Check ship collisions with asteroids
@@ -694,6 +694,10 @@ export class GameController {
 
     // Use NetworkManager's player list which has the correct names from server
     const allPlayers = this.networkManager.getAllPlayers();
+    const playersToRender = [...allPlayers];
+    if (!playersToRender.includes(currPlayer)) {
+      playersToRender.unshift(currPlayer);
+    }
     const currScore = currPlayer.score;
     const textAlpha = this.gameStateManager.getTextAlpha();
     const text = this.gameStateManager.getText();
@@ -706,7 +710,7 @@ export class GameController {
       textAlpha,
       text,
       currPlayer.lives,
-      allPlayers
+      playersToRender
     );
   }
 }

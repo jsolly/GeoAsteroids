@@ -392,6 +392,30 @@ export class EntityManager {
       bot.position.x += bot.velocity.x;
       bot.position.y += bot.velocity.y;
 
+      // Keep bots inside the circular play boundary. Without this they thrust
+      // in a straight line forever and escape the arena, so the player never
+      // encounters them. Bounce off the boundary and steer back toward center.
+      const BOUNDARY_RADIUS = 3100;
+      const CONTAIN_RADIUS = BOUNDARY_RADIUS - 200; // stay safely inside the wall
+      const distFromCenter = Math.sqrt(
+        bot.position.x * bot.position.x + bot.position.y * bot.position.y
+      );
+      if (distFromCenter > CONTAIN_RADIUS) {
+        const nx = bot.position.x / distFromCenter;
+        const ny = bot.position.y / distFromCenter;
+        // Clamp back onto the containment circle
+        bot.position.x = nx * CONTAIN_RADIUS;
+        bot.position.y = ny * CONTAIN_RADIUS;
+        // Reflect outward velocity component back inward
+        const vDotN = bot.velocity.x * nx + bot.velocity.y * ny;
+        if (vDotN > 0) {
+          bot.velocity.x -= 2 * vDotN * nx;
+          bot.velocity.y -= 2 * vDotN * ny;
+        }
+        // Steer heading toward the center (forward vector is (cos a, -sin a))
+        bot.angle = Math.atan2(ny, -nx);
+      }
+
       // Optimized friction - only apply if velocity is significant
       const velocityMagnitude = Math.sqrt(speedSquared);
       if (velocityMagnitude > 0.1) {

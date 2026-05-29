@@ -187,7 +187,7 @@ export class ConnectionManager {
 
     const message: ClientMessage = {
       type: 'shoot',
-      id: this.localPlayerId,
+      id: this.localPlayerId || this.clientId,
       data: {
         laserStart: laserPosition,
         laserDirection: laserVelocity,
@@ -341,6 +341,15 @@ export class ConnectionManager {
           }
         );
         break;
+      case 'playerKilled':
+        this.handlePlayerKilled(
+          data as {
+            targetPlayerId: string;
+            targetPlayerName: string;
+            attackerId: string;
+          }
+        );
+        break;
       case 'error':
         // Handle error messages from server
         logger.warn('NETWORK', 'Server error', { error: data });
@@ -355,65 +364,54 @@ export class ConnectionManager {
     if (data.entities) {
       // Update entities in place - no clearing to prevent bot disappearance!
       for (const entityData of data.entities) {
-        const existing = this.allPlayers.get(entityData.id);
+        const isLocalPlayer =
+          entityData.id === this.clientId || entityData.id === this.localPlayerId;
 
-        if (existing) {
-          // Debug logging for health updates
-          if (entityData.health !== undefined && existing.ship.health !== entityData.health) {
-            logger.debug('GAME_STATE_UPDATE', 'Health update from server', {
-              entityId: entityData.id,
-              entityName: entityData.name,
-              oldHealth: existing.ship.health,
-              newHealth: entityData.health,
-              isLocalPlayer: entityData.id === this.localPlayerId,
+        let entity = this.allPlayers.get(entityData.id);
+
+        if (!entity) {
+          if (isLocalPlayer) {
+            // Adopt the game-loop's local player as the single source of truth
+            // for the local ship, so server-authoritative state (health, score,
+            // lives, respawn) flows into the same object the game loop renders,
+            // collides, and attributes damage with. Align its id to the
+            // server-assigned id.
+            const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+            if (localPlayer) {
+              localPlayer.id = entityData.id;
+              if (this.localPlayerName) {
+                localPlayer.name = this.localPlayerName;
+              }
+              entity = localPlayer;
+            }
+          }
+
+          if (!entity) {
+            entity = entityFactory.createPlayer({
+              id: entityData.id,
+              name: entityData.name,
+              type: entityData.type === 'bot' ? 'bot' : 'remote',
+              color: entityData.color,
             });
           }
 
-          // Update existing entity
-          existing.updateFromServer({
-            position: entityData.position,
-            velocity: entityData.velocity,
-            angle: entityData.angle,
-            lives: entityData.lives,
-            score: entityData.score,
-            exploding: entityData.exploding,
-            thrusting: entityData.thrusting,
-            color: entityData.color,
-            health: entityData.health,
-            maxHealth: entityData.maxHealth,
-            respawnTimer: entityData.respawnTimer,
-          });
-        } else {
-          // Create new entity
-          const isLocalPlayer =
-            entityData.id === this.clientId || entityData.id === this.localPlayerId;
-          const entityName =
-            isLocalPlayer && this.localPlayerName ? this.localPlayerName : entityData.name;
-
-          const entity = entityFactory.createPlayer({
-            id: entityData.id,
-            name: entityName,
-            type: isLocalPlayer ? 'local' : entityData.type === 'bot' ? 'bot' : 'remote',
-            color: entityData.color,
-          });
-
-          // Update entity state from server data
-          entity.updateFromServer({
-            position: entityData.position,
-            velocity: entityData.velocity,
-            angle: entityData.angle,
-            lives: entityData.lives,
-            score: entityData.score,
-            exploding: entityData.exploding,
-            thrusting: entityData.thrusting,
-            color: entityData.color,
-            health: entityData.health,
-            maxHealth: entityData.maxHealth,
-            respawnTimer: entityData.respawnTimer,
-          });
-
-          this.allPlayers.set(entity.id, entity);
+          this.allPlayers.set(entityData.id, entity);
         }
+
+        entity.updateFromServer({
+          position: entityData.position,
+          velocity: entityData.velocity,
+          angle: entityData.angle,
+          lives: entityData.lives,
+          score: entityData.score,
+          exploding: entityData.exploding,
+          thrusting: entityData.thrusting,
+          color: entityData.color,
+          health: entityData.health,
+          maxHealth: entityData.maxHealth,
+          respawnTimer: entityData.respawnTimer,
+          spawnProtectionTimer: entityData.spawnProtectionTimer,
+        });
       }
     }
 
@@ -588,7 +586,6 @@ export class ConnectionManager {
       isDestroyed: data.isDestroyed,
     });
 
-    // Find the target player
     const targetPlayer = this.allPlayers.get(data.targetPlayerId);
     if (!targetPlayer) {
       logger.warn('NETWORK', 'Player not found for damage', {
@@ -597,19 +594,38 @@ export class ConnectionManager {
       return;
     }
 
-    // Apply authoritative health from server first
     targetPlayer.ship.health = data.remainingHealth;
+    if (targetPlayer.type === 'local') {
+      targetPlayer.syncServerHealthEcho(data.remainingHealth);
+    }
 
-    // Only call client-side takeDamage for visual feedback when health stays above 0
     if (data.remainingHealth > 0 && data.damage > 0) {
-      targetPlayer.ship.takeDamage(0, data.attackerId); // trigger timers/sounds without double-reducing health
+      targetPlayer.ship.takeDamage(0, data.attackerId);
     }
 
-    // If the player was destroyed, trigger explosion exactly once
-    if (data.isDestroyed) {
-      if (!targetPlayer.ship.exploding) {
-        targetPlayer.ship.explode(data.attackerId);
-      }
+    if (data.isDestroyed && !targetPlayer.ship.exploding) {
+      targetPlayer.ship.explode(data.attackerId);
     }
+  }
+
+  private handlePlayerKilled(data: {
+    targetPlayerId: string;
+    targetPlayerName: string;
+    attackerId: string;
+  }): void {
+    const localId = this.localPlayerId ?? this.clientId;
+    if (data.attackerId !== localId) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('remotePlayerDied', {
+        detail: {
+          playerId: data.targetPlayerId,
+          playerName: data.targetPlayerName,
+          deathCause: 'laser',
+        },
+      })
+    );
   }
 }

@@ -264,9 +264,8 @@ export class CollisionManager {
         },
       });
     } else if (player.type === 'remote') {
-      // For remote players, send general player damage message
       this.networkManager.sendMessage({
-        type: 'playerDamage',
+        type: 'laserDamage',
         data: {
           targetPlayerId: player.id,
           attackerId: attackerId,

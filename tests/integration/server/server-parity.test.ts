@@ -78,7 +78,8 @@ describe('Server Message Parity', () => {
     };
     wsCore.handleClientMessage(joinMessage, mockWs);
 
-    // Then update the player
+    // Then update the player. Position is client-owned; score/lives/health are
+    // server-authoritative and intentionally ignored from client updates.
     const updateMessage = {
       type: 'update',
       data: {
@@ -90,10 +91,12 @@ describe('Server Message Parity', () => {
 
     wsCore.handleClientMessage(updateMessage, mockWs);
 
-    // Verify player was updated
+    // The nested-data update was applied to the client-owned position...
     const player = gameEngine.getPlayer('update-test-id');
     expect(player).toBeDefined();
-    expect(player?.score).toBe(150);
+    expect(player?.position).toEqual({ x: 100, y: 200 });
+    // ...but the client-sent score was ignored (server-authoritative).
+    expect(player?.score).toBe(0);
   });
 
   it('should handle top-level id/name fields for backward compatibility', () => {

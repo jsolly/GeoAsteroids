@@ -171,10 +171,25 @@ export class MessageHandler {
       return;
     }
 
-    // Server-authoritative health: ignore client-sent health fields
+    // Ignore movement updates while the player is dead, exploding, or waiting to
+    // respawn. Otherwise the client's stale position keeps overwriting the
+    // server-chosen respawn position, leaving the ship frozen where it died
+    // (e.g. stuck outside the boundary at full health).
+    const existing = this.gameEngine.getPlayer(id);
+    if (existing && (existing.exploding || existing.respawnTimer !== undefined || existing.health <= 0)) {
+      return;
+    }
+
+    // Server-authoritative fields: the client only mirrors these back from our
+    // own broadcasts, so accepting them lets a stale client value clobber the
+    // authoritative state (e.g. a freshly-awarded score getting reset to 0).
     const sanitizedData: any = { ...data };
     delete (sanitizedData as any).health;
     delete (sanitizedData as any).maxHealth;
+    delete (sanitizedData as any).score;
+    delete (sanitizedData as any).lives;
+    delete (sanitizedData as any).respawnTimer;
+    delete (sanitizedData as any).spawnProtectionTimer;
 
     // Normalize client fields to server schema
     if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {
@@ -298,7 +313,7 @@ export class MessageHandler {
       }
 
       if (data.targetPlayerId.startsWith('server-bot-')) {
-        // Bot was destroyed
+        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
       } else {
         // Player was destroyed
         this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
@@ -318,10 +333,13 @@ export class MessageHandler {
     this.broadcaster.broadcastBotUpdate(data.botId);
 
     if (isDestroyed) {
-      // Broadcast score update for attacker
       const attacker = this.gameEngine.getPlayer(data.attackerId);
+      const targetBot = this.gameEngine.getBot(data.botId);
       if (attacker) {
         this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
+      }
+      if (targetBot) {
+        this.broadcaster.broadcastPlayerKilled(data.botId, targetBot.name, data.attackerId);
       }
     }
   }

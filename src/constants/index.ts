@@ -135,7 +135,7 @@ export const DEBUG = {
   BOT_PLAYER: {
     COUNT: 2, // Reduced for better performance during development (overrides GAME.BOT_COUNT when in debug mode)
     MOVEMENT: true,
-    LASERS: false,
+    LASERS: true,
     SPAWN_PROTECTION: false,
   },
 
@@ -144,13 +144,13 @@ export const DEBUG = {
     INITIAL_COUNT: 20, // Overrides ROID.INITIAL_ROID_COUNT
     MOVEMENT: false,
     PLACE_ON_BOT: false,
-    PLACE_ON_LOCAL_PLAYER: true,
+    PLACE_ON_LOCAL_PLAYER: false,
     ALL_LARGE: true, // Force all generated roids to be large size
   },
 
   // Player positioning settings (Affects local, remote, and bot players)
   PLACE_PLAYERS_NEAR_CENTER: false,
-  PLACE_PLAYERS_NEAR_BOUNDARY: true,
+  PLACE_PLAYERS_NEAR_BOUNDARY: false,
 } as const;
 
 // ============================================================================

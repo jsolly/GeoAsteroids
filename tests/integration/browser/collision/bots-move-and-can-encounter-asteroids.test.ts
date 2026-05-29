@@ -1,83 +1,31 @@
-import { test, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { BrowserManager } from '../../utils/browser-manager';
-import { ScreenshotManager } from '../../utils/screenshot-manager';
+import { test, expect } from 'vitest';
+import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
 import { TestConfig } from '../../utils/test-config';
-import { HealthChecker } from '../../utils/health-checker';
 
-// Test infrastructure
-const browserManager = new BrowserManager();
-const screenshotManager = new ScreenshotManager(__dirname);
+const { browserManager } = createBrowserScenarioHooks(__dirname);
 
-// Test setup and teardown
-beforeAll(async () => {
-  // Check if required servers are running before starting tests
-  console.log('🔍 Checking server health...');
-  
-  try {
-    await HealthChecker.checkAllServers();
-    console.log('✅ All servers are healthy!');
-  } catch (error) {
-    console.error('❌ Server health check failed:', error);
-    console.error('\n🚀 To run integration tests, start the servers first:');
-    console.error('   npm run dev');
-    console.error('\n   Then in another terminal, run:');
-    console.error('   npm run test:integration');
-    throw error;
-  }
-  
-  // Clear screenshots before starting tests
-  screenshotManager.clearScreenshots();
-  
-  // Initialize browser
-  await browserManager.initialize();
-});
-
-afterAll(async () => {
-  await browserManager.cleanup();
-});
-
-beforeEach(async () => {
-  // Create a new page for each test
-  await browserManager.createPage();
-});
-
-afterEach(async () => {
-  // Close the current page
-  await browserManager.closePage();
-});
-
-// Test: Bot movement and collision avoidance
 test('bots move and can encounter asteroids', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
-  
+
   const game = new GameInteractions(page);
-  
-  // Navigate and start the game
-  await game.navigateToGame();
-  await game.startGame();
-  await game.waitForGameInitialization(TestConfig.GAME_INIT_TIMEOUT);
-  
-  // Verify game elements
-  await game.verifyGameCanvas();
-  await game.verifyGameArea();
-  
-  // Wait for bots to start moving
-  await page.waitForTimeout(2000);
-  
-  // Take a screenshot for debugging
-  const screenshotPath = screenshotManager.getScreenshotPath(
-    screenshotManager.getTimestampedFilename('bot-movement-collision-test')
-  );
-  await page.screenshot({ path: screenshotPath });
-  
-  // In a real implementation, you would:
-  // 1. Track bot positions over time
-  // 2. Verify bots are moving around the game area
-  // 3. Check that bots can encounter asteroids
-  // 4. Monitor collision detection between bots and asteroids
-  // 5. Verify damage is applied when collisions occur
-  
-  console.log('✅ Bot movement and collision test completed');
+  await game.bootSinglePlayerGame();
+  await game.waitForBots(1, 25000);
+  await game.waitForAsteroids(1);
+
+  const start = await game.getBots();
+  expect(start.length).toBeGreaterThan(0);
+
+  await page.waitForTimeout(4000);
+
+  const later = await game.getBots();
+  const moved = later.some((bot, i) => {
+    const s = start.find((b) => b.id === bot.id) ?? start[i];
+    if (!s) return false;
+    return Math.hypot(bot.x - s.x, bot.y - s.y) > 2;
+  });
+
+  expect(moved, 'bots should move around the arena').toBe(true);
+  expect(await game.getAsteroidCount()).toBeGreaterThan(0);
 }, TestConfig.DEFAULT_TIMEOUT);

@@ -16,54 +16,56 @@ describe('Roid Placement Integration Tests', () => {
 
   describe('PLACE_ROID_ON_LOCAL_PLAYER functionality', () => {
     it('should place roids on player positions when PLACE_ROID_ON_LOCAL_PLAYER is true', () => {
-      // Verify the debug setting is enabled
-      expect(DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER).toBe(true);
+      // Enable the debug feature locally for this test (production default is off
+      // because spawning roids on the player makes the live game unplayable).
+      const originalSetting = DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER;
+      (DEBUG as any).ROIDS.PLACE_ON_LOCAL_PLAYER = true;
 
-      // Create a player at a specific position
-      const playerId = 'test-player-1';
-      const playerName = 'TestPlayer';
-      const playerPosition = { x: 100, y: 200 };
-      
-      // Mock WebSocket for player creation
-      const mockWs = {} as any;
-      gameEngine.addPlayer(playerId, playerName, mockWs, playerPosition);
+      try {
+        // Create a player at a specific position
+        const playerId = 'test-player-1';
+        const playerName = 'TestPlayer';
+        const playerPosition = { x: 100, y: 200 };
 
-      // Get player positions
-      const players = gameEngine.getAllPlayers();
-      const playerPositions = players.map(player => player.position);
-      
-      expect(playerPositions).toHaveLength(1);
-      expect(playerPositions[0]).toEqual(playerPosition);
+        // Mock WebSocket for player creation
+        const mockWs = {} as any;
+        gameEngine.addPlayer(playerId, playerName, mockWs, playerPosition);
 
-      // Create bots at specific positions
-      const botPositions = [
-        { x: 300, y: 400 },
-        { x: 500, y: 600 }
-      ];
-      
-      // Create bots (this will add them to the game engine)
-      const bots = gameEngine.createBots(2);
-      expect(bots).toHaveLength(2);
+        // Get player positions
+        const players = gameEngine.getAllPlayers();
+        const playerPositions = players.map(player => player.position);
 
-      // Create asteroids with player and bot positions
-      // Note: DEBUG.ROIDS.INITIAL_COUNT overrides the requested count
-      const asteroids = gameEngine.createAsteroids(5, { radius: 3100 }, botPositions, playerPositions);
-      
-      // DEBUG.ROIDS.INITIAL_COUNT is 20, so we expect 20 asteroids
-      expect(asteroids).toHaveLength(20);
+        expect(playerPositions).toHaveLength(1);
+        expect(playerPositions[0]).toEqual(playerPosition);
 
-      // Check if any asteroids are placed on player positions
-      const asteroidsOnPlayer = asteroids.filter(asteroid => 
-        Math.abs(asteroid.position.x - playerPosition.x) < 10 &&
-        Math.abs(asteroid.position.y - playerPosition.y) < 10
-      );
+        // Create bots at specific positions
+        const botPositions = [
+          { x: 300, y: 400 },
+          { x: 500, y: 600 }
+        ];
 
-      // With PLACE_ROID_ON_LOCAL_PLAYER enabled, we should have at least one asteroid on the player
-      expect(asteroidsOnPlayer.length).toBeGreaterThan(0);
-      
-      console.log('Player position:', playerPosition);
-      console.log('Asteroid positions:', asteroids.map(a => ({ x: a.position.x, y: a.position.y })));
-      console.log('Asteroids on player:', asteroidsOnPlayer.length);
+        // Create bots (this will add them to the game engine)
+        const bots = gameEngine.createBots(2);
+        expect(bots).toHaveLength(2);
+
+        // Create asteroids with player and bot positions
+        // Note: DEBUG.ROIDS.INITIAL_COUNT overrides the requested count
+        const asteroids = gameEngine.createAsteroids(5, { radius: 3100 }, botPositions, playerPositions);
+
+        // DEBUG.ROIDS.INITIAL_COUNT is 20, so we expect 20 asteroids
+        expect(asteroids).toHaveLength(20);
+
+        // Check if any asteroids are placed on player positions
+        const asteroidsOnPlayer = asteroids.filter(asteroid =>
+          Math.abs(asteroid.position.x - playerPosition.x) < 10 &&
+          Math.abs(asteroid.position.y - playerPosition.y) < 10
+        );
+
+        // With PLACE_ROID_ON_LOCAL_PLAYER enabled, we should have at least one asteroid on the player
+        expect(asteroidsOnPlayer.length).toBeGreaterThan(0);
+      } finally {
+        (DEBUG as any).ROIDS.PLACE_ON_LOCAL_PLAYER = originalSetting;
+      }
     });
 
     it('should not place roids on player positions when PLACE_ROID_ON_LOCAL_PLAYER is false', () => {

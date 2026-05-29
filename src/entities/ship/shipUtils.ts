@@ -44,7 +44,8 @@ export function shouldStartHealthRegeneration(
   currentHealth: number,
   maxHealth: number
 ): boolean {
-  return lastDamageTime <= 0 && currentHealth < maxHealth;
+  // Dead ships (health 0) await server respawn — never regen locally from zero.
+  return lastDamageTime <= 0 && currentHealth > 0 && currentHealth < maxHealth;
 }
 
 export function calculateLaserStartPosition(

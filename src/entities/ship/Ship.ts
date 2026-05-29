@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
-import { DAMAGE, EMP, GAME, LASER, SHIP } from '../../constants';
+import { DAMAGE, EMP, GAME, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
@@ -42,7 +42,7 @@ class Ship {
   lastCollisionTime: number = 0;
   blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
-  shotCooldown: number = 2000;
+  shotCooldown: number = 250;
   thrusterActive: boolean = false;
   lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
@@ -194,11 +194,18 @@ class Ship {
   }
 
   canShootAgain(): boolean {
-    if (this.canShoot && this.lasers.length < LASER.MAX_COUNT) {
+    this.updateShootCooldown();
+    if (this.canShoot && this.lasers.length < SHIP.MAX_LASERS) {
       return true;
     }
     this.canShoot = false;
     return false;
+  }
+
+  private updateShootCooldown(): void {
+    if (!this.canShoot && Date.now() - this.lastShotTime >= this.shotCooldown) {
+      this.canShoot = true;
+    }
   }
 
   shoot(): void {
@@ -223,6 +230,7 @@ class Ship {
 
     // Set canShoot to false to prevent rapid firing
     this.canShoot = false;
+    this.lastShotTime = Date.now();
 
     // Send shooting event to network system
     this.sendShootEvent(laser.position, laser.velocity);
@@ -480,21 +488,23 @@ class Ship {
       if (networkManager.isConnected && this.collidingPlayerId) {
         const myPlayerId = networkManager.getLocalPlayerId();
         if (myPlayerId) {
+          const tickDamage = Math.max(
+            1,
+            Math.round(DAMAGE.PLAYER_COLLISION_PER_SECOND * (damageInterval / 1000))
+          );
           logger.debug('COLLISION', 'Sending collision damage', {
             from: myPlayerId,
             to: this.collidingPlayerId,
             toIsBot: this.collidingPlayerId.startsWith('server-bot-'),
-            damage: 1,
+            damage: tickDamage,
           });
-          // Send collision event to server
-          networkManager.updatePlayerState({
-            position: this.position,
-            velocity: this.velocity,
-            r: this.r,
-            angle: this.angle,
-            lives: 0, // This will be updated by server
-            score: 0, // This will be updated by server
-            exploding: this.exploding,
+          networkManager.sendMessage({
+            type: 'collisionDamage',
+            data: {
+              targetPlayerId: myPlayerId,
+              attackerId: this.collidingPlayerId,
+              damage: tickDamage,
+            },
           });
         }
       } else {
@@ -606,6 +616,7 @@ class Ship {
     this.updateEmpPulse();
 
     // Update lasers
+    this.updateShootCooldown();
     this.moveLasers();
   }
 

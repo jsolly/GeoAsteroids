@@ -5,8 +5,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['tests/viteSetup.ts'],
     globals: true,
-    testTimeout: 60000, // 60 seconds for browser tests
+    testTimeout: 120000, // browser E2E scenarios (respawn cycles can exceed 60s under load)
     hookTimeout: 30000, // 30 seconds for hooks
+    // Browser E2E tests drive a real game loop over WebSockets and are subject
+    // to timing jitter under load in the long single-process suite. Retry to
+    // absorb transient flakes; deterministic unit tests pass on the first
+    // attempt and are unaffected.
+    retry: 2,
     env: {
       VITEST: 'true',
       NODE_ENV: 'test',

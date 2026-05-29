@@ -2,7 +2,6 @@ import { logger } from '../../utils/Logger';
 
 export class GameStateManager {
   private static instance: GameStateManager;
-  private currentScore = 0;
   private textAlpha = 1;
   private text = '';
   private isGameRunning = false;
@@ -19,18 +18,6 @@ export class GameStateManager {
       GameStateManager.instance = new GameStateManager();
     }
     return GameStateManager.instance;
-  }
-
-  getCurrentScore(): number {
-    return this.currentScore;
-  }
-
-  updateCurrentScore(points: number): void {
-    this.currentScore += points;
-  }
-
-  resetCurrentScore(): void {
-    this.currentScore = 0;
   }
 
   getTextAlpha(): number {

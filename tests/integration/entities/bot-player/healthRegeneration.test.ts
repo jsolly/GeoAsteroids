@@ -46,6 +46,7 @@ describe('Health Regeneration', () => {
       // Should start when lastDamageTime <= 0 and health < maxHealth
       expect(shouldStartHealthRegeneration(0, 50, 100)).toBe(true);
       expect(shouldStartHealthRegeneration(0, 100, 100)).toBe(false); // Already at max
+      expect(shouldStartHealthRegeneration(0, 0, 100)).toBe(false); // Dead — server respawns
       expect(shouldStartHealthRegeneration(10, 50, 100)).toBe(false); // Still in damage cooldown
       expect(shouldStartHealthRegeneration(-1, 50, 100)).toBe(true); // Past cooldown
     });

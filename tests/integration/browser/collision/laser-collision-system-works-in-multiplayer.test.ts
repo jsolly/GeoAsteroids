@@ -1,83 +1,33 @@
-import { test, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { BrowserManager } from '../../utils/browser-manager';
-import { ScreenshotManager } from '../../utils/screenshot-manager';
+import { test, expect } from 'vitest';
+import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
 import { TestConfig } from '../../utils/test-config';
-import { HealthChecker } from '../../utils/health-checker';
 
-// Test infrastructure
-const browserManager = new BrowserManager();
-const screenshotManager = new ScreenshotManager(__dirname);
+const { browserManager } = createBrowserScenarioHooks(__dirname);
 
-// Test setup and teardown
-beforeAll(async () => {
-  // Check if required servers are running before starting tests
-  console.log('🔍 Checking server health...');
-  
-  try {
-    await HealthChecker.checkAllServers();
-    console.log('✅ All servers are healthy!');
-  } catch (error) {
-    console.error('❌ Server health check failed:', error);
-    console.error('\n🚀 To run integration tests, start the servers first:');
-    console.error('   npm run dev');
-    console.error('\n   Then in another terminal, run:');
-    console.error('   npm run test:integration');
-    throw error;
-  }
-  
-  // Clear screenshots before starting tests
-  screenshotManager.clearScreenshots();
-  
-  // Initialize browser
-  await browserManager.initialize();
-});
-
-afterAll(async () => {
-  await browserManager.cleanup();
-});
-
-beforeEach(async () => {
-  // Create a new page for each test
-  await browserManager.createPage();
-});
-
-afterEach(async () => {
-  // Close the current page
-  await browserManager.closePage();
-});
-
-// Test: Laser collision with other players (if multiplayer)
 test('laser collision system works in multiplayer', async () => {
-  const page = browserManager.getCurrentPage();
-  if (!page) throw new Error('Page not available');
-  
-  const game = new GameInteractions(page);
-  
-  // Navigate and start the game
-  await game.navigateToGame();
-  await game.startGame();
-  await game.waitForGameInitialization(TestConfig.GAME_INIT_TIMEOUT);
-  
-  // Verify game elements
-  await game.verifyGameCanvas();
-  await game.verifyGameArea();
-  
-  // Fire lasers to test collision system
-  await game.fireLasers(2, 500); // Fire 2 lasers with 500ms delay
-  
-  // Wait for network processing
-  await page.waitForTimeout(1000);
-  
-  // Take a screenshot for debugging
-  const screenshotPath = screenshotManager.getScreenshotPath(
-    screenshotManager.getTimestampedFilename('laser-multiplayer-collision-test')
-  );
-  await page.screenshot({ path: screenshotPath });
-  
-  // Verify collision system is working
-  // In a real implementation, you might check for:
-  // - Network messages being sent
-  // - Server responses being received
-  // - Collision detection working properly
-}, TestConfig.DEFAULT_TIMEOUT);
+  const page1 = browserManager.getCurrentPage();
+  if (!page1) throw new Error('Page 1 not available');
+
+  await browserManager.createPage();
+  const page2 = browserManager.getCurrentPage();
+  if (!page2) throw new Error('Page 2 not available');
+
+  const game1 = new GameInteractions(page1);
+  const game2 = new GameInteractions(page2);
+
+  await game1.bootSinglePlayerGame();
+  await game2.bootSinglePlayerGame();
+  await game1.waitForCombatReady();
+  await game2.waitForCombatReady();
+
+  await expect.poll(() => game1.getRemoteHumanPlayerIds(), { timeout: 12000 }).not.toEqual([]);
+
+  const targetId = (await game1.getRemoteHumanPlayerIds())[0];
+  const healthBefore = await game2.getShipHealth();
+
+  await game1.fireLaserAtRemotePlayer(targetId);
+  await page2.waitForTimeout(500);
+
+  expect(await game2.getShipHealth()).toBeLessThan(healthBefore);
+}, TestConfig.DEFAULT_TIMEOUT * 2);
