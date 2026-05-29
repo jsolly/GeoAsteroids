@@ -1,0 +1,33 @@
+name: Sync agent fleet
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull latest fleet from dotagents
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add dotagents https://github.com/jsolly/dotagents.git || true
+          git fetch dotagents fleet
+          git subtree pull --prefix=.agents dotagents fleet --squash -m "CI: sync agent fleet from dotagents" || exit 0
+          ./scripts/link-fleet-rules.sh
+          git add .agents .cursor/rules
+          if git diff --cached --quiet; then
+            echo "Fleet already up to date"
+            exit 0
+          fi
+          git commit -m "CI: sync agent fleet from dotagents"
+          git push

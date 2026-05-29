@@ -16,7 +16,9 @@ if ! git remote get-url "$REMOTE" &>/dev/null; then
 fi
 
 git fetch "$REMOTE" "$BRANCH"
-git subtree pull --prefix=.agents "$REMOTE" "$BRANCH" --squash
+git subtree pull --prefix=.agents "$REMOTE" "$BRANCH" --squash -m "Update agent fleet subtree" || \
+  git subtree add --prefix=.agents "$REMOTE" "$BRANCH" --squash -m "Add agent fleet subtree from dotagents"
+
 ./scripts/link-fleet-rules.sh
 
 echo "Updated .agents/ from ${REMOTE}/${BRANCH}"
