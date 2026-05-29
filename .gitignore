@@ -20,4 +20,5 @@ dist/*
 # Environment Variables
 .env*
 # editor (local symlinks to ~/.agents rules — machine-specific)
-.cursor/
+.cursor/*
+!.cursor/environment.json
