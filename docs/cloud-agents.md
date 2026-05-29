@@ -63,7 +63,7 @@ cd ~/.agents
 # edit agents/, skills/, rules/
 ./scripts/refresh-fleet.sh
 git add fleet/ && git commit -m "..."
-./scripts/refresh-fleet-branch.sh --push
+./scripts/refresh-fleet.sh --push
 ```
 
 Then in GeoAsteroids: `./scripts/update-agents-subtree.sh`
