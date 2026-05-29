@@ -1,3 +1,9 @@
 {
-  "install": "npm ci || npm install"
+  "install": "npm ci || npm install",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev"
+    }
+  ]
 }

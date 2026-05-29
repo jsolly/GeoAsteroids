@@ -1,6 +1,6 @@
 # AGENTS.md
 
-@~/.agents/AGENTS.md
+@.agents/AGENTS.md
 
 ## Project
 
@@ -92,3 +92,12 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 - **Shared types** go in `shared-types.ts` at repo root, not duplicated per side.
 - **Conventional Commits** (`feat`, `fix`, `chore`, `refactor`, `test`, `perf`, `docs`) with a scope (e.g. `feat(network): ...`).
 - **Scenario-style test names** — describe a real user/system event, not the function under test.
+
+## Cursor Cloud
+
+This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
+
+- **Install:** `npm ci || npm install` (automatic on cloud VM boot)
+- **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
+- **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
+- **Fleet updates:** `./scripts/update-agents-subtree.sh`

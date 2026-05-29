@@ -1,116 +1,102 @@
-# Cursor Cloud Agents — Environment & Skills
+# Cursor Cloud Agents
 
-This doc covers how GeoAsteroids is configured for Cursor Cloud Agents, including the environment update script and project skills.
+GeoAsteroids is configured for **cloud-only development**: agents, skills, and rules are self-contained in this repo.
 
-## Environment update script
-
-### Problem
-
-Cloud agent VMs run an **install/update script** on boot (configured in `.cursor/environment.json` or the [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents#environments)). If that script fails, you see:
-
-> Update script failed. Your environment may not work as expected. Check your update script in your environment setup and fix any issues.
-
-For this repo, the failure was:
+## Layout
 
 ```text
-npm error 404 Not Found - GET https://pkg.pr.new/@biomejs/biome@7248dda
+GeoAsteroids/
+├── AGENTS.md                         # @.agents/AGENTS.md + ## Project
+├── .agents/                          # git subtree from dotagents (fleet branch)
+│   ├── AGENTS.md                     # fleet persona + collaboration
+│   ├── agents/                       # review-fix-push subagent prompts
+│   ├── skills/                       # review-fix, review-fix-push
+│   ├── rules/                        # canonical guideline markdown
+│   └── .cursor/rules/                # Cursor auto-apply rules (.mdc symlinks)
+├── .cursor/
+│   ├── environment.json              # cloud VM install + dev terminals
+│   └── rules/                        # fleet symlinks + project-only rules
+└── scripts/
+    ├── update-agents-subtree.sh      # pull fleet updates from dotagents
+    └── link-fleet-rules.sh           # wire .agents rules into .cursor/rules/
 ```
 
-`package.json` had pinned `@biomejs/biome` to a temporary **pkg.pr.new** preview URL that expired. Fresh cloud VMs could not run `npm install`.
+Cloud agents discover:
 
-### Fix (merged to main)
+- **Skills** at `.agents/skills/`
+- **Rules** at `.cursor/rules/` (fleet + project)
+- **Instructions** from root `AGENTS.md`
 
-1. Pin `@biomejs/biome` to `^2.4.16` from the npm registry (not pkg.pr.new).
-2. Regenerate `package-lock.json` so `npm ci` works.
-3. Add `.cursor/environment.json`:
+They do **not** see `~/.agents/`, `~/.cursor/skills/`, or local symlinks outside the repo.
 
-   ```json
-   {
-     "install": "npm ci || npm install"
-   }
-   ```
+## Environment
 
-4. Allow `.cursor/environment.json` through `.gitignore` (other `.cursor/*` stays local).
+`.cursor/environment.json`:
 
-### Verify locally
+```json
+{
+  "install": "npm ci || npm install",
+  "terminals": [
+    { "name": "dev", "command": "npm run dev" }
+  ]
+}
+```
+
+The install step previously failed when `@biomejs/biome` pointed at an expired pkg.pr.new URL — now pinned to the npm registry.
+
+**Dashboard:** If you set a custom update script in the [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents#environments), match `npm ci || npm install` or defer to the repo file.
+
+## Fleet updates (dotagents subtree)
+
+Fleet config is vendored from [dotagents](https://github.com/jsolly/dotagents) `fleet` branch via [git subtree](https://gist.github.com/SKempin/b7857a6ff6bddb05717cc17a44091202).
+
+**Pull latest fleet into this repo:**
 
 ```bash
-npm ci
-# or
-npm install
+./scripts/update-agents-subtree.sh
 ```
 
-Both should complete without 404 errors.
+**Edit fleet canonical copy** (in `~/.agents/` on a machine that has it):
 
-### Dashboard setup
-
-If your Cloud Agents environment has a custom **update/install** command in the dashboard, either:
-
-- Remove it and let the repo’s `.cursor/environment.json` take effect, or
-- Set it to match: `npm ci || npm install`
-
-After changing config, re-run environment setup or start a new cloud agent on an updated branch.
-
----
-
-## Adding skills for cloud agents
-
-Cloud agents clone your repo into an isolated VM. **Skills must live in the repo** — they do not see your local `~/.cursor/skills/` or `~/.agents/skills/`.
-
-### Where to put skills
-
-| Path | Scope |
-|------|--------|
-| `.cursor/skills/` | Project (recommended) |
-| `.agents/skills/` | Project |
-| `.claude/skills/`, `.codex/skills/` | Compatibility aliases |
-
-Example layout:
-
-```text
-.cursor/skills/
-└── debug-browser-tests/
-    └── SKILL.md
+```bash
+cd ~/.agents
+# edit agents/, skills/, rules/
+./scripts/refresh-fleet.sh
+git add fleet/ && git commit -m "..."
+./scripts/refresh-fleet-branch.sh --push
 ```
 
-### SKILL.md format
+Then in GeoAsteroids: `./scripts/update-agents-subtree.sh`
 
-```markdown
----
-name: debug-browser-tests
-description: How to run and debug browser integration tests for GeoAsteroids.
----
+**Push repo edits back to dotagents** (e.g. improved a skill in cloud):
 
-# Debug Browser Tests
-
-## When to Use
-- When browser integration tests fail or hang
-- When debugging laser, collision, or roid scenarios
-
-## Instructions
-- Always use `./scripts/test-runner.sh` (never raw `npx vitest` for integration tests)
-- Check `logs/client.log` and `logs/server.log`
-- See `.cursor/rules/browser-integration-testing.mdc` for the full playbook
+```bash
+git subtree push --prefix=.agents dotagents fleet
 ```
 
-Required frontmatter: `name` (matches folder name), `description`.
+Then merge `fleet` branch into `fleet/` on dotagents `main` (or re-run `refresh-fleet.sh` there to reconcile).
 
-Optional: `paths` (glob to scope when skill applies), `disable-model-invocation: true` (slash-command only).
+## Project-only vs fleet
 
-### Pair with AGENTS.md
+| Asset | Location | Synced from dotagents? |
+| --- | --- | --- |
+| Fleet persona, review skills, code-style rules | `.agents/` | Yes (subtree) |
+| Browser integration testing playbook | `.cursor/rules/browser-integration-testing.mdc` | No (project) |
+| Log file paths | `.cursor/rules/log-files.mdc` | No (project) |
+| Dev environment | `.cursor/environment.json` | No (project) |
+| Game architecture, commands | `AGENTS.md` ## Project | No (project) |
 
-Cloud agents read `AGENTS.md` at repo root. Keep run/test/debug commands there; use skills for deeper, on-demand workflows (e.g. “how to debug service X”).
+## Debugging in cloud
 
-See also: [Cursor Cloud Agent setup](https://cursor.com/docs/cloud-agent/setup), [Skills docs](https://cursor.com/docs/skills).
+1. Dev server starts via `terminals` in `environment.json` (or `npm run dev`)
+2. Integration tests: `./scripts/test-runner.sh tests/integration/browser/...` (never raw `npx vitest`)
+3. Logs: `logs/client.log`, `logs/server.log`
+4. Debug flags: edit `src/constants/index.ts` (`LOGGING`, `DEBUG`)
 
----
+See `.cursor/rules/browser-integration-testing.mdc` for the full playbook.
 
-## Boot sequence (reference)
+## References
 
-1. Start from base image, snapshot, or Dockerfile
-2. Run **`install`** from `.cursor/environment.json` (update script)
-3. Run optional **`start`** and **`terminals`** (e.g. dev server)
-4. Clone/checkout repo at commit
-5. Load `AGENTS.md` + `.cursor/skills/`
-
-Keep `install` idempotent and fast (dependency sync only). Put heavy or one-off setup in `AGENTS.md` or skills.
+- [Cursor Cloud Agent setup](https://cursor.com/docs/cloud-agent/setup)
+- [Cursor Skills](https://cursor.com/docs/skills)
+- [Git subtree basics (SKempin)](https://gist.github.com/SKempin/b7857a6ff6bddb05717cc17a44091202)

@@ -19,6 +19,8 @@ dist/*
 
 # Environment Variables
 .env*
-# editor (local symlinks to ~/.agents rules — machine-specific)
+# Cursor: track cloud config and rules; ignore other local editor state
 .cursor/*
 !.cursor/environment.json
+!.cursor/rules/
+!.cursor/rules/**
