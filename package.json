@@ -47,7 +47,7 @@
   },
   "homepage": "https://github.com/jsolly/GeoRoids#readme",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24"
   },
   "dependencies": {
     "mongodb": "^6.17.0",
