@@ -48,6 +48,16 @@ The install step previously failed when `@biomejs/biome` pointed at an expired p
 
 **Dashboard:** If you set a custom update script in the [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents#environments), match `npm ci || npm install` or defer to the repo file.
 
+## Snapshot bootstrap (agent-run)
+
+After install succeeds and smoke tests pass (`npm run check:ts` or integration tests per project rules), pin the VM snapshot so future agents boot faster:
+
+1. Obtain a real snapshot ID (agent UI, `CURSOR_SNAPSHOT_ID` / `SNAPSHOT_ID`, or [Cloud Agents → Environments](https://cursor.com/dashboard?tab=cloud-agents) Copy button).
+2. `./scripts/pin-cloud-snapshot.sh 'snapshot-...'`
+3. Commit and push `.cursor/environment.json`.
+
+See `docs/cloud-agents.md` in dotagents fleet for the full checklist. Do not guess snapshot IDs.
+
 ## Fleet updates (dotagents subtree)
 
 Fleet config is vendored from [dotagents](https://github.com/jsolly/dotagents) `fleet` branch via [git subtree](https://gist.github.com/SKempin/b7857a6ff6bddb05717cc17a44091202).
