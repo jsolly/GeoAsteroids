@@ -54,7 +54,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "https://pkg.pr.new/@biomejs/biome@7248dda",
+    "@biomejs/biome": "^2.2.0",
     "@playwright/test": "^1.40.0",
     "@types/chromedriver": "^81.0.5",
     "@types/jsdom": "^21.1.1",

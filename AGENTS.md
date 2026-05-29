@@ -92,3 +92,33 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 - **Shared types** go in `shared-types.ts` at repo root, not duplicated per side.
 - **Conventional Commits** (`feat`, `fix`, `chore`, `refactor`, `test`, `perf`, `docs`) with a scope (e.g. `feat(network): ...`).
 - **Scenario-style test names** — describe a real user/system event, not the function under test.
+
+## Cursor Cloud specific instructions
+
+### Environment prerequisites
+
+The VM has Node 22.x pre-installed via nvm. Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed. Playwright Chromium is also pre-installed.
+
+### Starting dev servers
+
+Run `npm run dev` (uses `./scripts/dev-server.sh`). This spawns both the Vite client dev server on `:5173` and the WebSocket game server on `:3001` via `concurrently`. An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
+
+Verify servers are healthy: `curl http://localhost:3001/health` and `curl -I http://localhost:5173/`.
+
+### Biome dependency
+
+The `package.json` originally referenced a `pkg.pr.new` PR preview build of `@biomejs/biome` which has expired. It has been replaced with the stable `@biomejs/biome@^2.2.0` from npm (same version the preview resolved to).
+
+### Known pre-existing test issues
+
+- `tests/integration/server/server-parity.test.ts` has a flaky assertion on asteroid count (`expect(gameEngine.getAsteroidCount()).toBe(20)`) that can fail depending on game engine timing.
+- The `tests/integration/component/` directory does not exist yet (referenced in npm scripts but no tests have been written).
+
+### Quick verification checklist
+
+```bash
+npm run check:lint   # biome check — should pass cleanly
+npm run check:ts     # tsc --noEmit — should pass cleanly
+npm run test         # unit tests (209 tests, ~3s)
+npm run build        # tsc && vite build — produces dist/
+```
