@@ -157,7 +157,7 @@ class RoidBelt {
   }
 }
 
-export { RoidBelt, Roid };
+export { Roid, RoidBelt };
 
 export function createRoidBelt(): RoidBelt {
   return new RoidBelt();
