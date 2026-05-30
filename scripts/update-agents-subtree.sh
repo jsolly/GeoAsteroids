@@ -24,6 +24,10 @@ else
 fi
 
 git fetch "$REMOTE" "$BRANCH"
+if [[ -f .agents/FLEET.lock ]]; then
+  git rm -f .agents/FLEET.lock
+  git commit -m "chore(fleet): remove stale FLEET.lock before subtree pull" || true
+fi
 git subtree pull --prefix=.agents "$REMOTE" "$BRANCH" --squash -m "Update agent fleet subtree" || \
   git subtree add --prefix=.agents "$REMOTE" "$BRANCH" --squash -m "Add agent fleet subtree from dotagents"
 
