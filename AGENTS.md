@@ -107,6 +107,12 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 
 - **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`. Cloud VMs may ship Node 22 — installs and tests still pass, but prefer Node 24 when available (`nvm use` / install from `.nvmrc`).
 
+### Environment prerequisites
+
+The VM has Node 22.x pre-installed via nvm. Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed. Playwright Chromium is also pre-installed.
+
+An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
+
 ### Services
 
 | Service | Port | Health / URL |
@@ -135,3 +141,12 @@ With dev servers up: open `http://localhost:5173`, click Play, thrust (arrow key
 ### Logs
 
 `logs/client.log` and `logs/server.log` (see `.cursor/rules/log-files.mdc`). Enable verbose client logs in `src/constants/index.ts` (`LOGGING.GLOBAL_LOG_LEVEL`, `DEBUG.ENABLED`), not via env vars.
+
+### Quick verification checklist
+
+```bash
+npm run check:lint   # biome check — should pass cleanly
+npm run check:ts     # tsc --noEmit — should pass cleanly
+npm run test         # unit tests (~3s)
+npm run build        # tsc && vite build — produces dist/
+```
