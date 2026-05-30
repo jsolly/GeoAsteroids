@@ -29,7 +29,7 @@
     "fix": "biome check --write . && npm run check:ts && npm run test",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "prepare": "if [ -d .git ]; then husky install; fi"
+    "prepare": "if [ -d .git ]; then git config core.hooksPath .git-hooks; fi"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,css,md,yml,yaml}": [
@@ -67,7 +67,6 @@
     "canvas": "^3.1.2",
     "chromedriver": "^139.0.3",
     "concurrently": "^9.2.1",
-    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.2",
     "playwright": "^1.40.0",

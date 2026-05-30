@@ -3,7 +3,7 @@ set -e
 
 # Skip if running in CI environment
 if [ -n "$CI" ]; then
-  echo "Skipping Husky hooks in CI environment"
+  echo "Skipping pre-commit hooks in CI environment"
   exit 0
 fi
 
