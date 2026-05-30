@@ -10,6 +10,7 @@ source "$REPO_ROOT/.agents/scripts/cloud-install-lib.sh"
 use_node_for_cursor_cloud
 npm ci
 install_playwright_chromium
+npx playwright install chromium-headless-shell
 if [[ ! -f .env ]] && [[ -f .env.example ]]; then
 	cp .env.example .env
 fi

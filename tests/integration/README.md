@@ -70,13 +70,14 @@ The tests are organized using a modular utility-based architecture:
 
 1. **Node.js**: Version 16 or higher
 2. **Game Server**: Must be running on port 3001
-3. **Playwright Chromium**: Required for browser tests (`npx playwright install chromium`). Cursor Cloud VMs install this during `bash scripts/cloud-agent-install.sh` on boot.
+3. **Playwright browsers**: Required for browser tests (`chromium` and `chromium-headless-shell`). Cursor Cloud VMs install both during `bash scripts/cloud-agent-install.sh` on boot.
 
 ## Setup
 
-1. Install Playwright Chromium (local dev; skipped on cloud after `cloud-agent-install.sh`):
+1. Install Playwright browsers (local dev; skipped on cloud after `cloud-agent-install.sh`):
    ```bash
    npx playwright install chromium
+   npx playwright install chromium-headless-shell
    ```
 
 2. Ensure the game server is running:
@@ -171,7 +172,7 @@ These tests integrate seamlessly with your existing Vitest setup:
 
 - **Connection refused**: Make sure the game server is running on port 3001
 - **Element not found**: Check that the game UI elements have the expected IDs
-- **Browser not found**: Run `npx playwright install chromium`
+- **Browser not found**: Run `npx playwright install chromium` and `npx playwright install chromium-headless-shell`
 - **Test timeouts**: Increase timeout values if the game loads slowly
 - **Screenshot issues**: Check that the screenshots directory is writable
 

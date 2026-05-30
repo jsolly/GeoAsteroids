@@ -97,7 +97,7 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 
 This repo is self-contained for [Cursor Cloud Agents](.agents/docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
 
-- **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, Playwright Chromium, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
+- **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, Playwright chromium + headless shell, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
 - **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
 - **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
 - **Fleet updates:** `./scripts/update-agents-subtree.sh`
@@ -108,7 +108,7 @@ This repo is self-contained for [Cursor Cloud Agents](.agents/docs/cloud-agents.
 
 ### Environment prerequisites
 
-The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers are downloaded during `cloud-agent-install.sh` (not bundled on the base image). Current Playwright also needs **Chrome Headless Shell** (`chromium_headless_shell-*` under `~/.cache/ms-playwright/`); if browser E2E fails with “Executable doesn't exist … chrome-headless-shell”, run `npx playwright install chromium-headless-shell` once (if the download stalls at 100%, remove `~/.cache/ms-playwright/__dirlock` and unzip the zip under `/tmp/playwright-download-*` into that cache dir).
+The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers (chromium + headless shell) are installed during `cloud-agent-install.sh`, not bundled on the image. If browser E2E still fails with a missing `chrome-headless-shell` binary, re-run `npx playwright install chromium-headless-shell`.
 
 An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
 
