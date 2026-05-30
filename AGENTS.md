@@ -1,104 +1,30 @@
-# AGENTS.md
+## Persona
 
-@.agents/AGENTS.md
+Software engineer turned Sr. Director at Leidos (Health-IT under DIGMOD). Treat as a technical peer.
 
-## Project
+## Conversation Preferences
 
-GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Deployed to https://geoasteroids.com (Railway server, see `railway.json`). Node `>=22.0.0`.
+- **Follow ideas wherever they lead, even uncomfortable ones.** Steel-man arguments; don't lecture. When I'm vague, call it out. When my logic doesn't hold up, say so. I value bluntness, proactive surfacing of things I haven't considered, and getting closer to the truth over reaching a comfortable answer.
+- **Get clarity on intent before acting; execute decisively once it's clear.** If the goal, scope, or success criteria is ambiguous, ask — even if it slows things down. Once intent is clear, pick the best implementation, fix obvious adjacent issues (typos, dead imports, stale comments) along the way, and flag concerns after rather than silently diverging.
+- **Layered questions.** Ask the 2-3 most critical questions first, start on what's clear, then follow up as you go.
+- **Present options with a recommendation.** "Here are approaches X, Y, Z. I'd recommend Y because..." — then wait.
+- **Match depth to question.** Be concise when reporting work, stating decisions, or answering direct factual questions — short, dense, no padding. Be thorough when exploring problems, working through tradeoffs, or analyzing options — cover multiple angles, examples, nuances, edge cases, implications. Aim for completeness with structure, not length for its own sake.
+- **Default to plain prose; reserve headers, bullets, and lists for cases where structure improves scannability.** Short answers don't need formatting. Long analyses do.
+- **Casual and direct.** Like a coworker on Slack. No hedging, no filler.
 
-## Commands
+## Planning
 
-```shell
-# Dev (Vite on :5173 + ws server on :3001 via concurrently)
-npm run dev                # ./scripts/dev-server.sh
-npm run dev:check          # status of dev servers
-npm run dev:kill           # kill all tsx/vite/concurrently processes
+- **State assumptions before coding.** Name what you're assuming, especially when multiple interpretations are plausible. Don't pick silently.
 
-# Build / typecheck / lint
-npm run build              # tsc && vite build
-npm run check:ts           # tsc --noEmit
-npm run check:lint         # biome check .
-npm run check:fix          # biome check --write .
-npm run fix                # biome write + tsc + unit tests
+## Collaboration
 
-# Tests
-npm run test               # unit only (tests/unit/)
-npm run test:all           # everything (vitest run)
-npm run test:integration:browser   # browser tests via test-runner.sh
-npm run test:integration:server    # server-side integration
-npm run test:integration:component # component integration
+- For personal projects, use `/review-fix-push` to review changes, fix issues, commit, and push. (No PR step.)
+- **In a repo:** fleet config lives at `.agents/` (git subtree from [dotagents](https://github.com/jsolly/dotagents)). Skills at `.agents/skills/`, review agents at `.agents/agents/`, guidelines at `.agents/rules/`.
+- **Cursor discovery:** skills under `.agents/skills/`; wire `.agents/rules/*.md` into `.cursor/rules/*.mdc` via `.agents/scripts/link-fleet-rules.sh` (relative symlinks). Project-only rules stay as real files in `.cursor/rules/`.
+- **Updating the fleet:** edit the canonical files in the [dotagents](https://github.com/jsolly/dotagents) repo and push to `main`; CI rebuilds and publishes the `fleet` branch automatically. App repos pull it via the weekly sync (or run `scripts/update-agents-subtree.sh` to pull on demand). The `fleet` branch is published by CI only — `.agents/` here is read-only; make fleet changes upstream in dotagents.
+- **Cloud agents:** no developer-home config on the VM — everything comes from the repo subtree and project `AGENTS.md`. After the first successful cloud boot, pin the VM snapshot per `docs/cloud-agents.md` → **Snapshot bootstrap (agent-run)** (`./scripts/pin-cloud-snapshot.sh`).
+- **Node.js:** fleet standard is Node 24 — see `rules/node-version.md` (`.nvmrc`, `engines`, CI `node-version-file`, Lambda `nodejs24.x`).
 
-# Single test file (integration must use the runner script — not raw vitest)
-./scripts/test-runner.sh tests/integration/browser/sanity/<file>.test.ts --reporter=verbose
-npx vitest run tests/unit/path/to.test.ts        # OK for unit tests only
-```
+## Family Memory
 
-**Use `./scripts/test-runner.sh` for integration tests** — it enforces single-instance execution. Running `npx vitest` directly opens multiple Vitest forks, each spawning a WebSocket client to `:3001`, which hits the connection rate limiter and fails. The `vitest.config.ts` is hard-coded to `singleFork`, `concurrent: false`, `maxConcurrency: 1`, `fileParallelism: false`; keep those settings.
-
-## Architecture
-
-### Two processes, one game
-
-- **Client** (`src/`, served by Vite): rendering, input, prediction, HUD. Entry is `index.html` → bootstraps `GameController` (singleton) which wires `GameStateManager`, `PlayerManager`, `InputManager`, `NetworkManager`, `CollisionManager`.
-- **Server** (`server.ts` → `server/`): authoritative game loop. `GameEngine` owns world state via `EntityManager`, `AsteroidManager`, deterministic `RNGService`. `WebSocketCore` (`server/communication/`) routes messages through `MessageHandler`. `GameStateBroadcaster` periodically pushes state. Bots run server-side.
-- **Two WebSocket paths on the same server**: `/ws` for gameplay, `/logs` for forwarded client logs (`ClientLogger` writes them to `logs/client.log`). HTTP routes on the same port: `/health`, `/status` (HTML or JSON depending on Accept/UA), `/test-server-log`.
-
-Vite dev proxies `/ws` to `ws://localhost:3001` so the client always connects via the Vite origin.
-
-### Server-authoritative model
-
-Asteroids and bots live on the server; clients render snapshots. Clients still simulate their local ship for responsiveness. `playerNetwork.ts` and `network/networkManager.ts` handle outbound (input/shoot) and inbound (state) messages. Shared message/payload types live in `shared-types.ts` (top level, imported by both client and server).
-
-### Key client modules
-
-- `src/core/gameController.ts` — top-level lifecycle (`newGame`, `startGame`, `setupNetworkDisconnectionHandler`).
-- `src/core/eventLoop.ts` — render/update loop.
-- `src/entities/{player,ship,roid,laser,bot}/` — entity classes + per-entity managers/renderers. `ShipMovementManager` and `ShipCombatManager` split ship behavior.
-- `src/physics/collision/{CollisionManager,collisionDetection}.ts` — collision system.
-- `src/network/networkManager.ts` + `services/ConnectionManager.ts` — WS lifecycle, reconnection, message dispatch.
-- `src/rendering/{RenderEngine,canvas,boundaryRenderer,hud/}` — canvas + HUD.
-- `src/input/{PlayerInput,MockPlayerInput,mouse}.ts` — input abstraction; `MockPlayerInput` is what tests drive.
-- `src/constants/index.ts` — single source of truth for tuning, `LOGGING`, and `DEBUG` flags.
-
-### Debug & logging
-
-Debug behavior is **constants, not env vars**. To enable debug mode, edit `src/constants/index.ts`:
-
-1. `LOGGING.GLOBAL_LOG_LEVEL = 'debug'`
-2. `DEBUG.ENABLED = true`
-
-Notable flags under `DEBUG.*`: `LOCAL_PLAYER.INVINCIBLE`, `BOT_PLAYER.{COUNT,MOVEMENT,LASERS,SPAWN_PROTECTION}`, `ROIDS.{INITIAL_COUNT,MOVEMENT,PLACE_ON_BOT}`, `PLACE_PLAYERS_NEAR_CENTER`. Client logs forward over `/logs` to the server; both ends append to:
-
-- `logs/client.log` — client-side (forwarded over WS)
-- `logs/server.log` — server-side
-
-Filter with grep prefixes: `[KEYBINDINGS]`, `[GAME_LOOP]`, `[RENDERING]`, `[NETWORK]`, `[SHIP]`, `[LASER]`, `[COLLISION]`, `[GAME_CONTROLLER]`. See `.cursor/rules/browser-integration-testing.mdc` for the full debugging playbook.
-
-## Tests
-
-- `tests/unit/` — pure, fast. Run via `npm run test`.
-- `tests/integration/server/` — vitest against server modules directly.
-- `tests/integration/component/` — vitest with jsdom against client modules.
-- `tests/integration/browser/` — Selenium/Playwright driving a real browser. Organized by scenario: `sanity/`, `laser/`, `collision/`, `roid/`. **Name each test for the user scenario it describes**, not the function under test — e.g. `bots-explode-and-respawn-after-asteroid-collision.test.ts` (what happens) over `test-bot-collision.test.ts` (what's tested). Screenshots land in `tests/integration/browser/screenshots/`.
-
-Integration tests boot the dev servers if not already running. If a test hangs or fails strangely, run `npm run dev:kill` then re-run.
-
-## Project conventions
-
-- **No barrel files / re-exports** — import from the defining module.
-- **Relative paths only** — no `@`-style aliases.
-- **Biome** is the only linter/formatter (`biome.jsonc`); ESLint is gone.
-- **Singletons via `getInstance()`** for the top-level managers (`GameController`, `PlayerManager`, `CollisionManager`, etc.) — wire through these, don't `new` them.
-- **Shared types** go in `shared-types.ts` at repo root, not duplicated per side.
-- **Conventional Commits** (`feat`, `fix`, `chore`, `refactor`, `test`, `perf`, `docs`) with a scope (e.g. `feat(network): ...`).
-- **Scenario-style test names** — describe a real user/system event, not the function under test.
-
-## Cursor Cloud
-
-This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
-
-- **Install:** `npm ci || npm install` (automatic on cloud VM boot)
-- **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
-- **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
-- **Fleet updates:** `./scripts/update-agents-subtree.sh`
-- **Snapshot:** After first successful cloud boot, `./scripts/pin-cloud-snapshot.sh` per `docs/cloud-agents.md` → Snapshot bootstrap (agent-run)
+When the family-memory MCP is available, call `recall` (no args) at conversation start to load context about the user. Use `remember` to store notable new facts, preferences, or events that come up naturally.
