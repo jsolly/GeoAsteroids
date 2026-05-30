@@ -1,5 +1,7 @@
 # Cursor Cloud Agents
 
+<!-- fleet-doc-version: 2 -->
+
 This repo is configured for **cloud-only development**: agents, skills, and rules are self-contained in git (no `.agents/` on the VM).
 
 ## Layout
