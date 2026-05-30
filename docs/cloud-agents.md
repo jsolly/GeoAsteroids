@@ -1,8 +1,8 @@
 # Cursor Cloud Agents
 
-<!-- fleet-doc-version: 2 -->
+<!-- fleet-doc-version: 3 -->
 
-This repo is configured for **cloud-only development**: agents, skills, and rules are self-contained in git (no `.agents/` on the VM).
+This repo is configured for **cloud-only development**: agents, skills, and rules are self-contained in git (no developer-home agents checkout on the VM).
 
 ## Layout
 
@@ -36,7 +36,7 @@ Cloud agents discover:
 - **Rules** at `.cursor/rules/` (fleet symlinks + project-only files)
 - **Instructions** from root `AGENTS.md`
 
-They **do** read the committed `.agents/` subtree in the repo. They do **not** see `.agents/`, `~/.cursor/skills/`, or machine-local symlinks outside the repo.
+They **do** read the committed `.agents/` subtree in the repo. They do **not** see developer-home skill paths, `~/.cursor/skills/`, or machine-local symlinks outside the repo.
 
 ### Edit path (fleet changes)
 
