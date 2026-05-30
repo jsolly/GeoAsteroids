@@ -97,7 +97,7 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 
 This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
 
-- **Install:** `npm ci || npm install` (automatic on cloud VM boot)
+- **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, Playwright Chromium, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
 - **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
 - **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
 - **Fleet updates:** `./scripts/update-agents-subtree.sh`
@@ -108,7 +108,7 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 
 ### Environment prerequisites
 
-The VM has Node 22.x pre-installed via nvm. Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed. Playwright Chromium is also pre-installed.
+The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright Chromium is downloaded during `cloud-agent-install.sh` (not bundled on the base image).
 
 An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
 
@@ -122,12 +122,6 @@ An empty `.env` file must exist at the repo root (the server startup uses `--env
 Start both with `npm run dev` (`./scripts/dev-server.sh`). Status: `npm run dev:check`. Stop: `npm run dev:kill`. If integration tests hang or rate-limit, kill then restart dev before re-running `./scripts/test-runner.sh`.
 
 **Background dev:** Prefer the `dev` terminal from `.cursor/environment.json`. If tmux sessions do not persist in the VM, `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
-
-### Browser integration (one-time per VM)
-
-Playwright Chromium is **not** installed by the update script. After first boot, run once:
-
-`npx playwright install chromium`
 
 ### Lint / tests (reference)
 

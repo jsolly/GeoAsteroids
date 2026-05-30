@@ -137,7 +137,8 @@ export class ConnectionManager {
   }
 
   getLocalPlayerId(): string {
-    return this.localPlayerId;
+    // Join uses clientId until the server `joined` echo sets localPlayerId (same value).
+    return this.localPlayerId || this.clientId;
   }
 
   private getLocalPlayerColor(): string {
@@ -207,6 +208,13 @@ export class ConnectionManager {
     }
 
     logger.debug('NETWORK', `Initializing asteroid sync with player name: ${this.localPlayerName}`);
+
+    // Align local player id with join id before the first gameState (avoids a
+    // transient remote duplicate keyed by clientId).
+    const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+    if (localPlayer) {
+      localPlayer.id = this.clientId;
+    }
 
     // Get the player's current position
     const playerPosition = this.getLocalPlayerPosition();
@@ -338,6 +346,7 @@ export class ConnectionManager {
             damage: number;
             remainingHealth: number;
             isDestroyed: boolean;
+            remainingLives?: number;
           }
         );
         break;
@@ -396,9 +405,20 @@ export class ConnectionManager {
           }
 
           this.allPlayers.set(entityData.id, entity);
+        } else if (isLocalPlayer) {
+          const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+          if (localPlayer && entity !== localPlayer) {
+            this.allPlayers.delete(entityData.id);
+            localPlayer.id = entityData.id;
+            if (this.localPlayerName) {
+              localPlayer.name = this.localPlayerName;
+            }
+            entity = localPlayer;
+            this.allPlayers.set(entityData.id, entity);
+          }
         }
 
-        entity.updateFromServer({
+        const serverSnapshot = {
           position: entityData.position,
           velocity: entityData.velocity,
           angle: entityData.angle,
@@ -411,7 +431,15 @@ export class ConnectionManager {
           maxHealth: entityData.maxHealth,
           respawnTimer: entityData.respawnTimer,
           spawnProtectionTimer: entityData.spawnProtectionTimer,
-        });
+        };
+        entity.updateFromServer(serverSnapshot);
+
+        if (isLocalPlayer) {
+          const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+          if (localPlayer && localPlayer !== entity) {
+            localPlayer.updateFromServer(serverSnapshot);
+          }
+        }
       }
     }
 
@@ -577,6 +605,7 @@ export class ConnectionManager {
     damage: number;
     remainingHealth: number;
     isDestroyed: boolean;
+    remainingLives?: number;
   }): void {
     logger.debug('NETWORK', 'Player damaged', {
       targetPlayerId: data.targetPlayerId,
@@ -584,15 +613,32 @@ export class ConnectionManager {
       damage: data.damage,
       remainingHealth: data.remainingHealth,
       isDestroyed: data.isDestroyed,
+      remainingLives: data.remainingLives,
     });
 
-    const targetPlayer = this.allPlayers.get(data.targetPlayerId);
+    let targetPlayer = this.allPlayers.get(data.targetPlayerId);
+    if (!targetPlayer) {
+      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+      if (
+        localPlayer &&
+        (localPlayer.id === data.targetPlayerId || this.getLocalPlayerId() === data.targetPlayerId)
+      ) {
+        targetPlayer = localPlayer;
+        this.allPlayers.set(data.targetPlayerId, localPlayer);
+      }
+    }
     if (!targetPlayer) {
       logger.warn('NETWORK', 'Player not found for damage', {
         targetPlayerId: data.targetPlayerId,
       });
       return;
     }
+
+    if (data.remainingLives !== undefined) {
+      targetPlayer.lives = data.remainingLives;
+    }
+
+    this.applyDamageToLocalPlayerIfTarget(data);
 
     targetPlayer.ship.health = data.remainingHealth;
     if (targetPlayer.type === 'local') {
@@ -605,6 +651,34 @@ export class ConnectionManager {
 
     if (data.isDestroyed && !targetPlayer.ship.exploding) {
       targetPlayer.ship.explode(data.attackerId);
+    }
+  }
+
+  /** Keep PlayerManager's local ship in sync when damage hits a network duplicate. */
+  private applyDamageToLocalPlayerIfTarget(data: {
+    targetPlayerId: string;
+    remainingHealth: number;
+    remainingLives?: number;
+    isDestroyed: boolean;
+    attackerId: string;
+  }): void {
+    const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+    if (!localPlayer) {
+      return;
+    }
+    const isLocalTarget =
+      localPlayer.id === data.targetPlayerId || this.getLocalPlayerId() === data.targetPlayerId;
+    if (!isLocalTarget) {
+      return;
+    }
+
+    localPlayer.ship.health = data.remainingHealth;
+    localPlayer.syncServerHealthEcho(data.remainingHealth);
+    if (data.remainingLives !== undefined) {
+      localPlayer.lives = data.remainingLives;
+    }
+    if (data.isDestroyed && !localPlayer.ship.exploding) {
+      localPlayer.ship.explode(data.attackerId);
     }
   }
 

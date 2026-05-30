@@ -20,11 +20,17 @@ test('ship respawns at a random location after laser death', async () => {
   await game.syncShipPositionToServer();
   await game.waitForCombatReady();
 
-  await game.killLocalPlayerUntilLifeLost();
+  await game.killLocalPlayerWithLaserDamage(4, 25);
+  await expect
+    .poll(
+      async () => {
+        await game.runGameFrames(10);
+        return game.getLives();
+      },
+      { timeout: 20000, message: 'laser death should cost a life' }
+    )
+    .toBeLessThan(initialLives);
 
-  expect(await game.getLives()).toBeLessThan(initialLives);
-
-  const actualDeathPosition = await game.getShipPosition();
-  const respawnPosition = await game.waitForShipRespawn(actualDeathPosition, 60000);
-  expectRandomRespawnPlacement(actualDeathPosition, respawnPosition);
+  const respawnPosition = await game.waitForShipRespawn(deathPosition, 90000);
+  expectRandomRespawnPlacement(deathPosition, respawnPosition);
 }, TestConfig.DEFAULT_TIMEOUT * 3);

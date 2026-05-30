@@ -16,10 +16,16 @@ test('player laser damages remote player', async () => {
   const game1 = new GameInteractions(page1);
   const game2 = new GameInteractions(page2);
 
-  await game1.bootSinglePlayerGame();
-  await game2.bootSinglePlayerGame();
+  // Boot without combat-ready first so a backgrounded tab does not stall join.
+  await page1.bringToFront();
+  await game1.bootSinglePlayerGame({ waitForCombatReady: false });
+  await page2.bringToFront();
+  await game2.bootSinglePlayerGame({ waitForCombatReady: false });
+  await page1.bringToFront();
   await game1.waitForCombatReady();
+  await page2.bringToFront();
   await game2.waitForCombatReady();
+  await page1.bringToFront();
 
   await expect.poll(() => game1.getRemoteHumanPlayerIds(), { timeout: 12000 }).not.toEqual([]);
 

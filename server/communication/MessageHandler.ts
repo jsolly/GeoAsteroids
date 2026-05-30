@@ -250,7 +250,8 @@ export class MessageHandler {
         data.attackerId,
         data.damage,
         targetPlayer.health ?? 0,
-        isDestroyed
+        isDestroyed,
+        targetPlayer.lives
       );
 
       // Broadcast score update if points were awarded
@@ -300,7 +301,8 @@ export class MessageHandler {
           data.attackerId,
           data.damage,
           remainingHealth,
-          isDestroyed
+          isDestroyed,
+          targetPlayer.lives
         );
       }
     }

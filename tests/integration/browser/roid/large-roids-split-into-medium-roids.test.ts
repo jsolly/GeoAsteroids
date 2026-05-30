@@ -54,10 +54,8 @@ test('large roids split into medium roids', async () => {
 
   const game = new GameInteractions(page);
 
-  await game.navigateToGame();
-  await game.waitForGameToLoad();
-  await game.waitForGameReady();
-  await game.waitForAsteroids(1);
+  await game.bootSinglePlayerGame();
+  await game.waitForAsteroids(1, 30000);
 
   const asteroids = await game.getAsteroidPositions();
   const initialCount = asteroids.length;

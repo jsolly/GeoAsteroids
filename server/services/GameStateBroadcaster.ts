@@ -80,7 +80,14 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message, playerId);
   }
 
-  public broadcastPlayerDamaged(targetPlayerId: string, attackerId: string, damage: number, remainingHealth: number, isDestroyed: boolean): void {
+  public broadcastPlayerDamaged(
+    targetPlayerId: string,
+    attackerId: string,
+    damage: number,
+    remainingHealth: number,
+    isDestroyed: boolean,
+    remainingLives?: number
+  ): void {
     const message = {
       type: 'playerDamaged',
       data: {
@@ -89,6 +96,7 @@ export class GameStateBroadcaster {
         damage,
         remainingHealth,
         isDestroyed,
+        ...(remainingLives !== undefined ? { remainingLives } : {}),
       },
       timestamp: Date.now(),
     };

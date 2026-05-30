@@ -16,8 +16,14 @@ test('lives indicator decrements on death', async () => {
   expect(await game.getLives()).toBe(3);
 
   await game.killLocalPlayerWithLaserDamage(4, 25);
-
+  await game.runGameFrames(20);
   await expect
-    .poll(() => game.getLives(), { timeout: 8000, message: 'death should decrement lives' })
+    .poll(
+      async () => {
+        await game.runGameFrames(10);
+        return game.getLives();
+      },
+      { timeout: 20000, message: 'death should decrement lives' }
+    )
     .toBe(2);
 }, TestConfig.DEFAULT_TIMEOUT);

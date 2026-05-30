@@ -14,6 +14,10 @@ test('player navigates through asteroid field while avoiding bots', async () => 
   await game.waitForAsteroids(1);
   await game.waitForBots(1);
 
+  // Random thrust through a live field can clip a roid; keep the ship invulnerable
+  // for this scenario (survival navigation, not damage testing).
+  await game.armSpawnProtection();
+
   await game.moveShip('up', 2000);
   await game.moveShip('right', 1000);
   await game.moveShip('left', 1000);

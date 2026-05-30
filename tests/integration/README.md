@@ -70,11 +70,11 @@ The tests are organized using a modular utility-based architecture:
 
 1. **Node.js**: Version 16 or higher
 2. **Game Server**: Must be running on port 3001
-3. **Playwright Browsers**: Will be automatically installed
+3. **Playwright Chromium**: Required for browser tests (`npx playwright install chromium`). Cursor Cloud VMs install this during `bash scripts/cloud-agent-install.sh` on boot.
 
 ## Setup
 
-1. Install Playwright browsers (if not already installed):
+1. Install Playwright Chromium (local dev; skipped on cloud after `cloud-agent-install.sh`):
    ```bash
    npx playwright install chromium
    ```

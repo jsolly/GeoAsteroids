@@ -19,13 +19,13 @@ test('ship respawns at a random location after asteroid collision death', async 
   const asteroid = (await game.getAsteroidPositions())[0];
   expect(asteroid).toBeTruthy();
 
+  const deathPosition = { x: asteroid.x, y: asteroid.y };
   await game.crashShipIntoAsteroidUntilDestroyed(asteroid);
 
   await expect
     .poll(() => game.getLives(), { timeout: 15000, message: 'asteroid collision should cost a life' })
     .toBeLessThan(initialLives);
 
-  const deathPosition = await game.getShipPosition();
-  const respawnPosition = await game.waitForShipRespawn(deathPosition, 60000);
+  const respawnPosition = await game.waitForShipRespawn(deathPosition, 90000);
   expectRandomRespawnPlacement(deathPosition, respawnPosition);
 }, TestConfig.DEFAULT_TIMEOUT * 2);

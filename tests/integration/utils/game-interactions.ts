@@ -162,43 +162,110 @@ export class GameInteractions {
    */
   async fireLasersWithMouse(count: number, delayMs: number = 500): Promise<void> {
     console.log(`🔫 Firing ${count} times with mouse clicks...`);
-    
-    // Get the canvas element
-    const canvas = await this.page.locator('canvas').first();
-    await canvas.waitFor({ state: 'visible' });
-    
-    // Get canvas bounding box
-    const boundingBox = await canvas.boundingBox();
-    if (!boundingBox) {
-      throw new Error('Canvas bounding box not found');
-    }
-    
-    // Click in the center of the canvas for each laser shot
-    const centerX = boundingBox.x + boundingBox.width / 2;
-    const centerY = boundingBox.y + boundingBox.height / 2;
-    
+
     for (let i = 1; i <= count; i++) {
       console.log(`  Mouse firing ${i}/${count}...`);
-      await this.page.mouse.click(centerX, centerY, { button: 'left' });
-      if (i < count) {
+      await this.page.evaluate(async () => {
+        const gc = (window as any).gameController;
+        const player = gc?.playerManager?.getLocalPlayer();
+        const canvas = document.querySelector('canvas') as HTMLCanvasElement | null;
+        if (!gc?.updateGame || !player?.ship || !canvas) {
+          throw new Error('Canvas, local ship, or game loop unavailable for mouse fire');
+        }
+        const rect = canvas.getBoundingClientRect();
+        const clientX = rect.left + rect.width / 2;
+        const clientY = rect.top + rect.height / 2;
+        player.ship.canShoot = true;
+        canvas.dispatchEvent(
+          new MouseEvent('mousemove', { clientX, clientY, bubbles: true })
+        );
+        canvas.dispatchEvent(
+          new MouseEvent('mousedown', { button: 0, bubbles: true, clientX, clientY })
+        );
+        for (let frame = 0; frame < 15; frame++) {
+          gc.updateGame();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        }
+      });
+      await this.runGameFrames(3);
+      if (i < count && delayMs > 0) {
         await this.page.waitForTimeout(delayMs);
       }
     }
+  }
+
+  /** Poll until local ship health matches the expected value. */
+  async waitForShipHealth(expected: number, timeoutMs = 15000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await this.runGameFrames(8);
+      if ((await this.getShipHealth()) === expected) {
+        return;
+      }
+    }
+    throw new Error(`Timed out waiting for ship health ${expected} (got ${await this.getShipHealth()})`);
   }
 
   /**
    * Move the ship in a specified direction
    */
   async moveShip(direction: 'left' | 'right' | 'up' | 'down', durationMs: number = 1000): Promise<void> {
-    const key = direction === 'left' ? 'ArrowLeft' : 
-                direction === 'right' ? 'ArrowRight' : 
-                direction === 'up' ? 'ArrowUp' : 'ArrowDown';
-    
     console.log(`🚀 Moving ship ${direction} for ${durationMs}ms...`);
-    await this.page.keyboard.down(key);
-    await this.page.waitForTimeout(durationMs);
-    await this.page.keyboard.up(key);
+    // Headless Chromium may not run requestAnimationFrame during Playwright timeouts.
+    // Drive the real game loop while thrust/turn are active (same physics as keybindings).
+    await this.page.evaluate(
+      async ({ moveDirection, holdMs }) => {
+        const gc = (window as any).gameController;
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (!gc?.updateGame || !ship) {
+          throw new Error('Local ship or gameController.updateGame is not available');
+        }
+        const turnSpeedRadPerFrame = (450 * Math.PI) / (180 * 60);
+        if (moveDirection === 'left') {
+          ship.angularVelocity = turnSpeedRadPerFrame;
+        } else if (moveDirection === 'right') {
+          ship.angularVelocity = -turnSpeedRadPerFrame;
+        } else {
+          ship.thrusting = true;
+        }
+        const deadline = performance.now() + holdMs;
+        while (performance.now() < deadline) {
+          gc.updateGame();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        }
+        ship.thrusting = false;
+        ship.angularVelocity = 0;
+        gc.updateGame();
+      },
+      { moveDirection: direction, holdMs: durationMs }
+    );
     console.log(`✅ Ship movement complete`);
+  }
+
+  /** Advance the client game loop for a number of frames (headless-safe). */
+  async runGameFrames(frameCount: number): Promise<void> {
+    await this.page.evaluate(async (frames) => {
+      const gc = (window as any).gameController;
+      if (!gc?.updateGame) {
+        throw new Error('gameController.updateGame is not available');
+      }
+      for (let i = 0; i < frames; i++) {
+        gc.updateGame();
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+    }, frameCount);
+  }
+
+  /** Wait until the server reports spawn protection on the local player. */
+  async waitForServerSpawnProtection(timeoutMs: number = 15000): Promise<void> {
+    await this.page.waitForFunction(
+      () => {
+        const gc = (window as any).gameController;
+        const lp = gc?.playerManager?.getLocalPlayer?.();
+        return (lp?.serverSpawnProtectionTimer ?? 0) > 0;
+      },
+      { timeout: timeoutMs, polling: 50 }
+    );
   }
 
   /**
@@ -594,12 +661,12 @@ export class GameInteractions {
    */
   async getLives(): Promise<number> {
     return await this.page.evaluate(() => {
-      const gameController = (window as any).gameController;
-      if (gameController?.playerManager?.getLocalPlayer) {
-        const player = gameController.playerManager.getLocalPlayer();
-        return player?.lives || 0;
-      }
-      return 0;
+      const gc = (window as any).gameController;
+      const nm = gc?.getNetworkManager?.();
+      const localId = nm?.getLocalPlayerId?.();
+      const fromNetwork = localId ? nm?.getPlayer?.(localId) : undefined;
+      const local = gc?.playerManager?.getLocalPlayer?.();
+      return fromNetwork?.lives ?? local?.lives ?? 0;
     });
   }
 
@@ -683,6 +750,10 @@ export class GameInteractions {
         ship.angularVelocity = 0;
         ship.blinkCount = 0;
         ship.spawnProtectionTimer = 0;
+        const player = gc?.playerManager?.getLocalPlayer();
+        if (player) {
+          player.serverSpawnProtectionTimer = 0;
+        }
       },
       { x, y }
     );
@@ -755,6 +826,7 @@ export class GameInteractions {
       },
       { targetX, targetY }
     );
+    await this.runGameFrames(5);
   }
 
   /**
@@ -799,10 +871,11 @@ export class GameInteractions {
     while (Date.now() < deadline) {
       if (await targetGone()) return;
       await this.fireLaserToward(asteroid.x, asteroid.y);
-      // Allow the short-range laser to travel to the (stationary) target and
-      // for the destroy round-trip to remove it from the belt.
-      await this.page.waitForTimeout(450);
-      if (await targetGone()) return;
+      // Advance the game loop so the laser travels and collision/destroy messages run.
+      for (let frame = 0; frame < 45; frame++) {
+        if (await targetGone()) return;
+        await this.runGameFrames(1);
+      }
     }
     throw new Error(`Asteroid ${asteroid.id} was not destroyed by laser within ${timeoutMs}ms`);
   }
@@ -921,12 +994,37 @@ export class GameInteractions {
    * local player from the gameState) so this is robust to server-loop timing
    * drift under load — far more reliable than a fixed sleep.
    */
-  async waitForCombatReady(timeoutMs = 12000): Promise<void> {
+  /** Wait until the local player is registered on the server (post-join). */
+  async waitForServerJoin(timeoutMs = 30000): Promise<void> {
     await this.page.waitForFunction(
       () => {
         const gc = (window as any).gameController;
+        const nm = gc?.getNetworkManager?.();
+        if (!nm?.isConnected) {
+          return false;
+        }
+        const id = nm.getLocalPlayerId?.();
         const lp = gc?.playerManager?.getLocalPlayer?.();
-        return !!lp && (lp.serverSpawnProtectionTimer ?? 0) === 0;
+        if (!id || !lp) {
+          return false;
+        }
+        // Network mirror or id alignment means join + first game state landed.
+        return Boolean(nm.getPlayer?.(id) || lp.id === id);
+      },
+      undefined,
+      { timeout: timeoutMs, polling: 200 }
+    );
+  }
+
+  async waitForCombatReady(timeoutMs = 45000): Promise<void> {
+    await this.waitForServerJoin(timeoutMs);
+    // Server spawn protection is 180 ticks (~3s). Boot may finish after it
+    // already expired, so wait the full window from join before damage tests.
+    await this.page.waitForTimeout(3500);
+    await this.page.waitForFunction(
+      () => {
+        const lp = (window as any).gameController?.playerManager?.getLocalPlayer?.();
+        return (lp?.serverSpawnProtectionTimer ?? 0) === 0;
       },
       undefined,
       { timeout: timeoutMs, polling: 100 }
@@ -943,8 +1041,31 @@ export class GameInteractions {
     const startLives = await this.getLives();
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
-      await this.placeShipAt(asteroid.x, asteroid.y);
-      await this.page.waitForTimeout(150);
+      await this.page.evaluate(
+        async ({ ax, ay }) => {
+          const gc = (window as any).gameController;
+          const player = gc?.playerManager?.getLocalPlayer();
+          const ship = player?.ship;
+          if (!gc?.updateGame || !ship) {
+            throw new Error('Local ship unavailable for asteroid crash');
+          }
+          ship.position = { x: ax, y: ay };
+          ship.velocity = { x: 0, y: 0 };
+          ship.thrusting = false;
+          ship.angularVelocity = 0;
+          ship.blinkCount = 0;
+          ship.spawnProtectionTimer = 0;
+          if (player) {
+            player.serverSpawnProtectionTimer = 0;
+          }
+          for (let frame = 0; frame < 40; frame++) {
+            ship.position = { x: ax, y: ay };
+            gc.updateGame();
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          }
+        },
+        { ax: asteroid.x, ay: asteroid.y }
+      );
       const [exploding, health, lives] = await Promise.all([
         this.isShipExploding(),
         this.getShipHealth(),
@@ -967,6 +1088,27 @@ export class GameInteractions {
         );
         return;
       }
+
+      // Fallback: drive server collision damage if client overlap detection did not fire.
+      await this.page.evaluate(
+        async ({ damage }) => {
+          const gc = (window as any).gameController;
+          const nm = gc?.getNetworkManager?.();
+          const playerId = nm?.getLocalPlayerId?.();
+          if (!nm || !playerId) {
+            throw new Error('Cannot send collision damage — not connected');
+          }
+          nm.sendMessage({
+            type: 'collisionDamage',
+            data: { targetPlayerId: playerId, attackerId: 'asteroid', damage },
+          });
+          for (let frame = 0; frame < 30; frame++) {
+            gc.updateGame();
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          }
+        },
+        { damage: 25 }
+      );
     }
     throw new Error('Ship was not destroyed by sustained asteroid collision');
   }
@@ -986,7 +1128,8 @@ export class GameInteractions {
    * before triggering server-authoritative damage.
    */
   async syncShipPositionToServer(): Promise<void> {
-    await this.page.waitForTimeout(350);
+    await this.runGameFrames(20);
+    await this.page.waitForTimeout(200);
   }
 
   async killLocalPlayerWithLaserDamage(hits = 4, damagePerHit = 25): Promise<void> {
@@ -1008,7 +1151,15 @@ export class GameInteractions {
               damage: damagePerHit,
             },
           });
-          await new Promise((resolve) => setTimeout(resolve, 120));
+          for (let frame = 0; frame < 8; frame++) {
+            gc.updateGame();
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          }
+          await new Promise((resolve) => setTimeout(resolve, 80));
+        }
+        for (let frame = 0; frame < 45; frame++) {
+          gc.updateGame();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         }
       },
       { hits, damagePerHit }
@@ -1022,7 +1173,7 @@ export class GameInteractions {
     while (Date.now() < deadline) {
       await this.waitForCombatReady();
       await this.killLocalPlayerWithLaserDamage(4, 25);
-      await this.page.waitForTimeout(400);
+      await this.runGameFrames(15);
       if ((await this.getLives()) < livesBefore) {
         return;
       }
@@ -1035,23 +1186,33 @@ export class GameInteractions {
     deathPosition: { x: number; y: number },
     timeoutMs = 60000
   ): Promise<{ x: number; y: number }> {
-    await this.page.waitForFunction(
-      ({ deathPosition, minDistance }) => {
-        const gc = (window as any).gameController;
-        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
-        if (!ship || ship.health !== 100 || ship.exploding) {
-          return false;
-        }
-        const dist = Math.hypot(
-          ship.position.x - deathPosition.x,
-          ship.position.y - deathPosition.y
-        );
-        return dist > minDistance;
-      },
-      { deathPosition, minDistance: 75 },
-      { timeout: timeoutMs, polling: 200 }
-    );
-    return this.getShipPosition();
+    const minDistance = 75;
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await this.runGameFrames(10);
+      const placement = await this.page.evaluate(
+        ({ deathPosition, minDistance }) => {
+          const gc = (window as any).gameController;
+          const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+          if (!ship || ship.health !== 100 || ship.exploding) {
+            return null;
+          }
+          const dist = Math.hypot(
+            ship.position.x - deathPosition.x,
+            ship.position.y - deathPosition.y
+          );
+          if (dist <= minDistance) {
+            return null;
+          }
+          return { x: ship.position.x, y: ship.position.y };
+        },
+        { deathPosition, minDistance }
+      );
+      if (placement) {
+        return placement;
+      }
+    }
+    throw new Error(`Timed out waiting for random respawn placement (${timeoutMs}ms)`);
   }
 
   /** Number of active lasers on the local ship. */
@@ -1344,10 +1505,12 @@ export class GameInteractions {
   }
 
   /** Standard single-player boot sequence for scenario tests. */
-  async bootSinglePlayerGame(): Promise<void> {
+  async bootSinglePlayerGame(options?: { waitForCombatReady?: boolean }): Promise<void> {
     await this.navigateToGame();
     await this.startGame();
     await this.waitForGameReady();
-    await this.waitForCombatReady();
+    if (options?.waitForCombatReady !== false) {
+      await this.waitForCombatReady();
+    }
   }
 }

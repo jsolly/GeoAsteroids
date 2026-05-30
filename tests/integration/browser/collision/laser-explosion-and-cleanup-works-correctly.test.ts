@@ -17,10 +17,22 @@ test('laser explosion and cleanup works correctly', async () => {
 
   await game.fireLasersWithMouse(1);
   await expect
-    .poll(() => game.getLocalLaserCount(), { timeout: 3000, message: 'firing should create a laser' })
+    .poll(
+      async () => {
+        await game.runGameFrames(5);
+        return game.getLocalLaserCount();
+      },
+      { timeout: 5000, message: 'firing should create a laser' }
+    )
     .toBeGreaterThan(0);
 
   await expect
-    .poll(() => game.getLocalLaserCount(), { timeout: 8000, message: 'laser should expire after travel' })
+    .poll(
+      async () => {
+        await game.runGameFrames(10);
+        return game.getLocalLaserCount();
+      },
+      { timeout: 15000, message: 'laser should expire after travel' }
+    )
     .toBe(0);
 }, TestConfig.DEFAULT_TIMEOUT);

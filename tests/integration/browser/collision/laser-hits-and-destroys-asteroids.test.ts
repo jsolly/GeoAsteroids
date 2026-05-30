@@ -15,15 +15,27 @@ test('laser hits and destroys asteroids', async () => {
   await game.waitForAsteroids(1);
 
   const initialScore = await game.getScore();
-  const initialCount = await game.getAsteroidCount();
   const target = (await game.getAsteroidDetails())[0];
 
   await game.destroyAsteroidWithLaser(target, 25000);
 
   await expect
-    .poll(() => game.getAsteroidCount(), { timeout: 8000, message: 'asteroid should be destroyed' })
-    .toBeLessThan(initialCount);
+    .poll(
+      async () => {
+        await game.runGameFrames(8);
+        const roids = await game.getAsteroidDetails();
+        return !roids.some((r) => r.id === target.id);
+      },
+      { timeout: 12000, message: 'target asteroid should be gone (split fragments may remain)' }
+    )
+    .toBe(true);
   await expect
-    .poll(() => game.getScore(), { timeout: 8000, message: 'destroying an asteroid should award points' })
+    .poll(
+      async () => {
+        await game.runGameFrames(8);
+        return game.getScore();
+      },
+      { timeout: 12000, message: 'destroying an asteroid should award points' }
+    )
     .toBeGreaterThan(initialScore);
 }, TestConfig.DEFAULT_TIMEOUT);

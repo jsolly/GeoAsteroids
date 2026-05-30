@@ -2,7 +2,7 @@
 # Shared Cursor Cloud install helpers. Source from repo scripts/cloud-agent-install.sh:
 #   source "$(cd "$(dirname "$0")/.." && pwd)/.agents/scripts/cloud-install-lib.sh"
 #
-# Provides: ensure_node_version, use_node_for_cursor_cloud, install_zip_unzip, install_aws_cli, install_sam, install_yaml_linters
+# Provides: ensure_node_version, use_node_for_cursor_cloud, install_playwright_chromium, install_zip_unzip, install_aws_cli, install_sam, install_yaml_linters
 
 ensure_node_version() {
 	local required_major
@@ -54,6 +54,11 @@ use_node_for_cursor_cloud() {
 
 	persist_cursor_node_shell "$required_major"
 	node -v
+}
+
+# Browser integration tests launch Chromium via Playwright; npm ci does not download browsers.
+install_playwright_chromium() {
+	npx playwright install chromium
 }
 
 persist_cursor_node_shell() {
