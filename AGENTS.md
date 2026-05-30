@@ -125,7 +125,7 @@ Start both with `npm run dev` (`./scripts/dev-server.sh`). Status: `npm run dev:
 
 ### Lint / tests (reference)
 
-See **Commands** above. Browser E2E must use `./scripts/test-runner.sh` (never raw `npx vitest` on `tests/integration/`). As of May 2026, `npm run check:lint` may report a pre-existing Biome `organizeImports` issue in `src/entities/roid/roid.ts` (export order); typecheck and unit tests still pass.
+See **Commands** above. Browser E2E must use `./scripts/test-runner.sh` (never raw `npx vitest` on `tests/integration/`).
 
 ### Hello-world smoke
 

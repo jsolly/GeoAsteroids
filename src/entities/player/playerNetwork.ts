@@ -89,7 +89,7 @@ export class PlayerNetwork {
     localPlayer: { position: Position },
     viewportRadius: number = 1200
   ): boolean {
-    if (!localPlayer || !localPlayer.position) {
+    if (!localPlayer?.position) {
       return false;
     }
 
