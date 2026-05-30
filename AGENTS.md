@@ -95,7 +95,7 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 
 ## Cursor Cloud
 
-This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
+This repo is self-contained for [Cursor Cloud Agents](.agents/docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
 
 - **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, Playwright Chromium, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
 - **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
