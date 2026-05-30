@@ -105,6 +105,8 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 
 ## Cursor Cloud specific instructions
 
+- **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`. Cloud VMs may ship Node 22 — installs and tests still pass, but prefer Node 24 when available (`nvm use` / install from `.nvmrc`).
+
 ### Services
 
 | Service | Port | Health / URL |
@@ -113,6 +115,8 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 | Game server (HTTP + WS) | 3001 | `curl http://localhost:3001/health` |
 
 Start both with `npm run dev` (`./scripts/dev-server.sh`). Status: `npm run dev:check`. Stop: `npm run dev:kill`. If integration tests hang or rate-limit, kill then restart dev before re-running `./scripts/test-runner.sh`.
+
+**Background dev:** Prefer the `dev` terminal from `.cursor/environment.json`. If tmux sessions do not persist in the VM, `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
 
 ### Browser integration (one-time per VM)
 
@@ -126,4 +130,8 @@ See **Commands** above. Browser E2E must use `./scripts/test-runner.sh` (never r
 
 ### Hello-world smoke
 
-With dev servers up: open `http://localhost:5173`, click Play, thrust (arrow keys) and fire (Space). Or run `./scripts/test-runner.sh tests/integration/browser/sanity/game-initializes-with-arena-and-hud.test.ts`.
+With dev servers up: open `http://localhost:5173`, click Play, thrust (arrow keys) and fire (Space). Or run `./scripts/test-runner.sh tests/integration/browser/sanity/game-initializes-with-arena-and-hud.test.ts --reporter=verbose` — navigates to the game, clicks Play, and asserts canvas, HUD, and asteroids.
+
+### Logs
+
+`logs/client.log` and `logs/server.log` (see `.cursor/rules/log-files.mdc`). Enable verbose client logs in `src/constants/index.ts` (`LOGGING.GLOBAL_LOG_LEVEL`, `DEBUG.ENABLED`), not via env vars.
