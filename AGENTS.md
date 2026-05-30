@@ -108,7 +108,7 @@ This repo is self-contained for [Cursor Cloud Agents](.agents/docs/cloud-agents.
 
 ### Environment prerequisites
 
-The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright Chromium is downloaded during `cloud-agent-install.sh` (not bundled on the base image).
+The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers are downloaded during `cloud-agent-install.sh` (not bundled on the base image). Current Playwright also needs **Chrome Headless Shell** (`chromium_headless_shell-*` under `~/.cache/ms-playwright/`); if browser E2E fails with “Executable doesn't exist … chrome-headless-shell”, run `npx playwright install chromium-headless-shell` once (if the download stalls at 100%, remove `~/.cache/ms-playwright/__dirlock` and unzip the zip under `/tmp/playwright-download-*` into that cache dir).
 
 An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
 
