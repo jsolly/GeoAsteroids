@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # Assert .agents/FLEET.lock matches dotagents fleet branch when .agents/ changes in a PR.
+# Source: dotagents templates/github-workflows/fleet-lock-check.sh
+#
+# Usage in onPRs.yml (after checkout, when FLEET_SYNC_TOKEN is set):
+#   - run: bash .github/scripts/fleet-lock-check.sh
+#     env:
+#       FLEET_SYNC_TOKEN: ${{ secrets.FLEET_SYNC_TOKEN }}
+
 set -euo pipefail
 
-if ! git diff --name-only "origin/${GITHUB_BASE_REF:-main}"...HEAD | grep -q '^\.agents/'; then
+if ! git diff --name-only origin/${GITHUB_BASE_REF:-main}...HEAD | grep -q '^\.agents/'; then
   echo "No .agents/ changes — lock check skipped"
   exit 0
 fi
