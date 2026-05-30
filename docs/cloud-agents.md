@@ -1,6 +1,6 @@
 # Cursor Cloud Agents — GeoRoids
 
-<!-- fleet-doc-version: 5 -->
+<!-- fleet-doc-version: 6 -->
 
 This repo is configured for **cloud-only development**: agents, skills, and rules are self-contained in git (no developer-home agents checkout on the VM).
 
@@ -14,16 +14,15 @@ This repo is configured for **cloud-only development**: agents, skills, and rule
 │   ├── agents/                       # review-fix-push subagent prompts
 │   ├── skills/                       # review-fix, review-fix-push
 │   ├── hooks/
-│   │   ├── block-git-no-verify.sh       # fleet — blocks git push/commit --no-verify
-│   │   └── check-fleet-subtree-stale.sh # fleet — sessionStart stale FLEET.lock check
+│   │   └── block-git-no-verify.sh    # fleet — blocks git push/commit --no-verify (Cursor hook)
 │   ├── rules/                        # canonical guidelines (.md, Cursor frontmatter)
 │   ├── FLEET.lock                    # pinned dotagents fleet branch SHA (written on sync in app repos)
 │   └── scripts/
-│       ├── link-fleet-rules.sh       # wire .agents/rules into .cursor/rules/ (fleet-vendored)
-│       └── merge-cursor-git-guard.sh # merge fleet hooks into .cursor/hooks.json
+│       ├── link-fleet-rules.sh       # wire .agents/rules into .cursor/rules/
+│       └── merge-cursor-git-guard.sh # merge git guard into .cursor/hooks.json
 ├── .cursor/
 │   ├── environment.json              # cloud VM install (+ optional terminals)
-│   ├── hooks.json                    # fleet hooks (+ project hooks)
+│   ├── hooks.json                    # git guard (+ project hooks)
 │   └── rules/                        # fleet symlinks (.mdc) + project-only rules
 └── scripts/
     ├── update-agents-subtree.sh      # pull fleet updates from dotagents
@@ -42,14 +41,11 @@ They **do** read the committed `.agents/` subtree in the repo. They do **not** s
 
 ### Edit path (fleet changes)
 
-Fleet changes go to [dotagents](https://github.com/jsolly/dotagents) `main` → CI publishes the `fleet` branch → each app repo pulls with `./scripts/update-agents-subtree.sh`. **Never edit `.agents/` in app repos** — the next fleet publish or subtree pull overwrites direct edits.
-
-- **Local IDE:** `sessionStart` runs `check-fleet-subtree-stale.sh` and nudges you to pull when `FLEET.lock` is behind.
-- **Cursor Cloud:** no `sessionStart` — run **Fleet sync at cloud task start** (below) so the VM works against current fleet before other tasks.
+Fleet changes go to [dotagents](https://github.com/jsolly/dotagents) `main` → CI publishes the `fleet` branch → each app repo syncs via **Fleet sync at cloud task start** (below) or `./scripts/update-agents-subtree.sh`. **Never edit `.agents/` in app repos** — the next fleet publish or subtree pull overwrites direct edits.
 
 ## Fleet sync at cloud task start (agent-run)
 
-Cloud agents only see **committed** `.agents/` on the branch Cursor cloned. Refresh fleet **at the start of each cloud task** when `FLEET.lock` is behind `dotagents/fleet`.
+Cloud agents only see **committed** `.agents/` on the branch Cursor cloned. **At the start of each cloud task**, refresh fleet when `FLEET.lock` is behind `dotagents/fleet`.
 
 1. **Secrets** — [Cloud Agents → Secrets](https://cursor.com/dashboard?tab=cloud-agents) for this repository:
 
@@ -67,28 +63,29 @@ Cloud agents only see **committed** `.agents/` on the branch Cursor cloned. Refr
    bash scripts/cloud-fleet-sync-if-stale.sh
    ```
 
-   This runs `.agents/hooks/check-fleet-subtree-stale.sh`; when stale it invokes `./scripts/update-agents-subtree.sh` (subtree pull, `FLEET.lock`, rule links, hook merge).
+   Compares `.agents/FLEET.lock` to `dotagents/fleet`; when stale, runs `./scripts/update-agents-subtree.sh` (subtree pull, `FLEET.lock`, rule links, git-guard merge).
 
 4. **Commit and push** any changes before feature work:
 
    ```bash
    git status
-   git add .agents .cursor/rules .cursor/hooks.json .agents/FLEET.lock docs/cloud-agents.md
+   git add .agents .cursor/rules .cursor/hooks.json docs/cloud-agents.md
+   git add .agents/FLEET.lock 2>/dev/null || true
    git commit -m "chore(fleet): sync agent fleet from dotagents"
    git push
    ```
 
    Stage only paths that changed. Skip the commit if `git status` is clean.
 
-If `dotagents` remote is missing, `update-agents-subtree.sh` adds it. If the hook script is missing, the repo needs a fleet subtree pull from a machine that can reach dotagents first.
+If `dotagents` remote is missing, `update-agents-subtree.sh` adds it.
 
 ## Environment
 
 See `.cursor/environment.json`. New repos ship with `"agentCanUpdateSnapshot": true` so Cursor may let the agent refresh the pinned snapshot when the platform supports it (see [environment schema](https://www.cursor.com/schemas/environment.schema.json)).
 
-**Project-local paths (never overwritten by fleet subtree pull):** extra files under `.agents/hooks/` (e.g. deploy checks) and `.agents/automations/` — commit these in the child repo only. Fleet ships `block-git-no-verify.sh`, `check-fleet-subtree-stale.sh`, and `merge-cursor-git-guard.sh` via subtree.
+**Project-local paths (never overwritten by fleet subtree pull):** extra files under `.agents/hooks/` (e.g. deploy checks) and `.agents/automations/` — commit these in the child repo only. Fleet ships `block-git-no-verify.sh` and `merge-cursor-git-guard.sh` via subtree.
 
-**sessionStart fleet check:** `check-fleet-subtree-stale.sh` runs in the IDE when a composer session starts (not in Cursor Cloud — cloud VMs start after submit). It compares `.agents/FLEET.lock` to `dotagents/fleet` and injects a reminder to run `./scripts/update-agents-subtree.sh` when behind.
+**Git guard hook:** `merge-cursor-git-guard.sh` wires `block-git-no-verify.sh` into `.cursor/hooks.json` (`beforeShellExecution`). Fleet sync is **not** a hook — use `cloud-fleet-sync-if-stale.sh` at task start.
 
 ## Snapshot bootstrap (agent-run)
 
@@ -115,7 +112,7 @@ Run this **once per repo** (or again after dependency/toolchain changes) when yo
    git push
    ```
 
-5. **Subtree sync** — If you also changed fleet docs under `.agents/`, run `./scripts/update-agents-subtree.sh` only when pulling from dotagents, not after pinning a snapshot.
+5. **Fleet sync** — Run `bash scripts/cloud-fleet-sync-if-stale.sh` when pulling dotagents fleet changes, not as part of snapshot pinning.
 
 If you cannot obtain a snapshot ID, **leave `snapshot` unset** and note the blocker in your summary. The next agent will boot from `install` only.
 
@@ -129,7 +126,9 @@ Fleet config is vendored from [dotagents](https://github.com/jsolly/dotagents) `
 ./scripts/update-agents-subtree.sh
 ```
 
-**Edit fleet canonical copy** (on a machine with a `~/.agents` checkout):
+Or from a cloud task: `bash scripts/cloud-fleet-sync-if-stale.sh` (checks `FLEET.lock` first).
+
+**Edit fleet canonical copy** (in `~/.agents` / dotagents `main`):
 
 ```bash
 cd ~/.agents
@@ -137,7 +136,7 @@ cd ~/.agents
 git add -A && git commit -m "..." && git push   # CI rebuilds + publishes the fleet branch
 ```
 
-Then in this repo: `./scripts/update-agents-subtree.sh` (local IDE sessions are nudged by the `sessionStart` hook when `FLEET.lock` is behind `dotagents/fleet`).
+Then sync into this repo via cloud task start or `update-agents-subtree.sh`.
 
 **Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `~/.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `~/.agents/`.
 
