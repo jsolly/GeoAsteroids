@@ -97,6 +97,21 @@ See `.cursor/environment.json`. Fleet repos use an `install` command (typically 
 
 After install succeeds, run smoke checks from root `AGENTS.md` (e.g. `npm run check:ts`, `npm test`). Do **not** add `snapshot` or `agentCanUpdateSnapshot` to `environment.json` unless the user explicitly asks for snapshot pinning.
 
+### Node on PATH (Cursor Cloud VMs)
+
+Cursor Cloud VMs ship **Node 22** on PATH ahead of nvm. `use_node_for_cursor_cloud` (in `.agents/scripts/cloud-install-lib.sh`) installs Node 24 and prepends nvm’s bin directory for the **install script** only. It also appends an `~/.bashrc` marker so **new interactive shells** prefer Node 24.
+
+Non-interactive commands in the same agent turn (or before opening a fresh shell) may still run Node 22 unless you activate nvm:
+
+```bash
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+nvm use 24
+export PATH="$(dirname "$(nvm which 24)"):$PATH"
+```
+
+Symptom: `node -v` shows v22 while `.nvmrc` requires 24 — `npm test` / native addons / `engines` checks fail mysteriously.
+
 **Fleet edit guards:** `converge-repo.sh` wires three enforcement layers:
 
 - **Cursor:** `merge-cursor-edit-guard.sh` adds `preToolUse` → `block-fleet-edits.sh` (denies `Write`/`Delete` on `.agents/**` and regenerated shims).
