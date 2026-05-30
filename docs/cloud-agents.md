@@ -1,24 +1,25 @@
-# Cursor Cloud Agents
+# Cursor Cloud Agents — GeoRoids
 
-GeoAsteroids is configured for **cloud-only development**: agents, skills, and rules are self-contained in this repo.
+This repo is configured for **cloud-only development**: agents, skills, and rules are self-contained in git (no `.agents/` on the VM).
 
 ## Layout
 
 ```text
-GeoAsteroids/
-├── AGENTS.md                         # @.agents/AGENTS.md + ## Project
+<repo>/
+├── AGENTS.md                         # @.agents/AGENTS.md + ## Project / ## Purpose
 ├── .agents/                          # git subtree from dotagents (fleet branch)
 │   ├── AGENTS.md                     # fleet persona + collaboration
 │   ├── agents/                       # review-fix-push subagent prompts
 │   ├── skills/                       # review-fix, review-fix-push
-│   ├── rules/                        # canonical guideline markdown
-│   └── .cursor/rules/                # Cursor auto-apply rules (.mdc symlinks)
+│   ├── rules/                        # canonical guidelines (.md, Cursor frontmatter)
+│   └── scripts/
+│       └── link-fleet-rules.sh       # wire .agents/rules into .cursor/rules/ (fleet-vendored)
 ├── .cursor/
-│   ├── environment.json              # cloud VM install + dev terminals
-│   └── rules/                        # fleet symlinks + project-only rules
+│   ├── environment.json              # cloud VM install (+ optional terminals)
+│   └── rules/                        # fleet symlinks (.mdc) + project-only rules
 └── scripts/
     ├── update-agents-subtree.sh      # pull fleet updates from dotagents
-    └── link-fleet-rules.sh           # wire .agents rules into .cursor/rules/
+    └── pin-cloud-snapshot.sh         # commit snapshot ID after first green cloud boot
 ```
 
 Cloud agents discover:
@@ -27,36 +28,42 @@ Cloud agents discover:
 - **Rules** at `.cursor/rules/` (fleet + project)
 - **Instructions** from root `AGENTS.md`
 
-They do **not** see `~/.agents/`, `~/.cursor/skills/`, or local symlinks outside the repo.
+They do **not** see `.agents/`, `~/.cursor/skills/`, or local symlinks outside the repo.
 
 ## Environment
 
-`.cursor/environment.json`:
+See `.cursor/environment.json`. New repos ship with `"agentCanUpdateSnapshot": true` so Cursor may let the agent refresh the pinned snapshot when the platform supports it (see [environment schema](https://www.cursor.com/schemas/environment.schema.json)).
 
-```json
-{
-  "install": "npm ci || npm install && (test -f .env || cp .env.example .env)",
-  "terminals": [
-    { "name": "dev", "command": "npm run dev" }
-  ]
-}
-```
-
-On first boot, install copies `.env.example` → `.env` if needed. `scripts/dev-server.sh` does the same before starting `tsx --env-file=.env`.
-
-The install step previously failed when `@biomejs/biome` pointed at an expired pkg.pr.new URL — now pinned to the npm registry.
-
-**Dashboard:** If you set a custom update script in the [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents#environments), match `npm ci || npm install` or defer to the repo file.
+**Project-local paths (never overwritten by fleet subtree pull):** `.agents/hooks/`, `.agents/automations/` — commit these in the child repo only; they are not in the dotagents `fleet` branch.
 
 ## Snapshot bootstrap (agent-run)
 
-After install succeeds and smoke tests pass (`npm run check:ts` or integration tests per project rules), pin the VM snapshot so future agents boot faster:
+Run this **once per repo** (or again after dependency/toolchain changes) when you are a **Cursor Cloud agent** and `.cursor/environment.json` has no `snapshot` field, has a stale snapshot, or the user asked you to refresh the cloud environment.
 
-1. Obtain a real snapshot ID (agent UI, `CURSOR_SNAPSHOT_ID` / `SNAPSHOT_ID`, or [Cloud Agents → Environments](https://cursor.com/dashboard?tab=cloud-agents) Copy button).
-2. `./scripts/pin-cloud-snapshot.sh 'snapshot-...'`
-3. Commit and push `.cursor/environment.json`.
+1. **Verify install** — Re-run or confirm the `install` command from `.cursor/environment.json` succeeded. Then run a **smoke check** from root `AGENTS.md` (e.g. `npm run check:ts`, `npm test`, project-specific command). Do not pin a snapshot on a broken environment.
 
-See `docs/cloud-agents.md` in dotagents fleet for the full checklist. Do not guess snapshot IDs.
+2. **Obtain a snapshot ID** (real ID only; never guess):
+   - Check agent UI / session metadata for a snapshot or environment ID after setup completes.
+   - Check env vars: `CURSOR_SNAPSHOT_ID`, `SNAPSHOT_ID` (if Cursor injected one).
+   - If still missing: open [Cloud Agents → Environments](https://cursor.com/dashboard?tab=cloud-agents), find this repository’s saved environment, and use **Copy** on the Snapshot column (requires an authenticated browser session — use browser tools if available, otherwise ask the user to paste the ID).
+
+3. **Pin in the repo:**
+
+   ```bash
+   ./scripts/pin-cloud-snapshot.sh 'snapshot-YYYYMMDD-...'
+   ```
+
+4. **Commit and push** on the working branch:
+
+   ```bash
+   git add .cursor/environment.json
+   git commit -m "chore(agents): pin cloud environment snapshot"
+   git push
+   ```
+
+5. **Subtree sync** — If you also changed fleet docs under `.agents/`, run `./scripts/update-agents-subtree.sh` only when pulling from dotagents, not after pinning a snapshot.
+
+If you cannot obtain a snapshot ID, **leave `snapshot` unset** and note the blocker in your summary. The next agent will boot from `install` only.
 
 ## Fleet updates (dotagents subtree)
 
@@ -68,47 +75,40 @@ Fleet config is vendored from [dotagents](https://github.com/jsolly/dotagents) `
 ./scripts/update-agents-subtree.sh
 ```
 
-**Edit fleet canonical copy** (in `~/.agents/` on a machine that has it):
+**Edit fleet canonical copy** (on a machine with a `~/.agents` checkout):
 
 ```bash
 cd ~/.agents
 # edit agents/, skills/, rules/
-./scripts/refresh-fleet.sh
-git add fleet/ && git commit -m "..."
-./scripts/refresh-fleet.sh --push
+git add -A && git commit -m "..." && git push   # CI rebuilds + publishes the fleet branch
 ```
 
-Then in GeoAsteroids: `./scripts/update-agents-subtree.sh`
+Then in this repo: `./scripts/update-agents-subtree.sh` (or wait for the weekly sync).
 
-**Push repo edits back to dotagents** (e.g. improved a skill in cloud):
+**Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `.agents/`.
 
-```bash
-git subtree push --prefix=.agents dotagents fleet
-```
+### GitHub Actions weekly sync
 
-Then merge `fleet` branch into `fleet/` on dotagents `main` (or re-run `refresh-fleet.sh` there to reconcile).
+Repos with `.github/workflows/sync-agent-fleet.yml` pull fleet automatically (Monday 6am UTC) or via **Actions → Sync agent fleet → Run workflow**.
+
+Because `dotagents` is private, each repo needs a **repository secret**:
+
+| Secret | Value |
+| --- | --- |
+| `FLEET_SYNC_TOKEN` | Fine-grained PAT: **read-only** access to `jsolly/dotagents` (Contents) |
+
+Do **not** reuse `GH_AGENT_TOKEN` (Cursor cloud agents) — that token has broader cross-repo scope and should stay in Cursor secrets only. The workflow push back to the same repo uses the built-in `GITHUB_TOKEN`.
 
 ## Project-only vs fleet
 
 | Asset | Location | Synced from dotagents? |
 | --- | --- | --- |
 | Fleet persona, review skills, code-style rules | `.agents/` | Yes (subtree) |
-| Browser integration testing playbook | `.cursor/rules/browser-integration-testing.mdc` | No (project) |
-| Log file paths | `.cursor/rules/log-files.mdc` | No (project) |
-| Dev environment | `.cursor/environment.json` | No (project) |
-| Game architecture, commands | `AGENTS.md` ## Project | No (project) |
-
-## Debugging in cloud
-
-1. Dev server starts via `terminals` in `environment.json` (or `npm run dev`)
-2. Integration tests: `./scripts/test-runner.sh tests/integration/browser/...` (never raw `npx vitest`)
-3. Logs: `logs/client.log`, `logs/server.log`
-4. Debug flags: edit `src/constants/index.ts` (`LOGGING`, `DEBUG`)
-
-See `.cursor/rules/browser-integration-testing.mdc` for the full playbook.
+| Project-only Cursor rules | `.cursor/rules/*.mdc` (real files) | No |
+| Dev environment | `.cursor/environment.json` | No (per-repo) |
+| Commands, architecture | `AGENTS.md` sections below `@.agents/` | No |
 
 ## References
 
 - [Cursor Cloud Agent setup](https://cursor.com/docs/cloud-agent/setup)
 - [Cursor Skills](https://cursor.com/docs/skills)
-- [Git subtree basics (SKempin)](https://gist.github.com/SKempin/b7857a6ff6bddb05717cc17a44091202)
