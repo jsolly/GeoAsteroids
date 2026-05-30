@@ -102,3 +102,12 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 - **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
 - **Fleet updates:** `./scripts/update-agents-subtree.sh`
 - **Snapshot:** After first successful cloud boot, `./scripts/pin-cloud-snapshot.sh` per `docs/cloud-agents.md` → Snapshot bootstrap (agent-run)
+
+## Cursor Cloud specific instructions
+
+- **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`. Cloud VMs may ship Node 22 — installs and tests still pass, but prefer Node 24 when available (`nvm use` / install from `.nvmrc`).
+- **Playwright browsers:** `npm ci` does not download Chromium. On a fresh VM run once: `npx playwright install chromium` before browser integration tests.
+- **Dev servers:** `npm run dev` starts Vite (`:5173`) and the game server (`:3001`) via `concurrently`. Check with `npm run dev:check` or `curl http://localhost:3001/health`. If ports are stuck after a bad run: `npm run dev:kill` then restart.
+- **Background dev:** Prefer the `dev` terminal from `.cursor/environment.json`. If tmux sessions do not persist in the VM, `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
+- **E2E smoke:** `./scripts/test-runner.sh tests/integration/browser/sanity/game-initializes-with-arena-and-hud.test.ts --reporter=verbose` — navigates to the game, clicks Play, and asserts canvas, HUD, and asteroids (core hello-world flow).
+- **Logs:** `logs/client.log` and `logs/server.log` (see `.cursor/rules/log-files.mdc`). Enable verbose client logs in `src/constants/index.ts` (`LOGGING.GLOBAL_LOG_LEVEL`, `DEBUG.ENABLED`), not via env vars.
