@@ -14,7 +14,7 @@ This repo is configured for **cloud-only development**: agents, skills, and rule
 │   ├── hooks/
 │   │   └── block-git-no-verify.sh    # fleet — blocks git push/commit --no-verify
 │   ├── rules/                        # canonical guidelines (.md, Cursor frontmatter)
-│   ├── FLEET.lock                    # pinned dotagents fleet branch SHA (updated on sync)
+│   ├── FLEET.lock                    # pinned dotagents fleet branch SHA (written on sync in app repos)
 │   └── scripts/
 │       ├── link-fleet-rules.sh       # wire .agents/rules into .cursor/rules/ (fleet-vendored)
 │       └── merge-cursor-git-guard.sh # merge git guard into .cursor/hooks.json
