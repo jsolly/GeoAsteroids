@@ -27,7 +27,7 @@ git fetch "$REMOTE" "$BRANCH"
 git subtree pull --prefix=.agents "$REMOTE" "$BRANCH" --squash -m "Update agent fleet subtree" || \
   git subtree add --prefix=.agents "$REMOTE" "$BRANCH" --squash -m "Add agent fleet subtree from dotagents"
 
-FLEET_SHA="$(git rev-parse "${REMOTE}/${BRANCH}^{commit}")"
+FLEET_SHA="$(git rev-parse "${REMOTE}/${BRANCH}")"
 printf 'sha: %s\n' "$FLEET_SHA" > .agents/FLEET.lock
 
 # Project-local .agents/hooks and .agents/automations are NOT in the fleet branch — subtree pull will not remove them if committed here.
