@@ -101,7 +101,6 @@ This repo is self-contained for [Cursor Cloud Agents](docs/cloud-agents.md): fle
 - **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
 - **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
 - **Fleet updates:** `./scripts/update-agents-subtree.sh`
-- **Snapshot:** After first successful cloud boot, `./scripts/pin-cloud-snapshot.sh` per `docs/cloud-agents.md` → Snapshot bootstrap (agent-run)
 
 ## Cursor Cloud specific instructions
 
