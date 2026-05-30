@@ -1,6 +1,6 @@
 # Cursor Cloud Agents — GeoRoids
 
-<!-- fleet-doc-version: 4 -->
+<!-- fleet-doc-version: 5 -->
 
 This repo is configured for **cloud-only development**: agents, skills, and rules are self-contained in git (no developer-home agents checkout on the VM).
 
@@ -27,6 +27,7 @@ This repo is configured for **cloud-only development**: agents, skills, and rule
 │   └── rules/                        # fleet symlinks (.mdc) + project-only rules
 └── scripts/
     ├── update-agents-subtree.sh      # pull fleet updates from dotagents
+    ├── cloud-fleet-sync-if-stale.sh  # cloud task start — pull when FLEET.lock is behind
     └── pin-cloud-snapshot.sh         # commit snapshot ID after first green cloud boot
 ```
 
@@ -41,7 +42,45 @@ They **do** read the committed `.agents/` subtree in the repo. They do **not** s
 
 ### Edit path (fleet changes)
 
-Fleet changes go to [dotagents](https://github.com/jsolly/dotagents) `main` → CI publishes the `fleet` branch → each app repo pulls with `./scripts/update-agents-subtree.sh` when the Cursor `sessionStart` hook reports a stale `FLEET.lock`. **Never edit `.agents/` in app repos** — the next fleet publish or subtree pull overwrites direct edits.
+Fleet changes go to [dotagents](https://github.com/jsolly/dotagents) `main` → CI publishes the `fleet` branch → each app repo pulls with `./scripts/update-agents-subtree.sh`. **Never edit `.agents/` in app repos** — the next fleet publish or subtree pull overwrites direct edits.
+
+- **Local IDE:** `sessionStart` runs `check-fleet-subtree-stale.sh` and nudges you to pull when `FLEET.lock` is behind.
+- **Cursor Cloud:** no `sessionStart` — run **Fleet sync at cloud task start** (below) so the VM works against current fleet before other tasks.
+
+## Fleet sync at cloud task start (agent-run)
+
+Cloud agents only see **committed** `.agents/` on the branch Cursor cloned. Refresh fleet **at the start of each cloud task** when `FLEET.lock` is behind `dotagents/fleet`.
+
+1. **Secrets** — [Cloud Agents → Secrets](https://cursor.com/dashboard?tab=cloud-agents) for this repository:
+
+   | Secret | Value |
+   | --- | --- |
+   | `DOTAGENTS_GITHUB_TOKEN` | Fine-grained PAT: **read-only** Contents on `jsolly/dotagents` (used by `update-agents-subtree.sh` to fetch `fleet`) |
+
+   App-repo push uses Cursor’s normal GitHub access for this repository. Do **not** put `GH_AGENT_TOKEN` in repo secrets for fleet fetch — keep that in Cursor-only config.
+
+2. **Working tree** — `update-agents-subtree.sh` requires a clean tree. Commit or stash unrelated work first.
+
+3. **Check and pull** (from repo root):
+
+   ```bash
+   bash scripts/cloud-fleet-sync-if-stale.sh
+   ```
+
+   This runs `.agents/hooks/check-fleet-subtree-stale.sh`; when stale it invokes `./scripts/update-agents-subtree.sh` (subtree pull, `FLEET.lock`, rule links, hook merge).
+
+4. **Commit and push** any changes before feature work:
+
+   ```bash
+   git status
+   git add .agents .cursor/rules .cursor/hooks.json .agents/FLEET.lock docs/cloud-agents.md
+   git commit -m "chore(fleet): sync agent fleet from dotagents"
+   git push
+   ```
+
+   Stage only paths that changed. Skip the commit if `git status` is clean.
+
+If `dotagents` remote is missing, `update-agents-subtree.sh` adds it. If the hook script is missing, the repo needs a fleet subtree pull from a machine that can reach dotagents first.
 
 ## Environment
 
@@ -102,15 +141,18 @@ Then in this repo: `./scripts/update-agents-subtree.sh` (local IDE sessions are 
 
 **Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `~/.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `~/.agents/`.
 
+### Secrets summary
+
+| Secret | Where | Purpose |
+| --- | --- | --- |
+| `DOTAGENTS_GITHUB_TOKEN` | Cursor Cloud repo secrets | Cloud agent fetch of `jsolly/dotagents` `fleet` |
+| `FLEET_SYNC_TOKEN` | GitHub Actions repo secret | PR workflow `fleet-lock-guard` when `.agents/` changes |
+
+Do **not** reuse `GH_AGENT_TOKEN` for fleet fetch — broader cross-repo scope; keep in Cursor-only config.
+
 ### FLEET.lock on pull requests
 
 Repos with `.github/workflows/fleet-lock-guard.yml` verify that `.agents/FLEET.lock` matches `dotagents/fleet` when `.agents/` changes in a PR.
-
-| Secret | Value |
-| --- | --- |
-| `FLEET_SYNC_TOKEN` | Fine-grained PAT: **read-only** access to `jsolly/dotagents` (Contents) |
-
-Do **not** reuse `GH_AGENT_TOKEN` (Cursor cloud agents) — that token has broader cross-repo scope and should stay in Cursor secrets only.
 
 ## Project-only vs fleet
 
