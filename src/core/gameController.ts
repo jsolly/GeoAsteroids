@@ -255,7 +255,7 @@ export class GameController {
     // Don't stop the game loop yet - let the text render for a few seconds
     setTimeout(() => {
       // Stop the game loop and return to main menu
-      this.gameStateManager.toggleIsGameRunning();
+      this.gameStateManager.setIsGameRunning(false);
       import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });

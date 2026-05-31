@@ -13,8 +13,8 @@ test('player health regenerates after damage', async () => {
   await game.bootSinglePlayerGame();
   await game.waitForCombatReady();
 
-  await game.applyLocalChipDamage(25);
-  await expect.poll(() => game.getShipHealth()).toBe(75);
+  await game.applyServerChipDamage(25);
+  await game.waitForShipHealth(75);
 
   const healed = await game.waitForHealthAbove(76, 15000);
   expect(healed).toBeGreaterThan(75);

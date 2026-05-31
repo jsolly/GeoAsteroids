@@ -616,13 +616,19 @@ export class ConnectionManager {
       remainingLives: data.remainingLives,
     });
 
+    const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+    const isLocalTarget = Boolean(
+      localPlayer &&
+        (localPlayer.id === data.targetPlayerId || this.getLocalPlayerId() === data.targetPlayerId)
+    );
+    const prevLocalLives =
+      isLocalTarget && localPlayer && data.remainingLives !== undefined
+        ? localPlayer.lives
+        : undefined;
+
     let targetPlayer = this.allPlayers.get(data.targetPlayerId);
     if (!targetPlayer) {
-      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
-      if (
-        localPlayer &&
-        (localPlayer.id === data.targetPlayerId || this.getLocalPlayerId() === data.targetPlayerId)
-      ) {
+      if (isLocalTarget && localPlayer) {
         targetPlayer = localPlayer;
         this.allPlayers.set(data.targetPlayerId, localPlayer);
       }
@@ -652,6 +658,32 @@ export class ConnectionManager {
     if (data.isDestroyed && !targetPlayer.ship.exploding) {
       targetPlayer.ship.explode(data.attackerId);
     }
+
+    if (
+      localPlayer &&
+      prevLocalLives !== undefined &&
+      data.remainingLives !== undefined &&
+      prevLocalLives > data.remainingLives
+    ) {
+      this.dispatchLocalPlayerDied(localPlayer, data.remainingLives, data.attackerId);
+    }
+  }
+
+  /** Fire playerDied when server reports a life loss before game-state sync arrives. */
+  private dispatchLocalPlayerDied(
+    localPlayer: Player,
+    remainingLives: number,
+    deathCause: string
+  ): void {
+    window.dispatchEvent(
+      new CustomEvent('playerDied', {
+        detail: {
+          playerId: localPlayer.id,
+          deathCause,
+          isGameOver: remainingLives <= 0,
+        },
+      })
+    );
   }
 
   /** Keep PlayerManager's local ship in sync when damage hits a network duplicate. */

@@ -42,6 +42,11 @@ export class GameStateManager {
     logger.debug('GAME_STATE', 'Game state toggled', { isGameRunning: this.isGameRunning });
   }
 
+  setIsGameRunning(running: boolean): void {
+    this.isGameRunning = running;
+    logger.debug('GAME_STATE', 'Game running state set', { isGameRunning: running });
+  }
+
   updateTextAlpha(alpha: number): void {
     this.textAlpha = alpha;
   }

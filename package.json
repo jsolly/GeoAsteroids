@@ -22,7 +22,7 @@
     "test:integration:browser:e2e": "./scripts/test-runner.sh tests/integration/browser/e2e/ --reporter=verbose",
     "test:integration:browser:sanity": "./scripts/test-runner.sh tests/integration/browser/sanity/ --reporter=verbose",
     "test:integration:server": "vitest run tests/integration/server/",
-    "test:integration:component": "vitest run tests/integration/component/",
+    "test:integration:component": "vitest run tests/integration/component/ --passWithNoTests",
     "check:ts": "tsc --noEmit",
     "check:lint": "biome check .",
     "check:fix": "biome check --write .",

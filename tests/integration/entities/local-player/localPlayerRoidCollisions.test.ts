@@ -41,7 +41,7 @@ describe('Integration: Local player roid collisions', () => {
     localShip = new Ship({ isLocalPlayer: true });
     localShip.position = { x: 400, y: 300 };
     localShip.r = 15;
-    
+
     // Clear spawn protection to allow collisions
     localShip.blinkCount = 0;
     localShip.spawnProtectionTimer = 0;
@@ -55,37 +55,33 @@ describe('Integration: Local player roid collisions', () => {
     vi.clearAllMocks();
   });
 
-  test('applies instant damage and sends messages when ship collides with asteroid', () => {
-    // Note: pass a typical server/player id that does not match Ship.id
+  test('sends server-authoritative collision messages without applying local damage', () => {
     const localPlayerId = 'local-player-123';
     const localPlayer = { ship: localShip, id: localPlayerId, type: 'local' as const };
     const initialHealth = localShip.health;
 
     collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
 
-    // Ship should have taken damage
-    expect(localShip.health).toBeLessThan(initialHealth);
+    // Server applies damage; client only sends network messages
+    expect(localShip.health).toBe(initialHealth);
 
-    // Should send collision damage message to server
     expect(mockSendMessage).toHaveBeenCalledWith({
       type: 'collisionDamage',
       data: {
         targetPlayerId: localPlayerId,
         attackerId: 'asteroid',
-        damage: 25, // DAMAGE.LASER_HIT value
+        damage: 25,
       },
     });
 
-    // Should send asteroid destroyed message to server
     expect(mockSendMessage).toHaveBeenCalledWith({
       type: 'asteroidDestroyed',
       data: {
         asteroidId: roid.id,
         playerId: localPlayerId,
-        points: 50, // Medium asteroid points (radius 25)
+        points: 50,
       },
     });
   });
 });
-
 

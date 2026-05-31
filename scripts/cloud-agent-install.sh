@@ -9,11 +9,11 @@ source "$REPO_ROOT/.agents/scripts/cloud-install-lib.sh"
 
 use_node_for_cursor_cloud
 npm ci
-# Fleet verify checks Linux headless-shell paths; macOS dev uses Chromium bundle (launch still works).
+# macOS dev uses Chromium bundle (launch still works); skip Linux-only headless-shell verify.
 if [ "$(uname -s)" = Darwin ]; then
-	PLAYWRIGHT_E2E_VERIFY=0 install_playwright_browsers_for_e2e
+	PLAYWRIGHT_E2E_VERIFY=0 bash scripts/ensure-playwright-browsers.sh
 else
-	install_playwright_browsers_for_e2e
+	bash scripts/ensure-playwright-browsers.sh
 fi
 if [[ ! -f .env ]] && [[ -f .env.example ]]; then
 	cp .env.example .env

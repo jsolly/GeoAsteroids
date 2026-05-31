@@ -1333,14 +1333,36 @@ export class GameInteractions {
     });
   }
 
-  /** Apply chip damage on the client (starts the local regen timer). */
+  /** Apply chip damage through the server (authoritative health sync). */
+  async applyServerChipDamage(amount = 25, attackerId = 'server-bot-0'): Promise<void> {
+    await this.page.evaluate(
+      async ({ damage, attackerId }) => {
+        const gc = (window as any).gameController;
+        const nm = gc?.getNetworkManager?.();
+        const playerId = nm?.getLocalPlayerId?.();
+        if (!nm || !playerId) {
+          throw new Error('Cannot apply server chip damage — not connected');
+        }
+        nm.sendMessage({
+          type: 'laserDamage',
+          data: {
+            targetPlayerId: playerId,
+            attackerId,
+            damage,
+          },
+        });
+        for (let frame = 0; frame < 30; frame++) {
+          gc.updateGame();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        }
+      },
+      { damage: amount, attackerId }
+    );
+  }
+
+  /** @deprecated Use applyServerChipDamage — local-only damage is overwritten by server snapshots. */
   async applyLocalChipDamage(amount = 25): Promise<void> {
-    await this.page.evaluate((damage) => {
-      const gc = (window as any).gameController;
-      const ship = gc?.playerManager?.getLocalPlayer()?.ship;
-      if (!ship) throw new Error('No local ship');
-      ship.takeDamage(damage, 'test');
-    }, amount);
+    await this.applyServerChipDamage(amount);
   }
 
   /** Apply laser damage without killing (single hit by default). */
@@ -1350,16 +1372,17 @@ export class GameInteractions {
 
   /** Poll until local health exceeds a threshold. */
   async waitForHealthAbove(threshold: number, timeoutMs = 15000): Promise<number> {
-    await this.page.waitForFunction(
-      (min) => {
-        const gc = (window as any).gameController;
-        const health = gc?.playerManager?.getLocalPlayer()?.ship?.health ?? 0;
-        return health > min;
-      },
-      threshold,
-      { timeout: timeoutMs, polling: 200 }
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await this.runGameFrames(8);
+      const health = await this.getShipHealth();
+      if (health > threshold) {
+        return health;
+      }
+    }
+    throw new Error(
+      `Timed out waiting for health above ${threshold} (got ${await this.getShipHealth()})`
     );
-    return this.getShipHealth();
   }
 
   /** Pin the local ship on a bot so ship-to-ship collision damage applies. */
