@@ -6,6 +6,8 @@ import { TestConfig } from '../../utils/test-config';
 
 const { browserManager } = createBrowserScenarioHooks(__dirname);
 
+const DEATH_POSITION = { x: 3150, y: 0 };
+
 test('ship respawns at a random location after boundary death', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
@@ -15,14 +17,14 @@ test('ship respawns at a random location after boundary death', async () => {
   await game.waitForCombatReady();
 
   const initialLives = await game.getLives();
-  await game.placeShipAt(3150, 0);
+  await game.placeShipAt(DEATH_POSITION.x, DEATH_POSITION.y);
   await game.syncShipPositionToServer();
 
   await expect
     .poll(() => game.getLives(), { timeout: 8000, message: 'boundary crossing should cost a life' })
     .toBeLessThan(initialLives);
 
-  const deathPosition = await game.getShipPosition();
-  const respawnPosition = await game.waitForShipRespawn(deathPosition, 60000);
-  expectRandomRespawnPlacement(deathPosition, respawnPosition);
+  const afterDeath = await game.getShipPosition();
+  const respawnPosition = await game.waitForServerRespawnAwayFrom(DEATH_POSITION, 90000, afterDeath);
+  expectRandomRespawnPlacement(DEATH_POSITION, respawnPosition);
 }, TestConfig.DEFAULT_TIMEOUT * 3);

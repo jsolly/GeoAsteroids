@@ -4,6 +4,7 @@ import { logger } from './setup/serverLogger';
 import { WebSocketCore } from './server/communication/WebSocketCore';
 import { GameEngine } from './server/core/GameEngine';
 import { ClientLogger } from './server/services/ClientLogger';
+import { buildHealthPayload, handleTestResetWorld } from './server/testHttpHandlers';
 
 // Production configuration
 const PORT = process.env.PORT || 3001;
@@ -34,14 +35,9 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
 
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        players: wsCore.getPlayerCount(),
-        uptime: process.uptime(),
-      })
-    );
+    res.end(JSON.stringify(buildHealthPayload(wsCore, gameEngine)));
+  } else if (req.url === '/test/reset-world') {
+    handleTestResetWorld(req, res, NODE_ENV, gameEngine);
   } else if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('GeoRoids Game Server - Running');
@@ -586,32 +582,48 @@ const wss = new WebSocketServer({
 // The ws library attaches its own upgrade handler. Manually calling handleUpgrade here can
 // result in 'server.handleUpgrade() was called more than once with the same socket'.
 
-// Connection rate limiting to prevent abuse
+// Connection rate limiting to prevent abuse (disabled in dev/test — browser E2E opens many sockets)
 const connectionAttempts = new Map<string, { count: number; lastAttempt: number }>();
-const MAX_CONNECTIONS_PER_MINUTE = 50; // Increased from 10 to 50
-const CONNECTION_WINDOW_MS = 60000; // 1 minute
+const isTestEnvironment =
+  NODE_ENV === 'test' || process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+const isDevelopmentEnvironment =
+  NODE_ENV === 'development' || process.env.NODE_ENV === 'development';
+const shouldDisableRateLimit = isTestEnvironment || isDevelopmentEnvironment;
+const MAX_CONNECTIONS_PER_MINUTE = shouldDisableRateLimit ? 10000 : 50;
+const CONNECTION_WINDOW_MS = 60000;
+
+if (shouldDisableRateLimit) {
+  logger.info('Development/test mode — WebSocket rate limiting relaxed', {
+    NODE_ENV,
+    VITEST: process.env.VITEST,
+  });
+}
 
 function isRateLimited(ip: string): boolean {
+  if (shouldDisableRateLimit) {
+    return false;
+  }
+
   const now = Date.now();
   const attempts = connectionAttempts.get(ip);
-  
+
   if (!attempts) {
     connectionAttempts.set(ip, { count: 1, lastAttempt: now });
     return false;
   }
-  
-  // Reset if outside window
+
   if (now - attempts.lastAttempt > CONNECTION_WINDOW_MS) {
     connectionAttempts.set(ip, { count: 1, lastAttempt: now });
     return false;
   }
-  
-  // Check if over limit
+
   if (attempts.count >= MAX_CONNECTIONS_PER_MINUTE) {
+    logger.warn(
+      `Rate limited connection attempt from ${ip} (${attempts.count}/${MAX_CONNECTIONS_PER_MINUTE})`
+    );
     return true;
   }
-  
-  // Increment count
+
   attempts.count++;
   attempts.lastAttempt = now;
   return false;
@@ -671,9 +683,8 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const url = req.url;
   const clientIp = req.socket.remoteAddress || 'unknown';
   
-  // Rate limiting check
   if (isRateLimited(clientIp)) {
-    logger.warn(`🚫 Rate limited connection attempt from ${clientIp}`);
+    logger.warn(`Rate limited connection attempt from ${clientIp}`);
     ws.close(1008, 'Rate limit exceeded');
     return;
   }

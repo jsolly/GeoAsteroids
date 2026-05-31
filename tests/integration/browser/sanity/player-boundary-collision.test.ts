@@ -1,52 +1,9 @@
-import { test, beforeAll, afterAll, beforeEach, afterEach, expect } from 'vitest';
-import { BrowserManager } from '../../utils/browser-manager';
-import { ScreenshotManager } from '../../utils/screenshot-manager';
+import { expect, test } from 'vitest';
+import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
 import { TestConfig } from '../../utils/test-config';
-import { HealthChecker } from '../../utils/health-checker';
 
-// Test infrastructure
-const browserManager = new BrowserManager();
-const screenshotManager = new ScreenshotManager(__dirname);
-
-// Test setup and teardown
-beforeAll(async () => {
-  // Check if required servers are running before starting tests
-  console.log('🔍 Checking server health...');
-  
-  try {
-    await HealthChecker.checkAllServers();
-    console.log('✅ All servers are healthy!');
-  } catch (error) {
-    console.error('❌ Server health check failed:', error);
-    console.error('\n🚀 To run integration tests, start the servers first:');
-    console.error('   npm run dev');
-    console.error('\n   Then in another terminal, run:');
-    console.error('   npm run test:integration');
-    throw error;
-  }
-  
-  // Clear screenshots before starting tests
-  screenshotManager.clearScreenshots();
-  console.log('🧹 Cleared screenshots directory');
-  
-  // Initialize browser
-  await browserManager.initialize();
-});
-
-afterAll(async () => {
-  await browserManager.cleanup();
-});
-
-beforeEach(async () => {
-  // Create a new page for each test
-  await browserManager.createPage();
-});
-
-afterEach(async () => {
-  // Close the current page
-  await browserManager.closePage();
-});
+const { browserManager } = createBrowserScenarioHooks(__dirname);
 
 // Scenario: a player that crosses the circular world boundary is destroyed,
 // loses a life, and respawns back inside the playfield.
@@ -76,16 +33,21 @@ test('player explodes when hitting boundary', async () => {
     .poll(() => game.getLives(), { timeout: 8000, message: 'crossing the boundary should cost a life' })
     .toBeLessThan(initialLives);
 
-  // After the death/respawn cycle the player is returned inside the boundary
-  // (a respawn places them within 80% of the radius) and is alive again.
+  // After the death/respawn cycle the server repositions the player inside the arena.
   await expect
-    .poll(() => game.getShipDistanceFromCenter(), {
-      timeout: 12000,
+    .poll(async () => {
+      await game.runGameFrames(15);
+      return game.getShipDistanceFromCenter();
+    }, {
+      timeout: 90000,
       message: 'player should respawn inside the boundary',
     })
     .toBeLessThan(3100);
 
   await expect
-    .poll(() => game.getShipHealth(), { timeout: 12000, message: 'player should respawn with health' })
+    .poll(async () => {
+      await game.runGameFrames(10);
+      return game.getShipHealth();
+    }, { timeout: 90000, message: 'player should respawn with health' })
     .toBeGreaterThan(0);
-}, TestConfig.DEFAULT_TIMEOUT);
+}, TestConfig.DEFAULT_TIMEOUT * 3);

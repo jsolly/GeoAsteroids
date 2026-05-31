@@ -22,6 +22,9 @@ export class Player {
   // While alive it predicts locally and ignores the lagging server echo.
   private adoptServerPosition = false;
 
+  /** Ship position when death forced server-authoritative movement (respawn latch). */
+  private respawnLatchOrigin: Position | null = null;
+
   /** Last health value accepted from the server (local player regen guard). */
   private lastServerHealthEcho?: number;
 
@@ -91,6 +94,11 @@ export class Player {
       const deadOrExploding =
         this.ship.health <= 0 || this.ship.exploding || data.respawnTimer !== undefined;
       if (deadOrExploding) {
+        if (!this.adoptServerPosition) {
+          this.respawnLatchOrigin = data.position
+            ? { ...data.position }
+            : { ...this.ship.position };
+        }
         this.adoptServerPosition = true;
       }
     }
@@ -195,6 +203,10 @@ export class Player {
 
       // If we were dead/exploding and now have health, reset local spawn protection visuals
       if ((wasDead || wasExploding) && this.ship.health > 0) {
+        if (this.ship.exploding) {
+          this.ship.exploding = false;
+          this.ship.explodeTime = 0;
+        }
         logger.debug('RESPAWN_PROTECTION', 'Setting respawn protection', {
           playerId: this.id,
           settingBlinkCount: Math.ceil(
@@ -245,15 +257,24 @@ export class Player {
       }
     }
 
-    // Resume local prediction once the server confirms the respawn is complete.
+    // Resume local prediction only after adopting a live server transform
+    // (health can land in an earlier gameState tick than the respawn position).
     if (
       isLocal &&
       this.adoptServerPosition &&
       this.ship.health > 0 &&
       !this.ship.exploding &&
-      data.respawnTimer === undefined
+      data.respawnTimer === undefined &&
+      data.position
     ) {
-      this.adoptServerPosition = false;
+      const origin = this.respawnLatchOrigin;
+      const movedFromDeath = origin
+        ? Math.hypot(data.position.x - origin.x, data.position.y - origin.y) > 75
+        : true;
+      if (movedFromDeath) {
+        this.adoptServerPosition = false;
+        this.respawnLatchOrigin = null;
+      }
     }
 
     this.lastUpdate = Date.now();

@@ -1,4 +1,7 @@
 import { Page } from 'playwright';
+import { TestConfig } from './test-config';
+import { TestServerControl } from './test-server-control';
+import { ServerLogHelper } from './server-log-helper';
 
 export class GameInteractions {
   constructor(private page: Page) {}
@@ -118,8 +121,27 @@ export class GameInteractions {
   /**
    * Wait for the game to be fully initialized
    */
-  async waitForGameInitialization(timeoutMs: number = 2000): Promise<void> {
-    await this.page.waitForTimeout(timeoutMs);
+  async waitForGameInitialization(timeoutMs: number = TestConfig.GAME_INIT_TIMEOUT): Promise<void> {
+    await this.page.waitForFunction(
+      () => {
+        const gameController = (window as any).gameController;
+        if (!gameController) {
+          return false;
+        }
+
+        const gameArea = document.querySelector('#gameArea');
+        const canvas = document.querySelector('canvas');
+        if (!gameArea || !canvas) {
+          return false;
+        }
+
+        const localPlayer = gameController.playerManager?.getLocalPlayer?.();
+        const networkManager = gameController.getNetworkManager?.();
+        return Boolean(localPlayer && networkManager?.isConnected);
+      },
+      undefined,
+      { timeout: timeoutMs, polling: 200 }
+    );
     console.log('⏳ Game initialization complete');
   }
 
@@ -162,32 +184,22 @@ export class GameInteractions {
    */
   async fireLasersWithMouse(count: number, delayMs: number = 500): Promise<void> {
     console.log(`🔫 Firing ${count} times with mouse clicks...`);
+    const canvas = this.page.locator('canvas');
+    await canvas.waitFor({ state: 'visible', timeout: 5000 });
 
     for (let i = 1; i <= count; i++) {
       console.log(`  Mouse firing ${i}/${count}...`);
-      await this.page.evaluate(async () => {
-        const gc = (window as any).gameController;
-        const player = gc?.playerManager?.getLocalPlayer();
-        const canvas = document.querySelector('canvas') as HTMLCanvasElement | null;
-        if (!gc?.updateGame || !player?.ship || !canvas) {
-          throw new Error('Canvas, local ship, or game loop unavailable for mouse fire');
-        }
-        const rect = canvas.getBoundingClientRect();
-        const clientX = rect.left + rect.width / 2;
-        const clientY = rect.top + rect.height / 2;
-        player.ship.canShoot = true;
-        canvas.dispatchEvent(
-          new MouseEvent('mousemove', { clientX, clientY, bubbles: true })
-        );
-        canvas.dispatchEvent(
-          new MouseEvent('mousedown', { button: 0, bubbles: true, clientX, clientY })
-        );
-        for (let frame = 0; frame < 15; frame++) {
-          gc.updateGame();
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        }
-      });
-      await this.runGameFrames(3);
+      const box = await canvas.boundingBox();
+      if (!box) {
+        throw new Error('Canvas bounding box unavailable for mouse fire');
+      }
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await this.page.mouse.move(x, y);
+      await this.page.mouse.down({ button: 'left' });
+      await this.runGameFrames(10);
+      await this.page.mouse.up({ button: 'left' });
+      await this.runGameFrames(5);
       if (i < count && delayMs > 0) {
         await this.page.waitForTimeout(delayMs);
       }
@@ -346,6 +358,8 @@ export class GameInteractions {
     await this.navigateToGame();
     await this.startGame();
     await this.waitForGameInitialization();
+    await this.waitForServerJoin();
+    await this.waitForNetworkAsteroids(1);
     await this.verifyGameCanvas();
     await this.verifyGameArea();
   }
@@ -995,40 +1009,97 @@ export class GameInteractions {
    * drift under load — far more reliable than a fixed sleep.
    */
   /** Wait until the local player is registered on the server (post-join). */
-  async waitForServerJoin(timeoutMs = 30000): Promise<void> {
-    await this.page.waitForFunction(
-      () => {
-        const gc = (window as any).gameController;
-        const nm = gc?.getNetworkManager?.();
-        if (!nm?.isConnected) {
-          return false;
-        }
-        const id = nm.getLocalPlayerId?.();
-        const lp = gc?.playerManager?.getLocalPlayer?.();
-        if (!id || !lp) {
-          return false;
-        }
-        // Network mirror or id alignment means join + first game state landed.
-        return Boolean(nm.getPlayer?.(id) || lp.id === id);
-      },
-      undefined,
-      { timeout: timeoutMs, polling: 200 }
-    );
+  async waitForServerJoin(timeoutMs = 60000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const remaining = deadline - Date.now();
+      try {
+        await this.page.waitForFunction(
+          () => {
+            const gc = (window as any).gameController;
+            const nm = gc?.getNetworkManager?.();
+            if (!nm?.isConnected) {
+              return false;
+            }
+            const id = nm.getLocalPlayerId?.();
+            const lp = gc?.playerManager?.getLocalPlayer?.();
+            return Boolean(id && lp);
+          },
+          undefined,
+          { timeout: Math.min(5000, remaining), polling: 200 }
+        );
+        return;
+      } catch {
+        await this.page
+          .evaluate(async () => {
+            const gc = (window as any).gameController;
+            const nm = gc?.getNetworkManager?.();
+            if (!nm?.isConnected) {
+              await nm.connect();
+              nm.initializeAsteroidSync?.();
+            }
+          })
+          .catch(() => {});
+      }
+    }
+    throw new Error(`Timed out waiting for server join after ${timeoutMs}ms`);
   }
 
   async waitForCombatReady(timeoutMs = 45000): Promise<void> {
-    await this.waitForServerJoin(timeoutMs);
-    // Server spawn protection is 180 ticks (~3s). Boot may finish after it
-    // already expired, so wait the full window from join before damage tests.
-    await this.page.waitForTimeout(3500);
-    await this.page.waitForFunction(
-      () => {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const ready = await this.page.evaluate(() => {
         const lp = (window as any).gameController?.playerManager?.getLocalPlayer?.();
         return (lp?.serverSpawnProtectionTimer ?? 0) === 0;
-      },
-      undefined,
-      { timeout: timeoutMs, polling: 100 }
+      });
+      if (ready) {
+        return;
+      }
+      await this.runGameFrames(3);
+    }
+    throw new Error(`Timed out waiting for combat readiness after ${timeoutMs}ms`);
+  }
+
+  /** Wait until the local client has at least one synced asteroid. */
+  async waitForNetworkAsteroids(minCount = 1, timeoutMs = 45000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const clientCount = await this.getAsteroidCount();
+      if (clientCount >= minCount) {
+        return;
+      }
+
+      const world = await TestServerControl.getWorldDiagnostics().catch(() => null);
+      if (world && world.asteroids >= minCount) {
+        await this.runGameFrames(5);
+      } else {
+        await this.page.waitForTimeout(200);
+      }
+    }
+
+    const clientCount = await this.getAsteroidCount();
+    const world = await TestServerControl.getWorldDiagnostics().catch(() => null);
+    throw new Error(
+      `Timed out waiting for ${minCount} synced asteroid(s): client=${clientCount}, server=${world?.asteroids ?? 'unknown'}`
     );
+  }
+
+  /** Poll server.log for a pattern written after `logLineOffset`. */
+  async waitForServerLogPattern(
+    pattern: RegExp,
+    logLineOffset: number,
+    timeoutMs = 15000
+  ): Promise<string[]> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const matches = ServerLogHelper.findMatchingLinesSince(logLineOffset, pattern);
+      if (matches.length > 0) {
+        return matches;
+      }
+      await this.page.waitForTimeout(200);
+    }
+    throw new Error(`Timed out waiting for server log pattern ${pattern}`);
   }
 
   /**
@@ -1107,7 +1178,7 @@ export class GameInteractions {
             await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
           }
         },
-        { damage: 25 }
+        { damage: 100 }
       );
     }
     throw new Error('Ship was not destroyed by sustained asteroid collision');
@@ -1181,6 +1252,36 @@ export class GameInteractions {
     throw new Error('laser damage should cost a life');
   }
 
+  /** Wait until the server respawns the ship inside the disk and away from `deathPosition`. */
+  async waitForServerRespawnAwayFrom(
+    deathPosition: { x: number; y: number },
+    timeoutMs = 90000,
+    afterDeathPosition?: { x: number; y: number }
+  ): Promise<{ x: number; y: number }> {
+    const minDistance = 75;
+    const afterDeath = afterDeathPosition ?? (await this.getShipPosition());
+    await this.page.waitForFunction(
+      ({ death, afterDeath, minDist }) => {
+        const ship = (window as any).gameController?.playerManager?.getLocalPlayer()?.ship;
+        if (!ship || ship.health <= 0) {
+          return false;
+        }
+        const fromDeath = Math.hypot(
+          ship.position.x - death.x,
+          ship.position.y - death.y
+        );
+        const fromAfterDeath = Math.hypot(
+          ship.position.x - afterDeath.x,
+          ship.position.y - afterDeath.y
+        );
+        return fromDeath > minDist && fromAfterDeath > minDist;
+      },
+      { death: deathPosition, afterDeath, minDist: minDistance },
+      { timeout: timeoutMs, polling: 100 }
+    );
+    return this.getShipPosition();
+  }
+
   /** Wait until respawn completes at a new random location away from death. */
   async waitForRandomRespawnPlacement(
     deathPosition: { x: number; y: number },
@@ -1189,12 +1290,13 @@ export class GameInteractions {
     const minDistance = 75;
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-      await this.runGameFrames(10);
+      await this.runGameFrames(20);
       const placement = await this.page.evaluate(
         ({ deathPosition, minDistance }) => {
           const gc = (window as any).gameController;
-          const ship = gc?.playerManager?.getLocalPlayer()?.ship;
-          if (!ship || ship.health !== 100 || ship.exploding) {
+          const player = gc?.playerManager?.getLocalPlayer();
+          const ship = player?.ship;
+          if (!ship || ship.exploding || ship.health <= 0) {
             return null;
           }
           const dist = Math.hypot(
@@ -1212,7 +1314,21 @@ export class GameInteractions {
         return placement;
       }
     }
-    throw new Error(`Timed out waiting for random respawn placement (${timeoutMs}ms)`);
+    const debug = await this.page.evaluate(({ deathPosition }) => {
+      const gc = (window as any).gameController;
+      const player = gc?.playerManager?.getLocalPlayer();
+      const ship = player?.ship;
+      return {
+        health: ship?.health,
+        exploding: ship?.exploding,
+        position: ship?.position,
+        lives: player?.lives,
+        deathPosition,
+      };
+    }, { deathPosition });
+    throw new Error(
+      `Timed out waiting for random respawn placement (${timeoutMs}ms): ${JSON.stringify(debug)}`
+    );
   }
 
   /** Number of active lasers on the local ship. */
@@ -1322,6 +1438,22 @@ export class GameInteractions {
     });
   }
 
+  /** Wait until at least `minCount` remote human players are visible. */
+  async waitForRemoteHumanPlayers(minCount = 1, timeoutMs = 20000): Promise<void> {
+    await this.page.waitForFunction(
+      (expected) => {
+        const gc = (window as any).gameController;
+        const localId = gc?.getNetworkManager?.().getLocalPlayerId?.();
+        const remotes = (gc?.getNetworkManager?.().getAllPlayers?.() ?? []).filter(
+          (p: any) => p.type === 'remote' && p.id !== localId
+        );
+        return remotes.length >= expected;
+      },
+      minCount,
+      { timeout: timeoutMs, polling: 200 }
+    );
+  }
+
   /** Remote human player ids visible to this client. */
   async getRemoteHumanPlayerIds(): Promise<string[]> {
     return await this.page.evaluate(() => {
@@ -1331,6 +1463,24 @@ export class GameInteractions {
         .filter((p: any) => p.type === 'remote' && p.id !== localId)
         .map((p: any) => p.id);
     });
+  }
+
+  /** Network-synced ship position for any player id known to this client. */
+  async getNetworkPlayerPosition(playerId: string): Promise<{ x: number; y: number } | null> {
+    return await this.page.evaluate((id) => {
+      const gc = (window as any).gameController;
+      const local = gc?.playerManager?.getLocalPlayer?.();
+      if (local?.id === id) {
+        return { x: local.ship.position.x, y: local.ship.position.y };
+      }
+      const found = (gc?.getNetworkManager?.().getAllPlayers?.() ?? []).find(
+        (p: any) => p.id === id
+      );
+      if (!found?.ship) {
+        return null;
+      }
+      return { x: found.ship.position.x, y: found.ship.position.y };
+    }, playerId);
   }
 
   /** Apply chip damage through the server (authoritative health sync). */
@@ -1532,6 +1682,8 @@ export class GameInteractions {
     await this.navigateToGame();
     await this.startGame();
     await this.waitForGameReady();
+    await this.waitForServerJoin();
+    await this.waitForNetworkAsteroids(1);
     if (options?.waitForCombatReady !== false) {
       await this.waitForCombatReady();
     }

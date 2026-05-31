@@ -14,7 +14,7 @@
     "watch": "vite build --watch",
     "preview": "vite preview",
     "test": "vitest run tests/unit/",
-    "test:all": "vitest run",
+    "test:all": "vitest run tests/unit/ tests/integration/server/ tests/integration/component/ tests/integration/entities/ --passWithNoTests",
     "test:unit": "vitest run tests/unit/",
     "test:integration": "./scripts/test-runner.sh tests/integration/ --reporter=verbose",
     "test:integration:run": "./scripts/test-runner.sh tests/integration/ --reporter=verbose",

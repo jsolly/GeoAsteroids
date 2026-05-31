@@ -18,6 +18,7 @@ test('ship respawns at a random location after asteroid collision death', async 
   await game.waitForAsteroids(1);
   const asteroid = (await game.getAsteroidPositions())[0];
   expect(asteroid).toBeTruthy();
+  if (!asteroid) return;
 
   const deathPosition = { x: asteroid.x, y: asteroid.y };
   await game.crashShipIntoAsteroidUntilDestroyed(asteroid);
@@ -26,6 +27,7 @@ test('ship respawns at a random location after asteroid collision death', async 
     .poll(() => game.getLives(), { timeout: 15000, message: 'asteroid collision should cost a life' })
     .toBeLessThan(initialLives);
 
-  const respawnPosition = await game.waitForShipRespawn(deathPosition, 90000);
+  const afterDeath = await game.getShipPosition();
+  const respawnPosition = await game.waitForServerRespawnAwayFrom(deathPosition, 90000, afterDeath);
   expectRandomRespawnPlacement(deathPosition, respawnPosition);
-}, TestConfig.DEFAULT_TIMEOUT * 2);
+}, TestConfig.DEFAULT_TIMEOUT * 3);

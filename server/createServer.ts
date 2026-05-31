@@ -4,6 +4,7 @@ import { logger } from '../setup/serverLogger';
 import { WebSocketCore } from './communication/WebSocketCore';
 import { GameEngine } from './core/GameEngine';
 import { ClientLogger } from './services/ClientLogger';
+import { buildHealthPayload, handleTestResetWorld } from './testHttpHandlers';
 
 type CreateServerOptions = {
   port?: number;
@@ -37,14 +38,12 @@ export function createServerInstance(options: CreateServerOptions = {}) {
 
     if (req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          status: 'healthy',
-          timestamp: new Date().toISOString(),
-          players: wsCore.getPlayerCount(),
-          uptime: process.uptime(),
-        })
-      );
+      res.end(JSON.stringify(buildHealthPayload(wsCore, gameEngine)));
+      return;
+    }
+
+    if (req.url === '/test/reset-world') {
+      handleTestResetWorld(req, res, NODE_ENV, gameEngine);
       return;
     }
 
@@ -202,6 +201,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
   const gameEngine = new GameEngine();
   // Ensure server-side game loop (including bot regen) runs
   gameEngine.startGameLoop();
+  gameEngine.updatePauseState();
   const wsCore = new WebSocketCore(gameEngine);
   wsCore.startPeriodicGameStateBroadcast();
 

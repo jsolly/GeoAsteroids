@@ -27,6 +27,7 @@ export class ConnectionManager {
   private localPlayerId: string = '';
   private allPlayers: Map<string, Player> = new Map();
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
+  private hasInitializedAsteroidsForConnection = false;
 
   private constructor() {
     this.state = {
@@ -124,6 +125,9 @@ export class ConnectionManager {
       this.state.isConnected = false;
       this.state.socket = null;
     }
+    this.seenAsteroidIds.clear();
+    this.hasInitializedAsteroidsForConnection = false;
+    this.localPlayerId = '';
   }
 
   // Player management
@@ -149,7 +153,11 @@ export class ConnectionManager {
   }
 
   private getLocalPlayerPosition(): { x: number; y: number } {
-    return { x: 400, y: 300 };
+    const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+    if (localPlayer?.ship?.position) {
+      return { x: localPlayer.ship.position.x, y: localPlayer.ship.position.y };
+    }
+    return { x: 0, y: 0 };
   }
 
   getAllPlayers(): Player[] {
@@ -234,17 +242,19 @@ export class ConnectionManager {
     logger.debug('NETWORK', 'Sending join message', { message: joinMessage });
     const jsonString = JSON.stringify(joinMessage);
     this.state.socket.send(jsonString);
-
-    // Initialize asteroids after joining
-    setTimeout(() => {
-      this.initializeAsteroids();
-    }, 100); // Small delay to ensure join message is processed
   }
 
-  // Initialize asteroids after joining
+  // Initialize asteroids after the server acknowledges join
   private initializeAsteroids(): void {
+    if (this.hasInitializedAsteroidsForConnection) {
+      return;
+    }
     if (!this.state.isConnected || !this.state.socket) {
       logger.warn('NETWORK', 'Cannot initialize asteroids - not connected');
+      return;
+    }
+    if (!this.localPlayerId) {
+      logger.warn('NETWORK', 'Cannot initialize asteroids - missing local player id');
       return;
     }
 
@@ -261,6 +271,7 @@ export class ConnectionManager {
     };
 
     this.state.socket.send(JSON.stringify(message));
+    this.hasInitializedAsteroidsForConnection = true;
     logger.debug('NETWORK', 'Sent initAsteroids message', { message });
   }
 
@@ -466,13 +477,14 @@ export class ConnectionManager {
       data as unknown as Record<string, unknown>
     );
 
+    this.seenAsteroidIds.clear();
+    this.hasInitializedAsteroidsForConnection = false;
+
     // Store the local player ID from server response
     if (data.id) {
       this.localPlayerId = data.id;
     }
-    setTimeout(() => {
-      this.initializeAsteroids();
-    }, 100);
+    this.initializeAsteroids();
   }
 
   private handlePlayerJoined(data: PlayerJoin): void {
@@ -498,12 +510,16 @@ export class ConnectionManager {
   private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
     if (data.asteroids && Array.isArray(data.asteroids)) {
       for (const asteroid of data.asteroids) {
-        const event = new CustomEvent('serverAsteroidCreated', {
-          detail: { asteroid },
-        });
-        window.dispatchEvent(event);
+        if (this.seenAsteroidIds.has(asteroid.id)) {
+          continue;
+        }
+        this.seenAsteroidIds.add(asteroid.id);
+        window.dispatchEvent(
+          new CustomEvent('serverAsteroidCreated', {
+            detail: { asteroid },
+          })
+        );
       }
-    } else {
     }
   }
 

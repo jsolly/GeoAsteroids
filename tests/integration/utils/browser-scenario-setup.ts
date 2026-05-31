@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 import { BrowserManager } from './browser-manager';
 import { HealthChecker } from './health-checker';
 import { ScreenshotManager } from './screenshot-manager';
+import { TestServerControl } from './test-server-control';
 
 /** Shared browser lifecycle hooks for scenario integration tests. */
 export function createBrowserScenarioHooks(testDir: string): {
@@ -22,11 +23,13 @@ export function createBrowserScenarioHooks(testDir: string): {
   });
 
   beforeEach(async () => {
+    await TestServerControl.resetWorld();
     await browserManager.createPage();
   });
 
   afterEach(async () => {
-    await browserManager.closePage();
+    await browserManager.closeAllPages();
+    await TestServerControl.waitForWorldReset();
   });
 
   return { browserManager, screenshotManager };

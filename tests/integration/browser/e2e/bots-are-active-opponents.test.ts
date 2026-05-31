@@ -1,30 +1,9 @@
-import { test, beforeAll, afterAll, beforeEach, afterEach, expect } from 'vitest';
-import { BrowserManager } from '../../utils/browser-manager';
+import { expect, test } from 'vitest';
+import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
-import { ScreenshotManager } from '../../utils/screenshot-manager';
 import { TestConfig } from '../../utils/test-config';
-import { HealthChecker } from '../../utils/health-checker';
 
-const browserManager = new BrowserManager();
-const screenshotManager = new ScreenshotManager(__dirname);
-
-beforeAll(async () => {
-  await HealthChecker.checkAllServers();
-  screenshotManager.clearScreenshots();
-  await browserManager.initialize();
-});
-
-afterAll(async () => {
-  await browserManager.cleanup();
-});
-
-beforeEach(async () => {
-  await browserManager.createPage();
-});
-
-afterEach(async () => {
-  await browserManager.closePage();
-});
+const { browserManager } = createBrowserScenarioHooks(__dirname);
 
 const BOUNDARY_RADIUS = 3100;
 

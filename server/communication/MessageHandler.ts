@@ -410,7 +410,9 @@ export class MessageHandler {
       const existingAsteroids = this.gameEngine.getAllAsteroids();
       this.broadcaster.sendToWebSocket(ws, {
         type: 'asteroidCreateBatch',
-        asteroids: existingAsteroids,
+        data: {
+          asteroids: existingAsteroids,
+        },
         timestamp: Date.now(),
       });
       logger.debug(`Player ${id} requested asteroid initialization - sent existing ${currentAsteroidCount} asteroids`);

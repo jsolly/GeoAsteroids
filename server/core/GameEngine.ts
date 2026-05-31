@@ -82,6 +82,42 @@ export class GameEngine {
     return this.isPaused;
   }
 
+  /** Read-only snapshot for health checks and integration test barriers. */
+  public getDiagnostics(): {
+    isPaused: boolean;
+    gameTime: number;
+    humanPlayers: number;
+    bots: number;
+    asteroids: number;
+  } {
+    return {
+      isPaused: this.isPaused,
+      gameTime: this.gameTime,
+      humanPlayers: this.entityManager.getHumanPlayerCount(),
+      bots: this.entityManager.getBotCount(),
+      asteroids: this.asteroidManager.getAsteroidCount(),
+    };
+  }
+
+  /**
+   * Force the world back to the empty paused state used after the last human
+   * disconnects. Intended for integration/E2E test harnesses only.
+   */
+  public resetForTesting(): void {
+    for (const entity of this.entityManager.getAllEntities()) {
+      if (entity.type === 'human' && entity.ws) {
+        try {
+          entity.ws.close(1000, 'Test world reset');
+        } catch {
+          // Socket may already be closed.
+        }
+      }
+    }
+    this.resetGameState();
+    this.isPaused = true;
+    this.rngService.reset();
+  }
+
   // Reset game state when no players are online
   private resetGameState(): void {
     // Clear all asteroids

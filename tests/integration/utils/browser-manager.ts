@@ -51,12 +51,26 @@ export class BrowserManager {
     await this.closeAllPages();
   }
 
+  /** Alias for closePage — closes every page opened in this manager. */
   async closeAllPages(): Promise<void> {
     for (const page of this.pages) {
       await page.close().catch(() => {});
     }
     this.pages = [];
     this.page = null;
+  }
+
+  /** Open an additional browser tab for multi-client scenarios. */
+  async createAdditionalPage(): Promise<Page> {
+    return this.createPage();
+  }
+
+  /** Returns the first and second pages for two-client tests. */
+  getTwoClientPages(): { first: Page; second: Page } {
+    if (this.pages.length < 2) {
+      throw new Error('Expected two pages — call createAdditionalPage() after the first createPage()');
+    }
+    return { first: this.pages[0], second: this.pages[1] };
   }
 
   async cleanup(): Promise<void> {

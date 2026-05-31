@@ -1,34 +1,10 @@
-import { test, beforeAll, afterAll, beforeEach, afterEach, expect } from 'vitest';
-import { BrowserManager } from '../../utils/browser-manager';
+import { expect, test } from 'vitest';
+import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
-import { ScreenshotManager } from '../../utils/screenshot-manager';
 import { TestConfig } from '../../utils/test-config';
-import { HealthChecker } from '../../utils/health-checker';
 
 // Comprehensive, scenario-based end-to-end coverage of combat against bots.
-// These prove the headline multiplayer promise: a human player can damage and
-// destroy the server-controlled bot opponents and be rewarded for it.
-
-const browserManager = new BrowserManager();
-const screenshotManager = new ScreenshotManager(__dirname);
-
-beforeAll(async () => {
-  await HealthChecker.checkAllServers();
-  screenshotManager.clearScreenshots();
-  await browserManager.initialize();
-});
-
-afterAll(async () => {
-  await browserManager.cleanup();
-});
-
-beforeEach(async () => {
-  await browserManager.createPage();
-});
-
-afterEach(async () => {
-  await browserManager.closePage();
-});
+const { browserManager } = createBrowserScenarioHooks(__dirname);
 
 // Scenario: a player lines up on a bot and shoots it down, scoring the kill.
 test('a player destroys a bot with lasers and is awarded the kill', async () => {
@@ -37,10 +13,7 @@ test('a player destroys a bot with lasers and is awarded the kill', async () => 
 
   const game = new GameInteractions(page);
 
-  await game.navigateToGame();
-  await game.startGame();
-  await game.waitForGameInitialization(TestConfig.GAME_INIT_TIMEOUT);
-  await game.waitForGameReady();
+  await game.bootSinglePlayerGame();
 
   // The server spawns bot opponents.
   await game.waitForBots(1);

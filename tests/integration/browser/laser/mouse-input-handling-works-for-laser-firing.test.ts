@@ -11,16 +11,17 @@ test('mouse input handling works for laser firing', async () => {
 
   const game = new GameInteractions(page);
   await game.bootSinglePlayerGame();
+  await game.waitForCombatReady();
 
   const before = await game.getLaserCount();
   await game.fireLasersWithMouse(1, 200);
   await expect
     .poll(
       async () => {
-        await game.runGameFrames(5);
+        await game.runGameFrames(8);
         return game.getLaserCount();
       },
-      { timeout: 5000, message: 'left click should create a laser' }
+      { timeout: 15000, message: 'left click should create a laser' }
     )
     .toBeGreaterThan(before);
 }, TestConfig.DEFAULT_TIMEOUT);

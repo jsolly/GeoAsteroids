@@ -5,23 +5,17 @@
 
 echo "🧪 Starting test runner with single-instance protection..."
 
+RUNNER_STARTED_DEV=false
+
 # Function to kill all test-related processes
 kill_test_processes() {
     echo "🧹 Cleaning up existing test processes..."
     
-    # Safety check: Don't kill processes if Cursor is running
-    if pgrep -f "Cursor" > /dev/null; then
-        echo "⚠️  Cursor is running - using conservative cleanup"
-    fi
-    
-    # Only kill vitest processes that are actually running tests, not Cursor processes
-    # Look for vitest processes that are running test files specifically
     local vitest_pids=$(pgrep -f "vitest.*run" 2>/dev/null || true)
     if [ -n "$vitest_pids" ]; then
-        # Double-check these aren't Cursor processes
         local safe_pids=""
         for pid in $vitest_pids; do
-            if ! ps -p $pid -o command= | grep -q "Cursor"; then
+            if ! ps -p $pid -o command= 2>/dev/null | grep -q "Cursor"; then
                 safe_pids="$safe_pids $pid"
             fi
         done
@@ -31,13 +25,11 @@ kill_test_processes() {
         fi
     fi
     
-    # Kill node test processes but be more specific
     local node_test_pids=$(pgrep -f "node.*vitest.*run" 2>/dev/null || true)
     if [ -n "$node_test_pids" ]; then
-        # Double-check these aren't Cursor processes
         local safe_pids=""
         for pid in $node_test_pids; do
-            if ! ps -p $pid -o command= | grep -q "Cursor"; then
+            if ! ps -p $pid -o command= 2>/dev/null | grep -q "Cursor"; then
                 safe_pids="$safe_pids $pid"
             fi
         done
@@ -47,15 +39,13 @@ kill_test_processes() {
         fi
     fi
     
-    # Wait for processes to terminate
     sleep 2
     
-    # Only force kill if we can confirm they're test processes and not Cursor
     local remaining_vitest=$(pgrep -f "vitest.*run" 2>/dev/null || true)
     if [ -n "$remaining_vitest" ]; then
         local safe_pids=""
         for pid in $remaining_vitest; do
-            if ! ps -p $pid -o command= | grep -q "Cursor"; then
+            if ! ps -p $pid -o command= 2>/dev/null | grep -q "Cursor"; then
                 safe_pids="$safe_pids $pid"
             fi
         done
@@ -69,7 +59,14 @@ kill_test_processes() {
     echo "✅ Test process cleanup complete"
 }
 
-# Function to check if any test processes are running
+cleanup_playwright_orphans() {
+    local playwright_pids=$(pgrep -f "playwright.*run-driver|chromium.*headless.*GeoAsteroids-Test-Bot" 2>/dev/null || true)
+    if [ -n "$playwright_pids" ]; then
+        echo "🧹 Cleaning orphaned Playwright/Chromium test processes..."
+        echo "$playwright_pids" | xargs kill 2>/dev/null || true
+    fi
+}
+
 check_test_processes() {
     local running_test_processes=$(pgrep -f "vitest.*run" | wc -l)
     if [ $running_test_processes -gt 0 ]; then
@@ -80,57 +77,75 @@ check_test_processes() {
     return 0
 }
 
-# Function to start dev servers if needed
+servers_ready() {
+    curl -sf http://localhost:5173/ > /dev/null 2>&1 && curl -sf http://localhost:3001/health > /dev/null 2>&1
+}
+
+wait_for_servers() {
+    local retries=0
+    while [ $retries -lt 20 ]; do
+        if servers_ready; then
+            echo "✅ Dev servers are running"
+            return 0
+        fi
+        retries=$((retries + 1))
+        echo "⏳ Waiting for servers... (attempt $retries/20)"
+        sleep 2
+    done
+    return 1
+}
+
+servers_have_world_diagnostics() {
+    curl -sf http://localhost:3001/health | grep -q '"world"'
+}
+
 start_dev_servers() {
     echo "🔍 Checking if dev servers are running..."
     
-    # Check if servers are running
-    local vite_running=$(curl -s http://localhost:5173 > /dev/null 2>&1 && echo "true" || echo "false")
-    local server_running=$(curl -s http://localhost:3001/health > /dev/null 2>&1 && echo "true" || echo "false")
-    
-    if [ "$vite_running" = "false" ] || [ "$server_running" = "false" ]; then
-        echo "🚀 Starting dev servers..."
-        ./scripts/dev-server.sh &
-        DEV_PID=$!
-        
-        # Wait for servers to start
-        echo "⏳ Waiting for servers to start..."
-        sleep 5
-        
-        # Verify servers are running
-        local retries=0
-        while [ $retries -lt 10 ]; do
-            vite_running=$(curl -s http://localhost:5173 > /dev/null 2>&1 && echo "true" || echo "false")
-            server_running=$(curl -s http://localhost:3001/health > /dev/null 2>&1 && echo "true" || echo "false")
-            
-            if [ "$vite_running" = "true" ] && [ "$server_running" = "true" ]; then
-                echo "✅ Dev servers are running"
-                break
-            fi
-            
-            retries=$((retries + 1))
-            echo "⏳ Waiting for servers... (attempt $retries/10)"
-            sleep 2
-        done
-        
-        if [ "$vite_running" = "false" ] || [ "$server_running" = "false" ]; then
-            echo "❌ Failed to start dev servers"
-            exit 1
-        fi
-    else
+    if servers_ready && servers_have_world_diagnostics; then
         echo "✅ Dev servers are already running"
+        return 0
+    fi
+
+    if servers_ready && ! servers_have_world_diagnostics; then
+        echo "♻️  Dev server is running an older build — restarting for test diagnostics..."
+        npm run dev:kill >/dev/null 2>&1 || true
+        sleep 2
+    fi
+
+    if curl -sf http://localhost:5173/ > /dev/null 2>&1 || curl -sf http://localhost:3001/health > /dev/null 2>&1; then
+        echo "⏳ Partial server startup detected — waiting for both endpoints..."
+        if wait_for_servers; then
+            return 0
+        fi
+        echo "❌ Servers did not become ready after partial startup"
+        exit 1
+    fi
+
+    echo "🚀 Starting dev servers..."
+    ./scripts/dev-server.sh &
+    RUNNER_STARTED_DEV=true
+
+    if ! wait_for_servers; then
+        echo "❌ Failed to start dev servers"
+        exit 1
     fi
 }
 
-# Function to run tests with single-instance protection
 run_tests() {
     local test_args="$@"
+    local vitest_config="vitest.config.ts"
+
+    if echo "$test_args" | grep -q "tests/integration/browser"; then
+        vitest_config="vitest.browser.config.ts"
+    fi
     
     echo "🧪 Running tests with single-instance protection..."
     echo "📝 Test arguments: $test_args"
+    echo "📝 Vitest config: $vitest_config"
     
-    # Run vitest with explicit single-instance flags
     npx vitest run \
+        --config "$vitest_config" \
         --pool=forks \
         --poolOptions.forks.singleFork=true \
         --sequence.concurrent=false \
@@ -150,33 +165,31 @@ run_tests() {
     return $exit_code
 }
 
-# Main execution
 main() {
-    # Parse command line arguments
     local test_args="$@"
     
-    # Always clean up first
     kill_test_processes
+    cleanup_playwright_orphans
     
-    # Verify cleanup
     if ! check_test_processes; then
         echo "❌ Failed to clean up existing test processes"
         exit 1
     fi
     
-    # Start dev servers if needed
     start_dev_servers
     
-    # Run tests
     run_tests $test_args
     local exit_code=$?
     
-    # Clean up after tests
     echo "🧹 Cleaning up after tests..."
     kill_test_processes
+    cleanup_playwright_orphans
+    
+    if [ "$RUNNER_STARTED_DEV" = "true" ]; then
+        echo "ℹ️  Dev servers were started by the test runner and left running"
+    fi
     
     exit $exit_code
 }
 
-# Run main function with all arguments
 main "$@"
