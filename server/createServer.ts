@@ -242,15 +242,24 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     if (url === '/ws') {
       logger.info('🔌 New player connected');
       ws.on('message', (data) => {
+        const rawData = String(data);
         try {
-          const rawData = String(data);
           console.log('🔌 SERVER: Raw WebSocket data:', rawData);
           const message = JSON.parse(rawData);
           console.log('🔌 SERVER: Parsed message:', JSON.stringify(message, null, 2));
           logger.debug('SERVER: Received WebSocket message', { type: message.type, id: message.id });
           wsCore.handleClientMessage(message, ws);
         } catch (error) {
-          console.log('❌ SERVER: Failed to parse message:', error);
+          const rawPrefix =
+            rawData.length <= 500 ? rawData : `${rawData.slice(0, 500)}…`;
+          logger.error(
+            'Failed to parse WebSocket message',
+            {
+              rawDataPrefix: rawPrefix,
+              rawDataByteLength: Buffer.byteLength(rawData, 'utf8'),
+            },
+            error instanceof Error ? error : new Error(String(error)),
+          );
           wsCore.sendError(ws, 'Invalid message format');
         }
       });

@@ -6,6 +6,24 @@ import { logger } from '../../setup/serverLogger';
 import { DEBUG } from '../../src/constants';
 import type { GameEntity } from '../core/EntityManager';
 
+const PAYLOAD_PREVIEW_MAX_CHARS = 500;
+
+function boundedPayloadPreview(value: unknown): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  let serialized: string;
+  try {
+    serialized = typeof value === 'string' ? value : JSON.stringify(value);
+  } catch {
+    serialized = String(value);
+  }
+  if (serialized.length <= PAYLOAD_PREVIEW_MAX_CHARS) {
+    return serialized;
+  }
+  return `${serialized.slice(0, PAYLOAD_PREVIEW_MAX_CHARS)}…`;
+}
+
 export class MessageHandler {
   private gameEngine: GameEngine;
   private broadcaster: GameStateBroadcaster;
@@ -112,7 +130,11 @@ export class MessageHandler {
           this.broadcaster.sendError(ws, `Unknown message type: ${type}`);
       }
     } catch (error) {
-      logger.error('Error handling message:', error);
+      logger.error('Error handling message', {
+        messageType: type ?? '<missing>',
+        messageId: id ?? '<missing>',
+        payloadPreview: boundedPayloadPreview(restData),
+      }, error);
       this.broadcaster.sendError(ws, 'Internal server error');
     }
   }
