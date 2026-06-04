@@ -1,5 +1,4 @@
 import jsdom from 'jsdom';
-import { vi } from 'vitest';
 
 const { JSDOM } = jsdom;
 import '../src/utils/logLevel';
@@ -83,17 +82,34 @@ const dom = new JSDOM(
 global.document = dom.window.document;
 global.window = global.document.defaultView as unknown as Window & typeof globalThis;
 
-// Mock localStorage for tests
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  key: vi.fn(),
-  length: 0,
+// Mock localStorage for tests with the same backing store for global/window access.
+const storage = new Map<string, string>();
+const localStorageMock: Storage = {
+  get length() {
+    return storage.size;
+  },
+  clear() {
+    storage.clear();
+  },
+  getItem(key: string) {
+    return storage.get(key) ?? null;
+  },
+  key(index: number) {
+    return Array.from(storage.keys())[index] ?? null;
+  },
+  removeItem(key: string) {
+    storage.delete(key);
+  },
+  setItem(key: string, value: string) {
+    storage.set(key, value);
+  },
 };
 
 Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
