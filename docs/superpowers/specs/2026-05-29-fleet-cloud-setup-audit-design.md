@@ -153,7 +153,7 @@ Severity: **Critical** · **High** · **Medium** · **Low**
 | F4 | **High** | **`docs/superpowers/{specs,plans}/` missing** in GeoRoids while fleet rules and `/review-fix-push` orchestration require them for plan/spec discovery (D.1). Plans will usually degrade to “review against diff only.” |
 | F5 | **Medium** | **No `FLEET.lock`.** Cannot tell from git whether vendored fleet matches dotagents `fleet` HEAD or how stale the copy is. |
 | F6 | **Medium** | **`refresh-fleet.sh` documented but not in GeoRoids.** Lives in `~/.agents` / dotagents per docs; easy to follow wrong path when editing fleet from an app repo. |
-| F7 | **Medium** | **`update-agents-subtree.sh` defaults to SSH** (`git@github.com:...`). Cloud VMs use HTTPS + installation token; script should support `DOTAGENTS_GITHUB_TOKEN` or rely on vendor CI instead. |
+| F7 | **Medium** | **`update-agents-subtree.sh` defaults to SSH** (`git@github.com:...`). Cloud VMs use HTTPS + installation token; script should support `FLEET_SYNC_TOKEN` or rely on vendor CI instead. |
 | F8 | **Medium** | **No GitHub Actions for fleet sync** in GeoRoids (or visible in `.github/workflows/`). CI only runs tests/lint/CodeQL — no `chore(fleet): sync` PRs. |
 | F9 | **Low** | **`check:lint` has pre-existing Biome issues** (e.g. optional chain in `playerNetwork.ts`, import order in `Roid.ts`). Unrelated to fleet but affects “green repo” signal for agents. |
 | F10 | **Low** | **Double symlink indirection** (`.cursor` → `.agents/.cursor` → `.agents/rules`). Works on Linux/cloud; fragile on Windows without Developer Mode — acceptable if fleet stays Linux/cloud-first. |
@@ -263,7 +263,7 @@ In **dotagents** (not GeoRoids):
   - Normal work: use committed fleet.
   - Fleet updates: merge `chore(fleet): sync` PRs, or run `update-agents-subtree.sh` locally.
   - Do not expect `git fetch dotagents` in cloud unless app has repo access.
-- [ ] Extend `update-agents-subtree.sh` to honor `DOTAGENTS_GITHUB_TOKEN` for HTTPS when set.
+- [ ] Extend `update-agents-subtree.sh` to honor `FLEET_SYNC_TOKEN` for HTTPS when set.
 - [ ] Move this audit’s recommendations into a short `docs/cloud-agents.md` “Fleet sync” section after Phase 1 ships.
 
 ### Phase 3 — Roll out to other repos
