@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # BEGIN dotagents fleet pre-commit guard
 ROOT="$(git rev-parse --show-toplevel)"
 if [ -x "$ROOT/.agents/scripts/fleet-precommit-check.sh" ]; then
@@ -6,21 +8,16 @@ if [ -x "$ROOT/.agents/scripts/fleet-precommit-check.sh" ]; then
 fi
 # END dotagents fleet pre-commit guard
 
-set -e
-
-# Skip if running in CI environment
-if [ -n "$CI" ]; then
-  echo "Skipping pre-commit hooks in CI environment"
-  exit 0
-fi
+error_handler() {
+  printf '\n\033[0;31m✗ Commit aborted: One or more checks failed.\033[0m\n'
+  printf 'Check the output above for details. Fix the issues, then try committing again.\n'
+}
+trap error_handler ERR
 
 echo "Ensuring staged files are linted/formatted..."
 npx lint-staged
 
-echo "Running TypeScript type check..."
+echo "Running checks..."
+npx biome ci . --error-on-warnings
 npm run check:ts
-
-echo "Running unit tests..."
 npm run test
-
-exit 0

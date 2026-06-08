@@ -29,7 +29,7 @@
     "fix": "biome check --write . && npm run check:ts && npm run test",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "prepare": "if [ -d .git ]; then git config core.hooksPath .git-hooks; fi"
+    "prepare": "if [ -z \"$CI\" ] && [ -d .git ]; then git config core.hooksPath .git-hooks; fi"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,css,md,yml,yaml}": [
