@@ -94,12 +94,11 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 
 ## Cursor Cloud
 
-This repo is self-contained for [Cursor Cloud Agents](.agents/docs/cloud-agents.md): fleet config lives in `.agents/` (subtree from dotagents), project rules in `.cursor/rules/`, dev boot in `.cursor/environment.json`.
+Dev boot is in `.cursor/environment.json`; install runs `scripts/cloud-agent-install.sh`.
 
 - **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, `scripts/ensure-playwright-browsers.sh`, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
 - **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
 - **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
-- **Fleet updates:** `./scripts/update-agents-subtree.sh`
 
 ## Cursor Cloud specific instructions
 
@@ -107,7 +106,7 @@ This repo is self-contained for [Cursor Cloud Agents](.agents/docs/cloud-agents.
 
 ### Environment prerequisites
 
-The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers for browser E2E are installed via `scripts/ensure-playwright-browsers.sh` during `cloud-agent-install.sh` (not bundled on the image). If install fails or the headless-shell binary is missing, see [Playwright browser E2E (opt-in)](.agents/docs/cloud-agents.md#playwright-browser-e2e-opt-in) (`__dirlock`, unzip from `/tmp/playwright-download-*/*headless-shell*.zip`).
+The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers for browser E2E are installed via `scripts/ensure-playwright-browsers.sh` during `cloud-agent-install.sh` (not bundled on the image). If install fails or the headless-shell binary is missing, remove the stale lock (`rm -f ~/.cache/ms-playwright/__dirlock`) or unzip from `/tmp/playwright-download-*/*headless-shell*.zip`.
 
 An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
 
