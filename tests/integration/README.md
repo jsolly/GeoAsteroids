@@ -4,7 +4,7 @@ This directory contains integration tests organized by test type and requirement
 
 ## Directory Structure
 
-```
+```text
 tests/integration/
 ├── browser/                     # Browser-based integration tests
 │   ├── sanity.test.ts          # End-to-end browser tests
@@ -42,16 +42,19 @@ tests/integration/
 ## Test Categories
 
 ### Browser Tests (`/browser/`)
+
 - **End-to-end tests**: Full game functionality tests that run in a real browser
 - **Visual regression tests**: Tests that capture screenshots and verify UI behavior
 - **User interaction tests**: Tests that simulate real user interactions
 
 ### Server Tests (`/server/`)
+
 - **WebSocket communication tests**: Tests server-client message handling
 - **Game engine tests**: Tests server-side game logic and state management
 - **Server API tests**: Tests server endpoints and responses
 
 ### Entity Tests (`/entities/`)
+
 - **Entity-based tests**: Tests organized by game entities (roids, players, bots, input)
 - **Mock-based integration tests**: Tests that use mocks for external dependencies
 - **Cross-entity interaction tests**: Tests how different entities interact with each other
@@ -75,13 +78,16 @@ The tests are organized using a modular utility-based architecture:
 ## Setup
 
 1. Install Playwright browsers (local dev; on cloud, `cloud-agent-install.sh` runs the fleet helper instead):
+
    ```bash
    source .agents/scripts/cloud-install-lib.sh
    install_playwright_browsers_for_e2e
    ```
+
    Or run `bash scripts/cloud-agent-install.sh` after `npm ci`. Troubleshooting: [.agents/docs/cloud-agents.md](../../.agents/docs/cloud-agents.md) — Playwright browser E2E (opt-in).
 
 2. Ensure the game server is running:
+
    ```bash
    # In the main project directory
    npm run dev
@@ -110,6 +116,7 @@ npm run test:ui
 ## What the Tests Do
 
 ### `Game loads and can fire lasers`
+
 1. Opens a headless Chromium browser
 2. Navigates to `http://localhost:5173`
 3. Waits for the start screen to load
@@ -120,6 +127,7 @@ npm run test:ui
 8. Verifies the game is in a playable state
 
 ### `Game shows asteroids and bots`
+
 1. Starts the game
 2. Takes a timestamped screenshot of the game state
 3. Checks for debug info that should show asteroids
@@ -136,21 +144,25 @@ npm run test:ui
 ## Utility Classes
 
 ### BrowserManager
+
 - Manages browser lifecycle (launch, cleanup)
 - Handles page creation and cleanup
 - Configures browser options and viewport
 
 ### ScreenshotManager
+
 - Clears screenshots directory before tests
 - Generates timestamped filenames
 - Manages screenshot file paths
 
 ### GameInteractions
+
 - Encapsulates common game interactions
 - Provides helper methods for game state verification
 - Handles debug information checking
 
 ### TestConfig
+
 - Centralizes test configuration constants
 - Defines timeouts, URLs, and selectors
 - Makes tests easily configurable
@@ -164,6 +176,7 @@ npm run test:ui
 ## Integration with Vitest
 
 These tests integrate seamlessly with your existing Vitest setup:
+
 - Use the same test runner and configuration
 - Can be run alongside unit tests
 - Support for test parallelization and timeouts
@@ -180,6 +193,7 @@ These tests integrate seamlessly with your existing Vitest setup:
 ## Customization
 
 You can easily extend these tests by:
+
 - Adding new utility classes for specific functionality
 - Creating new game interaction methods
 - Adding more test scenarios

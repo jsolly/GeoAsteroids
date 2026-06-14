@@ -17,5 +17,6 @@ This folder contains browser integration tests for roid (asteroid) functionality
 ## Dependencies
 
 These tests use the browser test infrastructure:
+
 - BrowserManager for browser automation
 - GameInteractions for game control

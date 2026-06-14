@@ -9,9 +9,10 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 ## Table of Contents
 
 - [Installation](#installation)
-- [Features](#features)
+- [Setup](#setup)
+- [Development](#development)
+- [Tests, Linting](#tests-linting)
 - [Contributing](#contributing)
-- [Support](#support)
 - [License](#license)
 
 ## Installation
@@ -20,9 +21,9 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 2. (Install <a href="https://www.mongodb.com/try/download/community" rel="noopener noreferrer">MongoDB</a>) (Or use a cloud service like <a href="https://www.mongodb.com/cloud/atlas" rel="noopener noreferrer">MongoDB Atlas</a>)
 
 ```shell
-    $ git clone git@github.com:jsolly/GeoAsteroids.git
-    $ cd GeoAsteroids
-    $ npm install
+    git clone git@github.com:jsolly/GeoAsteroids.git
+    cd GeoAsteroids
+    npm install
 ```
 
 ## Setup
@@ -45,14 +46,17 @@ A 2D spaceship game, <a href="https://geoasteroids.com" target="_blank" >Geoaste
 The following environment variables can be configured:
 
 #### Debug Mode
+
 Debug behavior is controlled by constants defined in `src/constants/index.ts`:
 
 **Logging Configuration:**
+
 - `LOGGING.GLOBAL_LOG_LEVEL` - Sets the global log level (error, warn, info, debug). This controls what gets written to both `server.log` and `client.log`.
 - `LOGGING.FORWARD_TO_SERVER` - Whether to forward client logs to the server (default: true).
 - `LOGGING.WRITE_TO_CONSOLE` - Whether to write logs to browser console (default: true).
 
 **Debug Configuration:**
+
 - `DEBUG.ENABLED` - Master switch for all debug features (default: false)
 - `DEBUG.LOCAL_PLAYER.INVINCIBLE` - Makes the local player invincible in debug mode (default: false)
 - `DEBUG.LOCAL_PLAYER.SPAWN_PROTECTION` - Enables local player spawn protection in debug mode (default: true)
@@ -66,13 +70,16 @@ Debug behavior is controlled by constants defined in `src/constants/index.ts`:
 - `DEBUG.PLACE_PLAYERS_NEAR_CENTER` - Places all players (local, remote, bots) near the center in debug mode (default: true)
 
 **Note**: To enable debug mode, you need to set both:
+
 1. `LOGGING.GLOBAL_LOG_LEVEL` to `'debug'` in `src/constants/index.ts`
 2. `DEBUG.ENABLED` to `true` in the same file
 
 #### Network
+
 - `VITE_WEBSOCKET_URL` - WebSocket server URL for network
 
 #### Build Info
+
 - `VITE_BUILD_TIME` - Build timestamp (auto-generated)
 - `VITE_COMMIT_HASH` - Git commit hash (auto-generated)
 
@@ -88,7 +95,6 @@ npm run dev:full
 npm run dev              # Vite dev server (port 5173)
 npm run dev:network  # WebSocket server (port 3001)
 ```
-
 
 ## Tests, Linting
 

@@ -17,6 +17,7 @@ This folder contains browser integration tests for basic game functionality and 
 ## Dependencies
 
 These tests use the browser test infrastructure:
+
 - BrowserManager for browser automation
 - ScreenshotManager for test documentation
 - GameInteractions for game control

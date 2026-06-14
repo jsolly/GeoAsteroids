@@ -11,6 +11,7 @@ This directory contains integration tests that require a real browser environmen
 ## Requirements
 
 These tests require:
+
 - A running Vite dev server (`npm run dev`)
 - A running WebSocket server (`npm run server`)
 - A browser environment (Playwright/Puppeteer)
@@ -30,18 +31,22 @@ npm run test:integration:browser -- sanity/sanity.test.ts
 Tests are organized into logical folders:
 
 ### `/collision/`
+
 - **botAsteroidCollisions.test.ts** - Bot collision with asteroids
 - **laserCollisions.test.ts** - Laser collision with asteroids
 
 ### `/laser/`
+
 - **laserCommunication.test.ts** - Laser firing and network communication
 - **laserNetworkFlow.test.ts** - Complete network flow for laser events
 - **laserServerLogs.test.ts** - Server-side logging for laser events
 
 ### `/roid/`
+
 - **roidSplitting.test.ts** - Roid splitting behavior on collision
 
 ### `/sanity/`
+
 - **sanity.test.ts** - Core game functionality and visual regression tests
 
 ## Screenshots

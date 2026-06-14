@@ -5,26 +5,36 @@ This directory contains integration tests organized by entity types rather than 
 ## Directory Structure
 
 ### `/roid/`
+
 Tests related to asteroid (roid) entities and their interactions:
+
 - **roidSplitting.test.ts** - Tests asteroid splitting mechanics when destroyed
 - **laserCollisionManager.test.ts** - Tests laser collision detection with asteroids
 
 ### `/local-player/`
+
 Tests for the local player entity and its interactions:
+
 - **localPlayerRoidCollisions.test.ts** - Tests local player collision with asteroids
 - **ship.test.ts** - Tests basic ship functionality and movement
 
 ### `/remote-player/`
+
 Tests for remote player entities and multiplayer interactions:
+
 - **laserPlayerCollisions.test.ts** - Tests laser damage between players
 
 ### `/bot-player/`
+
 Tests for bot player entities and their behavior:
+
 - **botAsteroidCollisions.test.ts** - Tests bot collision with asteroids and damage handling
 - **healthRegeneration.test.ts** - Tests health regeneration mechanics for all player types
 
 ### `/input/`
+
 Tests for input handling systems:
+
 - **keybindings.test.ts** - Tests keyboard input handling
 - **mouse.test.ts** - Tests mouse input handling
 
@@ -38,11 +48,13 @@ Tests for input handling systems:
 ## Running Tests
 
 To run all entity integration tests:
+
 ```bash
 npm test tests/integration/entities/
 ```
 
 To run tests for a specific entity:
+
 ```bash
 npm test tests/integration/entities/roid/
 npm test tests/integration/entities/local-player/

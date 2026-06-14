@@ -11,6 +11,7 @@ This directory contains integration tests that test server-side functionality di
 ## Requirements
 
 These tests require:
+
 - A running WebSocket server (`npm run server`)
 - Node.js environment (no browser needed)
 

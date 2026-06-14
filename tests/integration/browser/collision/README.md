@@ -19,6 +19,7 @@ This folder contains browser integration tests for collision detection and handl
 ## Dependencies
 
 These tests use the browser test infrastructure:
+
 - BrowserManager for browser automation
 - ScreenshotManager for test documentation
 - GameInteractions for game control

@@ -1,9 +1,8 @@
 # AGENTS.md
 
-
 ## Project
 
-GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Deployed to https://geoasteroids.com (Railway server, see `railway.json`). Node `>=24`.
+GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Deployed to <https://geoasteroids.com> (Railway server, see `railway.json`). Node `>=24`.
 
 ## Commands
 
@@ -113,7 +112,7 @@ An empty `.env` file must exist at the repo root (the server startup uses `--env
 ### Services
 
 | Service | Port | Health / URL |
-|---------|------|----------------|
+| --- | --- | --- |
 | Vite (client + `/ws` proxy) | 5173 | `curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/` → `200` |
 | Game server (HTTP + WS) | 3001 | `curl http://localhost:3001/health` |
 
