@@ -12,9 +12,8 @@ npm-debug.log
 
 # Vite
 dist/*
-# Vercel: track the project link (no secrets), ignore everything else local
-.vercel/*
-!.vercel/project.json
+# Vercel (local CLI state; the hook passes VERCEL_ORG_ID/VERCEL_PROJECT_ID)
+.vercel
 
 # Logs
 /logs

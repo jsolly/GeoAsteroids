@@ -98,7 +98,12 @@ echo "• vitest"
 npm test
 
 # --- Deploy: production deploy to Vercel (remote build) ---
+# The project link travels as non-secret env vars (same IDs Vercel writes into
+# .vercel/project.json) so nothing vendor-owned needs committing — keeps it out
+# of the lint/format gate and works in any fresh worktree.
 echo "• production deploy (Vercel)"
 trap 'echo "✗ Vercel deploy failed — production NOT updated; push aborted. Fix and re-run the push (or: npm run deploy)." >&2' ERR
-"$ROOT/node_modules/.bin/vercel" deploy --prod --yes
+VERCEL_ORG_ID=team_T8yHg0aDz7nCbyBgJh5a2saR \
+VERCEL_PROJECT_ID=prj_2uyFHuUn3HM9Ul7BwHuvoqgqeqKR \
+  "$ROOT/node_modules/.bin/vercel" deploy --prod --yes
 echo "✓ pre-push gate + deploy complete"
