@@ -12,7 +12,9 @@ npm-debug.log
 
 # Vite
 dist/*
-.vercel
+# Vercel: track the project link (no secrets), ignore everything else local
+.vercel/*
+!.vercel/project.json
 
 # Logs
 /logs

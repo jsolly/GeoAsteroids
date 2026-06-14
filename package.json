@@ -29,6 +29,7 @@
     "fix": "biome check --write . && npm run check:ts && npm run test",
     "lint": "biome check .",
     "format": "biome format --write .",
+    "deploy": "vercel deploy --prod --yes",
     "prepare": "if [ -z \"$CI\" ] && [ -d .git ]; then git config core.hooksPath .git-hooks; fi"
   },
   "lint-staged": {
