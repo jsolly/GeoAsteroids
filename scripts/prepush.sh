@@ -112,6 +112,8 @@ fi
 # --- Quality gate ---
 echo "• lint"
 npm run lint
+echo "• yaml lint"
+npm run check:yaml
 echo "• tsc --noEmit"
 npm run check:ts
 echo "• vitest"

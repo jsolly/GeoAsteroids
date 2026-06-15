@@ -25,6 +25,7 @@
     "test:integration:component": "vitest run tests/integration/component/ --passWithNoTests",
     "check:ts": "tsc --noEmit",
     "check:md": "bash scripts/lint-md.sh",
+    "check:yaml": "uvx yamllint@1.38.0 .",
     "check:lint": "biome check .",
     "check:fix": "biome check --write .",
     "fix": "biome check --write . && npm run check:ts && npm run test",
