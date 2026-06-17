@@ -81,8 +81,7 @@
     "typescript": "^5.9.2",
     "vercel": "^54.10.3",
     "vite": "^7.0.5",
-    "vitest": "^3.2.6",
-    "wrangler": "^4.99.0"
+    "vitest": "^3.2.6"
   },
   "overrides": {
     "shell-quote": ">=1.8.4",
