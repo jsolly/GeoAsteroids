@@ -48,13 +48,13 @@ fi
 echo "✅ Cleanup complete, starting dev servers..."
 
 # tsx --env-file requires the file to exist; bootstrap from .env.example on fresh clones
-if [ ! -f .env ]; then
+if [ ! -f .env.local ]; then
     if [ -f .env.example ]; then
-        echo "📋 Creating .env from .env.example..."
-        cp .env.example .env
+        echo "📋 Creating .env.local from .env.example..."
+        cp .env.example .env.local
     else
-        echo "📋 Creating default .env..."
-        cat > .env <<'EOF'
+        echo "📋 Creating default .env.local..."
+        cat > .env.local <<'EOF'
 NODE_ENV=development
 PORT=3001
 VITEST=false
@@ -78,4 +78,4 @@ exec npx concurrently \
   --prefix "[{name}]" \
   --names "vite,network" \
   "vite" \
-  "tsx --env-file=.env server.ts"
+  "tsx --env-file=.env.local server.ts"
