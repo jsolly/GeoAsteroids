@@ -72,7 +72,7 @@ touch logs/client.log logs/server.log
 export NODE_ENV=development
 export VITEST=false
 
-exec npx concurrently \
+exec npx --no-install concurrently \
   --kill-others \
   --prefix-colors "blue.bold,green.bold" \
   --prefix "[{name}]" \

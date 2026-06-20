@@ -19,8 +19,10 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
 
 gate_begin "GeoRoids" deploys   # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
 gate_require_clean_tree         # refuse dirty tree / pushed-SHA≠HEAD / non-fast-forward
+gate_require_node               # enforce the pinned Node (.nvmrc), not whatever's on PATH
 
 # --- Quality gate (run_step: silent on green, full output + abort on red) ---
+run_step "dep grounding" gate_check_dep_grounding .git-hooks/pre-push scripts/*.sh railway.json
 run_step "lint"   npm run lint
 run_step "yaml lint" npm run check:yaml
 run_step "tsc"    npm run check:ts

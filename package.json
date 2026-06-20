@@ -56,6 +56,7 @@
   "dependencies": {
     "mongodb": "^6.17.0",
     "socket.io-client": "^4.8.1",
+    "tsx": "^4.20.4",
     "uuid": "^11.0.0",
     "ws": "^8.18.0"
   },
@@ -78,7 +79,6 @@
     "selenium-webdriver": "^4.35.0",
     "ts-node": "^10.9.1",
     "ts-prune": "^0.10.3",
-    "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "vercel": "^54.10.3",
     "vite": "^7.0.5",

@@ -64,10 +64,10 @@ recover_chromium_from_tmp() {
 install_browsers() {
 	clear_playwright_lock
 	echo "Installing Playwright Chromium..."
-	run_with_timeout "chromium install" npx playwright install chromium || true
+	run_with_timeout "chromium install" npx --no-install playwright install chromium || true
 	clear_playwright_lock
 	echo "Installing Playwright chromium-headless-shell..."
-	run_with_timeout "headless-shell install" npx playwright install chromium-headless-shell || true
+	run_with_timeout "headless-shell install" npx --no-install playwright install chromium-headless-shell || true
 	clear_playwright_lock
 }
 
