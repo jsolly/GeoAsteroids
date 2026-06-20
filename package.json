@@ -5,7 +5,7 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "worktree:init": "bash scripts/worktree-init.sh; npm_config_cache=\"${TMPDIR:-/tmp}/georoids-npm-cache\" npm ci",
+    "worktree:init": "bash scripts/worktree-init.sh; npm ci",
     "prune": "ts-prune",
     "dev": "./scripts/dev-server.sh",
     "dev:check": "./scripts/check-dev-servers.sh",
