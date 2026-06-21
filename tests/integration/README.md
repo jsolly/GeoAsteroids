@@ -73,18 +73,15 @@ The tests are organized using a modular utility-based architecture:
 
 1. **Node.js**: Version 16 or higher
 2. **Game Server**: Must be running on port 3001
-3. **Playwright browsers**: Required for browser tests. Cursor Cloud VMs install them via fleet `install_playwright_browsers_for_e2e` in `bash scripts/cloud-agent-install.sh` on boot.
+3. **Playwright browsers**: Required for browser tests. Install with `npx playwright install`.
 
 ## Setup
 
-1. Install Playwright browsers (local dev; on cloud, `cloud-agent-install.sh` runs the fleet helper instead):
+1. Install Playwright browsers:
 
    ```bash
-   source .agents/scripts/cloud-install-lib.sh
-   install_playwright_browsers_for_e2e
+   npx playwright install
    ```
-
-   Or run `bash scripts/cloud-agent-install.sh` after `npm ci`. Troubleshooting: [.agents/docs/cloud-agents.md](../../.agents/docs/cloud-agents.md) — Playwright browser E2E (opt-in).
 
 2. Ensure the game server is running:
 
@@ -186,7 +183,7 @@ These tests integrate seamlessly with your existing Vitest setup:
 
 - **Connection refused**: Make sure the game server is running on port 3001
 - **Element not found**: Check that the game UI elements have the expected IDs
-- **Browser not found**: Re-run `install_playwright_browsers_for_e2e` (see `.agents/docs/cloud-agents.md` — `__dirlock` + unzip from `/tmp/playwright-download-*/*headless-shell*.zip`)
+- **Browser not found**: re-run `npx playwright install`; if the headless-shell binary is missing, remove the stale lock (`rm -f ~/.cache/ms-playwright/__dirlock`) and reinstall.
 - **Test timeouts**: Increase timeout values if the game loads slowly
 - **Screenshot issues**: Check that the screenshots directory is writable
 

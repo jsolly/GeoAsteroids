@@ -91,23 +91,13 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 - **Conventional Commits** (`feat`, `fix`, `chore`, `refactor`, `test`, `perf`, `docs`) with a scope (e.g. `feat(network): ...`).
 - **Scenario-style test names** — describe a real user/system event, not the function under test.
 
-## Cursor Cloud
+## Local development
 
-Dev boot is in `.cursor/environment.json`; install runs `scripts/cloud-agent-install.sh`.
-
-- **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, `scripts/ensure-playwright-browsers.sh`, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
-- **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
-- **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
-
-## Cursor Cloud specific instructions
-
-- **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`. Cloud VMs may ship Node 22 — installs and tests still pass, but prefer Node 24 when available (`nvm use` / install from `.nvmrc`).
-
-### Environment prerequisites
-
-The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers for browser E2E are installed via `scripts/ensure-playwright-browsers.sh` during `cloud-agent-install.sh` (not bundled on the image). If install fails or the headless-shell binary is missing, remove the stale lock (`rm -f ~/.cache/ms-playwright/__dirlock`) or unzip from `/tmp/playwright-download-*/*headless-shell*.zip`.
-
-An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
+- **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest` on `tests/integration/`.
+- **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`.
+- **`.env`:** an empty `.env` file must exist at the repo root (server startup uses `--env-file=.env`); create one with `touch .env` if missing.
+- **`canvas` native deps:** the `canvas` npm package needs Cairo, Pango, libjpeg, libgif, and librsvg dev headers installed on the system.
+- **Playwright browsers** (browser E2E): `npx playwright install`. If the headless-shell binary is missing, remove the stale lock (`rm -f ~/.cache/ms-playwright/__dirlock`) and reinstall.
 
 ### Services
 
@@ -118,7 +108,7 @@ An empty `.env` file must exist at the repo root (the server startup uses `--env
 
 Start both with `npm run dev` (`./scripts/dev-server.sh`). Status: `npm run dev:check`. Stop: `npm run dev:kill`. If integration tests hang or rate-limit, kill then restart dev before re-running `./scripts/test-runner.sh`.
 
-**Background dev:** Prefer the `dev` terminal from `.cursor/environment.json`. If tmux sessions do not persist in the VM, `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
+**Background dev:** `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
 
 ### Lint / tests (reference)
 
