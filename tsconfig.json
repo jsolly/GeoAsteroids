@@ -1,8 +1,6 @@
 {
   "extends": "../dotagents/tsconfig/strict-tsc.json",
   "compilerOptions": {
-    // GeoRoids debt: re-enable after fixing indexed-access violations — see dotagents/rules/typescript-strict.md
-    "noUncheckedIndexedAccess": false,
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",

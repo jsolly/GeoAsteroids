@@ -16,12 +16,12 @@ test('player engages in combat with bots and asteroids', async () => {
   await game.waitForBots(1);
 
   const scoreBefore = await game.getScore();
-  const bot = (await game.getBots())[0];
+  const bot = (await game.getBots())[0]!;
   const botResult = await game.attackBotWithLasers(bot.id, 8);
 
   let roidDestroyed = false;
   try {
-    const asteroid = (await game.getAsteroidDetails())[0];
+    const asteroid = (await game.getAsteroidDetails())[0]!;
     await game.destroyAsteroidWithLaser(asteroid, 20000);
     roidDestroyed = true;
   } catch {

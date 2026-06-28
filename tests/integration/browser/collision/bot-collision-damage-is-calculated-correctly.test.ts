@@ -13,7 +13,7 @@ test('bot collision damage is calculated correctly', async () => {
   await game.bootSinglePlayerGame();
   await game.waitForBots(1);
 
-  const bot = (await game.getBots())[0];
+  const bot = (await game.getBots())[0]!;
   expect(bot.health).toBe(100);
 
   await game.damageBot(bot.id, 25, 'asteroid-collision');

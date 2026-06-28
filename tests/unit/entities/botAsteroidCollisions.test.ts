@@ -3,6 +3,14 @@ import { GameEngine } from '../../../server/core/GameEngine';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { RNGService } from '../../../server/core/RNGService';
 import { SHIP } from '../../../src/constants';
+import type { GameEntity } from '../../../server/core/EntityManager';
+
+function firstBot(bots: GameEntity[] | null): GameEntity {
+  expect(bots).not.toBeNull();
+  const bot = bots![0];
+  expect(bot).toBeDefined();
+  return bot!;
+}
 
 // Mock logger
 vi.mock('../../setup/serverLogger', () => ({
@@ -41,7 +49,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2); // DEBUG.BOT_PLAYER.COUNT overrides the requested count
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const initialHealth = bot.health;
 
       // Damage the bot (simulating asteroid collision)
@@ -59,7 +67,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Deal lethal damage
       const lethalDamage = bot.health;
@@ -77,7 +85,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create a bot and destroy it (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, 'test-attacker', bot.health); // Destroy the bot
 
       // Try to damage exploding bot
@@ -90,7 +98,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create a bot and set health to 0 (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.updateBot(bot.id, { health: 0, exploding: true }); // Set exploding to true for dead bot
 
       // Try to damage dead bot
@@ -103,7 +111,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create a bot with spawn protection (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.updateBot(bot.id, { spawnProtectionTimer: 60 }); // 1 second protection
 
       // Try to damage bot with spawn protection
@@ -122,7 +130,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create and destroy a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, "test-attacker", bot.health); // Destroy the bot
 
       const updatedBot = gameEngine.getBot(bot.id);
@@ -141,7 +149,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create and destroy a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, "test-attacker", bot.health); // Destroy the bot
 
       // Check initial explosion timer
@@ -173,7 +181,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create, destroy, and complete explosion (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, "test-attacker", bot.health);
       
       // Check initial explosion timer
@@ -206,7 +214,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create, destroy, complete explosion, and start respawn (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, "test-attacker", bot.health);
       
       // Check initial explosion timer
@@ -245,7 +253,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create bots through game engine (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Simulate bot damage through game engine
       const isDestroyed = gameEngine.handleBotDamage(bot.id, 'test-attacker', 25);
@@ -265,7 +273,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create and destroy a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const isDestroyed = gameEngine.handleBotDamage(bot.id, 'test-player', bot.health);
 
       expect(isDestroyed).toBe(true); // Bot destroyed
@@ -299,7 +307,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create a bot and damage it (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, 'test-attacker', 30);
 
       // Start game loop to enable health regeneration
@@ -325,7 +333,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create and destroy a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       gameEngine.handleBotDamage(bot.id, 'test-attacker', bot.health);
 
       // Start game loop
@@ -382,7 +390,7 @@ describe('Bot-Asteroid Collision System', () => {
       // Create and destroy a bot (DEBUG.BOT_PLAYER.COUNT=2, so we get 2 bots)
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const initialPosition = { ...bot.position };
       
       gameEngine.handleBotDamage(bot.id, 'test-attacker', bot.health);
@@ -413,7 +421,7 @@ describe('Bot-Asteroid Collision System', () => {
 
     test('handles zero damage', () => {
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const initialHealth = bot.health;
 
       const isDestroyed = gameEngine.handleBotDamage(bot.id, 'test-attacker', 0);
@@ -426,7 +434,7 @@ describe('Bot-Asteroid Collision System', () => {
     test('handles negative damage (healing)', () => {
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       
       // Damage the bot first
       gameEngine.handleBotDamage(bot.id, 'test-attacker', 30);
@@ -444,7 +452,7 @@ describe('Bot-Asteroid Collision System', () => {
     test('handles excessive damage', () => {
       const bots = gameEngine.createBots(1);
       expect(bots).toHaveLength(2);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       const isDestroyed = gameEngine.handleBotDamage(bot.id, 'test-attacker', 1000);
       expect(isDestroyed).toBe(true);

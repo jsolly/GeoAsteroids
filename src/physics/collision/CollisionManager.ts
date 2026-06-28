@@ -164,6 +164,9 @@ export class CollisionManager {
   ): void {
     for (let i = lasers.length - 1; i >= 0; i--) {
       const laser = lasers[i];
+      if (laser === undefined) {
+        continue;
+      }
 
       // Skip lasers that are already exploding
       if (laser.hasExploded) {
