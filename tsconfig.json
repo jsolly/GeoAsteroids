@@ -1,5 +1,7 @@
 {
+  "extends": "../dotagents/tsconfig/strict-tsc.json",
   "compilerOptions": {
+    "noUncheckedIndexedAccess": false,
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",
@@ -7,15 +9,11 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "noEmit": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
