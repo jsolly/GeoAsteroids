@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# Pre-push gate + deploy for GeoRoids.
+# Pre-push GATE for GeoRoids (gate-only — this hook does NOT deploy).
 #
 # Thin shim over the shared fleet gate library (dotagents/gate/gate-lib.sh): the
 # ~100 lines of shared boilerplate — push-ref parsing, the gitleaks secrets scan,
 # markdown-lint-on-change, the doc-only fast path, the working-tree guards, and
 # run_step (silent on green, full output on red) — live in the lib. This file
-# declares only GeoRoids' quality steps and the Vercel production deploy. We
-# deploy from the hook because the Vercel↔GitHub git integration is disconnected,
-# so the push is the deploy trigger and a failed deploy fails the push.
+# declares only GeoRoids' quality steps. The Vercel client deploys via GitHub
+# integration after the push lands on main; the Railway game server is separate.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"
@@ -17,7 +16,7 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
   exit 1
 }
 
-gate_begin "GeoRoids" deploys   # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
+gate_begin "GeoRoids"           # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
 gate_require_clean_tree         # refuse dirty tree / pushed-SHA≠HEAD / non-fast-forward
 gate_require_node               # enforce the pinned Node (.nvmrc), not whatever's on PATH
 
@@ -28,6 +27,4 @@ run_step "yaml lint" npm run check:yaml
 run_step "tsc"    npm run check:ts
 run_step "vitest" npm test
 
-# --- Deploy: production deploy to Vercel (remote build; streams) ---
-gate_deploy_vercel team_T8yHg0aDz7nCbyBgJh5a2saR prj_2uyFHuUn3HM9Ul7BwHuvoqgqeqKR
-echo "✓ pre-push gate + deploy complete"
+echo "✓ pre-push gate passed — push will land; Vercel deploys via GitHub integration."

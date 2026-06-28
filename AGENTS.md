@@ -2,7 +2,18 @@
 
 ## Project
 
-GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Deployed to <https://geoasteroids.com> (Railway server, see `railway.json`). Node `>=24`.
+GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Live at <https://geoasteroids.com>. Node `>=24`.
+
+## Deploy
+
+Two separate deploy targets:
+
+- **Vercel (static client):** production deploy is owned by **Vercel's GitHub integration** — a push to `main` triggers a Vercel build/deploy after the pre-push gate passes. There is no local `npm run deploy` or CLI deploy step; `/ship` records `deploy: none (Vercel Git)`.
+- **Railway (game server):** the WebSocket server deploys via Railway (`railway.json`) — separate from Vercel and still manual/separate from the Git push flow.
+
+## CI (local pre-push gate)
+
+- `.git-hooks/pre-push` (wired via `core.hooksPath=.git-hooks`, fires on push to `main`) runs dep grounding → lint → yaml → tsc → vitest. It does **not** deploy. After the push lands, babysit the Vercel GitHub deployment in the dashboard.
 
 ## Commands
 
