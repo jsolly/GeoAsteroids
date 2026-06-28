@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Ship
+
+Ship profile: `vercel-static`
+
+Production URL: <https://geoasteroids.com>
+
+Vercel Git integration deploys the static client on push to `main`. After push, verify <https://geoasteroids.com> returns HTTP 200 — do not run a manual `vercel deploy` unless Git integration is broken. The Railway game server is a separate deploy path.
+
+Local gate before push: `npm run fix && npm run build`.
+
 ## Project
 
 GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Live at <https://geoasteroids.com>. Node `>=24`.
