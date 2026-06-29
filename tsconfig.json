@@ -1,5 +1,5 @@
 {
-  "extends": "../dotagents/tsconfig/strict-tsc.json",
+  "extends": "./tsconfig/fleet/strict-tsc.json",
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
