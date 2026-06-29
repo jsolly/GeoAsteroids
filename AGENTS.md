@@ -4,9 +4,11 @@
 
 Ship profile: `vercel-static`
 
-Production is split: **Vite static client on Vercel** + **WebSocket game server on Railway**. A push to `main` only rebuilds the client. Server changes need a **separate Railway deploy** before multiplayer works in production.
+**Integration: branch → PR → CI-gated auto-merge (canonical).** Open a PR from your branch; `.github/workflows/auto-merge.yml` enables squash auto-merge once **`CI / ci`** is green. Direct push to `main` is break-glass only.
 
-Local gate before push: `npm run fix && npm run build`.
+Production is split: **Vite static client on Vercel** + **WebSocket game server on Railway**. Merge to `main` only rebuilds the client. Server changes need a **separate Railway deploy** before multiplayer works in production.
+
+Local gate before push: `npm run fix && npm run build` (full gate also runs in GitHub CI on the PR).
 
 ### Post-push verification (`/ship` step 12)
 
