@@ -57,7 +57,7 @@
     "socket.io-client": "^4.8.1",
     "tsx": "^4.20.4",
     "uuid": "^11.0.0",
-    "ws": "^8.18.0"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
