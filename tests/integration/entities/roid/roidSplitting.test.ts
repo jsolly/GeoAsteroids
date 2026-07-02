@@ -62,9 +62,11 @@ describe('Integration: Roid splitting on collision', () => {
 
   test('large roid splits into two medium roids when collided with', () => {
     const largeRoid = roidBelt.roids[0];
-    
+    expect(largeRoid).toBeDefined();
+    const roid = largeRoid!;
+
     // Verify it's a large roid (size 25)
-    expect(largeRoid.r).toBe(25);
+    expect(roid.r).toBe(25);
 
     // Simulate collision
     collisionManager.checkPlayerAsteroidCollisions(localPlayer, roidBelt.roids);
@@ -93,7 +95,7 @@ describe('Integration: Roid splitting on collision', () => {
     expect(mockSendMessage).toHaveBeenCalledWith({
       type: 'asteroidDestroyed',
       data: {
-        asteroidId: largeRoid.id,
+        asteroidId: roid.id,
         playerId: 'local-player-123',
         points: 50, // Medium roid points (size 25)
       },

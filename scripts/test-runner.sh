@@ -144,7 +144,7 @@ run_tests() {
     echo "📝 Test arguments: $test_args"
     echo "📝 Vitest config: $vitest_config"
     
-    npx vitest run \
+    npx --no-install vitest run \
         --config "$vitest_config" \
         --pool=forks \
         --poolOptions.forks.singleFork=true \

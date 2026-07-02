@@ -94,7 +94,9 @@ describe('Laser vs Player Collisions Integration', () => {
 
       mockSendMessage(message);
 
-      const sentMessage = mockSendMessage.mock.calls[0][0];
+      const firstCall = mockSendMessage.mock.calls[0];
+      expect(firstCall).toBeDefined();
+      const sentMessage = firstCall![0];
       expect(sentMessage.type).toBe('laserDamage');
       expect(sentMessage.data.targetPlayerId).toBe('remote-player');
       expect(sentMessage.data.attackerId).toBe('local-player');

@@ -58,6 +58,9 @@ export function shoot(ship: Ship, state: ShipCombatState): void {
 export function updateLasers(state: ShipCombatState): void {
   for (let i = state.lasers.length - 1; i >= 0; i--) {
     const laser = state.lasers[i];
+    if (laser === undefined) {
+      continue;
+    }
     laser.move();
 
     // Remove lasers that have traveled their maximum distance OR finished exploding
