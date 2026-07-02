@@ -70,7 +70,7 @@
     "@vercel/node": "^5.3.6",
     "canvas": "^3.1.2",
     "chromedriver": "^139.0.3",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.2",
     "markdownlint-cli2": "^0.22.1",
