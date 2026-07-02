@@ -166,9 +166,14 @@ export class EntityManager {
         y: Math.sin(angle) * radius
       };
 
+      const botName = botNames[i];
+      if (botName === undefined) {
+        continue;
+      }
+
       const bot: GameEntity = {
         id: botId,
-        name: botNames[i],
+        name: botName,
         type: 'bot',
         position,
         velocity: { x: 0, y: 0 },

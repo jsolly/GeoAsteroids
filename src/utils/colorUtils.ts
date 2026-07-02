@@ -17,5 +17,6 @@ export function generateRandomPlayerColor(): string {
     '#FAD7A0', // Peach
   ];
 
-  return colors[Math.floor(Math.random() * colors.length)];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  return color ?? '#FF6B6B';
 }

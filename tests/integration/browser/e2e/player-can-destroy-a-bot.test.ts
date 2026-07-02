@@ -19,7 +19,7 @@ test('a player destroys a bot with lasers and is awarded the kill', async () => 
   await game.waitForBots(1);
   const bots = await game.getBots();
   expect(bots.length).toBeGreaterThan(0);
-  const target = bots[0];
+  const target = bots[0]!;
 
   const scoreBefore = await game.getScore();
 

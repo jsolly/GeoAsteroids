@@ -13,7 +13,7 @@ test('kill message appears when player destroys bot', async () => {
   await game.bootSinglePlayerGame();
   await game.waitForBots(1);
 
-  const target = (await game.getBots())[0];
+  const target = (await game.getBots())[0]!;
   await game.attackBotWithLasers(target.id, 12);
 
   await expect

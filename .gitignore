@@ -21,10 +21,10 @@ dist/*
 .env
 .env.local
 .env.*.local
-# Cursor: track cloud config and rules; ignore other local editor state
+# Cursor: track local-editor rules; ignore other editor state
 .cursor/*
-!.cursor/environment.json
 !.cursor/hooks.json
+!.cursor/worktrees.json
 !.cursor/rules/
 !.cursor/rules/**
 

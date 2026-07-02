@@ -70,7 +70,7 @@ export class BrowserManager {
     if (this.pages.length < 2) {
       throw new Error('Expected two pages — call createAdditionalPage() after the first createPage()');
     }
-    return { first: this.pages[0], second: this.pages[1] };
+    return { first: this.pages[0]!, second: this.pages[1]! };
   }
 
   async cleanup(): Promise<void> {

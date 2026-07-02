@@ -239,6 +239,9 @@ class Ship {
   moveLasers(): void {
     for (let i = this.lasers.length - 1; i >= 0; i--) {
       const laser = this.lasers[i];
+      if (laser === undefined) {
+        continue;
+      }
 
       laser.move();
 
@@ -250,7 +253,11 @@ class Ship {
   }
 
   updateLaserExplodeTime(i: number): void {
-    this.lasers[i].updateExplodeTime();
+    const laser = this.lasers[i];
+    if (laser === undefined) {
+      return;
+    }
+    laser.updateExplodeTime();
   }
 
   generateLaser(): Laser {

@@ -20,7 +20,7 @@ test('ship respawns after asteroid collision when spawn protection ends', async 
   const initialLives = await game.getLives();
 
   await game.waitForAsteroids(1);
-  const asteroid = (await game.getAsteroidPositions())[0];
+  const asteroid = (await game.getAsteroidPositions())[0]!;
   expect(asteroid).toBeTruthy();
 
   await game.crashShipIntoAsteroidUntilDestroyed(asteroid);

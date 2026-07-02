@@ -1,8 +1,77 @@
 # AGENTS.md
 
+## Ship
+
+Ship profile: `vercel-static`
+
+**Integration: branch → PR → CI-gated auto-merge (canonical).** Open a PR from your branch; `.github/workflows/auto-merge.yml` enables squash auto-merge once **`CI / ci`** is green. Direct push to `main` is break-glass only.
+
+Production is split: **Vite static client on Vercel** + **WebSocket game server on Railway**. Merge to `main` only rebuilds the client. Server changes need a **separate Railway deploy** before multiplayer works in production.
+
+Local gate before push: `npm run fix && npm run build` (full gate also runs in GitHub CI on the PR).
+
+### Post-push verification (`/ship` step 12)
+
+**Client-only changes** (default — `src/**`, client assets, docs, no server paths):
+
+1. Wait for Vercel Git deployment READY (project `georoids`, team `jsollys-projects`).
+2. `curl -sf -o /dev/null -w '%{http_code}\n' https://www.georoids.com` → `200`
+3. Optional smoke: `<title>` is `GeoRoids` or page contains the Play button.
+4. Record: `deploy: verified (Vercel Git)` at `https://www.georoids.com`
+
+Do **not** curl `geoasteroids.com` — that domain is no longer registered (NXDOMAIN). The live client is **georoids.com**.
+
+**Server changes** (`server.ts`, `server/**`, `railway.json`, or server-facing changes in `shared-types.ts`):
+
+1. Complete client verification above if the push also touched client files.
+2. Deploy manually on [Railway](https://railway.app) (linked GitHub repo or Railway CLI).
+3. Smoke: `curl -sf https://geoasteroids-production.up.railway.app/health` (if the Railway public URL changed, update Vercel production `VITE_WEBSOCKET_URL` to `wss://<new-host>/ws` and redeploy the Vercel client).
+4. Record: `deploy: verified (Vercel Git)` plus `Railway: deploy required` or `Railway: verified`.
+
+Do not run `vercel deploy` from `/ship` unless Git integration is broken.
+
 ## Project
 
-GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Deployed to <https://geoasteroids.com> (Railway server, see `railway.json`). Node `>=24`.
+GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Play the client at <https://www.georoids.com>; the authoritative server runs on Railway (see Deploy). Node `>=24`.
+
+## Deploy
+
+Two separate deploy targets — client and server do not share a host.
+
+### Vercel (static client)
+
+| | |
+| --- | --- |
+| **Project** | `georoids` (`jsollys-projects`) |
+| **Production URLs** | **Canonical:** <https://www.georoids.com>; **apex:** <https://georoids.com> (redirects to www); **Vercel default:** `https://georoids-jsollys-projects.vercel.app` |
+| **Build** | `npm run build` → `dist/` (Vite; framework auto-detected — no `vercel.json` required) |
+| **Trigger** | Push to `main` after the pre-push gate; Vercel GitHub integration |
+| **Local deploy** | None — no `npm run deploy` or CLI deploy step |
+
+**Required Vercel production env vars:**
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_WEBSOCKET_URL` | WebSocket endpoint baked into the client at build time. Currently `wss://geoasteroids-production.up.railway.app/ws`. Must match the live Railway public URL + `/ws`. |
+
+`VITE_BUILD_TIME` and `VITE_COMMIT_HASH` are injected by `vite.config.ts` at build time — do not set on Vercel.
+
+Local dev: `VITE_WEBSOCKET_URL=ws://localhost:3001/ws` in `.env.local` (see `.env.example`). Vite dev proxies `/ws` to `:3001` when unset; `ConnectionManager` falls back to same-origin `/ws`.
+
+### Railway (game server)
+
+| | |
+| --- | --- |
+| **Config** | `railway.json` (Nixpacks, `tsx server.ts`, healthcheck `/health`) |
+| **Public URL** | `https://geoasteroids-production.up.railway.app` (WebSocket: `wss://geoasteroids-production.up.railway.app/ws`) |
+| **Deploy** | Manual / separate from the Git push flow — Railway dashboard or CLI |
+| **When required** | Changes under `server.ts`, `server/**`, `railway.json`, or server protocol changes in `shared-types.ts` |
+
+Smoke: `curl https://geoasteroids-production.up.railway.app/health`
+
+## CI (local pre-push gate)
+
+- `.git-hooks/pre-push` (wired via `core.hooksPath=.git-hooks`, fires on push to `main`) runs dep grounding → lint → yaml → tsc → vitest. It does **not** deploy. After the push lands, babysit the Vercel GitHub deployment in the dashboard.
 
 ## Commands
 
@@ -91,23 +160,13 @@ Integration tests boot the dev servers if not already running. If a test hangs o
 - **Conventional Commits** (`feat`, `fix`, `chore`, `refactor`, `test`, `perf`, `docs`) with a scope (e.g. `feat(network): ...`).
 - **Scenario-style test names** — describe a real user/system event, not the function under test.
 
-## Cursor Cloud
+## Local development
 
-Dev boot is in `.cursor/environment.json`; install runs `scripts/cloud-agent-install.sh`.
-
-- **Install:** `bash scripts/cloud-agent-install.sh` (`npm ci`, `scripts/ensure-playwright-browsers.sh`, `.env` from example) — automatic on cloud VM boot via `.cursor/environment.json`
-- **Dev server:** `npm run dev` (Vite :5173 + ws :3001) — started via environment terminals
-- **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest`
-
-## Cursor Cloud specific instructions
-
-- **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`. Cloud VMs may ship Node 22 — installs and tests still pass, but prefer Node 24 when available (`nvm use` / install from `.nvmrc`).
-
-### Environment prerequisites
-
-The VM has Node 22.x pre-installed via nvm; `cloud-agent-install.sh` switches to Node from `.nvmrc` (24). Native build dependencies for the `canvas` npm package (Cairo, Pango, libjpeg, libgif, librsvg dev headers) are pre-installed on the image. Playwright browsers for browser E2E are installed via `scripts/ensure-playwright-browsers.sh` during `cloud-agent-install.sh` (not bundled on the image). If install fails or the headless-shell binary is missing, remove the stale lock (`rm -f ~/.cache/ms-playwright/__dirlock`) or unzip from `/tmp/playwright-download-*/*headless-shell*.zip`.
-
-An empty `.env` file must exist at the repo root (the server startup uses `--env-file=.env`); if missing, create one with `touch .env`.
+- **Integration tests:** always `./scripts/test-runner.sh`, never raw `npx vitest` on `tests/integration/`.
+- **Node:** `package.json` requires `>=24`; `.nvmrc` is `24`.
+- **`.env`:** an empty `.env` file must exist at the repo root (server startup uses `--env-file=.env`); create one with `touch .env` if missing.
+- **`canvas` native deps:** the `canvas` npm package needs Cairo, Pango, libjpeg, libgif, and librsvg dev headers installed on the system.
+- **Playwright browsers** (browser E2E): `npx playwright install`. If the headless-shell binary is missing, remove the stale lock (`rm -f ~/.cache/ms-playwright/__dirlock`) and reinstall.
 
 ### Services
 
@@ -118,7 +177,7 @@ An empty `.env` file must exist at the repo root (the server startup uses `--env
 
 Start both with `npm run dev` (`./scripts/dev-server.sh`). Status: `npm run dev:check`. Stop: `npm run dev:kill`. If integration tests hang or rate-limit, kill then restart dev before re-running `./scripts/test-runner.sh`.
 
-**Background dev:** Prefer the `dev` terminal from `.cursor/environment.json`. If tmux sessions do not persist in the VM, `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
+**Background dev:** `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
 
 ### Lint / tests (reference)
 

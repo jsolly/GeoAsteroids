@@ -157,7 +157,9 @@ describe('Server Message Parity', () => {
 
     // Verify error was sent
     expect(sentMessages).toHaveLength(1);
-    const errorMessage = JSON.parse(sentMessages[0]);
+    const rawMessage = sentMessages[0];
+    expect(rawMessage).toBeDefined();
+    const errorMessage = JSON.parse(rawMessage!);
     expect(errorMessage.type).toBe('error');
     expect(errorMessage.data).toBe('Missing player ID');
     expect(errorMessage.timestamp).toBeDefined();
@@ -219,7 +221,9 @@ describe('Server Message Parity', () => {
 
     // Verify shoot event was broadcast
     expect(sentMessages.length).toBe(1);
-    const broadcastMessage = JSON.parse(sentMessages[0]);
+    const rawBroadcast = sentMessages[0];
+    expect(rawBroadcast).toBeDefined();
+    const broadcastMessage = JSON.parse(rawBroadcast!);
     expect(broadcastMessage.type).toBe('playerShoot');
     expect(broadcastMessage.data.id).toBe('shoot-test-id');
     expect(broadcastMessage.data.laserStart).toEqual({ x: 10, y: 20 });
