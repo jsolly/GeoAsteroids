@@ -18,8 +18,8 @@ export default defineConfig(() => {
   }
   define['import.meta.env.VITE_COMMIT_HASH'] = JSON.stringify(commitHash);
 
-  // Set WebSocket URL for local development
-  define['import.meta.env.VITE_WEBSOCKET_URL'] = JSON.stringify('ws://localhost:3001/ws');
+  // VITE_WEBSOCKET_URL comes from .env.local (dev) or Vercel env (production).
+  // Do not define it here — vite `define` overrides env and breaks production builds.
 
   return {
     resolve: {

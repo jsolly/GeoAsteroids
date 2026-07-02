@@ -46,9 +46,18 @@ function createComplementaryColor(
     // Parse HSL color like "hsl(120, 50%, 60%)"
     const matches = baseColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
     if (matches) {
-      hue = parseInt(matches[1], 10);
-      saturation = parseInt(matches[2], 10);
-      lightness = parseInt(matches[3], 10);
+      const matchHue = matches[1];
+      const matchSaturation = matches[2];
+      const matchLightness = matches[3];
+      if (matchHue === undefined || matchSaturation === undefined || matchLightness === undefined) {
+        hue = 0;
+        saturation = 100;
+        lightness = 50;
+      } else {
+        hue = parseInt(matchHue, 10);
+        saturation = parseInt(matchSaturation, 10);
+        lightness = parseInt(matchLightness, 10);
+      }
     } else {
       // Fallback to red if parsing fails
       hue = 0;

@@ -59,8 +59,12 @@ function drawMultiLineText(
 
   // Draw each line
   for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line === undefined) {
+      continue;
+    }
     const lineY = y + (i - (lines.length - 1) / 2) * lineHeight;
-    ctx.fillText(lines[i], x, lineY);
+    ctx.fillText(line, x, lineY);
   }
 }
 

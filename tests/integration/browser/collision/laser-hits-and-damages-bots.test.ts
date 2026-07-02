@@ -20,7 +20,7 @@ test('laser hits and damages bots', async () => {
 
   // Find a bot and fire on it at close range.
   await game.waitForBots(1);
-  const target = (await game.getBots())[0];
+  const target = (await game.getBots())[0]!;
   expect(target).toBeTruthy();
 
   const result = await game.attackBotWithLasers(target.id, 10);
