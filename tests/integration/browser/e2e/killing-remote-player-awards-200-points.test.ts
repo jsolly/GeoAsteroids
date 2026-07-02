@@ -23,7 +23,7 @@ test('killing remote player awards 200 points', async () => {
 
   await expect.poll(() => game1.getRemoteHumanPlayerIds(), { timeout: 12000 }).not.toEqual([]);
 
-  const targetId = (await game1.getRemoteHumanPlayerIds())[0];
+  const targetId = (await game1.getRemoteHumanPlayerIds())[0]!;
   const scoreBefore = await game1.getScore();
 
   for (let i = 0; i < 8; i++) {

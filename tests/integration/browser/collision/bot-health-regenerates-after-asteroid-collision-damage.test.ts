@@ -13,7 +13,7 @@ test('bot health regenerates after asteroid collision damage', async () => {
   await game.bootSinglePlayerGame();
   await game.waitForBots(1);
 
-  const bot = (await game.getBots())[0];
+  const bot = (await game.getBots())[0]!;
   const result = await game.attackBotWithLasers(bot.id, 2);
   expect(result.minHealthObserved, 'bot should take laser damage').toBeLessThan(100);
 

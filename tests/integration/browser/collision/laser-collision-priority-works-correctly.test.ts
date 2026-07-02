@@ -15,7 +15,7 @@ test('laser collision priority works correctly', async () => {
   await game.waitForAsteroids(1);
 
   const scoreBefore = await game.getScore();
-  const asteroid = (await game.getAsteroidDetails())[0];
+  const asteroid = (await game.getAsteroidDetails())[0]!;
 
   await game.destroyAsteroidWithLaser(asteroid, 25000);
 

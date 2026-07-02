@@ -95,15 +95,20 @@ export class AsteroidManager {
       if (DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER && playerPositions.length > 0) {
         // Place asteroids exactly on players when PLACE_ON_LOCAL_PLAYER is true (for testing)
         const playerPos = playerPositions[i % playerPositions.length];
-        // Place asteroids exactly on the player for collision testing
-        position = {
-          x: playerPos.x,
-          y: playerPos.y
-        };
+        if (playerPos === undefined) {
+          position = this.rng.randomPosition(bounds);
+        } else {
+          // Place asteroids exactly on the player for collision testing
+          position = {
+            x: playerPos.x,
+            y: playerPos.y,
+          };
+        }
         console.log(`🪨 SERVER: Placing asteroid ${i} exactly on player at position:`, position);
       } else if (DEBUG.ROIDS.PLACE_ON_BOT && botPositions.length > 0) {
         // Place all asteroids on bots when PLACE_ON_BOT is true
-        position = botPositions[i % botPositions.length];
+        const botPos = botPositions[i % botPositions.length];
+        position = botPos ?? this.rng.randomPosition(bounds);
         console.log(`🪨 SERVER: Placing asteroid ${i} on bot at position:`, position);
       } else {
         position = this.rng.randomPosition(bounds);

@@ -5,6 +5,7 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "worktree:init": "bash scripts/worktree-init.sh; npm ci",
     "prune": "ts-prune",
     "dev": "./scripts/dev-server.sh",
     "dev:check": "./scripts/check-dev-servers.sh",
@@ -31,7 +32,6 @@
     "fix": "biome check --write . && npm run check:ts && npm run test",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "deploy": "VERCEL_ORG_ID=team_T8yHg0aDz7nCbyBgJh5a2saR VERCEL_PROJECT_ID=prj_2uyFHuUn3HM9Ul7BwHuvoqgqeqKR vercel deploy --prod --yes",
     "prepare": "if [ -z \"$CI\" ] && git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .git-hooks; fi"
   },
   "lint-staged": {
@@ -55,6 +55,7 @@
   "dependencies": {
     "mongodb": "^6.17.0",
     "socket.io-client": "^4.8.1",
+    "tsx": "^4.20.4",
     "uuid": "^11.0.0",
     "ws": "^8.18.0"
   },
@@ -77,7 +78,6 @@
     "selenium-webdriver": "^4.35.0",
     "ts-node": "^10.9.1",
     "ts-prune": "^0.10.3",
-    "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "vercel": "^54.10.3",
     "vite": "^7.0.5",

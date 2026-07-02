@@ -55,20 +55,22 @@ test('Move Roids', () => {
   const testRoidBelt = createRoidBelt();
   testRoidBelt.addRoid();
   const firstRoid = testRoidBelt.roids[0];
+  expect(firstRoid).toBeDefined();
+  const roid = firstRoid!;
 
   // Set deterministic velocity to ensure movement test is reliable
-  firstRoid.velocity = { x: 1, y: 0 }; // Move right at 1 unit per frame
+  roid.velocity = { x: 1, y: 0 }; // Move right at 1 unit per frame
 
-  const previousX = firstRoid.position.x;
+  const previousX = roid.position.x;
   testRoidBelt.moveRoids();
   
   // Check behavior based on debug setting
   if (!DEBUG.ROIDS.MOVEMENT) {
     // When movement is disabled, roids should not move
-    expect(firstRoid.position.x).toEqual(previousX);
+    expect(roid.position.x).toEqual(previousX);
   } else {
     // When movement is enabled, roids should move
-    expect(firstRoid.position.x).not.toEqual(previousX);
+    expect(roid.position.x).not.toEqual(previousX);
   }
 });
 
