@@ -1,15 +1,73 @@
 # AGENTS.md
 
+## Ship
+
+Ship profile: `vercel-static`
+
+**Integration: branch → PR → CI-gated auto-merge (canonical).** Open a PR from your branch; `.github/workflows/auto-merge.yml` enables squash auto-merge once **`CI / ci`** is green. Direct push to `main` is break-glass only.
+
+Production is split: **Vite static client on Vercel** + **WebSocket game server on Railway**. Merge to `main` only rebuilds the client. Server changes need a **separate Railway deploy** before multiplayer works in production.
+
+Local gate before push: `npm run fix && npm run build` (full gate also runs in GitHub CI on the PR).
+
+### Post-push verification (`/ship` step 12)
+
+**Client-only changes** (default — `src/**`, client assets, docs, no server paths):
+
+1. Wait for Vercel Git deployment READY (project `georoids`, team `jsollys-projects`).
+2. `curl -sf -o /dev/null -w '%{http_code}\n' https://www.georoids.com` → `200`
+3. Optional smoke: `<title>` is `GeoRoids` or page contains the Play button.
+4. Record: `deploy: verified (Vercel Git)` at `https://www.georoids.com`
+
+Do **not** curl `geoasteroids.com` — that domain is no longer registered (NXDOMAIN). The live client is **georoids.com**.
+
+**Server changes** (`server.ts`, `server/**`, `railway.json`, or server-facing changes in `shared-types.ts`):
+
+1. Complete client verification above if the push also touched client files.
+2. Deploy manually on [Railway](https://railway.app) (linked GitHub repo or Railway CLI).
+3. Smoke: `curl -sf https://geoasteroids-production.up.railway.app/health` (if the Railway public URL changed, update Vercel production `VITE_WEBSOCKET_URL` to `wss://<new-host>/ws` and redeploy the Vercel client).
+4. Record: `deploy: verified (Vercel Git)` plus `Railway: deploy required` or `Railway: verified`.
+
+Do not run `vercel deploy` from `/ship` unless Git integration is broken.
+
 ## Project
 
-GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Live at <https://geoasteroids.com>. Node `>=24`.
+GeoAsteroids — a 2D multiplayer spaceship/asteroids game. Vite + TypeScript client (`src/`) talking to a Node WebSocket server (`server.ts` + `server/`) over `ws://`. Play the client at <https://www.georoids.com>; the authoritative server runs on Railway (see Deploy). Node `>=24`.
 
 ## Deploy
 
-Two separate deploy targets:
+Two separate deploy targets — client and server do not share a host.
 
-- **Vercel (static client):** production deploy is owned by **Vercel's GitHub integration** — a push to `main` triggers a Vercel build/deploy after the pre-push gate passes. There is no local `npm run deploy` or CLI deploy step; `/ship` records `deploy: none (Vercel Git)`.
-- **Railway (game server):** the WebSocket server deploys via Railway (`railway.json`) — separate from Vercel and still manual/separate from the Git push flow.
+### Vercel (static client)
+
+| | |
+| --- | --- |
+| **Project** | `georoids` (`jsollys-projects`) |
+| **Production URLs** | **Canonical:** <https://www.georoids.com>; **apex:** <https://georoids.com> (redirects to www); **Vercel default:** `https://georoids-jsollys-projects.vercel.app` |
+| **Build** | `npm run build` → `dist/` (Vite; framework auto-detected — no `vercel.json` required) |
+| **Trigger** | Push to `main` after the pre-push gate; Vercel GitHub integration |
+| **Local deploy** | None — no `npm run deploy` or CLI deploy step |
+
+**Required Vercel production env vars:**
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_WEBSOCKET_URL` | WebSocket endpoint baked into the client at build time. Currently `wss://geoasteroids-production.up.railway.app/ws`. Must match the live Railway public URL + `/ws`. |
+
+`VITE_BUILD_TIME` and `VITE_COMMIT_HASH` are injected by `vite.config.ts` at build time — do not set on Vercel.
+
+Local dev: `VITE_WEBSOCKET_URL=ws://localhost:3001/ws` in `.env.local` (see `.env.example`). Vite dev proxies `/ws` to `:3001` when unset; `ConnectionManager` falls back to same-origin `/ws`.
+
+### Railway (game server)
+
+| | |
+| --- | --- |
+| **Config** | `railway.json` (Nixpacks, `tsx server.ts`, healthcheck `/health`) |
+| **Public URL** | `https://geoasteroids-production.up.railway.app` (WebSocket: `wss://geoasteroids-production.up.railway.app/ws`) |
+| **Deploy** | Manual / separate from the Git push flow — Railway dashboard or CLI |
+| **When required** | Changes under `server.ts`, `server/**`, `railway.json`, or server protocol changes in `shared-types.ts` |
+
+Smoke: `curl https://geoasteroids-production.up.railway.app/health`
 
 ## CI (local pre-push gate)
 
