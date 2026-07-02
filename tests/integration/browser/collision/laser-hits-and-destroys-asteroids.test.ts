@@ -15,7 +15,7 @@ test('laser hits and destroys asteroids', async () => {
   await game.waitForAsteroids(1);
 
   const initialScore = await game.getScore();
-  const target = (await game.getAsteroidDetails())[0];
+  const target = (await game.getAsteroidDetails())[0]!;
 
   await game.destroyAsteroidWithLaser(target, 25000);
 

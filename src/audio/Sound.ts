@@ -36,6 +36,10 @@ export class Sound {
 
       this.streamNum = (this.streamNum + 1) % this.streams.length;
       const audio = this.streams[this.streamNum];
+      if (audio === undefined) {
+        logger.warn('SOUND', 'Sound.play() called but stream index is out of range');
+        return;
+      }
 
       try {
         await audio.play();
@@ -58,8 +62,12 @@ export class Sound {
       return;
     }
 
-    this.streams[this.streamNum].pause();
-    this.streams[this.streamNum].currentTime = 0;
+    const audio = this.streams[this.streamNum];
+    if (audio === undefined) {
+      return;
+    }
+    audio.pause();
+    audio.currentTime = 0;
     this.playing = false;
   }
 

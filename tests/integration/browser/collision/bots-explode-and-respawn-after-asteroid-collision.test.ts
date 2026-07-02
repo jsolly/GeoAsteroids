@@ -13,7 +13,7 @@ test('bots explode and respawn after asteroid collision', async () => {
   await game.bootSinglePlayerGame();
   await game.waitForBots(1);
 
-  const bot = (await game.getBots())[0];
+  const bot = (await game.getBots())[0]!;
   const deathPosition = { x: bot.x, y: bot.y };
 
   await game.damageBot(bot.id, 100, 'asteroid-collision');

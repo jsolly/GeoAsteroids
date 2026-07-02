@@ -14,7 +14,7 @@ test('score persists after respawn', async () => {
   await game.waitForCombatReady();
   await game.waitForBots(1, 30000);
 
-  const target = (await game.getBots())[0];
+  const target = (await game.getBots())[0]!;
   await game.attackBotWithLasers(target.id, 12);
 
   await expect
