@@ -29,7 +29,7 @@ test('player laser damages remote player', async () => {
 
   await expect.poll(() => game1.getRemoteHumanPlayerIds(), { timeout: 12000 }).not.toEqual([]);
 
-  const targetId = (await game1.getRemoteHumanPlayerIds())[0];
+  const targetId = (await game1.getRemoteHumanPlayerIds())[0]!;
   const healthBefore = await game2.getShipHealth();
 
   for (let i = 0; i < 3; i++) {

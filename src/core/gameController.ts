@@ -220,9 +220,12 @@ export class GameController {
     if (this.currRoidBelt) {
       const index = this.currRoidBelt.roids.findIndex((r) => r.id === asteroidId);
       if (index !== -1) {
-        // Clear pending destruction flag before removing
-        this.currRoidBelt.roids[index].pendingDestruction = false;
-        this.currRoidBelt.roids.splice(index, 1);
+        const roid = this.currRoidBelt.roids[index];
+        if (roid !== undefined) {
+          // Clear pending destruction flag before removing
+          roid.pendingDestruction = false;
+          this.currRoidBelt.roids.splice(index, 1);
+        }
       }
     }
   };

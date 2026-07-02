@@ -97,6 +97,9 @@ class RoidBelt {
   destroyRoid(i: number): { score: number; newRoids: Roid[] } {
     const roids = this.roids;
     const r = roids[i];
+    if (r === undefined) {
+      return { score: 0, newRoids: [] };
+    }
     let score = 0;
 
     // Award points based on size (server handles all splitting logic)

@@ -14,7 +14,7 @@ test('player takes damage from bot collision', async () => {
   await game.waitForCombatReady();
   await game.waitForBots(1);
 
-  const bot = (await game.getBots())[0];
+  const bot = (await game.getBots())[0]!;
   const startHealth = await game.getShipHealth();
 
   await game.pinShipOnBot(bot.id, 3000);

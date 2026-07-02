@@ -3,6 +3,14 @@ import { GameEngine } from '../../../../server/core/GameEngine';
 import { AsteroidManager } from '../../../../server/core/AsteroidManager';
 import { RNGService } from '../../../../server/core/RNGService';
 import { SHIP } from '../../../../src/constants';
+import type { GameEntity } from '../../../../server/core/EntityManager';
+
+function firstBot(bots: GameEntity[] | null): GameEntity {
+  expect(bots).not.toBeNull();
+  const bot = bots![0];
+  expect(bot).toBeDefined();
+  return bot!;
+}
 
 // Mock logger
 vi.mock('../../../../setup/serverLogger', () => ({
@@ -51,7 +59,7 @@ describe('Bot-Asteroid Collision Integration', () => {
       // Create a bot and an asteroid at the same position
       const bots = gameEngine.createBots(1);
       expect(bots).not.toBeNull();
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const initialHealth = bot.health;
 
       // Create an asteroid at the same position as the bot
@@ -86,7 +94,7 @@ describe('Bot-Asteroid Collision Integration', () => {
       // Create a bot
       const bots = gameEngine.createBots(1);
       expect(bots).not.toBeNull();
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Create an asteroid
       const asteroid = {
@@ -165,7 +173,7 @@ describe('Bot-Asteroid Collision Integration', () => {
       // Create a bot
       const bots = gameEngine.createBots(1);
       expect(bots).not.toBeNull();
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Create an asteroid
       const asteroid = {
@@ -244,7 +252,7 @@ describe('Bot-Asteroid Collision Integration', () => {
     test('bot movement stops when destroyed by asteroid', () => {
       // Create a bot
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const initialPosition = { ...bot.position };
       
       // Create an asteroid at bot's position
@@ -295,7 +303,7 @@ describe('Bot-Asteroid Collision Integration', () => {
     test('bot health does not regenerate while exploding from asteroid collision', () => {
       // Create a bot
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Create an asteroid
       const asteroid = {
@@ -340,7 +348,7 @@ describe('Bot-Asteroid Collision Integration', () => {
     test('bot damage from asteroid collision sends network messages', () => {
       // Create a bot
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Create an asteroid
       const asteroid = {
@@ -377,7 +385,7 @@ describe('Bot-Asteroid Collision Integration', () => {
 
       // Create a bot
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // Create an asteroid
       const asteroid = {
@@ -414,7 +422,7 @@ describe('Bot-Asteroid Collision Integration', () => {
 
     test('handles zero collision damage', () => {
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
       const initialHealth = bot.health;
 
       const isDestroyed = gameEngine.handleBotDamage(bot.id, 'asteroid-collision', 0);
@@ -426,7 +434,7 @@ describe('Bot-Asteroid Collision Integration', () => {
 
     test('handles excessive collision damage', () => {
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       const isDestroyed = gameEngine.handleBotDamage(bot.id, 'asteroid-collision', 1000);
       expect(isDestroyed).toBe(true);
@@ -438,7 +446,7 @@ describe('Bot-Asteroid Collision Integration', () => {
 
     test('handles multiple collision damages to same bot', () => {
       const bots = gameEngine.createBots(1);
-      const bot = bots![0];
+      const bot = firstBot(bots);
 
       // First collision
       const isDestroyed1 = gameEngine.handleBotDamage(bot.id, 'asteroid-collision-1', 30);

@@ -20,18 +20,26 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
     const angle = roid.angle;
     const vertices = roid.vertices;
     const offsets = roid.offsets;
+    const firstOffset = offsets[0];
+    if (firstOffset === undefined) {
+      continue;
+    }
 
     // draw a path
     ctx.beginPath();
     ctx.moveTo(
-      screenPos.x + r * offsets[0] * Math.cos(angle),
-      screenPos.y + r * offsets[0] * Math.sin(angle)
+      screenPos.x + r * firstOffset * Math.cos(angle),
+      screenPos.y + r * firstOffset * Math.sin(angle)
     );
     // draw the polygon
     for (let j = 1; j < vertices; j++) {
+      const offset = offsets[j];
+      if (offset === undefined) {
+        continue;
+      }
       ctx.lineTo(
-        screenPos.x + r * offsets[j] * Math.cos(angle + (j * Math.PI * 2) / vertices),
-        screenPos.y + r * offsets[j] * Math.sin(angle + (j * Math.PI * 2) / vertices)
+        screenPos.x + r * offset * Math.cos(angle + (j * Math.PI * 2) / vertices),
+        screenPos.y + r * offset * Math.sin(angle + (j * Math.PI * 2) / vertices)
       );
     }
     ctx.closePath();

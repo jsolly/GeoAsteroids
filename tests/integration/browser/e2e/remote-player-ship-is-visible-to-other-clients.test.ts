@@ -12,7 +12,7 @@ test('remote player ship is visible to other clients', async () => {
   expect(remoteIdsOnClient1.length, 'client 1 should see client 2 as a remote human').toBeGreaterThan(
     0
   );
-  const targetId = remoteIdsOnClient1[0];
+  const targetId = remoteIdsOnClient1[0]!;
 
   const startPosOnClient1 = await game1.getNetworkPlayerPosition(targetId);
   expect(startPosOnClient1, 'client 1 should have an initial position for the remote ship').not.toBeNull();

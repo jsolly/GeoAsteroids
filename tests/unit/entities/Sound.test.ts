@@ -10,8 +10,10 @@ beforeEach(() => {
   localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
 
   testSound = new Sound('../public/sounds/thrust.m4a', 1);
-  testSound.streams[0].play = mockPlay;
-  testSound.streams[0].pause = mockPause;
+  const stream = testSound.streams[0];
+  expect(stream).toBeDefined();
+  stream!.play = mockPlay;
+  stream!.pause = mockPause;
 });
 
 afterEach(() => {
