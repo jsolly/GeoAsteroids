@@ -53,7 +53,7 @@
     "node": ">=24"
   },
   "dependencies": {
-    "mongodb": "^6.17.0",
+    "mongodb": "^7.3.0",
     "socket.io-client": "^4.8.1",
     "tsx": "^4.20.4",
     "uuid": "^11.0.0",
