@@ -69,7 +69,7 @@
     "@types/ws": "^8.18.1",
     "@vercel/node": "^5.3.6",
     "canvas": "^3.1.2",
-    "chromedriver": "^139.0.3",
+    "chromedriver": "^152.0.1",
     "concurrently": "^10.0.3",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.2",
