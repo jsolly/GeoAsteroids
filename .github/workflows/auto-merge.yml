@@ -17,8 +17,10 @@ name: Auto Merge
 # `github.event.workflow_run.pull_requests` can be empty (push-to-main, and
 # some pull_request-triggered runs), so do not rely on it.
 #
-# Merge only when eligible AND the `ci` check conclusion is success AND that
-# success is for a SHA that equals the open PR's current head. Otherwise exit 0.
+# This repo's CI workflow `name:` is `CI` and the job `name:` is `ci`
+# (check run `ci`, status context `CI / ci`). Merge only when eligible AND
+# that check conclusion is success AND the success SHA equals the open PR's
+# current head. Otherwise exit 0.
 # Failed/cancelled CI, push-to-main CI with no open PR, or green CI for a stale
 # SHA after a new push: do not merge.
 #
