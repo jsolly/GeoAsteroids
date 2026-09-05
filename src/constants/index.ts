@@ -114,6 +114,18 @@ export const EMP = {
 } as const;
 
 // ============================================================================
+// AUDIO CONFIGURATION
+// ============================================================================
+export const AUDIO = {
+  EXPLOSION_PATH: 'sounds/explode.m4a',
+  EXPLOSION_MAX_STREAMS: 5,
+  // Used when the canvas size is unknown (matches PlayerNetwork nearby radius).
+  FALLBACK_MAX_DISTANCE: 1200,
+  // Floor so an on-screen explosion at the viewport edge stays audible.
+  MIN_IN_VIEWPORT_VOLUME: 0.2,
+} as const;
+
+// ============================================================================
 // DEBUG CONFIGURATION
 // ============================================================================
 export const DEBUG = {

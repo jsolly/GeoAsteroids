@@ -1,4 +1,4 @@
-import { playSound, Sound } from '../../audio/Sound';
+import { playExplosionSound } from '../../audio/explosionSound';
 import { EMP, GAME, SHIP } from '../../constants';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
@@ -25,9 +25,6 @@ export interface ShipCombatState {
   empPulseActive: boolean;
   empPulseTime: number;
 }
-
-// Module-level sound instance
-const fxExplode = new Sound('sounds/explode.m4a', 5);
 
 /**
  * Check if the ship can shoot again
@@ -133,7 +130,7 @@ export function activateEmpPulse(ship: Ship, state: ShipCombatState): void {
 
   state.empPulseActive = true;
   state.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
-  playSound(fxExplode);
+  playExplosionSound(ship.position);
 
   // Dispatch EMP pulse event with actual ship position and radius
   const empEvent = new CustomEvent('empPulse', {
