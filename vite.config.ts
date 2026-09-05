@@ -26,7 +26,7 @@ export default defineConfig(() => {
       extensions: ['.ts'],
     },
     build: {
-      target: 'ESNext',
+      target: 'esnext',
       modulePreload: false,
     },
     server: {
