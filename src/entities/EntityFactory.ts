@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../shared-types';
-import { CANVAS, DEBUG } from '../constants';
+import { CANVAS, DEBUG, PALETTE } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
-import { generateRandomPlayerColor } from '../utils/colorUtils';
+import { getFactionColor } from '../utils/colorUtils';
 import {
   getRandomPositionNearBoundary,
   getRandomPositionNearPoint,
@@ -218,7 +218,7 @@ export class EntityFactory {
   private applyBotConfiguration(player: Player, config: PlayerConfig): void {
     // Apply bot-specific defaults if not specified
     if (!config.color) {
-      player.color = '#888888'; // Default bot color
+      player.color = PALETTE.BOT;
       player.ship.color = player.color;
     }
 
@@ -234,7 +234,7 @@ export class EntityFactory {
       player.ship.color = config.color;
     } else {
       // Fallback to random color if no color provided (shouldn't happen with proper server sync)
-      player.color = generateRandomPlayerColor();
+      player.color = getFactionColor('remote');
       player.ship.color = player.color;
     }
   }

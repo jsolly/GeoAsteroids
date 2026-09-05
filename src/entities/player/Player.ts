@@ -1,7 +1,7 @@
 import type { Position } from '../../../shared-types';
 import { GAME, SHIP } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
-import { generateRandomPlayerColor } from '../../utils/colorUtils';
+import { getFactionColor } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
 
@@ -51,8 +51,7 @@ export class Player {
     this.type = params.type;
     this.input = params.input;
 
-    // Assign a random color for this player
-    this.color = generateRandomPlayerColor();
+    this.color = getFactionColor(this.type);
 
     // Create ship with player's color and friction coefficient
     this.ship = new Ship({

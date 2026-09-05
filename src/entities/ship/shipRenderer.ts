@@ -1,6 +1,8 @@
-import { SHIP } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
+import { hexToRgba } from '../../utils/colorUtils';
+import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
 
 import type { Ship } from './Ship';
@@ -139,7 +141,7 @@ export function drawTargetingLine(
   angle: number,
   shipRadius: number,
   lineLength: number = 300,
-  color: string = '#ffffff',
+  color: string = PALETTE.HUD,
   alpha: number = 0.6
 ): void {
   const ctx = canvasManager.getContext();
@@ -168,90 +170,55 @@ export function drawTargetingLine(
   ctx.globalAlpha = 1.0;
 }
 
-export function drawGenericThruster(x: number, y: number, angle: number, radius: number): void {
+export function drawGenericThruster(
+  x: number,
+  y: number,
+  angle: number,
+  radius: number,
+  color: string = PALETTE.LOCAL
+): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
 
-  // Calculate the rear center position for the thruster
-  // This should be behind the ship relative to its current orientation
   const rearCenter = {
     x: x - radius * Math.cos(angle),
     y: y + radius * Math.sin(angle),
   };
 
-  // Create a much larger, more visible thruster flame
-  const flameLength = radius * 1.5; // Make flame 1.5x ship radius
-  const flameWidth = radius * 0.8; // Make flame width 0.8x ship radius
-
-  // Calculate flame tip position (extending behind the ship)
+  const flameLength = radius * VISUAL.THRUSTER_LENGTH_RATIO;
+  const flameWidth = radius * 0.32;
   const flameTip = {
     x: rearCenter.x - Math.cos(angle) * flameLength,
     y: rearCenter.y + Math.sin(angle) * flameLength,
   };
-
-  // Create a radial gradient for a more realistic flame effect
-  const gradient = ctx.createRadialGradient(
-    rearCenter.x,
-    rearCenter.y,
-    0,
-    flameTip.x,
-    flameTip.y,
-    flameLength
-  );
-
-  // Default enhanced thruster (same for all ships)
-  gradient.addColorStop(0, '#ffffff'); // White hot center
-  gradient.addColorStop(0.2, '#ffff00'); // Bright yellow
-  gradient.addColorStop(0.5, '#ffaa00'); // Orange
-  gradient.addColorStop(0.8, '#ff6600'); // Dark orange
-  gradient.addColorStop(1, '#cc3300'); // Dark red edge
-
-  // Draw the main flame body
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-
-  // Create a flame shape that extends behind the ship
-  // The flame should be perpendicular to the ship's orientation
   const leftFlame = {
     x: rearCenter.x + (Math.cos(angle + Math.PI / 2) * flameWidth) / 2,
     y: rearCenter.y - (Math.sin(angle + Math.PI / 2) * flameWidth) / 2,
   };
-
   const rightFlame = {
     x: rearCenter.x + (Math.cos(angle - Math.PI / 2) * flameWidth) / 2,
     y: rearCenter.y - (Math.sin(angle - Math.PI / 2) * flameWidth) / 2,
   };
 
-  // Draw flame from ship rear to tip
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = VISUAL.SHIP_GLOW;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = hexToRgba(color, 0.35);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
   ctx.moveTo(leftFlame.x, leftFlame.y);
   ctx.lineTo(flameTip.x, flameTip.y);
   ctx.lineTo(rightFlame.x, rightFlame.y);
   ctx.closePath();
   ctx.fill();
-
-  // Add a bright center core for extra visibility
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(rearCenter.x, rearCenter.y, radius * 0.3, 0, Math.PI * 2, false);
-  ctx.fill();
-
-  // Add some particle effects for extra visual appeal
-  for (let i = 0; i < 3; i++) {
-    const particleDistance = Math.random() * flameLength * 0.7;
-    const particleAngle = angle + (Math.random() - 0.5) * 0.3;
-    const particleX = rearCenter.x - Math.cos(particleAngle) * particleDistance;
-    const particleY = rearCenter.y + Math.sin(particleAngle) * particleDistance;
-
-    ctx.fillStyle = `rgba(255, 255, 0, ${0.8 - particleDistance / flameLength})`;
-    ctx.beginPath();
-    ctx.arc(particleX, particleY, 2, 0, Math.PI * 2, false);
-    ctx.fill();
-  }
+  ctx.stroke();
+  ctx.restore();
 }
 
-export function drawThruster(ship: Ship): void {
+export function drawThruster(ship: Ship, color: string = ship.color): void {
   const cvs = canvasManager.getCanvas();
   if (!cvs) {
     return;
@@ -279,7 +246,7 @@ export function drawThruster(ship: Ship): void {
     });
 
     // Use the generic thruster function
-    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r);
+    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r, color);
   } else {
     logger.debug('THRUSTER', 'Thruster not drawn - conditions not met', {
       exploding: ship.exploding,
@@ -288,7 +255,11 @@ export function drawThruster(ship: Ship): void {
   }
 }
 
-export function drawThrusterAtPosition(ship: Ship, shipPosition: { x: number; y: number }): void {
+export function drawThrusterAtPosition(
+  ship: Ship,
+  shipPosition: { x: number; y: number },
+  color: string = ship.color
+): void {
   const cvs = canvasManager.getCanvas();
   if (!cvs) {
     return;
@@ -300,7 +271,7 @@ export function drawThrusterAtPosition(ship: Ship, shipPosition: { x: number; y:
     const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
 
     // Use the generic thruster function at the calculated screen position
-    drawGenericThruster(screenX, screenY, ship.angle, ship.r);
+    drawGenericThruster(screenX, screenY, ship.angle, ship.r, color);
   }
 }
 
@@ -310,7 +281,7 @@ export function drawPlayerName(
   x: number,
   y: number,
   shipRadius: number,
-  color: string = '#ffffff'
+  color: string = PALETTE.HUD
 ): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
@@ -332,7 +303,7 @@ export function drawPlayerName(
   const textHeight = 14; // Approximate height for 12px font
   const padding = 4;
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillStyle = hexToRgba(PALETTE.BG, 0.55);
   ctx.fillRect(
     x - textWidth / 2 - padding,
     nameY - padding,
@@ -442,27 +413,31 @@ export function drawLasers(
     return;
   }
 
+  const boltColor = color || PALETTE.LASER_LOCAL;
+
   for (const laser of ship.lasers) {
-    // Convert laser world position to screen position using viewport transformation
     const referencePos = viewerShipPosition || ship.position;
     const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
 
+    ctx.save();
+    ctx.shadowColor = boltColor;
+    ctx.shadowBlur = VISUAL.LASER_GLOW;
+    ctx.fillStyle = boltColor;
     if (laser.explodeTime === 0) {
-      ctx.fillStyle = color || 'salmon';
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP.SIZE / 3, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, VISUAL.LASER_RADIUS, 0, Math.PI * 2, false);
       ctx.fill();
     } else {
-      // draw explosion
-      ctx.fillStyle = 'orangered';
+      ctx.fillStyle = PALETTE.DANGER;
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP.SIZE / 2, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, VISUAL.LASER_EXPLODE_RADIUS, 0, Math.PI * 2, false);
       ctx.fill();
-      ctx.fillStyle = color || 'salmon';
+      ctx.fillStyle = boltColor;
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, SHIP.SIZE / 3, 0, Math.PI * 2, false);
+      ctx.arc(screenPos.x, screenPos.y, VISUAL.LASER_RADIUS, 0, Math.PI * 2, false);
       ctx.fill();
     }
+    ctx.restore();
   }
 }
 
@@ -543,48 +518,65 @@ export function drawShipAtPosition(
     ship.angle
   );
 
-  // Draw ship body (triangle)
+  ctx.save();
   ctx.strokeStyle = shipColor;
-  ctx.lineWidth = SHIP.SIZE / 20;
+  ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
+  ctx.shadowColor = shipColor;
+  ctx.shadowBlur = VISUAL.SHIP_GLOW;
   ctx.beginPath();
   ctx.moveTo(nose.x, nose.y);
   ctx.lineTo(rearLeft.x, rearLeft.y);
   ctx.lineTo(rearRight.x, rearRight.y);
   ctx.closePath();
   ctx.stroke();
+  ctx.restore();
 
-  // Draw health bar above ship (same as local)
-  const barWidth = ship.r * 2.5;
-  const barHeight = 6;
-  const barY = screenY - ship.r - 15;
-  const healthPercent = ship.health / ship.maxHealth;
-  const currentWidth = barWidth * healthPercent;
-
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(screenX - barWidth / 2, barY, barWidth, barHeight);
-
-  let healthColor: string;
-  if (healthPercent > 0.6) {
-    healthColor = '#00ff00';
-  } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00';
-  } else {
-    healthColor = '#ff0000';
-  }
-  ctx.fillStyle = healthColor;
-  ctx.fillRect(screenX - barWidth / 2, barY, currentWidth, barHeight);
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(screenX - barWidth / 2, barY, barWidth, barHeight);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '10px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenX, barY - 12);
+  drawFloatingHealthCapsule(ctx, ship, screenX, screenY);
 
   // Draw player name under ship if provided
   if (playerName) {
     drawPlayerName(playerName, screenX, screenY, ship.r, shipColor);
   }
+}
+
+function drawFloatingHealthCapsule(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number
+): void {
+  const damaged = ship.health < ship.maxHealth;
+  if (!damaged && !isDebugMode()) {
+    return;
+  }
+
+  const barWidth = ship.r * 2.4;
+  const barHeight = VISUAL.HEALTH_CAPSULE_HEIGHT;
+  const barY = screenY - ship.r - 10;
+  const barX = screenX - barWidth / 2;
+  const healthPercent = Math.max(0, ship.health / ship.maxHealth);
+  const currentWidth = barWidth * healthPercent;
+  const radius = barHeight / 2;
+
+  ctx.save();
+  ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.45);
+  ctx.beginPath();
+  ctx.roundRect(barX, barY, barWidth, barHeight, radius);
+  ctx.fill();
+  if (currentWidth > 0) {
+    ctx.fillStyle = PALETTE.HEALTH;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, Math.max(currentWidth, barHeight), barHeight, radius);
+    ctx.fill();
+  }
+
+  if (isDebugMode()) {
+    ctx.fillStyle = PALETTE.HUD;
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenX, barY - 10);
+  }
+  ctx.restore();
 }
 
 // Helper function to draw player health bar in the HUD

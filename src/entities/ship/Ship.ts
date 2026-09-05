@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { Sound } from '../../audio/Sound';
-import { DAMAGE, EMP, GAME, SHIP } from '../../constants';
+import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
@@ -48,7 +48,7 @@ class Ship {
   lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
   lastThrusting?: boolean; // Track previous thruster state for network updates
-  color: string = '#ffffff'; // Ship color for rendering
+  color: string = PALETTE.LOCAL;
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
   frictionCoefficient: number = GAME.FRICTION; // Player-specific friction coefficient
   isLocalPlayer: boolean = false; // Track if this is the local player

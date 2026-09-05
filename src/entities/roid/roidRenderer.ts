@@ -1,7 +1,18 @@
+import { PALETTE, ROID, VISUAL } from '../../constants';
 import type { Ship } from '../../entities/ship/Ship';
 import { canvasManager } from '../../rendering/canvas';
 
 import type { Roid } from './Roid';
+
+export function getRoidStrokeWidth(radius: number): number {
+  if (radius >= ROID.SIZE * 0.8) {
+    return VISUAL.ROID_STROKE_LARGE;
+  }
+  if (radius >= ROID.SIZE * 0.4) {
+    return VISUAL.ROID_STROKE_MEDIUM;
+  }
+  return VISUAL.ROID_STROKE_SMALL;
+}
 
 export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   const ctx = canvasManager.getContext();
@@ -10,10 +21,11 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   }
 
   for (const roid of roids) {
-    ctx.strokeStyle = 'slategrey';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = PALETTE.ROID;
+    ctx.lineWidth = getRoidStrokeWidth(roid.r);
+    ctx.shadowColor = PALETTE.ROID;
+    ctx.shadowBlur = Math.min(ctx.lineWidth, VISUAL.SHIP_GLOW);
 
-    // Convert roid world position to screen position using viewport transformation
     const screenPos = canvasManager.worldToScreen(roid.position, ship.position);
 
     const r = roid.r;
@@ -25,13 +37,11 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
       continue;
     }
 
-    // draw a path
     ctx.beginPath();
     ctx.moveTo(
       screenPos.x + r * firstOffset * Math.cos(angle),
       screenPos.y + r * firstOffset * Math.sin(angle)
     );
-    // draw the polygon
     for (let j = 1; j < vertices; j++) {
       const offset = offsets[j];
       if (offset === undefined) {
@@ -45,4 +55,6 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
     ctx.closePath();
     ctx.stroke();
   }
+
+  ctx.shadowBlur = 0;
 }

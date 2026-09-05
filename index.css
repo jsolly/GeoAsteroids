@@ -51,19 +51,10 @@ body {
 }
 
 #gameCanvas {
-  background: transparent;
+  background: #000011;
   display: block;
-  /* Fill the full screen */
   width: 100vw;
   height: 100vh;
-  /* Maintain aspect ratio and prevent blurriness */
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-  /* Alternative crisp rendering */
-  image-rendering: -webkit-crisp-edges;
-  image-rendering: crisp-edges;
 }
 
 /* Attribution positioning */

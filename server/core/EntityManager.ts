@@ -1,9 +1,8 @@
 import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
-import { DEBUG } from '../../src/constants';
+import { DEBUG, PALETTE } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
-import { generateRandomPlayerColor } from '../../src/utils/colorUtils';
 
 export interface GameEntity {
   id: string;
@@ -119,7 +118,7 @@ export class EntityManager {
       angle: 0,
       exploding: false,
       thrusting: false,
-      color: color || generateRandomPlayerColor(),
+      color: color || PALETTE.REMOTE,
       lives: 3,
       score: 0,
       health: 100,
@@ -180,7 +179,7 @@ export class EntityManager {
         angle,
         exploding: false,
         thrusting: false,
-        color: generateRandomPlayerColor(),
+        color: PALETTE.BOT,
         lives: 3,
         score: 0,
         health: 100,
