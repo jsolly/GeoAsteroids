@@ -1,4 +1,5 @@
 import type { Position } from '../../shared-types';
+import { PALETTE } from '../constants';
 import {
   CANVAS_DEFAULT_CENTER_X,
   CANVAS_DEFAULT_CENTER_Y,
@@ -19,13 +20,14 @@ import {
 } from '../entities/ship/shipRenderer';
 import { NetworkManager } from '../network/networkManager';
 import { Point } from '../physics/Point';
+import { getFactionColor, getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
-import { drawMiniMap, drawServerInfo } from './hud/minimap';
+import { drawMiniMap } from './hud/minimap';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
 class CanvasManager {
@@ -48,7 +50,7 @@ class CanvasManager {
       this.canvas.height = viewportHeight;
 
       // Enable crisp pixel rendering
-      this.context.imageSmoothingEnabled = false;
+      this.context.imageSmoothingEnabled = true;
       this.context.imageSmoothingQuality = 'high';
 
       // Add resize handler to maintain full-screen coverage
@@ -71,7 +73,7 @@ class CanvasManager {
       this.canvas.height = viewportHeight;
 
       // Re-enable crisp rendering after resize
-      this.context.imageSmoothingEnabled = false;
+      this.context.imageSmoothingEnabled = true;
       this.context.imageSmoothingQuality = 'high';
     }
   }
@@ -192,7 +194,8 @@ class CanvasManager {
     }
 
     // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = PALETTE.BG;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
@@ -210,24 +213,17 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
+        const factionColor = getFactionColor(player.type);
         if (player.ship.exploding) {
-          // Draw explosion animation for exploding ships
           if (player.id === localId) {
-            // Local player explosion using local state
-            drawShipExplosion(currShip, currShip.color);
+            drawShipExplosion(currShip, factionColor);
           } else {
-            // Other players' explosions at their world positions
-            drawShipExplosionAtPosition(player.ship, currShip.position, player.ship.color);
+            drawShipExplosionAtPosition(player.ship, currShip.position, factionColor);
           }
+        } else if (player.id === localId) {
+          drawShipAtPosition(currShip, currShip.position, factionColor, currPlayer.name);
         } else {
-          // Draw local player using local state, others at world positions
-          if (player.id === localId) {
-            // Local player ship at world position (viewport will center it)
-            drawShipAtPosition(currShip, currShip.position, currShip.color, currPlayer.name);
-          } else {
-            // Other players at world coordinates
-            drawShipAtPosition(player.ship, currShip.position, player.ship.color, player.name);
-          }
+          drawShipAtPosition(player.ship, currShip.position, factionColor, player.name);
         }
       }
     } catch (error: unknown) {
@@ -242,34 +238,28 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        // Skip players who are exploding (truly dead)
         if (player.ship.exploding) {
           continue;
         }
 
+        const factionColor = getFactionColor(player.type);
         if (player.id === localId) {
-          // Local player - use local ship state
           if (!currShip.exploding && currShip.thrusting) {
             logger.debug('RENDERING', 'Drawing local player thruster', {
               thrusting: currShip.thrusting,
               blinkOn: currShip.blinkOn,
               exploding: currShip.exploding,
             });
-            drawThruster(currShip);
+            drawThruster(currShip, factionColor);
           } else {
-            // Debug: log why local player thruster is not being drawn
             logger.debug('RENDERING', 'Local player thruster not drawn', {
               thrusting: currShip.thrusting,
               blinkOn: currShip.blinkOn,
               exploding: currShip.exploding,
             });
           }
-        } else {
-          // Other players - use their ship state
-          if (!player.ship.exploding && player.ship.thrusting) {
-            // Other players' thrusters at their world positions
-            drawThrusterAtPosition(player.ship, currShip.position);
-          }
+        } else if (!player.ship.exploding && player.ship.thrusting) {
+          drawThrusterAtPosition(player.ship, currShip.position, factionColor);
         }
       }
     } catch (error: unknown) {
@@ -280,45 +270,34 @@ class CanvasManager {
       );
     }
 
-    // Local player ship is already drawn in the main player loop above
+    drawLasers(currShip, getLaserColor(true));
 
-    // Draw ship lasers (local ship uses self as reference)
-    drawLasers(currShip);
-
-    // Draw other players' lasers using local ship position for viewport transform
     for (const player of allPlayers) {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       if (player.id === localId) {
         continue;
       }
-      // Skip players who are exploding (truly dead)
       if (player.ship.exploding) {
         continue;
       }
 
-      drawLasers(player.ship, player.ship.color, currShip.position);
+      drawLasers(player.ship, getLaserColor(false), currShip.position);
     }
 
-    // Draw mini map with all players, bots, and lasers
     this.drawMiniMapWithPlayers(currShip);
 
-    // Draw score overlay
     drawScoreOverlay(ctx, canvas, currScore);
 
-    // Draw lives indicator
-    drawLivesIndicator(ctx, lives, currShip.color);
+    drawLivesIndicator(ctx, lives, PALETTE.LOCAL);
 
-    // Draw text overlay if there is text to display
     if (text && textAlpha > 0) {
       drawTextOverlay(ctx, canvas, text, textAlpha);
     }
 
-    // Draw leaderboard if there are multiple players
     if (allPlayers.length > 1) {
       drawLeaderboard(ctx, canvas, allPlayers, currPlayer.id);
     }
 
-    // Draw debug information
     const roidCount = currRoidBelt.roids.length;
     drawDebugInfo(ctx, canvas, roidCount, isDebugMode());
   }
@@ -330,8 +309,6 @@ class CanvasManager {
     const canvas = this.getCanvas();
     if (ctx && canvas) {
       drawMiniMap(ctx, canvas, ship);
-      // Draw server info below the minimap
-      drawServerInfo(ctx, canvas);
     }
 
     // The mini map module will handle drawing all players internally

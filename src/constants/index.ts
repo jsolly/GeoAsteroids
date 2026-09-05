@@ -36,6 +36,45 @@ export const CANVAS = {
 } as const;
 
 // ============================================================================
+// LOCKED PLAYFIELD PALETTE
+// ============================================================================
+// Exact hexes for the visual pass. accent_ui is title/menu only — never the playfield.
+export const PALETTE = {
+  BG: '#000011',
+  STARS: '#8BA3C7',
+  LOCAL: '#5EEAD4',
+  REMOTE: '#7DD3FC',
+  BOT: '#FB923C',
+  ROID: '#94A3B8',
+  LASER_LOCAL: '#FDE68A',
+  LASER_ENEMY: '#FCA5A5',
+  HUD: '#E2E8F0',
+  HUD_MUTED: '#64748B',
+  DANGER: '#F43F5E',
+  HEALTH: '#4ADE80',
+  ACCENT_UI: '#A78BFA',
+} as const;
+
+// Stroke / glow caps. Soft glow must stay ≤ stroke width so beams cannot wash the field.
+export const VISUAL = {
+  SHIP_STROKE_WIDTH: 1.5,
+  SHIP_GLOW: 1.5,
+  LASER_RADIUS: 3,
+  LASER_EXPLODE_RADIUS: 5,
+  LASER_GLOW: 3,
+  HEALTH_CAPSULE_HEIGHT: 2,
+  BOUNDARY_STROKE_WIDTH: 1.25,
+  BOUNDARY_GLOW: 1.25,
+  ROID_STROKE_LARGE: 2.25,
+  ROID_STROKE_MEDIUM: 1.5,
+  ROID_STROKE_SMALL: 1,
+  MINIMAP_SIZE: 96,
+  MINIMAP_DOT: 3,
+  THRUSTER_LENGTH_RATIO: 0.65,
+  SCORE_FONT: '12px Arial',
+} as const;
+
+// ============================================================================
 // SHIP CONFIGURATION
 // ============================================================================
 export const SHIP = {
@@ -131,8 +170,9 @@ export const AUDIO = {
 // DEBUG CONFIGURATION
 // ============================================================================
 export const DEBUG = {
-  // Master switch for debug features
-  ENABLED: true,
+  // Master switch for debug features. Off in the default play path so yellow
+  // DEBUG MODE chrome does not paint in production builds.
+  ENABLED: false,
 
   // Local player settings
   LOCAL_PLAYER: {

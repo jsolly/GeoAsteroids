@@ -1,22 +1,38 @@
-export function generateRandomPlayerColor(): string {
-  const colors = [
-    '#FF6B6B', // Red
-    '#4ECDC4', // Teal
-    '#45B7D1', // Blue
-    '#96CEB4', // Green
-    '#FFEAA7', // Yellow
-    '#DDA0DD', // Plum
-    '#98D8C8', // Mint
-    '#F7DC6F', // Gold
-    '#BB8FCE', // Lavender
-    '#85C1E9', // Sky Blue
-    '#F8C471', // Orange
-    '#82E0AA', // Light Green
-    '#F1948A', // Light Red
-    '#85C1E9', // Light Blue
-    '#FAD7A0', // Peach
-  ];
+import { PALETTE } from '../constants';
 
-  const color = colors[Math.floor(Math.random() * colors.length)];
-  return color ?? '#FF6B6B';
+export type FactionType = 'local' | 'remote' | 'bot';
+
+export function getFactionColor(type: FactionType): string {
+  switch (type) {
+    case 'local':
+      return PALETTE.LOCAL;
+    case 'remote':
+      return PALETTE.REMOTE;
+    case 'bot':
+      return PALETTE.BOT;
+  }
+}
+
+export function getLaserColor(isLocal: boolean): string {
+  return isLocal ? PALETTE.LASER_LOCAL : PALETTE.LASER_ENEMY;
+}
+
+export function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.startsWith('#') ? hex.slice(1) : hex;
+  const normalized =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : raw;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** @deprecated Playfield ships use getFactionColor(type). Kept for server join fallbacks. */
+export function generateRandomPlayerColor(): string {
+  return PALETTE.REMOTE;
 }

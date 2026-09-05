@@ -1,4 +1,4 @@
-import { SHIP } from '../../constants';
+import { PALETTE, SHIP, VISUAL } from '../../constants';
 import { calculateShipTrianglePoints } from '../../entities/ship/shipRenderer';
 
 // Helper function to draw player lives indicator
@@ -32,8 +32,8 @@ export function drawLivesIndicator(
     );
 
     // Draw ship outline using the exact same style as actual ships
-    ctx.strokeStyle = shipColor;
-    ctx.lineWidth = SHIP.SIZE / 20; // Same line width as actual ships
+    ctx.strokeStyle = shipColor || PALETTE.LOCAL;
+    ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
     ctx.beginPath();
     ctx.moveTo(nose.x, nose.y);
     ctx.lineTo(rearLeft.x, rearLeft.y);

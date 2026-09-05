@@ -7,6 +7,7 @@ import type {
   ServerGameState,
   Velocity,
 } from '../../../shared-types';
+import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
@@ -149,7 +150,7 @@ export class ConnectionManager {
     // Get the local player's color from the player manager
     const playerManager = PlayerManager.getInstance();
     const localPlayer = playerManager.getLocalPlayer();
-    return localPlayer?.color || '#00ff00'; // Fallback to green if not found
+    return localPlayer?.color || PALETTE.LOCAL;
   }
 
   private getLocalPlayerPosition(): { x: number; y: number } {

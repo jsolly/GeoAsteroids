@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position } from '../../../shared-types';
-import { CANVAS, DEBUG } from '../../constants';
+import { CANVAS, DEBUG, PALETTE } from '../../constants';
 import { MockPlayerInput } from '../../input/MockPlayerInput';
 import {
   getRandomPositionNearBoundary,
@@ -62,7 +62,7 @@ export class PlayerFactory {
     // Bot-specific customizations
     if (params.type === 'bot') {
       if (!params.color) {
-        player.color = '#888888'; // Default bot color
+        player.color = PALETTE.BOT;
         player.ship.color = player.color;
       }
       if (params.shotCooldown === undefined) {
