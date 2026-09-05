@@ -22,6 +22,19 @@ export const GAME = {
 } as const;
 
 // ============================================================================
+// SPAWN CONFIGURATION
+// ============================================================================
+export const SPAWN = {
+  // Radius (px) around the arena center within which human players spawn.
+  // The arena boundary radius is ~3100px, so spawning anywhere inside it puts
+  // players thousands of px apart — far outside each other's viewport, so two
+  // people joining the same server never see one another. Clustering spawns
+  // near the center keeps freshly-joined players within view of each other
+  // (max separation ~2x this radius) and near where bots/asteroids converge.
+  NEAR_CENTER_RADIUS: 150,
+} as const;
+
+// ============================================================================
 // CANVAS CONFIGURATION
 // ============================================================================
 export const CANVAS = {
