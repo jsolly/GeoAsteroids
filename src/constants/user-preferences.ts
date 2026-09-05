@@ -1,4 +1,4 @@
-import { logger } from '../utils/Logger';
+import { getStoredItem } from '../utils/safeStorage';
 
 export const LOCAL_STORAGE_KEYS = {
   soundOn: 'soundOn',
@@ -7,19 +7,7 @@ export const LOCAL_STORAGE_KEYS = {
 /* Preferences from Localstorage */
 
 export function soundIsOn(): boolean {
-  // Check if we're in a browser environment and localStorage is available
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return false; // Default to sound off in SSR or when localStorage is unavailable
-  }
-
-  try {
-    const soundPref = localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn);
-    return soundPref === 'true';
-  } catch (error) {
-    // Handle cases where localStorage access fails (e.g., private browsing mode)
-    logger.warn('UTILS', `Failed to access localStorage for sound preference: ${String(error)}`);
-    return false; // Default to sound off if access fails
-  }
+  return getStoredItem(LOCAL_STORAGE_KEYS.soundOn) === 'true';
 }
 
 // Initialize checkbox state from stored preference (only in browser environment)

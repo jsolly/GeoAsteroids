@@ -1,5 +1,6 @@
 import { LOCAL_STORAGE_KEYS, soundIsOn } from '../constants/user-preferences';
 import { logger } from '../utils/Logger';
+import { setStoredItem } from '../utils/safeStorage';
 
 export class Sound {
   streamNum = 0;
@@ -85,7 +86,7 @@ export class Sound {
 }
 
 export function setSound(pref: boolean): void {
-  localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, String(pref));
+  setStoredItem(LOCAL_STORAGE_KEYS.soundOn, String(pref));
 }
 
 /**
