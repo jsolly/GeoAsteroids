@@ -38,7 +38,7 @@ export function drawLeaderboard(
   entries.forEach((entry, index) => {
     const y = boardY + 6 + index * 16;
     const nameColor = getFactionColor(entry.type);
-    const alpha = entry.isCurrentPlayer ? 0.85 : 0.5;
+    const alpha = entry.isCurrentPlayer ? 0.92 : 0.78;
 
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.4);
     ctx.font = '11px Arial';
