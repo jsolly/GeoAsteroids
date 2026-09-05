@@ -3,6 +3,8 @@
  * Organized by domain for better maintainability
  */
 
+import { getStoredItem } from '../utils/safeStorage';
+
 // ============================================================================
 // GAME CONFIGURATION
 // ============================================================================
@@ -180,20 +182,8 @@ export const LOGGING = {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-export const isSoundEnabled = (): boolean => {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return false;
-  }
-
-  try {
-    const soundPref = localStorage.getItem(PREFERENCES.LOCAL_STORAGE_KEYS.SOUND_ON);
-    return soundPref === 'true';
-  } catch (error) {
-    // Use console.warn instead of logger to avoid circular dependency
-    console.warn('UTILS', `Failed to access localStorage for sound preference: ${String(error)}`);
-    return false;
-  }
-};
+export const isSoundEnabled = (): boolean =>
+  getStoredItem(PREFERENCES.LOCAL_STORAGE_KEYS.SOUND_ON) === 'true';
 
 // Initialize sound preference checkbox after DOM is ready
 function initializeSoundPreference() {

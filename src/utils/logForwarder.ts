@@ -2,6 +2,7 @@
 // Used by Logger.ts for structured logging
 
 import { logger } from './Logger';
+import { getStoredItem, setStoredItem } from './safeStorage';
 
 type ClientLogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
@@ -21,17 +22,13 @@ function getSessionId(): string {
   if (sessionId) {
     return sessionId;
   }
-  try {
-    const key = 'geoasteroids-session-id';
-    sessionId = localStorage.getItem(key);
-    if (!sessionId) {
-      sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem(key, sessionId);
-    }
-  } catch {
+  const key = 'geoasteroids-session-id';
+  sessionId = getStoredItem(key);
+  if (!sessionId) {
     sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    setStoredItem(key, sessionId);
   }
-  return sessionId as string;
+  return sessionId;
 }
 
 function getLogsWebSocketUrl(): string {
