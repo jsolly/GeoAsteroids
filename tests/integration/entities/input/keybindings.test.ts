@@ -34,7 +34,7 @@ beforeEach(() => {
   keys.ArrowUp = false;
 
   // Create spies for thrust sounds to avoid polluting global state
-  playSpy = vi.spyOn(Ship.fxThrust, 'play');
+  playSpy = vi.spyOn(Ship.fxThrust, 'play') as ReturnType<typeof vi.spyOn>;
   stopSpy = vi.spyOn(Ship.fxThrust, 'stop');
   isPlayingStub = vi.spyOn(Ship.fxThrust, 'isPlaying');
 

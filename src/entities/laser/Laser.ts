@@ -1,5 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { playSound, Sound } from '../../audio/Sound';
+import { playWorldSound } from '../../audio/spatialAudio';
 import { GAME, LASER } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
@@ -59,6 +60,6 @@ export class Laser implements LaserData {
   }
 
   playHitSound(): void {
-    playSound(Laser.fxHit);
+    playWorldSound(Laser.fxHit, this.position);
   }
 }

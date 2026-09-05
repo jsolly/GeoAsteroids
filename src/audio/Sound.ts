@@ -6,10 +6,12 @@ export class Sound {
   streamNum = 0;
   streams: HTMLAudioElement[] = [];
   playing = false;
+  private readonly baseVolume: number;
 
   constructor(src: string, maxStreams: number, vol = 0.05) {
     // Enforce at least one stream to prevent NaN indexing
     maxStreams = Math.max(1, maxStreams);
+    this.baseVolume = vol;
 
     for (let i = 0; i < maxStreams; i++) {
       const audio = new Audio(src);
@@ -27,8 +29,13 @@ export class Sound {
     }
   }
 
-  async play(): Promise<void> {
+  async play(volumeScale = 1): Promise<void> {
     if (soundIsOn()) {
+      const scale = Number.isFinite(volumeScale) ? Math.min(1, Math.max(0, volumeScale)) : 1;
+      if (scale <= 0) {
+        return;
+      }
+
       // Defensive guard against empty streams array
       if (this.streams.length === 0) {
         logger.warn('SOUND', 'Sound.play() called but no audio streams available');
@@ -41,6 +48,8 @@ export class Sound {
         logger.warn('SOUND', 'Sound.play() called but stream index is out of range');
         return;
       }
+
+      audio.volume = Math.min(1, this.baseVolume * scale);
 
       try {
         await audio.play();
@@ -92,9 +101,10 @@ export function setSound(pref: boolean): void {
 /**
  * Clean utility for playing sounds with explicit error suppression.
  * Use this instead of void sound.play() for cleaner code.
+ * volumeScale is 1 for local/full volume; 0 skips playback.
  */
-export function playSound(sound: Sound): void {
-  sound.play().catch(() => {
+export function playSound(sound: Sound, volumeScale = 1): void {
+  sound.play(volumeScale).catch(() => {
     // Sound play failed - silently ignore to avoid console spam
   });
 }

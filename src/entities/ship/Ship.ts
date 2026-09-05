@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
-import { playSound, Sound } from '../../audio/Sound';
+import { playExplosionSound } from '../../audio/explosionSound';
+import { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
@@ -69,7 +70,6 @@ class Ship {
   collidingPlayerId?: string;
 
   static fxThrust = new Sound('sounds/thrust.m4a', 5);
-  static fxExplode = new Sound('sounds/explode.m4a', 5);
 
   constructor(options?: {
     position?: Position;
@@ -124,9 +124,13 @@ class Ship {
   }
 
   explode(cause?: string, killerName?: string): void {
+    if (this.exploding) {
+      return;
+    }
+
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
-    playSound(Ship.fxExplode);
+    playExplosionSound(this.position);
 
     // Dispatch event to notify that ship has exploded with cause information
     window.dispatchEvent(
@@ -410,7 +414,7 @@ class Ship {
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
-    playSound(Ship.fxExplode);
+    playExplosionSound(this.position);
 
     const empEvent = new CustomEvent('empPulse', {
       detail: {

@@ -35,12 +35,17 @@ test('Set Sound', () => {
   expect(localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn)).toBe('false');
 });
 
-test('Sound play functionality', () => {
-  // Since HTMLMediaElement.play is not implemented in jsdom,
-  // we test that the streamNum is updated correctly
+test('Sound play applies volume scale to the stream', async () => {
   const initialStreamNum = testSound.streamNum;
-  testSound.play();
+  await testSound.play(0.5);
   expect(testSound.streamNum).toBe((initialStreamNum + 1) % testSound.streams.length);
+  expect(testSound.streams[testSound.streamNum]?.volume).toBeCloseTo(0.025);
+});
+
+test('Sound play skips when volume scale is zero', async () => {
+  const initialStreamNum = testSound.streamNum;
+  await testSound.play(0);
+  expect(testSound.streamNum).toBe(initialStreamNum);
 });
 
 test('Sound stop functionality', () => {

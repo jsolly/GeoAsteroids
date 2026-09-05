@@ -1,4 +1,5 @@
 import type { AsteroidData } from '../../shared-types';
+import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
@@ -28,6 +29,17 @@ export class GameController {
     this.inputManager = InputManager.getInstance();
     this.networkManager = NetworkManager.getInstance();
     this.collisionManager = CollisionManager.getInstance();
+
+    bindGameAudio({
+      getListenerPosition: () => this.playerManager.getLocalShip()?.position,
+      getViewport: () => {
+        const canvas = canvasManager.getCanvas();
+        if (!canvas) {
+          return undefined;
+        }
+        return { width: canvas.width, height: canvas.height };
+      },
+    });
 
     // Initialize with empty asteroid belt - will be populated by server
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
