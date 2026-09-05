@@ -80,9 +80,10 @@ test('roid stroke weights follow three size tiers', () => {
   expect(getRoidStrokeWidth(ROID.SIZE * 0.2)).toBe(VISUAL.ROID_STROKE_SMALL);
 });
 
-test('projectile and glow caps stay small', () => {
-  expect(VISUAL.LASER_STROKE_WIDTH).toBe(3);
-  expect(VISUAL.LASER_LENGTH).toBeGreaterThan(VISUAL.LASER_STROKE_WIDTH * 2);
+test('shots are classic short segments, never beams or oversized discs', () => {
+  expect(VISUAL.LASER_STROKE_WIDTH).toBeLessThanOrEqual(2);
+  expect(VISUAL.LASER_LENGTH).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH * 2);
+  expect(VISUAL.LASER_EXPLODE_RADIUS).toBeLessThanOrEqual(VISUAL.LASER_LENGTH);
   expect(VISUAL.LASER_GLOW).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH);
   expect(VISUAL.SHIP_GLOW).toBeLessThanOrEqual(VISUAL.SHIP_STROKE_WIDTH);
   expect(VISUAL.BOUNDARY_GLOW).toBeLessThanOrEqual(VISUAL.BOUNDARY_STROKE_WIDTH);

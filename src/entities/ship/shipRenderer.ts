@@ -423,19 +423,17 @@ export function drawLasers(
     ctx.shadowColor = boltColor;
     ctx.shadowBlur = VISUAL.LASER_GLOW;
     if (laser.explodeTime === 0) {
-      // Bolt is a short beam along its heading, with the tip at the laser position.
+      // Classic Asteroids shot: a short hard-edged segment centred on the laser position,
+      // aligned to its heading. Butt caps keep it a crisp vector dash, not a bloomed pill.
       const speed = Math.hypot(laser.velocity.x, laser.velocity.y);
-      const dirX = speed > 0 ? laser.velocity.x / speed : 1;
-      const dirY = speed > 0 ? laser.velocity.y / speed : 0;
+      const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * (VISUAL.LASER_LENGTH / 2);
+      const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * (VISUAL.LASER_LENGTH / 2);
       ctx.strokeStyle = boltColor;
       ctx.lineWidth = VISUAL.LASER_STROKE_WIDTH;
-      ctx.lineCap = 'round';
+      ctx.lineCap = 'butt';
       ctx.beginPath();
-      ctx.moveTo(
-        screenPos.x - dirX * VISUAL.LASER_LENGTH,
-        screenPos.y - dirY * VISUAL.LASER_LENGTH
-      );
-      ctx.lineTo(screenPos.x, screenPos.y);
+      ctx.moveTo(screenPos.x - halfX, screenPos.y - halfY);
+      ctx.lineTo(screenPos.x + halfX, screenPos.y + halfY);
       ctx.stroke();
     } else {
       ctx.fillStyle = PALETTE.DANGER;

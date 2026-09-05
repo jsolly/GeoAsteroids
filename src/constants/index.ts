@@ -59,10 +59,11 @@ export const PALETTE = {
 export const VISUAL = {
   SHIP_STROKE_WIDTH: 1.5,
   SHIP_GLOW: 1.5,
-  LASER_STROKE_WIDTH: 3,
-  LASER_LENGTH: 14,
-  LASER_EXPLODE_RADIUS: 5,
-  LASER_GLOW: 3,
+  // Classic Atari shot: a short hard-edged segment along the heading, not a beam or disc.
+  LASER_STROKE_WIDTH: 2,
+  LASER_LENGTH: 4,
+  LASER_EXPLODE_RADIUS: 4,
+  LASER_GLOW: 2,
   HEALTH_CAPSULE_HEIGHT: 2,
   BOUNDARY_STROKE_WIDTH: 1.25,
   BOUNDARY_GLOW: 1.25,
