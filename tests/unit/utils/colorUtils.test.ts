@@ -81,8 +81,9 @@ test('roid stroke weights follow three size tiers', () => {
 });
 
 test('projectile and glow caps stay small', () => {
-  expect(VISUAL.LASER_RADIUS).toBe(3);
-  expect(VISUAL.LASER_GLOW).toBeLessThanOrEqual(VISUAL.LASER_RADIUS);
+  expect(VISUAL.LASER_STROKE_WIDTH).toBe(3);
+  expect(VISUAL.LASER_LENGTH).toBeGreaterThan(VISUAL.LASER_STROKE_WIDTH * 2);
+  expect(VISUAL.LASER_GLOW).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH);
   expect(VISUAL.SHIP_GLOW).toBeLessThanOrEqual(VISUAL.SHIP_STROKE_WIDTH);
   expect(VISUAL.BOUNDARY_GLOW).toBeLessThanOrEqual(VISUAL.BOUNDARY_STROKE_WIDTH);
 });
