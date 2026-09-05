@@ -18,6 +18,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
 } from './connectionHealth';
+import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
 
 export interface ConnectionState {
   isConnected: boolean;
@@ -45,6 +46,9 @@ export class ConnectionManager {
       socket: null,
     };
     this.clientId = this.generateClientId();
+    // Tab close / bfcache must tear the socket down so the server drops us
+    // and other clients can prune this player from their leaderboard.
+    bindPageHideDisconnect(() => this.disconnect());
   }
 
   static getInstance(): ConnectionManager {
@@ -516,6 +520,14 @@ export class ConnectionManager {
             localPlayer.updateFromServer(serverSnapshot);
           }
         }
+      }
+
+      // Server never sends playerLeft; drop remotes that vanished from the
+      // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
+      const snapshotIds = new Set(data.entities.map((entity) => entity.id));
+      for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
+        this.allPlayers.delete(id);
+        logger.info('NETWORK', 'Removed departed remote player', { id });
       }
     }
 
