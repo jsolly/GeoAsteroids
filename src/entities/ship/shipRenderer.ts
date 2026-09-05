@@ -1,4 +1,4 @@
-import { PALETTE, VISUAL } from '../../constants';
+import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
@@ -33,105 +33,6 @@ export function calculateShipTrianglePoints(
   };
 
   return { nose, rearLeft, rearRight };
-}
-
-// Helper function to create complementary colors that work well with the laser color
-function createComplementaryColor(
-  baseColor: string,
-  lightnessAdjustment: number,
-  saturationAdjustment: number
-): string {
-  // Parse HSL color or convert hex to HSL
-  let hue: number, saturation: number, lightness: number;
-
-  if (baseColor.startsWith('hsl')) {
-    // Parse HSL color like "hsl(120, 50%, 60%)"
-    const matches = baseColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-    if (matches) {
-      const matchHue = matches[1];
-      const matchSaturation = matches[2];
-      const matchLightness = matches[3];
-      if (matchHue === undefined || matchSaturation === undefined || matchLightness === undefined) {
-        hue = 0;
-        saturation = 100;
-        lightness = 50;
-      } else {
-        hue = parseInt(matchHue, 10);
-        saturation = parseInt(matchSaturation, 10);
-        lightness = parseInt(matchLightness, 10);
-      }
-    } else {
-      // Fallback to red if parsing fails
-      hue = 0;
-      saturation = 100;
-      lightness = 50;
-    }
-  } else if (baseColor.startsWith('#')) {
-    // Convert hex to HSL
-    const hex = baseColor.slice(1).trim();
-
-    // Validate hex color format
-    if (hex.length !== 6 && hex.length !== 3) {
-      logger.warn('RENDERING', `Invalid hex color format, using fallback: ${baseColor}`);
-      hue = 0;
-      saturation = 100;
-      lightness = 50;
-      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    }
-
-    // Handle 3-character hex shorthand
-    const normalizedHex =
-      hex.length === 3
-        ? hex
-            .split('')
-            .map((char) => char + char)
-            .join('')
-        : hex;
-
-    const r = parseInt(normalizedHex.substr(0, 2), 16) / 255;
-    const g = parseInt(normalizedHex.substr(2, 2), 16) / 255;
-    const b = parseInt(normalizedHex.substr(4, 2), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const diff = max - min;
-
-    // Calculate HSL
-    lightness = (max + min) / 2;
-
-    if (diff === 0) {
-      hue = saturation = 0;
-    } else {
-      saturation = lightness > 0.5 ? diff / (2 - max - min) : diff / (max + min);
-
-      switch (max) {
-        case r:
-          hue = ((g - b) / diff + (g < b ? 6 : 0)) / 6;
-          break;
-        case g:
-          hue = ((b - r) / diff + 2) / 6;
-          break;
-        case b:
-          hue = ((r - g) / diff + 4) / 6;
-          break;
-        default:
-          hue = 0;
-      }
-    }
-  } else {
-    // Fallback to red if color format is not recognized
-    logger.warn('RENDERING', `Unrecognized color format, using fallback: ${baseColor}`);
-    hue = 0;
-    saturation = 100;
-    lightness = 50;
-  }
-
-  // Apply adjustments
-  hue = (hue * 360 + 180) % 360; // Shift hue by 180 degrees for complementary color
-  saturation = Math.max(0, Math.min(100, saturation * 100 + saturationAdjustment));
-  lightness = Math.max(0, Math.min(100, lightness * 100 + lightnessAdjustment));
-
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 // Helper function to draw a targeting line extending from the ship
@@ -182,38 +83,39 @@ export function drawGenericThruster(
     return;
   }
 
+  // The hull's rear edge sits 0.8r behind centre; the trail is an open V hanging off it.
   const rearCenter = {
-    x: x - radius * Math.cos(angle),
-    y: y + radius * Math.sin(angle),
+    x: x - radius * 0.8 * Math.cos(angle),
+    y: y + radius * 0.8 * Math.sin(angle),
   };
 
-  const flameLength = radius * VISUAL.THRUSTER_LENGTH_RATIO;
-  const flameWidth = radius * 0.32;
+  const flicker = Math.floor(performance.now() / VISUAL.THRUSTER_FLICKER_MS) % 2 === 0;
+  const lengthRatio = flicker ? VISUAL.THRUSTER_LENGTH_RATIO : VISUAL.THRUSTER_FLICKER_RATIO;
+  const flameLength = radius * lengthRatio;
+  const halfWidth = radius * 0.2;
   const flameTip = {
     x: rearCenter.x - Math.cos(angle) * flameLength,
     y: rearCenter.y + Math.sin(angle) * flameLength,
   };
   const leftFlame = {
-    x: rearCenter.x + (Math.cos(angle + Math.PI / 2) * flameWidth) / 2,
-    y: rearCenter.y - (Math.sin(angle + Math.PI / 2) * flameWidth) / 2,
+    x: rearCenter.x + Math.sin(angle) * halfWidth,
+    y: rearCenter.y + Math.cos(angle) * halfWidth,
   };
   const rightFlame = {
-    x: rearCenter.x + (Math.cos(angle - Math.PI / 2) * flameWidth) / 2,
-    y: rearCenter.y - (Math.sin(angle - Math.PI / 2) * flameWidth) / 2,
+    x: rearCenter.x - Math.sin(angle) * halfWidth,
+    y: rearCenter.y - Math.cos(angle) * halfWidth,
   };
 
   ctx.save();
   ctx.shadowColor = color;
-  ctx.shadowBlur = VISUAL.SHIP_GLOW;
+  ctx.shadowBlur = VISUAL.THRUSTER_GLOW;
   ctx.strokeStyle = color;
-  ctx.fillStyle = hexToRgba(color, 0.35);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = VISUAL.THRUSTER_STROKE_WIDTH;
+  ctx.lineCap = 'butt';
   ctx.beginPath();
   ctx.moveTo(leftFlame.x, leftFlame.y);
   ctx.lineTo(flameTip.x, flameTip.y);
   ctx.lineTo(rightFlame.x, rightFlame.y);
-  ctx.closePath();
-  ctx.fill();
   ctx.stroke();
   ctx.restore();
 }
@@ -288,32 +190,81 @@ export function drawPlayerName(
     return;
   }
 
-  // Position name below the ship
-  const nameY = y + shipRadius + 20;
+  const nameY = y + shipRadius + 14;
 
-  // Set text style
-  ctx.fillStyle = color;
-  ctx.font = '12px Arial';
+  ctx.save();
+  ctx.fillStyle = hexToRgba(color, 0.7);
+  ctx.font = '11px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-
-  // Add a subtle background for better readability
-  const textMetrics = ctx.measureText(name);
-  const textWidth = textMetrics.width;
-  const textHeight = 14; // Approximate height for 12px font
-  const padding = 4;
-
-  ctx.fillStyle = hexToRgba(PALETTE.BG, 0.55);
-  ctx.fillRect(
-    x - textWidth / 2 - padding,
-    nameY - padding,
-    textWidth + padding * 2,
-    textHeight + padding * 2
-  );
-
-  // Draw the name text
-  ctx.fillStyle = color;
   ctx.fillText(name, x, nameY);
+  ctx.restore();
+}
+
+// Classic vector break-up: the three hull edges drift apart along their outward normals and fade,
+// with a few hairline sparks — no filled fireball.
+function drawVectorExplosion(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  angle: number,
+  progress: number,
+  color: string
+): void {
+  const t = Math.min(Math.max(progress, 0), 1);
+  const alpha = 1 - t * 0.85;
+  const spread = radius * VISUAL.EXPLOSION_SPREAD_RATIO * t;
+  const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(x, y, radius, angle);
+  const edges: [{ x: number; y: number }, { x: number; y: number }][] = [
+    [nose, rearLeft],
+    [rearLeft, rearRight],
+    [rearRight, nose],
+  ];
+
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(color, alpha);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = VISUAL.EXPLOSION_STROKE_WIDTH;
+  ctx.lineWidth = VISUAL.EXPLOSION_STROKE_WIDTH;
+  ctx.lineCap = 'butt';
+
+  for (const [a, b] of edges) {
+    const midX = (a.x + b.x) / 2;
+    const midY = (a.y + b.y) / 2;
+    const len = Math.hypot(midX - x, midY - y) || 1;
+    const dx = ((midX - x) / len) * spread;
+    const dy = ((midY - y) / len) * spread;
+    // Fragments tumble slightly as they fly.
+    const spin = t * 0.6;
+    const cos = Math.cos(spin);
+    const sin = Math.sin(spin);
+    const rot = (p: { x: number; y: number }) => ({
+      x: midX + dx + (p.x - midX) * cos - (p.y - midY) * sin,
+      y: midY + dy + (p.x - midX) * sin + (p.y - midY) * cos,
+    });
+    const a2 = rot(a);
+    const b2 = rot(b);
+    ctx.beginPath();
+    ctx.moveTo(a2.x, a2.y);
+    ctx.lineTo(b2.x, b2.y);
+    ctx.stroke();
+  }
+
+  const sparkInner = radius * (0.4 + t * 1.2);
+  const sparkOuter = sparkInner + radius * 0.25 * (1 - t);
+  for (let i = 0; i < 6; i++) {
+    const a = angle + (i * Math.PI) / 3 + 0.35;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a) * sparkInner, y - Math.sin(a) * sparkInner);
+    ctx.lineTo(x + Math.cos(a) * sparkOuter, y - Math.sin(a) * sparkOuter);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function explosionProgress(ship: Ship): number {
+  return 1 - ship.explodeTime / SHIP.EXPLODE_DURATION_FRAMES;
 }
 
 export function drawShipExplosion(ship: Ship, color?: string): void {
@@ -323,38 +274,16 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
     return;
   }
 
-  // Ship explosion is always drawn at screen center (viewport transformation)
   const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
-
-  // Create explosion colors that complement the laser color
-  const baseColor = color || '#ff0000'; // Default to red if no color provided
-
-  // Generate complementary explosion colors that work well with the laser
-  const darkColor = createComplementaryColor(baseColor, -0.3, 0.1); // Darker complementary outer ring
-  const mediumColor = createComplementaryColor(baseColor, -0.1, 0.2); // Medium complementary ring
-  const lightColor = createComplementaryColor(baseColor, 0.1, 0.3); // Lighter complementary inner ring
-  const brightColor = createComplementaryColor(baseColor, 0.3, 0.4); // Bright complementary center
-
-  ctx.fillStyle = darkColor;
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, ship.r * 1.7, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = mediumColor;
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, ship.r * 1.4, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = baseColor;
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, ship.r * 1.1, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = lightColor;
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, ship.r * 0.8, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = brightColor;
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, ship.r * 0.5, 0, Math.PI * 2, false);
-  ctx.fill();
+  drawVectorExplosion(
+    ctx,
+    screenCenter.x,
+    screenCenter.y,
+    ship.r,
+    ship.angle,
+    explosionProgress(ship),
+    color || ship.color || PALETTE.LOCAL
+  );
 }
 
 export function drawShipExplosionAtPosition(
@@ -368,39 +297,17 @@ export function drawShipExplosionAtPosition(
     return;
   }
 
-  // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
   const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
   const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
-
-  // Create explosion colors that complement the laser color
-  const baseColor = color || ship.color || '#ff0000'; // Default to ship color or red
-
-  // Generate complementary explosion colors that work well with the laser
-  const darkColor = createComplementaryColor(baseColor, -0.3, 0.1); // Darker complementary outer ring
-  const mediumColor = createComplementaryColor(baseColor, -0.1, 0.2); // Medium complementary ring
-  const lightColor = createComplementaryColor(baseColor, 0.1, 0.3); // Lighter complementary inner ring
-  const brightColor = createComplementaryColor(baseColor, 0.3, 0.4); // Bright complementary center
-
-  ctx.fillStyle = darkColor;
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, ship.r * 1.7, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = mediumColor;
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, ship.r * 1.4, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = baseColor;
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, ship.r * 1.1, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = lightColor;
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, ship.r * 0.8, 0, Math.PI * 2, false);
-  ctx.fill();
-  ctx.fillStyle = brightColor;
-  ctx.beginPath();
-  ctx.arc(screenX, screenY, ship.r * 0.5, 0, Math.PI * 2, false);
-  ctx.fill();
+  drawVectorExplosion(
+    ctx,
+    screenX,
+    screenY,
+    ship.r,
+    ship.angle,
+    explosionProgress(ship),
+    color || ship.color || PALETTE.REMOTE
+  );
 }
 
 export function drawLasers(
@@ -436,14 +343,14 @@ export function drawLasers(
       ctx.lineTo(screenPos.x + halfX, screenPos.y + halfY);
       ctx.stroke();
     } else {
-      ctx.fillStyle = PALETTE.DANGER;
+      // Impact flash: a hairline ring that expands and fades over the short explode window.
+      const t = 1 - laser.explodeTime / Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
+      const ringRadius = VISUAL.LASER_EXPLODE_RADIUS * (0.5 + t);
+      ctx.strokeStyle = hexToRgba(boltColor, 1 - t * 0.7);
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, VISUAL.LASER_EXPLODE_RADIUS, 0, Math.PI * 2, false);
-      ctx.fill();
-      ctx.fillStyle = boltColor;
-      ctx.beginPath();
-      ctx.arc(screenPos.x, screenPos.y, VISUAL.LASER_STROKE_WIDTH / 2, 0, Math.PI * 2, false);
-      ctx.fill();
+      ctx.arc(screenPos.x, screenPos.y, ringRadius, 0, Math.PI * 2, false);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -559,23 +466,26 @@ function drawFloatingHealthCapsule(
   }
 
   const barWidth = ship.r * 2.4;
-  const barHeight = VISUAL.HEALTH_CAPSULE_HEIGHT;
   const barY = screenY - ship.r - 10;
   const barX = screenX - barWidth / 2;
   const healthPercent = Math.max(0, ship.health / ship.maxHealth);
   const currentWidth = barWidth * healthPercent;
-  const radius = barHeight / 2;
 
+  // Two hairline strokes: a muted track and the remaining-health segment on top.
   ctx.save();
-  ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.45);
+  ctx.lineWidth = VISUAL.HEALTH_CAPSULE_HEIGHT;
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.45);
   ctx.beginPath();
-  ctx.roundRect(barX, barY, barWidth, barHeight, radius);
-  ctx.fill();
+  ctx.moveTo(barX, barY);
+  ctx.lineTo(barX + barWidth, barY);
+  ctx.stroke();
   if (currentWidth > 0) {
-    ctx.fillStyle = PALETTE.HEALTH;
+    ctx.strokeStyle = PALETTE.HEALTH;
     ctx.beginPath();
-    ctx.roundRect(barX, barY, Math.max(currentWidth, barHeight), barHeight, radius);
-    ctx.fill();
+    ctx.moveTo(barX, barY);
+    ctx.lineTo(barX + currentWidth, barY);
+    ctx.stroke();
   }
 
   if (isDebugMode()) {

@@ -84,8 +84,27 @@ test('shots are classic short segments, never beams or oversized discs', () => {
   expect(VISUAL.LASER_STROKE_WIDTH).toBeLessThanOrEqual(2);
   expect(VISUAL.LASER_LENGTH).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH * 2);
   expect(VISUAL.LASER_EXPLODE_RADIUS).toBeLessThanOrEqual(VISUAL.LASER_LENGTH);
+});
+
+test('ships and roids are hairline polylines', () => {
+  expect(VISUAL.SHIP_STROKE_WIDTH).toBeLessThanOrEqual(1.5);
+  expect(VISUAL.ROID_STROKE_LARGE).toBeLessThanOrEqual(1.5);
+  expect(VISUAL.ROID_STROKE_MEDIUM).toBeLessThanOrEqual(VISUAL.ROID_STROKE_LARGE);
+  expect(VISUAL.ROID_STROKE_SMALL).toBeLessThanOrEqual(VISUAL.ROID_STROKE_MEDIUM);
+  expect(VISUAL.THRUSTER_STROKE_WIDTH).toBeLessThanOrEqual(1);
+  expect(VISUAL.EXPLOSION_STROKE_WIDTH).toBeLessThanOrEqual(1);
+});
+
+test('thruster trail is tiny and flickers shorter, never longer', () => {
+  expect(VISUAL.THRUSTER_LENGTH_RATIO).toBeLessThanOrEqual(0.5);
+  expect(VISUAL.THRUSTER_FLICKER_RATIO).toBeLessThan(VISUAL.THRUSTER_LENGTH_RATIO);
+});
+
+test('phosphor glow never exceeds its stroke', () => {
   expect(VISUAL.LASER_GLOW).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH);
   expect(VISUAL.SHIP_GLOW).toBeLessThanOrEqual(VISUAL.SHIP_STROKE_WIDTH);
+  expect(VISUAL.ROID_GLOW).toBeLessThanOrEqual(VISUAL.ROID_STROKE_SMALL);
+  expect(VISUAL.THRUSTER_GLOW).toBeLessThanOrEqual(VISUAL.THRUSTER_STROKE_WIDTH);
   expect(VISUAL.BOUNDARY_GLOW).toBeLessThanOrEqual(VISUAL.BOUNDARY_STROKE_WIDTH);
 });
 
