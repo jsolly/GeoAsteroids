@@ -1,8 +1,12 @@
 import { canvasManager } from '../rendering/canvas';
+import { initNetworkStatusUI } from '../ui/networkStatus';
 import { logger } from '../utils/Logger';
 import { GameController } from './gameController';
 
 const gameController = GameController.getInstance();
+
+// Surface a visible banner whenever the game-server connection drops.
+initNetworkStatusUI();
 
 // Initialize canvas with proper scaling after DOM is loaded
 if (document.readyState === 'loading') {
