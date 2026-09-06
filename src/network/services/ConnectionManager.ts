@@ -11,6 +11,7 @@ import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
+import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 
@@ -121,14 +122,27 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
-    if (this.state.socket) {
-      this.state.socket.close();
-      this.state.isConnected = false;
-      this.state.socket = null;
+    const socket = this.state.socket;
+    if (socket) {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close();
+      }
     }
+    this.state.isConnected = false;
+    this.state.socket = null;
+    this.allPlayers.clear();
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
+    this.clientId = this.generateClientId();
+  }
+
+  private describeAttacker(attackerId: string): string {
+    return describeDeathCause(attackerId, (id) => this.allPlayers.get(id)?.name);
   }
 
   // Player management
@@ -682,7 +696,9 @@ export class ConnectionManager {
       data.remainingLives !== undefined &&
       prevLocalLives > data.remainingLives
     ) {
-      this.dispatchLocalPlayerDied(localPlayer, data.remainingLives, data.attackerId);
+      const deathCause = this.describeAttacker(data.attackerId);
+      localPlayer.deathCause = deathCause;
+      this.dispatchLocalPlayerDied(localPlayer, data.remainingLives, deathCause);
     }
   }
 

@@ -232,47 +232,45 @@ export class EntityManager {
     return entity;
   }
 
+  private placeAtRandomRespawnPoint(entity: GameEntity): void {
+    const respawnRadius = 3100 * 0.8;
+    const angle = this.rng.random() * Math.PI * 2;
+    const radius = this.rng.random() * respawnRadius;
+    entity.position = {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+    };
+    entity.angle = this.rng.random() * Math.PI * 2;
+    entity.velocity = { x: 0, y: 0 };
+  }
+
+  private shouldScheduleRespawn(entity: GameEntity): boolean {
+    return entity.type === 'bot' || entity.lives > 0;
+  }
+
   // Explosion updates (server-side respawn logic only)
   public updateExplosions(): string[] {
     const finishedExploding: string[] = [];
 
     for (const [entityId, entity] of this.entities) {
-      if (entity.exploding) {
+      if (!entity.exploding || !entity.explodeTime || entity.explodeTime <= 0) {
+        continue;
+      }
+
+      entity.explodeTime--;
+      if (entity.explodeTime > 0) {
+        continue;
+      }
+
+      entity.exploding = false;
+      if (this.shouldScheduleRespawn(entity)) {
+        entity.respawnTimer = 180; // 3 seconds at 60 FPS
         if (entity.type === 'bot') {
-          // Bot explosion handling (frame-based)
-          if (entity.explodeTime && entity.explodeTime > 0) {
-            entity.explodeTime--;
-            if (entity.explodeTime <= 0) {
-              entity.exploding = false;
-              // Set respawn timer and reset health
-              entity.respawnTimer = 180; // 3 seconds at 60 FPS
-              entity.health = entity.maxHealth;
-              // Generate new random position for respawn within circular boundary
-              const respawnRadius = 3100 * 0.8; // Stay within 80% of boundary
-              const angle = this.rng.random() * Math.PI * 2;
-              const radius = this.rng.random() * respawnRadius;
-              entity.position = {
-                x: Math.cos(angle) * radius,
-                y: Math.sin(angle) * radius
-              };
-              entity.angle = this.rng.random() * Math.PI * 2;
-              entity.velocity = { x: 0, y: 0 };
-              finishedExploding.push(entityId);
-            }
-          }
-        } else {
-          // Human explosion handling (same as bots)
-          if (entity.explodeTime && entity.explodeTime > 0) {
-            entity.explodeTime--;
-            if (entity.explodeTime <= 0) {
-              entity.exploding = false;
-              // Set respawn timer for human players
-              entity.respawnTimer = 180; // 3 seconds at 60 FPS
-              finishedExploding.push(entityId);
-            }
-          }
+          entity.health = entity.maxHealth;
+          this.placeAtRandomRespawnPoint(entity);
         }
       }
+      finishedExploding.push(entityId);
     }
 
     return finishedExploding;
@@ -290,30 +288,21 @@ export class EntityManager {
         }
 
         if (entity.respawnTimer === 0) {
-          // Clear respawn timer and respawn the entity
           entity.respawnTimer = undefined;
-          
-          // Restore health and reset position for respawn
+
+          // A leftover timer must not resurrect a human who already spent their last life.
+          if (!this.shouldScheduleRespawn(entity)) {
+            continue;
+          }
+
           entity.health = entity.maxHealth;
           entity.exploding = false;
           entity.explodeTime = undefined;
-          
-          // Generate new random position for respawn within circular boundary
-          const respawnRadius = 3100 * 0.8; // Stay within 80% of boundary
-          const angle = this.rng.random() * Math.PI * 2;
-          const radius = this.rng.random() * respawnRadius;
-          entity.position = {
-            x: Math.cos(angle) * radius,
-            y: Math.sin(angle) * radius
-          };
-          entity.angle = this.rng.random() * Math.PI * 2;
-          entity.velocity = { x: 0, y: 0 };
-          
-          // Set spawn protection for respawned entities
-          entity.spawnProtectionTimer = 180; // 3 seconds of spawn protection at 60 FPS
-          
+          this.placeAtRandomRespawnPoint(entity);
+          entity.spawnProtectionTimer = 180;
+
           finishedRespawning.push(entityId);
-          
+
           logger.debug('ENTITY', `Respawned ${entity.type} entity: ${entity.name} (${entityId})`, {
             health: entity.health,
             position: entity.position,

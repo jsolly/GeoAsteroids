@@ -8,6 +8,7 @@ import { NetworkManager } from '../network/networkManager';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { toggleScreen } from '../ui/uiUtils';
+import { describeDeathCause, formatGameOverText } from '../utils/deathCause';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
@@ -22,6 +23,9 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private gameOverInProgress = false;
+  private gameOverTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly GAME_OVER_MENU_DELAY_MS = 3500;
 
   private constructor() {
     this.gameStateManager = GameStateManager.getInstance();
@@ -78,10 +82,11 @@ export class GameController {
 
   async startGame(playerName?: string): Promise<void> {
     logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
+    this.resetSessionForNewGame();
     this.newGame(playerName);
     toggleScreen('start-screen', false);
     toggleScreen('gameArea', true);
-    this.gameStateManager.toggleIsGameRunning();
+    this.gameStateManager.setIsGameRunning(true);
 
     // Reset button text to default state
     this.inputManager.resetButtonText();
@@ -260,21 +265,40 @@ export class GameController {
     window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
   }
 
+  private resetSessionForNewGame(): void {
+    if (this.gameOverTimer !== null) {
+      clearTimeout(this.gameOverTimer);
+      this.gameOverTimer = null;
+    }
+    this.gameOverInProgress = false;
+    this.gameStateManager.clearOverlay();
+    PlayerNetwork.getInstance().stopNetworkUpdates();
+    this.networkManager.disconnect();
+  }
+
   gameOver(deathCause?: string): void {
-    const gameOverText = deathCause ? `Game Over: You were killed by ${deathCause}` : 'Game Over';
-    this.gameStateManager.updateTextProperties(gameOverText, 1.0);
+    if (this.gameOverInProgress) {
+      return;
+    }
+    this.gameOverInProgress = true;
 
-    // Clean up server asteroid listeners to prevent memory leaks
+    const described = describeDeathCause(
+      deathCause,
+      (id) => this.networkManager.getPlayer(id)?.name
+    );
+    this.gameStateManager.updateTextProperties(formatGameOverText(described), 1.0);
+
     this.cleanupServerAsteroidListeners();
+    PlayerNetwork.getInstance().stopNetworkUpdates();
+    this.networkManager.disconnect();
 
-    // Don't stop the game loop yet - let the text render for a few seconds
-    setTimeout(() => {
-      // Stop the game loop and return to main menu
+    this.gameOverTimer = setTimeout(() => {
+      this.gameOverTimer = null;
       this.gameStateManager.setIsGameRunning(false);
       import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });
-    }, 3500); // Increased time to read the death message
+    }, GameController.GAME_OVER_MENU_DELAY_MS);
   }
 
   private setupGameOverHandler(): void {
@@ -325,6 +349,20 @@ export class GameController {
             }
           }
         }
+      }
+    });
+
+    window.addEventListener('shipExploded', (event) => {
+      const customEvent = event as CustomEvent<{
+        shipId?: string;
+        cause?: string;
+        killerName?: string;
+      }>;
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (localPlayer && customEvent.detail.shipId === localPlayer.ship.id) {
+        localPlayer.onShipExploded({
+          cause: describeDeathCause(customEvent.detail.cause, () => customEvent.detail.killerName),
+        });
       }
     });
 
@@ -670,9 +708,8 @@ export class GameController {
     const allPlayers = this.networkManager.getAllPlayers();
     const otherShips = allPlayers
       .filter((player) => player.id !== currPlayer.id)
-      .map((player) => player.ship);
+      .map((player) => ({ ship: player.ship, id: player.id }));
 
-    // Check ship-to-ship collisions
     this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);
   }
 
