@@ -13,6 +13,8 @@ import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { hudLayoutForCanvas } from './hudLayout';
 
+const miniMapPoint = { x: 0, y: 0 };
+
 type RadarMark =
   | { kind: 'local'; x: number; y: number; heading: number; factionId?: SoftFactionId }
   | {
@@ -48,7 +50,9 @@ export function projectWorldToMiniMap(
   ) {
     return null;
   }
-  return { x, y };
+  miniMapPoint.x = x;
+  miniMapPoint.y = y;
+  return miniMapPoint;
 }
 
 function drawRadarMark(ctx: CanvasRenderingContext2D, mark: RadarMark): void {

@@ -107,6 +107,7 @@ test('projectWorldToMiniMap maps the arena center to the radar center', () => {
 
   const east = projectWorldToMiniMap(boundary, 0, 0, 80, 100, 0);
   expect(east).toEqual({ x: 80, y: 40 });
+  expect(east).toBe(center);
 
   const outside = projectWorldToMiniMap(boundary, 0, 0, 80, 400, 0, 10);
   expect(outside).toBeNull();

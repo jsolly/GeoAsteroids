@@ -5,6 +5,18 @@ import type {
 } from '../../../shared-types';
 import { containAsteroidPositionInto, isPoseInAsteroidField } from '../../physics/asteroidMotion';
 
+function writeOptionalField<K extends keyof AsteroidData>(
+  into: Partial<AsteroidData>,
+  key: K,
+  value: AsteroidData[K] | undefined
+): void {
+  if (value !== undefined) {
+    into[key] = value;
+  } else {
+    delete into[key];
+  }
+}
+
 export interface AsteroidFieldSyncResult {
   created: AsteroidData[];
   updated: AsteroidData[];
@@ -91,33 +103,23 @@ export function partitionAsteroidSnapshot(
 }
 
 /** Pose + health fields that must stay server-authoritative after first create. */
+export function writeAsteroidKinematicUpdates(
+  asteroid: Partial<AsteroidData>,
+  into: Partial<AsteroidData>
+): Partial<AsteroidData> {
+  writeOptionalField(into, 'position', asteroid.position);
+  writeOptionalField(into, 'velocity', asteroid.velocity);
+  writeOptionalField(into, 'rotation', asteroid.rotation);
+  writeOptionalField(into, 'angularVelocity', asteroid.angularVelocity);
+  writeOptionalField(into, 'health', asteroid.health);
+  writeOptionalField(into, 'maxHealth', asteroid.maxHealth);
+  writeOptionalField(into, 'size', asteroid.size);
+  writeOptionalField(into, 'isCollabTarget', asteroid.isCollabTarget);
+  return into;
+}
+
 export function asteroidKinematicUpdates(asteroid: Partial<AsteroidData>): Partial<AsteroidData> {
-  const updates: Partial<AsteroidData> = {};
-  if (asteroid.position) {
-    updates.position = asteroid.position;
-  }
-  if (asteroid.velocity) {
-    updates.velocity = asteroid.velocity;
-  }
-  if (asteroid.rotation !== undefined) {
-    updates.rotation = asteroid.rotation;
-  }
-  if (asteroid.angularVelocity !== undefined) {
-    updates.angularVelocity = asteroid.angularVelocity;
-  }
-  if (asteroid.health !== undefined) {
-    updates.health = asteroid.health;
-  }
-  if (asteroid.maxHealth !== undefined) {
-    updates.maxHealth = asteroid.maxHealth;
-  }
-  if (asteroid.size !== undefined) {
-    updates.size = asteroid.size;
-  }
-  if (asteroid.isCollabTarget !== undefined) {
-    updates.isCollabTarget = asteroid.isCollabTarget;
-  }
-  return updates;
+  return writeAsteroidKinematicUpdates(asteroid, {});
 }
 
 /**

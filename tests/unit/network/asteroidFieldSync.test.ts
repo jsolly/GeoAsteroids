@@ -9,6 +9,7 @@ import {
   partitionAsteroidSnapshot,
   shouldPreserveSeenAsteroidsOnJoin,
   shouldSnapAsteroidPose,
+  writeAsteroidKinematicUpdates,
 } from '../../../src/network/services/asteroidFieldSync';
 
 function roid(id: string, x: number, y: number): AsteroidData {
@@ -183,6 +184,13 @@ test('kinematic updates omit undefined fields so a lean row cannot wipe pose', (
   expect(asteroidKinematicUpdates({ id: 'server-asteroid-0', position: { x: 3, y: 4 } })).toEqual({
     position: { x: 3, y: 4 },
   });
+});
+
+test('writeAsteroidKinematicUpdates reuses the caller envelope and drops stale keys', () => {
+  const into: Partial<AsteroidData> = { health: 9, size: 40 };
+  const same = writeAsteroidKinematicUpdates({ position: { x: 3, y: 4 } }, into);
+  expect(same).toBe(into);
+  expect(into).toEqual({ position: { x: 3, y: 4 } });
 });
 
 test('collab flag copies onto the local rock so both pilots can chip it', () => {
