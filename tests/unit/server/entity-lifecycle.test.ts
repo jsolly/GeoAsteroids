@@ -161,13 +161,16 @@ describe('shared player and bot explosion → respawn → spawn protection', () 
     expect(afterDeath?.health).toBe(0);
 
     for (let i = 0; i < LIFECYCLE.explodeFrames; i++) {
-      engine.tickWorld();
+      engine.entityManager.updateExplosions();
     }
 
     const afterExplosion = engine.getBot(bot.id);
     expect(afterExplosion?.exploding).toBe(false);
     expect(afterExplosion?.health).toBe(0);
     expect(afterExplosion?.respawnTimer).toBe(LIFECYCLE.respawnFrames);
+
+    engine.tickWorld();
+    expect(engine.getBot(bot.id)?.respawnTimer).toBe(LIFECYCLE.respawnFrames - 1);
   });
 
   test('respawn restores hull, arms protection, and holds an anchor for both kinds', () => {
@@ -182,14 +185,15 @@ describe('shared player and bot explosion → respawn → spawn protection', () 
     const fresh = new GameEngine(54321);
     const bot = firstBot(fresh);
     fresh.handleBotDamage(bot.id, 'asteroid', bot.health);
-    for (let i = 0; i < LIFECYCLE.explodeFrames + LIFECYCLE.respawnFrames; i++) {
+    // tickWorld decrements the respawn timer on the explosion-complete frame.
+    for (let i = 0; i < LIFECYCLE.explodeFrames + LIFECYCLE.respawnFrames - 1; i++) {
       fresh.tickWorld();
     }
     expectRespawned(fresh.getBot(bot.id));
   });
 
   test('handleTargetDamage routes player and bot scoring rules', () => {
-    const attacker = engine.addPlayer('attacker', 'Gunner', mockWs());
+    engine.addPlayer('attacker', 'Gunner', mockWs());
     const victim = engine.addPlayer('victim', 'Target', mockWs());
     clearSpawnShield(engine, 'attacker');
     clearSpawnShield(engine, 'victim');
@@ -261,7 +265,14 @@ describe('MessageHandler defers lifecycle to GameEngine', () => {
     } as unknown as WebSocket;
     const handler = new MessageHandler(engine, new GameStateBroadcaster(engine));
 
+    const spectatorWs = {
+      readyState: WebSocket.OPEN,
+      send: (payload: string) => {
+        sent.push(payload);
+      },
+    } as unknown as WebSocket;
     engine.addPlayer('p1', 'Pilot', ws, { x: 0, y: 0 });
+    engine.addPlayer('p2', 'Spectator', spectatorWs, { x: 10, y: 10 });
     clearSpawnShield(engine, 'p1');
     engine.handlePlayerDamage('p1', 'boundary', SHIP.MAX_HEALTH);
 
