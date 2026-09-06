@@ -6,7 +6,6 @@ import type {
   Position,
   ServerGameState,
   Velocity,
-  WireAsteroidSnapshot,
 } from '../../../shared-types';
 import { playLaserSound } from '../../audio/gameSounds';
 import { PALETTE } from '../../constants';
@@ -460,7 +459,7 @@ export class ConnectionManager {
         this.handleAsteroidCreated(data as { asteroid: AsteroidData });
         break;
       case 'asteroidCreateBatch':
-        this.handleAsteroidCreateBatch(data as { asteroids: WireAsteroidSnapshot[] });
+        this.handleAsteroidCreateBatch(data as { asteroids: AsteroidData[] });
         break;
       case 'asteroidUpdate':
         this.handleAsteroidUpdated(data as { asteroidId: string; updates: Partial<AsteroidData> });
@@ -564,7 +563,7 @@ export class ConnectionManager {
           if (!entity) {
             entity = entityFactory.createPlayer({
               id: entityData.id,
-              name: entityData.name ?? `player-${entityData.id}`,
+              name: entityData.name,
               type: entityData.type === 'bot' ? 'bot' : 'remote',
               color: entityData.color,
             });
@@ -585,22 +584,18 @@ export class ConnectionManager {
         }
 
         const serverSnapshot = {
-          ...(entityData.position ? { position: entityData.position } : {}),
-          ...(entityData.velocity ? { velocity: entityData.velocity } : {}),
-          ...(entityData.angle !== undefined ? { angle: entityData.angle } : {}),
-          ...(entityData.lives !== undefined ? { lives: entityData.lives } : {}),
-          ...(entityData.score !== undefined ? { score: entityData.score } : {}),
-          ...(entityData.exploding !== undefined ? { exploding: entityData.exploding } : {}),
-          ...(entityData.thrusting !== undefined ? { thrusting: entityData.thrusting } : {}),
-          ...(entityData.color !== undefined ? { color: entityData.color } : {}),
-          ...(entityData.health !== undefined ? { health: entityData.health } : {}),
-          ...(entityData.maxHealth !== undefined ? { maxHealth: entityData.maxHealth } : {}),
-          ...(entityData.respawnTimer !== undefined
-            ? { respawnTimer: entityData.respawnTimer }
-            : {}),
-          ...(entityData.spawnProtectionTimer !== undefined
-            ? { spawnProtectionTimer: entityData.spawnProtectionTimer }
-            : {}),
+          position: entityData.position,
+          velocity: entityData.velocity,
+          angle: entityData.angle,
+          lives: entityData.lives,
+          score: entityData.score,
+          exploding: entityData.exploding,
+          thrusting: entityData.thrusting,
+          color: entityData.color,
+          health: entityData.health,
+          maxHealth: entityData.maxHealth,
+          respawnTimer: entityData.respawnTimer,
+          spawnProtectionTimer: entityData.spawnProtectionTimer,
         };
         entity.updateFromServer(serverSnapshot);
 
@@ -628,7 +623,7 @@ export class ConnectionManager {
     }
   }
 
-  private applyAuthoritativeAsteroids(asteroids: WireAsteroidSnapshot[]): void {
+  private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
     const { created, updated, removed } = partitionAsteroidSnapshot(
       asteroids,
       this.seenAsteroidIds
@@ -699,7 +694,7 @@ export class ConnectionManager {
     );
   }
 
-  private handleAsteroidCreateBatch(data: { asteroids: WireAsteroidSnapshot[] }): void {
+  private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
     if (data.asteroids && Array.isArray(data.asteroids)) {
       this.applyAuthoritativeAsteroids(data.asteroids);
     }

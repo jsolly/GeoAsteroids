@@ -1,12 +1,11 @@
 import { WebSocket } from 'ws';
-import { DEBUG } from '../../src/constants';
-import { quantizeAsteroids } from '../../src/network/gameStateSnapshot';
-import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
-import { logger } from '../../setup/serverLogger';
-import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 import { GameEngine } from '../core/GameEngine';
-import { ClientLogger } from '../services/ClientLogger';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
+import { ClientLogger } from '../services/ClientLogger';
+import { logger } from '../../setup/serverLogger';
+import { DEBUG } from '../../src/constants';
+import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
+import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
 
@@ -170,7 +169,7 @@ export class MessageHandler {
 
     // Broadcast to all other players
     this.broadcaster.broadcastPlayerJoined(id, name, joinPosition);
-    this.broadcaster.broadcastGameState(undefined, { full: true });
+    this.broadcaster.broadcastGameState();
     logger.debug('📢 Broadcasted player joined and game state', { id, name });
   }
 
@@ -441,7 +440,7 @@ export class MessageHandler {
       this.broadcaster.sendToWebSocket(ws, {
         type: 'asteroidCreateBatch',
         data: {
-          asteroids: quantizeAsteroids(existingAsteroids),
+          asteroids: existingAsteroids,
         },
         timestamp: Date.now(),
       });
