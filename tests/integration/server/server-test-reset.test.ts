@@ -25,6 +25,7 @@ describe('Server test world reset', () => {
       humanPlayers: 0,
       bots: 0,
       asteroids: 0,
+      satellites: 0,
     });
   });
 
@@ -48,6 +49,7 @@ describe('Server test world reset', () => {
       humanPlayers: 0,
       bots: 0,
       asteroids: 0,
+      satellites: 0,
     });
   });
 

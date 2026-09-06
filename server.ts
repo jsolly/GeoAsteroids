@@ -666,6 +666,10 @@ try {
   } else {
     logger.warn('⚠️ Bot creation returned null');
   }
+  const satellites = gameEngine.createSatellites(2);
+  if (satellites) {
+    logger.info(`🛰️ Created ${satellites.length} satellites`);
+  }
 } catch (error) {
   logger.error('❌ Failed to create bots:', error);
 }

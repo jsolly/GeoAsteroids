@@ -4,6 +4,7 @@ import type {
   PlayerLeave,
   PlayerUpdate,
   Position,
+  SatelliteShoot,
   ServerGameState,
   Velocity,
 } from '../../../shared-types';
@@ -11,6 +12,7 @@ import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
+import { SatelliteManager } from '../../entities/satellite/SatelliteManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
@@ -149,6 +151,7 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
+    SatelliteManager.getInstance().clear();
   }
 
   private startHeartbeat(): void {
@@ -406,6 +409,9 @@ export class ConnectionManager {
       case 'botDestroyed':
         this.handleBotDestroyed(data as { botId: string });
         break;
+      case 'satelliteShoot':
+        this.handleSatelliteShoot(data as SatelliteShoot);
+        break;
       case 'playerShoot':
         this.handlePlayerShoot(
           data as {
@@ -532,6 +538,10 @@ export class ConnectionManager {
       }
     }
 
+    if (data.satellites) {
+      SatelliteManager.getInstance().syncFromServer(data.satellites);
+    }
+
     // Dispatch asteroid events only for NEW asteroids
     if (data.asteroids) {
       for (const asteroidData of data.asteroids) {
@@ -557,6 +567,7 @@ export class ConnectionManager {
 
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
+    SatelliteManager.getInstance().clear();
 
     // Store the local player ID from server response
     if (data.id) {
@@ -655,6 +666,15 @@ export class ConnectionManager {
     if (data.botId) {
       this.allPlayers.delete(data.botId);
     }
+  }
+
+  private handleSatelliteShoot(data: SatelliteShoot): void {
+    logger.debug('NETWORK', 'Satellite shot laser', {
+      satelliteId: data.id,
+      laserStart: data.laserStart,
+      laserDirection: data.laserDirection,
+    });
+    SatelliteManager.getInstance().addLaser(data.id, data.laserStart, data.laserDirection);
   }
 
   private handlePlayerShoot(data: {

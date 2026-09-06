@@ -1,23 +1,27 @@
 import { WebSocket } from 'ws';
-import type { Position, AsteroidData } from '../../shared-types';
+import type { Position, AsteroidData, SatelliteData, SatelliteShoot } from '../../shared-types';
+import { SATELLITE, SHIP } from '../../src/constants';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
+import { SatelliteManager } from './SatelliteManager';
 import { RNGService } from './RNGService';
-import { SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
 
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
+  private satelliteManager: SatelliteManager;
   private rngService: RNGService;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
+  private pendingSatelliteShots: SatelliteShoot[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
     this.entityManager = new EntityManager(this.rngService);
     this.asteroidManager = new AsteroidManager(this.rngService);
+    this.satelliteManager = new SatelliteManager(this.rngService);
 
     // Don't initialize pause state yet - will be called after initialization
   }
@@ -43,6 +47,17 @@ export class GameEngine {
         // Update every 2 frames (30 FPS instead of 60 FPS)
         if (this.gameTime % 2 === 0) {
           this.entityManager.updateBotMovement();
+        }
+
+        const targets = this.entityManager.getAllEntities().map((entity) => ({
+          id: entity.id,
+          position: entity.position,
+          health: entity.health,
+          exploding: entity.exploding,
+        }));
+        const shots = this.satelliteManager.update(targets);
+        if (shots.length > 0) {
+          this.pendingSatelliteShots.push(...shots);
         }
       }
     }, 1000 / 60); // 60 FPS
@@ -76,6 +91,12 @@ export class GameEngine {
           logger.info(`🤖 Recreated ${bots.length} bots on resume`);
         }
       }
+      if (this.satelliteManager.getCount() === 0) {
+        const satellites = this.createSatellites(2);
+        if (satellites) {
+          logger.info(`🛰️ Recreated ${satellites.length} satellites on resume`);
+        }
+      }
     }
   }
 
@@ -90,6 +111,7 @@ export class GameEngine {
     humanPlayers: number;
     bots: number;
     asteroids: number;
+    satellites: number;
   } {
     return {
       isPaused: this.isPaused,
@@ -97,6 +119,7 @@ export class GameEngine {
       humanPlayers: this.entityManager.getHumanPlayerCount(),
       bots: this.entityManager.getBotCount(),
       asteroids: this.asteroidManager.getAsteroidCount(),
+      satellites: this.satelliteManager.getCount(),
     };
   }
 
@@ -123,6 +146,8 @@ export class GameEngine {
   private resetGameState(): void {
     // Clear all asteroids
     this.asteroidManager.clearAsteroids();
+    this.satelliteManager.clearSatellites();
+    this.pendingSatelliteShots = [];
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
@@ -272,6 +297,40 @@ export class GameEngine {
     return false;
   }
 
+  public createSatellites(count: number): SatelliteData[] | null {
+    return this.satelliteManager.createSatellitesSafely(count);
+  }
+
+  public getSatellite(satelliteId: string) {
+    return this.satelliteManager.getSatellite(satelliteId);
+  }
+
+  public getAllSatellites(): SatelliteData[] {
+    return this.satelliteManager.getAllSatellites();
+  }
+
+  public getSatelliteCount(): number {
+    return this.satelliteManager.getCount();
+  }
+
+  public drainSatelliteShots(): SatelliteShoot[] {
+    const shots = this.pendingSatelliteShots;
+    this.pendingSatelliteShots = [];
+    return shots;
+  }
+
+  public handleSatelliteDamage(satelliteId: string, attackerId: string, damage: number): boolean {
+    const damaged = this.satelliteManager.damageSatellite(satelliteId, damage);
+    if (!damaged) {
+      return false;
+    }
+    if (damaged.health <= 0) {
+      this.awardPoints(attackerId, SATELLITE.POINTS);
+      return true;
+    }
+    return false;
+  }
+
   public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
     const existing = this.getBot(botId);
     if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
@@ -331,6 +390,7 @@ export class GameEngine {
         spawnProtectionTimer: entity.spawnProtectionTimer,
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
+      satellites: this.satelliteManager.getAllSatellites(),
       gameTime: this.gameTime,
       isPaused: this.isPaused,
     };
@@ -367,6 +427,20 @@ export class GameEngine {
 
   public updateBotMovement(): void {
     this.entityManager.updateBotMovement();
+  }
+
+  public tickSatellites(): SatelliteShoot[] {
+    const targets = this.entityManager.getAllEntities().map((entity) => ({
+      id: entity.id,
+      position: entity.position,
+      health: entity.health,
+      exploding: entity.exploding,
+    }));
+    const shots = this.satelliteManager.update(targets);
+    if (shots.length > 0) {
+      this.pendingSatelliteShots.push(...shots);
+    }
+    return shots;
   }
 
 

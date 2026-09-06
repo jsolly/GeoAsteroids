@@ -1,3 +1,4 @@
+import type { Position, Velocity } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
@@ -310,24 +311,21 @@ export function drawShipExplosionAtPosition(
   );
 }
 
-export function drawLasers(
-  ship: Ship,
-  color?: string,
-  viewerShipPosition?: { x: number; y: number }
+export function drawLaserBolts(
+  lasers: Array<{ position: Position; velocity: Velocity; explodeTime: number }>,
+  color: string,
+  viewerPosition: Position
 ): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
 
-  const boltColor = color || PALETTE.LASER_LOCAL;
-
-  for (const laser of ship.lasers) {
-    const referencePos = viewerShipPosition || ship.position;
-    const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
+  for (const laser of lasers) {
+    const screenPos = canvasManager.worldToScreen(laser.position, viewerPosition);
 
     ctx.save();
-    ctx.shadowColor = boltColor;
+    ctx.shadowColor = color;
     ctx.shadowBlur = VISUAL.LASER_GLOW;
     if (laser.explodeTime === 0) {
       // Classic Asteroids shot: a short hard-edged segment centred on the laser position,
@@ -335,7 +333,7 @@ export function drawLasers(
       const speed = Math.hypot(laser.velocity.x, laser.velocity.y);
       const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * (VISUAL.LASER_LENGTH / 2);
       const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * (VISUAL.LASER_LENGTH / 2);
-      ctx.strokeStyle = boltColor;
+      ctx.strokeStyle = color;
       ctx.lineWidth = VISUAL.LASER_STROKE_WIDTH;
       ctx.lineCap = 'butt';
       ctx.beginPath();
@@ -346,7 +344,7 @@ export function drawLasers(
       // Impact flash: a hairline ring that expands and fades over the short explode window.
       const t = 1 - laser.explodeTime / Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
       const ringRadius = VISUAL.LASER_EXPLODE_RADIUS * (0.5 + t);
-      ctx.strokeStyle = hexToRgba(boltColor, 1 - t * 0.7);
+      ctx.strokeStyle = hexToRgba(color, 1 - t * 0.7);
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, ringRadius, 0, Math.PI * 2, false);
@@ -354,6 +352,14 @@ export function drawLasers(
     }
     ctx.restore();
   }
+}
+
+export function drawLasers(
+  ship: Ship,
+  color?: string,
+  viewerShipPosition?: { x: number; y: number }
+): void {
+  drawLaserBolts(ship.lasers, color || PALETTE.LASER_LOCAL, viewerShipPosition || ship.position);
 }
 
 export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): void {

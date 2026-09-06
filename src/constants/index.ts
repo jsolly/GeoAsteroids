@@ -59,6 +59,7 @@ export const PALETTE = {
   REMOTE: '#7DD3FC',
   BOT: '#FB923C',
   ROID: '#94A3B8',
+  SATELLITE: '#67E8F9',
   LASER_LOCAL: '#FDE68A',
   LASER_ENEMY: '#FCA5A5',
   HUD: '#E2E8F0',
@@ -179,6 +180,26 @@ export const ROID = {
 } as const;
 
 // ============================================================================
+// SATELLITE ENEMY CONFIGURATION
+// ============================================================================
+export const SATELLITE = {
+  SIZE: 28,
+  ORBIT_RADIUS: 160,
+  ORBIT_SPEED: 0.018,
+  DRIFT_SPEED: 0.35,
+  SHOOT_INTERVAL_FRAMES: 90,
+  AIM_JITTER: 0.22,
+  MAX_COUNT: 4,
+  HEALTH: 50,
+  POINTS: 75,
+  COLLISION_DAMAGE: 50,
+  DESPAWN_DISTANCE: 2600,
+  BOUNDARY_RADIUS: 2800,
+  EXPLODE_DURATION_FRAMES: 18,
+  RESPAWN_FRAMES: 180,
+} as const;
+
+// ============================================================================
 // EMP PULSE CONFIGURATION
 // ============================================================================
 export const EMP = {
@@ -223,6 +244,12 @@ export const DEBUG = {
     MOVEMENT: true,
     LASERS: true,
     SPAWN_PROTECTION: false,
+  },
+
+  SATELLITE: {
+    COUNT: 2,
+    MOVEMENT: true,
+    LASERS: true,
   },
 
   // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)

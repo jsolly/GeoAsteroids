@@ -9,6 +9,8 @@ import {
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';
+import type { Satellite } from '../entities/satellite/Satellite';
+import { drawSatellites } from '../entities/satellite/satelliteRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
   drawLasers,
@@ -184,7 +186,8 @@ class CanvasManager {
     textAlpha: number,
     text: string,
     lives: number,
-    allPlayers: Player[]
+    allPlayers: Player[],
+    satellites: Satellite[] = []
   ): void {
     const currShip = currPlayer.ship;
     const ctx = this.getContext();
@@ -211,6 +214,8 @@ class CanvasManager {
     } else {
       logger.debug('RENDERING', 'No asteroids to render');
     }
+
+    drawSatellites(satellites, currShip.position);
 
     // Draw all players (including bots) using unified rendering
     try {

@@ -20,6 +20,7 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.REMOTE).toBe('#7DD3FC');
   expect(PALETTE.BOT).toBe('#FB923C');
   expect(PALETTE.ROID).toBe('#94A3B8');
+  expect(PALETTE.SATELLITE).toBe('#67E8F9');
   expect(PALETTE.LASER_LOCAL).toBe('#FDE68A');
   expect(PALETTE.LASER_ENEMY).toBe('#FCA5A5');
   expect(PALETTE.HUD).toBe('#E2E8F0');
@@ -29,10 +30,12 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.ACCENT_UI).toBe('#A78BFA');
 });
 
-test('faction colors map local mint, remote sky, bot amber', () => {
+test('faction colors map local mint, remote sky, bot amber, satellite cyan', () => {
   expect(getFactionColor('local')).toBe(PALETTE.LOCAL);
   expect(getFactionColor('remote')).toBe(PALETTE.REMOTE);
   expect(getFactionColor('bot')).toBe(PALETTE.BOT);
+  expect(getFactionColor('satellite')).toBe(PALETTE.SATELLITE);
+  expect(getFactionColor('satellite').toLowerCase()).not.toBe('#ffffff');
 });
 
 test('laser colors never use white', () => {

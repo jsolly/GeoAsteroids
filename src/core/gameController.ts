@@ -5,6 +5,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { SatelliteManager } from '../entities/satellite/SatelliteManager';
 import { NetworkManager } from '../network/networkManager';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
@@ -376,6 +377,10 @@ export class GameController {
     return this.currRoidBelt;
   }
 
+  getSatellites() {
+    return SatelliteManager.getInstance().getAll();
+  }
+
   getCurrRoidCount(): number {
     return this.currRoidBelt.roids.length;
   }
@@ -580,6 +585,8 @@ export class GameController {
     // freezing at the muzzle.
     advanceRemotePlayerLasers(allPlayers);
 
+    SatelliteManager.getInstance().update();
+
     // Update asteroids
     if (this.currRoidBelt) {
       this.currRoidBelt.moveRoids();
@@ -587,6 +594,9 @@ export class GameController {
 
     // Check laser collisions with asteroids and bots
     this.checkLaserCollisions();
+    this.checkLaserSatelliteCollisions();
+    this.checkShipSatelliteCollisions();
+    this.checkSatelliteLaserCollisions();
 
     // Check ship collisions with asteroids
     this.checkShipAsteroidCollisions();
@@ -631,6 +641,45 @@ export class GameController {
       this.currRoidBelt.roids,
       laserTargets,
       attackerId
+    );
+  }
+
+  private checkLaserSatelliteCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+    const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
+    this.collisionManager.checkLaserSatelliteCollisions(
+      currPlayer.ship.lasers,
+      SatelliteManager.getInstance().getAll(),
+      attackerId
+    );
+  }
+
+  private checkShipSatelliteCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+    const localPlayerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
+    this.collisionManager.checkShipSatelliteCollisions(
+      currPlayer.ship,
+      SatelliteManager.getInstance().getAll(),
+      localPlayerId
+    );
+  }
+
+  private checkSatelliteLaserCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+    const localPlayerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
+    this.collisionManager.checkSatelliteLaserCollisions(
+      SatelliteManager.getInstance().getAll(),
+      currPlayer.ship,
+      localPlayerId
     );
   }
 
@@ -731,7 +780,8 @@ export class GameController {
       textAlpha,
       text,
       currPlayer.lives,
-      playersToRender
+      playersToRender,
+      SatelliteManager.getInstance().getAll()
     );
   }
 }

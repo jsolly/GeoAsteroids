@@ -1,8 +1,8 @@
 import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
+import { SatelliteManager } from '../../entities/satellite/SatelliteManager';
 import type { Ship } from '../../entities/ship/Ship';
-
 import { getGameBoundary } from '../../physics/boundary';
 import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
@@ -89,6 +89,13 @@ export function drawMiniMap(
         drawRoidMiniMap(ctx, roid, boundary, miniMapX, miniMapY, miniMapSize);
       }
     }
+
+    for (const satellite of SatelliteManager.getInstance().getAll()) {
+      if (satellite.exploding) {
+        continue;
+      }
+      drawSatelliteMiniMap(ctx, satellite, boundary, miniMapX, miniMapY, miniMapSize);
+    }
   } catch (error: unknown) {
     logger.error(
       'RENDERING',
@@ -163,5 +170,34 @@ export function drawRoidMiniMap(
   ctx.save();
   ctx.fillStyle = hexToRgba(PALETTE.ROID, 0.7);
   ctx.fillRect(p.x - 0.75, p.y - 0.75, 1.5, 1.5);
+  ctx.restore();
+}
+
+export function drawSatelliteMiniMap(
+  ctx: CanvasRenderingContext2D,
+  satellite: { position: { x: number; y: number } },
+  boundary: CircleBoundary,
+  miniMapX: number,
+  miniMapY: number,
+  miniMapSize: number
+): void {
+  const p = projectToMiniMap(
+    boundary,
+    miniMapX,
+    miniMapY,
+    miniMapSize,
+    satellite.position.x,
+    satellite.position.y,
+    10
+  );
+  if (!p) {
+    return;
+  }
+
+  ctx.save();
+  ctx.fillStyle = hexToRgba(PALETTE.SATELLITE, 0.85);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, VISUAL.MINIMAP_DOT / 2, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }

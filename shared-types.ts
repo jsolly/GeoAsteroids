@@ -98,9 +98,29 @@ export interface ServerPlayerData {
   respawnTimer?: number;
 }
 
+export interface SatelliteData {
+  id: string;
+  name: string;
+  position: Position;
+  velocity: Velocity;
+  angle: number;
+  exploding: boolean;
+  color: string;
+  health: number;
+  maxHealth: number;
+  radius: number;
+}
+
+export interface SatelliteShoot {
+  id: string;
+  laserStart: Position;
+  laserDirection: Velocity;
+}
+
 export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];
+  satellites: SatelliteData[];
   gameTime: number;
   isPaused: boolean;
 }

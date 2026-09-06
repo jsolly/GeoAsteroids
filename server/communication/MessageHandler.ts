@@ -89,6 +89,10 @@ export class MessageHandler {
           this.handleBotDamage(ws, restData);
           break;
 
+        case 'satelliteDamage':
+          this.handleSatelliteDamage(ws, restData);
+          break;
+
         case 'asteroidDestroyed':
           this.handleAsteroidDestroyed(ws, restData);
           break;
@@ -310,8 +314,19 @@ export class MessageHandler {
     let remainingHealth = 0;
     let targetName = '';
 
-    // Check if target is a bot or player
-    if (data.targetPlayerId.startsWith('server-bot-')) {
+    // Check if target is a satellite, bot, or player
+    if (data.targetPlayerId.startsWith('server-sat-')) {
+      isDestroyed = this.gameEngine.handleSatelliteDamage(
+        data.targetPlayerId,
+        data.attackerId,
+        data.damage
+      );
+      const targetSatellite = this.gameEngine.getSatellite(data.targetPlayerId);
+      if (targetSatellite) {
+        remainingHealth = targetSatellite.health;
+        targetName = targetSatellite.name;
+      }
+    } else if (data.targetPlayerId.startsWith('server-bot-')) {
       // Target is a bot
       isDestroyed = this.gameEngine.handleBotDamage(data.targetPlayerId, data.attackerId, data.damage);
       const targetBot = this.gameEngine.getBot(data.targetPlayerId);
@@ -354,11 +369,38 @@ export class MessageHandler {
         this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
       }
 
-      if (data.targetPlayerId.startsWith('server-bot-')) {
+      if (
+        data.targetPlayerId.startsWith('server-bot-') ||
+        data.targetPlayerId.startsWith('server-sat-')
+      ) {
         this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
       } else {
         // Player was destroyed
         this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
+      }
+    }
+  }
+
+  private handleSatelliteDamage(ws: WebSocket, data: any): void {
+    if (!data.satelliteId || !data.attackerId || data.damage === undefined) {
+      this.broadcaster.sendError(ws, 'Missing required fields for satelliteDamage');
+      return;
+    }
+
+    const isDestroyed = this.gameEngine.handleSatelliteDamage(
+      data.satelliteId,
+      data.attackerId,
+      data.damage
+    );
+
+    if (isDestroyed) {
+      const attacker = this.gameEngine.getPlayer(data.attackerId);
+      const target = this.gameEngine.getSatellite(data.satelliteId);
+      if (attacker) {
+        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
+      }
+      if (target) {
+        this.broadcaster.broadcastPlayerKilled(data.satelliteId, target.name, data.attackerId);
       }
     }
   }

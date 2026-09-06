@@ -1,6 +1,7 @@
-import { DAMAGE } from '../../constants';
+import { DAMAGE, SATELLITE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
+import type { Satellite } from '../../entities/satellite/Satellite';
 import type { Ship } from '../../entities/ship/Ship';
 import { isShipCollisionImmune } from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
@@ -353,6 +354,106 @@ export class CollisionManager {
       });
     }
     // Remote players are handled by server, no client-side network message needed
+  }
+
+  checkLaserSatelliteCollisions(
+    lasers: Laser[],
+    satellites: Satellite[],
+    attackerId: string
+  ): void {
+    for (let i = lasers.length - 1; i >= 0; i--) {
+      const laser = lasers[i];
+      if (laser === undefined || laser.hasExploded) {
+        continue;
+      }
+
+      for (const satellite of satellites) {
+        if (satellite.exploding || satellite.health <= 0) {
+          continue;
+        }
+        if (checkLaserShipCollision(laser.position, satellite.position, satellite.radius)) {
+          this.networkManager.sendMessage({
+            type: 'satelliteDamage',
+            data: {
+              satelliteId: satellite.id,
+              attackerId,
+              damage: DAMAGE.LASER_HIT,
+            },
+          });
+          laser.updateExplodeTime();
+          laser.playHitSound();
+          break;
+        }
+      }
+    }
+  }
+
+  checkShipSatelliteCollisions(
+    localShip: Ship,
+    satellites: Satellite[],
+    localPlayerId: string
+  ): void {
+    if (!localShip || isShipCollisionImmune(localShip)) {
+      return;
+    }
+
+    for (const satellite of satellites) {
+      if (satellite.exploding || satellite.health <= 0) {
+        continue;
+      }
+      if (
+        checkShipCollision(localShip.position, localShip.r, satellite.position, satellite.radius)
+      ) {
+        this.networkManager.sendMessage({
+          type: 'collisionDamage',
+          data: {
+            targetPlayerId: localPlayerId,
+            attackerId: satellite.id,
+            damage: SATELLITE.COLLISION_DAMAGE,
+          },
+        });
+        this.networkManager.sendMessage({
+          type: 'satelliteDamage',
+          data: {
+            satelliteId: satellite.id,
+            attackerId: localPlayerId,
+            damage: SATELLITE.COLLISION_DAMAGE,
+          },
+        });
+        break;
+      }
+    }
+  }
+
+  checkSatelliteLaserCollisions(
+    satellites: Satellite[],
+    localShip: Ship,
+    localPlayerId: string
+  ): void {
+    if (!localShip || isShipCollisionImmune(localShip)) {
+      return;
+    }
+
+    for (const satellite of satellites) {
+      for (const laser of satellite.lasers) {
+        if (laser.hasExploded) {
+          continue;
+        }
+        if (checkLaserShipCollision(laser.position, localShip.position, localShip.r)) {
+          this.networkManager.sendMessage({
+            type: 'laserDamage',
+            data: {
+              targetPlayerId: localPlayerId,
+              attackerId: satellite.id,
+              damage: DAMAGE.LASER_HIT,
+            },
+          });
+          laser.updateExplodeTime();
+          laser.playHitSound();
+          return;
+        }
+      }
+    }
   }
 
   /**
