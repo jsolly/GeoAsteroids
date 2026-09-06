@@ -45,9 +45,10 @@ Hull bake stays on hold until silhouette v2 lock.
 
 Ambient NPC. Not player line-ship DNA. Not a faction mark.
 
-The current UFO-disc is **TEMPORARY** (John rejected it). Game Director will
-deliver a Landsat-style satellite. Swap art with
-`registerSaucerNpcPainter` + `setSaucerNpcArtId('landsat')` — do not grow the disc.
+The current UFO-disc is **TEMPORARY only**. John locked an **EO satellite**
+redesign — **art-first**. No new saucer/satellite drawing until Game Director
+hands packs (`SAUCER_EO_SATELLITE_PACKS_HANDED`). Do not expand disc fidelity.
+Swap slot is `eo-sat` on `registerSaucerNpcPainter` when packs land.
 
 Temporary disc files (box paths, do not polish):
 

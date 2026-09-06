@@ -4,6 +4,7 @@ import { afterEach, expect, test } from 'vitest';
 import {
   SAUCER_ART_PACK,
   SAUCER_CABIN_FILL_ALPHA,
+  SAUCER_EO_SATELLITE_PACKS_HANDED,
   SAUCER_FIRING_SEGMENTS,
   SAUCER_HULL_COLOR,
   SAUCER_NPC_ART_ID,
@@ -38,22 +39,23 @@ test('saucer NPC is allowed SVG-like fidelity and is not a kit outline', () => {
   expect(SAUCER_NPC_ART_ID).toBe('disc-temp');
   expect(getSaucerNpcArtId()).toBe('disc-temp');
   expect(isSaucerNpcArtTemporary()).toBe(true);
+  expect(SAUCER_EO_SATELLITE_PACKS_HANDED).toBe(false);
 });
 
-test('registering a Landsat painter swaps art without rewriting callers', () => {
+test('EO-sat swap hook stays empty until Game Director hands packs', () => {
   const calls: string[] = [];
   registerSaucerNpcPainter({
-    id: 'landsat',
+    id: 'eo-sat',
     temporary: false,
     draw: () => {
-      calls.push('landsat');
+      calls.push('eo-sat');
     },
   });
-  setSaucerNpcArtId('landsat');
-  expect(getSaucerNpcArtId()).toBe('landsat');
-  expect(isSaucerNpcArtTemporary()).toBe(false);
+  setSaucerNpcArtId('eo-sat');
+  expect(SAUCER_EO_SATELLITE_PACKS_HANDED).toBe(false);
+  expect(getSaucerNpcArtId()).toBe('eo-sat');
   drawSaucerNpc({} as CanvasRenderingContext2D, { x: 0, y: 0, radius: 12 });
-  expect(calls).toEqual(['landsat']);
+  expect(calls).toEqual(['eo-sat']);
 });
 
 test('AD art-pack SVGs match the confirmed box spec', () => {

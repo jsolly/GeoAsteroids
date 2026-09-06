@@ -1,16 +1,19 @@
 /**
- * Saucer NPC art. The UFO-disc is a TEMPORARY stand-in (John rejected it).
- * Register a Landsat painter and call `setSaucerNpcArtId('landsat')` to swap —
- * do not grow the disc. Ambient NPC, not a kit, not a faction mark.
+ * Saucer NPC art. The UFO-disc is TEMPORARY only (John rejected it).
+ * John locked an EO-satellite redesign — art-first. Do not implement satellite
+ * geometry until Game Director hands packs. Do not grow the disc.
  */
 
 export const SAUCER_NPC_RENDER_LANGUAGE = 'svg-fidelity' as const;
 
-/** Reserved id for the Game Director Landsat redo. No painter yet. */
-export type SaucerNpcArtId = 'disc-temp' | 'landsat';
+/** Reserved for the EO-satellite pack. No painter until GD hands art. */
+export type SaucerNpcArtId = 'disc-temp' | 'eo-sat';
 
 export const SAUCER_NPC_ART_ID: SaucerNpcArtId = 'disc-temp';
 export const SAUCER_NPC_ART_IS_TEMPORARY = true;
+
+/** Art-first hold. Flip only after Game Director delivers EO-sat packs. */
+export const SAUCER_EO_SATELLITE_PACKS_HANDED = false;
 
 export interface SaucerNpcPainter {
   id: SaucerNpcArtId;
