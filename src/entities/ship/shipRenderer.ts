@@ -1,4 +1,4 @@
-import type { SoftFactionId } from '../../../shared-types';
+import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIELD, SHIP, TITLE, VISUAL } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import {
@@ -451,26 +451,24 @@ export function drawShipExplosionAtPosition(
   );
 }
 
-export function drawLasers(
-  ship: Ship,
-  color?: string,
-  viewerShipPosition?: { x: number; y: number }
+export function drawLaserBolts(
+  lasers: Array<{ position: Position; velocity: Velocity; explodeTime: number }>,
+  color: string,
+  viewerPosition: Position
 ): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
 
-  const boltColor = color || PALETTE.LASER_LOCAL;
   const cvs = canvasManager.getCanvas();
   const viewW = cvs?.width ?? Number.POSITIVE_INFINITY;
   const viewH = cvs?.height ?? Number.POSITIVE_INFINITY;
   const cullPad =
     (VISUAL.LASER_LENGTH + VISUAL.LASER_EXPLODE_RADIUS) * canvasManager.getPlayfieldScale();
 
-  for (const laser of ship.lasers) {
-    const referencePos = viewerShipPosition || ship.position;
-    const screenPos = canvasManager.worldToScreenInto(laserScreen, laser.position, referencePos);
+  for (const laser of lasers) {
+    const screenPos = canvasManager.worldToScreenInto(laserScreen, laser.position, viewerPosition);
     if (
       screenPos.x < -cullPad ||
       screenPos.y < -cullPad ||
@@ -495,7 +493,7 @@ export function drawLasers(
         screenPos.y - halfY - trailY,
         screenPos.x - halfX,
         screenPos.y - halfY,
-        boltColor,
+        color,
         VISUAL.LASER_STROKE_WIDTH * 0.7,
         VISUAL.LASER_GLOW * 0.55,
         0.38
@@ -506,7 +504,7 @@ export function drawLasers(
         screenPos.y - halfY,
         screenPos.x + halfX,
         screenPos.y + halfY,
-        boltColor,
+        color,
         VISUAL.LASER_STROKE_WIDTH,
         VISUAL.LASER_GLOW
       );
@@ -515,9 +513,9 @@ export function drawLasers(
       const ringRadius = VISUAL.LASER_EXPLODE_RADIUS * (0.55 + t * 1.15);
       const alpha = 1 - t * 0.7;
       ctx.save();
-      ctx.shadowColor = boltColor;
+      ctx.shadowColor = color;
       ctx.shadowBlur = VISUAL.LASER_GLOW;
-      ctx.strokeStyle = hexToRgba(boltColor, alpha);
+      ctx.strokeStyle = hexToRgba(color, alpha);
       ctx.lineWidth = 1.25;
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, ringRadius, 0, Math.PI * 2, false);
@@ -531,13 +529,21 @@ export function drawLasers(
         t * 0.5,
         ringRadius * 0.35,
         ringRadius * 1.35,
-        boltColor,
+        color,
         alpha,
         1,
         VISUAL.LASER_GLOW
       );
     }
   }
+}
+
+export function drawLasers(
+  ship: Ship,
+  color?: string,
+  viewerShipPosition?: { x: number; y: number }
+): void {
+  drawLaserBolts(ship.lasers, color || PALETTE.LASER_LOCAL, viewerShipPosition || ship.position);
 }
 
 export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): void {

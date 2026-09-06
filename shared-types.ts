@@ -121,6 +121,26 @@ export interface LootData {
   fuel?: number;
 }
 
+/** Server-owned ambient hostile NPC. No kit, no soft faction. */
+export interface SatelliteData {
+  id: string;
+  name: string;
+  position: Position;
+  velocity: Velocity;
+  angle: number;
+  exploding: boolean;
+  color: string;
+  health: number;
+  maxHealth: number;
+  radius: number;
+}
+
+export interface SatelliteShoot {
+  id: string;
+  laserStart: Position;
+  laserDirection: Velocity;
+}
+
 // Server game state structure (what the server actually sends)
 export interface ServerPlayerData {
   id: string;
@@ -170,6 +190,7 @@ export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];
   loot: LootData[];
+  satellites: SatelliteData[];
   gameTime: number;
   isPaused: boolean;
   /** Same seed on every client → same contours and slope field. */

@@ -331,6 +331,25 @@ export interface GameConstants {
     readonly SPAWN_TIME_FRAMES: number;
   };
 
+  readonly SATELLITE: {
+    readonly SIZE: number;
+    readonly ORBIT_RADIUS: number;
+    readonly ORBIT_SPEED: number;
+    readonly DRIFT_SPEED: number;
+    readonly SHOOT_INTERVAL_FRAMES: number;
+    readonly AIM_JITTER: number;
+    readonly AMBIENT_COUNT: number;
+    readonly MAX_COUNT: number;
+    readonly HEALTH: number;
+    readonly POINTS: number;
+    readonly COLLISION_DAMAGE: number;
+    readonly DESPAWN_DISTANCE: number;
+    readonly BOUNDARY_RADIUS: number;
+    readonly EXPLODE_DURATION_FRAMES: number;
+    readonly RESPAWN_FRAMES: number;
+    readonly MASS: number;
+  };
+
   readonly EMP: {
     readonly RADIUS: number;
     readonly DURATION: number;

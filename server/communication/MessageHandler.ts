@@ -108,6 +108,10 @@ export class MessageHandler {
           this.handleBotDamage(ws, restData);
           break;
 
+        case 'satelliteDamage':
+          this.handleSatelliteDamage(ws, restData);
+          break;
+
         case 'asteroidDestroyed':
           this.handleAsteroidDestroyed(ws, restData);
           break;
@@ -388,6 +392,7 @@ export class MessageHandler {
     }
 
     // Ship↔asteroid and ship↔ship are resolved in the server game loop.
+    // Satellite hull damage stays on satelliteDamage, not this leftover path.
     if (!isClientOwnedCollisionAttacker(data.attackerId)) {
       return;
     }
@@ -404,6 +409,31 @@ export class MessageHandler {
       DAMAGE.BOUNDARY_COLLISION,
       before?.health
     );
+  }
+
+  private handleSatelliteDamage(ws: WebSocket, data: any): void {
+    if (!data.satelliteId || !data.attackerId || data.damage === undefined) {
+      this.broadcaster.sendError(ws, 'Missing required fields for satelliteDamage');
+      return;
+    }
+
+    const isDestroyed = this.gameEngine.handleSatelliteDamage(
+      data.satelliteId,
+      data.attackerId,
+      data.damage
+    );
+    this.broadcaster.broadcastGameState();
+
+    if (isDestroyed) {
+      const attacker = this.gameEngine.getPlayer(data.attackerId);
+      const target = this.gameEngine.getSatellite(data.satelliteId);
+      if (attacker) {
+        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
+      }
+      if (target) {
+        this.broadcaster.broadcastPlayerKilled(data.satelliteId, target.name, data.attackerId);
+      }
+    }
   }
 
   private handleBotDamage(ws: WebSocket, data: any): void {

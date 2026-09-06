@@ -1,9 +1,11 @@
 import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
+import { SAUCER_HULL_COLOR } from '../../entities/npc/saucerRenderHook';
 import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { SoftFactionId } from '../../entities/player/softFactions';
 import { canDrawAsteroid } from '../../entities/roid/roidRenderer';
+import { SatelliteManager } from '../../entities/satellite/SatelliteManager';
 import type { Ship } from '../../entities/ship/Ship';
 import { calculateShipTrianglePoints, strokePhosphorHull } from '../../entities/ship/shipRenderer';
 import type { CircleBoundary } from '../../physics/boundary';
@@ -23,7 +25,8 @@ type RadarMark =
       color: string;
       factionId?: SoftFactionId;
     }
-  | { kind: 'roid'; x: number; y: number };
+  | { kind: 'roid'; x: number; y: number }
+  | { kind: 'saucer'; x: number; y: number };
 
 export function projectWorldToMiniMap(
   boundary: CircleBoundary,
@@ -92,6 +95,15 @@ function drawRadarMark(ctx: CanvasRenderingContext2D, mark: RadarMark): void {
       ctx.restore();
       return;
     }
+    case 'saucer': {
+      ctx.save();
+      ctx.fillStyle = hexToRgba(SAUCER_HULL_COLOR, 0.85);
+      ctx.beginPath();
+      ctx.arc(mark.x, mark.y, VISUAL.MINIMAP_DOT / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
   }
 }
 
@@ -138,6 +150,23 @@ export function drawMiniMap(
         if (p) {
           drawRadarMark(ctx, { kind: 'roid', x: p.x, y: p.y });
         }
+      }
+    }
+
+    for (const satellite of SatelliteManager.getInstance().getAll()) {
+      if (satellite.exploding) {
+        continue;
+      }
+      const sat = projectWorldToMiniMap(
+        boundary,
+        miniMapX,
+        miniMapY,
+        miniMapSize,
+        satellite.position.x,
+        satellite.position.y
+      );
+      if (sat) {
+        drawRadarMark(ctx, { kind: 'saucer', x: sat.x, y: sat.y });
       }
     }
 
