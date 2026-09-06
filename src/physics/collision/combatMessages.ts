@@ -13,7 +13,7 @@ export function laserHitDamageMessage(
       data: { botId: target.id, attackerId, damage },
     };
   }
-  if (isRemote(target)) {
+  if (isRemote(target) || isLocal(target)) {
     return {
       type: 'laserDamage',
       data: { targetPlayerId: target.id, attackerId, damage },

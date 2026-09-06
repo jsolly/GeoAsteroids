@@ -8,7 +8,7 @@ import {
 } from '../../../src/physics/collision/combatMessages';
 
 describe('shared combat network messages', () => {
-  test('laser hits send botDamage or laserDamage and skip the local hull', () => {
+  test('laser hits send botDamage or laserDamage for bot, remote, and local hulls', () => {
     expect(laserHitDamageMessage({ id: 'server-bot-0', type: 'bot' }, 'p1')).toEqual({
       type: 'botDamage',
       data: { botId: 'server-bot-0', attackerId: 'p1', damage: DAMAGE.LASER_HIT },
@@ -17,7 +17,10 @@ describe('shared combat network messages', () => {
       type: 'laserDamage',
       data: { targetPlayerId: 'p2', attackerId: 'p1', damage: DAMAGE.LASER_HIT },
     });
-    expect(laserHitDamageMessage({ id: 'p1', type: 'local' }, 'p1')).toBeNull();
+    expect(laserHitDamageMessage({ id: 'p1', type: 'local' }, 'server-bot-0')).toEqual({
+      type: 'laserDamage',
+      data: { targetPlayerId: 'p1', attackerId: 'server-bot-0', damage: DAMAGE.LASER_HIT },
+    });
   });
 
   test('asteroid collisions report local players and bots, not remotes', () => {
