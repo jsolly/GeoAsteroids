@@ -13,7 +13,7 @@ test('destroying a roid drops a collectible shard that uses grow/loot collect', 
   }
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForAsteroids(1);
 
   const initialScore = await game.getScore();
