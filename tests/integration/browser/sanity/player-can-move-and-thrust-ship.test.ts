@@ -10,7 +10,7 @@ test('player can move and thrust ship', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
 
   const startPos = await game.getShipPosition();
   const startAngle = await game.getShipAngle();

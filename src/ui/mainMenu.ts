@@ -191,11 +191,6 @@ export function showGameOverMenu(): void {
   setPlayView(false);
 }
 
-// Export function to set up periodic updates
-export function setupMainMenuUpdates(): void {
-  // Player count updates removed - no longer needed
-}
-
 // Display build info
 function displayBuildInfo(): void {
   const buildInfoElement = getElementById<HTMLElement>('buildInfo');

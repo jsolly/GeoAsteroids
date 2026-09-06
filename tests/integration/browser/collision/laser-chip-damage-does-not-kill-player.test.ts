@@ -10,7 +10,7 @@ test('laser chip damage does not kill player', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
 
   const livesBefore = await game.getLives();

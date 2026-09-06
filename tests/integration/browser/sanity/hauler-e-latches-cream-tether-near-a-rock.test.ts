@@ -10,7 +10,7 @@ test('Hauler E near a rock latches and paints cream tether plus amber tip', asyn
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame({ waitForCombatReady: false, kitId: 'hauler' });
+  await game.bootGame({ waitForCombatReady: false, kitId: 'hauler' });
 
   const before = await page.evaluate(() => {
     const gc = (window as { gameController?: any }).gameController;

@@ -15,7 +15,7 @@ test('mobile viewport fits chrome and shows stick + fire', async () => {
   await page.setViewportSize({ width: 390, height: 844 });
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame({ waitForCombatReady: false });
+  await game.bootGame({ waitForCombatReady: false });
 
   const chrome = await page.evaluate(() => {
     const root = document.getElementById('touch-controls');

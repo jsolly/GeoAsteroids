@@ -112,7 +112,7 @@ describe('Client Environment Variables (VITE_*)', () => {
     });
 
     it('should verify debug configuration parsing', () => {
-      // Test the debug config parsing logic from DebugManager
+      // Test the debug config parsing logic
       const testCases = [
         { input: '5', expected: 5 },
         { input: undefined, expected: 1 },

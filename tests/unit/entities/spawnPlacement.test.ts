@@ -2,7 +2,6 @@ import { expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { SPAWN } from '../../../src/constants';
 import { entityFactory } from '../../../src/entities/EntityFactory';
-import { playerFactory } from '../../../src/entities/player/PlayerFactory';
 import { getAsteroidFieldRadius } from '../../../src/physics/asteroidMotion';
 import { resolveSpawnPosition } from '../../../src/utils/spawnPosition';
 
@@ -22,14 +21,10 @@ test('local players spawn near the arena center so co-players are in view', () =
   }
 });
 
-test('PlayerFactory and EntityFactory share the same near-center spawn', () => {
+test('local players and client bot ships share the same near-center spawn', () => {
   for (let i = 0; i < 40; i++) {
-    const viaFactory = playerFactory.createLocalPlayer('ViaFactory');
     const viaEntity = entityFactory.createLocalPlayer('ViaEntity');
-    const viaBot = playerFactory.createBotPlayer('ViaBot');
-    expect(Math.hypot(viaFactory.ship.position.x, viaFactory.ship.position.y)).toBeLessThanOrEqual(
-      SPAWN.NEAR_CENTER_RADIUS
-    );
+    const viaBot = entityFactory.createBotPlayer('ViaBot');
     expect(Math.hypot(viaEntity.ship.position.x, viaEntity.ship.position.y)).toBeLessThanOrEqual(
       SPAWN.NEAR_CENTER_RADIUS
     );
@@ -44,9 +39,9 @@ test('resolveSpawnPosition keeps an explicit late-join pose', () => {
 });
 
 test('client bots spawn on the same near-center path as humans', () => {
-  const bots = entityFactory.createBots({ count: 3 });
-  expect(bots.size).toBe(3);
-  for (const bot of bots.values()) {
+  const bots = [0, 1, 2].map((i) => entityFactory.createBotPlayer(`Bot ${i}`));
+  expect(bots).toHaveLength(3);
+  for (const bot of bots) {
     expect(Math.hypot(bot.ship.position.x, bot.ship.position.y)).toBeLessThanOrEqual(
       SPAWN.NEAR_CENTER_RADIUS
     );

@@ -12,7 +12,7 @@ test('solo player destroying a large roid does not split', async () => {
 
   const game = new GameInteractions(page);
 
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForAsteroids(1, 30000);
 
   const asteroids = await game.getAsteroidPositions();

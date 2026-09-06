@@ -28,7 +28,7 @@ test('server receives and processes shoot messages', async () => {
     }
   });
 
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
 
   await game.fireLasersWithMouse(3, 1000);
 

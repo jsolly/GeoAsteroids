@@ -114,7 +114,7 @@ export class InputManager {
     const gameBtn = document.getElementById('start-game') as HTMLButtonElement;
 
     if (gameBtn) {
-      gameBtn.innerText = '🌐 Start Game';
+      gameBtn.innerText = 'Enter Game';
     }
   }
 }

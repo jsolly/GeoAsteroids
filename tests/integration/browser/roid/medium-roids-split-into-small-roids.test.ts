@@ -12,7 +12,7 @@ test('medium roids do not split', async () => {
 
   const game = new GameInteractions(page);
 
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForAsteroids(1);
 
   const initial = await game.getAsteroidPositions();
