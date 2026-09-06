@@ -119,6 +119,7 @@ describe('Local Player Roid Collision Damage', () => {
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
 
+      const initialHealth = localShip.health;
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
       expect(localShip.health).toBe(initialHealth);
       expect(mockSendMessage).not.toHaveBeenCalled();
