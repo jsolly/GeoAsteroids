@@ -1,7 +1,8 @@
 import type { AsteroidData, Position } from '../../shared-types';
-import { RNGService } from './RNGService';
 import { DEBUG } from '../../src/constants';
+import { stepAsteroidPosition } from '../../src/physics/asteroidMotion';
 import { logger } from '../../setup/serverLogger';
+import { RNGService } from './RNGService';
 
 export class AsteroidManager {
   private asteroids = new Map<string, AsteroidData>();
@@ -76,10 +77,7 @@ export class AsteroidManager {
     }
 
     for (const asteroid of this.asteroids.values()) {
-      asteroid.position = {
-        x: asteroid.position.x + asteroid.velocity.x,
-        y: asteroid.position.y + asteroid.velocity.y,
-      };
+      asteroid.position = stepAsteroidPosition(asteroid.position, asteroid.velocity);
       asteroid.rotation += asteroid.angularVelocity;
     }
   }

@@ -1,6 +1,7 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
 import { DEBUG, GAME, ROID } from '../../constants';
+import { stepAsteroidPosition } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
 
@@ -120,18 +121,15 @@ class RoidBelt {
   }
 
   moveRoids(): void {
-    // Check if asteroid movement is disabled in debug mode
-    if (!DEBUG.ROIDS.MOVEMENT) {
+    // Freeze only when debug mode explicitly disables movement.
+    // Production always interpolates using the last server velocity so the
+    // field does not look static between 30 Hz gameState snapshots.
+    if (DEBUG.ENABLED && !DEBUG.ROIDS.MOVEMENT) {
       return;
     }
 
     for (const roid of this.roids) {
-      // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
-      // let dt = 1/Math.sqrt(1-beta_squared)
-      roid.position = {
-        x: roid.position.x + roid.velocity.x,
-        y: roid.position.y + roid.velocity.y,
-      };
+      roid.position = stepAsteroidPosition(roid.position, roid.velocity);
     }
   }
 

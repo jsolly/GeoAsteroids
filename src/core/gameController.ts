@@ -6,6 +6,7 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
+import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { setPlayView } from '../ui/uiUtils';
@@ -105,10 +106,11 @@ export class GameController {
       this.showConnectionFailureMessage(errorType, 'Cannot connect');
       throw new Error(`Network connection failed: ${errorMessage}`);
     }
-    this.networkManager.initializeAsteroidSync();
-
-    // Create an empty asteroid belt - server will populate with authoritative asteroids
+    // Empty belt + listeners must be ready before join so the first
+    // asteroidCreateBatch / gameState cannot land on a static local set.
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    this.setupServerAsteroidListeners();
+    this.networkManager.initializeAsteroidSync();
 
     // Initialize listeners
     if (this.playerManager.getLocalPlayer()) {
@@ -117,9 +119,6 @@ export class GameController {
     } else {
       logger.warn('GAME_CONTROLLER', 'No local player found, cannot initialize input listeners');
     }
-
-    // Set up server asteroid event listeners
-    this.setupServerAsteroidListeners();
 
     // Begin sending continuous local player updates to server
     PlayerNetwork.getInstance().startNetworkUpdates();
@@ -145,11 +144,13 @@ export class GameController {
       this.currRoidBelt.roids.length = 0;
     }
 
-    // Check if asteroid already exists to prevent duplicates
+    // Duplicate create (late join / rejoined snapshot) must still take the
+    // live pose — skipping here left a private static copy on prod.
     if (this.currRoidBelt) {
       const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
       if (existingRoid) {
-        return; // Skip duplicate
+        applyAsteroidKinematics(existingRoid, asteroid);
+        return;
       }
     }
 
@@ -160,12 +161,7 @@ export class GameController {
       id: asteroid.id,
     });
 
-    // Override properties with server data
-    roid.velocity = asteroid.velocity;
-    roid.angle = asteroid.rotation;
-    roid.angularVelocity = asteroid.angularVelocity;
-    roid.health = asteroid.health;
-    roid.maxHealth = asteroid.maxHealth;
+    applyAsteroidKinematics(roid, asteroid);
 
     // Override shape properties to match server exactly
     roid.jaggedness = asteroid.jaggedness;
@@ -197,28 +193,7 @@ export class GameController {
     if (this.currRoidBelt) {
       const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
       if (roid && updates) {
-        if (updates.position) {
-          roid.position = { x: updates.position.x, y: updates.position.y };
-        }
-        if (updates.velocity) {
-          roid.velocity = { x: updates.velocity.x, y: updates.velocity.y };
-        }
-        if (updates.size !== undefined) {
-          roid.r = updates.size;
-        }
-        // jaggedness is read-only in Roid class, skip updating it
-        if (updates.rotation !== undefined) {
-          roid.angle = updates.rotation;
-        }
-        if (updates.angularVelocity !== undefined) {
-          roid.angularVelocity = updates.angularVelocity;
-        }
-        if (updates.health !== undefined) {
-          roid.health = updates.health;
-        }
-        if (updates.maxHealth !== undefined) {
-          roid.maxHealth = updates.maxHealth;
-        }
+        applyAsteroidKinematics(roid, updates);
       }
     }
   };
@@ -243,6 +218,7 @@ export class GameController {
   };
 
   private setupServerAsteroidListeners(): void {
+    this.cleanupServerAsteroidListeners();
     // Listen for server asteroid creation events
     window.addEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
 

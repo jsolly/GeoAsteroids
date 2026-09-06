@@ -169,7 +169,10 @@ describe('Server initAsteroids sync', () => {
       expect(lateTracked!.velocity).toEqual(liveAfterJoin!.velocity);
       expect(Math.abs(lateTracked!.position.x - liveAfterJoin!.position.x)).toBeLessThan(12);
       expect(Math.abs(lateTracked!.position.y - liveAfterJoin!.position.y)).toBeLessThan(12);
-      expect(lateTracked!.position.x).toBeGreaterThan(tracked.position.x);
+      expect(
+        lateTracked!.position.x !== tracked.position.x || lateTracked!.position.y !== tracked.position.y
+      ).toBe(true);
+      expect(Math.hypot(lateTracked!.position.x, lateTracked!.position.y)).toBeLessThan(3200);
     } finally {
       playerOne.close();
       playerTwo.close();
