@@ -34,6 +34,7 @@ describe('kill loot and growth', () => {
 
     const loot = engine.getLoot();
     expect(loot.length).toBe(expected * 2);
+    expect(loot.every((drop) => drop.kind === 'wreckage')).toBe(true);
     expect(engine.getGameState().loot.map((drop) => drop.id)).toEqual(loot.map((drop) => drop.id));
   });
 

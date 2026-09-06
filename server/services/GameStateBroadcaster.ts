@@ -194,6 +194,19 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message);
   }
 
+  public broadcastLootExploded(event: {
+    lootId: string;
+    position: { x: number; y: number };
+    radius: number;
+    shooterId: string;
+  }): void {
+    this.broadcastToAll({
+      type: 'lootExploded',
+      data: event,
+      timestamp: Date.now(),
+    });
+  }
+
   public broadcastAsteroidDestruction(
     asteroidId: string,
     extras?: { collabSplit?: boolean; origin?: { x: number; y: number } }

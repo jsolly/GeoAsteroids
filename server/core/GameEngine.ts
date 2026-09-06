@@ -2,7 +2,14 @@ import { WebSocket } from 'ws';
 import type { AsteroidData, LootData, Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
 import { asteroidRamDamage, shipShipTickDamage } from '../../shared/combat';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
-import { GROWTH, applyLootMass, applyShipMass } from '../../shared/shipGrowth';
+import {
+  LOOT_BLAST,
+  blastPush,
+  inBlastRadius,
+  inLootArmRange,
+  isSmallRoid,
+} from '../../shared/lootBlast';
+import { GROWTH, applyLootMass, applyShipMass, radiusFromMass } from '../../shared/shipGrowth';
 import { CANVAS, LASER } from '../../src/constants';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
@@ -593,6 +600,7 @@ export class GameEngine {
 
     if (result.outcome === 'destroyed' && result.destroyed) {
       this.awardPoints(playerId, pointsForRoidSize(result.destroyed.size));
+      this.dropShardAt(result.destroyed.position);
     }
 
     return result;
@@ -658,6 +666,7 @@ export class GameEngine {
     const expired = this.asteroidManager.expireStaleHits(now);
     for (const item of expired) {
       this.awardPoints(item.playerId, item.points);
+      this.dropShardAt(item.destroyed.position);
       this.resolvedCollabHits.push(item);
     }
     return expired;
@@ -914,7 +923,7 @@ export class GameEngine {
   }
 
   private combatSidesAllowDamage(attackerId: string, targetId: string): boolean {
-    if (!attackerId || attackerId === 'asteroid' || attackerId === 'boundary') {
+    if (!attackerId || attackerId === 'asteroid' || attackerId === 'boundary' || attackerId === 'loot') {
       return true;
     }
     const attacker = this.entityManager.getEntity(attackerId);
@@ -969,6 +978,7 @@ export class GameEngine {
     const result = this.asteroidManager.destroyFromCollision(asteroidId);
     if (result.destroyed) {
       this.awardPoints(playerId, pointsForRoidSize(result.destroyed.size));
+      this.dropShardAt(result.destroyed.position);
     }
     return {
       destroyed: result.outcome === 'destroyed',
@@ -987,16 +997,94 @@ export class GameEngine {
     const results: Array<{ collectorId: string; lootId: string; mass: number }> = [];
     for (const { collector, loot } of collected) {
       applyShipMass(collector, applyLootMass(collector.mass ?? GROWTH.BASE_MASS, loot.mass));
+      if (loot.kind === 'shard') {
+        this.awardPoints(collector.id, GROWTH.SHARD_SCORE);
+      }
       collector.lastUpdate = Date.now();
       results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
-      logger.debug('LOOT', 'Collected kill loot', {
+      logger.debug('LOOT', 'Collected loot', {
         collectorId: collector.id,
         lootId: loot.id,
+        kind: loot.kind,
         mass: collector.mass,
         maxHealth: collector.maxHealth,
       });
     }
     return results;
+  }
+
+  /**
+   * Shooting a drop detonates it (GH #313). Environmental blast: hits every
+   * nearby live hull, including the shooter. Shields do not absorb it.
+   */
+  public handleLootExplode(
+    playerId: string,
+    lootId: string
+  ): {
+    success: boolean;
+    loot?: LootData;
+    origin?: Position;
+    damagedIds: string[];
+    pushedAsteroidIds: string[];
+  } {
+    const empty = { success: false, damagedIds: [] as string[], pushedAsteroidIds: [] as string[] };
+    const shooter = this.entityManager.getEntity(playerId);
+    if (!shooter || shooter.exploding || shooter.health <= 0 || shooter.respawnTimer !== undefined) {
+      return empty;
+    }
+
+    const loot = this.lootManager.get(lootId);
+    if (!loot || !inLootArmRange(shooter.position, loot.position)) {
+      return empty;
+    }
+
+    this.lootManager.remove(lootId);
+    const origin = loot.position;
+    const damagedIds: string[] = [];
+    const pushedAsteroidIds: string[] = [];
+
+    for (const entity of this.entityManager.getAllEntities()) {
+      const shipR = radiusFromMass(entity.mass ?? GROWTH.BASE_MASS);
+      if (!inBlastRadius(origin, entity.position, shipR)) {
+        continue;
+      }
+      if (this.harmFromLootBlast(entity) !== 'ignored') {
+        damagedIds.push(entity.id);
+      }
+    }
+
+    for (const asteroid of this.asteroidManager.getAllAsteroids()) {
+      if (!isSmallRoid(asteroid.size) || !inBlastRadius(origin, asteroid.position, asteroid.size)) {
+        continue;
+      }
+      const impulse = blastPush(origin, asteroid.position);
+      asteroid.velocity.x += impulse.x;
+      asteroid.velocity.y += impulse.y;
+      pushedAsteroidIds.push(asteroid.id);
+    }
+
+    return { success: true, loot, origin, damagedIds, pushedAsteroidIds };
+  }
+
+  private dropShardAt(position: Position): LootData {
+    return this.lootManager.spawnShard(position, this.gameTime);
+  }
+
+  private harmFromLootBlast(entity: GameEntity): 'hit' | 'killed' | 'ignored' {
+    if (entity.exploding || entity.health <= 0 || entity.respawnTimer !== undefined) {
+      return 'ignored';
+    }
+    if (entity.spawnProtectionTimer !== undefined && entity.spawnProtectionTimer > 0) {
+      return 'ignored';
+    }
+
+    entity.health = Math.max(0, entity.health - LOOT_BLAST.DAMAGE);
+    entity.lastUpdate = Date.now();
+    if (entity.health <= 0) {
+      this.applyShipDeath(entity, 'loot', 0);
+      return 'killed';
+    }
+    return 'hit';
   }
 
   // Award points to an entity
