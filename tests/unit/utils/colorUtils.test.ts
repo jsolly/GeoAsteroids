@@ -143,8 +143,8 @@ test('default play path keeps debug chrome gated off', () => {
 test('HUD score stays readable in the compact cluster and name labels stay faded', () => {
   expect(VISUAL.SCORE_FONT).toBe('14px Arial');
   expect(VISUAL.HUD_LIFE_SIZE).toBeLessThan(SHIP.SIZE / 2);
-  expect(VISUAL.NAME_LABEL_ALPHA).toBeLessThanOrEqual(0.45);
-  expect(VISUAL.NAME_LABEL_ALPHA).toBeGreaterThan(0);
+  expect(VISUAL.NAME_LABEL_ALPHA).toBeGreaterThanOrEqual(0.5);
+  expect(VISUAL.NAME_LABEL_ALPHA).toBeLessThan(0.75);
 });
 
 test('applyLockedPaletteCss writes title/menu custom properties', () => {

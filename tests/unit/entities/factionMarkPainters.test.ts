@@ -3,8 +3,13 @@ import { PALETTE } from '../../../src/constants';
 import {
   drawSoftFactionMark,
   FACTION_MARK_COLORS,
+  FACTION_MARK_HULL_OFFSET_MAX_PX,
+  FACTION_MARK_MAX_SCREEN_PX,
+  FACTION_MARK_MIN_SCREEN_PX,
   FACTION_MARK_PAINTERS,
   FACTION_MARK_RADIUS_RATIO,
+  factionMarkAnchor,
+  factionMarkScreenSize,
   getFactionMarkColor,
   OWNERSHIP_HULL_COLORS,
   registerFactionMarkPainter,
@@ -23,6 +28,40 @@ test('ION and EMBER marks use the Game Director swatches, not ownership hull pai
   expect(getFactionMarkColor('ember')).not.toBe(PALETTE.LOCAL);
   expect(getFactionMarkColor('ember')).not.toBe(PALETTE.BOT);
   expect(FACTION_MARK_RADIUS_RATIO).toBeLessThanOrEqual(0.35);
+  expect(FACTION_MARK_MIN_SCREEN_PX).toBeGreaterThanOrEqual(5);
+  expect(FACTION_MARK_MAX_SCREEN_PX).toBeLessThanOrEqual(9);
+  expect(FACTION_MARK_MIN_SCREEN_PX).toBeLessThan(FACTION_MARK_MAX_SCREEN_PX);
+});
+
+test('playfield zoom cannot shrink ION/EMBER marks below a readable chip', () => {
+  expect(factionMarkScreenSize(2.1)).toBe(FACTION_MARK_MIN_SCREEN_PX);
+  expect(factionMarkScreenSize(4)).toBe(FACTION_MARK_MIN_SCREEN_PX);
+  expect(factionMarkScreenSize(32)).toBeLessThanOrEqual(FACTION_MARK_MAX_SCREEN_PX);
+  expect(factionMarkScreenSize(32)).toBeGreaterThanOrEqual(FACTION_MARK_MIN_SCREEN_PX);
+  expect(factionMarkScreenSize(Number.NaN)).toBe(FACTION_MARK_MIN_SCREEN_PX);
+});
+
+test('hull marks park ahead of the silhouette; HUD marks stay on their pixel', () => {
+  const hull = factionMarkAnchor({
+    x: 100,
+    y: 80,
+    radius: 3,
+    angle: 0,
+    park: 'hull',
+  });
+  expect(hull.x).toBeGreaterThan(100);
+  expect(hull.y).toBe(80);
+  expect(hull.x - 100).toBeLessThanOrEqual(FACTION_MARK_HULL_OFFSET_MAX_PX);
+  expect(hull.size).toBe(FACTION_MARK_MIN_SCREEN_PX);
+
+  const point = factionMarkAnchor({
+    x: 20,
+    y: 12,
+    radius: 8,
+    angle: Math.PI / 2,
+    park: 'point',
+  });
+  expect(point).toEqual({ x: 20, y: 12, size: factionMarkScreenSize(8) });
 });
 
 test('hull stroke stays local / remote / bot even when a side is assigned', () => {

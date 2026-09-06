@@ -7,8 +7,9 @@ import {
   inLootArmRange,
   isSmallRoid,
 } from '../../../shared/lootBlast';
-import { PALETTE } from '../../../src/constants';
-import { lootStrokeColor } from '../../../src/entities/loot/lootRenderer';
+import { GROWTH } from '../../../shared/shipGrowth';
+import { PALETTE, VISUAL } from '../../../src/constants';
+import { lootScreenRadius, lootStrokeColor } from '../../../src/entities/loot/lootRenderer';
 
 describe('loot blast math', () => {
   test('blast radius includes nearby hulls and excludes far ones', () => {
@@ -34,5 +35,13 @@ describe('loot blast math', () => {
     expect(lootStrokeColor('shard')).toBe(PALETTE.LASER_LOCAL);
     expect(lootStrokeColor('wreckage')).toBe(PALETTE.LOOT);
     expect(lootStrokeColor('fuel')).toBe(PALETTE.HEALTH);
+  });
+
+  test('live playfield zoom cannot erase shard or fuel diamonds', () => {
+    expect(VISUAL.LOOT_MIN_SCREEN_PX).toBeGreaterThanOrEqual(4);
+    expect(lootScreenRadius(GROWTH.LOOT_RADIUS, 0.14)).toBe(VISUAL.LOOT_MIN_SCREEN_PX);
+    expect(lootScreenRadius(8, 0.14)).toBe(VISUAL.LOOT_MIN_SCREEN_PX);
+    expect(lootScreenRadius(GROWTH.LOOT_RADIUS, 1)).toBe(GROWTH.LOOT_RADIUS);
+    expect(lootScreenRadius(0, 1)).toBe(VISUAL.LOOT_MIN_SCREEN_PX);
   });
 });

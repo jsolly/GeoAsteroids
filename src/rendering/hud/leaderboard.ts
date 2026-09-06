@@ -76,8 +76,9 @@ export function drawLeaderboard(
       drawSoftFactionMark(ctx, entry.factionId, {
         x: boardX + 20,
         y: y - 4,
-        radius: 6,
+        radius: 8,
         angle: Math.PI / 2,
+        park: 'point',
       });
     }
 

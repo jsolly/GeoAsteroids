@@ -133,6 +133,8 @@ export const VISUAL = {
   STAR_ALPHA_MAX: 0.8,
   LOOT_STROKE_WIDTH: 1.25,
   LOOT_GLOW: 1.25,
+  /** Floor so shards / fuel stay a diamond at live playfield zoom. */
+  LOOT_MIN_SCREEN_PX: 4.5,
   FUEL_BAR_WIDTH: 72,
   FUEL_BAR_HEIGHT: 2,
   // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
@@ -150,7 +152,7 @@ export const VISUAL = {
   HUD_SCORE_GAP: 10,
   SCORE_FONT: '14px Arial',
   NAME_LABEL_FONT: '11px Arial',
-  NAME_LABEL_ALPHA: 0.4,
+  NAME_LABEL_ALPHA: 0.58,
   // Iso-contours: hairline slate, no glow. Index lines are only slightly stronger.
   CONTOUR_STROKE_WIDTH: 1,
   CONTOUR_ALPHA: 0.16,

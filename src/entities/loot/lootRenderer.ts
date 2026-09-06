@@ -15,6 +15,15 @@ export function lootStrokeColor(kind: LootKind): string {
   return PALETTE.LOOT;
 }
 
+/** Screen-space pickup radius. Live zoom must not erase the diamond. */
+export function lootScreenRadius(worldRadius: number, scale: number): number {
+  const scaled = worldRadius * scale;
+  if (!Number.isFinite(scaled) || scaled <= 0) {
+    return VISUAL.LOOT_MIN_SCREEN_PX;
+  }
+  return Math.max(VISUAL.LOOT_MIN_SCREEN_PX, scaled);
+}
+
 /** Phosphor diamond pickups — hairline stroke, glow capped to stroke. */
 export function drawLootRelative(ship: Ship, loot: readonly LootData[]): void {
   const ctx = canvasManager.getContext();
@@ -46,8 +55,8 @@ export function drawLootRelative(ship: Ship, loot: readonly LootData[]): void {
 
   for (const drop of loot) {
     const screen = canvasManager.worldToScreen(drop.position, ship.position);
-    const r = drop.radius * scale;
-    if (!Number.isFinite(screen.x) || !Number.isFinite(screen.y) || !Number.isFinite(r)) {
+    const r = lootScreenRadius(drop.radius, scale);
+    if (!Number.isFinite(screen.x) || !Number.isFinite(screen.y)) {
       continue;
     }
 
@@ -76,7 +85,7 @@ export function drawLootRelative(ship: Ship, loot: readonly LootData[]): void {
     ctx.lineWidth = VISUAL.LOOT_STROKE_WIDTH;
     ctx.shadowColor = color;
     ctx.shadowBlur = VISUAL.LOOT_GLOW;
-    ctx.strokeStyle = hexToRgba(color, 0.45);
+    ctx.strokeStyle = hexToRgba(color, 0.62);
     trace();
     ctx.stroke();
     ctx.shadowBlur = 0;

@@ -308,20 +308,31 @@ export function drawPlayerName(
   x: number,
   y: number,
   shipRadius: number,
-  color: string = PALETTE.HUD
+  color: string = PALETTE.HUD,
+  factionId?: SoftFactionId
 ): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
 
-  const nameY = y + shipRadius + 14;
+  const nameY = y + shipRadius + 12;
 
   ctx.save();
-  ctx.fillStyle = hexToRgba(color, VISUAL.NAME_LABEL_ALPHA);
   ctx.font = VISUAL.NAME_LABEL_FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
+  if (factionId) {
+    const nameWidth = ctx.measureText(name).width;
+    drawSoftFactionMark(ctx, factionId, {
+      x: x - nameWidth / 2 - 8,
+      y: nameY + 5,
+      radius: 8,
+      angle: Math.PI / 2,
+      park: 'point',
+    });
+  }
+  ctx.fillStyle = hexToRgba(color, VISUAL.NAME_LABEL_ALPHA);
   ctx.fillText(name, x, nameY);
   ctx.restore();
 }
@@ -628,6 +639,7 @@ export function drawShipAtPosition(
     y: screenY,
     radius: shipR,
     angle: ship.angle,
+    park: 'hull',
   });
   drawAbilityFx(ctx, ship, screenX, screenY, shipR, shipPosition);
 
@@ -637,7 +649,7 @@ export function drawShipAtPosition(
 
   // Draw player name under ship if provided
   if (playerName) {
-    drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
+    drawPlayerName(playerName, screenX, screenY, shipR, shipColor, factionId);
   }
 }
 
