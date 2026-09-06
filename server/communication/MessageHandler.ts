@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { GameEngine } from '../core/GameEngine';
+import { GameEngine, type AppliedAsteroidHit } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
@@ -269,7 +269,9 @@ export class MessageHandler {
       return;
     }
 
+    this.gameEngine.spawnLaser(id, data.laserStart, data.laserDirection);
     this.broadcaster.broadcastPlayerShoot(id, data.laserStart, data.laserDirection);
+    this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits());
   }
 
   private handleShield(ws: WebSocket, id: string, data: any): void {
@@ -497,7 +499,7 @@ export class MessageHandler {
   }
 
   private handleAsteroidDestroyed(ws: WebSocket, data: any): void {
-    if (!data.asteroidId || !data.playerId || data.points === undefined) {
+    if (!data.asteroidId || !data.playerId) {
       this.broadcaster.sendError(ws, 'Missing required fields for asteroidDestroyed');
       return;
     }
@@ -509,31 +511,47 @@ export class MessageHandler {
     }
 
     const cause = data.cause === 'collision' ? 'collision' : 'laser';
-    const result = this.gameEngine.handleAsteroidHit(data.asteroidId, shooterId, cause);
-
-    if (result.outcome === 'tagged' && result.expiresAt) {
-      this.broadcaster.broadcastAsteroidTagged({
-        asteroidId: data.asteroidId,
+    this.broadcastAppliedAsteroidHits([
+      this.gameEngine.applyLaserAsteroidHit(
+        data.asteroidId,
         shooterId,
-        expiresAt: result.expiresAt,
-      });
-      return;
-    }
+        data.laserPosition,
+        cause
+      ),
+    ]);
+  }
 
-    if (result.outcome === 'destroyed') {
-      const player = this.gameEngine.getPlayer(shooterId);
-      if (player) {
-        this.broadcaster.broadcastScoreUpdate(shooterId, player.score);
+  public broadcastAppliedAsteroidHits(hits: AppliedAsteroidHit[]): void {
+    for (const hit of hits) {
+      if (!hit.applied) {
+        continue;
       }
 
-      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId, {
-        collabSplit: result.split,
-        origin: result.destroyed?.position,
+      if (hit.outcome === 'tagged' && hit.expiresAt) {
+        this.broadcaster.broadcastAsteroidTagged({
+          asteroidId: hit.asteroidId,
+          shooterId: hit.playerId,
+          expiresAt: hit.expiresAt,
+        });
+        continue;
+      }
+
+      if (hit.outcome !== 'destroyed') {
+        continue;
+      }
+
+      const scorer = this.gameEngine.getPlayer(hit.playerId);
+      if (scorer) {
+        this.broadcaster.broadcastScoreUpdate(hit.playerId, scorer.score);
+      }
+
+      this.broadcaster.broadcastAsteroidDestruction(hit.asteroidId, {
+        collabSplit: hit.split,
+        origin: hit.origin,
       });
 
-      // #443 hook: when split && destroyed, queue/broadcast shockwave from origin.
-      if (result.newAsteroids.length > 0) {
-        this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
+      if (hit.newAsteroids.length > 0) {
+        this.broadcaster.broadcastAsteroidCreation(hit.newAsteroids);
       }
     }
   }
@@ -620,7 +638,10 @@ export class MessageHandler {
       return;
     }
 
-    this.gameEngine.removeAsteroid(data.asteroidId);
+    const removed = this.gameEngine.removeAsteroid(data.asteroidId);
+    if (!removed) {
+      return;
+    }
     this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
   }
 

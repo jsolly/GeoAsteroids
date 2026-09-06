@@ -1,10 +1,20 @@
 import type { Position } from '../../../shared-types';
+import { pointsForRoidSize } from '../../entities/roid/roidScore';
 import { getGameBoundary } from '../boundary';
 
 /** Same rounding as `Point.distance` — keep combat feel, drop Point allocs. */
 function flooredDistance(ax: number, ay: number, bx: number, by: number): number {
   return Math.floor(Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2));
 }
+
+/** Discrete laser radius used by point and swept laser tests. */
+export const LASER_HIT_RADIUS = 2;
+
+/**
+ * Extra slack when the server validates a client-reported laser↔roid hit.
+ * Covers one-way latency while still rejecting far-away phantom reports.
+ */
+export const LASER_ROID_AUTHORITY_SLOP = 64;
 
 /**
  * Check if two circular objects are colliding
@@ -30,8 +40,6 @@ export function checkBoundaryCollision(shipPos: Position, shipRadius: number): b
   );
 }
 
-const LASER_RADIUS = 2;
-
 /**
  * Check if a laser hits an asteroid
  */
@@ -40,7 +48,7 @@ export function checkLaserAsteroidCollision(
   asteroidPos: Position,
   asteroidRadius: number
 ): boolean {
-  return checkCircularCollision(laserPos, LASER_RADIUS, asteroidPos, asteroidRadius);
+  return checkCircularCollision(laserPos, LASER_HIT_RADIUS, asteroidPos, asteroidRadius);
 }
 
 /**
@@ -53,7 +61,7 @@ export function checkLaserAsteroidCollisionSwept(
   asteroidPos: Position,
   asteroidRadius: number
 ): boolean {
-  const hitRadius = asteroidRadius + LASER_RADIUS;
+  const hitRadius = asteroidRadius + LASER_HIT_RADIUS;
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const lengthSq = dx * dx + dy * dy;
@@ -69,6 +77,24 @@ export function checkLaserAsteroidCollisionSwept(
   const closestY = from.y + dy * t;
   const distSq = (closestX - asteroidPos.x) ** 2 + (closestY - asteroidPos.y) ** 2;
   return distSq < hitRadius * hitRadius;
+}
+
+/** True when a reported laser is close enough to the server asteroid to count. */
+export function isLaserNearAsteroid(
+  laserPos: Position,
+  asteroidPos: Position,
+  asteroidRadius: number,
+  slop: number = LASER_ROID_AUTHORITY_SLOP
+): boolean {
+  const dx = laserPos.x - asteroidPos.x;
+  const dy = laserPos.y - asteroidPos.y;
+  const limit = asteroidRadius + LASER_HIT_RADIUS + slop;
+  return dx * dx + dy * dy <= limit * limit;
+}
+
+/** Server-authoritative score for a destroyed roid. Do not trust client points. */
+export function asteroidPointsForRadius(radius: number): number {
+  return pointsForRoidSize(radius);
 }
 
 /**

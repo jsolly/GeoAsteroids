@@ -277,7 +277,7 @@ export class CollisionManager {
     }
 
     if (reportAsteroidHits) {
-      this.reportAsteroidHit(asteroid.id, attackerId, asteroid.r, 'laser');
+      this.reportAsteroidHit(asteroid.id, attackerId, asteroid.r, 'laser', laser.position);
     }
 
     // Biggest rocks stay visible through the server-owned 1s tag window.
@@ -294,7 +294,8 @@ export class CollisionManager {
     asteroidId: string,
     playerId: string,
     radius: number,
-    cause: 'laser' | 'collision'
+    cause: 'laser' | 'collision',
+    laserPosition?: { x: number; y: number }
   ): void {
     this.networkManager.sendMessage({
       type: 'asteroidDestroyed',
@@ -303,6 +304,7 @@ export class CollisionManager {
         playerId,
         points: pointsForRoidSize(radius),
         cause,
+        ...(laserPosition ? { laserPosition: { x: laserPosition.x, y: laserPosition.y } } : {}),
       },
     });
   }

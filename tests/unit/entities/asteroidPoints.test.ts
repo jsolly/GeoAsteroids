@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { pointsForRoidSize } from '../../../src/entities/roid/roidScore';
+import { asteroidPointsForRadius } from '../../../src/physics/collision/collisionDetection';
 
 describe('Asteroid Points Calculation', () => {
   test('returns 20 points for large asteroids (radius >= 40)', () => {
@@ -27,5 +28,11 @@ describe('Asteroid Points Calculation', () => {
     expect(pointsForRoidSize(20.0)).toBe(50);
     expect(pointsForRoidSize(39.9)).toBe(50);
     expect(pointsForRoidSize(40.0)).toBe(20);
+  });
+
+  test('asteroidPointsForRadius matches the shared size table', () => {
+    expect(asteroidPointsForRadius(50)).toBe(pointsForRoidSize(50));
+    expect(asteroidPointsForRadius(20)).toBe(pointsForRoidSize(20));
+    expect(asteroidPointsForRadius(10)).toBe(pointsForRoidSize(10));
   });
 });
