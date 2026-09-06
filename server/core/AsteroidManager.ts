@@ -65,6 +65,20 @@ export class AsteroidManager {
     this.asteroids.clear();
   }
 
+  /** Advance asteroid transforms one sim frame (same integration as the client). */
+  public advance(): void {
+    if (!DEBUG.ROIDS.MOVEMENT) {
+      return;
+    }
+    for (const asteroid of this.asteroids.values()) {
+      asteroid.position = {
+        x: asteroid.position.x + asteroid.velocity.x,
+        y: asteroid.position.y + asteroid.velocity.y,
+      };
+      asteroid.rotation += asteroid.angularVelocity;
+    }
+  }
+
   public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {
     // If we already have asteroids and no player positions are provided, return them instead of recreating
     // But if player positions are provided, we should recreate to place roids on players

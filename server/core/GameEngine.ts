@@ -1,15 +1,40 @@
 import { WebSocket } from 'ws';
 import type { Position, AsteroidData } from '../../shared-types';
+import {
+  asteroidDestroyPoints,
+  asteroidRamDamage,
+  shipShipTickDamage,
+} from '../../shared/combat';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
+import { CollisionAuthority } from './CollisionAuthority';
 import { RNGService } from './RNGService';
 import { SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
+
+export interface CombatBroadcast {
+  targetId: string;
+  attackerId: string;
+  damage: number;
+  remainingHealth: number;
+  remainingLives: number;
+  isDestroyed: boolean;
+  targetType: 'human' | 'bot';
+  targetName: string;
+  awardedScore?: { playerId: string; score: number };
+  destroyedAsteroidId?: string;
+  newAsteroids?: AsteroidData[];
+  asteroidScore?: { playerId: string; score: number };
+}
+
+export type CombatSink = (result: CombatBroadcast) => void;
 
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
   private rngService: RNGService;
+  private collisionAuthority = new CollisionAuthority();
+  private combatSink: CombatSink | null = null;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
@@ -20,6 +45,10 @@ export class GameEngine {
     this.asteroidManager = new AsteroidManager(this.rngService);
 
     // Don't initialize pause state yet - will be called after initialization
+  }
+
+  public setCombatSink(sink: CombatSink | null): void {
+    this.combatSink = sink;
   }
 
   // Game loop management
@@ -44,6 +73,8 @@ export class GameEngine {
         if (this.gameTime % 2 === 0) {
           this.entityManager.updateBotMovement();
         }
+
+        this.resolveAuthoritativeCombat();
       }
     }, 1000 / 60); // 60 FPS
   }
@@ -126,6 +157,7 @@ export class GameEngine {
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
+    this.collisionAuthority.reset();
 
     // Keep gameTime monotonic for the process lifetime. Zeroing it when the
     // last player leaves makes /health.world.gameTime look frozen on prod
@@ -218,78 +250,160 @@ export class GameEngine {
   }
 
   // Game logic operations
-  public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
-    console.log('DEBUG: handlePlayerDamage called', { targetPlayerId, attackerId, damage });
-    // Ignore damage if player is already in respawn countdown or already at 0 health
-    const existing = this.getPlayer(targetPlayerId);
+  /**
+   * Apply damage to a human or bot through one path. Health/lives stay
+   * server-owned; kill scores still differ (200 human / 50 bot).
+   */
+  public handleShipDamage(
+    targetId: string,
+    attackerId: string,
+    damage: number
+  ): { applied: boolean; isDestroyed: boolean; entity?: GameEntity } {
+    const existing = this.entityManager.getEntity(targetId);
     if (!existing) {
-      console.log('DEBUG: damagedPlayer is null');
-      return false;
+      return { applied: false, isDestroyed: false };
     }
-    if (existing.respawnTimer !== undefined || existing.health <= 0) {
-      console.log('DEBUG: ignoring damage during respawn or while dead');
-      return false;
+    if (existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
+      return { applied: false, isDestroyed: false };
     }
 
-    const damagedPlayer = this.entityManager.damageEntity(targetPlayerId, damage);
-    if (!damagedPlayer) {
-      console.log('DEBUG: damagedPlayer is null');
-      return false;
+    const damaged = this.entityManager.damageEntity(targetId, damage);
+    if (!damaged) {
+      return { applied: false, isDestroyed: false };
     }
-    console.log('DEBUG: damagedPlayer after damage', { health: damagedPlayer.health, exploding: damagedPlayer.exploding });
 
-    // Handle destruction: decrement lives, award points, and schedule respawn if any lives remain
-    if (damagedPlayer.health <= 0) {
-      // Decrement lives for the destroyed player (min 0)
-      const destroyedEntity = this.entityManager.getEntity(targetPlayerId);
-      if (destroyedEntity) {
-        const prevLives = destroyedEntity.lives;
-        destroyedEntity.lives = Math.max(0, destroyedEntity.lives - 1);
-        logger.info('PLAYER', `Life lost`, {
-          playerId: targetPlayerId,
-          name: destroyedEntity.name,
-          livesBefore: prevLives,
-          livesAfter: destroyedEntity.lives,
-        });
-      }
+    if (damaged.health > 0) {
+      return { applied: true, isDestroyed: false, entity: damaged };
+    }
 
-      // Only award points if attacker is a valid, different player
-      const attackerIsValidPlayer = !!attackerId && attackerId !== targetPlayerId && !!this.entityManager.getEntity(attackerId);
-      if (attackerIsValidPlayer) {
-        this.awardPoints(attackerId, 200);
-      }
-
-      // Schedule respawn only if player still has lives remaining
-      if (destroyedEntity && destroyedEntity.lives > 0) {
-        this.entityManager.updateEntity(targetPlayerId, {
+    if (damaged.type === 'human') {
+      const prevLives = damaged.lives;
+      damaged.lives = Math.max(0, damaged.lives - 1);
+      logger.info('PLAYER', `Life lost`, {
+        playerId: targetId,
+        name: damaged.name,
+        livesBefore: prevLives,
+        livesAfter: damaged.lives,
+      });
+      if (damaged.lives > 0) {
+        this.entityManager.updateEntity(targetId, {
           respawnTimer: SHIP.RESPAWN_DELAY_FRAMES,
         });
       }
-
-      return true; // Player was destroyed
+      const attackerIsValid =
+        !!attackerId && attackerId !== targetId && !!this.entityManager.getEntity(attackerId);
+      if (attackerIsValid) {
+        this.awardPoints(attackerId, 200);
+      }
+    } else {
+      this.awardPoints(attackerId, 50);
     }
 
-    return false;
+    return { applied: true, isDestroyed: true, entity: damaged };
+  }
+
+  public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
+    if (!this.getPlayer(targetPlayerId)) {
+      return false;
+    }
+    return this.handleShipDamage(targetPlayerId, attackerId, damage).isDestroyed;
   }
 
   public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
-    const existing = this.getBot(botId);
-    if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
+    if (!this.getBot(botId)) {
       return false;
     }
+    return this.handleShipDamage(botId, attackerId, damage).isDestroyed;
+  }
 
-    const damagedBot = this.entityManager.damageEntity(botId, damage);
-    if (!damagedBot) {
-      return false;
+  /**
+   * Server-owned ship↔asteroid and ship↔ship resolution. Humans and bots
+   * share the same overlap + handleShipDamage path.
+   */
+  public resolveAuthoritativeCombat(now: number = Date.now()): CombatBroadcast[] {
+    if (this.isPaused) {
+      return [];
     }
 
-    // Award points to attacker for destroying a bot
-    if (damagedBot.health <= 0) {
-      this.awardPoints(attackerId, 50);
-      return true; // Bot was destroyed
+    this.asteroidManager.advance();
+    const results: CombatBroadcast[] = [];
+    const entities = this.entityManager.getAllEntities();
+
+    const ramHits = this.collisionAuthority.collectShipAsteroidHits(
+      entities,
+      this.asteroidManager.getAllAsteroids()
+    );
+    const destroyedAsteroids = new Set<string>();
+    const ramDamage = asteroidRamDamage();
+    for (const hit of ramHits) {
+      const result = this.applyDirectedHit(hit.shipId, 'asteroid', ramDamage);
+      if (!result) {
+        continue;
+      }
+      if (!destroyedAsteroids.has(hit.asteroidId)) {
+        destroyedAsteroids.add(hit.asteroidId);
+        const destruction = this.handleAsteroidDestruction(
+          hit.asteroidId,
+          hit.shipId,
+          asteroidDestroyPoints(this.getAsteroid(hit.asteroidId)?.size ?? 0)
+        );
+        if (destruction.success) {
+          result.destroyedAsteroidId = hit.asteroidId;
+          result.newAsteroids = destruction.newAsteroids;
+          const scorer = this.entityManager.getEntity(hit.shipId);
+          if (scorer) {
+            result.asteroidScore = { playerId: hit.shipId, score: scorer.score };
+          }
+        }
+      }
+      results.push(result);
     }
 
-    return false; // Bot was damaged but not destroyed
+    const pairTicks = this.collisionAuthority.collectShipShipTicks(entities, now);
+    const tickDamage = shipShipTickDamage();
+    for (const pair of pairTicks) {
+      const first = this.applyDirectedHit(pair.a, pair.b, tickDamage);
+      if (first) {
+        results.push(first);
+      }
+      const second = this.applyDirectedHit(pair.b, pair.a, tickDamage);
+      if (second) {
+        results.push(second);
+      }
+    }
+
+    for (const result of results) {
+      this.combatSink?.(result);
+    }
+    return results;
+  }
+
+  private applyDirectedHit(
+    targetId: string,
+    attackerId: string,
+    damage: number
+  ): CombatBroadcast | null {
+    const outcome = this.handleShipDamage(targetId, attackerId, damage);
+    if (!outcome.applied || !outcome.entity) {
+      return null;
+    }
+    const broadcast: CombatBroadcast = {
+      targetId,
+      attackerId,
+      damage,
+      remainingHealth: outcome.entity.health,
+      remainingLives: outcome.entity.lives,
+      isDestroyed: outcome.isDestroyed,
+      targetType: outcome.entity.type,
+      targetName: outcome.entity.name,
+    };
+    if (outcome.isDestroyed) {
+      const attacker = this.entityManager.getEntity(attackerId);
+      if (attacker) {
+        broadcast.awardedScore = { playerId: attackerId, score: attacker.score };
+      }
+    }
+    return broadcast;
   }
 
   public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {

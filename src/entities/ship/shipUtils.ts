@@ -1,4 +1,5 @@
 import type { Position } from '../../../shared-types';
+import { isCombatantImmune } from '../../../shared/combat';
 import { GAME, SHIP } from '../../constants';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
@@ -17,7 +18,7 @@ export interface ShipSpawnProtectionState {
 
 /** True when a ship must not report or receive collision damage. */
 export function isShipCollisionImmune(ship: ShipCollisionState): boolean {
-  return ship.exploding || ship.health <= 0 || ship.blinkCount > 0;
+  return isCombatantImmune(ship);
 }
 
 /** Arm the client blink window used by players and bots. */

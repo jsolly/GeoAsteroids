@@ -1160,26 +1160,9 @@ export class GameInteractions {
         return;
       }
 
-      // Fallback: drive server collision damage if client overlap detection did not fire.
-      await this.page.evaluate(
-        async ({ damage }) => {
-          const gc = (window as any).gameController;
-          const nm = gc?.getNetworkManager?.();
-          const playerId = nm?.getLocalPlayerId?.();
-          if (!nm || !playerId) {
-            throw new Error('Cannot send collision damage — not connected');
-          }
-          nm.sendMessage({
-            type: 'collisionDamage',
-            data: { targetPlayerId: playerId, attackerId: 'asteroid', damage },
-          });
-          for (let frame = 0; frame < 30; frame++) {
-            gc.updateGame();
-            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          }
-        },
-        { damage: 100 }
-      );
+      // Keep the predicted pose pinned so the next network tick carries it
+      // to the server, which is the only place asteroid ram is applied.
+      await this.page.waitForTimeout(50);
     }
     throw new Error('Ship was not destroyed by sustained asteroid collision');
   }
@@ -1557,14 +1540,19 @@ export class GameInteractions {
     }
   }
 
-  /** Send server-authoritative damage to a bot (simulates asteroid ram). */
-  async damageBot(botId: string, damage: number, attackerId = 'asteroid-collision'): Promise<void> {
+  /** Apply laser-style bot damage from the local human (asteroid ram is server-owned). */
+  async damageBot(botId: string, damage: number, attackerId?: string): Promise<void> {
     await this.page.evaluate(
       ({ botId, damage, attackerId }) => {
         const gc = (window as any).gameController;
-        gc?.getNetworkManager?.().sendMessage?.({
+        const nm = gc?.getNetworkManager?.();
+        const reporterId =
+          !attackerId || attackerId === 'asteroid' || String(attackerId).startsWith('asteroid')
+            ? nm?.getLocalPlayerId?.()
+            : attackerId;
+        nm?.sendMessage?.({
           type: 'botDamage',
-          data: { botId, attackerId, damage },
+          data: { botId, attackerId: reporterId, damage },
         });
       },
       { botId, damage, attackerId }

@@ -588,14 +588,9 @@ export class GameController {
     // Check laser collisions with asteroids and bots
     this.checkLaserCollisions();
 
-    // Check ship collisions with asteroids
-    this.checkShipAsteroidCollisions();
-
-    // Check ship collisions with other ships
+    // Ship↔asteroid and ship↔ship damage are server-owned. Keep local
+    // ship-ship overlap for offline DOT / visual contact only.
     this.checkShipShipCollisions();
-
-    // Check bot collisions with asteroids
-    this.checkBotAsteroidCollisions();
 
     // Check boundary collisions for ships
     this.checkBoundaryCollisions();
@@ -648,23 +643,6 @@ export class GameController {
     this.collisionManager.checkBoundaryCollisions([currPlayer.ship], currPlayer.id);
   }
 
-  // Check ship collisions with asteroids
-  private checkShipAsteroidCollisions(): void {
-    const currPlayer = this.playerManager.getLocalPlayer();
-    if (!currPlayer || !this.currRoidBelt) {
-      return;
-    }
-
-    // Check asteroid collisions for local player
-    logger.debug('COLLISION', 'Checking ship-asteroid collisions', {
-      shipPos: currPlayer.ship.position,
-      shipRadius: currPlayer.ship.r,
-      asteroidCount: this.currRoidBelt.roids.length,
-      localPlayerId: currPlayer.id,
-    });
-    this.collisionManager.checkPlayerAsteroidCollisions(currPlayer, this.currRoidBelt.roids);
-  }
-
   // Check ship collisions with other ships
   private checkShipShipCollisions(): void {
     const currPlayer = this.playerManager.getLocalPlayer();
@@ -680,30 +658,6 @@ export class GameController {
 
     // Check ship-to-ship collisions
     this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);
-  }
-
-  // Check bot collisions with asteroids
-  private checkBotAsteroidCollisions(): void {
-    if (!this.currRoidBelt) {
-      return;
-    }
-
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
-
-    // Check asteroid collisions for each bot
-    for (const botPlayer of botPlayers) {
-      if (botPlayer.ship && !botPlayer.ship.exploding) {
-        logger.debug('COLLISION', 'Checking bot-asteroid collisions', {
-          botId: botPlayer.id,
-          botPos: botPlayer.ship.position,
-          botRadius: botPlayer.ship.r,
-          asteroidCount: this.currRoidBelt.roids.length,
-        });
-        this.collisionManager.checkPlayerAsteroidCollisions(botPlayer, this.currRoidBelt.roids);
-      }
-    }
   }
 
   // Simple render method - no game logic, just rendering

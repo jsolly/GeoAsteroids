@@ -55,33 +55,15 @@ describe('Integration: Local player roid collisions', () => {
     vi.clearAllMocks();
   });
 
-  test('sends server-authoritative collision messages without applying local damage', () => {
+  test('does not apply local asteroid damage or send client reports', () => {
     const localPlayerId = 'local-player-123';
     const localPlayer = { ship: localShip, id: localPlayerId, type: 'local' as const };
     const initialHealth = localShip.health;
 
     collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
 
-    // Server applies damage; client only sends network messages
     expect(localShip.health).toBe(initialHealth);
-
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      type: 'collisionDamage',
-      data: {
-        targetPlayerId: localPlayerId,
-        attackerId: 'asteroid',
-        damage: 25,
-      },
-    });
-
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      type: 'asteroidDestroyed',
-      data: {
-        asteroidId: roid.id,
-        playerId: localPlayerId,
-        points: 50,
-      },
-    });
+    expect(mockSendMessage).not.toHaveBeenCalled();
   });
 });
 

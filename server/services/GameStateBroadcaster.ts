@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { GameEngine } from '../core/GameEngine';
+import { GameEngine, type CombatBroadcast } from '../core/GameEngine';
 import { logger } from '../../setup/serverLogger';
 
 export class GameStateBroadcaster {
@@ -78,6 +78,38 @@ export class GameStateBroadcaster {
     };
 
     this.broadcastToAll(message, playerId);
+  }
+
+  public broadcastCombatResult(result: CombatBroadcast): void {
+    if (result.targetType === 'bot') {
+      this.broadcastBotUpdate(result.targetId);
+    } else {
+      this.broadcastPlayerDamaged(
+        result.targetId,
+        result.attackerId,
+        result.damage,
+        result.remainingHealth,
+        result.isDestroyed,
+        result.remainingLives
+      );
+    }
+
+    if (result.isDestroyed) {
+      this.broadcastPlayerKilled(result.targetId, result.targetName, result.attackerId);
+      if (result.awardedScore) {
+        this.broadcastScoreUpdate(result.awardedScore.playerId, result.awardedScore.score);
+      }
+    }
+
+    if (result.destroyedAsteroidId) {
+      this.broadcastAsteroidDestruction(result.destroyedAsteroidId);
+      if (result.newAsteroids && result.newAsteroids.length > 0) {
+        this.broadcastAsteroidCreation(result.newAsteroids);
+      }
+      if (result.asteroidScore) {
+        this.broadcastScoreUpdate(result.asteroidScore.playerId, result.asteroidScore.score);
+      }
+    }
   }
 
   public broadcastPlayerDamaged(

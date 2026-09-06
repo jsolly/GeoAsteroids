@@ -72,6 +72,10 @@ export class EntityManager {
     return Array.from(this.entities.values()).filter(entity => entity.type === 'bot');
   }
 
+  public getHumanBySocket(ws: WebSocket): GameEntity | undefined {
+    return this.getHumanPlayers().find((entity) => entity.ws === ws);
+  }
+
   public getEntityCount(): number {
     return this.entities.size;
   }

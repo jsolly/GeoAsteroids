@@ -532,10 +532,9 @@ export class ConnectionManager {
       }
     }
 
-    // Dispatch asteroid events only for NEW asteroids
+    // Create unseen asteroids; snap existing ones to the server transform.
     if (data.asteroids) {
       for (const asteroidData of data.asteroids) {
-        // Only dispatch event if we haven't seen this asteroid before
         if (!this.seenAsteroidIds.has(asteroidData.id)) {
           this.seenAsteroidIds.add(asteroidData.id);
           window.dispatchEvent(
@@ -543,7 +542,22 @@ export class ConnectionManager {
               detail: { asteroid: asteroidData },
             })
           );
+          continue;
         }
+        window.dispatchEvent(
+          new CustomEvent('serverAsteroidUpdated', {
+            detail: {
+              asteroidId: asteroidData.id,
+              updates: {
+                position: asteroidData.position,
+                velocity: asteroidData.velocity,
+                rotation: asteroidData.rotation,
+                angularVelocity: asteroidData.angularVelocity,
+                size: asteroidData.size,
+              },
+            },
+          })
+        );
       }
     }
   }

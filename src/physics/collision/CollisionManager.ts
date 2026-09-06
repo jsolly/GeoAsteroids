@@ -1,4 +1,5 @@
 import { DAMAGE } from '../../constants';
+import { asteroidDestroyPoints } from '../../../shared/combat';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
@@ -300,59 +301,8 @@ export class CollisionManager {
       playerType: player.type,
     });
 
-    // Don't apply damage directly - let server handle it
-    const damage = DAMAGE.LASER_HIT;
-    logger.debug('COLLISION', 'Sending asteroid collision damage to server', {
-      damage,
-      playerId: player.id,
-    });
-
-    // Send appropriate network message based on player type
-    if (player.type === 'local') {
-      // For local players, use the server-assigned player ID
-      const serverPlayerId = this.networkManager.getLocalPlayerId();
-      if (serverPlayerId) {
-        this.networkManager.sendMessage({
-          type: 'collisionDamage',
-          data: {
-            targetPlayerId: serverPlayerId,
-            attackerId: 'asteroid',
-            damage: damage,
-          },
-        });
-
-        // Send asteroid destruction message to server to trigger splitting
-        this.networkManager.sendMessage({
-          type: 'asteroidDestroyed',
-          data: {
-            asteroidId: asteroid.id,
-            playerId: serverPlayerId,
-            points: this.getAsteroidPoints(asteroid.r),
-          },
-        });
-      }
-    } else if (player.type === 'bot') {
-      // For bots, send bot damage message
-      this.networkManager.sendMessage({
-        type: 'botDamage',
-        data: {
-          botId: player.id,
-          attackerId: 'asteroid',
-          damage: damage,
-        },
-      });
-
-      // Send asteroid destruction message to server to trigger splitting
-      this.networkManager.sendMessage({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: asteroid.id,
-          playerId: player.id,
-          points: this.getAsteroidPoints(asteroid.r),
-        },
-      });
-    }
-    // Remote players are handled by server, no client-side network message needed
+    // Ship↔asteroid health and splitting are server-owned. The client only
+    // predicts motion; leftover every-tab reports would desync health.
   }
 
   /**
@@ -367,7 +317,8 @@ export class CollisionManager {
       localPlayerId,
     });
 
-    // Start collision damage-over-time for the local ship
+    // Visual overlap only. Ship↔ship DOT is applied on the server from
+    // last-known positions so both tabs share one health timeline.
     localShip.startPlayerCollision(otherShip.id);
   }
 
@@ -375,12 +326,6 @@ export class CollisionManager {
    * Get points for destroying an asteroid based on its size
    */
   private getAsteroidPoints(radius: number): number {
-    if (radius >= 40) {
-      return 20; // Large asteroid
-    } else if (radius >= 20) {
-      return 50; // Medium asteroid
-    } else {
-      return 100; // Small asteroid
-    }
+    return asteroidDestroyPoints(radius);
   }
 }

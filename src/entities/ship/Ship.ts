@@ -480,31 +480,8 @@ class Ship {
     const damageInterval = DAMAGE.PLAYER_COLLISION_INTERVAL_MS;
 
     if (timeSinceLastDamage >= damageInterval) {
-      // Apply local damage only when not connected to server; otherwise server-authoritative
       const networkManager = NetworkManager.getInstance();
-      if (networkManager.isConnected && this.collidingPlayerId) {
-        const myPlayerId = networkManager.getLocalPlayerId();
-        if (myPlayerId) {
-          const tickDamage = Math.max(
-            1,
-            Math.round(DAMAGE.PLAYER_COLLISION_PER_SECOND * (damageInterval / 1000))
-          );
-          logger.debug('COLLISION', 'Sending collision damage', {
-            from: myPlayerId,
-            to: this.collidingPlayerId,
-            toIsBot: this.collidingPlayerId.startsWith('server-bot-'),
-            damage: tickDamage,
-          });
-          networkManager.sendMessage({
-            type: 'collisionDamage',
-            data: {
-              targetPlayerId: myPlayerId,
-              attackerId: this.collidingPlayerId,
-              damage: tickDamage,
-            },
-          });
-        }
-      } else {
+      if (!networkManager.isConnected) {
         logger.debug('COLLISION', 'Applying local collision damage', { damage: 1 });
         this.takeDamage(1, 'player');
       }
