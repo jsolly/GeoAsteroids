@@ -76,6 +76,7 @@ export class Player {
       frictionCoefficient: this.getFrictionCoefficient(),
       kitId: params.kitId,
     });
+    this.ship.factionId = this.factionId;
   }
 
   // Update player state from server data
@@ -108,6 +109,7 @@ export class Player {
     }
     if (data.factionId !== undefined) {
       this.factionId = parseSoftFactionId(data.factionId);
+      this.ship.factionId = this.factionId;
     }
     if (data.spawnProtectionTimer !== undefined) {
       this.serverSpawnProtectionTimer = data.spawnProtectionTimer;
@@ -189,7 +191,7 @@ export class Player {
     if (data.thrusting !== undefined && this.type !== 'local') {
       this.ship.thrusting = data.thrusting;
     }
-    if (data.color !== undefined) {
+    if (data.color !== undefined && this.type !== 'local') {
       this.color = data.color;
       this.ship.color = data.color;
     }

@@ -22,6 +22,7 @@ export interface PlayerConfig {
   type: 'local' | 'remote' | 'bot';
   position?: Position;
   color?: string;
+  faction?: FactionId;
   shotCooldown?: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
@@ -172,7 +173,7 @@ export class EntityFactory {
       type: config.type,
       input: new MockPlayerInput(),
       kitId: config.kitId,
-      factionId: config.factionId,
+      factionId: config.factionId ?? config.faction,
     });
   }
 

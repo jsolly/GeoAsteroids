@@ -1,3 +1,4 @@
+import type { FactionId } from '../../../shared-types';
 import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
@@ -20,9 +21,17 @@ import {
   checkShipCollision,
 } from './collisionDetection';
 
+export interface LaserTarget {
+  ship: Ship;
+  id: string;
+  type: 'local' | 'remote' | 'bot';
+  faction?: FactionId;
+}
+
 export interface LaserCollisionOptions {
   /** Spectator clients play VFX only for remote-human shots. */
   reportAsteroidHits?: boolean;
+  attackerFaction?: FactionId;
 }
 
 export class CollisionManager {
@@ -189,7 +198,7 @@ export class CollisionManager {
   checkLaserCollisions(
     lasers: Laser[],
     asteroids: Roid[],
-    players: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' }[],
+    players: LaserTarget[],
     localPlayerId: string,
     options: LaserCollisionOptions = {}
   ): void {
@@ -231,7 +240,10 @@ export class CollisionManager {
           }
 
           if (
-            canDealCombatDamage(this.factionForId(localPlayerId), this.factionForId(player.id)) &&
+            canDealCombatDamage(
+              options.attackerFaction ?? this.factionForId(localPlayerId),
+              player.faction ?? this.factionForId(player.id)
+            ) &&
             checkLaserShipCollision(laser.position, ship.position, ship.r)
           ) {
             this.handleLaserPlayerHit(laser, player, localPlayerId);
@@ -283,7 +295,7 @@ export class CollisionManager {
    */
   private handleLaserPlayerHit(
     laser: Laser,
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
+    player: LaserTarget,
     attackerId: string
   ): void {
     const ship = player.ship;

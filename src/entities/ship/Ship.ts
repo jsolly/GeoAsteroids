@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, ShipKitId, Velocity } from '../../../shared-types';
+import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
@@ -57,6 +57,7 @@ class Ship {
   lastRotation?: number; // Track previous rotation for movement analysis
   lastThrusting?: boolean; // Track previous thruster state for network updates
   color: string = PALETTE.LOCAL;
+  factionId?: SoftFactionId;
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
   frictionCoefficient: number = GAME.FRICTION; // Player-specific friction coefficient
   isLocalPlayer: boolean = false; // Track if this is the local player

@@ -157,13 +157,11 @@ export class MessageHandler {
 
     const validatedPosition = this.gameEngine.validatePosition(data.position);
     const joinPosition = validatedPosition || { x: 0, y: 0 };
-    const joinColor = data.color || '#00ff00'; // Default to green if no color provided
     const kitId = data.kitId ?? data.data?.kitId;
-    const factionId = data.factionId ?? data.data?.factionId;
-    logger.debug('Player join', { id, position: joinPosition, color: joinColor, kitId, factionId });
+    logger.debug('Player join', { id, position: joinPosition, kitId });
 
-    this.gameEngine.addPlayer(id, name, ws, joinPosition, joinColor, kitId, factionId);
-    logger.info('✅ Player added to game engine', { id, name });
+    const player = this.gameEngine.addPlayer(id, name, ws, joinPosition, undefined, kitId);
+    logger.info('✅ Player added to game engine', { id, name, factionId: player.factionId });
 
     // Send confirmation to the joining player
     this.broadcaster.sendToWebSocket(ws, {
@@ -172,6 +170,9 @@ export class MessageHandler {
         id,
         name,
         position: joinPosition,
+        color: player.color,
+        kitId: player.kitId,
+        factionId: player.factionId,
       },
       timestamp: Date.now(),
     });
@@ -220,6 +221,8 @@ export class MessageHandler {
     delete (sanitizedData as any).spawnProtectionTimer;
     delete (sanitizedData as any).kitId;
     delete (sanitizedData as any).factionId;
+    delete (sanitizedData as any).faction;
+    delete (sanitizedData as any).color;
     delete (sanitizedData as any).abilityCooldownFrames;
     delete (sanitizedData as any).abilityActiveFrames;
     delete (sanitizedData as any).shieldTimer;
@@ -276,15 +279,22 @@ export class MessageHandler {
       return;
     }
 
+    const before = this.gameEngine.getPlayer(data.targetPlayerId);
+    const healthBefore = before?.health;
     const isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
 
     const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
     if (targetPlayer) {
+      const remainingHealth = targetPlayer.health ?? 0;
+      const healthDropped = healthBefore !== undefined && remainingHealth < healthBefore;
+      if (!isDestroyed && !healthDropped) {
+        return;
+      }
       this.broadcaster.broadcastPlayerDamaged(
         data.targetPlayerId,
         data.attackerId,
         data.damage,
-        targetPlayer.health ?? 0,
+        remainingHealth,
         isDestroyed,
         targetPlayer.lives
       );
@@ -372,14 +382,22 @@ export class MessageHandler {
       return;
     }
 
+    const before = this.gameEngine.getBot(data.botId);
+    const healthBefore = before?.health;
     const isDestroyed = this.gameEngine.handleBotDamage(data.botId, data.attackerId, data.damage);
+    const targetBot = this.gameEngine.getBot(data.botId);
+    const remainingHealth = targetBot?.health;
+    const healthDropped =
+      healthBefore !== undefined && remainingHealth !== undefined && remainingHealth < healthBefore;
+    if (!isDestroyed && !healthDropped) {
+      return;
+    }
 
     // Always broadcast bot update after damage to ensure health synchronization
     this.broadcaster.broadcastBotUpdate(data.botId);
 
     if (isDestroyed) {
       const attacker = this.gameEngine.getPlayer(data.attackerId);
-      const targetBot = this.gameEngine.getBot(data.botId);
       if (attacker) {
         this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
       }

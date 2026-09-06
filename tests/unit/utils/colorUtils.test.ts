@@ -10,8 +10,10 @@ import {
   generateRandomPlayerColor,
   getFactionColor,
   getLaserColor,
+  getShipDisplayColor,
   hexToRgba,
 } from '../../../src/utils/colorUtils';
+import { FACTION_COLORS } from '../../../shared/factions';
 import { isDebugMode } from '../../../src/utils/debugUtils';
 
 test('locked palette hexes match the art-direction swatch', () => {
@@ -36,6 +38,14 @@ test('faction colors map local mint, remote sky, bot amber', () => {
   expect(getFactionColor('bot')).toBe(PALETTE.BOT);
   expect(getFactionColor('local')).toBe('#5EEAD4');
   expect(getFactionColor('bot')).toBe('#FB923C');
+});
+
+test('hull display color stays ownership even when a side is assigned', () => {
+  expect(getShipDisplayColor({ type: 'local', faction: 'ember' })).toBe(PALETTE.LOCAL);
+  expect(getShipDisplayColor({ type: 'bot', faction: 'ion' })).toBe(PALETTE.BOT);
+  expect(getShipDisplayColor({ type: 'remote', faction: 'ion' })).toBe(PALETTE.REMOTE);
+  expect(getShipDisplayColor({ type: 'local', faction: 'ember' })).not.toBe(FACTION_COLORS.ember);
+  expect(getShipDisplayColor({ type: 'bot', faction: 'ion' })).not.toBe(FACTION_COLORS.ion);
 });
 
 test('laser colors never use white', () => {

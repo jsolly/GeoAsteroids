@@ -28,6 +28,7 @@
     "setup",
     "server",
     "server.ts",
-    "shared"
+    "shared",
+    "shared-types.ts"
   ]
 }

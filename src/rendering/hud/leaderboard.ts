@@ -1,11 +1,14 @@
 import { PALETTE } from '../../constants';
 import type { Player } from '../../entities/player/Player';
-import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
+import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
+import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 
 interface LeaderboardEntry {
   name: string;
   score: number;
   type: 'local' | 'remote' | 'bot';
+  factionId?: Player['factionId'];
+  color?: string;
   isCurrentPlayer?: boolean;
 }
 
@@ -46,6 +49,8 @@ export function drawLeaderboard(
       name: player.name,
       score: player.score,
       type: player.type,
+      factionId: player.factionId,
+      color: player.color,
       isCurrentPlayer: player.id === currentPlayerId,
     }))
     .sort((a, b) => b.score - a.score)
@@ -59,7 +64,7 @@ export function drawLeaderboard(
 
   entries.forEach((entry, index) => {
     const y = boardY + 6 + index * 16;
-    const nameColor = getFactionColor(entry.type);
+    const nameColor = getShipDisplayColor(entry);
     const alpha = entry.isCurrentPlayer ? 0.92 : 0.78;
 
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.4);
@@ -67,8 +72,17 @@ export function drawLeaderboard(
     ctx.textAlign = 'left';
     ctx.fillText(`${index + 1}.`, boardX + 4, y);
 
+    if (entry.factionId) {
+      drawSoftFactionMark(ctx, entry.factionId, {
+        x: boardX + 20,
+        y: y - 4,
+        radius: 6,
+        angle: Math.PI / 2,
+      });
+    }
+
     ctx.fillStyle = hexToRgba(nameColor, alpha);
-    ctx.fillText(entry.name, boardX + 22, y);
+    ctx.fillText(entry.name, boardX + 28, y);
 
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.55);
     ctx.textAlign = 'right';

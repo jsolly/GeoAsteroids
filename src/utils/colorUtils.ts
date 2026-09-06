@@ -1,8 +1,18 @@
+import type { FactionId } from '../../shared-types';
 import { PALETTE } from '../constants';
 
 export type FactionType = 'local' | 'remote' | 'bot';
 
-/** Ownership stroke (local / remote / bot). Not ION / EMBER hull paint. */
+/** Ownership stroke (local / remote / bot). Soft faction never paints the hull. */
+export function getShipDisplayColor(player: {
+  type: FactionType;
+  faction?: FactionId;
+  factionId?: FactionId;
+  color?: string;
+}): string {
+  return getFactionColor(player.type);
+}
+
 export function getFactionColor(type: FactionType): string {
   switch (type) {
     case 'local':

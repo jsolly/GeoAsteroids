@@ -1,3 +1,4 @@
+import { areAllied } from '../../shared/factions';
 import { consumeTickAccumulator } from '../../shared/gameClock';
 import type { AsteroidData, ShipKitId } from '../../shared-types';
 import {
@@ -699,6 +700,7 @@ export class GameController {
         ship: player.ship,
         id: player.id,
         type: player.type as 'bot' | 'remote',
+        faction: player.factionId,
       }));
 
     // Attribute kills to the server-assigned player id (set at join time), not
@@ -724,7 +726,7 @@ export class GameController {
         this.currRoidBelt.roids,
         ownerType === 'local' ? laserTargets : [],
         ownerAttackerId,
-        { reportAsteroidHits }
+        { reportAsteroidHits, attackerFaction: player.factionId }
       );
     }
   }
@@ -770,7 +772,9 @@ export class GameController {
     // Get all players (including bots) from network manager
     const allPlayers = this.networkManager.getAllPlayers();
     const otherShips = allPlayers
-      .filter((player) => player.id !== currPlayer.id)
+      .filter(
+        (player) => player.id !== currPlayer.id && !areAllied(currPlayer.factionId, player.factionId)
+      )
       .map((player) => ({ ship: player.ship, id: player.id }));
 
     this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);

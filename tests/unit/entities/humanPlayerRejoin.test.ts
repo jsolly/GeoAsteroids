@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
 import { EntityManager } from '../../../server/core/EntityManager';
 import { RNGService } from '../../../server/core/RNGService';
+import { PALETTE } from '../../../src/constants';
 
-test('rejoining the same human id keeps lives and swaps the socket', () => {
+test('rejoining the same human id keeps lives, side, and swaps the socket', () => {
   const manager = new EntityManager(new RNGService(1));
   const firstSocket = { sent: 1 } as never;
   const secondSocket = { sent: 2 } as never;
@@ -18,7 +19,8 @@ test('rejoining the same human id keeps lives and swaps the socket', () => {
   expect(rejoined.health).toBe(40);
   expect(rejoined.position).toEqual({ x: 8, y: 9 });
   expect(rejoined.ws).toBe(secondSocket);
-  expect(rejoined.color).toBe('#def');
+  expect(rejoined.factionId).toBe('ion');
+  expect(rejoined.color).toBe(PALETTE.REMOTE);
 });
 
 test('a new client id with the same name takes over the live ship instead of cloning it', () => {

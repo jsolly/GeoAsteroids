@@ -328,7 +328,7 @@ class CanvasManager {
 
     this.drawMiniMapWithPlayers(currShip);
 
-    drawScoreOverlay(ctx, canvas, currScore);
+    drawScoreOverlay(ctx, canvas, currScore, currPlayer.factionId);
 
     drawLivesIndicator(ctx, lives, PALETTE.LOCAL, currShip.kitId);
 
