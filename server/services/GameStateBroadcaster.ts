@@ -386,7 +386,18 @@ export class GameStateBroadcaster {
   }
 
   public broadcastToAll(message: any, excludeId?: string): void {
-    const messageStr = JSON.stringify(message);
+    let messageStr: string;
+    try {
+      messageStr = JSON.stringify(message);
+    } catch (error) {
+      // A circular Timeout on player.ws used to kill the process here and
+      // flap every client into the Reconnecting banner (#485 live miss).
+      logger.error('Failed to serialize broadcast', {
+        type: message?.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
     const humanPlayers = this.gameEngine.entityManager.getHumanPlayers();
 
     for (const player of humanPlayers) {
