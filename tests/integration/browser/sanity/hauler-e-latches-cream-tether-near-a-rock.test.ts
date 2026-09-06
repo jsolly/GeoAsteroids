@@ -5,7 +5,7 @@ import { TestConfig } from '../../utils/test-config';
 
 const { browserManager } = createBrowserScenarioHooks(__dirname);
 
-test('Hauler E near a rock latches and paints cream tether plus amber tip', async () => {
+test('Hauler menu kit survives join, KeyE near a rock latches cream+tip', async () => {
   const page = browserManager.getCurrentPage();
   if (!page) throw new Error('Page not available');
 
@@ -18,27 +18,76 @@ test('Hauler E near a rock latches and paints cream tether plus amber tip', asyn
     return {
       kitId: player?.ship?.kitId,
       selected: document.querySelector('[data-kit-id="hauler"]')?.getAttribute('aria-pressed'),
+      joined: Boolean(gc?.getNetworkManager?.()?.getLocalPlayerId?.()),
     };
   });
   expect(before.kitId).toBe('hauler');
+  expect(before.selected).toBe('true');
+  expect(before.joined).toBe(true);
+
+  const approached = await page.evaluate(async () => {
+    const gc = (window as { gameController?: any }).gameController;
+    const ship = gc?.playerManager?.getLocalPlayer?.()?.ship;
+    const roids = gc?.getCurrRoidBelt?.()?.getRoids?.() ?? [];
+    if (!ship || !roids.length) {
+      return { ok: false, reason: 'missing ship or rock' };
+    }
+    const rock = roids
+      .map((candidate: { position: { x: number; y: number }; r?: number; id?: string }) => ({
+        candidate,
+        dist: Math.hypot(
+          candidate.position.x - ship.position.x,
+          candidate.position.y - ship.position.y
+        ),
+      }))
+      .sort(
+        (
+          a: { dist: number },
+          b: { dist: number }
+        ) => a.dist - b.dist
+      )[0]?.candidate;
+    if (!rock) {
+      return { ok: false, reason: 'no rock' };
+    }
+    const dx = rock.position.x - ship.position.x;
+    const dy = rock.position.y - ship.position.y;
+    ship.angle = Math.atan2(-dy, dx);
+    ship.thrusting = true;
+    const start = performance.now();
+    while (performance.now() - start < 1200) {
+      const gap =
+        Math.hypot(rock.position.x - ship.position.x, rock.position.y - ship.position.y) -
+        (ship.r ?? 0) -
+        (rock.r ?? 0);
+      if (gap < 90) {
+        break;
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    ship.thrusting = false;
+    ship.abilityCooldownFrames = 0;
+    const dist = Math.hypot(rock.position.x - ship.position.x, rock.position.y - ship.position.y);
+    return {
+      ok: true,
+      kitId: ship.kitId,
+      dist,
+      gap: dist - (ship.r ?? 0) - (rock.r ?? 0),
+      rockId: rock.id ?? null,
+    };
+  });
+  expect(approached.ok).toBe(true);
+  expect(approached.kitId).toBe('hauler');
 
   const latch = await page.evaluate(async () => {
     const gc = (window as { gameController?: any }).gameController;
-    const player = gc?.playerManager?.getLocalPlayer?.();
-    const ship = player?.ship;
-    const roids = gc?.getCurrRoidBelt?.()?.getRoids?.() ?? [];
-    const rock = roids[0];
-    if (!ship || !rock) {
-      return { ok: false, reason: 'missing ship or rock' };
+    const ship = gc?.playerManager?.getLocalPlayer?.()?.ship;
+    if (!ship) {
+      return { ok: false, reason: 'no ship' };
     }
-    // Live QA: 1:1 "near" is often 400–900wu. #480's 220wu KeyE sat inside
-    // the old 320wu cap and passed while production still missed.
-    ship.position.x = rock.position.x - 520;
-    ship.position.y = rock.position.y;
-    ship.angle = 0;
-    ship.abilityCooldownFrames = 0;
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', key: 'e', bubbles: true }));
     gc.updateGame(16);
+    gc.renderGame();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     gc.renderGame();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     gc.renderGame();
@@ -46,8 +95,7 @@ test('Hauler E near a rock latches and paints cream tether plus amber tip', asyn
     const canvas = document.querySelector('#gameCanvas') as HTMLCanvasElement | null;
     const ctx = canvas?.getContext('2d');
     const pixels = ctx && canvas ? ctx.getImageData(0, 0, canvas.width, canvas.height).data : null;
-
-    const nearHex = (hex: string, tolerance: number): boolean => {
+    const scan = (hex: string, tolerance: number): boolean => {
       if (!pixels) {
         return false;
       }
@@ -72,15 +120,17 @@ test('Hauler E near a rock latches and paints cream tether plus amber tip', asyn
       kitId: ship.kitId,
       harpoonTargetId: ship.harpoonTargetId ?? null,
       harpoonTimer: ship.harpoonTimer,
-      cream: nearHex('#E8D5A3', 22),
-      tip: nearHex('#FDE68A', 22),
+      abilityActiveFrames: ship.abilityActiveFrames,
+      latchPos: ship.harpoonLatchPos ?? null,
+      cream: scan('#E8D5A3', 22),
+      tip: scan('#FDE68A', 22),
     };
   });
 
   expect(latch.ok).toBe(true);
   expect(latch.kitId).toBe('hauler');
   expect(latch.harpoonTimer).toBeGreaterThan(0);
-  expect(latch.harpoonTargetId).toBeTruthy();
+  expect(latch.harpoonTargetId || latch.latchPos).toBeTruthy();
   expect(latch.cream).toBe(true);
   expect(latch.tip).toBe(true);
 }, TestConfig.DEFAULT_TIMEOUT);

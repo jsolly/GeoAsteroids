@@ -34,6 +34,7 @@ export interface AbilityBody {
   id?: string;
   position: Position;
   velocity: Velocity;
+  kind?: 'asteroid' | 'ship';
   factionId?: SoftFactionId;
   exploding?: boolean;
   health?: number;
@@ -110,11 +111,28 @@ export function listHarpoonCandidates(world?: AbilityWorld): AbilityBody[] {
   return [...getHarpoonField()];
 }
 
+/** Rocks are environment. Ship combat filters must not reject a visible belt row. */
+export function isEnvironmentLatchBody(body: AbilityBody): boolean {
+  if (body.kind === 'ship' || body.factionId !== undefined) {
+    return false;
+  }
+  if (body.shieldActive || (body.shieldTimer ?? 0) > 0) {
+    return false;
+  }
+  return true;
+}
+
 export function isHarpoonableBody(
   host: Pick<AbilityHost, 'id' | 'factionId'>,
   body: AbilityBody
 ): boolean {
-  if (!body.id || body.id === host.id) {
+  if (body.id && body.id === host.id) {
+    return false;
+  }
+  if (isEnvironmentLatchBody(body)) {
+    return !body.exploding;
+  }
+  if (!body.id) {
     return false;
   }
   if (body.exploding || (body.health !== undefined && body.health <= 0)) {
@@ -244,6 +262,8 @@ export function harpoonLatchRange(
   );
 }
 
+const NEAREST_GAP_TIE_WU = 24;
+
 export function findHarpoonTarget(
   host: Pick<AbilityHost, 'id' | 'factionId' | 'position' | 'angle' | 'r'>,
   bodies: AbilityBody[],
@@ -251,7 +271,7 @@ export function findHarpoonTarget(
 ): AbilityBody | undefined {
   const hx = Math.cos(host.angle);
   const hy = -Math.sin(host.angle);
-  let best: { body: AbilityBody; dist: number; facing: number } | undefined;
+  let best: { body: AbilityBody; gap: number; facing: number } | undefined;
 
   for (const body of bodies) {
     if (!isHarpoonableBody(host, body)) {
@@ -265,16 +285,64 @@ export function findHarpoonTarget(
       continue;
     }
     const facing = dist < 1 ? 1 : (dx * hx + dy * hy) / dist;
+    // QA "next to a rock" is hull gap, not nose-forward. A distant bot
+    // ahead used to steal the latch, then pull-clear left activation-only.
     if (
       !best ||
-      (facing > 0 && best.facing <= 0) ||
-      (facing > 0 === best.facing > 0 && dist < best.dist)
+      gap < best.gap - NEAREST_GAP_TIE_WU ||
+      (Math.abs(gap - best.gap) <= NEAREST_GAP_TIE_WU && facing > best.facing) ||
+      (Math.abs(gap - best.gap) <= NEAREST_GAP_TIE_WU && facing === best.facing && gap < best.gap)
     ) {
-      best = { body, dist, facing };
+      best = { body, gap, facing };
     }
   }
 
   return best?.body;
+}
+
+export interface HarpoonDiagnosis {
+  kitId: ShipKitId;
+  canActivate: boolean;
+  fieldCount: number;
+  scale: number;
+  range: number;
+  targetId?: string;
+  nearest?: { id?: string; dist: number; gap: number; reason: string };
+}
+
+/** QA probe: kit, field, nearest gap, reject reason, chosen latch. */
+export function diagnoseHarpoonLatch(host: AbilityHost, world?: AbilityWorld): HarpoonDiagnosis {
+  if (!world) {
+    syncHarpoonFieldFromPlay();
+  }
+  const resolved = resolveAbilityWorld(world);
+  const scale = world?.playfieldScale ?? getHarpoonFieldScale();
+  const canvas = world?.canvas ?? getHarpoonFieldCanvas();
+  const range = harpoonLatchRange(scale, canvas);
+  const candidates = listHarpoonCandidates(resolved);
+  let nearest: HarpoonDiagnosis['nearest'];
+  for (const body of candidates) {
+    const dist = Math.hypot(body.position.x - host.position.x, body.position.y - host.position.y);
+    const gap = dist - bodyRadius(host) - bodyRadius(body);
+    let reason = 'ok';
+    if (!isHarpoonableBody(host, body)) {
+      reason = 'rejected';
+    } else if (gap > range) {
+      reason = 'out-of-range';
+    }
+    if (!nearest || gap < nearest.gap) {
+      nearest = { id: body.id, dist, gap, reason };
+    }
+  }
+  return {
+    kitId: host.kitId,
+    canActivate: canActivateAbility(host),
+    fieldCount: candidates.length,
+    scale,
+    range,
+    targetId: findHarpoonTarget(host, candidates, range)?.id,
+    nearest,
+  };
 }
 
 function latchStillValid(
@@ -288,18 +356,29 @@ function latchStillValid(
   return harpoonSurfaceGap(host, target) <= range * SHIP_ABILITY.HARPOON_SLACK;
 }
 
+function bodyMatchesLatchId(body: AbilityBody, id: string): boolean {
+  if (!body.id) {
+    return false;
+  }
+  return body.id === id || body.id.endsWith(id) || id.endsWith(body.id);
+}
+
 /** Hauler-only: haul the latched rock or ship. Other kits never pull. */
 export function pullHarpoonTarget(host: AbilityHost, bodies: AbilityBody[]): void {
-  if (host.kitId !== 'hauler' || host.harpoonTimer <= 0 || !host.harpoonTargetId) {
-    if (host.kitId !== 'hauler') {
-      clearHarpoonLatch(host);
-    }
+  if (host.kitId !== 'hauler') {
+    clearHarpoonLatch(host);
+    return;
+  }
+  if (host.harpoonTimer <= 0 || !host.harpoonTargetId) {
     return;
   }
 
-  const target = bodies.find((body) => body.id === host.harpoonTargetId);
+  const targetId = host.harpoonTargetId;
+  const target =
+    bodies.find((body) => bodyMatchesLatchId(body, targetId)) ?? findHarpoonFieldBody(targetId);
+  // Keep cream VFX (timer + latchPos) if the field id is mid-sync. #481
+  // cleared here and left abilityActiveFrames — activation ring, no tether.
   if (!target || !latchStillValid(host, target, SHIP_ABILITY.HARPOON_RANGE_MAX)) {
-    clearHarpoonLatch(host);
     return;
   }
 
@@ -382,7 +461,7 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
       world?.canvas ?? getHarpoonFieldCanvas()
     );
     const target = findHarpoonTarget(host, listHarpoonCandidates(resolved), latchRange);
-    if (!target?.id) {
+    if (!target) {
       return { activated: false };
     }
     host.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES[kit.id];

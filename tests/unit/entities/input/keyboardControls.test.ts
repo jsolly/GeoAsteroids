@@ -1,9 +1,11 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { FUEL, GAME, SHIP } from '../../../../src/constants';
 import { Player } from '../../../../src/entities/player/Player';
+import { publishHarpoonField } from '../../../../src/entities/ship/harpoonField';
 import { applyShipKitToShip } from '../../../../src/entities/ship/shipKits';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { keyDown, keyUp } from '../../../../src/input/keybindings';
+import { setSelectedShipKitId } from '../../../../src/ui/shipKitSelect';
 
 // Covers the "controls appeared unresponsive" report: WASD did nothing and
 // Space did not fire. Movement now supports WASD alongside the arrow keys, and
@@ -19,6 +21,11 @@ const release = (code: string): void => keyUp(new KeyboardEvent('keyup', { code 
 
 beforeEach(() => {
   player = new Player({ id: 'p', name: 'P', type: 'local', input: new MockPlayerInput() });
+});
+
+afterEach(() => {
+  setSelectedShipKitId('dart');
+  publishHarpoonField([]);
 });
 
 test('KeyW thrusts and releasing it stops thrust', () => {
@@ -75,6 +82,16 @@ test('held KeyE repeat does not re-fire the ability', () => {
   const activateSpy = vi.spyOn(player.ship, 'activateAbility');
   keyDown(new KeyboardEvent('keydown', { code: 'KeyE', repeat: true }), player);
   expect(activateSpy).not.toHaveBeenCalled();
+});
+
+test('KeyE reapplies the title Hauler kit before activate', () => {
+  setSelectedShipKitId('hauler');
+  publishHarpoonField([{ id: 'rock-1', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } }]);
+  expect(player.ship.kitId).toBe('dart');
+  press('KeyE');
+  expect(player.ship.kitId).toBe('hauler');
+  expect(player.ship.harpoonTimer).toBeGreaterThan(0);
+  expect(player.ship.harpoonLatchPos).toBeTruthy();
 });
 
 test('KeyE on Dart does not spend fuel', () => {

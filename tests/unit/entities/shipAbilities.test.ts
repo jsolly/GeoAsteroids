@@ -5,16 +5,22 @@ import {
   applySharedHarpoonLatch,
   applyShockPulse,
   canActivateAbility,
+  diagnoseHarpoonLatch,
   findHarpoonTarget,
   harpoonLatchRange,
   harpoonSurfaceGap,
+  isEnvironmentLatchBody,
   pullHarpoonTarget,
   tickAbilityHost,
   type AbilityHost,
 } from '../../../src/entities/ship/shipAbilities';
 import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { bindHarpoonFieldSource, publishHarpoonField } from '../../../src/entities/ship/harpoonField';
+import {
+  bindHarpoonFieldSource,
+  harpoonBodyFromRock,
+  publishHarpoonField,
+} from '../../../src/entities/ship/harpoonField';
 
 function host(kitId: AbilityHost['kitId']): AbilityHost {
   return {
@@ -55,12 +61,12 @@ test('Hauler harpoon latches one rock and hauls only that rock', () => {
   expect(far.velocity.x).toBe(0);
 });
 
-test('harpoon prefers a forward rock over a nearer rock behind the Hauler', () => {
+test('harpoon latches the nearer rock even if a farther rock is ahead', () => {
   const hauler = host('hauler');
   hauler.angle = 0;
   const behind = { id: 'behind', position: { x: -40, y: 0 }, velocity: { x: 0, y: 0 } };
   const ahead = { id: 'ahead', position: { x: 90, y: 0 }, velocity: { x: 0, y: 0 } };
-  expect(findHarpoonTarget(hauler, [behind, ahead])?.id).toBe('ahead');
+  expect(findHarpoonTarget(hauler, [behind, ahead])?.id).toBe('behind');
 });
 
 test('non-Hauler kits never latch or haul', () => {
@@ -180,7 +186,7 @@ test('Hauler harpoon latches a nearby ship and hauls only that ship', () => {
   expect(far.velocity.x).toBe(0);
 });
 
-test('harpoon prefers a forward ship over a nearer rock behind the Hauler', () => {
+test('harpoon latches a touching rock instead of a distant forward ship', () => {
   const hauler = host('hauler');
   hauler.id = 'hauler-1';
   hauler.angle = 0;
@@ -190,8 +196,71 @@ test('harpoon prefers a forward ship over a nearer rock behind the Hauler', () =
     position: { x: 90, y: 0 },
     velocity: { x: 0, y: 0 },
     health: 100,
+    kind: 'ship' as const,
   };
-  expect(findHarpoonTarget(hauler, [rockBehind, shipAhead])?.id).toBe('foe');
+  expect(findHarpoonTarget(hauler, [rockBehind, shipAhead])?.id).toBe('rock');
+});
+
+test('harpoonBodyFromRock tags belt rows as asteroid so ship filters cannot reject them', () => {
+  const body = harpoonBodyFromRock({
+    position: { x: 10, y: 4 },
+    velocity: { x: 0, y: 0 },
+    r: 50,
+    health: 0,
+  });
+  expect(body).toBeTruthy();
+  expect(body?.kind).toBe('asteroid');
+  expect(body?.id).toMatch(/^rock:/);
+  expect(isEnvironmentLatchBody(body!)).toBe(true);
+});
+
+test('an environment rock without an id still latches via pose', () => {
+  const hauler = host('hauler');
+  const rock = { position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 }, r: 40 };
+  expect(isEnvironmentLatchBody(rock)).toBe(true);
+  expect(findHarpoonTarget(hauler, [rock])).toBe(rock);
+  const result = activateAbilityOnHost(hauler, { asteroids: [rock], entities: [] });
+  expect(result.activated).toBe(true);
+  expect(hauler.harpoonTimer).toBeGreaterThan(0);
+  expect(hauler.harpoonLatchPos?.x).toBe(80);
+});
+
+test('a visible rock with health 0 still latches', () => {
+  const hauler = host('hauler');
+  const rock = {
+    id: 'chip-rock',
+    position: { x: 80, y: 0 },
+    velocity: { x: 0, y: 0 },
+    health: 0,
+    r: 40,
+  };
+  expect(isEnvironmentLatchBody(rock)).toBe(true);
+  expect(findHarpoonTarget(hauler, [rock])?.id).toBe('chip-rock');
+  const result = activateAbilityOnHost(hauler, { asteroids: [rock], entities: [] });
+  expect(result.activated).toBe(true);
+  expect(hauler.harpoonTimer).toBeGreaterThan(0);
+});
+
+test('pull keeps the latch when the field id is missing so cream VFX stays', () => {
+  const hauler = host('hauler');
+  hauler.harpoonTimer = 80;
+  hauler.harpoonTargetId = 'server-asteroid-3';
+  hauler.harpoonLatchPos = { x: 40, y: 0 };
+  pullHarpoonTarget(hauler, []);
+  expect(hauler.harpoonTimer).toBe(80);
+  expect(hauler.harpoonTargetId).toBe('server-asteroid-3');
+  expect(hauler.harpoonLatchPos?.x).toBe(40);
+});
+
+test('diagnoseHarpoonLatch reports kit, nearest gap, and chosen target', () => {
+  const hauler = host('hauler');
+  const rock = { id: 'near-rock', position: { x: 60, y: 0 }, velocity: { x: 0, y: 0 }, r: 20 };
+  const probe = diagnoseHarpoonLatch(hauler, { asteroids: [rock], entities: [] });
+  expect(probe.kitId).toBe('hauler');
+  expect(probe.canActivate).toBe(true);
+  expect(probe.fieldCount).toBe(1);
+  expect(probe.targetId).toBe('near-rock');
+  expect(probe.nearest?.reason).toBe('ok');
 });
 
 test('harpoon skips self, same-side mates, and a Warden shield', () => {

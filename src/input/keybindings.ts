@@ -1,6 +1,8 @@
 import { upsertThrustSource } from '../audio/gameSounds';
 import { GAME } from '../constants';
 import type { Player } from '../entities/player/Player';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID } from '../entities/ship/shipKits';
+import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { logger } from '../utils/Logger';
 import { controlSources } from './controlSources';
 
@@ -131,6 +133,12 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         break;
       case 'KeyE':
         if (!ev.repeat) {
+          const selectedKit = getSelectedShipKitId();
+          // Title kit only wins when the live ship is still the default Dart.
+          // A stale dart menu must not strip Quake / Hauler mid-match.
+          if (player.ship.kitId === DEFAULT_SHIP_KIT_ID && selectedKit !== player.ship.kitId) {
+            applyShipKitToShip(player.ship, selectedKit);
+          }
           player.ship.activateAbility();
         }
         break;

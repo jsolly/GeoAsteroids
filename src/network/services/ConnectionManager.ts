@@ -813,11 +813,15 @@ export class ConnectionManager {
         localPlayer.id = data.id;
       }
     }
-    if (data.factionId) {
-      if (localPlayer) {
-        localPlayer.factionId = data.factionId;
-        localPlayer.ship.factionId = data.factionId;
+    if (localPlayer) {
+      const selectedKit = getSelectedShipKitId();
+      if (localPlayer.ship.kitId !== selectedKit) {
+        applyShipKitToShip(localPlayer.ship, selectedKit);
       }
+    }
+    if (data.factionId && localPlayer) {
+      localPlayer.factionId = data.factionId;
+      localPlayer.ship.factionId = data.factionId;
     }
     if (!keepField) {
       this.initializeAsteroids();
