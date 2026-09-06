@@ -11,6 +11,7 @@ export const HUMAN_REJOIN_STASH_TTL_MS = 5 * 60 * 1000;
 interface HumanRejoinStash {
   lives: number;
   score: number;
+  name: string;
   savedAt: number;
 }
 
@@ -54,6 +55,7 @@ export class EntityManager {
   private rng: RNGService;
   private isCreatingBots = false;
   private humanRejoinStash = new Map<string, HumanRejoinStash>();
+  private humanRejoinByName = new Map<string, HumanRejoinStash>();
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
@@ -145,7 +147,12 @@ export class EntityManager {
       return existing;
     }
 
-    const restored = this.consumeHumanRejoinStash(id);
+    const sameName = this.getHumanPlayers().find((human) => human.name === name);
+    if (sameName) {
+      return this.takeOverHuman(sameName, id, name, ws, color);
+    }
+
+    const restored = this.consumeHumanRejoinStash(id, name);
     const entity: GameEntity = {
       id,
       name,
@@ -169,23 +176,63 @@ export class EntityManager {
     return entity;
   }
 
+  private takeOverHuman(
+    existing: GameEntity,
+    id: string,
+    name: string,
+    ws: WebSocket,
+    color?: string
+  ): GameEntity {
+    const oldWs = existing.ws;
+    if (existing.id !== id) {
+      this.entities.delete(existing.id);
+      existing.id = id;
+      this.entities.set(id, existing);
+    }
+    existing.ws = ws;
+    existing.name = name;
+    existing.lastUpdate = Date.now();
+    if (color) {
+      existing.color = color;
+    }
+    if (oldWs && oldWs !== ws) {
+      try {
+        oldWs.close();
+      } catch {
+        // Old tab or zombie socket; the close handler must not see this ws.
+      }
+    }
+    return existing;
+  }
+
   private stashHumanForRejoin(entity: GameEntity): void {
     if (entity.type !== 'human' || entity.lives <= 0) {
       return;
     }
-    this.humanRejoinStash.set(entity.id, {
+    const stash: HumanRejoinStash = {
       lives: entity.lives,
       score: entity.score,
+      name: entity.name,
       savedAt: Date.now(),
-    });
+    };
+    this.humanRejoinStash.set(entity.id, stash);
+    this.humanRejoinByName.set(entity.name, stash);
   }
 
-  private consumeHumanRejoinStash(id: string): HumanRejoinStash | undefined {
-    const stash = this.humanRejoinStash.get(id);
+  private consumeHumanRejoinStash(id: string, name?: string): HumanRejoinStash | undefined {
+    const stash = this.humanRejoinStash.get(id) ?? (name ? this.humanRejoinByName.get(name) : undefined);
     if (!stash) {
       return undefined;
     }
-    this.humanRejoinStash.delete(id);
+    for (const [key, value] of this.humanRejoinStash) {
+      if (value === stash || key === id) {
+        this.humanRejoinStash.delete(key);
+      }
+    }
+    this.humanRejoinByName.delete(stash.name);
+    if (name) {
+      this.humanRejoinByName.delete(name);
+    }
     if (Date.now() - stash.savedAt > HUMAN_REJOIN_STASH_TTL_MS) {
       return undefined;
     }

@@ -21,6 +21,46 @@ test('rejoining the same human id keeps lives and swaps the socket', () => {
   expect(rejoined.color).toBe('#def');
 });
 
+test('a new client id with the same name takes over the live ship instead of cloning it', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-old', 'PilotB', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 2;
+  first.score = 450;
+
+  const taken = manager.addHumanPlayer(
+    'pilot-new',
+    'PilotB',
+    { sent: 2 } as never,
+    { x: 3000, y: 0 }
+  );
+
+  expect(taken).toBe(first);
+  expect(taken.id).toBe('pilot-new');
+  expect(taken.lives).toBe(2);
+  expect(taken.score).toBe(450);
+  expect(manager.getHumanPlayerCount()).toBe(1);
+  expect(manager.getEntity('pilot-old')).toBeUndefined();
+});
+
+test('drop then rejoin under a new id restores lives and score by name', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-old', 'PilotB', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 2;
+  first.score = 450;
+  manager.removeEntity('pilot-old');
+
+  const rejoined = manager.addHumanPlayer(
+    'pilot-new',
+    'PilotB',
+    { sent: 2 } as never,
+    { x: 3000, y: 0 }
+  );
+
+  expect(rejoined.lives).toBe(2);
+  expect(rejoined.score).toBe(450);
+  expect(manager.getHumanPlayerCount()).toBe(1);
+});
+
 test('game-over rejoin starts a new ship instead of restoring 0 lives', () => {
   const manager = new EntityManager(new RNGService(1));
   const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });

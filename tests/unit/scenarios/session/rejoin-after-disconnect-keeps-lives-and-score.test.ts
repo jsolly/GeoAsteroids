@@ -42,4 +42,20 @@ describe('Rejoin after a dropped socket', () => {
     expect(ship.score).toBe(210);
     expect(ship.spawnProtectionTimer).toBeGreaterThan(0);
   });
+
+  test('a new client id with the same name does not leave a second Ace at 3/0', () => {
+    const cloneSocket = new FakeSocket();
+    world.send({ id: 'ace-clone', name: ace.name, socket: cloneSocket }, {
+      type: 'join',
+      id: 'ace-clone',
+      name: ace.name,
+      data: { name: ace.name, position: { x: 1, y: 1 } },
+    });
+
+    expect(world.engine.getPlayerCount()).toBe(1);
+    expect(world.engine.getPlayer(ace.id)).toBeUndefined();
+    const ship = world.engine.getPlayer('ace-clone');
+    expect(ship?.lives).toBe(2);
+    expect(ship?.score).toBe(210);
+  });
 });

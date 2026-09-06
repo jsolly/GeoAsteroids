@@ -16,13 +16,19 @@ import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 import { asteroidKinematicUpdates, partitionAsteroidSnapshot } from './asteroidFieldSync';
+import { readOrCreateClientId } from './clientIdentity';
 import {
   CONNECTION_STALE_TIMEOUT_MS,
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
 } from './connectionHealth';
 import { nextReconnectDelayMs } from './connectionReconnect';
-import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
+import {
+  bindPageHideDisconnect,
+  duplicateOwnRemoteIds,
+  isLocalGameEntity,
+  staleRemotePlayerIds,
+} from './playerPresence';
 
 export interface ConnectionState {
   isConnected: boolean;
@@ -56,7 +62,9 @@ export class ConnectionManager {
       isConnected: false,
       socket: null,
     };
-    this.clientId = this.generateClientId();
+    this.clientId = readOrCreateClientId(
+      typeof sessionStorage === 'undefined' ? null : sessionStorage
+    );
     // Tab close / bfcache must tear the socket down so the server drops us
     // and other clients can prune this player from their leaderboard.
     bindPageHideDisconnect(() => this.disconnect());
@@ -79,12 +87,6 @@ export class ConnectionManager {
 
   isConnected(): boolean {
     return this.state.isConnected;
-  }
-
-  private generateClientId(): string {
-    const timestamp = Date.now().toString(36);
-    const randomPart = Math.random().toString(36).substring(2, 8);
-    return `client-${timestamp}-${randomPart}`;
   }
 
   async connect(): Promise<void> {
@@ -543,8 +545,11 @@ export class ConnectionManager {
     if (data.entities) {
       // Update entities in place - no clearing to prevent bot disappearance!
       for (const entityData of data.entities) {
-        const isLocalPlayer =
-          entityData.id === this.clientId || entityData.id === this.localPlayerId;
+        const isLocalPlayer = isLocalGameEntity(entityData, {
+          clientId: this.clientId,
+          localPlayerId: this.localPlayerId,
+          localPlayerName: this.localPlayerName,
+        });
 
         let entity = this.allPlayers.get(entityData.id);
 
@@ -626,6 +631,10 @@ export class ConnectionManager {
         for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
           this.allPlayers.delete(id);
           logger.info('NETWORK', 'Removed departed remote player', { id });
+        }
+        for (const id of duplicateOwnRemoteIds(this.allPlayers.values(), this.localPlayerName)) {
+          this.allPlayers.delete(id);
+          logger.info('NETWORK', 'Removed duplicate remote copy of local player', { id });
         }
       }
     }
