@@ -4,9 +4,11 @@ import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 describe('local player game-over state', () => {
   let player: Player;
-  const deaths: Array<{ deathCause: string; isGameOver: boolean }> = [];
+  const deaths: Array<{ playerId: string; deathCause: string; isGameOver: boolean }> = [];
   const onPlayerDied = (event: Event): void => {
-    const detail = (event as CustomEvent<{ deathCause: string; isGameOver: boolean }>).detail;
+    const detail = (
+      event as CustomEvent<{ playerId: string; deathCause: string; isGameOver: boolean }>
+    ).detail;
     deaths.push(detail);
   };
 
@@ -34,7 +36,9 @@ describe('local player game-over state', () => {
     });
 
     expect(player.deathCause).toBe('an asteroid');
-    expect(deaths).toEqual([{ deathCause: 'an asteroid', isGameOver: false }]);
+    expect(deaths).toEqual([
+      { playerId: 'local-player', deathCause: 'an asteroid', isGameOver: false },
+    ]);
   });
 
   test('ignores a server heal while lives are 0', () => {
