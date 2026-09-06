@@ -52,12 +52,44 @@ test('tether VFX can resolve a latched ship from the shared field', () => {
 function paintRecorder(): { ctx: CanvasRenderingContext2D; strokes: string[]; fills: string[] } {
   const strokes: string[] = [];
   const fills: string[] = [];
-  const ctx = {
+  const state = {
     strokeStyle: '',
     fillStyle: '',
     shadowColor: '',
     shadowBlur: 0,
     lineWidth: 0,
+  };
+  const ctx = {
+    get strokeStyle() {
+      return state.strokeStyle;
+    },
+    set strokeStyle(value: string) {
+      state.strokeStyle = value;
+    },
+    get fillStyle() {
+      return state.fillStyle;
+    },
+    set fillStyle(value: string) {
+      state.fillStyle = value;
+    },
+    get shadowColor() {
+      return state.shadowColor;
+    },
+    set shadowColor(value: string) {
+      state.shadowColor = value;
+    },
+    get shadowBlur() {
+      return state.shadowBlur;
+    },
+    set shadowBlur(value: number) {
+      state.shadowBlur = value;
+    },
+    get lineWidth() {
+      return state.lineWidth;
+    },
+    set lineWidth(value: number) {
+      state.lineWidth = value;
+    },
     save: () => undefined,
     restore: () => undefined,
     beginPath: () => undefined,
@@ -66,10 +98,10 @@ function paintRecorder(): { ctx: CanvasRenderingContext2D; strokes: string[]; fi
     arc: () => undefined,
     setLineDash: () => undefined,
     stroke() {
-      strokes.push(String(this.strokeStyle));
+      strokes.push(state.strokeStyle);
     },
     fill() {
-      fills.push(String(this.fillStyle));
+      fills.push(state.fillStyle);
     },
   } as unknown as CanvasRenderingContext2D;
   return { ctx, strokes, fills };

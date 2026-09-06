@@ -188,7 +188,7 @@ export function harpoonLatchRange(playfieldScale = 1): number {
 export function findHarpoonTarget(
   host: Pick<AbilityHost, 'id' | 'factionId' | 'position' | 'angle'>,
   bodies: AbilityBody[],
-  range = SHIP_ABILITY.HARPOON_RANGE
+  range: number = SHIP_ABILITY.HARPOON_RANGE
 ): AbilityBody | undefined {
   const hx = Math.cos(host.angle);
   const hy = -Math.sin(host.angle);
