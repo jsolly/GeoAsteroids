@@ -237,7 +237,11 @@ export function findHarpoonTarget(
   return best?.body;
 }
 
-function latchStillValid(host: AbilityHost, target: AbilityBody, range = SHIP_ABILITY.HARPOON_RANGE): boolean {
+function latchStillValid(
+  host: AbilityHost,
+  target: AbilityBody,
+  range = SHIP_ABILITY.HARPOON_RANGE
+): boolean {
   if (!isHarpoonableBody(host, target)) {
     return false;
   }

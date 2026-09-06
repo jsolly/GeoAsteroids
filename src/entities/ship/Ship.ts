@@ -23,7 +23,7 @@ import {
   canActivateAbility,
   tickAbilityHost,
 } from './shipAbilities';
-import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit, SHIP_ABILITY } from './shipKits';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from './shipKits';
 import { drawThruster } from './shipRenderer';
 
 import {
