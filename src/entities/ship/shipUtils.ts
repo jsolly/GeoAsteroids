@@ -137,8 +137,7 @@ export function applyShipLethalCollision(
 ): void {
   applyShipImpactFlash(ship);
   if (!ship.exploding) {
-    const damage =
-      cause === 'asteroid' ? DAMAGE.ASTEROID_COLLISION : DAMAGE.BOUNDARY_COLLISION;
+    const damage = cause === 'asteroid' ? DAMAGE.ASTEROID_COLLISION : DAMAGE.BOUNDARY_COLLISION;
     ship.takeDamage(damage, cause);
   }
 }

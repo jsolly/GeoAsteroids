@@ -1,3 +1,4 @@
+import { consumeTickAccumulator } from '../../shared/gameClock';
 import type { AsteroidData } from '../../shared-types';
 import {
   replaceThrustSources,
@@ -17,7 +18,6 @@ import {
   applyAsteroidKinematics,
   applyAsteroidRowToBelt,
 } from '../network/services/asteroidFieldSync';
-import { consumeTickAccumulator } from '../../shared/gameClock';
 import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
