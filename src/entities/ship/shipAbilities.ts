@@ -1,6 +1,6 @@
 import { areAllied } from '../../../shared/factions';
 import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
-import { getHarpoonField } from './harpoonField';
+import { getHarpoonField, getHarpoonFieldScale } from './harpoonField';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId, type ShipKitId } from './shipKits';
 
 export interface AbilityHost {
@@ -174,11 +174,22 @@ function pullBody(body: AbilityBody, toward: Position, force: number): void {
   body.velocity.y += (dy / dist) * force;
 }
 
+/** World-unit latch reach. Zoomed playfields make a 280wu rock look adjacent. */
+export function harpoonLatchRange(playfieldScale = 1): number {
+  if (!Number.isFinite(playfieldScale) || playfieldScale >= 1 || playfieldScale <= 0) {
+    return SHIP_ABILITY.HARPOON_RANGE;
+  }
+  return Math.min(
+    SHIP_ABILITY.HARPOON_RANGE / Math.max(playfieldScale, 0.28),
+    SHIP_ABILITY.HARPOON_RANGE * 2.5
+  );
+}
+
 export function findHarpoonTarget(
   host: Pick<AbilityHost, 'id' | 'factionId' | 'position' | 'angle'>,
-  bodies: AbilityBody[]
+  bodies: AbilityBody[],
+  range = SHIP_ABILITY.HARPOON_RANGE
 ): AbilityBody | undefined {
-  const range = SHIP_ABILITY.HARPOON_RANGE;
   const hx = Math.cos(host.angle);
   const hy = -Math.sin(host.angle);
   let best: { body: AbilityBody; dist: number; facing: number } | undefined;
@@ -295,7 +306,10 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
     if (host.kitId !== 'hauler') {
       return { activated: false };
     }
-    const target = findHarpoonTarget(host, listHarpoonCandidates(resolved));
+    const latchRange = world
+      ? SHIP_ABILITY.HARPOON_RANGE
+      : harpoonLatchRange(getHarpoonFieldScale());
+    const target = findHarpoonTarget(host, listHarpoonCandidates(resolved), latchRange);
     if (!target?.id) {
       return { activated: false };
     }

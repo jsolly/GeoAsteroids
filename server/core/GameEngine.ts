@@ -5,6 +5,7 @@ import { GROWTH, applyLootMass, applyShipMass } from '../../shared/shipGrowth';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import { activateAbilityOnHost, pullHarpoonTarget } from '../../src/entities/ship/shipAbilities';
+import { applyShipKitStats, isShipKitId } from '../../src/entities/ship/shipKits';
 import {
   requestShield,
   resolveCombatDamageSource,
@@ -528,10 +529,13 @@ export class GameEngine {
     return canDealCombatDamage(attacker?.factionId, target?.factionId);
   }
 
-  public useAbility(entityId: string): boolean {
+  public useAbility(entityId: string, requestedKitId?: unknown): boolean {
     const entity = this.entityManager.getEntity(entityId);
     if (!entity) {
       return false;
+    }
+    if (isShipKitId(requestedKitId) && entity.kitId !== requestedKitId) {
+      applyShipKitStats(entity, requestedKitId);
     }
     const world = {
       asteroids: this.asteroidManager.getAllAsteroids(),

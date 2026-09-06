@@ -1732,8 +1732,16 @@ export class GameInteractions {
   }
 
   /** Standard single-player boot sequence for scenario tests. */
-  async bootSinglePlayerGame(options?: { waitForCombatReady?: boolean }): Promise<void> {
+  async bootSinglePlayerGame(options?: {
+    waitForCombatReady?: boolean;
+    kitId?: 'dart' | 'hauler' | 'warden' | 'skirmisher' | 'quake';
+  }): Promise<void> {
     await this.navigateToGame();
+    if (options?.kitId) {
+      const kitButton = this.page.locator(`[data-kit-id="${options.kitId}"]`);
+      await kitButton.waitFor({ state: 'visible', timeout: 5000 });
+      await kitButton.click();
+    }
     await this.startGame();
     await this.waitForGameReady();
     await this.waitForServerJoin();

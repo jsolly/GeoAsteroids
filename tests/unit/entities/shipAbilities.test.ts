@@ -6,6 +6,7 @@ import {
   applyShockPulse,
   canActivateAbility,
   findHarpoonTarget,
+  harpoonLatchRange,
   pullHarpoonTarget,
   tickAbilityHost,
   type AbilityHost,
@@ -71,6 +72,19 @@ test('non-Hauler kits never latch or haul', () => {
   pullHarpoonTarget(dart, [rock]);
   expect(rock.velocity.x).toBe(0);
   expect(dart.harpoonTimer).toBe(0);
+});
+
+test('zoomed playfields widen local latch range so a visually-near rock hooks', () => {
+  expect(harpoonLatchRange(1)).toBe(SHIP_ABILITY.HARPOON_RANGE);
+  expect(harpoonLatchRange(0.3)).toBeGreaterThan(SHIP_ABILITY.HARPOON_RANGE);
+  const hauler = host('hauler');
+  const almostNear = {
+    id: 'zoom-rock',
+    position: { x: 400, y: 0 },
+    velocity: { x: 0, y: 0 },
+  };
+  expect(findHarpoonTarget(hauler, [almostNear])).toBeUndefined();
+  expect(findHarpoonTarget(hauler, [almostNear], harpoonLatchRange(0.3))?.id).toBe('zoom-rock');
 });
 
 test('Hauler harpoon whiffs without a rock in range', () => {

@@ -7,7 +7,25 @@ import {
 } from '../entities/ship/shipKits';
 import { attachEventListener, getElementById } from '../utils/dom';
 
-let selectedKitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
+const SELECTED_KIT_STORAGE_KEY = 'georoids.selectedShipKit';
+
+function readStoredKit(): ShipKitId {
+  try {
+    return parseShipKitId(globalThis.localStorage?.getItem(SELECTED_KIT_STORAGE_KEY));
+  } catch {
+    return DEFAULT_SHIP_KIT_ID;
+  }
+}
+
+function persistSelectedKit(kitId: ShipKitId): void {
+  try {
+    globalThis.localStorage?.setItem(SELECTED_KIT_STORAGE_KEY, kitId);
+  } catch {
+    // Private mode / blocked storage — in-memory selection still applies on join.
+  }
+}
+
+let selectedKitId: ShipKitId = readStoredKit();
 
 export function getSelectedShipKitId(): ShipKitId {
   return selectedKitId;
@@ -15,6 +33,7 @@ export function getSelectedShipKitId(): ShipKitId {
 
 export function setSelectedShipKitId(kitId: unknown): ShipKitId {
   selectedKitId = parseShipKitId(kitId);
+  persistSelectedKit(selectedKitId);
   syncKitButtons();
   return selectedKitId;
 }

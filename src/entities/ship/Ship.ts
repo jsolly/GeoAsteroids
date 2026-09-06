@@ -334,13 +334,12 @@ class Ship {
     if (result.abilityId === 'burstFire') {
       this.fireBurst(kit.burstCount, 0.12);
     }
-    // Harpoon latch is server-authoritative. Local prediction may miss a ship
-    // that the server can see — still send so both clients agree on the tether.
-    const requestHarpoon = kit.abilityId === 'harpoon' && canTry && !result.activated;
-    if (this.isLocalPlayer && !this.isBot) {
+    // Always tell the server on a legal E. Local predict can miss a rock the
+    // server sees; Hauler still sends so both clients agree on the tether.
+    if (this.isLocalPlayer && !this.isBot && canTry) {
       const networkManager = NetworkManager.getInstance();
-      if (networkManager.isConnected && (result.activated || requestHarpoon)) {
-        if (requestHarpoon) {
+      if (networkManager.isConnected) {
+        if (kit.abilityId === 'harpoon' && !result.activated) {
           this.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.hauler;
         }
         networkManager.sendMessage({

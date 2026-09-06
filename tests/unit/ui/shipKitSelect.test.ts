@@ -26,3 +26,15 @@ test('clicking Quake stores that kit for join', () => {
   expect(getSelectedShipKitId()).toBe('quake');
   expect(quake!.getAttribute('aria-pressed')).toBe('true');
 });
+
+test('Hauler selection survives a remount so join is not stuck on Dart', () => {
+  const hauler = document.querySelector<HTMLButtonElement>('[data-kit-id="hauler"]');
+  expect(hauler).toBeTruthy();
+  hauler!.click();
+  expect(getSelectedShipKitId()).toBe('hauler');
+  mountShipKitSelect();
+  expect(getSelectedShipKitId()).toBe('hauler');
+  expect(
+    document.querySelector<HTMLButtonElement>('[data-kit-id="hauler"]')?.getAttribute('aria-pressed')
+  ).toBe('true');
+});

@@ -50,7 +50,8 @@ tether VFX. It is not a sixth class and not “VFX-only until Hook.”
 - Only the Hauler kit may activate or draw harpoon
 - Latch one nearby rock (forward hemisphere preferred, else nearest in range)
 - While latched, haul that rock toward the Hauler
-- Tether line + latch ring VFX on Hauler only — never on Dart / Warden / Skirmisher / Quake
+- Tether VFX is Hauler only — cream line `#E8D5A3` + amber tip `#FDE68A`
+- Never draw the cable on Dart / Warden / Skirmisher / Quake
 
 See `src/entities/ship/shipAbilities.ts` and `drawHaulerHarpoonVfx`.
 

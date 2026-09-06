@@ -20,6 +20,25 @@ test('local Hauler adopts a server ship latch so the tether can draw', () => {
   expect(canDrawHaulerHarpoon(local.ship)).toBe(true);
 });
 
+test('local Hauler keeps its kit when a stale snapshot echoes dart', () => {
+  const local = new Player({
+    id: 'alice',
+    name: 'Alice',
+    type: 'local',
+    input: new MockPlayerInput(),
+    kitId: 'hauler',
+  });
+  local.updateFromServer({
+    kitId: 'dart',
+    harpoonTimer: 70,
+    harpoonTargetId: 'server-asteroid-10',
+  });
+  expect(local.ship.kitId).toBe('hauler');
+  expect(local.ship.harpoonTimer).toBe(70);
+  expect(local.ship.harpoonTargetId).toBe('server-asteroid-10');
+  expect(canDrawHaulerHarpoon(local.ship)).toBe(true);
+});
+
 test('remote Hauler matches the same server latch', () => {
   const remote = new Player({
     id: 'alice',
