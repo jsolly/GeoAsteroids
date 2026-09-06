@@ -59,6 +59,9 @@ describe('Boundary collision immunity', () => {
         damage: 100,
       },
     });
+    expect(ship.exploding).toBe(true);
+    expect(ship.health).toBe(0);
+    expect(ship.impactFlashFrames).toBeGreaterThan(0);
   });
 
   test('does not send boundary damage while blinking', () => {

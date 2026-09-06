@@ -5,6 +5,15 @@ import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
+/** Keep lives/score after a dropped socket so the same id can rejoin. */
+export const HUMAN_REJOIN_STASH_TTL_MS = 5 * 60 * 1000;
+
+interface HumanRejoinStash {
+  lives: number;
+  score: number;
+  name: string;
+  savedAt: number;
+}
 
 export interface GameEntity {
   id: string;
@@ -45,6 +54,8 @@ export class EntityManager {
   private entities = new Map<string, GameEntity>();
   private rng: RNGService;
   private isCreatingBots = false;
+  private humanRejoinStash = new Map<string, HumanRejoinStash>();
+  private humanRejoinByName = new Map<string, HumanRejoinStash>();
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
@@ -116,6 +127,7 @@ export class EntityManager {
   public removeEntity(entityId: string): GameEntity | undefined {
     const entity = this.entities.get(entityId);
     if (entity) {
+      this.stashHumanForRejoin(entity);
       this.entities.delete(entityId);
       logger.debug('ENTITY', `Removed ${entity.type} entity: ${entity.name} (${entityId})`);
     }
@@ -135,6 +147,12 @@ export class EntityManager {
       return existing;
     }
 
+    const sameName = this.getHumanPlayers().find((human) => human.name === name);
+    if (sameName) {
+      return this.takeOverHuman(sameName, id, name, ws, color);
+    }
+
+    const restored = this.consumeHumanRejoinStash(id, name);
     const entity: GameEntity = {
       id,
       name,
@@ -145,8 +163,8 @@ export class EntityManager {
       exploding: false,
       thrusting: false,
       color: color || PALETTE.REMOTE,
-      lives: 3,
-      score: 0,
+      lives: restored?.lives ?? 3,
+      score: restored?.score ?? 0,
       health: 100,
       maxHealth: 100,
       lastUpdate: Date.now(),
@@ -156,6 +174,69 @@ export class EntityManager {
 
     this.addEntity(entity);
     return entity;
+  }
+
+  private takeOverHuman(
+    existing: GameEntity,
+    id: string,
+    name: string,
+    ws: WebSocket,
+    color?: string
+  ): GameEntity {
+    const oldWs = existing.ws;
+    if (existing.id !== id) {
+      this.entities.delete(existing.id);
+      existing.id = id;
+      this.entities.set(id, existing);
+    }
+    existing.ws = ws;
+    existing.name = name;
+    existing.lastUpdate = Date.now();
+    if (color) {
+      existing.color = color;
+    }
+    if (oldWs && oldWs !== ws) {
+      try {
+        oldWs.close();
+      } catch {
+        // Old tab or zombie socket; the close handler must not see this ws.
+      }
+    }
+    return existing;
+  }
+
+  private stashHumanForRejoin(entity: GameEntity): void {
+    if (entity.type !== 'human' || entity.lives <= 0) {
+      return;
+    }
+    const stash: HumanRejoinStash = {
+      lives: entity.lives,
+      score: entity.score,
+      name: entity.name,
+      savedAt: Date.now(),
+    };
+    this.humanRejoinStash.set(entity.id, stash);
+    this.humanRejoinByName.set(entity.name, stash);
+  }
+
+  private consumeHumanRejoinStash(id: string, name?: string): HumanRejoinStash | undefined {
+    const stash = this.humanRejoinStash.get(id) ?? (name ? this.humanRejoinByName.get(name) : undefined);
+    if (!stash) {
+      return undefined;
+    }
+    for (const [key, value] of this.humanRejoinStash) {
+      if (value === stash || key === id) {
+        this.humanRejoinStash.delete(key);
+      }
+    }
+    this.humanRejoinByName.delete(stash.name);
+    if (name) {
+      this.humanRejoinByName.delete(name);
+    }
+    if (Date.now() - stash.savedAt > HUMAN_REJOIN_STASH_TTL_MS) {
+      return undefined;
+    }
+    return stash;
   }
 
   // Bot management

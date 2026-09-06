@@ -11,6 +11,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
 import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
@@ -59,6 +60,7 @@ export class GameController {
 
     // Set up game over handler
     this.setupGameOverHandler();
+    this.setupShipExplodedHandler();
 
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
@@ -250,7 +252,8 @@ export class GameController {
   }
 
   gameOver(deathCause?: string): void {
-    const gameOverText = deathCause ? `Game Over: You were killed by ${deathCause}` : 'Game Over';
+    const killer = formatDeathCauseForOverlay(deathCause);
+    const gameOverText = killer ? `Game Over: You were killed by ${killer}` : 'Game Over';
     this.gameStateManager.updateTextProperties(gameOverText, 1.0);
 
     // Clean up server asteroid listeners to prevent memory leaks
@@ -265,6 +268,33 @@ export class GameController {
         showGameOverMenu();
       });
     }, 3500); // Increased time to read the death message
+  }
+
+  private setupShipExplodedHandler(): void {
+    window.addEventListener('shipExploded', (event) => {
+      const customEvent = event as CustomEvent<{
+        shipId: string;
+        cause?: string;
+        killerName?: string;
+      }>;
+      const cause = customEvent.detail.cause;
+      if (!cause) {
+        return;
+      }
+
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (localPlayer?.ship.id === customEvent.detail.shipId) {
+        localPlayer.onShipExploded({ cause });
+        return;
+      }
+
+      for (const player of this.networkManager.getAllPlayers()) {
+        if (player.ship.id === customEvent.detail.shipId) {
+          player.onShipExploded({ cause });
+          return;
+        }
+      }
+    });
   }
 
   private setupGameOverHandler(): void {
