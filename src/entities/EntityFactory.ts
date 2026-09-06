@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../shared-types';
-import { CANVAS, DEBUG, PALETTE } from '../constants';
+import { CANVAS, DEBUG, PALETTE, SPAWN } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
 import { getFactionColor } from '../utils/colorUtils';
 import {
@@ -185,8 +185,12 @@ export class EntityFactory {
       const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
       position = getRandomPositionNearPoint(centerPosition, 150);
     } else {
-      // Default behavior: random position within boundary
-      position = getRandomPositionWithinBoundary();
+      // Default: spawn near the arena center (world origin) so players joining
+      // the same server appear within view of each other. Spawning anywhere in
+      // the full boundary radius (~3100px) scatters players thousands of px
+      // apart, leaving them permanently off each other's screens even though
+      // the leaderboard lists everyone. See SPAWN.NEAR_CENTER_RADIUS.
+      position = getRandomPositionNearPoint({ x: 0, y: 0 }, SPAWN.NEAR_CENTER_RADIUS);
     }
     player.ship.position = position;
 

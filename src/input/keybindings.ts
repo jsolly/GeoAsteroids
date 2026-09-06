@@ -36,18 +36,19 @@ export function getPressedKeysForPlayer(player: Player): Set<string> {
   return set;
 }
 
-// Helper function to update thrust state based on aggregate key state
+// Helper function to update thrust state based on aggregate key state.
+// Thrust keys are ArrowUp and KeyW (Space is the fire key — see keyDown).
 export function updateThrustFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
-  const shouldThrust = pressed.has('Space') || pressed.has('ArrowUp');
+  const shouldThrust = pressed.has('ArrowUp') || pressed.has('KeyW');
   const currentlyThrusting = player.ship.thrusting;
 
   logger.debug('KEYBINDINGS', 'updateThrustFromKeys', {
     pressedKeys: Array.from(pressed),
     shouldThrust,
     currentlyThrusting,
-    hasSpace: pressed.has('Space'),
     hasArrowUp: pressed.has('ArrowUp'),
+    hasKeyW: pressed.has('KeyW'),
     playerId: player.id,
     playerName: player.name,
   });
@@ -75,6 +76,25 @@ export function updateThrustFromKeys(player: Player): void {
   }
 }
 
+// Helper to set angular velocity from the aggregate turn-key state. Supports
+// both arrow keys (ArrowLeft/ArrowRight) and WASD (KeyA/KeyD); opposing keys
+// held together cancel out. Using the per-player pressed set (rather than the
+// global `keys` map) keeps combinations correct across arrow/WASD mixes.
+export function updateTurnFromKeys(player: Player): void {
+  const pressed = getPressedKeysForPlayer(player);
+  const turningLeft = pressed.has('ArrowLeft') || pressed.has('KeyA');
+  const turningRight = pressed.has('ArrowRight') || pressed.has('KeyD');
+
+  if (turningLeft && !turningRight) {
+    player.ship.angularVelocity = TURN_SPEED_RAD_PER_FRAME;
+  } else if (turningRight && !turningLeft) {
+    player.ship.angularVelocity = -TURN_SPEED_RAD_PER_FRAME;
+  } else {
+    // Neither held, or both held (opposing turns cancel).
+    player.ship.angularVelocity = 0;
+  }
+}
+
 export function keyDown(ev: KeyboardEvent, player: Player): void {
   logger.debug('KEYBINDINGS', 'KeyDown called', {
     key: ev.code,
@@ -90,23 +110,24 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
     getPressedKeysForPlayer(player).add(ev.code);
     switch (ev.code) {
       case 'Space':
-        // Space now thrusts (in addition to right click). Keep arrows unchanged.
-        updateThrustFromKeys(player);
+        // Space fires (classic Asteroids + the documented control scheme).
+        // Thrust is ArrowUp / KeyW / right-mouse; see updateThrustFromKeys.
+        player.ship.shoot();
         break;
       case 'KeyE':
         player.ship.empPulse();
         break;
       case 'ArrowLeft':
-        logger.debug('KEYBINDINGS', 'Setting left rotation');
-        player.ship.angularVelocity = TURN_SPEED_RAD_PER_FRAME;
+      case 'KeyA':
+      case 'ArrowRight':
+      case 'KeyD':
+        logger.debug('KEYBINDINGS', 'Updating rotation', { key: ev.code });
+        updateTurnFromKeys(player);
         break;
       case 'ArrowUp':
-        logger.debug('KEYBINDINGS', 'Setting thrust');
+      case 'KeyW':
+        logger.debug('KEYBINDINGS', 'Setting thrust', { key: ev.code });
         updateThrustFromKeys(player);
-        break;
-      case 'ArrowRight':
-        logger.debug('KEYBINDINGS', 'Setting right rotation');
-        player.ship.angularVelocity = -TURN_SPEED_RAD_PER_FRAME;
         break;
     }
   }
@@ -132,38 +153,27 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
     globalKeys: { ...keys },
   });
 
-  // Always handle Space key release to ensure thrust cleanup even if player cannot act
+  // Space is the fire key; on release simply re-arm the next shot (mirrors the
+  // left-mouse behavior). Handled regardless of alive state so it never sticks.
   if (ev.code === 'Space') {
-    updateThrustFromKeys(player);
-    return; // Exit early for Space to avoid any further state changes
+    player.ship.canShoot = true;
+    return;
   }
 
-  // Then check if player can respond to key events
-  if (player.lives > 0 && !player.ship.exploding) {
-    switch (ev.code) {
-      case 'Space':
-        // Already handled above to ensure cleanup regardless of state
-        break;
-      case 'ArrowLeft':
-        if (!keys.ArrowRight) {
-          player.ship.angularVelocity = 0;
-        } else {
-          player.ship.angularVelocity = -TURN_SPEED_RAD_PER_FRAME; // If right arrow is still down, continue rotation
-        }
-        break;
-      case 'ArrowUp':
-        updateThrustFromKeys(player);
-        break;
-      case 'ArrowRight':
-        if (!keys.ArrowLeft) {
-          player.ship.angularVelocity = 0;
-        } else {
-          player.ship.angularVelocity = TURN_SPEED_RAD_PER_FRAME; // If left arrow is still down, continue rotation
-        }
-        break;
-    }
+  // Reconcile thrust/turn from the remaining held keys. Done regardless of
+  // lives/exploding so releasing a key never leaves a dead ship stuck
+  // thrusting or spinning. Both arrows and WASD funnel through the same
+  // aggregate helpers.
+  switch (ev.code) {
+    case 'ArrowUp':
+    case 'KeyW':
+      updateThrustFromKeys(player);
+      break;
+    case 'ArrowLeft':
+    case 'KeyA':
+    case 'ArrowRight':
+    case 'KeyD':
+      updateTurnFromKeys(player);
+      break;
   }
-
-  // Note: updateThrustFromKeys() already handles all thrust state reconciliation
-  // including sound management and aggregate key state checking
 }

@@ -28,6 +28,7 @@ import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
+import { drawStarfield } from './starfield';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
 class CanvasManager {
@@ -207,6 +208,8 @@ class CanvasManager {
     ctx.fillStyle = PALETTE.BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    drawStarfield(currShip.position);
+
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
 
@@ -230,6 +233,7 @@ class CanvasManager {
           } else {
             drawShipExplosionAtPosition(player.ship, currShip.position, factionColor);
           }
+        } else if (player.ship.health <= 0) {
         } else if (player.id === localId) {
           drawShipAtPosition(currShip, currShip.position, factionColor, currPlayer.name);
         } else {
@@ -248,7 +252,7 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        if (player.ship.exploding) {
+        if (player.ship.exploding || player.ship.health <= 0) {
           continue;
         }
 
@@ -287,7 +291,7 @@ class CanvasManager {
       if (player.id === localId) {
         continue;
       }
-      if (player.ship.exploding) {
+      if (player.ship.exploding || player.ship.health <= 0) {
         continue;
       }
 

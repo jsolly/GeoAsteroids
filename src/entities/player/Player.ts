@@ -1,10 +1,11 @@
 import type { Position } from '../../../shared-types';
-import { GAME, SHIP } from '../../constants';
+import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
 import { isStaleGameOverSnapshot } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
+import { applyShipSpawnProtection } from '../ship/shipUtils';
 
 export class Player {
   id: string;
@@ -217,7 +218,8 @@ export class Player {
           this.ship.explode('server-damage');
         }
 
-        // If we were dead/exploding and now have health, reset local spawn protection visuals
+        // Arm blink on death → alive, or whenever the server still has
+        // spawn protection and the client lost the visual (heal-leak).
         if ((wasDead || wasExploding) && this.ship.health > 0) {
           if (this.ship.exploding) {
             this.ship.exploding = false;
@@ -225,18 +227,15 @@ export class Player {
           }
           logger.debug('RESPAWN_PROTECTION', 'Setting respawn protection', {
             playerId: this.id,
-            settingBlinkCount: Math.ceil(
-              SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-            ),
-            settingSpawnProtectionTimer: SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES,
             type: this.type,
           });
-
-          this.ship.blinkCount = Math.ceil(
-            SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-          );
-          this.ship.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
-          this.ship.setBlinkOn();
+          applyShipSpawnProtection(this.ship);
+        } else if (
+          this.ship.health > 0 &&
+          this.ship.blinkCount <= 0 &&
+          (data.spawnProtectionTimer ?? 0) > 0
+        ) {
+          applyShipSpawnProtection(this.ship);
         } else if (this.ship.health > 0 && this.type === 'local') {
           logger.debug(
             'HEALTH_UPDATE_LOCAL',
@@ -319,12 +318,7 @@ export class Player {
     // Reset velocity
     this.ship.velocity = { x: 0, y: 0 };
 
-    // Set spawn protection
-    this.ship.blinkCount = Math.ceil(
-      SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-    );
-    this.ship.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
-    this.ship.setBlinkOn();
+    applyShipSpawnProtection(this.ship);
 
     logger.debug('RESPAWN', 'Player respawn completed', {
       playerId: this.id,

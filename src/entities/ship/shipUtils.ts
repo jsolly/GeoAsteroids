@@ -2,6 +2,46 @@ import type { Position } from '../../../shared-types';
 import { GAME, SHIP } from '../../constants';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
+/** Minimal ship shape shared by local players, remotes, and bots. */
+export interface ShipCollisionState {
+  exploding: boolean;
+  health: number;
+  blinkCount: number;
+}
+
+export interface ShipSpawnProtectionState {
+  blinkCount: number;
+  spawnProtectionTimer: number;
+  setBlinkOn(): void;
+}
+
+/** True when a ship must not report or receive collision damage. */
+export function isShipCollisionImmune(ship: ShipCollisionState): boolean {
+  return ship.exploding || ship.health <= 0 || ship.blinkCount > 0;
+}
+
+/** Arm the client blink window used by players and bots. */
+export function applyShipSpawnProtection(ship: ShipSpawnProtectionState): void {
+  ship.blinkCount = Math.ceil(
+    SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
+  );
+  ship.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+  ship.setBlinkOn();
+}
+
+/**
+ * playerDamaged must never raise health. Ignored hits (spawn protection)
+ * still arrive with remainingHealth=100 and would "heal" a dead ship at
+ * the death pose, skipping the blink arm in updateFromServer.
+ */
+export function shouldApplyDamagedHealth(
+  currentHealth: number,
+  remainingHealth: number,
+  isDestroyed: boolean
+): boolean {
+  return isDestroyed || remainingHealth < currentHealth;
+}
+
 export function canTakeCollisionDamage(
   lastCollisionTime: number,
   cooldownMs: number = 500

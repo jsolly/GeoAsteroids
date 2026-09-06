@@ -69,10 +69,12 @@ afterEach(() => {
   releaseKey('Space');
 });
 
-test('keyDown - Space starts thrust and plays sound', () => {
+test('keyDown - Space fires and does not thrust', () => {
+  const shootSpy = vi.spyOn(mockPlayer.ship, 'shoot');
   pressKey('Space');
-  expect(mockPlayer.ship.thrusting).toBeTruthy();
-  expect(playSpy).toHaveBeenCalled();
+  expect(shootSpy).toHaveBeenCalled();
+  expect(mockPlayer.ship.thrusting).toBeFalsy();
+  expect(playSpy).not.toHaveBeenCalled();
 });
 
 test('keyDown - ArrowLeft', () => {
@@ -97,28 +99,12 @@ test('keyDown - ArrowRight', () => {
   );
 });
 
-test('keyUp - Space stops thrust and stops sound', async () => {
-  // Clear spy history
-  stopSpy.mockClear();
-
-  // Ensure clean state - release any keys that might be pressed from previous tests
-  keys.ArrowUp = false;
-  keys.ArrowLeft = false;
-  keys.ArrowRight = false;
-  keys.Space = false;
-
-  // Simulate Space key is already pressed and player is thrusting
-  pressKey('Space');
-
-  // Simulate sound is playing for the key release
-  isPlayingStub.mockReturnValue(true);
+test('keyUp - Space re-arms shooting', () => {
+  // Firing sets canShoot=false; releasing Space should re-arm the next shot
+  // (mirrors the left-mouse behavior).
+  mockPlayer.ship.canShoot = false;
   releaseKey('Space');
-
-  // Allow any asynchronous operations to complete
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  // Check thrust state after release
-  expect(mockPlayer.ship.thrusting).toBeFalsy();
+  expect(mockPlayer.ship.canShoot).toBeTruthy();
 });
 
 test('keyUp - ArrowLeft', () => {
@@ -153,17 +139,17 @@ test('thrust persists when one of multiple thrust keys is released', () => {
   expect(mockPlayer.ship.thrusting).toBeTruthy();
   expect(playSpy).toHaveBeenCalled();
 
-  // Clear spy history again to test Space press doesn't call play again
+  // Clear spy history again to test KeyW press doesn't call play again
   playSpy.mockClear();
 
-  // While still holding ArrowUp, press Space too
-  pressKey('Space');
+  // While still holding ArrowUp, press KeyW (the WASD thrust key) too
+  pressKey('KeyW');
   expect(mockPlayer.ship.thrusting).toBeTruthy();
   // Play should not be called again since sound is already playing
   expect(playSpy).not.toHaveBeenCalled();
 
-  // Release Space: thrust should continue due to ArrowUp still down
-  releaseKey('Space');
+  // Release KeyW: thrust should continue due to ArrowUp still down
+  releaseKey('KeyW');
   expect(mockPlayer.ship.thrusting).toBeTruthy();
 
   // Finally release ArrowUp: thrust should stop
@@ -194,7 +180,8 @@ test('keyDown - non-specified key', () => {
   const initialAngularVelocity = mockPlayer.ship.angularVelocity;
   const initialThrusting = mockPlayer.ship.thrusting;
 
-  pressKey('KeyA');
+  // KeyZ is unbound (KeyA/KeyW/KeyD are now WASD controls).
+  pressKey('KeyZ');
 
   expect(mockPlayer.ship.angularVelocity).toEqual(initialAngularVelocity);
   expect(mockPlayer.ship.thrusting).toEqual(initialThrusting);
@@ -222,7 +209,7 @@ test('keyUp - non-specified key', () => {
   const initialAngularVelocity = mockPlayer.ship.angularVelocity;
   const initialThrusting = mockPlayer.ship.thrusting;
 
-  releaseKey('KeyA');
+  releaseKey('KeyZ');
 
   expect(mockPlayer.ship.angularVelocity).toEqual(initialAngularVelocity);
   expect(mockPlayer.ship.thrusting).toEqual(initialThrusting);

@@ -169,11 +169,11 @@ describe('Bot-Asteroid Collision System', () => {
         gameEngine.entityManager.updateExplosions();
       }
 
-      // Bot should be respawning now
+      // Explosion finished; shared ship lifecycle waits for respawn to restore health
       const respawnedBot = gameEngine.getBot(bot.id);
       expect(respawnedBot).not.toBeNull();
       expect(respawnedBot!.exploding).toBe(false);
-      expect(respawnedBot!.health).toBe(respawnedBot!.maxHealth);
+      expect(respawnedBot!.health).toBe(0);
       expect(respawnedBot!.respawnTimer).toBe(180); // 3 seconds respawn delay
     });
 
@@ -243,8 +243,10 @@ describe('Bot-Asteroid Collision System', () => {
       const respawnedBot = gameEngine.getBot(bot.id);
       expect(respawnedBot).not.toBeNull();
       expect(respawnedBot!.respawnTimer).toBeUndefined();
-      // Spawn protection timer might not be set in test environment, so just check it's not exploding
       expect(respawnedBot!.exploding).toBe(false);
+      expect(respawnedBot!.health).toBe(respawnedBot!.maxHealth);
+      expect(respawnedBot!.spawnProtectionTimer).toBe(180);
+      expect(respawnedBot!.respawnAnchor).toEqual(respawnedBot!.position);
     });
   });
 
