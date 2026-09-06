@@ -7,6 +7,8 @@ import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
+import { TERRAIN } from '../../src/physics/terrain/terrainConfig';
+import { ensureTerrain, getTerrainSeed } from '../../src/physics/terrain/terrainSession';
 import { logger } from '../../setup/serverLogger';
 
 export class GameEngine {
@@ -24,6 +26,7 @@ export class GameEngine {
     this.rngService = new RNGService(rngSeed);
     this.entityManager = new EntityManager(this.rngService);
     this.asteroidManager = new AsteroidManager(this.rngService);
+    ensureTerrain(TERRAIN.DEFAULT_SEED);
 
     // Don't initialize pause state yet - will be called after initialization
   }
@@ -415,6 +418,7 @@ export class GameEngine {
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
       isPaused: this.isPaused,
+      terrainSeed: getTerrainSeed(),
     };
     
     // Debug logging for health values
@@ -494,6 +498,10 @@ export class GameEngine {
 
   public updateBotMovement(): void {
     this.entityManager.updateBotMovement();
+  }
+
+  public getTerrainSeed(): number {
+    return getTerrainSeed();
   }
 
 

@@ -24,6 +24,7 @@ import { getFactionColor, getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { drawIsoContours } from './contourRenderer';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
@@ -227,6 +228,7 @@ class CanvasManager {
     this.beginPlayfieldFrame(currShip.position, rocksForPlayfieldZoom(roids));
 
     drawStarfield(currShip.position);
+    drawIsoContours(currShip.position);
 
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);

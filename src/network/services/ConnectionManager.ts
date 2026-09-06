@@ -13,6 +13,7 @@ import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
+import { applyTerrainSeed } from '../../physics/terrain/terrainSession';
 import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
@@ -564,6 +565,8 @@ export class ConnectionManager {
   }
 
   private handleGameState(data: ServerGameState): void {
+    applyTerrainSeed(data.terrainSeed);
+
     // Update local game state from server using unified entity system
     if (data.entities) {
       // Update entities in place - no clearing to prevent bot disappearance!
@@ -729,6 +732,8 @@ export class ConnectionManager {
 
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
+
+    applyTerrainSeed(data.terrainSeed);
 
     // Store the local player ID from server response
     if (data.id) {

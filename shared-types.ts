@@ -52,6 +52,8 @@ export interface PlayerJoin {
   color: string;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
+  /** Seeded heightfield shared by every client in the room. */
+  terrainSeed?: number;
 }
 
 export interface PlayerLeave {
@@ -122,6 +124,8 @@ export interface ServerGameState {
   asteroids: AsteroidData[];
   gameTime: number;
   isPaused: boolean;
+  /** Same seed on every client → same contours and slope field. */
+  terrainSeed?: number;
 }
 
 export interface ServerEntityData {

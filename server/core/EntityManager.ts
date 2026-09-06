@@ -7,6 +7,7 @@ import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/
 import { RNGService } from './RNGService';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
+import { applySharedShipSlope } from '../../src/physics/terrain/applyShipSlope';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
@@ -546,6 +547,8 @@ export class EntityManager {
         bot.velocity.x *= scale;
         bot.velocity.y *= scale;
       }
+
+      applySharedShipSlope(bot.velocity, bot.position);
 
       // Turn off thrusters occasionally for more realistic behavior
       if (Math.random() < 0.1) { // 10% chance to turn off thrusters
