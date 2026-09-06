@@ -4,6 +4,9 @@ Short, readable stories of GeoRoids mechanics. They run in-process against a rea
 `GameEngine` (and, where it matters, the shared `Ship` class) — no Playwright,
 no 90-second death loops.
 
+`playerLeft` on disconnect already shipped in #444; these tests lock that
+behavior in, plus the rest of the P0 mechanics list.
+
 ```text
 npm test   # vitest run tests/unit/  — includes this folder
 ```

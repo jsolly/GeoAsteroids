@@ -9,7 +9,8 @@ import { DAMAGE, GAME, SHIP } from '../../../../src/constants';
 /** One server tick is one frame at GAME.FPS. */
 export const FRAMES_PER_SECOND = GAME.FPS;
 export const EXPLOSION_FRAMES = SHIP.EXPLODE_DURATION_FRAMES;
-export const RESPAWN_COUNTDOWN_FRAMES = 3 * FRAMES_PER_SECOND;
+/** GameEngine schedules this at death; the explosion runs in parallel. */
+export const RESPAWN_COUNTDOWN_FRAMES = SHIP.RESPAWN_DELAY_FRAMES;
 export const SPAWN_PROTECTION_FRAMES = SHIP.INVINCIBILITY_DURATION_FRAMES;
 /** Circular arena used by the server (`getGameBoundary()` / EntityManager). */
 export const ARENA_RADIUS = 3100;
@@ -138,7 +139,7 @@ export class GameServerWorld {
   }
 
   tickThroughRespawn(): void {
-    this.tick(EXPLOSION_FRAMES + RESPAWN_COUNTDOWN_FRAMES);
+    this.tick(RESPAWN_COUNTDOWN_FRAMES);
   }
 
   startClock(): void {
