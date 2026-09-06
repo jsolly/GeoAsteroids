@@ -254,6 +254,7 @@ export class GameStateBroadcaster {
           lives: bot.lives,
           health: bot.health,
           maxHealth: bot.maxHealth,
+          mass: bot.mass,
         },
         timestamp: Date.now(),
       };

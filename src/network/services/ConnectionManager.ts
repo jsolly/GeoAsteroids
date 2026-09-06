@@ -2,6 +2,7 @@ import type {
   AsteroidData,
   AsteroidDestroyEvent,
   AsteroidTaggedEvent,
+  LootData,
   PlayerJoin,
   PlayerLeave,
   PlayerUpdate,
@@ -12,6 +13,7 @@ import type {
 import { playLaserSound } from '../../audio/gameSounds';
 import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
+import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
@@ -206,6 +208,7 @@ export class ConnectionManager {
     this.allPlayers.clear();
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
+    LootField.getInstance().clear();
     this.localPlayerId = '';
     // pagehide / unexpected close keep the stored id (#467). Game-over Start
     // mints a new one so we do not rejoin a 0-life ship.
@@ -641,6 +644,7 @@ export class ConnectionManager {
           ...(entityData.color !== undefined ? { color: entityData.color } : {}),
           ...(entityData.health !== undefined ? { health: entityData.health } : {}),
           ...(entityData.maxHealth !== undefined ? { maxHealth: entityData.maxHealth } : {}),
+          ...(entityData.mass !== undefined ? { mass: entityData.mass } : {}),
           ...(entityData.respawnTimer !== undefined
             ? { respawnTimer: entityData.respawnTimer }
             : {}),
@@ -694,6 +698,10 @@ export class ConnectionManager {
     if (data.asteroids) {
       this.applyAuthoritativeAsteroids(data.asteroids);
     }
+
+    if (Array.isArray(data.loot)) {
+      LootField.getInstance().applySnapshot(data.loot as LootData[]);
+    }
   }
 
   private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
@@ -737,6 +745,7 @@ export class ConnectionManager {
 
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
+    LootField.getInstance().clear();
 
     applyTerrainSeed(data.terrainSeed);
 

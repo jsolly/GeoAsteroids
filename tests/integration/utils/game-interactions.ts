@@ -430,6 +430,41 @@ export class GameInteractions {
     });
   }
 
+  async getLoot(): Promise<Array<{ id: string; x: number; y: number; mass: number; radius: number }>> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      const loot = gameController?.getLoot?.() ?? [];
+      return loot.map((drop: { id: string; position: { x: number; y: number }; mass: number; radius: number }) => ({
+        id: drop.id,
+        x: drop.position.x,
+        y: drop.position.y,
+        mass: drop.mass,
+        radius: drop.radius,
+      }));
+    });
+  }
+
+  async getShipMass(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      return gameController?.playerManager?.getLocalPlayer?.()?.ship?.mass ?? 1;
+    });
+  }
+
+  async getShipRadius(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      return gameController?.playerManager?.getLocalPlayer?.()?.ship?.r ?? 15;
+    });
+  }
+
+  async getShipMaxHealth(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      return gameController?.playerManager?.getLocalPlayer?.()?.ship?.maxHealth ?? 100;
+    });
+  }
+
   /**
    * Get asteroid sizes
    */

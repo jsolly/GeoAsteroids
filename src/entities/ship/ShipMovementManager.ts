@@ -1,3 +1,4 @@
+import { GROWTH, maxVelocityFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import type { Position, Velocity } from '../../../shared-types';
 import { GAME, SHIP } from '../../constants';
 import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
@@ -11,6 +12,7 @@ export interface ShipMovementState {
   thrusting: boolean;
   thrusterActive: boolean;
   frictionCoefficient: number; // Player-specific friction instead of hardcoded bot logic
+  mass?: number;
 }
 
 /**
@@ -18,9 +20,12 @@ export interface ShipMovementState {
  */
 export function applyVelocity(state: ShipMovementState): void {
   if (state.thrusting) {
+    const mass = state.mass ?? GROWTH.BASE_MASS;
+    const thrustScale = thrustScaleFromMass(mass);
+    const maxVelocity = maxVelocityFromMass(mass);
     const thrust: Velocity = {
-      x: (Math.cos(state.angle) * SHIP.THRUST) / GAME.FPS,
-      y: (-Math.sin(state.angle) * SHIP.THRUST) / GAME.FPS,
+      x: (Math.cos(state.angle) * SHIP.THRUST * thrustScale) / GAME.FPS,
+      y: (-Math.sin(state.angle) * SHIP.THRUST * thrustScale) / GAME.FPS,
     };
     state.velocity = addVectors(state.velocity, thrust);
 
@@ -28,8 +33,8 @@ export function applyVelocity(state: ShipMovementState): void {
     const currentSpeed = Math.sqrt(
       state.velocity.x * state.velocity.x + state.velocity.y * state.velocity.y
     );
-    if (currentSpeed > SHIP.MAX_VELOCITY) {
-      const scale = SHIP.MAX_VELOCITY / currentSpeed;
+    if (currentSpeed > maxVelocity) {
+      const scale = maxVelocity / currentSpeed;
       state.velocity.x *= scale;
       state.velocity.y *= scale;
     }

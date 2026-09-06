@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
-import type { AsteroidData, Position, ShipKitId, SoftFactionId } from '../../shared-types';
+import type { AsteroidData, LootData, Position, ShipKitId, SoftFactionId } from '../../shared-types';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
+import { GROWTH, applyLootMass, applyShipMass } from '../../shared/shipGrowth';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import { activateAbilityOnHost, pullHarpoonTarget } from '../../src/entities/ship/shipAbilities';
@@ -15,11 +16,13 @@ import {
   type ExpiredCollabHit,
 } from './AsteroidManager.ts';
 import { EntityManager, GameEntity } from './EntityManager';
+import { LootManager } from './LootManager';
 import { RNGService } from './RNGService';
 
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
+  private lootManager: LootManager;
   private rngService: RNGService;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
@@ -33,6 +36,7 @@ export class GameEngine {
     this.rngService = new RNGService(rngSeed);
     this.entityManager = new EntityManager(this.rngService);
     this.asteroidManager = new AsteroidManager(this.rngService);
+    this.lootManager = new LootManager(this.rngService);
     ensureTerrain(TERRAIN.DEFAULT_SEED);
 
     // Don't initialize pause state yet - will be called after initialization
@@ -87,6 +91,8 @@ export class GameEngine {
     this.entityManager.updateExplosions();
     this.entityManager.updateRespawns();
     this.tickAbilities();
+    this.lootManager.expire(this.gameTime);
+    this.collectLoot();
     this.asteroidManager.updateMotion();
     this.flushExpiredCollabHits();
     if (this.gameTime % 2 === 0) {
@@ -150,6 +156,7 @@ export class GameEngine {
     humanPlayers: number;
     bots: number;
     asteroids: number;
+    loot: number;
   } {
     return {
       isPaused: this.isPaused,
@@ -157,6 +164,7 @@ export class GameEngine {
       humanPlayers: this.entityManager.getHumanPlayerCount(),
       bots: this.entityManager.getBotCount(),
       asteroids: this.asteroidManager.getAsteroidCount(),
+      loot: this.lootManager.getCount(),
     };
   }
 
@@ -184,6 +192,7 @@ export class GameEngine {
     // Clear all asteroids and pending collab resolutions
     this.asteroidManager.clearAsteroids();
     this.resolvedCollabHits = [];
+    this.lootManager.clear();
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
@@ -357,11 +366,12 @@ export class GameEngine {
     return false;
   }
 
-  /** One death path for humans and bots: lives (humans), points, shared respawn schedule. */
+  /** One death path for humans and bots: loot, lives (humans), points, shared respawn. */
   private applyShipDeath(entity: GameEntity, attackerId: string, killPoints: number): void {
     if (attackerId) {
       entity.deathCause = attackerId;
     }
+    this.lootManager.spawnFromKill(entity, this.gameTime);
     if (entity.type === 'human') {
       const prevLives = entity.lives;
       entity.lives = Math.max(0, entity.lives - 1);
@@ -433,6 +443,7 @@ export class GameEngine {
         score: entity.score,
         health: entity.health,
         maxHealth: entity.maxHealth,
+        mass: entity.mass ?? GROWTH.BASE_MASS,
         respawnTimer: entity.respawnTimer,
         spawnProtectionTimer: entity.spawnProtectionTimer,
         kitId: entity.kitId,
@@ -445,6 +456,7 @@ export class GameEngine {
         ...(entity.deathCause ? { deathCause: entity.deathCause } : {}),
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
+      loot: this.lootManager.getAll(),
       gameTime: this.gameTime,
       isPaused: this.isPaused,
       terrainSeed: getTerrainSeed(),
@@ -519,6 +531,28 @@ export class GameEngine {
       asteroid,
       newAsteroids: result.newAsteroids,
     };
+  }
+
+  public getLoot(): LootData[] {
+    return this.lootManager.getAll();
+  }
+
+  /** Server-authoritative pickup: first overlapping live ship wins. */
+  public collectLoot(): Array<{ collectorId: string; lootId: string; mass: number }> {
+    const collected = this.lootManager.collectOverlaps(this.entityManager.getAllEntities());
+    const results: Array<{ collectorId: string; lootId: string; mass: number }> = [];
+    for (const { collector, loot } of collected) {
+      applyShipMass(collector, applyLootMass(collector.mass ?? GROWTH.BASE_MASS, loot.mass));
+      collector.lastUpdate = Date.now();
+      results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
+      logger.debug('LOOT', 'Collected kill loot', {
+        collectorId: collector.id,
+        lootId: loot.id,
+        mass: collector.mass,
+        maxHealth: collector.maxHealth,
+      });
+    }
+    return results;
   }
 
   // Award points to an entity
