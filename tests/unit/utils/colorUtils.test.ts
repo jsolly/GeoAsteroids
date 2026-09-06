@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { DEBUG, PALETTE, ROID, VISUAL } from '../../../src/constants';
+import { DEBUG, PALETTE, ROID, SHIP, VISUAL } from '../../../src/constants';
 import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Player } from '../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
@@ -115,8 +115,9 @@ test('default play path keeps debug chrome gated off', () => {
   expect(isDebugMode()).toBe(false);
 });
 
-test('HUD score stays whispered and name labels stay faded', () => {
-  expect(VISUAL.SCORE_FONT).toBe('10px Arial');
+test('HUD score stays readable in the compact cluster and name labels stay faded', () => {
+  expect(VISUAL.SCORE_FONT).toBe('13px Arial');
+  expect(VISUAL.HUD_LIFE_SIZE).toBeLessThan(SHIP.SIZE / 2);
   expect(VISUAL.NAME_LABEL_ALPHA).toBeLessThanOrEqual(0.45);
   expect(VISUAL.NAME_LABEL_ALPHA).toBeGreaterThan(0);
 });
