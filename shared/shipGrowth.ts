@@ -13,6 +13,9 @@ export const GROWTH = {
   /** Fraction of growable mass (above BASE) converted to pellets. */
   DROP_FRACTION: 0.85,
   PELLET_MASS: 0.4,
+  /** Small nibble from a destroyed roid — uses the same collect/growth path. */
+  SHARD_MASS: 0.25,
+  SHARD_SCORE: 5,
   MAX_PELLETS: 7,
   LOOT_RADIUS: 7,
   SCATTER_MIN: 16,

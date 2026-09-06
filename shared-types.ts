@@ -105,11 +105,15 @@ export interface BotData {
   shieldFlashTime?: number;
 }
 
+/** Shared world pickups. Kill loot is wreckage; destroy-drop is shard; fuel later. */
+export type LootKind = 'shard' | 'wreckage' | 'fuel';
+
 export interface LootData {
   id: string;
   position: Position;
   mass: number;
   radius: number;
+  kind: LootKind;
 }
 
 // Server game state structure (what the server actually sends)

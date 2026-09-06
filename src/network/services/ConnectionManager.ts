@@ -602,6 +602,11 @@ export class ConnectionManager {
           }
         );
         break;
+      case 'lootExploded':
+        this.handleLootExploded(
+          data as { lootId: string; position: Position; radius: number; shooterId: string }
+        );
+        break;
       case 'abilityUsed':
         this.handleAbilityUsed(
           data as {
@@ -740,6 +745,21 @@ export class ConnectionManager {
 
     if (Array.isArray(data.loot)) {
       LootField.getInstance().applySnapshot(data.loot as LootData[]);
+    }
+  }
+
+  private handleLootExploded(data: {
+    lootId: string;
+    position: Position;
+    radius: number;
+    shooterId: string;
+  }): void {
+    if (!data.lootId) {
+      return;
+    }
+    LootField.getInstance().remove(data.lootId);
+    if (data.position && Number.isFinite(data.radius)) {
+      LootField.getInstance().noteBlast(data.position, data.radius);
     }
   }
 

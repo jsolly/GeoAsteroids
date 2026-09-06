@@ -10,6 +10,7 @@ import {
   isClientOwnedCollisionAttacker,
   isServerOwnedRamAttacker,
 } from '../../shared/combat';
+import { LOOT_BLAST } from '../../shared/lootBlast';
 import type { CombatDamageSource } from '../../src/entities/ship/shipShield';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
@@ -109,6 +110,10 @@ export class MessageHandler {
 
         case 'asteroidDestroyed':
           this.handleAsteroidDestroyed(ws, restData);
+          break;
+
+        case 'lootExplode':
+          this.handleLootExplode(ws, id, restData);
           break;
 
         case 'initAsteroids':
@@ -533,6 +538,39 @@ export class MessageHandler {
 
       if (hit.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(hit.newAsteroids);
+      }
+    }
+  }
+
+  private handleLootExplode(ws: WebSocket, id: string, data: any): void {
+    const lootId = data.lootId;
+    if (!lootId) {
+      this.broadcaster.sendError(ws, 'Missing loot ID for lootExplode');
+      return;
+    }
+
+    const shooterId = this.resolveAsteroidShooter(ws, data.playerId ?? id);
+    if (!shooterId) {
+      this.broadcaster.sendError(ws, 'Unknown shooter for lootExplode');
+      return;
+    }
+
+    const result = this.gameEngine.handleLootExplode(shooterId, lootId);
+    if (!result.success || !result.origin) {
+      return;
+    }
+
+    this.broadcaster.broadcastLootExploded({
+      lootId,
+      position: result.origin,
+      radius: LOOT_BLAST.RADIUS,
+      shooterId,
+    });
+
+    for (const asteroidId of result.pushedAsteroidIds) {
+      const asteroid = this.gameEngine.getAsteroid(asteroidId);
+      if (asteroid) {
+        this.broadcaster.broadcastAsteroidUpdate(asteroidId, { velocity: asteroid.velocity });
       }
     }
   }

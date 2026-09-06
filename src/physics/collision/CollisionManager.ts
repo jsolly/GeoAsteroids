@@ -1,6 +1,7 @@
 import type { FactionId } from '../../../shared-types';
 import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
+import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { canDealCombatDamage } from '../../entities/player/softFactions';
@@ -214,6 +215,27 @@ export class CollisionManager {
           laser.updateExplodeTime();
           laser.playHitSound();
           break; // Laser can only hit one target
+        }
+      }
+
+      if (!laser.hasExploded) {
+        const from = laser.prevPosition ?? laser.position;
+        for (const drop of LootField.getInstance().getAll()) {
+          if (
+            !checkLaserAsteroidCollisionSwept(from, laser.position, drop.position, drop.radius)
+          ) {
+            continue;
+          }
+          if (reportAsteroidHits) {
+            this.networkManager.sendMessage({
+              type: 'lootExplode',
+              data: { lootId: drop.id, playerId: localPlayerId },
+            });
+            LootField.getInstance().remove(drop.id);
+          }
+          laser.updateExplodeTime();
+          laser.playHitSound();
+          break;
         }
       }
 

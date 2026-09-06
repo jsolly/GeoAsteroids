@@ -21,7 +21,8 @@ export interface ServerMessage {
     | 'botCreated'
     | 'botUpdate'
     | 'botDestroyed'
-    | 'abilityUsed';
+    | 'abilityUsed'
+    | 'lootExploded';
   // Prefer `data`; accept `payload` temporarily during transition
   data?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
   payload?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
@@ -50,7 +51,8 @@ export interface ClientMessage {
     | 'asteroidUpdate'
     | 'asteroidDestroy'
     | 'clientLog'
-    | 'useAbility';
+    | 'useAbility'
+    | 'lootExplode';
   id?: string; // Optional ID field for messages that need it
   data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | unknown; // Flexible payload for custom messages
   timestamp: number;

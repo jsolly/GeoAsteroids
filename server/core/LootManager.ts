@@ -30,6 +30,35 @@ export class LootManager {
     return spawned;
   }
 
+  /** One shard at the break site. Collect uses the existing overlap/growth path. */
+  public spawnShard(position: Position, gameTime: number): LootData {
+    const drop: TrackedLoot = {
+      id: `loot-${this.nextId++}`,
+      position: { x: position.x, y: position.y },
+      mass: GROWTH.SHARD_MASS,
+      radius: GROWTH.LOOT_RADIUS,
+      kind: 'shard',
+      expiresAt: gameTime + GROWTH.LOOT_TTL_FRAMES,
+    };
+    this.loot.set(drop.id, drop);
+    this.enforceCap();
+    return this.toPublic(drop);
+  }
+
+  public get(lootId: string): LootData | undefined {
+    const drop = this.loot.get(lootId);
+    return drop ? this.toPublic(drop) : undefined;
+  }
+
+  public remove(lootId: string): LootData | undefined {
+    const drop = this.loot.get(lootId);
+    if (!drop) {
+      return undefined;
+    }
+    this.loot.delete(lootId);
+    return this.toPublic(drop);
+  }
+
   public collectOverlaps(entities: GameEntity[]): Array<{ collector: GameEntity; loot: LootData }> {
     const collected: Array<{ collector: GameEntity; loot: LootData }> = [];
     const collectors = entities
@@ -85,6 +114,7 @@ export class LootManager {
       },
       mass,
       radius: GROWTH.LOOT_RADIUS,
+      kind: 'wreckage',
       expiresAt: gameTime + GROWTH.LOOT_TTL_FRAMES,
     };
   }
@@ -109,6 +139,7 @@ export class LootManager {
       position: { x: drop.position.x, y: drop.position.y },
       mass: drop.mass,
       radius: drop.radius,
+      kind: drop.kind,
     };
   }
 }
