@@ -6,8 +6,8 @@ export const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000] as const;
  * client should surface the permanent disconnect banner instead of retrying.
  */
 export function nextReconnectDelayMs(attempt: number): number | null {
-  if (!Number.isInteger(attempt) || attempt < 0 || attempt >= RECONNECT_DELAYS_MS.length) {
+  if (!Number.isInteger(attempt) || attempt < 0) {
     return null;
   }
-  return RECONNECT_DELAYS_MS[attempt];
+  return RECONNECT_DELAYS_MS[attempt] ?? null;
 }
