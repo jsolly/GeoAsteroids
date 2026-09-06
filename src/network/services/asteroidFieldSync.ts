@@ -1,31 +1,29 @@
-import type { AsteroidData, WireAsteroidSnapshot } from '../../../shared-types';
+import type { AsteroidData } from '../../../shared-types';
 import { containAsteroidPosition } from '../../physics/asteroidMotion';
-import { asteroidHasWireShape } from '../gameStateSnapshot';
 
 export interface AsteroidFieldSyncResult {
   created: AsteroidData[];
-  updated: WireAsteroidSnapshot[];
+  updated: AsteroidData[];
   removed: string[];
 }
 
 /**
  * Split an authoritative asteroid snapshot into first-seen creates vs
  * kinematic updates for asteroids the client already spawned.
- * Lean deltas without shape must not create a private / incomplete roid.
  */
 export function partitionAsteroidSnapshot(
-  asteroids: WireAsteroidSnapshot[],
+  asteroids: AsteroidData[],
   seenIds: Set<string>
 ): AsteroidFieldSyncResult {
   const created: AsteroidData[] = [];
-  const updated: WireAsteroidSnapshot[] = [];
+  const updated: AsteroidData[] = [];
   const snapshotIds = new Set<string>();
 
   for (const asteroid of asteroids) {
     snapshotIds.add(asteroid.id);
     if (seenIds.has(asteroid.id)) {
       updated.push(asteroid);
-    } else if (asteroidHasWireShape(asteroid)) {
+    } else {
       seenIds.add(asteroid.id);
       created.push(asteroid);
     }
@@ -49,27 +47,15 @@ export function partitionAsteroidSnapshot(
 }
 
 /** Pose + health fields that must stay server-authoritative after first create. */
-export function asteroidKinematicUpdates(asteroid: WireAsteroidSnapshot): Partial<AsteroidData> {
-  const updates: Partial<AsteroidData> = {};
-  if (asteroid.position) {
-    updates.position = asteroid.position;
-  }
-  if (asteroid.velocity) {
-    updates.velocity = asteroid.velocity;
-  }
-  if (asteroid.rotation !== undefined) {
-    updates.rotation = asteroid.rotation;
-  }
-  if (asteroid.angularVelocity !== undefined) {
-    updates.angularVelocity = asteroid.angularVelocity;
-  }
-  if (asteroid.health !== undefined) {
-    updates.health = asteroid.health;
-  }
-  if (asteroid.maxHealth !== undefined) {
-    updates.maxHealth = asteroid.maxHealth;
-  }
-  return updates;
+export function asteroidKinematicUpdates(asteroid: AsteroidData): Partial<AsteroidData> {
+  return {
+    position: asteroid.position,
+    velocity: asteroid.velocity,
+    rotation: asteroid.rotation,
+    angularVelocity: asteroid.angularVelocity,
+    health: asteroid.health,
+    maxHealth: asteroid.maxHealth,
+  };
 }
 
 /** Snap only when dead-reckoning has drifted; avoids 30 Hz teleport jitter. */

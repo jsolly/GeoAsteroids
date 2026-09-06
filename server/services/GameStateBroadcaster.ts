@@ -1,27 +1,13 @@
 import { WebSocket } from 'ws';
-import {
-  encodeGameStateSnapshot,
-  mergeAsteroidsIntoBaseline,
-  quantizeAsteroids,
-  shouldSendFullKeyframe,
-  type CanonicalGameState,
-} from '../../src/network/gameStateSnapshot';
-import { logger } from '../../setup/serverLogger';
 import { GameEngine } from '../core/GameEngine';
+import { logger } from '../../setup/serverLogger';
 
 export class GameStateBroadcaster {
   private gameEngine: GameEngine;
   private broadcastInterval: NodeJS.Timeout | null = null;
-  private lastBaseline: CanonicalGameState | null = null;
-  private broadcastSeq = 0;
 
   constructor(gameEngine: GameEngine) {
     this.gameEngine = gameEngine;
-  }
-
-  public resetSnapshotBaseline(): void {
-    this.lastBaseline = null;
-    this.broadcastSeq = 0;
   }
 
   public startPeriodicBroadcast(): void {
@@ -33,8 +19,6 @@ export class GameStateBroadcaster {
     this.broadcastInterval = setInterval(() => {
       if (this.gameEngine.getPlayerCount() > 0) {
         this.broadcastGameState();
-      } else if (this.lastBaseline) {
-        this.resetSnapshotBaseline();
       }
     }, 1000 / 30); // 30 FPS (33.33ms) for smooth bot movement
   }
@@ -46,16 +30,11 @@ export class GameStateBroadcaster {
     }
   }
 
-  public broadcastGameState(excludeId?: string, options?: { full?: boolean }): void {
-    const raw = this.gameEngine.getGameState();
-    const full = options?.full === true || shouldSendFullKeyframe(this.broadcastSeq);
-    const { wire, baseline } = encodeGameStateSnapshot(raw, this.lastBaseline, { full });
-    this.lastBaseline = baseline;
-    this.broadcastSeq += 1;
-
+  public broadcastGameState(excludeId?: string): void {
+    const gameState = this.gameEngine.getGameState();
     const message = {
       type: 'gameState',
-      data: wire,
+      data: gameState,
       timestamp: Date.now(),
     };
 
@@ -165,12 +144,10 @@ export class GameStateBroadcaster {
   }
 
   public broadcastAsteroidCreation(asteroids: any[]): void {
-    const quantized = quantizeAsteroids(asteroids);
-    this.lastBaseline = mergeAsteroidsIntoBaseline(this.lastBaseline, quantized);
     const message = {
       type: 'asteroidCreateBatch',
       data: {
-        asteroids: quantized,
+        asteroids: asteroids,
       },
       timestamp: Date.now(),
     };

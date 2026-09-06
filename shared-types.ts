@@ -98,6 +98,13 @@ export interface ServerPlayerData {
   respawnTimer?: number;
 }
 
+export interface ServerGameState {
+  entities: ServerEntityData[];
+  asteroids: AsteroidData[];
+  gameTime: number;
+  isPaused: boolean;
+}
+
 export interface ServerEntityData {
   id: string;
   name: string;
@@ -114,19 +121,4 @@ export interface ServerEntityData {
   maxHealth: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
-}
-
-/** Periodic gameState may omit unchanged / static fields after a keyframe. */
-export type WireEntitySnapshot = { id: string } & Partial<Omit<ServerEntityData, 'id'>>;
-
-/** Periodic gameState may omit shape + unchanged kinematics after first create. */
-export type WireAsteroidSnapshot = { id: string } & Partial<Omit<AsteroidData, 'id'>>;
-
-export interface ServerGameState {
-  entities: WireEntitySnapshot[];
-  asteroids: WireAsteroidSnapshot[];
-  gameTime: number;
-  isPaused: boolean;
-  /** True on join / recovery keyframes that include every field. */
-  full?: boolean;
 }
