@@ -130,7 +130,7 @@ export class GameInteractions {
         }
 
         const gameArea = document.querySelector('#gameArea');
-        const canvas = document.querySelector('canvas');
+        const canvas = document.querySelector('#gameCanvas');
         if (!gameArea || !canvas) {
           return false;
         }
@@ -150,7 +150,7 @@ export class GameInteractions {
    */
   async verifyGameCanvas(): Promise<void> {
     await this.page.waitForFunction(() => {
-      const canvas = document.querySelector('canvas');
+      const canvas = document.querySelector('#gameCanvas');
       if (!canvas) return false;
       
       const computedStyle = window.getComputedStyle(canvas);

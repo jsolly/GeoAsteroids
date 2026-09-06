@@ -65,7 +65,7 @@ export class InputManager {
     });
 
     // Mouse listeners on canvas
-    const canvas = document.querySelector('canvas');
+    const canvas = document.querySelector('#gameCanvas');
     if (canvas) {
       canvas.addEventListener('mousemove', (ev) => {
         const localPlayer = getLocalPlayer();

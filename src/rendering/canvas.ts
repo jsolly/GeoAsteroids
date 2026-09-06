@@ -38,7 +38,7 @@ class CanvasManager {
 
   // Initialize canvas with proper scaling
   initialize(): void {
-    this.canvas = document.querySelector('canvas');
+    this.canvas = document.querySelector('#gameCanvas');
     this.context = this.canvas?.getContext('2d') || null;
 
     if (this.canvas && this.context) {

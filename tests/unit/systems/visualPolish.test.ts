@@ -5,6 +5,7 @@ import { expect, test } from 'vitest';
 import { PALETTE } from '../../../src/constants';
 
 const canvasSrc = readFileSync(resolve(process.cwd(), 'src/rendering/canvas.ts'), 'utf8');
+const inputSrc = readFileSync(resolve(process.cwd(), 'src/core/services/InputManager.ts'), 'utf8');
 const shipSrc = readFileSync(resolve(process.cwd(), 'src/entities/ship/shipRenderer.ts'), 'utf8');
 const loopSrc = readFileSync(resolve(process.cwd(), 'src/core/gameController.ts'), 'utf8');
 
@@ -28,4 +29,11 @@ test('live ship and laser strokes never use white', () => {
 
 test('play loop still advances remote lasers from the #418 MP path', () => {
   expect(loopSrc).toMatch(/advanceRemotePlayerLasers\(allPlayers\)/);
+});
+
+test('play canvas and mouse input bind to #gameCanvas, not the title starfield', () => {
+  expect(canvasSrc).toMatch(/querySelector\('#gameCanvas'\)/);
+  expect(inputSrc).toMatch(/querySelector\('#gameCanvas'\)/);
+  expect(canvasSrc).not.toMatch(/querySelector\('canvas'\)/);
+  expect(inputSrc).not.toMatch(/querySelector\('canvas'\)/);
 });
