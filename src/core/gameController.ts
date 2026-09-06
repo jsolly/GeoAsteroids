@@ -1,4 +1,4 @@
-import type { AsteroidData } from '../../shared-types';
+import type { AsteroidData, WireAsteroidSnapshot } from '../../shared-types';
 import {
   replaceThrustSources,
   resetThrustSources,
@@ -135,7 +135,7 @@ export class GameController {
 
   // Event handler methods for server asteroid synchronization
   private handleServerAsteroidCreated = (event: Event): void => {
-    const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
+    const customEvent = event as CustomEvent<{ asteroid: WireAsteroidSnapshot }>;
     const { asteroid } = customEvent.detail;
     logger.debug('GAME', 'Adding server asteroid to local belt', { asteroidId: asteroid.id });
 
@@ -159,6 +159,19 @@ export class GameController {
         applyAsteroidKinematics(existingRoid, asteroid);
         return;
       }
+    }
+
+    if (
+      !asteroid.position ||
+      asteroid.size === undefined ||
+      asteroid.jaggedness === undefined ||
+      asteroid.vertices === undefined ||
+      !asteroid.offsets?.length
+    ) {
+      logger.warn('GAME', 'Ignoring incomplete asteroid create (wait for keyframe)', {
+        asteroidId: asteroid.id,
+      });
+      return;
     }
 
     // Create a proper Roid object from server data with server ID
