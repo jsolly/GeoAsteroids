@@ -722,7 +722,7 @@ export function drawShipShield(
     ctx.lineWidth = flashing ? VISUAL.SHIELD_STROKE_WIDTH + 0.5 : VISUAL.SHIELD_STROKE_WIDTH;
     ctx.shadowColor = PALETTE.SHIELD;
     ctx.shadowBlur = VISUAL.SHIELD_GLOW;
-    ctx.strokeStyle = hexToRgba(PALETTE.SHIELD, flashing ? 0.95 : 0.7);
+    ctx.strokeStyle = hexToRgba(PALETTE.SHIELD, flashing ? 1 : 0.9);
     ctx.beginPath();
     ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
     ctx.stroke();
