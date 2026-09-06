@@ -1,6 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, test } from 'vitest';
 import {
+  SAUCER_ART_PACK,
   SAUCER_CABIN_FILL_ALPHA,
+  SAUCER_FIRING_SEGMENTS,
   SAUCER_HULL_COLOR,
   SAUCER_NPC_RENDER_LANGUAGE,
   SAUCER_RING_TICKS,
@@ -19,6 +23,25 @@ test('saucer NPC is allowed SVG-like fidelity and is not a kit outline', () => {
   expect(SAUCER_CABIN_FILL_ALPHA).toBeLessThanOrEqual(0.2);
   expect(SAUCER_CABIN_FILL_ALPHA).toBe(0.18);
   expect(SAUCER_RING_TICKS).toBe(8);
+  expect(SAUCER_FIRING_SEGMENTS).toBe(2);
+});
+
+test('AD art-pack SVGs match the confirmed box spec', () => {
+  const idle = readFileSync(resolve(SAUCER_ART_PACK.idleSvg), 'utf8');
+  const firing = readFileSync(resolve(SAUCER_ART_PACK.firingSvg), 'utf8');
+
+  for (const svg of [idle, firing]) {
+    expect(svg).toContain(`stroke="${SAUCER_HULL_COLOR}"`);
+    expect(svg).toContain(`fill-opacity="${SAUCER_CABIN_FILL_ALPHA}"`);
+    expect((svg.match(/<ellipse\b/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect(svg).toContain('<circle');
+    expect((svg.match(/<line\b/g) ?? []).length).toBeGreaterThanOrEqual(SAUCER_RING_TICKS);
+  }
+
+  expect(idle).not.toContain(SAUCER_SHOT_COLOR);
+  expect(firing).toContain(`stroke="${SAUCER_SHOT_COLOR}"`);
+  const shotBlocks = firing.split(SAUCER_SHOT_COLOR)[1] ?? '';
+  expect((shotBlocks.match(/<line\b/g) ?? []).length).toBe(SAUCER_FIRING_SEGMENTS);
 });
 
 function mockCtx(): { calls: string[]; ctx: CanvasRenderingContext2D } {
@@ -53,12 +76,12 @@ test('idle saucer strokes stacked ellipses, eight ticks, cabin fill, and a dish 
   expect(calls).toContain('arc');
 });
 
-test('firing saucer adds a short shot segment', () => {
+test('firing saucer adds short shot segments off both rims', () => {
   const idle = mockCtx();
   const firing = mockCtx();
   drawSaucerNpc(idle.ctx, { x: 0, y: 0, radius: 12 });
   drawSaucerNpcFiring(firing.ctx, { x: 0, y: 0, radius: 12 });
-  expect(firing.calls.filter((call) => call === 'lineTo').length).toBeGreaterThan(
-    idle.calls.filter((call) => call === 'lineTo').length
+  expect(firing.calls.filter((call) => call === 'lineTo').length).toBe(
+    idle.calls.filter((call) => call === 'lineTo').length + SAUCER_FIRING_SEGMENTS
   );
 });

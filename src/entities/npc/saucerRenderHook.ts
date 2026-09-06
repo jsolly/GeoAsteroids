@@ -4,6 +4,11 @@
  * Stacked ellipses, 8 ring ticks, vertical antenna + dish circle,
  * soft cabin fill. Ambient hull, not a faction mark.
  * Player kits stay on the placeholder triangle until AD v2 is locked.
+ *
+ * AD-confirmed art-pack sources (box paths):
+ *   georoids-art/saucer-npc.svg
+ *   georoids-art/saucer-npc-firing.svg
+ *   georoids-art/saucer-silhouette-svgish.png
  */
 
 export const SAUCER_NPC_RENDER_LANGUAGE = 'svg-fidelity' as const;
@@ -20,6 +25,16 @@ export const SAUCER_SHOT_COLOR = '#E9D5FF';
 export const SAUCER_CABIN_FILL_ALPHA = 0.18;
 
 export const SAUCER_RING_TICKS = 8;
+
+/** Short segments off both rims while firing (art-pack firing SVG). */
+export const SAUCER_FIRING_SEGMENTS = 2;
+
+/** Repo-relative AD box paths. Canvas drawer replicates these SVGs. */
+export const SAUCER_ART_PACK = {
+  idleSvg: 'georoids-art/saucer-npc.svg',
+  firingSvg: 'georoids-art/saucer-npc-firing.svg',
+  silhouettePreview: 'georoids-art/saucer-silhouette-svgish.png',
+} as const;
 
 export interface SaucerNpcDrawTarget {
   x: number;
@@ -131,11 +146,15 @@ export function drawSaucerNpc(
   if (options.firing) {
     ctx.strokeStyle = shot;
     ctx.lineWidth = Math.max(1.5, radius * 0.09);
-    const shotStart = x + outerW;
-    ctx.beginPath();
-    ctx.moveTo(shotStart, y);
-    ctx.lineTo(shotStart + radius * 0.85, y);
-    ctx.stroke();
+    const shotGap = Math.max(3, radius * 0.28);
+    const shotLen = Math.max(6, radius * 0.67);
+    for (const dir of [-1, 1] as const) {
+      const start = x + dir * (outerW + shotGap);
+      ctx.beginPath();
+      ctx.moveTo(start, y);
+      ctx.lineTo(start + dir * shotLen, y);
+      ctx.stroke();
+    }
   }
 
   ctx.restore();

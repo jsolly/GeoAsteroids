@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AD confirmed saucer firing  same hull + short #E9D5FF shot segments. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Saucer NPC firing">
+  <title>Saucer NPC firing</title>
+  <rect width="64" height="64" fill="#000011"/>
+  <g fill="none" stroke="#C4B5FD" stroke-linecap="round" stroke-linejoin="round" transform="translate(32 34)">
+    <ellipse cx="0" cy="0" rx="22" ry="8" stroke-width="1.6"/>
+    <ellipse cx="0" cy="-2" rx="14" ry="5" stroke-width="1.2"/>
+    <ellipse cx="0" cy="-6" rx="7" ry="4.5" stroke-width="1.15" fill="#C4B5FD" fill-opacity="0.18"/>
+    <g stroke-width="1.05">
+      <line x1="-19.053" y1="-4" x2="-20.785" y2="-4.366"/>
+      <line x1="-8.485" y1="-7.657" x2="-9.192" y2="-8.485"/>
+      <line x1="0" y1="-8" x2="0" y2="-9"/>
+      <line x1="8.485" y1="-7.657" x2="9.192" y2="-8.485"/>
+      <line x1="19.053" y1="-4" x2="20.785" y2="-4.366"/>
+      <line x1="19.053" y1="4" x2="20.785" y2="4.366"/>
+      <line x1="0" y1="8" x2="0" y2="9"/>
+      <line x1="-19.053" y1="4" x2="-20.785" y2="4.366"/>
+    </g>
+    <line x1="0" y1="-10.5" x2="0" y2="-16" stroke-width="1.1"/>
+    <circle cx="0" cy="-18.2" r="2.4" stroke-width="1.1"/>
+    <g stroke="#E9D5FF" stroke-width="1.4">
+      <line x1="-26" y1="0" x2="-34" y2="0"/>
+      <line x1="26" y1="0" x2="34" y2="0"/>
+    </g>
+  </g>
+</svg>
