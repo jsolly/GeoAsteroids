@@ -1,4 +1,5 @@
 import { expect, test, describe, beforeEach, vi, afterEach } from 'vitest';
+import { DAMAGE } from '../../../../src/constants';
 import { CollisionManager } from '../../../../src/physics/collision/CollisionManager';
 import { Ship } from '../../../../src/entities/ship/Ship';
 import { Roid } from '../../../../src/entities/roid/Roid';
@@ -55,22 +56,21 @@ describe('Integration: Local player roid collisions', () => {
     vi.clearAllMocks();
   });
 
-  test('sends server-authoritative collision messages without applying local damage', () => {
+  test('roid contact explodes the ship immediately and tells the server', () => {
     const localPlayerId = 'local-player-123';
     const localPlayer = { ship: localShip, id: localPlayerId, type: 'local' as const };
-    const initialHealth = localShip.health;
 
     collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
 
-    // Server applies damage; client only sends network messages
-    expect(localShip.health).toBe(initialHealth);
+    expect(localShip.health).toBe(0);
+    expect(localShip.exploding).toBe(true);
 
     expect(mockSendMessage).toHaveBeenCalledWith({
       type: 'collisionDamage',
       data: {
         targetPlayerId: localPlayerId,
         attackerId: 'asteroid',
-        damage: 25,
+        damage: DAMAGE.ASTEROID_COLLISION,
       },
     });
 

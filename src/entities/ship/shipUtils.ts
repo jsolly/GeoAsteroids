@@ -127,12 +127,24 @@ export function formatDeathCauseForOverlay(cause?: string): string | undefined {
   return cause;
 }
 
-/** Instant-kill wall contact: flash + shared takeDamage/explode path. */
-export function applyShipBoundaryDeath(ship: ShipLethalHitState, cause = 'boundary'): void {
+/**
+ * Instant-kill environment hit (wall or roid): flash + shared explode path.
+ * Player and bot ships both use this — one DRY ship type.
+ */
+export function applyShipLethalCollision(
+  ship: ShipLethalHitState,
+  cause: 'boundary' | 'asteroid'
+): void {
   applyShipImpactFlash(ship);
   if (!ship.exploding) {
-    ship.takeDamage(DAMAGE.BOUNDARY_COLLISION, cause);
+    const damage = cause === 'asteroid' ? DAMAGE.ASTEROID_COLLISION : DAMAGE.BOUNDARY_COLLISION;
+    ship.takeDamage(damage, cause);
   }
+}
+
+/** Instant-kill wall contact: flash + shared takeDamage/explode path. */
+export function applyShipBoundaryDeath(ship: ShipLethalHitState, cause = 'boundary'): void {
+  applyShipLethalCollision(ship, cause === 'asteroid' ? 'asteroid' : 'boundary');
 }
 
 /** True when a ship must not report or receive collision damage. */

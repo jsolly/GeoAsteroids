@@ -4,7 +4,7 @@ import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
 import {
   applyShipBoundaryDeath,
-  applyShipImpactFlash,
+  applyShipLethalCollision,
   isShipCollisionImmune,
 } from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
@@ -323,40 +323,39 @@ export class CollisionManager {
 
     lockAsteroidPending(asteroid);
     ship.lastCollisionTime = Date.now();
-    applyShipImpactFlash(ship);
     asteroid.playHitSound();
 
-    // Don't apply damage directly - let server handle it
-    const damage = DAMAGE.LASER_HIT;
+    const damage = DAMAGE.ASTEROID_COLLISION;
     logger.debug('COLLISION', 'Sending asteroid collision damage to server', {
       damage,
       playerId: player.id,
     });
 
-    // Send appropriate network message based on player type
+    // Same instant flash/explode as the wall — waiting for a 25-hp packet
+    // plus a 3s corpse timer is what felt like freeze-stick.
     if (player.type === 'local') {
-      // For local players, use the server-assigned player ID
       const serverPlayerId = this.networkManager.getLocalPlayerId();
       if (serverPlayerId) {
+        applyShipLethalCollision(ship, 'asteroid');
         this.networkManager.sendMessage({
           type: 'collisionDamage',
           data: {
             targetPlayerId: serverPlayerId,
             attackerId: 'asteroid',
-            damage: damage,
+            damage,
           },
         });
 
         this.reportAsteroidDestroyed(asteroid, serverPlayerId);
       }
     } else if (player.type === 'bot') {
-      // For bots, send bot damage message
+      applyShipLethalCollision(ship, 'asteroid');
       this.networkManager.sendMessage({
         type: 'botDamage',
         data: {
           botId: player.id,
           attackerId: 'asteroid',
-          damage: damage,
+          damage,
         },
       });
 

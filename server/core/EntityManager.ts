@@ -350,10 +350,23 @@ export class EntityManager {
     return entity.type === 'bot' || entity.lives > 0;
   }
 
-  // Shared ship explosion: tick the animation, then start a respawn countdown
-  // if the ship is allowed to come back. Do not restore health/position here
-  // and do not reset an existing timer (GameEngine already schedules humans
-  // at death — resetting stacked a second 3s). Humans with lives === 0 stay dead.
+  /**
+   * One schedule for humans and bots. Do not reset an existing countdown
+   * (that stacked a second wait and felt like freeze-stick). Last-life
+   * humans stay dead; bots always come back.
+   */
+  public scheduleShipRespawn(entity: GameEntity): void {
+    if (entity.respawnTimer !== undefined) {
+      return;
+    }
+    if (!this.shouldScheduleRespawn(entity)) {
+      return;
+    }
+    entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
+  }
+
+  // Shared ship explosion: tick the animation. Respawn is scheduled at death
+  // for every ship; this only fills in if a kill path forgot to.
   public updateExplosions(): string[] {
     const finishedExploding: string[] = [];
 
@@ -368,9 +381,7 @@ export class EntityManager {
       }
 
       entity.exploding = false;
-      if (entity.respawnTimer === undefined && this.shouldScheduleRespawn(entity)) {
-        entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
-      }
+      this.scheduleShipRespawn(entity);
       finishedExploding.push(entityId);
     }
 

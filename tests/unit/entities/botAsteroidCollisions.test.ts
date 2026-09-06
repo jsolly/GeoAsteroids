@@ -78,7 +78,8 @@ describe('Bot-Asteroid Collision System', () => {
       expect(updatedBot).not.toBeNull();
       expect(updatedBot!.health).toBe(0);
       expect(updatedBot!.exploding).toBe(true);
-      expect(updatedBot!.explodeTime).toBe(18);
+      expect(updatedBot!.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
+      expect(updatedBot!.respawnTimer).toBe(SHIP.RESPAWN_DELAY_FRAMES);
     });
 
     test('bot cannot take damage while exploding', () => {
@@ -174,7 +175,7 @@ describe('Bot-Asteroid Collision System', () => {
       expect(respawnedBot).not.toBeNull();
       expect(respawnedBot!.exploding).toBe(false);
       expect(respawnedBot!.health).toBe(0);
-      expect(respawnedBot!.respawnTimer).toBe(180); // 3 seconds respawn delay
+      expect(respawnedBot!.respawnTimer).toBe(SHIP.RESPAWN_DELAY_FRAMES);
     });
 
     test('bot respawn timer counts down correctly', () => {
@@ -207,7 +208,7 @@ describe('Bot-Asteroid Collision System', () => {
 
       // Check that timer decreased
       const botAfterRespawnUpdate = gameEngine.getBot(bot.id);
-      expect(botAfterRespawnUpdate!.respawnTimer).toBe(179); // 180 - 1
+      expect(botAfterRespawnUpdate!.respawnTimer).toBe(SHIP.RESPAWN_DELAY_FRAMES - 1);
     });
 
     test('bot completes respawn after timer expires', () => {
@@ -234,8 +235,7 @@ describe('Bot-Asteroid Collision System', () => {
         gameEngine.entityManager.updateExplosions();
       }
 
-      // Complete respawn timer
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < SHIP.RESPAWN_DELAY_FRAMES; i++) {
         gameEngine.entityManager.updateRespawns();
       }
 

@@ -112,6 +112,8 @@ export const VISUAL = {
 // ============================================================================
 // SHIP CONFIGURATION
 // ============================================================================
+const EXPLODE_DURATION_FRAMES = 18;
+
 export const SHIP = {
   // Movement
   TURN_SPEED: 450, // degrees per second
@@ -129,11 +131,12 @@ export const SHIP = {
   HEALTH_REGEN_DELAY: 5, // seconds
 
   // Timing (in frames at 60 FPS)
-  EXPLODE_DURATION_FRAMES: 18, // 0.3 seconds
-  INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds
+  EXPLODE_DURATION_FRAMES: EXPLODE_DURATION_FRAMES, // 0.3 seconds of flash/explode
+  INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds of blink after respawn
   INVINCIBILITY_BLINK_DURATION_FRAMES: 6, // 0.1 seconds
-  RESPAWN_DELAY_FRAMES: 180, // 3 seconds — shared by player and bot ships
-  IMPACT_FLASH_FRAMES: 10, // hairline ring after a ship↔roid graze
+  // Parallel with explode so wall/roid death is flash → respawn+invuln, not a 3s corpse freeze.
+  RESPAWN_DELAY_FRAMES: EXPLODE_DURATION_FRAMES,
+  IMPACT_FLASH_FRAMES: 10, // hairline ring on a lethal wall/roid hit
 } as const;
 
 // ============================================================================
@@ -143,6 +146,7 @@ export const DAMAGE = {
   // Instant damage (applied immediately)
   LASER_HIT: 25, // Damage dealt by a single laser hit
   BOUNDARY_COLLISION: 100, // Instant kill when hitting game boundary
+  ASTEROID_COLLISION: 100, // Instant kill — same flash/explode path as the wall
 
   // Damage over time (applied per second while colliding)
   PLAYER_COLLISION_PER_SECOND: 20, // Damage per second when colliding with another player
