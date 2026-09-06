@@ -58,6 +58,23 @@ export class ShockwaveManager {
     return this.active.filter((fx) => now - fx.startedAt <= lifetime);
   }
 
+  getDebugState(now = performance.now()): {
+    count: number;
+    lifetimeMs: number;
+    now: number;
+    items: Array<{ ageMs: number; fired: string[] }>;
+  } {
+    return {
+      count: this.active.length,
+      lifetimeMs: shockwaveLifetimeMs(),
+      now,
+      items: this.active.map((fx) => ({
+        ageMs: now - fx.startedAt,
+        fired: [...fx.fired],
+      })),
+    };
+  }
+
   clear(): void {
     this.active = [];
   }

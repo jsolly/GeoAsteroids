@@ -278,6 +278,10 @@ export class GameController {
     return shockwaveManager.getActive();
   }
 
+  getShockwaveDebug(): ReturnType<typeof shockwaveManager.getDebugState> {
+    return shockwaveManager.getDebugState();
+  }
+
   private setupServerAsteroidListeners(): void {
     this.cleanupServerAsteroidListeners();
     // Listen for server asteroid creation events

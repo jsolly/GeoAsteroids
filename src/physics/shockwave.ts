@@ -129,5 +129,5 @@ export function shockwaveLifetimeMs(): number {
   for (const wave of SHOCKWAVE_WAVES) {
     max = Math.max(max, framesToMs(wave.delayFrames + wave.durationFrames));
   }
-  return max;
+  return max + 80;
 }

@@ -16,8 +16,8 @@ const WAVE_COLOR: Record<ShockwaveWaveId, string> = {
 };
 
 const WAVE_PEAK_ALPHA: Record<ShockwaveWaveId, number> = {
-  fast: 0.72,
-  heavy: 0.95,
+  fast: 0.82,
+  heavy: 1,
 };
 
 export function drawShockwaves(
@@ -63,14 +63,22 @@ export function drawShockwaves(
       ctx.stroke();
 
       if (wave.id === 'heavy') {
-        ctx.strokeStyle = hexToRgba(PALETTE.HUD, alpha * 0.45);
+        ctx.strokeStyle = hexToRgba(PALETTE.LASER_LOCAL, alpha * 0.55);
+        ctx.lineWidth = Math.max(1, wave.strokeWidth * 0.55);
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, radius * 1.04, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = hexToRgba(PALETTE.HUD, alpha * 0.55);
         ctx.lineWidth = Math.max(1, wave.strokeWidth * 0.45);
         ctx.beginPath();
-        ctx.arc(screen.x, screen.y, radius * 0.92, 0, Math.PI * 2);
+        ctx.arc(screen.x, screen.y, radius * 0.9, 0, Math.PI * 2);
         ctx.stroke();
 
         const ticks = 12;
-        const tickInner = radius * 0.86;
+        const tickInner = radius * 0.84;
+        ctx.strokeStyle = hexToRgba(PALETTE.LASER_LOCAL, alpha * 0.7);
+        ctx.lineWidth = 1;
         for (let i = 0; i < ticks; i++) {
           const angle = (Math.PI * 2 * i) / ticks;
           const cos = Math.cos(angle);

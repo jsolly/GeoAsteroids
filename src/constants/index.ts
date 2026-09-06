@@ -216,7 +216,7 @@ export const SHOCKWAVE = {
   },
   HEAVY: {
     delayFrames: 7,
-    durationFrames: 26,
+    durationFrames: 36,
     radius: 400,
     impulse: 7.0,
     strokeWidth: 2.25,

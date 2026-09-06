@@ -56,4 +56,17 @@ describe('phosphor shockwave rings', () => {
     manager.update(t0 + shockwaveLifetimeMs() + 1);
     expect(manager.getActive(t0 + shockwaveLifetimeMs() + 1)).toHaveLength(0);
   });
+
+  test('debug state reports the padded lifetime and fired waves', () => {
+    const manager = ShockwaveManager.getInstance();
+    const [fast, heavy] = SHOCKWAVE_WAVES;
+    const t0 = 2_000;
+    manager.spawn({ x: 1, y: 2 }, t0);
+    const debug = manager.getDebugState(t0);
+    expect(debug.count).toBe(1);
+    expect(debug.lifetimeMs).toBe(
+      framesToMs(heavy!.delayFrames + heavy!.durationFrames) + 80
+    );
+    expect(debug.items[0]?.fired).toEqual([fast!.id]);
+  });
 });
