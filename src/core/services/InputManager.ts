@@ -6,6 +6,7 @@ import {
   handleMouseUp,
   preventContextMenu,
 } from '../../input/mouse';
+import { initializeTouchControls } from '../../input/touchControls';
 import { logger } from '../../utils/Logger';
 import { GameStateManager } from './GameStateManager';
 
@@ -87,6 +88,13 @@ export class InputManager {
       });
       // Prevent default context menu for right-click thrust
       canvas.addEventListener('contextmenu', preventContextMenu);
+      canvas.addEventListener(
+        'touchstart',
+        (ev) => {
+          ev.preventDefault();
+        },
+        { passive: false }
+      );
     }
 
     // Reset shoot cooldown if the mouse is released outside the canvas
@@ -96,6 +104,8 @@ export class InputManager {
         localPlayer.ship.canShoot = true;
       }
     });
+
+    initializeTouchControls();
 
     this.listenersInitialized = true;
   }

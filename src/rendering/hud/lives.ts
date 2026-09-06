@@ -3,6 +3,7 @@ import { DEFAULT_SHIP_KIT_ID, type ShipKitId } from '../../entities/ship/shipKit
 import { strokeKitHullOutline } from '../../entities/ship/shipRenderer';
 
 import { layoutHudCluster } from './cluster';
+import { hudLayoutForCanvas } from './hudLayout';
 
 export function drawLivesIndicator(
   ctx: CanvasRenderingContext2D,
@@ -10,13 +11,24 @@ export function drawLivesIndicator(
   shipColor: string,
   kitId: ShipKitId = DEFAULT_SHIP_KIT_ID
 ): void {
+  const layout = hudLayoutForCanvas(ctx.canvas);
   const { lifeCenters } = layoutHudCluster(lives);
+  const dx = layout.lives.x - VISUAL.HUD_INSET;
+  const dy = layout.lives.y - VISUAL.HUD_INSET;
   const radius = VISUAL.HUD_LIFE_SIZE / 2;
   const color = shipColor || PALETTE.LOCAL;
 
   ctx.save();
   for (const center of lifeCenters) {
-    strokeKitHullOutline(ctx, center.x, center.y, radius, VISUAL.HUD_LIFE_HEADING, color, kitId);
+    strokeKitHullOutline(
+      ctx,
+      center.x + dx,
+      center.y + dy,
+      radius,
+      VISUAL.HUD_LIFE_HEADING,
+      color,
+      kitId
+    );
   }
   ctx.restore();
 }

@@ -13,5 +13,9 @@ export function setPlayView(inPlay: boolean): void {
   toggleScreen('start-screen', !inPlay);
   if (typeof document !== 'undefined') {
     document.body.classList.toggle('in-play', inPlay);
+    if (!inPlay) {
+      document.body.classList.remove('touch-play');
+    }
+    window.dispatchEvent(new CustomEvent(inPlay ? 'playViewOn' : 'playViewOff'));
   }
 }

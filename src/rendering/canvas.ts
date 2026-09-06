@@ -47,13 +47,7 @@ class CanvasManager {
     this.context = this.canvas?.getContext('2d') || null;
 
     if (this.canvas && this.context) {
-      // Get the viewport dimensions
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // Set the internal resolution to match the viewport (what the game logic uses)
-      this.canvas.width = viewportWidth;
-      this.canvas.height = viewportHeight;
+      this.applyViewportSize();
 
       // Enable crisp pixel rendering
       this.context.imageSmoothingEnabled = true;
@@ -62,21 +56,37 @@ class CanvasManager {
       // Add resize handler to maintain full-screen coverage
       this.resizeHandler = this.handleCanvasResize.bind(this);
       window.addEventListener('resize', this.resizeHandler);
+      window.visualViewport?.addEventListener('resize', this.resizeHandler);
+      window.visualViewport?.addEventListener('scroll', this.resizeHandler);
 
       // Initial resize call
       this.handleCanvasResize();
     }
   }
 
+  private viewportSize(): { width: number; height: number } {
+    const vv = window.visualViewport;
+    return {
+      width: Math.max(1, Math.round(vv?.width ?? window.innerWidth)),
+      height: Math.max(1, Math.round(vv?.height ?? window.innerHeight)),
+    };
+  }
+
+  private applyViewportSize(): void {
+    if (!this.canvas) {
+      return;
+    }
+    const { width, height } = this.viewportSize();
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+  }
+
   // Handle canvas resizing to maintain full-screen coverage
   private handleCanvasResize(): void {
     if (this.canvas && this.context) {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // Update internal resolution to match new viewport size
-      this.canvas.width = viewportWidth;
-      this.canvas.height = viewportHeight;
+      this.applyViewportSize();
 
       // Re-enable crisp rendering after resize
       this.context.imageSmoothingEnabled = true;
@@ -88,6 +98,8 @@ class CanvasManager {
   destroy(): void {
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
+      window.visualViewport?.removeEventListener('resize', this.resizeHandler);
+      window.visualViewport?.removeEventListener('scroll', this.resizeHandler);
       this.resizeHandler = null;
     }
     this.canvas = null;

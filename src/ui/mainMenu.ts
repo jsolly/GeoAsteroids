@@ -10,6 +10,7 @@ import { attachEventListener, getElementById } from '../utils/dom';
 import { logger } from '../utils/Logger';
 import { mountShipKitSelect } from './shipKitSelect';
 import { setPlayView } from './uiUtils';
+import { controlsHintFor } from './viewportChrome';
 
 // UI element references
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
@@ -208,6 +209,17 @@ displayBuildInfo();
 applyLockedPaletteCss();
 initTitleStarfield();
 mountShipKitSelect();
+
+function syncControlsHint(): void {
+  const hint = getElementById<HTMLElement>('controls-hint');
+  if (hint) {
+    hint.textContent = controlsHintFor();
+  }
+}
+
+syncControlsHint();
+window.addEventListener('resize', syncControlsHint);
+window.visualViewport?.addEventListener('resize', syncControlsHint);
 
 // Generate a nickname once and use it consistently
 const generatedNickname = generateFunNickname();

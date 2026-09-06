@@ -1,34 +1,24 @@
-import { upsertThrustSource } from '../audio/gameSounds';
 import type { Player } from '../entities/player/Player';
 import { canvasManager } from '../rendering/canvas';
 import { logger } from '../utils/Logger';
-import { getPressedKeysForPlayer } from './keybindings';
+import { controlSources } from './controlSources';
+import { reconcilePlayerInput } from './keybindings';
 
 /* =============
 Mouse Input Handling
 ============= */
 
-let isRightMouseDown = false;
-
-// Helper function to update thrust state including mouse input.
-// Thrust sources: ArrowUp / KeyW keys and right-mouse-hold (Space fires).
-function updateThrustFromAllInputs(player: Player): void {
-  const pressed = getPressedKeysForPlayer(player);
-  const shouldThrust = pressed.has('ArrowUp') || pressed.has('KeyW') || isRightMouseDown;
-  const currentlyThrusting = player.ship.thrusting;
-
-  // Only update if the aggregate state has changed
-  if (shouldThrust !== currentlyThrusting) {
-    player.ship.thrusting = shouldThrust;
-    upsertThrustSource({
-      id: player.id,
-      thrusting: shouldThrust,
-      position: player.ship.position,
-    });
-  }
+function isSyntheticTouchMouse(ev: MouseEvent): boolean {
+  return Boolean(
+    (ev as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities
+      ?.firesTouchEvents
+  );
 }
 
 export function handleMouseMove(ev: MouseEvent, player: Player): void {
+  if (isSyntheticTouchMouse(ev)) {
+    return;
+  }
   if (player.lives <= 0 || player.ship.exploding) {
     return;
   }
@@ -60,6 +50,9 @@ export function handleMouseMove(ev: MouseEvent, player: Player): void {
 }
 
 export function handleMouseDown(ev: MouseEvent, player: Player): void {
+  if (isSyntheticTouchMouse(ev)) {
+    return;
+  }
   logger.debug('MOUSE', 'Mouse down event', {
     button: ev.button,
     playerId: player.id,
@@ -76,16 +69,19 @@ export function handleMouseDown(ev: MouseEvent, player: Player): void {
     logger.debug('MOUSE', 'Left mouse click - shooting', { playerId: player.id });
     player.ship.shoot();
   } else if (ev.button === 2) {
-    isRightMouseDown = true;
-    updateThrustFromAllInputs(player);
+    controlSources.mouseThrust = true;
+    reconcilePlayerInput(player);
   }
 }
 
 export function handleMouseUp(ev: MouseEvent, player: Player): void {
+  if (isSyntheticTouchMouse(ev)) {
+    return;
+  }
   // Handle right-button release unconditionally to ensure cleanup even for dead/exploding players
   if (ev.button === 2) {
-    isRightMouseDown = false;
-    updateThrustFromAllInputs(player);
+    controlSources.mouseThrust = false;
+    reconcilePlayerInput(player);
     return;
   }
 
@@ -105,5 +101,5 @@ export function preventContextMenu(ev: MouseEvent): void {
 }
 
 export function isRightClickThrustActive(): boolean {
-  return isRightMouseDown;
+  return controlSources.mouseThrust;
 }

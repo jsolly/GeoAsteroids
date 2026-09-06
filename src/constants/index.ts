@@ -49,6 +49,22 @@ export const CANVAS = {
 } as const;
 
 // ============================================================================
+// TOUCH CONTROLS
+// ============================================================================
+export const TOUCH = {
+  STICK_RADIUS: 56,
+  STICK_DEADZONE: 0.18,
+  STICK_THRUST: 0.38,
+  FIRE_SIZE: 72,
+  // Canvas space reserved above the fire button so the radar stays readable.
+  FIRE_RESERVE: 112,
+  PHONE_MAX_WIDTH: 500,
+  PHONE_LANDSCAPE_MAX_HEIGHT: 430,
+  PHONE_LANDSCAPE_MAX_WIDTH: 1000,
+  TABLET_MIN_SIDE: 820,
+} as const;
+
+// ============================================================================
 // LOCKED PLAYFIELD PALETTE
 // ============================================================================
 export const PALETTE = {

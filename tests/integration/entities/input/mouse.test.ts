@@ -3,6 +3,7 @@ import { LOCAL_STORAGE_KEYS } from '../../../../src/constants/user-preferences';
 import { Player } from '../../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { Ship } from '../../../../src/entities/ship/Ship';
+import { resetControlSources } from '../../../../src/input/controlSources';
 import {
   handleMouseDown,
   handleMouseMove,
@@ -18,6 +19,7 @@ let isPlayingStub: ReturnType<typeof vi.spyOn>;
 let testCanvas: HTMLCanvasElement;
 
 beforeEach(() => {
+  resetControlSources();
   localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
   // Set predictable viewport size used by canvasManager.initialize()
   Object.defineProperty(window, 'innerWidth', { value: 800, writable: true });
@@ -59,6 +61,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetControlSources();
   // Restore all spies to clean up global state
   playSpy.mockRestore();
   stopSpy.mockRestore();

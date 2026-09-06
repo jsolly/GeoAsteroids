@@ -16,6 +16,7 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { publishHarpoonField } from '../entities/ship/harpoonField';
+import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
 import {
   applyAsteroidKinematics,
@@ -693,6 +694,8 @@ export class GameController {
       this.lifecycleAccumulatorMs
     );
     this.lifecycleAccumulatorMs = remainingMs;
+
+    tickTouchControls(currPlayer);
 
     // Update local player ship
     logger.debug('GAME_LOOP', 'Updating ship', {
