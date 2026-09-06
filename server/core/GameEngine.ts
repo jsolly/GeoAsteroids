@@ -40,6 +40,7 @@ import {
   type ExpiredCollabHit,
 } from './AsteroidManager.ts';
 import { CollisionAuthority } from './CollisionAuthority';
+import { killScoreFor, shouldAwardHumanKillPoints } from './combatScoring';
 import { EntityManager, GameEntity } from './EntityManager';
 import { LootManager } from './LootManager';
 import { RNGService } from './RNGService';
@@ -458,7 +459,7 @@ export class GameEngine {
       return { applied: true, isDestroyed: false, entity: damaged };
     }
 
-    this.applyShipDeath(damaged, attackerId, damaged.type === 'human' ? 200 : 50);
+    this.applyShipDeath(damaged, attackerId, killScoreFor(damaged.type));
     return { applied: true, isDestroyed: true, entity: damaged };
   }
 
@@ -468,6 +469,10 @@ export class GameEngine {
     damage: number,
     source?: CombatDamageSource
   ): boolean {
+    const existing = this.getPlayer(targetPlayerId);
+    if (!existing || existing.type !== 'human') {
+      return false;
+    }
     return this.handleShipDamage(targetPlayerId, attackerId, damage, source).isDestroyed;
   }
 
@@ -477,6 +482,10 @@ export class GameEngine {
     damage: number,
     source?: CombatDamageSource
   ): boolean {
+    const existing = this.getBot(botId);
+    if (!existing || existing.type !== 'bot') {
+      return false;
+    }
     return this.handleShipDamage(botId, attackerId, damage, source).isDestroyed;
   }
 
@@ -585,9 +594,13 @@ export class GameEngine {
         livesBefore: prevLives,
         livesAfter: entity.lives,
       });
-      const attackerIsValidPlayer =
-        !!attackerId && attackerId !== entity.id && !!this.entityManager.getEntity(attackerId);
-      if (attackerIsValidPlayer) {
+      if (
+        shouldAwardHumanKillPoints(
+          attackerId,
+          entity.id,
+          !!this.entityManager.getEntity(attackerId)
+        )
+      ) {
         this.awardPoints(attackerId, killPoints);
       }
     } else if (attackerId) {

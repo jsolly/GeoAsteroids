@@ -15,7 +15,7 @@ import { NetworkManager } from '../../network/networkManager';
 import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
 import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
-import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
+import { addPositionAndVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser, createLaserAtAngle } from '../laser/laserUtils';
 import { getHarpoonFieldCanvas, getHarpoonFieldScale } from './harpoonField';
@@ -41,11 +41,13 @@ import {
   applySharedShipExplodingFlag,
   applySharedShipRespawnCue,
   applyShipSpawnProtection,
+  applyThrustOrFriction,
   calculateHealthAfterDamage,
   calculateHealthAfterHeal,
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
   canTakeCollisionDamage,
+  moveFrictionForShip,
   shouldStartHealthRegeneration,
   tickShipImpactFlash,
 } from './shipUtils';
@@ -231,31 +233,15 @@ class Ship {
       this.lastThrusting = this.thrusting;
     }
 
+    this.velocity = applyThrustOrFriction(
+      this.velocity,
+      this.angle,
+      this.thrusting,
+      moveFrictionForShip(this.isBot),
+      { thrust: this.thrust, mass: this.mass, maxVelocity: this.maxVelocity }
+    );
     if (this.thrusting) {
-      const thrustScale = thrustScaleFromMass(this.mass);
-      const maxVelocity = maxVelocityFromMass(this.mass);
-      const thrust: Velocity = {
-        x: (Math.cos(this.angle) * this.thrust * thrustScale) / GAME.FPS,
-        y: (-Math.sin(this.angle) * this.thrust * thrustScale) / GAME.FPS,
-      };
-      this.velocity = addVectors(this.velocity, thrust);
-
-      // Cap velocity to prevent excessive speed
-      const currentSpeed = Math.sqrt(
-        this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
-      );
-      const speedCap = this.maxVelocity * (maxVelocity / SHIP.MAX_VELOCITY);
-      if (currentSpeed > speedCap) {
-        const scale = speedCap / currentSpeed;
-        this.velocity.x *= scale;
-        this.velocity.y *= scale;
-      }
-
       drawThruster(this);
-    } else {
-      // Use bot-specific friction if this is a bot ship
-      const frictionCoeff = this.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
-      this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / GAME.FPS);
     }
 
     applySharedShipSlope(this.velocity, this.position);
@@ -815,38 +801,16 @@ class Ship {
       return;
     }
 
-    // Apply angular velocity to rotation
     this.angle += this.angularVelocity;
-
-    // Apply thrust if thrusting
-    if (this.thrusting) {
-      const thrustScale = thrustScaleFromMass(this.mass);
-      const maxVelocity = maxVelocityFromMass(this.mass);
-      const thrust: Velocity = {
-        x: (Math.cos(this.angle) * this.thrust * thrustScale) / GAME.FPS,
-        y: (-Math.sin(this.angle) * this.thrust * thrustScale) / GAME.FPS,
-      };
-      this.velocity = addVectors(this.velocity, thrust);
-
-      // Cap velocity to prevent excessive speed
-      const currentSpeed = Math.sqrt(
-        this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
-      );
-      const speedCap = this.maxVelocity * (maxVelocity / SHIP.MAX_VELOCITY);
-      if (currentSpeed > speedCap) {
-        const scale = speedCap / currentSpeed;
-        this.velocity.x *= scale;
-        this.velocity.y *= scale;
-      }
-    } else {
-      // Apply player-specific friction
-      this.velocity = multiplyVelocity(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
-    }
-
+    this.velocity = applyThrustOrFriction(
+      this.velocity,
+      this.angle,
+      this.thrusting,
+      this.frictionCoefficient,
+      { thrust: this.thrust, mass: this.mass, maxVelocity: this.maxVelocity }
+    );
     applySharedShipSlope(this.velocity, this.position);
     this.capVelocity();
-
-    // Update position based on velocity
     this.position = addPositionAndVelocity(this.position, this.velocity);
   }
 
