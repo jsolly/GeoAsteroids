@@ -476,7 +476,12 @@ export class MessageHandler {
       return;
     }
 
-    const result = this.gameEngine.handleSatellitePickupCollected(pickupId, playerId);
+    const claimedPosition = this.gameEngine.validatePosition(data.position);
+    const result = this.gameEngine.handleSatellitePickupCollected(
+      pickupId,
+      playerId,
+      claimedPosition ?? undefined
+    );
     if (!result.success || !result.pickup) {
       return;
     }

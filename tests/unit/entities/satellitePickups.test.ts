@@ -118,4 +118,14 @@ describe('Satellite pickups', () => {
     gameEngine.updatePlayer('pilot', { position: { ...pickup.position }, health: 0 });
     expect(gameEngine.handleSatellitePickupCollected(pickup.id, 'pilot').success).toBe(false);
   });
+
+  test('a claimed nearby pose can collect when the server echo is still stale', () => {
+    gameEngine.addPlayer('pilot', 'Pilot', mockWs as never, { x: 0, y: 0 });
+    const pickup = gameEngine.getAllSatellitePickups()[0]!;
+    const result = gameEngine.handleSatellitePickupCollected(pickup.id, 'pilot', {
+      ...pickup.position,
+    });
+    expect(result.success).toBe(true);
+    expect(gameEngine.getSatellitePickup(pickup.id)?.state).toBe('orbiting');
+  });
 });

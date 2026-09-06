@@ -4,7 +4,8 @@ import { SatellitePickup } from './SatellitePickup';
 export class SatellitePickupManager {
   private static instance: SatellitePickupManager;
   private pickups = new Map<string, SatellitePickup>();
-  private pendingCollect = new Set<string>();
+  private lastCollectAttemptAt = new Map<string, number>();
+  private static readonly COLLECT_RETRY_MS = 250;
 
   static getInstance(): SatellitePickupManager {
     if (!SatellitePickupManager.instance) {
@@ -23,15 +24,17 @@ export class SatellitePickupManager {
 
   clear(): void {
     this.pickups.clear();
-    this.pendingCollect.clear();
+    this.lastCollectAttemptAt.clear();
   }
 
-  markCollectPending(id: string): void {
-    this.pendingCollect.add(id);
+  /** True when we should skip another collect packet for this loose pickup. */
+  shouldDebounceCollect(id: string, now = Date.now()): boolean {
+    const last = this.lastCollectAttemptAt.get(id);
+    return last !== undefined && now - last < SatellitePickupManager.COLLECT_RETRY_MS;
   }
 
-  isCollectPending(id: string): boolean {
-    return this.pendingCollect.has(id);
+  markCollectAttempt(id: string, now = Date.now()): void {
+    this.lastCollectAttemptAt.set(id, now);
   }
 
   syncFromServer(list: SatellitePickupData[]): void {
@@ -39,12 +42,12 @@ export class SatellitePickupManager {
     for (const id of this.pickups.keys()) {
       if (!seen.has(id)) {
         this.pickups.delete(id);
-        this.pendingCollect.delete(id);
+        this.lastCollectAttemptAt.delete(id);
       }
     }
     for (const data of list) {
       if (data.state !== 'loose') {
-        this.pendingCollect.delete(data.id);
+        this.lastCollectAttemptAt.delete(data.id);
       }
       const existing = this.pickups.get(data.id);
       if (existing) {
