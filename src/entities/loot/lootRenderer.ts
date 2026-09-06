@@ -1,8 +1,8 @@
 import type { LootData } from '../../../shared-types';
 import { PALETTE, VISUAL } from '../../constants';
-import type { Ship } from '../ship/Ship';
 import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
+import type { Ship } from '../ship/Ship';
 
 /** Phosphor diamond pickups — hairline stroke, glow capped to stroke. */
 export function drawLootRelative(ship: Ship, loot: readonly LootData[]): void {

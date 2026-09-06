@@ -48,7 +48,10 @@ export function applyLootMass(current: number, gain: number): number {
   if (headroom <= 0) {
     return GROWTH.SOFT_MAX_MASS;
   }
-  return Math.min(GROWTH.SOFT_MAX_MASS, cur + headroom * (1 - Math.exp(-GROWTH.MASS_GAIN_K * added)));
+  return Math.min(
+    GROWTH.SOFT_MAX_MASS,
+    cur + headroom * (1 - Math.exp(-GROWTH.MASS_GAIN_K * added))
+  );
 }
 
 export function sizeScaleFromMass(mass: number): number {

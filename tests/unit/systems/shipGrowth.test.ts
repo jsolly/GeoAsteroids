@@ -32,7 +32,7 @@ describe('ship growth math', () => {
   });
 
   test('soft max keeps mass and size readable after many pickups', () => {
-    let mass = GROWTH.BASE_MASS;
+    let mass: number = GROWTH.BASE_MASS;
     for (let i = 0; i < 80; i++) {
       mass = applyLootMass(mass, 1);
     }

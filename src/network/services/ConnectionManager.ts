@@ -1,3 +1,4 @@
+import { GROWTH } from '../../../shared/shipGrowth';
 import type {
   AsteroidData,
   AsteroidDestroyEvent,

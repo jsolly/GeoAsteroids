@@ -6,10 +6,10 @@ import {
   CANVAS_INTERNAL_HEIGHT,
   CANVAS_INTERNAL_WIDTH,
 } from '../constants/canvas';
-import type { Player } from '../entities/player/Player';
-import type { RoidBelt } from '../entities/roid/Roid';
 import { LootField } from '../entities/loot/LootField';
 import { drawLootRelative } from '../entities/loot/lootRenderer';
+import type { Player } from '../entities/player/Player';
+import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative, rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {

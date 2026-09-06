@@ -1,5 +1,5 @@
-import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
 import { radiusFromMass } from '../../../shared/shipGrowth';
+import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';

@@ -1,10 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../../shared-types';
+import {
+  GROWTH,
+  maxVelocityFromMass,
+  radiusFromMass,
+  thrustScaleFromMass,
+} from '../../../shared/shipGrowth';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
-import { GROWTH, maxVelocityFromMass, radiusFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import { NetworkManager } from '../../network/networkManager';
 import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
 import { isGenericDeathCause } from '../../utils/deathCause';
