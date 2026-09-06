@@ -493,28 +493,54 @@ export class GameInteractions {
       const gameController = (
         window as {
           gameController?: {
-            getCurrPlayer?: () => { ship?: { position?: { x: number; y: number } } };
+            getCurrPlayer?: () => {
+              ship?: { position?: { x: number; y: number }; velocity?: { x: number; y: number } };
+            };
+            getFuelDrops?: () => Array<{
+              id: string;
+              position: { x: number; y: number };
+              r?: number;
+            }>;
+            updateGame?: () => void;
           };
         }
       ).gameController;
-      const position = gameController?.getCurrPlayer?.()?.ship?.position;
-      if (!position) {
-        throw new Error('No local ship position for fuel drop');
+      const player = gameController?.getCurrPlayer?.();
+      const ship = player?.ship;
+      if (!ship?.position || !gameController?.getFuelDrops || !gameController.updateGame) {
+        throw new Error('Game controller is missing fuel helpers');
       }
+      ship.velocity = { x: 0, y: 0 };
       const dropId = `test-fuel-${Date.now()}`;
       window.dispatchEvent(
         new CustomEvent('serverFuelDropCreated', {
           detail: {
             drop: {
               id: dropId,
-              position: { x: position.x, y: position.y },
+              position: { x: ship.position.x, y: ship.position.y },
               velocity: { x: 0, y: 0 },
               amount: dropAmount,
-              radius: 40,
+              radius: 80,
             },
           },
         })
       );
+      const drops = gameController.getFuelDrops();
+      let drop = drops.find((item) => item.id === dropId);
+      if (!drop) {
+        drop = {
+          id: dropId,
+          position: { x: ship.position.x, y: ship.position.y },
+          r: 80,
+        };
+        (drop as { amount?: number }).amount = dropAmount;
+        drops.push(drop as (typeof drops)[number]);
+      }
+      drop.position = { x: ship.position.x, y: ship.position.y };
+      for (let i = 0; i < 8; i++) {
+        drop.position = { x: ship.position.x, y: ship.position.y };
+        gameController.updateGame();
+      }
       return dropId;
     }, amount);
   }
