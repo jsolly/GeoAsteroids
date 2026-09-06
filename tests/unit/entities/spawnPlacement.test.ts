@@ -1,6 +1,8 @@
 import { expect, test } from 'vitest';
 import { SPAWN } from '../../../src/constants';
 import { entityFactory } from '../../../src/entities/EntityFactory';
+import { playerFactory } from '../../../src/entities/player/PlayerFactory';
+import { getShipSpawnRadius } from '../../../src/physics/playVolume';
 
 // Regression test for the live-multiplayer bug where two players joining the
 // same server could never see each other: players used to spawn anywhere inside
@@ -15,6 +17,15 @@ test('local players spawn near the arena center so co-players are in view', () =
     const player = entityFactory.createLocalPlayer('Tester');
     const distanceFromCenter = Math.hypot(player.ship.position.x, player.ship.position.y);
     expect(distanceFromCenter).toBeLessThanOrEqual(SPAWN.NEAR_CENTER_RADIUS);
+  }
+});
+
+test('PlayerFactory uses the same spawn disk as EntityFactory', () => {
+  for (let i = 0; i < 40; i++) {
+    const player = playerFactory.createLocalPlayer('Factory');
+    expect(Math.hypot(player.ship.position.x, player.ship.position.y)).toBeLessThanOrEqual(
+      getShipSpawnRadius()
+    );
   }
 });
 

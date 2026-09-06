@@ -1,5 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { GAME, SHIP } from '../../constants';
+import { containShipUnlessPastKillWall } from '../../physics/playVolume';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 
 export interface ShipMovementState {
@@ -50,7 +51,9 @@ export function move(state: ShipMovementState): void {
   applyVelocity(state);
 
   const newPosition = addPositionAndVelocity(state.position, state.velocity);
-  state.position = newPosition;
+  const contained = containShipUnlessPastKillWall(newPosition, state.velocity);
+  state.position = contained.position;
+  state.velocity = contained.velocity;
 }
 
 /**

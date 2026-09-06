@@ -2,10 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Position } from '../../../shared-types';
 import { CANVAS, DEBUG, PALETTE } from '../../constants';
 import { MockPlayerInput } from '../../input/MockPlayerInput';
+import { randomShipSpawnPosition } from '../../physics/playVolume';
 import {
   getRandomPositionNearBoundary,
   getRandomPositionNearPoint,
-  getRandomPositionWithinBoundary,
 } from '../../utils/positionUtils';
 import { Player } from './Player';
 
@@ -35,8 +35,7 @@ export class PlayerFactory {
       const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
       position = getRandomPositionNearPoint(centerPosition, 150); // Within 150 pixels of center
     } else {
-      // Default behavior: random position within boundary
-      position = getRandomPositionWithinBoundary();
+      position = randomShipSpawnPosition();
     }
 
     const player = new Player({
