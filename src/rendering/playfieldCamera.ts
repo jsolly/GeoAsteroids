@@ -68,6 +68,17 @@ export function countRocksOnCanvas(
   return roids.filter((roid) => isRockOnCanvas(roid.position, ship, canvas, scale, margin)).length;
 }
 
+function beltCentroid(roids: readonly PlayfieldRock[]): Position {
+  let x = 0;
+  let y = 0;
+  for (const roid of roids) {
+    x += roid.position.x;
+    y += roid.position.y;
+  }
+  const n = roids.length;
+  return { x: x / n, y: y / n };
+}
+
 function farthestReach(roids: readonly PlayfieldRock[], ship: Position): number {
   let maxDist = 1;
   for (const roid of roids) {
@@ -92,9 +103,10 @@ function fitFarthestRock(
 }
 
 /**
- * Keep 1:1 while a real cluster is already on the playfield. Edge-clip or
- * hidden (pending / undrawable) rocks do not pin the camera — those are the
- * flaky empty-canvas + minimap-dots misses after #445.
+ * Keep 1:1 only while the ship is looking at the belt: ≥2 drawable rocks
+ * inside the comfort inset *and* the pack centroid still on the playfield.
+ * A clip-edge speck, a pending hide, or two rim stragglers must not pin
+ * 1:1 while the dense field stays on the minimap (Pilot B pass 4).
  */
 export function playfieldZoom(
   roids: readonly PlayfieldRock[],
@@ -106,7 +118,10 @@ export function playfieldZoom(
     return 1;
   }
   const comfortable = countRocksOnCanvas(belt, ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
-  if (comfortable >= PLAYFIELD_MIN_VISIBLE) {
+  const lookingAtPack =
+    comfortable >= PLAYFIELD_MIN_VISIBLE &&
+    isRockOnCanvas(beltCentroid(belt), ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
+  if (lookingAtPack) {
     return 1;
   }
   return fitFarthestRock(belt, ship, canvas);

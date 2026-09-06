@@ -173,6 +173,28 @@ describe('playfield zoom paints the radar belt when 1:1 would be empty', () => {
     }
   });
 
+  test('two rim stragglers do not pin 1:1 while the pack is only on radar', () => {
+    const ship = { x: 0, y: 0 };
+    const stragglers = [
+      { position: { x: 80, y: 40 }, r: 20 },
+      { position: { x: -60, y: 50 }, r: 20 },
+    ];
+    const pack = [
+      { position: { x: 900, y: 180 }, r: 20 },
+      { position: { x: 860, y: 240 }, r: 20 },
+      { position: { x: 940, y: 120 }, r: 20 },
+      { position: { x: 880, y: 300 }, r: 20 },
+    ];
+    const field = [...stragglers, ...pack];
+    expect(countRocksOnCanvas(stragglers, ship, SMALL, 1, -PLAYFIELD_COMFORT_INSET)).toBe(2);
+    expect(countRocksOnCanvas(pack, ship, SMALL, 1)).toBe(0);
+    expect(playfieldZoom(field, ship, SMALL)).toBeLessThan(1);
+    expect(radarBeltVisibleOnPlayfield(field, ship, SMALL)).toBe(true);
+    expect(countRocksOnCanvas(field, ship, SMALL, playfieldZoom(field, ship, SMALL))).toBe(
+      field.length
+    );
+  });
+
   test('Pilot B pass 4: a left-edge speck at ~60s does not leave the belt on radar only', () => {
     const ship = { x: 0, y: 0 };
     const leftEdge = { position: { x: -(SMALL.width / 2) + 8, y: 40 }, r: 40 };
