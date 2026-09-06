@@ -1,5 +1,4 @@
 import { expect, test, describe, beforeEach, vi, afterEach } from 'vitest';
-import { DAMAGE } from '../../../../src/constants';
 import { CollisionManager } from '../../../../src/physics/collision/CollisionManager';
 import { Ship } from '../../../../src/entities/ship/Ship';
 import { Roid } from '../../../../src/entities/roid/Roid';
@@ -56,33 +55,14 @@ describe('Integration: Local player roid collisions', () => {
     vi.clearAllMocks();
   });
 
-  test('roid contact explodes the ship immediately and tells the server', () => {
-    const localPlayerId = 'local-player-123';
-    const localPlayer = { ship: localShip, id: localPlayerId, type: 'local' as const };
+  test('does not apply local asteroid damage or send client reports', () => {
+    const localPlayer = { ship: localShip, id: 'local-player-123', type: 'local' as const };
+    const initialHealth = localShip.health;
 
     collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
 
-    expect(localShip.health).toBe(0);
-    expect(localShip.exploding).toBe(true);
-
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      type: 'collisionDamage',
-      data: {
-        targetPlayerId: localPlayerId,
-        attackerId: 'asteroid',
-        damage: DAMAGE.ASTEROID_COLLISION,
-      },
-    });
-
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      type: 'asteroidDestroyed',
-      data: {
-        asteroidId: roid.id,
-        playerId: localPlayerId,
-        points: 50,
-        cause: 'collision',
-      },
-    });
+    expect(localShip.health).toBe(initialHealth);
+    expect(mockSendMessage).not.toHaveBeenCalled();
   });
 });
 

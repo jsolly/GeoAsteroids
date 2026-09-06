@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import type { AsteroidData, LootData, Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
+import { asteroidRamDamage, shipShipTickDamage } from '../../shared/combat';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
 import { GROWTH, applyLootMass, applyShipMass } from '../../shared/shipGrowth';
 import { CANVAS, LASER } from '../../src/constants';
@@ -28,6 +29,7 @@ import {
   type AsteroidHitOutcome,
   type ExpiredCollabHit,
 } from './AsteroidManager.ts';
+import { CollisionAuthority } from './CollisionAuthority';
 import { EntityManager, GameEntity } from './EntityManager';
 import { LootManager } from './LootManager';
 import { RNGService } from './RNGService';
@@ -54,6 +56,25 @@ export interface AppliedAsteroidHit {
   origin?: Position;
 }
 
+export interface CombatBroadcast {
+  targetId: string;
+  attackerId: string;
+  damage: number;
+  remainingHealth: number;
+  remainingLives: number;
+  isDestroyed: boolean;
+  targetType: 'human' | 'bot';
+  targetName: string;
+  awardedScore?: { playerId: string; score: number };
+  destroyedAsteroidId?: string;
+  newAsteroids?: AsteroidData[];
+  asteroidScore?: { playerId: string; score: number };
+  collabSplit?: boolean;
+  origin?: { x: number; y: number };
+}
+
+export type CombatSink = (result: CombatBroadcast) => void;
+
 /** Matches client Laser.isExpired when the canvas is the internal playfield. */
 const SERVER_LASER_MAX_DISTANCE = LASER.TRAVEL_DISTANCE_RATIO + CANVAS.INTERNAL_WIDTH;
 
@@ -62,6 +83,8 @@ export class GameEngine {
   private asteroidManager: AsteroidManager;
   private lootManager: LootManager;
   private rngService: RNGService;
+  private collisionAuthority = new CollisionAuthority();
+  private combatSink: CombatSink | null = null;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
@@ -82,6 +105,10 @@ export class GameEngine {
     ensureTerrain(TERRAIN.DEFAULT_SEED);
 
     // Don't initialize pause state yet - will be called after initialization
+  }
+
+  public setCombatSink(sink: CombatSink | null): void {
+    this.combatSink = sink;
   }
 
   // Game loop management
@@ -142,6 +169,7 @@ export class GameEngine {
     if (this.gameTime % 2 === 0) {
       this.entityManager.updateBotMovement();
     }
+    this.resolveAuthoritativeCombat();
   }
 
   /** Combat pair + clock — scenario tests drive death→respawn without moving the belt. */
@@ -244,6 +272,7 @@ export class GameEngine {
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
+    this.collisionAuthority.reset();
 
     // Keep gameTime monotonic for the process lifetime. Zeroing it when the
     // last player leaves makes /health.world.gameTime look frozen on prod
@@ -365,51 +394,54 @@ export class GameEngine {
     return changed;
   }
 
+  /**
+   * Apply damage to a human or bot through one path. Shield, faction, loot,
+   * and deathCause stay on the tip helpers; health/lives stay server-owned.
+   */
+  public handleShipDamage(
+    targetId: string,
+    attackerId: string,
+    damage: number,
+    source?: CombatDamageSource
+  ): { applied: boolean; isDestroyed: boolean; entity?: GameEntity } {
+    logger.debug('handleShipDamage called', { targetId, attackerId, damage, source });
+    if (!this.combatSidesAllowDamage(attackerId, targetId)) {
+      logger.debug('friendly fire ignored', { attackerId, targetId });
+      return { applied: false, isDestroyed: false };
+    }
+
+    const existing = this.entityManager.getEntity(targetId);
+    if (!existing) {
+      return { applied: false, isDestroyed: false };
+    }
+    if (existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
+      return { applied: false, isDestroyed: false };
+    }
+
+    const damaged = this.entityManager.damageEntity(
+      targetId,
+      damage,
+      resolveCombatDamageSource(attackerId, source)
+    );
+    if (!damaged) {
+      return { applied: false, isDestroyed: false };
+    }
+
+    if (damaged.health > 0) {
+      return { applied: true, isDestroyed: false, entity: damaged };
+    }
+
+    this.applyShipDeath(damaged, attackerId, damaged.type === 'human' ? 200 : 50);
+    return { applied: true, isDestroyed: true, entity: damaged };
+  }
+
   public handlePlayerDamage(
     targetPlayerId: string,
     attackerId: string,
     damage: number,
     source?: CombatDamageSource
   ): boolean {
-    logger.debug('handlePlayerDamage called', { targetPlayerId, attackerId, damage, source });
-    if (!this.combatSidesAllowDamage(attackerId, targetPlayerId)) {
-      logger.debug('friendly fire ignored', { attackerId, targetPlayerId });
-      return false;
-    }
-    // Ignore damage if player is already in respawn countdown or already at 0 health
-    const existing = this.getPlayer(targetPlayerId);
-    if (!existing) {
-      logger.debug('damagedPlayer is null');
-      return false;
-    }
-    if (existing.respawnTimer !== undefined || existing.health <= 0) {
-      logger.debug('ignoring damage during respawn or while dead');
-      return false;
-    }
-
-    const damagedPlayer = this.entityManager.damageEntity(
-      targetPlayerId,
-      damage,
-      source ?? 'collision'
-    );
-    if (!damagedPlayer) {
-      logger.debug('damagedPlayer is null after damageEntity');
-      return false;
-    }
-    logger.debug('damagedPlayer after damage', {
-      health: damagedPlayer.health,
-      exploding: damagedPlayer.exploding,
-    });
-
-    if (damagedPlayer.health <= 0) {
-      const destroyedEntity = this.entityManager.getEntity(targetPlayerId);
-      if (destroyedEntity) {
-        this.applyShipDeath(destroyedEntity, attackerId, 200);
-      }
-      return true;
-    }
-
-    return false;
+    return this.handleShipDamage(targetPlayerId, attackerId, damage, source).isDestroyed;
   }
 
   public handleBotDamage(
@@ -418,30 +450,97 @@ export class GameEngine {
     damage: number,
     source?: CombatDamageSource
   ): boolean {
-    if (!this.combatSidesAllowDamage(attackerId, botId)) {
-      logger.debug('friendly fire ignored', { attackerId, botId });
-      return false;
-    }
-    const existing = this.getBot(botId);
-    if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
-      return false;
+    return this.handleShipDamage(botId, attackerId, damage, source).isDestroyed;
+  }
+
+  /**
+   * Server-owned ship↔asteroid and ship↔ship resolution. Humans and bots
+   * share the same overlap + handleShipDamage path. Asteroid motion already
+   * ran in the game loop (`updateMotion`); this only applies health.
+   * Ram uses the tip collision destroy path so laser collab stays intact.
+   */
+  public resolveAuthoritativeCombat(now: number = Date.now()): CombatBroadcast[] {
+    if (this.isPaused) {
+      return [];
     }
 
-    const damagedBot = this.entityManager.damageEntity(
-      botId,
-      damage,
-      resolveCombatDamageSource(attackerId, source)
+    const results: CombatBroadcast[] = [];
+    const entities = this.entityManager.getAllEntities();
+
+    const ramHits = this.collisionAuthority.collectShipAsteroidHits(
+      entities,
+      this.asteroidManager.getAllAsteroids()
     );
-    if (!damagedBot) {
-      return false;
+    const destroyedAsteroids = new Set<string>();
+    const ramDamage = asteroidRamDamage();
+    for (const hit of ramHits) {
+      const result = this.applyDirectedHit(hit.shipId, 'asteroid', ramDamage, 'collision');
+      if (!result) {
+        continue;
+      }
+      if (!destroyedAsteroids.has(hit.asteroidId)) {
+        destroyedAsteroids.add(hit.asteroidId);
+        const destruction = this.handleAsteroidHit(hit.asteroidId, hit.shipId, 'collision');
+        if (destruction.outcome === 'destroyed') {
+          result.destroyedAsteroidId = hit.asteroidId;
+          result.newAsteroids = destruction.newAsteroids;
+          result.collabSplit = destruction.split;
+          result.origin = destruction.destroyed?.position;
+          const scorer = this.entityManager.getEntity(hit.shipId);
+          if (scorer) {
+            result.asteroidScore = { playerId: hit.shipId, score: scorer.score };
+          }
+        }
+      }
+      results.push(result);
     }
 
-    if (damagedBot.health <= 0) {
-      this.applyShipDeath(damagedBot, attackerId, 50);
-      return true;
+    const pairTicks = this.collisionAuthority.collectShipShipTicks(entities, now);
+    const tickDamage = shipShipTickDamage();
+    for (const pair of pairTicks) {
+      const first = this.applyDirectedHit(pair.a, pair.b, tickDamage, 'collision');
+      if (first) {
+        results.push(first);
+      }
+      const second = this.applyDirectedHit(pair.b, pair.a, tickDamage, 'collision');
+      if (second) {
+        results.push(second);
+      }
     }
 
-    return false;
+    for (const result of results) {
+      this.combatSink?.(result);
+    }
+    return results;
+  }
+
+  private applyDirectedHit(
+    targetId: string,
+    attackerId: string,
+    damage: number,
+    source?: CombatDamageSource
+  ): CombatBroadcast | null {
+    const outcome = this.handleShipDamage(targetId, attackerId, damage, source);
+    if (!outcome.applied || !outcome.entity) {
+      return null;
+    }
+    const broadcast: CombatBroadcast = {
+      targetId,
+      attackerId,
+      damage,
+      remainingHealth: outcome.entity.health,
+      remainingLives: outcome.entity.lives,
+      isDestroyed: outcome.isDestroyed,
+      targetType: outcome.entity.type,
+      targetName: outcome.entity.name,
+    };
+    if (outcome.isDestroyed) {
+      const attacker = this.entityManager.getEntity(attackerId);
+      if (attacker) {
+        broadcast.awardedScore = { playerId: attackerId, score: attacker.score };
+      }
+    }
+    return broadcast;
   }
 
   /** One death path for humans and bots: loot, lives (humans), points, shared respawn. */

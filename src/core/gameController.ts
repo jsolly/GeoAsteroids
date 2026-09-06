@@ -721,14 +721,9 @@ export class GameController {
     // Check laser collisions with asteroids and bots
     this.checkLaserCollisions(allPlayers);
 
-    // Check ship collisions with asteroids
-    this.checkShipAsteroidCollisions();
-
-    // Check ship collisions with other ships
+    // Ship↔asteroid damage is server-owned. Keep local ship-ship overlap
+    // for offline DOT / visual contact only. Factions still skip allies.
     this.checkShipShipCollisions(allPlayers);
-
-    // Check bot collisions with asteroids
-    this.checkBotAsteroidCollisions(allPlayers);
 
     // Check boundary collisions for ships
     this.checkBoundaryCollisions();
@@ -851,16 +846,6 @@ export class GameController {
     this.collisionManager.checkBoundaryCollisions([currPlayer.ship], currPlayer.id);
   }
 
-  // Check ship collisions with asteroids
-  private checkShipAsteroidCollisions(): void {
-    const currPlayer = this.playerManager.getLocalPlayer();
-    if (!currPlayer || !this.currRoidBelt) {
-      return;
-    }
-
-    this.collisionManager.checkPlayerAsteroidCollisions(currPlayer, this.currRoidBelt.roids);
-  }
-
   // Check ship collisions with other ships
   private checkShipShipCollisions(allPlayers: Player[]): void {
     const currPlayer = this.playerManager.getLocalPlayer();
@@ -885,22 +870,6 @@ export class GameController {
     this.otherShips.length = count;
 
     this.collisionManager.checkShipShipCollisions(currPlayer.ship, this.otherShips, currPlayer.id);
-  }
-
-  // Check bot collisions with asteroids
-  private checkBotAsteroidCollisions(allPlayers: Player[]): void {
-    if (!this.currRoidBelt) {
-      return;
-    }
-
-    for (const botPlayer of allPlayers) {
-      if (botPlayer.type !== 'bot') {
-        continue;
-      }
-      if (botPlayer.ship && !botPlayer.ship.exploding) {
-        this.collisionManager.checkPlayerAsteroidCollisions(botPlayer, this.currRoidBelt.roids);
-      }
-    }
   }
 
   // Simple render method - no game logic, just rendering

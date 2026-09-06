@@ -107,43 +107,24 @@ describe('Local Player Roid Collision Damage', () => {
       console.log('  Health:', localShip.health);
       console.log('  Network manager calls:', mockSendMessage.mock.calls.length);
       
-      expect(localShip.health).toBe(0);
-      expect(localShip.exploding).toBe(true);
-      
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'collisionDamage',
-        data: {
-          targetPlayerId: 'local-player-123',
-          attackerId: 'asteroid',
-          damage: DAMAGE.ASTEROID_COLLISION,
-        },
-      });
-
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: roid.id,
-          playerId: 'local-player-123',
-          points: expect.any(Number),
-          cause: 'collision',
-        },
-      });
+      // Server owns ship↔asteroid health; the client must not apply or report it.
+      expect(localShip.health).toBe(100);
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
   });
 
   describe('Server-Authoritative Damage', () => {
-    test('asteroid collision explodes locally and tells the server', async () => {
+    test('asteroid overlap does not apply local damage or send client reports', async () => {
+      // Mock the collision detection to return true
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
 
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
-
-      expect(localShip.health).toBe(0);
-      expect(localShip.exploding).toBe(true);
-      expect(mockSendMessage).toHaveBeenCalledTimes(2);
+      expect(localShip.health).toBe(initialHealth);
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
-    test('asteroid collision triggers asteroid splitting', async () => {
+    test('asteroid overlap does not request client-side splitting', async () => {
       // Mock the collision detection to return true
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
@@ -151,16 +132,7 @@ describe('Local Player Roid Collision Damage', () => {
       // Check collision
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
       
-      // Verify asteroid destruction message was sent (triggers splitting on server)
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: roid.id,
-          playerId: 'local-player-123',
-          points: expect.any(Number),
-          cause: 'collision',
-        },
-      });
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
   });
 
@@ -174,7 +146,7 @@ describe('Local Player Roid Collision Damage', () => {
 
     test('local player is not invincible in debug mode', () => {
       expect(DEBUG.LOCAL_PLAYER.INVINCIBLE).toBe(false);
-      // Damage is applied by the server after the client sends collisionDamage
+      // Damage is applied by the server from authoritative overlap, not client reports
     });
   });
 
@@ -184,7 +156,7 @@ describe('Local Player Roid Collision Damage', () => {
       expect(DAMAGE.ASTEROID_COLLISION).toBe(100);
     });
 
-    test('a raised shield still reports asteroid collision damage', async () => {
+    test('a raised shield does not report asteroid ram — server owns it', async () => {
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
 
@@ -193,14 +165,8 @@ describe('Local Player Roid Collision Damage', () => {
 
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
 
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'collisionDamage',
-        data: {
-          targetPlayerId: 'local-player-123',
-          attackerId: 'asteroid',
-          damage: DAMAGE.ASTEROID_COLLISION,
-        },
-      });
+      expect(localShip.health).toBe(100);
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
   });
 

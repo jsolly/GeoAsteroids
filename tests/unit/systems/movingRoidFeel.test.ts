@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { DAMAGE } from '../../../src/constants';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { Roid } from '../../../src/entities/roid/Roid';
 import { Ship } from '../../../src/entities/ship/Ship';
@@ -104,7 +103,7 @@ describe('moving-roid hit feel', () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
-  test('player and bot ship-roid hits share cooldown, pending lock, and impact flash', () => {
+  test('player and bot ship-roid overlaps do not apply local ram or send reports', () => {
     const collisionManager = CollisionManager.getInstance();
     const roid = new Roid({ x: 0, y: 0 }, 25);
     roid.playHitSound = vi.fn();
@@ -120,24 +119,16 @@ describe('moving-roid hit feel', () => {
       { ship: localShip, id: 'local-player-123', type: 'local' },
       [roid]
     );
-    expect(localShip.impactFlashFrames).toBeGreaterThan(0);
-    expect(localShip.exploding).toBe(true);
-    expect(roid.pendingDestruction).toBe(true);
-    expect(mockSendMessage).toHaveBeenCalledTimes(2);
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      type: 'collisionDamage',
-      data: {
-        targetPlayerId: 'local-player-123',
-        attackerId: 'asteroid',
-        damage: DAMAGE.ASTEROID_COLLISION,
-      },
-    });
+    expect(localShip.health).toBe(100);
+    expect(localShip.exploding).toBe(false);
+    expect(roid.pendingDestruction).toBeUndefined();
+    expect(mockSendMessage).not.toHaveBeenCalled();
 
     collisionManager.checkPlayerAsteroidCollisions(
       { ship: localShip, id: 'local-player-123', type: 'local' },
       [roid]
     );
-    expect(mockSendMessage).toHaveBeenCalledTimes(2);
+    expect(mockSendMessage).not.toHaveBeenCalled();
 
     const other = new Roid({ x: 0, y: 0 }, 25);
     other.playHitSound = vi.fn();
@@ -145,16 +136,9 @@ describe('moving-roid hit feel', () => {
       { ship: botShip, id: 'server-bot-1', type: 'bot' },
       [other]
     );
-    expect(botShip.impactFlashFrames).toBeGreaterThan(0);
-    expect(botShip.exploding).toBe(true);
-    expect(mockSendMessage).toHaveBeenCalledWith({
-      type: 'botDamage',
-      data: {
-        botId: 'server-bot-1',
-        attackerId: 'asteroid',
-        damage: DAMAGE.ASTEROID_COLLISION,
-      },
-    });
+    expect(botShip.health).toBe(100);
+    expect(botShip.exploding).toBe(false);
+    expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
   test('impact flash ticks down on the shared player/bot path', () => {
