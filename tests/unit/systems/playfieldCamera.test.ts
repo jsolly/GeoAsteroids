@@ -98,6 +98,12 @@ describe('root cause: camera frustum vs the radar belt (not wrap / stale / offse
     expect(drawingOffsets([])).toEqual([1]);
     expect(drawingOffsets([1.1, 0.9])).toEqual([1.1, 0.9]);
   });
+
+  test('drawingOffsets reuses the input array and a shared empty fallback', () => {
+    const offsets = [1.1, 0.9];
+    expect(drawingOffsets(offsets)).toBe(offsets);
+    expect(drawingOffsets([])).toBe(drawingOffsets([]));
+  });
 });
 
 describe('playfield zoom paints the radar belt when 1:1 would be empty', () => {

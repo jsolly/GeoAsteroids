@@ -5,7 +5,9 @@ import {
   applyAsteroidRowToBelt,
   asteroidHasSpawnPose,
   asteroidKinematicUpdates,
+  createAsteroidFieldSyncScratch,
   partitionAsteroidSnapshot,
+  shouldPreserveSeenAsteroidsOnJoin,
   shouldSnapAsteroidPose,
 } from '../../../src/network/services/asteroidFieldSync';
 
@@ -187,4 +189,35 @@ test('collab flag copies onto the local rock so both pilots can chip it', () => 
   const local = { ...localRoid(1, 2), isCollabTarget: false };
   applyAsteroidKinematics(local, { ...roid('server-asteroid-0', 10, 10), isCollabTarget: true });
   expect(local.isCollabTarget).toBe(true);
+});
+
+test('partition scratch arrays and snapshot set stay the same identity', () => {
+  const seen = new Set<string>();
+  const scratch = createAsteroidFieldSyncScratch();
+  const first = partitionAsteroidSnapshot([roid('a', 1, 2)], seen, scratch);
+  expect(first.created).toBe(scratch.created);
+  expect(first.updated).toBe(scratch.updated);
+  expect(first.removed).toBe(scratch.removed);
+
+  const second = partitionAsteroidSnapshot([roid('a', 3, 4), roid('b', 0, 0)], seen, scratch);
+  expect(second.created).toBe(scratch.created);
+  expect(second.updated).toBe(scratch.updated);
+  expect(second.created.map((asteroid) => asteroid.id)).toEqual(['b']);
+  expect(second.updated.map((asteroid) => asteroid.id)).toEqual(['a']);
+});
+
+test('applyAsteroidKinematics writes into the existing roid vectors', () => {
+  const local = localRoid(1, 2);
+  const position = local.position;
+  const velocity = local.velocity;
+  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
+  expect(local.position).toBe(position);
+  expect(local.velocity).toBe(velocity);
+  expect(position).toEqual({ x: 80, y: -12 });
+  expect(velocity).toEqual({ x: 1, y: 0 });
+});
+
+test('a warm rejoin keeps seen asteroid ids so the next snapshot updates in place', () => {
+  expect(shouldPreserveSeenAsteroidsOnJoin(0)).toBe(false);
+  expect(shouldPreserveSeenAsteroidsOnJoin(11)).toBe(true);
 });

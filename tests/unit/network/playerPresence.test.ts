@@ -2,7 +2,10 @@ import { expect, test } from 'vitest';
 import {
   bindPageHideDisconnect,
   duplicateOwnRemoteIds,
+  fillSnapshotEntityIds,
   isLocalGameEntity,
+  pruneDuplicateOwnRemotes,
+  pruneStaleRemotePlayers,
   staleRemotePlayerIds,
 } from '../../../src/network/services/playerPresence';
 
@@ -49,6 +52,36 @@ test('remote copies of the local name are duplicates', () => {
     { id: 'friend', name: 'NeonLightning', type: 'remote' },
   ];
   expect(duplicateOwnRemoteIds(players, 'PilotB')).toEqual(['ghost-1', 'ghost-2']);
+});
+
+test('fillSnapshotEntityIds clears and reuses the same Set', () => {
+  const into = new Set(['stale-id']);
+  const same = fillSnapshotEntityIds([{ id: 'a' }, { id: 'b' }], into);
+  expect(same).toBe(into);
+  expect([...into].sort()).toEqual(['a', 'b']);
+});
+
+test('pruneStaleRemotePlayers deletes only remotes missing from the snapshot', () => {
+  const players = new Map<string, { type: string }>([
+    ['local-1', { type: 'local' }],
+    ['remote-gone', { type: 'remote' }],
+    ['remote-still', { type: 'remote' }],
+    ['bot-1', { type: 'bot' }],
+  ]);
+  const snapshot = new Set(['local-1', 'remote-still', 'bot-1']);
+
+  expect(pruneStaleRemotePlayers(players, snapshot)).toBe(1);
+  expect([...players.keys()].sort()).toEqual(['bot-1', 'local-1', 'remote-still']);
+});
+
+test('pruneDuplicateOwnRemotes deletes same-name remotes in place', () => {
+  const players = new Map<string, { name: string; type: string }>([
+    ['me', { name: 'PilotB', type: 'local' }],
+    ['ghost', { name: 'PilotB', type: 'remote' }],
+    ['friend', { name: 'Castle', type: 'remote' }],
+  ]);
+  expect(pruneDuplicateOwnRemotes(players, 'PilotB')).toBe(1);
+  expect([...players.keys()].sort()).toEqual(['friend', 'me']);
 });
 
 test('pagehide runs the disconnect callback', () => {

@@ -11,20 +11,28 @@ import { bindGameAudio } from '../audio/spatialAudio';
 import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
 import { LootField } from '../entities/loot/LootField';
+import type { Player } from '../entities/player/Player';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { publishHarpoonField } from '../entities/ship/harpoonField';
+import type { Ship } from '../entities/ship/Ship';
 import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
 import {
   applyAsteroidKinematics,
   applyAsteroidRowToBelt,
+  bindAsteroidFieldApply,
+  unbindAsteroidFieldApply,
 } from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
-import { CollisionManager } from '../physics/collision/CollisionManager';
+import {
+  CollisionManager,
+  type LaserCollisionOptions,
+  type LaserTarget,
+} from '../physics/collision/CollisionManager';
 import { contourSegmentCount } from '../physics/terrain/contours';
 import { sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
 import {
@@ -50,6 +58,11 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private readonly otherShips: { ship: Ship; id: string }[] = [];
+  private readonly laserTargets: LaserTarget[] = [];
+  private readonly localFirstPlayers: Player[] = [];
+  private readonly laserOwnerSeen = new Set<string>();
+  private readonly laserHitOptions: LaserCollisionOptions = { reportAsteroidHits: true };
   private gameOverInProgress = false;
   private gameOverTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly GAME_OVER_MENU_DELAY_MS = 3500;
@@ -160,9 +173,7 @@ export class GameController {
   }
 
   // Event handler methods for server asteroid synchronization
-  private handleServerAsteroidCreated = (event: Event): void => {
-    const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
-    const { asteroid } = customEvent.detail;
+  private applyServerAsteroidCreated = (asteroid: AsteroidData): void => {
     logger.debug('GAME', 'Adding server asteroid to local belt', { asteroidId: asteroid.id });
 
     // Clear local asteroids only once when receiving the first server asteroid (server-authoritative)
@@ -213,7 +224,7 @@ export class GameController {
     // Add to current asteroid belt if it exists
     if (this.currRoidBelt) {
       this.currRoidBelt.roids.push(roid);
-      logger.info(
+      logger.debug(
         'GAME',
         `Added asteroid ${asteroid.id} to belt. Total asteroids: ${this.currRoidBelt.roids.length}`
       );
@@ -222,12 +233,10 @@ export class GameController {
     }
   };
 
-  private handleServerAsteroidUpdated = (event: Event): void => {
-    const customEvent = event as CustomEvent<{
-      asteroidId: string;
-      updates: Partial<AsteroidData>;
-    }>;
-    const { asteroidId, updates } = customEvent.detail;
+  private applyServerAsteroidUpdated = (
+    asteroidId: string,
+    updates: Partial<AsteroidData>
+  ): void => {
     logger.debug('GAME', 'Updating server asteroid in local belt', { asteroidId });
 
     if (!this.currRoidBelt || !updates) {
@@ -237,21 +246,16 @@ export class GameController {
       (id) => this.currRoidBelt.roids.find((roid) => roid.id === id),
       asteroidId,
       updates,
-      (asteroid) => {
-        this.handleServerAsteroidCreated(
-          new CustomEvent('serverAsteroidCreated', { detail: { asteroid } })
-        );
-      }
+      this.applyServerAsteroidCreated
     );
   };
 
-  private handleServerAsteroidDestroyed = (event: Event): void => {
-    const customEvent = event as CustomEvent<{
-      asteroidId: string;
-      collabSplit?: boolean;
-      origin?: Position;
-    }>;
-    const { asteroidId, collabSplit, origin } = customEvent.detail;
+  private applyServerAsteroidDestroyed = (event: {
+    asteroidId: string;
+    collabSplit?: boolean;
+    origin?: Position;
+  }): void => {
+    const { asteroidId, collabSplit, origin } = event;
     logger.debug('GAME', 'Removing server asteroid from local belt', {
       asteroidId,
       collabSplit,
@@ -276,13 +280,8 @@ export class GameController {
     }
   };
 
-  private handleServerAsteroidTagged = (event: Event): void => {
-    const customEvent = event as CustomEvent<{
-      asteroidId: string;
-      shooterId: string;
-      expiresAt: number;
-    }>;
-    const { asteroidId, expiresAt } = customEvent.detail;
+  private applyServerAsteroidTagged = (event: { asteroidId: string; expiresAt: number }): void => {
+    const { asteroidId, expiresAt } = event;
     const roid = this.currRoidBelt?.roids.find((r) => r.id === asteroidId);
     if (!roid) {
       return;
@@ -293,23 +292,16 @@ export class GameController {
 
   private setupServerAsteroidListeners(): void {
     this.cleanupServerAsteroidListeners();
-    // Listen for server asteroid creation events
-    window.addEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
-
-    // Listen for server asteroid update events
-    window.addEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
-
-    // Listen for server asteroid destruction events
-    window.addEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
-    window.addEventListener('serverAsteroidTagged', this.handleServerAsteroidTagged);
+    bindAsteroidFieldApply({
+      onCreated: this.applyServerAsteroidCreated,
+      onUpdated: this.applyServerAsteroidUpdated,
+      onDestroyed: this.applyServerAsteroidDestroyed,
+      onTagged: this.applyServerAsteroidTagged,
+    });
   }
 
   private cleanupServerAsteroidListeners(): void {
-    // Remove all server asteroid event listeners
-    window.removeEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
-    window.removeEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
-    window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
-    window.removeEventListener('serverAsteroidTagged', this.handleServerAsteroidTagged);
+    unbindAsteroidFieldApply();
   }
 
   /** Drop a pending return-to-menu so Start (or a test) can open a new session. */
@@ -696,27 +688,24 @@ export class GameController {
     this.lifecycleAccumulatorMs = remainingMs;
 
     tickTouchControls(currPlayer);
-
-    // Update local player ship
-    logger.debug('GAME_LOOP', 'Updating ship', {
-      shipPosition: currPlayer.ship.position,
-      shipAngle: currPlayer.ship.angle,
-    });
     currPlayer.ship.update(lifecycleFrames);
 
     // Bots predict locally; remotes share the same 60 Hz explode/blink clock
     // so a hitch does not freeze their corpse or latch blink forever.
     const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
-    for (const botPlayer of botPlayers) {
-      if (botPlayer.ship) {
-        botPlayer.ship.update(lifecycleFrames);
+    for (const player of allPlayers) {
+      if (player.type === 'bot' && player.ship) {
+        player.ship.update(lifecycleFrames);
       }
     }
     advanceRemotePlayerShips(allPlayers, lifecycleFrames);
 
     // One thrust loop for local + bot + remote ships; volume is the loudest in-range source.
-    replaceThrustSources(thrustSourcesFromPlayers([currPlayer, ...allPlayers]));
+    replaceThrustSources(
+      thrustSourcesFromPlayers(
+        allPlayers.includes(currPlayer) ? allPlayers : this.playersWithLocal(currPlayer, allPlayers)
+      )
+    );
 
     // Update asteroids
     if (this.currRoidBelt) {
@@ -725,16 +714,16 @@ export class GameController {
     }
 
     // Check laser collisions with asteroids and bots
-    this.checkLaserCollisions();
+    this.checkLaserCollisions(allPlayers);
 
     // Check ship collisions with asteroids
     this.checkShipAsteroidCollisions();
 
     // Check ship collisions with other ships
-    this.checkShipShipCollisions();
+    this.checkShipShipCollisions(allPlayers);
 
     // Check bot collisions with asteroids
-    this.checkBotAsteroidCollisions();
+    this.checkBotAsteroidCollisions(allPlayers);
 
     // Check boundary collisions for ships
     this.checkBoundaryCollisions();
@@ -743,48 +732,76 @@ export class GameController {
     this.gameStateManager.updateKillMessageTimer();
   }
 
+  private playersWithLocal(local: Player, allPlayers: Player[]): Player[] {
+    this.localFirstPlayers.length = 0;
+    this.localFirstPlayers.push(local);
+    for (const player of allPlayers) {
+      this.localFirstPlayers.push(player);
+    }
+    return this.localFirstPlayers;
+  }
+
+  private fillLaserTargets(allPlayers: Player[]): void {
+    let count = 0;
+    for (const player of allPlayers) {
+      if (player.type !== 'bot' && player.type !== 'remote') {
+        continue;
+      }
+      const existing = this.laserTargets[count];
+      if (existing) {
+        existing.ship = player.ship;
+        existing.id = player.id;
+        existing.type = player.type;
+        existing.faction = player.factionId;
+      } else {
+        this.laserTargets[count] = {
+          ship: player.ship,
+          id: player.id,
+          type: player.type,
+          faction: player.factionId,
+        };
+      }
+      count += 1;
+    }
+    this.laserTargets.length = count;
+  }
+
   // Check laser collisions with asteroids and bots
-  private checkLaserCollisions(): void {
+  private checkLaserCollisions(allPlayers: Player[]): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer || !this.currRoidBelt) {
       return;
     }
 
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const laserTargets = allPlayers
-      .filter((player) => player.type === 'bot' || player.type === 'remote')
-      .map((player) => ({
-        ship: player.ship,
-        id: player.id,
-        type: player.type as 'bot' | 'remote',
-        faction: player.factionId,
-      }));
+    this.fillLaserTargets(allPlayers);
 
     // Attribute kills to the server-assigned player id (set at join time), not
     // currPlayer.id which only becomes the server id once the first gameState
     // reconciles the local player — asteroids can arrive before that.
     const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
 
-    const seenIds = new Set<string>();
-    const ships = [currPlayer, ...allPlayers];
+    this.laserOwnerSeen.clear();
+    const ships = allPlayers.includes(currPlayer)
+      ? allPlayers
+      : this.playersWithLocal(currPlayer, allPlayers);
     for (const player of ships) {
-      if (seenIds.has(player.id)) {
+      if (this.laserOwnerSeen.has(player.id)) {
         continue;
       }
-      seenIds.add(player.id);
+      this.laserOwnerSeen.add(player.id);
       if (!player.ship?.lasers.length) {
         continue;
       }
       const ownerType = player.type;
-      const reportAsteroidHits = shouldReportLaserAsteroidHit(ownerType);
+      this.laserHitOptions.reportAsteroidHits = shouldReportLaserAsteroidHit(ownerType);
+      this.laserHitOptions.attackerFaction = player.factionId;
       const ownerAttackerId = ownerType === 'local' ? attackerId : player.id;
       this.collisionManager.checkLaserCollisions(
         player.ship.lasers,
         this.currRoidBelt.roids,
-        ownerType === 'local' ? laserTargets : [],
+        ownerType === 'local' ? this.laserTargets : [],
         ownerAttackerId,
-        { reportAsteroidHits, attackerFaction: player.factionId }
+        this.laserHitOptions
       );
     }
   }
@@ -810,54 +827,46 @@ export class GameController {
       return;
     }
 
-    // Check asteroid collisions for local player
-    logger.debug('COLLISION', 'Checking ship-asteroid collisions', {
-      shipPos: currPlayer.ship.position,
-      shipRadius: currPlayer.ship.r,
-      asteroidCount: this.currRoidBelt.roids.length,
-      localPlayerId: currPlayer.id,
-    });
     this.collisionManager.checkPlayerAsteroidCollisions(currPlayer, this.currRoidBelt.roids);
   }
 
   // Check ship collisions with other ships
-  private checkShipShipCollisions(): void {
+  private checkShipShipCollisions(allPlayers: Player[]): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer) {
       return;
     }
 
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const otherShips = allPlayers
-      .filter(
-        (player) =>
-          player.id !== currPlayer.id && !areAllied(currPlayer.factionId, player.factionId)
-      )
-      .map((player) => ({ ship: player.ship, id: player.id }));
+    let count = 0;
+    for (const player of allPlayers) {
+      if (player.id === currPlayer.id || areAllied(currPlayer.factionId, player.factionId)) {
+        continue;
+      }
+      const existing = this.otherShips[count];
+      if (existing) {
+        existing.ship = player.ship;
+        existing.id = player.id;
+      } else {
+        this.otherShips[count] = { ship: player.ship, id: player.id };
+      }
+      count += 1;
+    }
+    this.otherShips.length = count;
 
-    this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);
+    this.collisionManager.checkShipShipCollisions(currPlayer.ship, this.otherShips, currPlayer.id);
   }
 
   // Check bot collisions with asteroids
-  private checkBotAsteroidCollisions(): void {
+  private checkBotAsteroidCollisions(allPlayers: Player[]): void {
     if (!this.currRoidBelt) {
       return;
     }
 
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
-
-    // Check asteroid collisions for each bot
-    for (const botPlayer of botPlayers) {
+    for (const botPlayer of allPlayers) {
+      if (botPlayer.type !== 'bot') {
+        continue;
+      }
       if (botPlayer.ship && !botPlayer.ship.exploding) {
-        logger.debug('COLLISION', 'Checking bot-asteroid collisions', {
-          botId: botPlayer.id,
-          botPos: botPlayer.ship.position,
-          botRadius: botPlayer.ship.r,
-          asteroidCount: this.currRoidBelt.roids.length,
-        });
         this.collisionManager.checkPlayerAsteroidCollisions(botPlayer, this.currRoidBelt.roids);
       }
     }
@@ -872,10 +881,9 @@ export class GameController {
 
     // Use NetworkManager's player list which has the correct names from server
     const allPlayers = this.networkManager.getAllPlayers();
-    const playersToRender = [...allPlayers];
-    if (!playersToRender.includes(currPlayer)) {
-      playersToRender.unshift(currPlayer);
-    }
+    const playersToRender = allPlayers.includes(currPlayer)
+      ? allPlayers
+      : this.playersWithLocal(currPlayer, allPlayers);
     const currScore = currPlayer.score;
     const textAlpha = this.gameStateManager.getTextAlpha();
     const text = this.gameStateManager.getText();

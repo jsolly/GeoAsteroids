@@ -149,6 +149,43 @@ describe('client blink after a heal-leak', () => {
 
     expect(player.ship.blinkCount).toBeGreaterThan(0);
   });
+
+  test('updateFromServer writes position into the existing ship vectors', () => {
+    const player = new Player({
+      id: 'remote',
+      name: 'Remote',
+      type: 'remote',
+      input: new MockPlayerInput(),
+    });
+    const position = player.ship.position;
+    const velocity = player.ship.velocity;
+
+    player.updateFromServer({
+      position: { x: 120, y: -40 },
+      velocity: { x: 2, y: 3 },
+      angle: 1.2,
+    });
+
+    expect(player.ship.position).toBe(position);
+    expect(player.ship.velocity).toBe(velocity);
+    expect(position).toEqual({ x: 120, y: -40 });
+    expect(velocity).toEqual({ x: 2, y: 3 });
+    expect(player.ship.angle).toBe(1.2);
+  });
+
+  test('getStateForNetwork reuses the same envelope object', () => {
+    const player = new Player({
+      id: 'local',
+      name: 'Local',
+      type: 'local',
+      input: new MockPlayerInput(),
+    });
+    const first = player.getStateForNetwork();
+    player.ship.angle = 0.5;
+    const second = player.getStateForNetwork();
+    expect(second).toBe(first);
+    expect(second.angle).toBe(0.5);
+  });
 });
 
 describe('remote ship lifecycle is the same 60 Hz clock', () => {

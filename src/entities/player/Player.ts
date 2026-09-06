@@ -17,6 +17,11 @@ import {
 } from '../ship/shipUtils';
 import { parseSoftFactionId } from './softFactions';
 
+function copyVec2(dest: { x: number; y: number }, src: { x: number; y: number }): void {
+  dest.x = src.x;
+  dest.y = src.y;
+}
+
 export class Player {
   id: string;
   name: string;
@@ -45,6 +50,20 @@ export class Player {
   // server ignores all incoming damage. Mirrored from the gameState so callers
   // (notably tests) can tell exactly when the player becomes vulnerable.
   serverSpawnProtectionTimer = 0;
+
+  private readonly networkState: {
+    position: Position;
+    velocity: Position;
+    r: number;
+    angle: number;
+    lives: number;
+    score: number;
+    exploding: boolean;
+    thrusting: boolean;
+    health?: number;
+    maxHealth?: number;
+    mass?: number;
+  };
 
   // Interpolation state for smooth movement (disabled for now to fix popping issue)
   // private targetPosition?: Position;
@@ -78,6 +97,19 @@ export class Player {
       kitId: params.kitId,
     });
     this.ship.factionId = this.factionId;
+    this.networkState = {
+      position: this.ship.position,
+      velocity: this.ship.velocity,
+      r: this.ship.r,
+      angle: this.ship.angle,
+      lives: this.lives,
+      score: this.score,
+      exploding: this.ship.exploding,
+      thrusting: this.ship.thrusting,
+      health: this.ship.health,
+      maxHealth: this.ship.maxHealth,
+      mass: this.ship.mass,
+    };
   }
 
   // Update player state from server data
@@ -148,10 +180,10 @@ export class Player {
     };
 
     if (data.position && acceptServerTransform) {
-      this.ship.position = data.position;
+      copyVec2(this.ship.position, data.position);
     }
     if (data.velocity && acceptServerTransform) {
-      this.ship.velocity = data.velocity;
+      copyVec2(this.ship.velocity, data.velocity);
     }
     if (data.angle !== undefined && acceptServerTransform) {
       this.ship.angle = data.angle;
@@ -514,18 +546,17 @@ export class Player {
     maxHealth?: number;
     mass?: number;
   } {
-    return {
-      position: this.ship.position,
-      velocity: this.ship.velocity,
-      r: this.ship.r,
-      angle: this.ship.angle,
-      lives: this.lives,
-      score: this.score,
-      exploding: this.ship.exploding,
-      thrusting: this.ship.thrusting,
-      health: this.ship.health,
-      maxHealth: this.ship.maxHealth,
-      mass: this.ship.mass,
-    };
+    this.networkState.position = this.ship.position;
+    this.networkState.velocity = this.ship.velocity;
+    this.networkState.r = this.ship.r;
+    this.networkState.angle = this.ship.angle;
+    this.networkState.lives = this.lives;
+    this.networkState.score = this.score;
+    this.networkState.exploding = this.ship.exploding;
+    this.networkState.thrusting = this.ship.thrusting;
+    this.networkState.health = this.ship.health;
+    this.networkState.maxHealth = this.ship.maxHealth;
+    this.networkState.mass = this.ship.mass;
+    return this.networkState;
   }
 }

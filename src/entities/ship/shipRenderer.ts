@@ -1,6 +1,5 @@
 import type { SoftFactionId } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, TITLE, VISUAL } from '../../constants';
-import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import {
   driftSegment,
@@ -24,6 +23,18 @@ import {
 import type { Ship } from './Ship';
 import { CLASSIC_HULL, HAULER_TETHER_COLOR, type HullProfile, type ShipKitId } from './shipKits';
 
+const shipTriangle = {
+  nose: { x: 0, y: 0 },
+  rearLeft: { x: 0, y: 0 },
+  rearRight: { x: 0, y: 0 },
+};
+
+const thrusterGeom = {
+  rearCenter: { x: 0, y: 0 },
+};
+
+const laserScreen = { x: 0, y: 0 };
+const shipScreen = { x: 0, y: 0 };
 // Helper function to calculate ship triangle points for consistent ship rendering
 export function calculateShipTrianglePoints(
   centerX: number,
@@ -36,20 +47,17 @@ export function calculateShipTrianglePoints(
   rearLeft: { x: number; y: number };
   rearRight: { x: number; y: number };
 } {
-  const nose = {
-    x: centerX + radius * hull.nose * Math.cos(angle),
-    y: centerY - radius * hull.nose * Math.sin(angle),
-  };
-  const rearLeft = {
-    x: centerX - radius * hull.rear * Math.cos(angle) + radius * hull.beam * Math.sin(angle),
-    y: centerY + radius * hull.rear * Math.sin(angle) + radius * hull.beam * Math.cos(angle),
-  };
-  const rearRight = {
-    x: centerX - radius * hull.rear * Math.cos(angle) - radius * hull.beam * Math.sin(angle),
-    y: centerY + radius * hull.rear * Math.sin(angle) - radius * hull.beam * Math.cos(angle),
-  };
-
-  return { nose, rearLeft, rearRight };
+  shipTriangle.nose.x = centerX + radius * hull.nose * Math.cos(angle);
+  shipTriangle.nose.y = centerY - radius * hull.nose * Math.sin(angle);
+  shipTriangle.rearLeft.x =
+    centerX - radius * hull.rear * Math.cos(angle) + radius * hull.beam * Math.sin(angle);
+  shipTriangle.rearLeft.y =
+    centerY + radius * hull.rear * Math.sin(angle) + radius * hull.beam * Math.cos(angle);
+  shipTriangle.rearRight.x =
+    centerX - radius * hull.rear * Math.cos(angle) - radius * hull.beam * Math.sin(angle);
+  shipTriangle.rearRight.y =
+    centerY + radius * hull.rear * Math.sin(angle) - radius * hull.beam * Math.cos(angle);
+  return shipTriangle;
 }
 
 /** Shared phosphor stroke for v2 kit outlines (and the leftover 3-point helper). */
@@ -214,7 +222,10 @@ export function drawGenericThruster(
   }
 
   const aft = getKitHullOutline(kitId).thruster;
-  const rearCenter = projectHullPoint(x, y, radius, angle, aft);
+  const rear = projectHullPoint(x, y, radius, angle, aft);
+  const rearCenter = thrusterGeom.rearCenter;
+  rearCenter.x = rear.x;
+  rearCenter.y = rear.y;
   const flicker = Math.floor(performance.now() / VISUAL.THRUSTER_FLICKER_MS) % 2 === 0;
   const lengthRatio = flicker ? VISUAL.THRUSTER_LENGTH_RATIO : VISUAL.THRUSTER_FLICKER_RATIO;
   const flame = thrusterFlameGeometry(
@@ -252,34 +263,8 @@ export function drawThruster(ship: Ship, color: string = ship.color): void {
     return;
   }
 
-  logger.debug('THRUSTER', 'drawThruster called', {
-    exploding: ship.exploding,
-    blinkOn: ship.blinkOn,
-    thrusting: ship.thrusting,
-    shipId: ship.id,
-    shipPosition: ship.position,
-    shipAngle: ship.angle,
-    shipRadius: ship.r,
-  });
-
   if (!ship.exploding && ship.thrusting) {
-    // Ship is always drawn at screen center (viewport transformation)
-    const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
-
-    logger.debug('THRUSTER', 'Drawing thruster at screen center', {
-      x: screenCenter.x,
-      y: screenCenter.y,
-      angle: ship.angle,
-      radius: ship.r,
-    });
-
-    // Use the generic thruster function
-    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r, color, ship.kitId);
-  } else {
-    logger.debug('THRUSTER', 'Thruster not drawn - conditions not met', {
-      exploding: ship.exploding,
-      thrusting: ship.thrusting,
-    });
+    drawGenericThruster(cvs.width / 2, cvs.height / 2, ship.angle, ship.r, color, ship.kitId);
   }
 }
 
@@ -294,8 +279,17 @@ export function drawThrusterAtPosition(
   }
 
   if (!ship.exploding && ship.thrusting) {
-    const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+    const screen = canvasManager.worldToScreenInto(shipScreen, ship.position, shipPosition);
     const scale = canvasManager.getPlayfieldScale();
+    const cull = ship.r * 3 * scale;
+    if (
+      screen.x < -cull ||
+      screen.y < -cull ||
+      screen.x > cvs.width + cull ||
+      screen.y > cvs.height + cull
+    ) {
+      return;
+    }
     drawGenericThruster(screen.x, screen.y, ship.angle, ship.r * scale, color, ship.kitId);
   }
 }
@@ -413,11 +407,10 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
     return;
   }
 
-  const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
   drawVectorExplosion(
     ctx,
-    screenCenter.x,
-    screenCenter.y,
+    cvs.width / 2,
+    cvs.height / 2,
     ship.r * canvasManager.getPlayfieldScale(),
     ship.angle,
     explosionProgress(ship),
@@ -437,7 +430,7 @@ export function drawShipExplosionAtPosition(
     return;
   }
 
-  const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+  const screen = canvasManager.worldToScreenInto(shipScreen, ship.position, shipPosition);
   const scale = canvasManager.getPlayfieldScale();
   drawVectorExplosion(
     ctx,
@@ -462,10 +455,23 @@ export function drawLasers(
   }
 
   const boltColor = color || PALETTE.LASER_LOCAL;
+  const cvs = canvasManager.getCanvas();
+  const viewW = cvs?.width ?? Number.POSITIVE_INFINITY;
+  const viewH = cvs?.height ?? Number.POSITIVE_INFINITY;
+  const cullPad =
+    (VISUAL.LASER_LENGTH + VISUAL.LASER_EXPLODE_RADIUS) * canvasManager.getPlayfieldScale();
 
   for (const laser of ship.lasers) {
     const referencePos = viewerShipPosition || ship.position;
-    const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
+    const screenPos = canvasManager.worldToScreenInto(laserScreen, laser.position, referencePos);
+    if (
+      screenPos.x < -cullPad ||
+      screenPos.y < -cullPad ||
+      screenPos.x > viewW + cullPad ||
+      screenPos.y > viewH + cullPad
+    ) {
+      continue;
+    }
 
     if (laser.explodeTime === 0) {
       const scale = canvasManager.getPlayfieldScale();
@@ -590,13 +596,21 @@ export function drawShipAtPosition(
     return; // Skip rendering this frame
   }
 
-  const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+  const screen = canvasManager.worldToScreenInto(shipScreen, ship.position, shipPosition);
   const scale = canvasManager.getPlayfieldScale();
   const screenX = screen.x;
   const screenY = screen.y;
   const shipR = ship.r * scale;
+  const cull = shipR * 3;
+  if (
+    screenX < -cull ||
+    screenY < -cull ||
+    screenX > cvs.width + cull ||
+    screenY > cvs.height + cull
+  ) {
+    return;
+  }
 
-  // Use ship's own color or provided color
   const shipColor = color || ship.color;
 
   strokeKitHullOutline(ctx, screenX, screenY, shipR, ship.angle, shipColor, ship.kitId);
