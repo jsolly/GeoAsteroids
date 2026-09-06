@@ -1,12 +1,12 @@
 import type { AsteroidData } from '../../shared-types';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
-import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
+import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { toggleScreen } from '../ui/uiUtils';
