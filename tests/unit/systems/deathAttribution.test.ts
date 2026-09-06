@@ -8,12 +8,13 @@ import {
 } from '../../../src/utils/deathCause';
 import { GameStateManager } from '../../../src/core/services/GameStateManager';
 
+const KNOWN_NAMES = new Map<string, string>([
+  ['server-bot-0', 'Crimson Falcon'],
+  ['client-friend', 'Nova Ranger'],
+]);
+const resolve = (id: string): string | undefined => KNOWN_NAMES.get(id);
+
 describe('death cause attribution', () => {
-  const names = new Map<string, string>([
-    ['server-bot-0', 'Crimson Falcon'],
-    ['client-friend', 'Nova Ranger'],
-  ]);
-  const resolve = (id: string) => names.get(id);
 
   test('maps asteroid and boundary tokens to readable phrases', () => {
     expect(describeDeathCause('asteroid', resolve)).toBe('an asteroid');

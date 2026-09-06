@@ -239,6 +239,9 @@ export class Player {
           this.lastServerHealthEcho = serverHealth;
         } else if (!isLocal) {
           this.ship.health = serverHealth;
+        } else if (isLocal && serverHealth <= 0) {
+          this.ship.health = 0;
+          this.lastServerHealthEcho = 0;
         } else if (isLocal && serverHealth > this.ship.health) {
           this.ship.health = serverHealth;
           this.lastServerHealthEcho = serverHealth;
@@ -269,7 +272,11 @@ export class Player {
         }
 
         applySharedShipRespawnCue(this.ship, wasDead || wasExploding, data.spawnProtectionTimer);
-        if ((wasDead || wasExploding) && this.ship.health > 0) {
+        if (
+          (wasDead || wasExploding) &&
+          this.ship.health > 0 &&
+          (data.health === undefined || data.health > 0)
+        ) {
           this.ship.lastExplodeCause = undefined;
           this.deathCause = undefined;
         }

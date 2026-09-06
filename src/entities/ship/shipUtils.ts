@@ -2,8 +2,8 @@ import type { Position } from '../../../shared-types';
 import { DAMAGE, GAME, SHIP } from '../../constants';
 import { checkBoundaryCollision } from '../../physics/collision/collisionDetection';
 import {
-  formatDeathCauseForOverlay as overlayDeathCause,
   isGenericDeathCause,
+  formatDeathCauseForOverlay as overlayDeathCause,
 } from '../../utils/deathCause';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 

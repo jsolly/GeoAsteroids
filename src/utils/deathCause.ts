@@ -30,32 +30,33 @@ export function describeDeathCause(
   attackerId: string | undefined,
   resolveName?: (id: string) => string | undefined
 ): string {
-  if (isGenericDeathCause(attackerId)) {
+  if (isGenericDeathCause(attackerId) || !attackerId) {
     return 'unknown';
   }
-  if (attackerId === 'asteroid') {
+  const token = attackerId;
+  if (token === 'asteroid') {
     return 'an asteroid';
   }
-  if (attackerId === 'boundary') {
+  if (token === 'boundary') {
     return 'the arena wall';
   }
-  if (attackerId === 'laser') {
+  if (token === 'laser') {
     return 'a laser';
   }
-  if (attackerId === 'player') {
+  if (token === 'player') {
     return 'another ship';
   }
-  const named = resolveName?.(attackerId);
+  const named = resolveName?.(token);
   if (named) {
     return named;
   }
-  if (attackerId.startsWith('server-bot-')) {
+  if (token.startsWith('server-bot-')) {
     return 'a bot';
   }
-  if (looksLikeEntityId(attackerId)) {
+  if (looksLikeEntityId(token)) {
     return 'another ship';
   }
-  return attackerId;
+  return token;
 }
 
 /** Overlay phrase. Undefined means omit "killed by …" (never print unknown). */
