@@ -272,6 +272,7 @@ export class GameController {
     }
     this.gameOverInProgress = false;
     this.gameStateManager.clearOverlay();
+    canvasManager.clearPlayfield();
     PlayerNetwork.getInstance().stopNetworkUpdates();
     this.networkManager.disconnect();
   }
