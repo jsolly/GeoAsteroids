@@ -13,6 +13,12 @@ import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
+import {
+  CONNECTION_STALE_TIMEOUT_MS,
+  HEARTBEAT_INTERVAL_MS,
+  isConnectionStale,
+} from './connectionHealth';
+import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
 
 export interface ConnectionState {
   isConnected: boolean;
@@ -30,12 +36,19 @@ export class ConnectionManager {
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
   private hasInitializedAsteroidsForConnection = false;
 
+  // Heartbeat / half-open-socket detection (see connectionHealth.ts).
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private lastServerMessageAt = 0;
+
   private constructor() {
     this.state = {
       isConnected: false,
       socket: null,
     };
     this.clientId = this.generateClientId();
+    // Tab close / bfcache must tear the socket down so the server drops us
+    // and other clients can prune this player from their leaderboard.
+    bindPageHideDisconnect(() => this.disconnect());
   }
 
   static getInstance(): ConnectionManager {
@@ -81,6 +94,8 @@ export class ConnectionManager {
 
         this.state.socket.onopen = (): void => {
           this.state.isConnected = true;
+          this.lastServerMessageAt = Date.now();
+          this.startHeartbeat();
           logger.info('NETWORK', 'Connected to server');
           window.dispatchEvent(new CustomEvent('networkConnected'));
           resolve();
@@ -94,6 +109,7 @@ export class ConnectionManager {
         this.state.socket.onclose = (): void => {
           this.state.isConnected = false;
           this.state.socket = null;
+          this.stopHeartbeat();
           logger.warn('NETWORK', 'WebSocket connection closed');
           window.dispatchEvent(
             new CustomEvent('networkDisconnected', {
@@ -103,6 +119,8 @@ export class ConnectionManager {
         };
 
         this.state.socket.onmessage = (event: MessageEvent): void => {
+          // Any inbound traffic (game state, pong, etc.) proves the link is alive.
+          this.lastServerMessageAt = Date.now();
           try {
             const message: ServerMessage = JSON.parse(event.data);
             this.handleServerMessage(message);
@@ -121,6 +139,7 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.stopHeartbeat();
     if (this.state.socket) {
       this.state.socket.close();
       this.state.isConnected = false;
@@ -129,6 +148,55 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => this.checkHeartbeat(), HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer !== null) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  /**
+   * Periodic liveness check. Pings the server (which replies with `pong`,
+   * refreshing lastServerMessageAt) and, if nothing has been heard within the
+   * stale timeout, tears the socket down locally so the disconnect surfaces in
+   * the UI — even for half-open/zombie sockets the browser hasn't reported.
+   */
+  private checkHeartbeat(): void {
+    const socket = this.state.socket;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    try {
+      socket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+    } catch {
+      // A throwing send on an OPEN socket means it is broken; stale check closes it.
+    }
+
+    if (isConnectionStale(this.lastServerMessageAt, Date.now())) {
+      logger.warn('NETWORK', 'No server traffic within timeout; treating connection as lost', {
+        msSinceLastMessage: Date.now() - this.lastServerMessageAt,
+        timeoutMs: CONNECTION_STALE_TIMEOUT_MS,
+      });
+      this.stopHeartbeat();
+      // close() drives onclose -> networkDisconnected -> disconnect banner.
+      try {
+        socket.close();
+      } catch {
+        this.state.isConnected = false;
+        this.state.socket = null;
+        window.dispatchEvent(
+          new CustomEvent('networkDisconnected', { detail: { reason: 'Connection timed out' } })
+        );
+      }
+    }
   }
 
   // Player management
@@ -452,6 +520,14 @@ export class ConnectionManager {
             localPlayer.updateFromServer(serverSnapshot);
           }
         }
+      }
+
+      // Server never sends playerLeft; drop remotes that vanished from the
+      // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
+      const snapshotIds = new Set(data.entities.map((entity) => entity.id));
+      for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
+        this.allPlayers.delete(id);
+        logger.info('NETWORK', 'Removed departed remote player', { id });
       }
     }
 

@@ -3,6 +3,7 @@ import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
+import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
 import { CollisionManager } from '../physics/collision/CollisionManager';
@@ -573,6 +574,11 @@ export class GameController {
         botPlayer.ship.update();
       }
     }
+
+    // Remote human ships are server-driven and never run Ship.update(); advance
+    // their lasers so other players' shots visibly travel and expire instead of
+    // freezing at the muzzle.
+    advanceRemotePlayerLasers(allPlayers);
 
     // Update asteroids
     if (this.currRoidBelt) {

@@ -11,10 +11,11 @@ Mouse Input Handling
 
 let isRightMouseDown = false;
 
-// Helper function to update thrust state including mouse input
+// Helper function to update thrust state including mouse input.
+// Thrust sources: ArrowUp / KeyW keys and right-mouse-hold (Space fires).
 function updateThrustFromAllInputs(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
-  const shouldThrust = pressed.has('Space') || pressed.has('ArrowUp') || isRightMouseDown;
+  const shouldThrust = pressed.has('ArrowUp') || pressed.has('KeyW') || isRightMouseDown;
   const currentlyThrusting = player.ship.thrusting;
 
   // Only update if the aggregate state has changed
