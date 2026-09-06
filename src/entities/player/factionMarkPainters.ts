@@ -21,10 +21,7 @@ export interface FactionMarkTarget {
   angle: number;
 }
 
-export type FactionMarkPainter = (
-  ctx: CanvasRenderingContext2D,
-  mark: FactionMarkTarget
-) => void;
+export type FactionMarkPainter = (ctx: CanvasRenderingContext2D, mark: FactionMarkTarget) => void;
 
 function heading(angle: number): { x: number; y: number } {
   return { x: Math.cos(angle), y: -Math.sin(angle) };
