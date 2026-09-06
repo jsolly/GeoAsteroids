@@ -46,6 +46,19 @@ export const CLASSIC_HULL: HullProfile = {
 export const KIT_HULL_PLACEHOLDER = CLASSIC_HULL;
 export const KIT_HULLS_ARE_PLACEHOLDERS = true;
 
+/**
+ * AD v2 topology — HOLD. Do not bake into `hull` until John / Product Owner lock it.
+ * Dart = needle; Hauler = barge hex; Warden = Δ + forward shield arc;
+ * Skirmisher = Y-fork; Quake = terraced mountain.
+ */
+export const AD_V2_HULL_TOPOLOGY = {
+  dart: 'needle',
+  hauler: 'barge-hex',
+  warden: 'delta-shield-arc',
+  skirmisher: 'y-fork',
+  quake: 'terraced-mountain',
+} as const;
+
 export const SHIP_ABILITY = {
   DASH_BOOST: 6,
   MAGNET_RADIUS: 280,
