@@ -6,6 +6,7 @@ import { PlayerManager } from '../../entities/player/PlayerManager';
 import { getShipKit } from '../../entities/ship/shipKits';
 import { hexToRgba } from '../../utils/colorUtils';
 import { layoutHudCluster } from './cluster';
+import { drawFuelGauge } from './fuel';
 import { hudLayoutForCanvas } from './hudLayout';
 
 export function drawScoreOverlay(
@@ -40,6 +41,10 @@ export function drawScoreOverlay(
     const kit = getShipKit(localShip.kitId);
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
     ctx.fillText(kit.name, VISUAL.HUD_INSET + dx, metaY + 14);
+    drawFuelGauge(ctx, localShip.fuel, localShip.maxFuel, {
+      x: VISUAL.HUD_INSET + dx,
+      y: metaY + 32,
+    });
   }
 
   const gameStateManager = GameStateManager.getInstance();

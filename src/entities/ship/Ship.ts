@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { applyFuelSnapshot, createFuelTank, trySpendEmpFuel } from '../../../shared/fuel';
 import {
   GROWTH,
   maxVelocityFromMass,
@@ -9,7 +10,7 @@ import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../../shar
 import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
-import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
+import { DAMAGE, EMP, FUEL, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
 import { isGenericDeathCause } from '../../utils/deathCause';
@@ -72,6 +73,9 @@ class Ship {
   shieldFlashTime = 0;
   health: number = SHIP.MAX_HEALTH;
   maxHealth: number = SHIP.MAX_HEALTH;
+  fuel: number = FUEL.START;
+  maxFuel: number = FUEL.MAX;
+  lastLocalFuelWriteMs: number = 0;
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
@@ -164,6 +168,9 @@ class Ship {
     if (options?.frictionCoefficient !== undefined) {
       this.frictionCoefficient = options.frictionCoefficient;
     }
+    const tank = createFuelTank();
+    this.fuel = tank.fuel;
+    this.maxFuel = tank.maxFuel;
     applyShipKitToShip(this, options?.kitId ?? DEFAULT_SHIP_KIT_ID);
     if (options?.shotCooldown !== undefined) {
       this.shotCooldown = options.shotCooldown;
@@ -332,6 +339,9 @@ class Ship {
     const kit = getShipKit(this.kitId);
     const canTry = canActivateAbility(this);
     const result = activateAbilityOnHost(this, world);
+    if (result.activated && result.abilityId === 'shockPulse') {
+      this.lastLocalFuelWriteMs = Date.now();
+    }
     if (result.abilityId === 'burstFire') {
       this.fireBurst(kit.burstCount, 0.12);
     }
@@ -422,6 +432,8 @@ class Ship {
     thrusting?: boolean;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
     mass?: number;
     shieldActive?: boolean;
     shieldTime?: number;
@@ -475,6 +487,8 @@ class Ship {
     exploding?: boolean;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
     mass?: number;
     spawnProtectionTimer?: number;
     shieldActive?: boolean;
@@ -494,6 +508,7 @@ class Ship {
     if (data.maxHealth !== undefined) {
       this.maxHealth = data.maxHealth;
     }
+    applyFuelSnapshot(this, data);
     applyShieldSnapshot(this, data);
     applySharedShipRespawnCue(this, wasDeadOrExploding, data.spawnProtectionTimer);
     if (wasDeadOrExploding && this.health > 0) {
@@ -519,10 +534,14 @@ class Ship {
     };
   }
 
-  empPulse(): void {
-    if (this.exploding) {
-      return;
+  empPulse(): boolean {
+    if (this.exploding || this.empPulseActive) {
+      return false;
     }
+    if (!trySpendEmpFuel(this)) {
+      return false;
+    }
+    this.lastLocalFuelWriteMs = Date.now();
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
@@ -536,6 +555,7 @@ class Ship {
     });
 
     window.dispatchEvent(empEvent);
+    return true;
   }
 
   updateEmpPulse(): void {

@@ -324,6 +324,8 @@ export class GameStateBroadcaster {
           lives: bot.lives,
           health: bot.health,
           maxHealth: bot.maxHealth,
+          fuel: bot.fuel,
+          maxFuel: bot.maxFuel,
           mass: bot.mass,
           kitId: bot.kitId,
           factionId: bot.factionId,

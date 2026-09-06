@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
-import { GAME, SHIP } from '../../../../src/constants';
+import { FUEL, GAME, SHIP } from '../../../../src/constants';
 import { Player } from '../../../../src/entities/player/Player';
+import { applyShipKitToShip } from '../../../../src/entities/ship/shipKits';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { keyDown, keyUp } from '../../../../src/input/keybindings';
 
@@ -74,6 +75,27 @@ test('held KeyE repeat does not re-fire the ability', () => {
   const activateSpy = vi.spyOn(player.ship, 'activateAbility');
   keyDown(new KeyboardEvent('keydown', { code: 'KeyE', repeat: true }), player);
   expect(activateSpy).not.toHaveBeenCalled();
+});
+
+test('KeyE on Dart does not spend fuel', () => {
+  const startFuel = player.ship.fuel;
+  press('KeyE');
+  expect(player.ship.fuel).toBe(startFuel);
+});
+
+test('KeyE on Quake spends EMP fuel', () => {
+  applyShipKitToShip(player.ship, 'quake');
+  const startFuel = player.ship.fuel;
+  press('KeyE');
+  expect(player.ship.fuel).toBe(startFuel - FUEL.EMP_COST);
+});
+
+test('KeyE on Quake does nothing when the tank is empty', () => {
+  applyShipKitToShip(player.ship, 'quake');
+  player.ship.fuel = 0;
+  press('KeyE');
+  expect(player.ship.abilityActiveFrames).toBe(0);
+  expect(player.ship.fuel).toBe(0);
 });
 
 test('KeyF toggles the local ship shield and KeyF again drops it into cooldown', () => {

@@ -48,7 +48,9 @@ test('score sits in the same cluster in HUD cream', () => {
   expect(scoreSrc).toMatch(/layoutHudCluster\(lives\)/);
   expect(scoreSrc).toMatch(/PALETTE\.HUD/);
   expect(scoreSrc).toMatch(/FACTION_LABELS\[faction\]/);
+  expect(scoreSrc).toMatch(/drawFuelGauge/);
   expect(scoreSrc).not.toMatch(/SHIP\.SIZE/);
+  expect(scoreSrc).not.toMatch(/#fff|#ffffff/i);
 });
 
 test('layoutHudCluster keeps three lives and the score in one compact strip', () => {

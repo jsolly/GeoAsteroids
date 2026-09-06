@@ -7,7 +7,7 @@ function normalizeKind(kind: LootData['kind'] | undefined): LootKind {
   return 'wreckage';
 }
 
-/** Client snapshot of server-authoritative loot (kill wreckage + destroy-drop shards). */
+/** Client snapshot of server-authoritative loot (wreckage, shards, fuel). */
 export class LootField {
   private static instance: LootField;
   private loot: LootData[] = [];
@@ -27,6 +27,7 @@ export class LootField {
       mass: drop.mass,
       radius: drop.radius,
       kind: normalizeKind(drop.kind),
+      ...(drop.kind === 'fuel' ? { fuel: drop.fuel } : {}),
     }));
   }
 

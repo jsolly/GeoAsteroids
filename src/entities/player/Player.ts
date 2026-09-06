@@ -1,3 +1,4 @@
+import { applyFuelSnapshot } from '../../../shared/fuel';
 import { radiusFromMass } from '../../../shared/shipGrowth';
 import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
 import { GAME } from '../../constants';
@@ -127,6 +128,8 @@ export class Player {
     deathCause?: string;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
     mass?: number;
     respawnTimer?: number;
     spawnProtectionTimer?: number;
@@ -352,6 +355,7 @@ export class Player {
     if (data.maxHealth !== undefined) {
       this.ship.maxHealth = data.maxHealth;
     }
+    applyFuelSnapshot(this.ship, data);
     if (this.type !== 'local') {
       if (data.abilityCooldownFrames !== undefined) {
         this.ship.abilityCooldownFrames = data.abilityCooldownFrames;

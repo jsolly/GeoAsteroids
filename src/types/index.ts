@@ -94,6 +94,8 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   readonly explodeTime: number;
   readonly empPulseActive: boolean;
   readonly empPulseTime: number;
+  readonly fuel: number;
+  readonly maxFuel: number;
   readonly shieldActive: boolean;
   readonly shieldTime: number;
   readonly shieldCooldown: number;
@@ -105,7 +107,7 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   setBlinkOn(): void;
   explode(): void;
   setExploding(): void;
-  empPulse(): void;
+  empPulse(): boolean;
   updateEmpPulse(): void;
   requestShieldToggle(): boolean;
   updateExplosion(): void;
@@ -354,6 +356,15 @@ export interface GameConstants {
       readonly impulse: number;
       readonly strokeWidth: number;
     };
+  };
+
+  readonly FUEL: {
+    readonly MAX: number;
+    readonly START: number;
+    readonly EMP_COST: number;
+    readonly DROP_AMOUNT: number;
+    readonly DROP_RADIUS: number;
+    readonly MIN_ROID_SIZE_TO_DROP: number;
   };
 
   readonly SHIELD: {

@@ -1,5 +1,7 @@
-import type { LootData, Position } from '../../shared-types';
+import type { AsteroidData, LootData, Position } from '../../shared-types';
+import { createFuelLootData, isFuelLoot, shouldReleaseFuel } from '../../shared/fuel';
 import { GROWTH, canCollectLoot, lootOverlap, planKillLoot } from '../../shared/shipGrowth';
+import { FUEL } from '../../src/constants';
 import type { GameEntity } from './EntityManager';
 import type { RNGService } from './RNGService';
 
@@ -14,6 +16,19 @@ export class LootManager {
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
+  }
+
+  public spawnFuelFromAsteroid(asteroid: AsteroidData, gameTime: number): LootData | undefined {
+    if (!shouldReleaseFuel(asteroid.size)) {
+      return undefined;
+    }
+    const drop: TrackedLoot = {
+      ...createFuelLootData(`fuel-${this.nextId++}`, asteroid.position),
+      expiresAt: gameTime + GROWTH.LOOT_TTL_FRAMES,
+    };
+    this.loot.set(drop.id, drop);
+    this.enforceCap();
+    return this.toPublic(drop);
   }
 
   public spawnFromKill(entity: GameEntity, gameTime: number): LootData[] {
@@ -67,9 +82,17 @@ export class LootManager {
 
     const drops = [...this.loot.values()].sort((a, b) => a.id.localeCompare(b.id));
     for (const drop of drops) {
-      const winner = collectors.find((entity) =>
-        lootOverlap(entity.position, entity.mass ?? GROWTH.BASE_MASS, drop.position, drop.radius)
-      );
+      const winner = collectors.find((entity) => {
+        if (
+          !lootOverlap(entity.position, entity.mass ?? GROWTH.BASE_MASS, drop.position, drop.radius)
+        ) {
+          return false;
+        }
+        if (isFuelLoot(drop) && (entity.fuel ?? FUEL.START) >= (entity.maxFuel ?? FUEL.MAX)) {
+          return false;
+        }
+        return true;
+      });
       if (!winner) {
         continue;
       }
@@ -134,12 +157,17 @@ export class LootManager {
   }
 
   private toPublic(drop: TrackedLoot): LootData {
-    return {
+    const publicDrop: LootData = {
       id: drop.id,
       position: { x: drop.position.x, y: drop.position.y },
       mass: drop.mass,
       radius: drop.radius,
       kind: drop.kind,
     };
+    if (isFuelLoot(drop)) {
+      publicDrop.kind = 'fuel';
+      publicDrop.fuel = drop.fuel ?? FUEL.DROP_AMOUNT;
+    }
+    return publicDrop;
   }
 }
