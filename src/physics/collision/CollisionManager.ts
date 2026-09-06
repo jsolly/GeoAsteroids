@@ -2,7 +2,11 @@ import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
-import { applyShipImpactFlash, isShipCollisionImmune } from '../../entities/ship/shipUtils';
+import {
+  applyShipBoundaryDeath,
+  applyShipImpactFlash,
+  isShipCollisionImmune,
+} from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { isAsteroidPending, lockAsteroidPending } from './asteroidHitFeel';
@@ -76,10 +80,11 @@ export class CollisionManager {
       localPlayerId,
     });
 
-    // The caller passes only the local player's ship, so always send damage for boundary collisions
-    const serverPlayerId = this.networkManager.getLocalPlayerId();
+    // Shared player+bot path: visible wall flash + explode, then the server
+    // confirms the life loss. Waiting for the packet alone looked like a silent reset.
+    applyShipBoundaryDeath(ship, 'boundary');
 
-    // Send boundary collision message to server
+    const serverPlayerId = this.networkManager.getLocalPlayerId();
     this.networkManager.sendMessage({
       type: 'collisionDamage',
       data: {

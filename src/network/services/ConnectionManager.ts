@@ -16,14 +16,20 @@ import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
-import { asteroidKinematicUpdates, partitionAsteroidSnapshot } from './asteroidFieldSync';
+import { partitionAsteroidSnapshot } from './asteroidFieldSync';
+import { readOrCreateClientId, replaceStoredClientId } from './clientIdentity';
 import {
   CONNECTION_STALE_TIMEOUT_MS,
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
 } from './connectionHealth';
 import { nextReconnectDelayMs } from './connectionReconnect';
-import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
+import {
+  bindPageHideDisconnect,
+  duplicateOwnRemoteIds,
+  isLocalGameEntity,
+  staleRemotePlayerIds,
+} from './playerPresence';
 
 export interface ConnectionState {
   isConnected: boolean;
@@ -57,7 +63,9 @@ export class ConnectionManager {
       isConnected: false,
       socket: null,
     };
-    this.clientId = this.generateClientId();
+    this.clientId = readOrCreateClientId(
+      typeof sessionStorage === 'undefined' ? null : sessionStorage
+    );
     // Tab close / bfcache must tear the socket down so the server drops us
     // and other clients can prune this player from their leaderboard.
     bindPageHideDisconnect(() => this.disconnect());
@@ -80,12 +88,6 @@ export class ConnectionManager {
 
   isConnected(): boolean {
     return this.state.isConnected;
-  }
-
-  private generateClientId(): string {
-    const timestamp = Date.now().toString(36);
-    const randomPart = Math.random().toString(36).substring(2, 8);
-    return `client-${timestamp}-${randomPart}`;
   }
 
   async connect(): Promise<void> {
@@ -180,7 +182,7 @@ export class ConnectionManager {
     });
   }
 
-  disconnect(): void {
+  disconnect(options?: { newSession?: boolean }): void {
     this.userRequestedDisconnect = true;
     this.clearReconnectTimer();
     this.reconnectAttempt = 0;
@@ -202,9 +204,14 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
-    // Next Start is a new session, not a #444 unexpected-drop rejoin.
+    // pagehide / unexpected close keep the stored id (#467). Game-over Start
+    // mints a new one so we do not rejoin a 0-life ship.
     this.hasConnectedOnce = false;
-    this.clientId = this.generateClientId();
+    if (options?.newSession) {
+      this.clientId = replaceStoredClientId(
+        typeof sessionStorage === 'undefined' ? null : sessionStorage
+      );
+    }
   }
 
   private describeAttacker(attackerId: string): string {
@@ -344,7 +351,12 @@ export class ConnectionManager {
   }
 
   // Send player state to server
-  sendPlayerState(playerState: PlayerUpdate): void {
+  sendPlayerState(
+    playerState: Omit<PlayerUpdate, 'lives' | 'score'> & {
+      lives?: number;
+      score?: number;
+    }
+  ): void {
     if (!this.state.isConnected || !this.state.socket) {
       return;
     }
@@ -555,8 +567,11 @@ export class ConnectionManager {
     if (data.entities) {
       // Update entities in place - no clearing to prevent bot disappearance!
       for (const entityData of data.entities) {
-        const isLocalPlayer =
-          entityData.id === this.clientId || entityData.id === this.localPlayerId;
+        const isLocalPlayer = isLocalGameEntity(entityData, {
+          clientId: this.clientId,
+          localPlayerId: this.localPlayerId,
+          localPlayerName: this.localPlayerName,
+        });
 
         let entity = this.allPlayers.get(entityData.id);
 
@@ -578,6 +593,9 @@ export class ConnectionManager {
           }
 
           if (!entity) {
+            if (!entityData.name || !entityData.type) {
+              continue;
+            }
             entity = entityFactory.createPlayer({
               id: entityData.id,
               name: entityData.name,
@@ -601,18 +619,22 @@ export class ConnectionManager {
         }
 
         const serverSnapshot = {
-          position: entityData.position,
-          velocity: entityData.velocity,
-          angle: entityData.angle,
-          lives: entityData.lives,
-          score: entityData.score,
-          exploding: entityData.exploding,
-          thrusting: entityData.thrusting,
-          color: entityData.color,
-          health: entityData.health,
-          maxHealth: entityData.maxHealth,
-          respawnTimer: entityData.respawnTimer,
-          spawnProtectionTimer: entityData.spawnProtectionTimer,
+          ...(entityData.position ? { position: entityData.position } : {}),
+          ...(entityData.velocity ? { velocity: entityData.velocity } : {}),
+          ...(entityData.angle !== undefined ? { angle: entityData.angle } : {}),
+          ...(entityData.lives !== undefined ? { lives: entityData.lives } : {}),
+          ...(entityData.score !== undefined ? { score: entityData.score } : {}),
+          ...(entityData.exploding !== undefined ? { exploding: entityData.exploding } : {}),
+          ...(entityData.thrusting !== undefined ? { thrusting: entityData.thrusting } : {}),
+          ...(entityData.color !== undefined ? { color: entityData.color } : {}),
+          ...(entityData.health !== undefined ? { health: entityData.health } : {}),
+          ...(entityData.maxHealth !== undefined ? { maxHealth: entityData.maxHealth } : {}),
+          ...(entityData.respawnTimer !== undefined
+            ? { respawnTimer: entityData.respawnTimer }
+            : {}),
+          ...(entityData.spawnProtectionTimer !== undefined
+            ? { spawnProtectionTimer: entityData.spawnProtectionTimer }
+            : {}),
         };
         entity.updateFromServer(serverSnapshot);
 
@@ -626,10 +648,16 @@ export class ConnectionManager {
 
       // Drop remotes that vanished from the snapshot so a closed tab leaves
       // the leaderboard even if `playerLeft` was missed. Bots are left alone.
-      const snapshotIds = new Set(data.entities.map((entity) => entity.id));
-      for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
-        this.allPlayers.delete(id);
-        logger.info('NETWORK', 'Removed departed remote player', { id });
+      if (data.entities.length > 0) {
+        const snapshotIds = new Set(data.entities.map((entity) => entity.id));
+        for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
+          this.allPlayers.delete(id);
+          logger.info('NETWORK', 'Removed departed remote player', { id });
+        }
+        for (const id of duplicateOwnRemoteIds(this.allPlayers.values(), this.localPlayerName)) {
+          this.allPlayers.delete(id);
+          logger.info('NETWORK', 'Removed duplicate remote copy of local player', { id });
+        }
       }
     }
 
@@ -657,7 +685,8 @@ export class ConnectionManager {
         new CustomEvent('serverAsteroidUpdated', {
           detail: {
             asteroidId: asteroid.id,
-            updates: asteroidKinematicUpdates(asteroid),
+            // Full row so a missing local rock can still be created (heal).
+            updates: asteroid,
           },
         })
       );
@@ -854,6 +883,9 @@ export class ConnectionManager {
       return;
     }
 
+    if (data.attackerId) {
+      targetPlayer.deathCause = data.attackerId;
+    }
     if (data.remainingLives !== undefined) {
       targetPlayer.lives = data.remainingLives;
     }
@@ -918,6 +950,9 @@ export class ConnectionManager {
     }
 
     this.applyAuthoritativeDamageHealth(localPlayer, data.remainingHealth, data.isDestroyed);
+    if (data.attackerId) {
+      localPlayer.deathCause = data.attackerId;
+    }
     if (data.remainingLives !== undefined) {
       localPlayer.lives = data.remainingLives;
     }

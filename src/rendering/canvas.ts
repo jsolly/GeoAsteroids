@@ -8,7 +8,7 @@ import {
 } from '../constants/canvas';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
-import { drawRoidsRelative } from '../entities/roid/roidRenderer';
+import { drawRoidsRelative, rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
   drawLasers,
@@ -224,7 +224,7 @@ class CanvasManager {
 
     // Draw roids
     const roids = currRoidBelt.getRoids();
-    this.beginPlayfieldFrame(currShip.position, roids);
+    this.beginPlayfieldFrame(currShip.position, rocksForPlayfieldZoom(roids));
 
     drawStarfield(currShip.position);
 

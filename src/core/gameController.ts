@@ -11,14 +11,18 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
-import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
+import {
+  applyAsteroidKinematics,
+  applyAsteroidRowToBelt,
+} from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { setPlayView } from '../ui/uiUtils';
-import { describeDeathCause, formatGameOverText } from '../utils/deathCause';
+import { describeDeathCause } from '../utils/deathCause';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
@@ -63,6 +67,7 @@ export class GameController {
 
     // Set up game over handler
     this.setupGameOverHandler();
+    this.setupShipExplodedHandler();
 
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
@@ -177,10 +182,14 @@ export class GameController {
     applyAsteroidKinematics(roid, asteroid, { snapPosition: true });
 
     // Override shape properties to match server exactly. Keep the factory
-    // silhouette when the snapshot omits offsets — wiping to [] made the
-    // playfield skip every rock while the minimap still dotted positions.
-    roid.jaggedness = asteroid.jaggedness;
-    roid.vertices = asteroid.vertices;
+    // silhouette when the snapshot omits offsets / vertices — wiping those
+    // made the playfield skip every rock while the minimap still dotted.
+    if (asteroid.jaggedness !== undefined) {
+      roid.jaggedness = asteroid.jaggedness;
+    }
+    if (asteroid.vertices !== undefined) {
+      roid.vertices = asteroid.vertices;
+    }
     if (asteroid.offsets && asteroid.offsets.length > 0) {
       roid.offsets.length = 0;
       roid.offsets.push(...asteroid.offsets);
@@ -206,13 +215,19 @@ export class GameController {
     const { asteroidId, updates } = customEvent.detail;
     logger.debug('GAME', 'Updating server asteroid in local belt', { asteroidId });
 
-    // Find and update the asteroid in the local belt
-    if (this.currRoidBelt) {
-      const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
-      if (roid && updates) {
-        applyAsteroidKinematics(roid, updates);
-      }
+    if (!this.currRoidBelt || !updates) {
+      return;
     }
+    applyAsteroidRowToBelt(
+      (id) => this.currRoidBelt.roids.find((roid) => roid.id === id),
+      asteroidId,
+      updates,
+      (asteroid) => {
+        this.handleServerAsteroidCreated(
+          new CustomEvent('serverAsteroidCreated', { detail: { asteroid } })
+        );
+      }
+    );
   };
 
   private handleServerAsteroidDestroyed = (event: Event): void => {
@@ -269,7 +284,7 @@ export class GameController {
     canvasManager.clearPlayfield();
     resetThrustSources();
     PlayerNetwork.getInstance().stopNetworkUpdates();
-    this.networkManager.disconnect();
+    this.networkManager.disconnect({ newSession: true });
   }
 
   gameOver(deathCause?: string): void {
@@ -282,11 +297,13 @@ export class GameController {
       deathCause,
       (id) => this.networkManager.getPlayer(id)?.name
     );
-    this.gameStateManager.updateTextProperties(formatGameOverText(described), 1.0);
+    const killer = formatDeathCauseForOverlay(described);
+    const gameOverText = killer ? `Game Over: You were killed by ${killer}` : 'Game Over';
+    this.gameStateManager.updateTextProperties(gameOverText, 1.0);
 
     this.cleanupServerAsteroidListeners();
     PlayerNetwork.getInstance().stopNetworkUpdates();
-    this.networkManager.disconnect();
+    this.networkManager.disconnect({ newSession: true });
 
     this.gameOverTimer = setTimeout(() => {
       this.gameOverTimer = null;
@@ -296,6 +313,33 @@ export class GameController {
         showGameOverMenu();
       });
     }, GameController.GAME_OVER_MENU_DELAY_MS);
+  }
+
+  private setupShipExplodedHandler(): void {
+    window.addEventListener('shipExploded', (event) => {
+      const customEvent = event as CustomEvent<{
+        shipId: string;
+        cause?: string;
+        killerName?: string;
+      }>;
+      const cause = customEvent.detail.cause;
+      if (!cause) {
+        return;
+      }
+
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (localPlayer?.ship.id === customEvent.detail.shipId) {
+        localPlayer.onShipExploded({ cause });
+        return;
+      }
+
+      for (const player of this.networkManager.getAllPlayers()) {
+        if (player.ship.id === customEvent.detail.shipId) {
+          player.onShipExploded({ cause });
+          return;
+        }
+      }
+    });
   }
 
   private setupGameOverHandler(): void {
@@ -346,20 +390,6 @@ export class GameController {
             }
           }
         }
-      }
-    });
-
-    window.addEventListener('shipExploded', (event) => {
-      const customEvent = event as CustomEvent<{
-        shipId?: string;
-        cause?: string;
-        killerName?: string;
-      }>;
-      const localPlayer = this.playerManager.getLocalPlayer();
-      if (localPlayer && customEvent.detail.shipId === localPlayer.ship.id) {
-        localPlayer.onShipExploded({
-          cause: describeDeathCause(customEvent.detail.cause, () => customEvent.detail.killerName),
-        });
       }
     });
 

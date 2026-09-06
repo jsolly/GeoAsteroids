@@ -81,7 +81,7 @@ describe('Game-over returns to the menu', () => {
     );
 
     const text = GameStateManager.getInstance().getText();
-    expect(text).toBe('Game Over: You were killed by the boundary');
+    expect(text).toBe('Game Over: You were killed by the arena wall');
     expect(text.toLowerCase()).not.toContain('unknown');
   });
 });
@@ -114,6 +114,11 @@ describe('Last life on the server', () => {
     expect(ace.socket.lastReceived('playerKilled')?.data).not.toMatchObject({
       attackerId: 'unknown',
     });
+    expect(ace.socket.lastReceived('playerDamaged')?.data).toMatchObject({
+      attackerId: 'boundary',
+      remainingLives: 0,
+    });
+    expect(world.entity(ace).respawnTimer).toBeUndefined();
     expect(GAME.START_LIVES).toBe(3);
   });
 });

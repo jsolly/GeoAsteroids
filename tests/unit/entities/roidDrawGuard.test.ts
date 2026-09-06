@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { canDrawAsteroid } from '../../../src/entities/roid/roidRenderer';
+import { canDrawAsteroid, rocksForPlayfieldZoom } from '../../../src/entities/roid/roidRenderer';
+import type { Roid } from '../../../src/entities/roid/Roid';
 
 test('a finite pose with offsets is drawable', () => {
   expect(
@@ -32,4 +33,25 @@ test('empty offsets still draw — same pose the minimap already dots', () => {
       offsets: [],
     })
   ).toBe(true);
+});
+
+test('playfield zoom ignores pending rocks the canvas will skip', () => {
+  const drawn = {
+    position: { x: 4, y: 5 },
+    r: 20,
+    angle: 0,
+    offsets: [1],
+    vertices: 8,
+    pendingDestruction: false,
+    pendingUntilMs: 0,
+  } as unknown as Roid;
+  const pending = {
+    ...drawn,
+    position: { x: 0, y: 0 },
+    pendingDestruction: true,
+    pendingUntilMs: Date.now() + 800,
+  } as unknown as Roid;
+  expect(rocksForPlayfieldZoom([drawn, pending])).toEqual([
+    expect.objectContaining({ position: { x: 4, y: 5 } }),
+  ]);
 });

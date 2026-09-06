@@ -15,7 +15,7 @@ describe('death cause attribution', () => {
 
   test('maps asteroid and boundary tokens to readable phrases', () => {
     expect(describeDeathCause('asteroid', resolve)).toBe('an asteroid');
-    expect(describeDeathCause('boundary', resolve)).toBe('the boundary');
+    expect(describeDeathCause('boundary', resolve)).toBe('the arena wall');
   });
 
   test('resolves bot and player ids to names', () => {

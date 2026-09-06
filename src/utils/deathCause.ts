@@ -10,7 +10,7 @@ export function describeDeathCause(
     return 'an asteroid';
   }
   if (attackerId === 'boundary') {
-    return 'the boundary';
+    return 'the arena wall';
   }
   return resolveName?.(attackerId) ?? attackerId;
 }
