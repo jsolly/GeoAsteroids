@@ -1,5 +1,5 @@
-import type { Position } from '../../../shared-types';
 import { isCombatantImmune } from '../../../shared/combat';
+import type { Position } from '../../../shared-types';
 import { GAME, SHIP } from '../../constants';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 

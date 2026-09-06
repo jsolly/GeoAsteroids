@@ -1,5 +1,5 @@
-import { DAMAGE } from '../../constants';
 import { asteroidDestroyPoints } from '../../../shared/combat';
+import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
