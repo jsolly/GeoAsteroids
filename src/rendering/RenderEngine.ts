@@ -267,7 +267,7 @@ export class RenderEngine {
 
     // Render HUD elements
     drawScoreOverlay(this.ctx, this.canvas, score);
-    drawLivesIndicator(this.ctx, lives, player.ship.color);
+    drawLivesIndicator(this.ctx, lives, player.ship.color, player.ship.kitId);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(this.ctx, this.canvas, text, textAlpha);

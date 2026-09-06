@@ -202,6 +202,7 @@ a {
 .ship-kit-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.2em;
   padding: 0.55em 0.4em;
   background: transparent;
@@ -209,7 +210,13 @@ a {
   color: var(--palette-hud, #e2e8f0);
   border-radius: 8px;
   cursor: pointer;
-  min-height: 64px;
+  min-height: 88px;
+}
+
+.ship-kit-silhouette {
+  display: block;
+  width: 48px;
+  height: 36px;
 }
 
 .ship-kit-card.is-selected,

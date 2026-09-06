@@ -1,15 +1,20 @@
-# GeoRoids — ships and factions (topology hold)
+# GeoRoids — ships and factions (AD v2 bake)
 
-Art-box replica of AD v2 **topology only**. Player kit hulls are **not baked**
-until John / Product Owner set `AD_V2_HULL_BAKE_LOCKED` in `src/entities/ship/shipKits.ts`.
+Art-box replica of AD v2 **topology**. John locked silhouette v2 on 2026-09-06
+via Game Director. `AD_V2_HULL_BAKE_LOCKED` is **true**. Bake against v2 only —
+no v1 silhouettes.
 
 Stroke `#5EEAD4` on `#000011`. Play-scale target ~32px. Matt-blush outline Asteroids.
+
+Canonical sheets: `ship-silhouettes-contact-v2` / `ship-silhouettes-play-scale-v2`.
+Runtime + SVG source: `src/entities/ship/hullOutlines.ts`. Pack copies:
+`georoids-art/ships-v2/{dart,hauler,warden,skirmisher,quake}.svg`.
 
 ## Kits (John lock — exactly five)
 
 There is **no Hook sixth ship class**. Harpoon is a **Hauler-only** ability.
 
-| Kit | Topology (after hull lock) | Ability |
+| Kit | Topology | Ability |
 | --- | --- | --- |
 | Dart | needle — tall thin isosceles; inverted-V notch at aft | Boost dash |
 | Hauler | barge hex — wide low polygon; flat keel; faceted bow | **Harpoon** (tether / latch) |
@@ -39,7 +44,6 @@ tether VFX. It is not a sixth class and not “VFX-only until Hook.”
 - Tether line + latch ring VFX on Hauler only — never on Dart / Warden / Skirmisher / Quake
 
 See `src/entities/ship/shipAbilities.ts` and `drawHaulerHarpoonVfx`.
-Hull bake stays on hold until silhouette v2 lock.
 
 ## Saucer NPC (separate language)
 

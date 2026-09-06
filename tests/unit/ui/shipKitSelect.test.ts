@@ -16,6 +16,7 @@ test('kit picker lists the five kits and selects Dart by default', () => {
   expect(buttons.map((button) => button.dataset.kitId)).toEqual(listShipKits().map((kit) => kit.id));
   expect(getSelectedShipKitId()).toBe('dart');
   expect(buttons[0]?.classList.contains('is-selected')).toBe(true);
+  expect(buttons.every((button) => button.querySelector('svg.ship-kit-silhouette'))).toBe(true);
 });
 
 test('clicking Quake stores that kit for join', () => {

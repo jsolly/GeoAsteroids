@@ -330,7 +330,7 @@ class CanvasManager {
 
     drawScoreOverlay(ctx, canvas, currScore);
 
-    drawLivesIndicator(ctx, lives, PALETTE.LOCAL);
+    drawLivesIndicator(ctx, lives, PALETTE.LOCAL, currShip.kitId);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(ctx, canvas, text, textAlpha);

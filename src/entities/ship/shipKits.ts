@@ -32,25 +32,24 @@ export interface ShipKit {
   turnSpeed: number;
   shotCooldown: number;
   burstCount: number;
-  hull: HullProfile;
 }
 
-/** Classic triangle. TEMPORARY: AD pack held — kits share this until outline deltas land. */
+/** Classic triangle. Kept for the leftover 3-point helper; play hulls use v2 outlines. */
 export const CLASSIC_HULL: HullProfile = {
   nose: 1,
   rear: 0.8,
   beam: 0.5,
 };
 
-/** All player kits use this until the Art Director pack ships stronger nose/aft/aspect deltas. */
+/** Retired placeholder. Play kits bake from `hullOutlines.ts`, not this triangle. */
 export const KIT_HULL_PLACEHOLDER = CLASSIC_HULL;
-export const KIT_HULLS_ARE_PLACEHOLDERS = true;
+export const KIT_HULLS_ARE_PLACEHOLDERS = false;
 
 /**
- * AD v2 topology — HOLD. Do not bake into `hull` until John / Product Owner
- * set `AD_V2_HULL_BAKE_LOCKED`. Sheets: silhouettes-v2 + play-scale-v2.
+ * John lock 2026-09-06 via Game Director. Bake against v2 sheets only
+ * (`ship-silhouettes-contact-v2` / `ship-silhouettes-play-scale-v2`).
  */
-export const AD_V2_HULL_BAKE_LOCKED = false;
+export const AD_V2_HULL_BAKE_LOCKED = true;
 
 export const AD_V2_HULL_TOPOLOGY = {
   dart: 'needle',
@@ -65,6 +64,8 @@ export const AD_V2_HULL_SHEET = {
   stroke: '#5EEAD4',
   background: '#000011',
   playScalePx: 32,
+  packDir: 'georoids-art/ships-v2',
+  sheets: ['ship-silhouettes-contact-v2', 'ship-silhouettes-play-scale-v2'],
   topology: AD_V2_HULL_TOPOLOGY,
   notes: {
     dart: 'needle — tall thin isosceles, inverted-V notch at aft',
@@ -112,7 +113,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     turnSpeed: SHIP.TURN_SPEED,
     shotCooldown: 250,
     burstCount: 1,
-    hull: KIT_HULL_PLACEHOLDER,
   },
   hauler: {
     id: 'hauler',
@@ -128,7 +128,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     turnSpeed: 380,
     shotCooldown: 280,
     burstCount: 1,
-    hull: KIT_HULL_PLACEHOLDER,
   },
   warden: {
     id: 'warden',
@@ -144,7 +143,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     turnSpeed: SHIP.TURN_SPEED,
     shotCooldown: 260,
     burstCount: 1,
-    hull: KIT_HULL_PLACEHOLDER,
   },
   skirmisher: {
     id: 'skirmisher',
@@ -160,7 +158,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     turnSpeed: 540,
     shotCooldown: 200,
     burstCount: 3,
-    hull: KIT_HULL_PLACEHOLDER,
   },
   quake: {
     id: 'quake',
@@ -176,7 +173,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     turnSpeed: SHIP.TURN_SPEED,
     shotCooldown: 270,
     burstCount: 1,
-    hull: KIT_HULL_PLACEHOLDER,
   },
 };
 

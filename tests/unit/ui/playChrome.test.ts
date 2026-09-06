@@ -34,7 +34,7 @@ test('title menu shows a phosphor WASD + Space / arrows hint', () => {
 test('title menu lets a pilot pick a ship kit before enter', () => {
   const startScreen = html.slice(html.indexOf('id="start-screen"'), html.indexOf('id="gameArea"'));
   expect(startScreen).toMatch(/id="ship-kit-grid"/);
-  expect(startScreen).toMatch(/Hull outlines temporary/);
+  expect(startScreen).toMatch(/AD v2 silhouettes/);
   expect(startScreen).not.toMatch(/no factions/i);
   expect(css).toMatch(/\.ship-kit-grid/);
 });

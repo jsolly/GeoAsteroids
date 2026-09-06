@@ -57,11 +57,9 @@ test('kit abilities are mixed flavors and geo is optional', () => {
   expect(getShipKit('hauler').flavor).toBe('utility');
 });
 
-test('kit hulls stay on the shared placeholder until the AD pack', () => {
-  expect(KIT_HULLS_ARE_PLACEHOLDERS).toBe(true);
-  expect(AD_V2_HULL_BAKE_LOCKED).toBe(false);
-  const hulls = listShipKits().map((kit) => kit.hull);
-  expect(hulls.every((hull) => hull === hulls[0])).toBe(true);
+test('kit hull bake is locked to AD v2 topologies', () => {
+  expect(KIT_HULLS_ARE_PLACEHOLDERS).toBe(false);
+  expect(AD_V2_HULL_BAKE_LOCKED).toBe(true);
   expect(AD_V2_HULL_TOPOLOGY).toEqual({
     dart: 'needle',
     hauler: 'barge-hex',
@@ -71,6 +69,7 @@ test('kit hulls stay on the shared placeholder until the AD pack', () => {
   });
   expect(AD_V2_HULL_SHEET.playScalePx).toBe(32);
   expect(AD_V2_HULL_SHEET.stroke).toBe('#5EEAD4');
+  expect(listShipKits().every((kit) => !('hull' in kit))).toBe(true);
 });
 
 test('applyShipKitToShip is shared for human and bot hulls', () => {

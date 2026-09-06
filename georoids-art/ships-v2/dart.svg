@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AD v2 bake. Topology: needle. Source: src/entities/ship/hullOutlines.ts -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="dart needle">
+  <title>dart — needle</title>
+  <rect width="64" height="64" fill="#000011"/>
+  <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 8.4 L29.2 30.4 L28.4 53.6 L32 44 L35.6 53.6 L34.8 30.4 Z"/>
+  </g>
+</svg>

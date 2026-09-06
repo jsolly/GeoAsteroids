@@ -38,4 +38,6 @@ dist/*
 !/georoids-art/saucer-npc.svg
 !/georoids-art/saucer-npc-firing.svg
 !/georoids-art/saucer-silhouette-svgish.png
+# AD v2 player-kit hull bake (topology only; no v1 sheets)
+!/georoids-art/ships-v2/*.svg
 

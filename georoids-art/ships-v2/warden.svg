@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AD v2 bake. Topology: delta-shield-arc. Source: src/entities/ship/hullOutlines.ts -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="warden delta-shield-arc">
+  <title>warden — delta-shield-arc</title>
+  <rect width="64" height="64" fill="#000011"/>
+  <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 13.6 L21.2 49.2 L42.8 49.2 Z"/>
+    <path d="M25.4 6.2 L27.2 4.2 L29.4 2.8 L32 2.4 L34.6 2.8 L36.8 4.2 L38.6 6.2"/>
+  </g>
+</svg>

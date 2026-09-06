@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AD v2 bake. Topology: terraced-mountain. Source: src/entities/ship/hullOutlines.ts -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="quake terraced-mountain">
+  <title>quake — terraced-mountain</title>
+  <rect width="64" height="64" fill="#000011"/>
+  <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 10.8 L28 23.6 L24.8 23.6 L24.8 35.6 L21.2 35.6 L21.2 48.4 L18 48.4 L18 54 L46 54 L46 48.4 L42.8 48.4 L42.8 35.6 L39.2 35.6 L39.2 23.6 L36 23.6 Z"/>
+  </g>
+</svg>
