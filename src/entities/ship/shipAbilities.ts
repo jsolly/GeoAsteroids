@@ -47,7 +47,9 @@ export function absorbDamageWithShield(host: { shieldTimer: number }): boolean {
   return host.shieldTimer > 0;
 }
 
-export function clearHarpoonLatch(host: Pick<AbilityHost, 'harpoonTimer' | 'harpoonTargetId'>): void {
+export function clearHarpoonLatch(
+  host: Pick<AbilityHost, 'harpoonTimer' | 'harpoonTargetId'>
+): void {
   host.harpoonTimer = 0;
   host.harpoonTargetId = undefined;
 }
@@ -117,7 +119,7 @@ export function findHarpoonTarget(
     if (
       !best ||
       (facing > 0 && best.facing <= 0) ||
-      ((facing > 0) === (best.facing > 0) && dist < best.dist)
+      (facing > 0 === best.facing > 0 && dist < best.dist)
     ) {
       best = { body: asteroid, dist, facing };
     }

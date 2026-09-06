@@ -12,6 +12,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { publishHarpoonField } from '../entities/ship/harpoonField';
 import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
 import {
@@ -22,7 +23,6 @@ import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
-import { publishHarpoonField } from '../entities/ship/harpoonField';
 import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { setPlayView } from '../ui/uiUtils';
 import { describeDeathCause } from '../utils/deathCause';

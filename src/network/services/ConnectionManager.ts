@@ -647,7 +647,9 @@ export class ConnectionManager {
             ? { abilityActiveFrames: entityData.abilityActiveFrames }
             : {}),
           ...(entityData.shieldTimer !== undefined ? { shieldTimer: entityData.shieldTimer } : {}),
-          ...(entityData.harpoonTimer !== undefined ? { harpoonTimer: entityData.harpoonTimer } : {}),
+          ...(entityData.harpoonTimer !== undefined
+            ? { harpoonTimer: entityData.harpoonTimer }
+            : {}),
           ...(entityData.harpoonTargetId !== undefined
             ? { harpoonTargetId: entityData.harpoonTargetId }
             : {}),
