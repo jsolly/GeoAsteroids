@@ -132,8 +132,13 @@ export class Player {
     if (data.score !== undefined) {
       this.score = data.score;
     }
-    if (data.exploding !== undefined) {
-      this.ship.exploding = data.exploding;
+    if (data.exploding === true) {
+      // Shared explode() path for local, remote, and bot — plays once, never doubles.
+      if (!this.ship.exploding) {
+        this.ship.explode(this.deathCause ?? data.deathCause ?? 'server-damage');
+      }
+    } else if (data.exploding === false) {
+      this.ship.exploding = false;
     }
     // Thrusting is client-owned for the local player (keyboard/mouse input).
     // The server echo lacks thrusting when updates omit it, which flickers the flame.

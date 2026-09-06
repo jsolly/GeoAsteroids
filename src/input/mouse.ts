@@ -1,6 +1,5 @@
-import { playSound } from '../audio/Sound';
+import { upsertThrustSource } from '../audio/gameSounds';
 import type { Player } from '../entities/player/Player';
-import { Ship } from '../entities/ship/Ship';
 import { canvasManager } from '../rendering/canvas';
 import { logger } from '../utils/Logger';
 import { getPressedKeysForPlayer } from './keybindings';
@@ -21,13 +20,11 @@ function updateThrustFromAllInputs(player: Player): void {
   // Only update if the aggregate state has changed
   if (shouldThrust !== currentlyThrusting) {
     player.ship.thrusting = shouldThrust;
-    if (shouldThrust) {
-      if (!Ship.fxThrust.isPlaying()) {
-        playSound(Ship.fxThrust);
-      }
-    } else {
-      Ship.fxThrust.stop();
-    }
+    upsertThrustSource({
+      id: player.id,
+      thrusting: shouldThrust,
+      position: player.ship.position,
+    });
   }
 }
 

@@ -1,6 +1,11 @@
 import type { Position, Velocity } from '../../../shared-types';
-import { playSound, Sound } from '../../audio/Sound';
-import { playWorldSound } from '../../audio/spatialAudio';
+import {
+  getHitSound,
+  getLaserSound,
+  playHitSound as playHitSoundAt,
+  playLaserSound as playLaserSoundAt,
+} from '../../audio/gameSounds';
+import type { Sound } from '../../audio/Sound';
 import { GAME, LASER } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
@@ -14,8 +19,12 @@ export interface LaserData {
 }
 
 export class Laser implements LaserData {
-  static fxLaser: Sound = new Sound('sounds/laser.m4a', 5);
-  static fxHit: Sound = new Sound('sounds/hit.m4a', 5);
+  static get fxLaser(): Sound {
+    return getLaserSound();
+  }
+  static get fxHit(): Sound {
+    return getHitSound();
+  }
 
   constructor(
     public position: Position,
@@ -56,10 +65,10 @@ export class Laser implements LaserData {
   }
 
   playLaserSound(): void {
-    playSound(Laser.fxLaser);
+    playLaserSoundAt(this.position);
   }
 
   playHitSound(): void {
-    playWorldSound(Laser.fxHit, this.position);
+    playHitSoundAt(this.position);
   }
 }
