@@ -1,5 +1,7 @@
 import type {
   AsteroidData,
+  AsteroidDestroyEvent,
+  AsteroidTaggedEvent,
   PlayerJoin,
   PlayerLeave,
   PlayerUpdate,
@@ -495,7 +497,10 @@ export class ConnectionManager {
         this.handleAsteroidUpdated(data as { asteroidId: string; updates: Partial<AsteroidData> });
         break;
       case 'asteroidDestroy':
-        this.handleAsteroidDestroyed(data as { asteroidId: string });
+        this.handleAsteroidDestroyed(data as AsteroidDestroyEvent);
+        break;
+      case 'asteroidTagged':
+        this.handleAsteroidTagged(data as AsteroidTaggedEvent);
         break;
       case 'botCreated':
         this.handleBotCreated(data as { botId: string; botName: string; position: Position });
@@ -787,10 +792,29 @@ export class ConnectionManager {
     );
   }
 
-  private handleAsteroidDestroyed(data: { asteroidId: string }): void {
+  private handleAsteroidDestroyed(data: AsteroidDestroyEvent): void {
     window.dispatchEvent(
       new CustomEvent('serverAsteroidDestroyed', {
-        detail: { asteroidId: data.asteroidId },
+        detail: {
+          asteroidId: data.asteroidId,
+          collabSplit: data.collabSplit === true,
+          origin: data.origin,
+        },
+      })
+    );
+  }
+
+  private handleAsteroidTagged(data: AsteroidTaggedEvent): void {
+    if (!data?.asteroidId) {
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent('serverAsteroidTagged', {
+        detail: {
+          asteroidId: data.asteroidId,
+          shooterId: data.shooterId,
+          expiresAt: data.expiresAt,
+        },
       })
     );
   }

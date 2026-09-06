@@ -5,6 +5,7 @@ import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { canDealCombatDamage } from '../../entities/player/softFactions';
 import type { Roid } from '../../entities/roid/Roid';
+import { isBiggestAsteroid, pointsForRoidSize } from '../../entities/roid/roidScore';
 import type { Ship } from '../../entities/ship/Ship';
 import {
   applyShipBoundaryDeath,
@@ -281,13 +282,35 @@ export class CollisionManager {
       return;
     }
 
-    lockAsteroidPending(asteroid);
-
-    if (!reportAsteroidHits) {
-      return;
+    if (reportAsteroidHits) {
+      this.reportAsteroidHit(asteroid.id, attackerId, asteroid.r, 'laser');
     }
 
-    this.reportAsteroidDestroyed(asteroid, attackerId);
+    // Biggest rocks stay visible through the server-owned 1s tag window.
+    if (!isBiggestAsteroid(asteroid.r) && (asteroid.taggedUntil ?? 0) <= Date.now()) {
+      lockAsteroidPending(asteroid);
+    }
+  }
+
+  /**
+   * Report a laser or ram hit. `playerId` is any ship id (human or bot) so
+   * collab split stays DRY across ship kinds. The server owns the 1s window.
+   */
+  private reportAsteroidHit(
+    asteroidId: string,
+    playerId: string,
+    radius: number,
+    cause: 'laser' | 'collision'
+  ): void {
+    this.networkManager.sendMessage({
+      type: 'asteroidDestroyed',
+      data: {
+        asteroidId,
+        playerId,
+        points: pointsForRoidSize(radius),
+        cause,
+      },
+    });
   }
 
   /**
@@ -370,7 +393,7 @@ export class CollisionManager {
           },
         });
 
-        this.reportAsteroidDestroyed(asteroid, serverPlayerId);
+        this.reportAsteroidHit(asteroid.id, serverPlayerId, asteroid.r, 'collision');
       }
     } else if (player.type === 'bot') {
       applyShipLethalCollision(ship, 'asteroid');
@@ -383,20 +406,9 @@ export class CollisionManager {
         },
       });
 
-      this.reportAsteroidDestroyed(asteroid, player.id);
+      this.reportAsteroidHit(asteroid.id, player.id, asteroid.r, 'collision');
     }
     // Remote players are handled by server, no client-side network message needed
-  }
-
-  private reportAsteroidDestroyed(asteroid: Roid, playerId: string): void {
-    this.networkManager.sendMessage({
-      type: 'asteroidDestroyed',
-      data: {
-        asteroidId: asteroid.id,
-        playerId,
-        points: this.getAsteroidPoints(asteroid.r),
-      },
-    });
   }
 
   private reportAsteroidDamage(asteroid: Roid, playerId: string): void {
@@ -406,7 +418,7 @@ export class CollisionManager {
         asteroidId: asteroid.id,
         playerId,
         damage: DAMAGE.LASER_HIT,
-        points: this.getAsteroidPoints(asteroid.r),
+        points: pointsForRoidSize(asteroid.r),
       },
     });
   }
@@ -452,16 +464,4 @@ export class CollisionManager {
     localShip.startPlayerCollision(otherPlayerId);
   }
 
-  /**
-   * Get points for destroying an asteroid based on its size
-   */
-  private getAsteroidPoints(radius: number): number {
-    if (radius >= 40) {
-      return 20; // Large asteroid
-    } else if (radius >= 20) {
-      return 50; // Medium asteroid
-    } else {
-      return 100; // Small asteroid
-    }
-  }
 }

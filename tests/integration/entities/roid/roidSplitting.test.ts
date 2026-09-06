@@ -98,6 +98,7 @@ describe('Integration: Roid splitting on collision', () => {
         asteroidId: roid.id,
         playerId: 'local-player-123',
         points: 50, // Medium roid points (size 25)
+        cause: 'collision',
       },
     });
   });
@@ -126,6 +127,7 @@ describe('Integration: Roid splitting on collision', () => {
         asteroidId: mediumRoid.id,
         playerId: 'local-player-123',
         points: 100, // Small roid points (size 12.5)
+        cause: 'collision',
       },
     });
   });
@@ -155,6 +157,7 @@ describe('Integration: Roid splitting on collision', () => {
         asteroidId: smallRoid.id,
         playerId: 'local-player-123',
         points: 100, // ROID.POINTS_SMALL
+        cause: 'collision',
       },
     });
   });
@@ -223,6 +226,7 @@ describe('Integration: Roid splitting on collision', () => {
           asteroidId: roid.id,
           playerId: 'local-player-123',
           points: expectedPoints,
+          cause: 'collision',
         },
       });
     });

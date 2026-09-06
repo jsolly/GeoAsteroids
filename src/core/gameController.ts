@@ -1,6 +1,7 @@
+import type { AsteroidData, Position, ShipKitId } from '../../shared-types';
 import { areAllied } from '../../shared/factions';
 import { consumeTickAccumulator } from '../../shared/gameClock';
-import type { AsteroidData, ShipKitId } from '../../shared-types';
+import { playExplosionSound } from '../audio/explosionSound';
 import {
   replaceThrustSources,
   resetThrustSources,
@@ -236,9 +237,16 @@ export class GameController {
   };
 
   private handleServerAsteroidDestroyed = (event: Event): void => {
-    const customEvent = event as CustomEvent<{ asteroidId: string }>;
-    const { asteroidId } = customEvent.detail;
-    logger.debug('GAME', 'Removing server asteroid from local belt', { asteroidId });
+    const customEvent = event as CustomEvent<{
+      asteroidId: string;
+      collabSplit?: boolean;
+      origin?: Position;
+    }>;
+    const { asteroidId, collabSplit, origin } = customEvent.detail;
+    logger.debug('GAME', 'Removing server asteroid from local belt', {
+      asteroidId,
+      collabSplit,
+    });
 
     // Remove the asteroid from the local belt
     if (this.currRoidBelt) {
@@ -246,13 +254,32 @@ export class GameController {
       if (index !== -1) {
         const roid = this.currRoidBelt.roids[index];
         if (roid !== undefined) {
+          if (collabSplit) {
+            playExplosionSound(origin ?? roid.position);
+          }
           // Clear pending destruction flag before removing
           roid.pendingDestruction = false;
           roid.pendingUntilMs = 0;
+          roid.taggedUntil = undefined;
           this.currRoidBelt.roids.splice(index, 1);
         }
       }
     }
+  };
+
+  private handleServerAsteroidTagged = (event: Event): void => {
+    const customEvent = event as CustomEvent<{
+      asteroidId: string;
+      shooterId: string;
+      expiresAt: number;
+    }>;
+    const { asteroidId, expiresAt } = customEvent.detail;
+    const roid = this.currRoidBelt?.roids.find((r) => r.id === asteroidId);
+    if (!roid) {
+      return;
+    }
+    roid.taggedUntil = expiresAt;
+    logger.debug('GAME', 'Server tagged asteroid for collab window', { asteroidId, expiresAt });
   };
 
   private setupServerAsteroidListeners(): void {
@@ -265,6 +292,7 @@ export class GameController {
 
     // Listen for server asteroid destruction events
     window.addEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
+    window.addEventListener('serverAsteroidTagged', this.handleServerAsteroidTagged);
   }
 
   private cleanupServerAsteroidListeners(): void {
@@ -272,6 +300,7 @@ export class GameController {
     window.removeEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
     window.removeEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
     window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
+    window.removeEventListener('serverAsteroidTagged', this.handleServerAsteroidTagged);
   }
 
   /** Drop a pending return-to-menu so Start (or a test) can open a new session. */

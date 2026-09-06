@@ -93,6 +93,15 @@ export class EntityManager {
     return Array.from(this.entities.values()).filter(entity => entity.type === 'human');
   }
 
+  public getEntityBySocket(ws: WebSocket): GameEntity | undefined {
+    for (const entity of this.entities.values()) {
+      if (entity.ws === ws) {
+        return entity;
+      }
+    }
+    return undefined;
+  }
+
   public getBots(): GameEntity[] {
     return Array.from(this.entities.values()).filter(entity => entity.type === 'bot');
   }

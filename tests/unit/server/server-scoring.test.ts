@@ -53,9 +53,12 @@ describe('Server scoring via asteroidDestroyed', () => {
       });
     });
 
-    // Tell server we destroyed that asteroid and should get points
+    // Biggest asteroids need two laser hits from the same ship to finish
+    // without a collab partner. Second hit awards points.
     const points = 20; // matches ROID.POINTS_LARGE
-    ws.send(JSON.stringify({ type: 'asteroidDestroyed', asteroidId, playerId, points }));
+    ws.send(JSON.stringify({ type: 'asteroidDestroyed', asteroidId, playerId, points, cause: 'laser' }));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    ws.send(JSON.stringify({ type: 'asteroidDestroyed', asteroidId, playerId, points, cause: 'laser' }));
 
     // Expect a scoreUpdate reflecting the awarded points
     const updatedScore: number = await new Promise<number>((resolve, reject) => {
@@ -125,13 +128,14 @@ describe('Server scoring via asteroidDestroyed', () => {
     };
     ws.on('message', messageHandler);
 
-    // Simulate the client-side collision: send asteroidDestroyed with large asteroid points
+    // Ship-ram is not a collab laser hit: destroy immediately, no split.
     const expectedPoints = ROID.POINTS_LARGE; // 20 points for large asteroid
     ws.send(JSON.stringify({
       type: 'asteroidDestroyed',
       asteroidId,
       playerId,
-      points: expectedPoints
+      points: expectedPoints,
+      cause: 'collision',
     }));
 
     // Wait for messages to be processed
@@ -163,13 +167,12 @@ describe('Server scoring via asteroidDestroyed', () => {
     expect(asteroidDestruction).toHaveProperty('type', 'asteroidDestroy');
     expect(asteroidDestruction.data).toHaveProperty('asteroidId', asteroidId);
 
-    // Verify that new asteroids were created from splitting
+    // Ramming a biggest asteroid destroys it without a collab split.
     const asteroidCreation = receivedMessages.find(msg =>
       msg?.type === 'asteroidCreateBatch' && msg?.data?.asteroids?.length === 2
     );
-
-    expect(asteroidCreation).toBeDefined();
-    expect(asteroidCreation.data.asteroids).toHaveLength(2);
+    expect(asteroidCreation).toBeUndefined();
+    expect(asteroidDestruction.data.collabSplit).toBe(false);
 
     ws.close();
   });

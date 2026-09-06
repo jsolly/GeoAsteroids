@@ -117,6 +117,20 @@ export interface ServerPlayerData {
   factionId?: SoftFactionId;
 }
 
+/** Server-owned collab tag. Clients must not destroy the roid until asteroidDestroy. */
+export interface AsteroidTaggedEvent {
+  asteroidId: string;
+  shooterId: string;
+  expiresAt: number;
+}
+
+/** Authoritative destroy. `origin` + `collabSplit` are the #443 shockwave hook. */
+export interface AsteroidDestroyEvent {
+  asteroidId: string;
+  collabSplit?: boolean;
+  origin?: Position;
+}
+
 export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];

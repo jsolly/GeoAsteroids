@@ -2,12 +2,18 @@ import { WebSocket } from 'ws';
 import type { AsteroidData, Position, ShipKitId, SoftFactionId } from '../../shared-types';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
+import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import { activateAbilityOnHost, pullHarpoonTarget } from '../../src/entities/ship/shipAbilities';
-import { EntityManager, GameEntity } from './EntityManager';
-import { AsteroidManager } from './AsteroidManager.ts';
-import { RNGService } from './RNGService';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { logger } from '../../setup/serverLogger';
+import {
+  AsteroidManager,
+  type AsteroidHitCause,
+  type AsteroidHitOutcome,
+  type ExpiredCollabHit,
+} from './AsteroidManager.ts';
+import { EntityManager, GameEntity } from './EntityManager';
+import { RNGService } from './RNGService';
 
 export class GameEngine {
   public entityManager: EntityManager;
@@ -19,6 +25,7 @@ export class GameEngine {
   private lastTickAtMs = 0;
   private tickAccumulatorMs = 0;
   private clockPrimed = false;
+  private resolvedCollabHits: ExpiredCollabHit[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -78,6 +85,7 @@ export class GameEngine {
     this.entityManager.updateRespawns();
     this.tickAbilities();
     this.asteroidManager.updateMotion();
+    this.flushExpiredCollabHits();
     if (this.gameTime % 2 === 0) {
       this.entityManager.updateBotMovement();
     }
@@ -170,8 +178,9 @@ export class GameEngine {
 
   // Reset game state when no players are online
   private resetGameState(): void {
-    // Clear all asteroids
+    // Clear all asteroids and pending collab resolutions
     this.asteroidManager.clearAsteroids();
+    this.resolvedCollabHits = [];
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
@@ -210,6 +219,10 @@ export class GameEngine {
 
   public getPlayer(id: string): GameEntity | undefined {
     return this.entityManager.getEntity(id);
+  }
+
+  public getPlayerBySocket(ws: WebSocket): GameEntity | undefined {
+    return this.entityManager.getEntityBySocket(ws);
   }
 
   public getAllPlayers(): GameEntity[] {
@@ -366,21 +379,37 @@ export class GameEngine {
     this.entityManager.scheduleShipRespawn(entity);
   }
 
-  public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {
-    // Use the new destroyAsteroid method that handles splitting
-    const result = this.asteroidManager.destroyAsteroid(asteroidId);
-    if (!result.destroyed) {
-      return { success: false, newAsteroids: [] };
+  public handleAsteroidHit(
+    asteroidId: string,
+    playerId: string,
+    cause: AsteroidHitCause = 'laser',
+    now = Date.now()
+  ): AsteroidHitOutcome {
+    const result =
+      cause === 'collision'
+        ? this.asteroidManager.destroyFromCollision(asteroidId)
+        : this.asteroidManager.registerLaserHit(asteroidId, playerId, now);
+
+    if (result.outcome === 'destroyed' && result.destroyed) {
+      this.awardPoints(playerId, pointsForRoidSize(result.destroyed.size));
     }
 
-    // Award points to the player
-    this.awardPoints(playerId, points);
+    return result;
+  }
 
-    // Return success status and any new asteroids created from splitting
-    return { 
-      success: true, 
-      newAsteroids: result.newAsteroids 
-    };
+  public flushExpiredCollabHits(now = Date.now()): ExpiredCollabHit[] {
+    const expired = this.asteroidManager.expireStaleHits(now);
+    for (const item of expired) {
+      this.awardPoints(item.playerId, item.points);
+      this.resolvedCollabHits.push(item);
+    }
+    return expired;
+  }
+
+  public drainResolvedCollabHits(): ExpiredCollabHit[] {
+    const items = this.resolvedCollabHits;
+    this.resolvedCollabHits = [];
+    return items;
   }
 
   // Game state
@@ -467,7 +496,7 @@ export class GameEngine {
     asteroidId: string,
     playerId: string,
     damage: number,
-    points: number
+    _points: number
   ): { destroyed: boolean; asteroid: AsteroidData | null; newAsteroids: AsteroidData[] } {
     const asteroid = this.asteroidManager.damageAsteroid(asteroidId, damage);
     if (!asteroid) {
@@ -476,8 +505,16 @@ export class GameEngine {
     if (asteroid.health > 0) {
       return { destroyed: false, asteroid, newAsteroids: [] };
     }
-    const result = this.handleAsteroidDestruction(asteroidId, playerId, points);
-    return { destroyed: result.success, asteroid, newAsteroids: result.newAsteroids };
+    // Chip-to-zero is kits coop HP, not the 1s split window.
+    const result = this.asteroidManager.destroyFromCollision(asteroidId);
+    if (result.destroyed) {
+      this.awardPoints(playerId, pointsForRoidSize(result.destroyed.size));
+    }
+    return {
+      destroyed: result.outcome === 'destroyed',
+      asteroid,
+      newAsteroids: result.newAsteroids,
+    };
   }
 
   // Award points to an entity

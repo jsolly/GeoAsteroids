@@ -80,6 +80,7 @@ describe('Integration: Local player roid collisions', () => {
         asteroidId: roid.id,
         playerId: localPlayerId,
         points: 50,
+        cause: 'collision',
       },
     });
   });

@@ -240,6 +240,16 @@ export interface CustomEventMap {
     shipPosition: Position;
     shipRadius: number;
   }>;
+  serverAsteroidTagged: CustomEvent<{
+    asteroidId: string;
+    shooterId: string;
+    expiresAt: number;
+  }>;
+  serverAsteroidDestroyed: CustomEvent<{
+    asteroidId: string;
+    collabSplit?: boolean;
+    origin?: Position;
+  }>;
   botShoot: CustomEvent<{
     laserStart: Position;
     laserDirection: Velocity;
@@ -301,6 +311,9 @@ export interface GameConstants {
     readonly POINTS_LARGE: number;
     readonly POINTS_MEDIUM: number;
     readonly POINTS_SMALL: number;
+    readonly COLLAB_SPLIT_WINDOW_MS: number;
+    readonly COLLAB_SPLIT_MIN_SIZE: number;
+    readonly COLLAB_HIT_DEDUPE_MS: number;
     readonly INITIAL_ROID_COUNT: number;
     readonly MIN_COUNT: number;
     readonly MAX_COUNT: number;

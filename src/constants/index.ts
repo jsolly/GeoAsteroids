@@ -180,6 +180,14 @@ export const ROID = {
   POINTS_MEDIUM: 50,
   POINTS_SMALL: 100,
 
+  // Collaborative split: only the biggest asteroids, and only when two
+  // distinct ships (player or bot) land laser hits within this window.
+  // The server owns the clock, shooter identity, and resolve/expire.
+  COLLAB_SPLIT_WINDOW_MS: 1000,
+  COLLAB_SPLIT_MIN_SIZE: 40,
+  // Same-shooter reports inside this gap are one shot (multi-client echo).
+  COLLAB_HIT_DEDUPE_MS: 100,
+
   // Spawning (can be overridden by DEBUG.ROIDS.INITIAL_COUNT when in debug mode)
   INITIAL_ROID_COUNT: 10,
   MIN_COUNT: 5,

@@ -16,6 +16,7 @@ export interface ServerMessage {
     | 'asteroidCreateBatch'
     | 'asteroidUpdate'
     | 'asteroidDestroy'
+    | 'asteroidTagged'
     | 'botCreated'
     | 'botUpdate'
     | 'botDestroyed'
