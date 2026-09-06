@@ -60,7 +60,9 @@ export function drawScoreOverlay(
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const pickupY = gameStateManager.hasKillMessage() ? layout.killMessageY + 18 : layout.killMessageY;
+    const pickupY = gameStateManager.hasKillMessage()
+      ? layout.killMessageY + 18
+      : layout.killMessageY;
     ctx.fillText(gameStateManager.getPickupMessage(), canvas.width / 2, pickupY);
   }
 

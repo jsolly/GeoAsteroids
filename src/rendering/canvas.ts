@@ -273,7 +273,6 @@ class CanvasManager {
     const localLaserColor = getLaserColor(true);
     const enemyLaserColor = getLaserColor(false);
 
-
     try {
       for (const player of allPlayers) {
         const factionColor = getFactionColor(player.type);
