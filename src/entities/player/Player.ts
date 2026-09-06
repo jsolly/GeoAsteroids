@@ -10,6 +10,7 @@ import {
   applyShipSpawnProtection,
   isServerRespawnActive,
   isSilentHudReset,
+  resolveCombatDeathCause,
 } from '../ship/shipUtils';
 
 export class Player {
@@ -122,6 +123,15 @@ export class Player {
       this.ship.angle = data.angle;
     }
 
+    if (data.deathCause) {
+      this.deathCause = data.deathCause;
+    }
+    const explodeCause = resolveCombatDeathCause(this.deathCause ?? data.deathCause, this.ship);
+    applySharedShipExplodingFlag(this.ship, data.exploding, explodeCause);
+    if (data.exploding === true || data.health === 0) {
+      this.deathCause = explodeCause;
+    }
+
     const skipHudReset = isSilentHudReset(this.lives, this.score, data.lives, data.score);
     if (data.lives !== undefined && !skipHudReset) {
       const prevLives = this.lives;
@@ -131,7 +141,7 @@ export class Player {
           new CustomEvent('playerDied', {
             detail: {
               playerId: this.id,
-              deathCause: this.deathCause ?? data.deathCause ?? 'unknown',
+              deathCause: resolveCombatDeathCause(this.deathCause ?? data.deathCause, this.ship),
               isGameOver: this.lives <= 0,
             },
           })
@@ -141,11 +151,6 @@ export class Player {
     if (data.score !== undefined && !skipHudReset) {
       this.score = data.score;
     }
-    applySharedShipExplodingFlag(
-      this.ship,
-      data.exploding,
-      this.deathCause ?? data.deathCause ?? 'server-damage'
-    );
     // Thrusting is client-owned for the local player (keyboard/mouse input).
     // The server echo lacks thrusting when updates omit it, which flickers the flame.
     if (data.thrusting !== undefined && this.type !== 'local') {
@@ -154,9 +159,6 @@ export class Player {
     if (data.color !== undefined) {
       this.color = data.color;
       this.ship.color = data.color;
-    }
-    if (data.deathCause) {
-      this.deathCause = data.deathCause;
     }
     if (data.health !== undefined) {
       const wasDead = this.ship.health <= 0;

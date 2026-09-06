@@ -11,6 +11,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
 import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
@@ -251,7 +252,8 @@ export class GameController {
   }
 
   gameOver(deathCause?: string): void {
-    const gameOverText = deathCause ? `Game Over: You were killed by ${deathCause}` : 'Game Over';
+    const killer = formatDeathCauseForOverlay(deathCause);
+    const gameOverText = killer ? `Game Over: You were killed by ${killer}` : 'Game Over';
     this.gameStateManager.updateTextProperties(gameOverText, 1.0);
 
     // Clean up server asteroid listeners to prevent memory leaks

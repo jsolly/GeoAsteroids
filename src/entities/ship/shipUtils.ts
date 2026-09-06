@@ -1,5 +1,6 @@
 import type { Position } from '../../../shared-types';
 import { DAMAGE, GAME, SHIP } from '../../constants';
+import { checkBoundaryCollision } from '../../physics/collision/collisionDetection';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
 /** Minimal ship shape shared by local players, remotes, and bots. */
@@ -96,6 +97,34 @@ export function applySharedShipRespawnCue(
   ) {
     applyShipSpawnProtection(ship);
   }
+}
+
+/** Prefer a known cause; a hull past the arena edge is a wall death. */
+export function resolveCombatDeathCause(
+  known: string | undefined,
+  ship?: { position: Position; r: number }
+): string {
+  if (known && known !== 'unknown') {
+    return known;
+  }
+  if (ship && checkBoundaryCollision(ship.position, ship.r)) {
+    return 'boundary';
+  }
+  return known ?? 'unknown';
+}
+
+/** Overlay copy. Never print "unknown". */
+export function formatDeathCauseForOverlay(cause?: string): string | undefined {
+  if (!cause || cause === 'unknown' || cause === 'server-damage') {
+    return undefined;
+  }
+  if (cause === 'boundary') {
+    return 'the arena wall';
+  }
+  if (cause === 'asteroid') {
+    return 'an asteroid';
+  }
+  return cause;
 }
 
 /** Instant-kill wall contact: flash + shared takeDamage/explode path. */
