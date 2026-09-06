@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import type { AsteroidData, Position } from '../../shared-types';
 import { SHIP } from '../../src/constants';
+import { framesToMs, SHOCKWAVE_WAVES, type ShockwaveWaveSpec } from '../../src/physics/shockwave';
 import { logger } from '../../setup/serverLogger';
 import {
   AsteroidManager,
@@ -11,6 +12,13 @@ import {
 import { EntityManager, GameEntity } from './EntityManager';
 import { RNGService } from './RNGService';
 
+type PendingShockwave = {
+  origin: Position;
+  radius: number;
+  impulse: number;
+  fireAt: number;
+};
+
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
@@ -18,6 +26,7 @@ export class GameEngine {
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
+  private pendingShockwaves: PendingShockwave[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -45,6 +54,7 @@ export class GameEngine {
         this.entityManager.updateRespawns();
         // Authoritative asteroid field — clients render these positions from gameState.
         this.asteroidManager.updateMotion();
+        this.flushDueShockwaves();
         
         // Update bot movement at reduced frequency for better performance
         // Update every 2 frames (30 FPS instead of 60 FPS)
@@ -133,6 +143,7 @@ export class GameEngine {
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
+    this.pendingShockwaves = [];
 
     // Keep gameTime monotonic for the process lifetime. Zeroing it when the
     // last player leaves makes /health.world.gameTime look frozen on prod
@@ -324,6 +335,49 @@ export class GameEngine {
       this.awardPoints(item.playerId, item.points);
     }
     return expired;
+  }
+
+  public queueCollabShockwave(origin: Position, now = Date.now()): void {
+    const source = { x: origin.x, y: origin.y };
+    for (const wave of SHOCKWAVE_WAVES) {
+      if (wave.delayFrames <= 0) {
+        this.applyShockwaveWave(source, wave);
+      } else {
+        this.pendingShockwaves.push({
+          origin: source,
+          radius: wave.radius,
+          impulse: wave.impulse,
+          fireAt: now + framesToMs(wave.delayFrames),
+        });
+      }
+    }
+  }
+
+  public flushDueShockwaves(now = Date.now()): number {
+    let applied = 0;
+    const remaining: PendingShockwave[] = [];
+    for (const pending of this.pendingShockwaves) {
+      if (now >= pending.fireAt) {
+        this.applyShockwaveWave(pending.origin, pending);
+        applied += 1;
+      } else {
+        remaining.push(pending);
+      }
+    }
+    this.pendingShockwaves = remaining;
+    return applied;
+  }
+
+  public getPendingShockwaveCount(): number {
+    return this.pendingShockwaves.length;
+  }
+
+  private applyShockwaveWave(
+    origin: Position,
+    wave: Pick<ShockwaveWaveSpec, 'radius' | 'impulse'>
+  ): void {
+    this.asteroidManager.applyRadialImpulse(origin, wave.radius, wave.impulse);
+    this.entityManager.applyRadialImpulse(origin, wave.radius, wave.impulse);
   }
 
   // Game state

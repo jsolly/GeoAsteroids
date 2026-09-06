@@ -1,6 +1,7 @@
 import type { AsteroidData, Position } from '../../shared-types';
 import { DEBUG, ROID } from '../../src/constants';
 import { stepAsteroidPosition } from '../../src/physics/asteroidMotion';
+import { applyShockwaveToBody } from '../../src/physics/shockwave';
 import { logger } from '../../setup/serverLogger';
 import { RNGService } from './RNGService';
 
@@ -109,6 +110,27 @@ export class AsteroidManager {
       asteroid.position = stepAsteroidPosition(asteroid.position, asteroid.velocity);
       asteroid.rotation += asteroid.angularVelocity;
     }
+  }
+
+  /** Radial kick from a collab-split shockwave. Smaller roids move more. */
+  public applyRadialImpulse(
+    origin: Position,
+    radius: number,
+    impulse: number
+  ): number {
+    let affected = 0;
+    for (const asteroid of this.asteroids.values()) {
+      const next = applyShockwaveToBody(
+        { position: asteroid.position, velocity: asteroid.velocity, size: asteroid.size },
+        origin,
+        { radius, impulse }
+      );
+      if (next) {
+        asteroid.velocity = next;
+        affected += 1;
+      }
+    }
+    return affected;
   }
 
   public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {

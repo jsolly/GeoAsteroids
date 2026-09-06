@@ -96,6 +96,13 @@ export function planPositionalPlayback(
   };
 }
 
+export function planBoundPlayback(
+  sourcePosition: Position | undefined,
+  options?: { requireViewport?: boolean }
+): PlaybackPlan {
+  return planPositionalPlayback(sourcePosition, getListenerPosition(), getViewportSize(), options);
+}
+
 export function playWorldSound(
   sound: Sound,
   position?: Position,

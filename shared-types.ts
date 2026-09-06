@@ -98,6 +98,11 @@ export interface ServerPlayerData {
   respawnTimer?: number;
 }
 
+export interface ShockwaveEvent {
+  origin: Position;
+  asteroidId?: string;
+}
+
 export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];

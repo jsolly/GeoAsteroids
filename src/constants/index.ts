@@ -196,6 +196,34 @@ export const EMP = {
 } as const;
 
 // ============================================================================
+// COLLAB SPLIT SHOCKWAVE
+// ============================================================================
+// Double phosphor ring + radial impulse when a biggest asteroid splits.
+// First wave is small/fast; second is large/impactful. Size scale is inverse
+// so crumbs and ships get shoved harder than remaining big rocks.
+export const SHOCKWAVE = {
+  REFERENCE_SIZE: 25,
+  MIN_SIZE: 8,
+  MIN_SIZE_SCALE: 0.28,
+  MAX_SIZE_SCALE: 2.6,
+  SIZE_EXPONENT: 1.2,
+  FAST: {
+    delayFrames: 0,
+    durationFrames: 8,
+    radius: 150,
+    impulse: 3.2,
+    strokeWidth: 1.25,
+  },
+  HEAVY: {
+    delayFrames: 7,
+    durationFrames: 26,
+    radius: 400,
+    impulse: 7.0,
+    strokeWidth: 2.25,
+  },
+} as const;
+
+// ============================================================================
 // AUDIO CONFIGURATION
 // ============================================================================
 export const AUDIO = {

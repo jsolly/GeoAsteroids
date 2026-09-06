@@ -403,6 +403,14 @@ export class MessageHandler {
 
       this.broadcaster.broadcastAsteroidDestruction(data.asteroidId, { collabSplit: result.split });
 
+      if (result.split && result.destroyed) {
+        this.gameEngine.queueCollabShockwave(result.destroyed.position);
+        this.broadcaster.broadcastShockwave({
+          origin: result.destroyed.position,
+          asteroidId: result.destroyed.id,
+        });
+      }
+
       if (result.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
       }

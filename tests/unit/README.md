@@ -30,6 +30,8 @@ Tests for game systems and mechanics:
 - **minimap.test.ts** - Tests minimap system
 - **respawn.test.ts** - Tests respawn system
 - **scoring.test.ts** - Tests scoring system
+- **shockwaveImpulse.test.ts** - Inverse-size radial kick for collab-split waves
+- **shockwaveVisual.test.ts** - Fast then heavy phosphor ring timing
 
 ### `/server/`
 
@@ -40,6 +42,7 @@ Tests for server-side functionality:
 - **remote-player-respawn.test.ts** - Tests remote player respawn system
 - **server-scoring.test.ts** - Tests server-side scoring system
 - **collaborative-asteroid-split.test.ts** - Two players hit a big roid within 1s → split
+- **collab-split-shockwave.test.ts** - Collab split broadcasts a double shockwave and shoves crumbs harder
 
 ### `/utils/`
 
