@@ -79,7 +79,11 @@ function farthestReach(roids: readonly PlayfieldRock[], ship: Position): number 
   return maxDist;
 }
 
-function fitFarthestRock(roids: readonly PlayfieldRock[], ship: Position, canvas: PlayfieldSize): number {
+function fitFarthestRock(
+  roids: readonly PlayfieldRock[],
+  ship: Position,
+  canvas: PlayfieldSize
+): number {
   const inset = Math.min(canvas.width, canvas.height) / 2 - 24;
   if (inset <= 0) {
     return 1;
