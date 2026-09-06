@@ -1,11 +1,27 @@
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
-import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
 
 import type { Ship } from './Ship';
+
+const shipTriangle = {
+  nose: { x: 0, y: 0 },
+  rearLeft: { x: 0, y: 0 },
+  rearRight: { x: 0, y: 0 },
+};
+
+const thrusterGeom = {
+  rearCenter: { x: 0, y: 0 },
+  flameTip: { x: 0, y: 0 },
+  leftFlame: { x: 0, y: 0 },
+  rightFlame: { x: 0, y: 0 },
+};
+
+const laserScreen = { x: 0, y: 0 };
+const rotA = { x: 0, y: 0 };
+const rotB = { x: 0, y: 0 };
 
 // Helper function to calculate ship triangle points for consistent ship rendering
 export function calculateShipTrianglePoints(
@@ -19,20 +35,13 @@ export function calculateShipTrianglePoints(
   rearRight: { x: number; y: number };
 } {
   // Create a more isosceles triangle shape for better ship appearance
-  const nose = {
-    x: centerX + radius * Math.cos(angle), // Pointed nose
-    y: centerY - radius * Math.sin(angle),
-  };
-  const rearLeft = {
-    x: centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle), // Wider back
-    y: centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle),
-  };
-  const rearRight = {
-    x: centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle), // Wider back
-    y: centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle),
-  };
-
-  return { nose, rearLeft, rearRight };
+  shipTriangle.nose.x = centerX + radius * Math.cos(angle);
+  shipTriangle.nose.y = centerY - radius * Math.sin(angle);
+  shipTriangle.rearLeft.x = centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle);
+  shipTriangle.rearLeft.y = centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle);
+  shipTriangle.rearRight.x = centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle);
+  shipTriangle.rearRight.y = centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle);
+  return shipTriangle;
 }
 
 // Helper function to draw a targeting line extending from the ship
@@ -84,29 +93,24 @@ export function drawGenericThruster(
   }
 
   // The hull's rear edge sits 0.8r behind centre; the trail is an open V hanging off it.
-  const rearCenter = {
-    x: x - radius * 0.8 * Math.cos(angle),
-    y: y + radius * 0.8 * Math.sin(angle),
-  };
+  const rearCenter = thrusterGeom.rearCenter;
+  rearCenter.x = x - radius * 0.8 * Math.cos(angle);
+  rearCenter.y = y + radius * 0.8 * Math.sin(angle);
 
   const flicker = Math.floor(performance.now() / VISUAL.THRUSTER_FLICKER_MS) % 2 === 0;
   const lengthRatio = flicker ? VISUAL.THRUSTER_LENGTH_RATIO : VISUAL.THRUSTER_FLICKER_RATIO;
   const flameLength = radius * lengthRatio;
   const halfWidth = radius * 0.2;
-  const flameTip = {
-    x: rearCenter.x - Math.cos(angle) * flameLength,
-    y: rearCenter.y + Math.sin(angle) * flameLength,
-  };
-  const leftFlame = {
-    x: rearCenter.x + Math.sin(angle) * halfWidth,
-    y: rearCenter.y + Math.cos(angle) * halfWidth,
-  };
-  const rightFlame = {
-    x: rearCenter.x - Math.sin(angle) * halfWidth,
-    y: rearCenter.y - Math.cos(angle) * halfWidth,
-  };
+  const flameTip = thrusterGeom.flameTip;
+  flameTip.x = rearCenter.x - Math.cos(angle) * flameLength;
+  flameTip.y = rearCenter.y + Math.sin(angle) * flameLength;
+  const leftFlame = thrusterGeom.leftFlame;
+  leftFlame.x = rearCenter.x + Math.sin(angle) * halfWidth;
+  leftFlame.y = rearCenter.y + Math.cos(angle) * halfWidth;
+  const rightFlame = thrusterGeom.rightFlame;
+  rightFlame.x = rearCenter.x - Math.sin(angle) * halfWidth;
+  rightFlame.y = rearCenter.y - Math.cos(angle) * halfWidth;
 
-  ctx.save();
   ctx.shadowColor = color;
   ctx.shadowBlur = VISUAL.THRUSTER_GLOW;
   ctx.strokeStyle = color;
@@ -117,7 +121,7 @@ export function drawGenericThruster(
   ctx.lineTo(flameTip.x, flameTip.y);
   ctx.lineTo(rightFlame.x, rightFlame.y);
   ctx.stroke();
-  ctx.restore();
+  ctx.shadowBlur = 0;
 }
 
 export function drawThruster(ship: Ship, color: string = ship.color): void {
@@ -126,34 +130,8 @@ export function drawThruster(ship: Ship, color: string = ship.color): void {
     return;
   }
 
-  logger.debug('THRUSTER', 'drawThruster called', {
-    exploding: ship.exploding,
-    blinkOn: ship.blinkOn,
-    thrusting: ship.thrusting,
-    shipId: ship.id,
-    shipPosition: ship.position,
-    shipAngle: ship.angle,
-    shipRadius: ship.r,
-  });
-
   if (!ship.exploding && ship.thrusting) {
-    // Ship is always drawn at screen center (viewport transformation)
-    const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
-
-    logger.debug('THRUSTER', 'Drawing thruster at screen center', {
-      x: screenCenter.x,
-      y: screenCenter.y,
-      angle: ship.angle,
-      radius: ship.r,
-    });
-
-    // Use the generic thruster function
-    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r, color);
-  } else {
-    logger.debug('THRUSTER', 'Thruster not drawn - conditions not met', {
-      exploding: ship.exploding,
-      thrusting: ship.thrusting,
-    });
+    drawGenericThruster(cvs.width / 2, cvs.height / 2, ship.angle, ship.r, color);
   }
 }
 
@@ -168,11 +146,12 @@ export function drawThrusterAtPosition(
   }
 
   if (!ship.exploding && ship.thrusting) {
-    // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
     const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
     const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
-
-    // Use the generic thruster function at the calculated screen position
+    const cull = ship.r * 3;
+    if (screenX < -cull || screenY < -cull || screenX > cvs.width + cull || screenY > cvs.height + cull) {
+      return;
+    }
     drawGenericThruster(screenX, screenY, ship.angle, ship.r, color);
   }
 }
@@ -192,13 +171,11 @@ export function drawPlayerName(
 
   const nameY = y + shipRadius + 14;
 
-  ctx.save();
   ctx.fillStyle = hexToRgba(color, 0.7);
   ctx.font = '11px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(name, x, nameY);
-  ctx.restore();
 }
 
 // Classic vector break-up: the three hull edges drift apart along their outward normals and fade,
@@ -239,15 +216,13 @@ function drawVectorExplosion(
     const spin = t * 0.6;
     const cos = Math.cos(spin);
     const sin = Math.sin(spin);
-    const rot = (p: { x: number; y: number }) => ({
-      x: midX + dx + (p.x - midX) * cos - (p.y - midY) * sin,
-      y: midY + dy + (p.x - midX) * sin + (p.y - midY) * cos,
-    });
-    const a2 = rot(a);
-    const b2 = rot(b);
+    rotA.x = midX + dx + (a.x - midX) * cos - (a.y - midY) * sin;
+    rotA.y = midY + dy + (a.x - midX) * sin + (a.y - midY) * cos;
+    rotB.x = midX + dx + (b.x - midX) * cos - (b.y - midY) * sin;
+    rotB.y = midY + dy + (b.x - midX) * sin + (b.y - midY) * cos;
     ctx.beginPath();
-    ctx.moveTo(a2.x, a2.y);
-    ctx.lineTo(b2.x, b2.y);
+    ctx.moveTo(rotA.x, rotA.y);
+    ctx.lineTo(rotB.x, rotB.y);
     ctx.stroke();
   }
 
@@ -274,11 +249,10 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
     return;
   }
 
-  const screenCenter = new Point(cvs.width / 2, cvs.height / 2);
   drawVectorExplosion(
     ctx,
-    screenCenter.x,
-    screenCenter.y,
+    cvs.width / 2,
+    cvs.height / 2,
     ship.r,
     ship.angle,
     explosionProgress(ship),
@@ -321,14 +295,27 @@ export function drawLasers(
   }
 
   const boltColor = color || PALETTE.LASER_LOCAL;
+  const cvs = canvasManager.getCanvas();
+  const viewW = cvs?.width ?? Number.POSITIVE_INFINITY;
+  const viewH = cvs?.height ?? Number.POSITIVE_INFINITY;
+  const cullPad = VISUAL.LASER_LENGTH + VISUAL.LASER_EXPLODE_RADIUS;
+
+  ctx.shadowColor = boltColor;
+  ctx.shadowBlur = VISUAL.LASER_GLOW;
+  ctx.lineCap = 'butt';
 
   for (const laser of ship.lasers) {
     const referencePos = viewerShipPosition || ship.position;
-    const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
+    const screenPos = canvasManager.worldToScreenInto(laserScreen, laser.position, referencePos);
+    if (
+      screenPos.x < -cullPad ||
+      screenPos.y < -cullPad ||
+      screenPos.x > viewW + cullPad ||
+      screenPos.y > viewH + cullPad
+    ) {
+      continue;
+    }
 
-    ctx.save();
-    ctx.shadowColor = boltColor;
-    ctx.shadowBlur = VISUAL.LASER_GLOW;
     if (laser.explodeTime === 0) {
       // Classic Asteroids shot: a short hard-edged segment centred on the laser position,
       // aligned to its heading. Butt caps keep it a crisp vector dash, not a bloomed pill.
@@ -337,7 +324,6 @@ export function drawLasers(
       const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * (VISUAL.LASER_LENGTH / 2);
       ctx.strokeStyle = boltColor;
       ctx.lineWidth = VISUAL.LASER_STROKE_WIDTH;
-      ctx.lineCap = 'butt';
       ctx.beginPath();
       ctx.moveTo(screenPos.x - halfX, screenPos.y - halfY);
       ctx.lineTo(screenPos.x + halfX, screenPos.y + halfY);
@@ -352,8 +338,9 @@ export function drawLasers(
       ctx.arc(screenPos.x, screenPos.y, ringRadius, 0, Math.PI * 2, false);
       ctx.stroke();
     }
-    ctx.restore();
   }
+
+  ctx.shadowBlur = 0;
 }
 
 export function drawEmpPulse(ship: Ship, empRadius: number, empAlpha: number): void {
@@ -422,6 +409,11 @@ export function drawShipAtPosition(
   const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
   const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
 
+  const cull = ship.r * 3;
+  if (screenX < -cull || screenY < -cull || screenX > cvs.width + cull || screenY > cvs.height + cull) {
+    return;
+  }
+
   // Use ship's own color or provided color
   const shipColor = color || ship.color;
 
@@ -433,7 +425,6 @@ export function drawShipAtPosition(
     ship.angle
   );
 
-  ctx.save();
   ctx.strokeStyle = shipColor;
   ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
   ctx.shadowColor = shipColor;
@@ -444,7 +435,7 @@ export function drawShipAtPosition(
   ctx.lineTo(rearRight.x, rearRight.y);
   ctx.closePath();
   ctx.stroke();
-  ctx.restore();
+  ctx.shadowBlur = 0;
 
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY);
 

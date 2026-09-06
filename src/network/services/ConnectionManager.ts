@@ -19,7 +19,12 @@ import {
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
 } from './connectionHealth';
-import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
+import { PlayerListCache } from './playerListCache';
+import {
+  bindPageHideDisconnect,
+  fillSnapshotEntityIds,
+  pruneStaleRemotePlayers,
+} from './playerPresence';
 
 export interface ConnectionState {
   isConnected: boolean;
@@ -36,6 +41,14 @@ export class ConnectionManager {
   private allPlayers: Map<string, Player> = new Map();
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
   private hasInitializedAsteroidsForConnection = false;
+  private readonly playerListCache = new PlayerListCache<Player>();
+  private readonly snapshotEntityIds = new Set<string>();
+  private readonly pingPayload = { type: 'ping', timestamp: 0 };
+  private readonly updateEnvelope: ClientMessage = {
+    type: 'update',
+    data: {} as PlayerUpdate,
+    timestamp: 0,
+  };
 
   // Heartbeat / half-open-socket detection (see connectionHealth.ts).
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -176,7 +189,8 @@ export class ConnectionManager {
     }
 
     try {
-      socket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+      this.pingPayload.timestamp = Date.now();
+      socket.send(JSON.stringify(this.pingPayload));
     } catch {
       // A throwing send on an OPEN socket means it is broken; stale check closes it.
     }
@@ -231,11 +245,22 @@ export class ConnectionManager {
   }
 
   getAllPlayers(): Player[] {
-    return Array.from(this.allPlayers.values());
+    return this.playerListCache.allPlayers(this.allPlayers);
   }
 
   getRemotePlayers(): Player[] {
-    return Array.from(this.allPlayers.values()).filter((p) => p.type === 'remote');
+    return this.playerListCache.remotePlayers(this.allPlayers);
+  }
+
+  private rememberPlayer(id: string, player: Player): void {
+    this.allPlayers.set(id, player);
+    this.playerListCache.invalidate();
+  }
+
+  private forgetPlayer(id: string): void {
+    if (this.allPlayers.delete(id)) {
+      this.playerListCache.invalidate();
+    }
   }
 
   getPlayer(playerId: string): Player | undefined {
@@ -248,13 +273,9 @@ export class ConnectionManager {
       return;
     }
 
-    const message: ClientMessage = {
-      type: 'update',
-      data: playerState,
-      timestamp: Date.now(),
-    };
-
-    this.state.socket.send(JSON.stringify(message));
+    this.updateEnvelope.data = playerState;
+    this.updateEnvelope.timestamp = Date.now();
+    this.state.socket.send(JSON.stringify(this.updateEnvelope));
   }
 
   // Send shoot event to server
@@ -452,6 +473,9 @@ export class ConnectionManager {
   private handleGameState(data: ServerGameState): void {
     // Update local game state from server using unified entity system
     if (data.entities) {
+      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+      fillSnapshotEntityIds(data.entities, this.snapshotEntityIds);
+
       // Update entities in place - no clearing to prevent bot disappearance!
       for (const entityData of data.entities) {
         const isLocalPlayer =
@@ -466,7 +490,6 @@ export class ConnectionManager {
             // lives, respawn) flows into the same object the game loop renders,
             // collides, and attributes damage with. Align its id to the
             // server-assigned id.
-            const localPlayer = PlayerManager.getInstance().getLocalPlayer();
             if (localPlayer) {
               localPlayer.id = entityData.id;
               if (this.localPlayerName) {
@@ -485,50 +508,31 @@ export class ConnectionManager {
             });
           }
 
-          this.allPlayers.set(entityData.id, entity);
-        } else if (isLocalPlayer) {
-          const localPlayer = PlayerManager.getInstance().getLocalPlayer();
-          if (localPlayer && entity !== localPlayer) {
-            this.allPlayers.delete(entityData.id);
-            localPlayer.id = entityData.id;
-            if (this.localPlayerName) {
-              localPlayer.name = this.localPlayerName;
-            }
-            entity = localPlayer;
-            this.allPlayers.set(entityData.id, entity);
+          this.rememberPlayer(entityData.id, entity);
+        } else if (isLocalPlayer && localPlayer && entity !== localPlayer) {
+          this.allPlayers.delete(entityData.id);
+          localPlayer.id = entityData.id;
+          if (this.localPlayerName) {
+            localPlayer.name = this.localPlayerName;
           }
+          entity = localPlayer;
+          this.rememberPlayer(entityData.id, entity);
         }
 
-        const serverSnapshot = {
-          position: entityData.position,
-          velocity: entityData.velocity,
-          angle: entityData.angle,
-          lives: entityData.lives,
-          score: entityData.score,
-          exploding: entityData.exploding,
-          thrusting: entityData.thrusting,
-          color: entityData.color,
-          health: entityData.health,
-          maxHealth: entityData.maxHealth,
-          respawnTimer: entityData.respawnTimer,
-          spawnProtectionTimer: entityData.spawnProtectionTimer,
-        };
-        entity.updateFromServer(serverSnapshot);
+        // Apply the parsed entity directly — no per-tick snapshot wrapper.
+        entity.updateFromServer(entityData);
 
-        if (isLocalPlayer) {
-          const localPlayer = PlayerManager.getInstance().getLocalPlayer();
-          if (localPlayer && localPlayer !== entity) {
-            localPlayer.updateFromServer(serverSnapshot);
-          }
+        if (isLocalPlayer && localPlayer && localPlayer !== entity) {
+          localPlayer.updateFromServer(entityData);
         }
       }
 
       // Server never sends playerLeft; drop remotes that vanished from the
       // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
-      const snapshotIds = new Set(data.entities.map((entity) => entity.id));
-      for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
-        this.allPlayers.delete(id);
-        logger.info('NETWORK', 'Removed departed remote player', { id });
+      const removed = pruneStaleRemotePlayers(this.allPlayers, this.snapshotEntityIds);
+      if (removed > 0) {
+        this.playerListCache.invalidate();
+        logger.info('NETWORK', 'Removed departed remote players', { count: removed });
       }
     }
 
@@ -573,7 +577,7 @@ export class ConnectionManager {
   private handlePlayerLeft(data: PlayerLeave): void {
     logger.info('NETWORK', 'Player left', data as unknown as Record<string, unknown>);
     if (data.id) {
-      this.allPlayers.delete(data.id);
+      this.forgetPlayer(data.id);
     }
   }
 
@@ -653,7 +657,7 @@ export class ConnectionManager {
     logger.debug('NETWORK', 'Bot destroyed', { botId: data.botId });
 
     if (data.botId) {
-      this.allPlayers.delete(data.botId);
+      this.forgetPlayer(data.botId);
     }
   }
 
@@ -724,7 +728,7 @@ export class ConnectionManager {
     if (!targetPlayer) {
       if (isLocalTarget && localPlayer) {
         targetPlayer = localPlayer;
-        this.allPlayers.set(data.targetPlayerId, localPlayer);
+        this.rememberPlayer(data.targetPlayerId, localPlayer);
       }
     }
     if (!targetPlayer) {

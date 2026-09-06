@@ -14,21 +14,36 @@ export function getRoidStrokeWidth(radius: number): number {
   return VISUAL.ROID_STROKE_SMALL;
 }
 
+const roidScreen = { x: 0, y: 0 };
+
 export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
   if (!ctx) {
     return;
   }
 
+  const viewW = cvs?.width ?? Number.POSITIVE_INFINITY;
+  const viewH = cvs?.height ?? Number.POSITIVE_INFINITY;
+
+  ctx.strokeStyle = PALETTE.ROID;
+  ctx.shadowColor = PALETTE.ROID;
+  ctx.shadowBlur = VISUAL.ROID_GLOW;
+
   for (const roid of roids) {
-    ctx.strokeStyle = PALETTE.ROID;
-    ctx.lineWidth = getRoidStrokeWidth(roid.r);
-    ctx.shadowColor = PALETTE.ROID;
-    ctx.shadowBlur = Math.min(ctx.lineWidth, VISUAL.ROID_GLOW);
-
-    const screenPos = canvasManager.worldToScreen(roid.position, ship.position);
-
+    const screenPos = canvasManager.worldToScreenInto(roidScreen, roid.position, ship.position);
     const r = roid.r;
+    if (
+      screenPos.x < -r ||
+      screenPos.y < -r ||
+      screenPos.x > viewW + r ||
+      screenPos.y > viewH + r
+    ) {
+      continue;
+    }
+
+    ctx.lineWidth = getRoidStrokeWidth(r);
+
     const angle = roid.angle;
     const vertices = roid.vertices;
     const offsets = roid.offsets;

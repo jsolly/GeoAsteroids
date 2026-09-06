@@ -6,6 +6,11 @@ import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
 import { applyShipSpawnProtection } from '../ship/shipUtils';
 
+function copyVec2(dest: { x: number; y: number }, src: { x: number; y: number }): void {
+  dest.x = src.x;
+  dest.y = src.y;
+}
+
 export class Player {
   id: string;
   name: string;
@@ -105,10 +110,10 @@ export class Player {
     const acceptServerTransform = !isLocal || this.adoptServerPosition;
 
     if (data.position && acceptServerTransform) {
-      this.ship.position = data.position;
+      copyVec2(this.ship.position, data.position);
     }
     if (data.velocity && acceptServerTransform) {
-      this.ship.velocity = data.velocity;
+      copyVec2(this.ship.velocity, data.velocity);
     }
     if (data.angle !== undefined && acceptServerTransform) {
       this.ship.angle = data.angle;

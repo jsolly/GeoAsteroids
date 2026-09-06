@@ -568,10 +568,9 @@ export class GameController {
 
     // Update all bot ships
     const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
-    for (const botPlayer of botPlayers) {
-      if (botPlayer.ship) {
-        botPlayer.ship.update();
+    for (const player of allPlayers) {
+      if (player.type === 'bot' && player.ship) {
+        player.ship.update();
       }
     }
 
@@ -690,10 +689,12 @@ export class GameController {
 
     // Get all players (including bots) from network manager
     const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
 
     // Check asteroid collisions for each bot
-    for (const botPlayer of botPlayers) {
+    for (const botPlayer of allPlayers) {
+      if (botPlayer.type !== 'bot') {
+        continue;
+      }
       if (botPlayer.ship && !botPlayer.ship.exploding) {
         logger.debug('COLLISION', 'Checking bot-asteroid collisions', {
           botId: botPlayer.id,
@@ -715,10 +716,9 @@ export class GameController {
 
     // Use NetworkManager's player list which has the correct names from server
     const allPlayers = this.networkManager.getAllPlayers();
-    const playersToRender = [...allPlayers];
-    if (!playersToRender.includes(currPlayer)) {
-      playersToRender.unshift(currPlayer);
-    }
+    const playersToRender = allPlayers.includes(currPlayer)
+      ? allPlayers
+      : [currPlayer, ...allPlayers];
     const currScore = currPlayer.score;
     const textAlpha = this.gameStateManager.getTextAlpha();
     const text = this.gameStateManager.getText();

@@ -17,7 +17,15 @@ export function getLaserColor(isLocal: boolean): string {
   return isLocal ? PALETTE.LASER_LOCAL : PALETTE.LASER_ENEMY;
 }
 
+const rgbaCache = new Map<string, string>();
+
 export function hexToRgba(hex: string, alpha: number): string {
+  const key = `${hex}|${alpha}`;
+  const cached = rgbaCache.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const raw = hex.startsWith('#') ? hex.slice(1) : hex;
   const normalized =
     raw.length === 3
@@ -29,7 +37,9 @@ export function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(normalized.slice(0, 2), 16);
   const g = parseInt(normalized.slice(2, 4), 16);
   const b = parseInt(normalized.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  const value = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  rgbaCache.set(key, value);
+  return value;
 }
 
 /** @deprecated Playfield ships use getFactionColor(type). Kept for server join fallbacks. */

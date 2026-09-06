@@ -8,6 +8,7 @@ export interface Star {
   x: number;
   y: number;
   alpha: number;
+  fillStyle: string;
 }
 
 // mulberry32: tiny deterministic PRNG so the sky is identical on every client and every frame.
@@ -38,7 +39,13 @@ export function generateStarfield(
     if (x * x + y * y > radius * radius) {
       continue;
     }
-    stars.push({ x: cx + x, y: cy + y, alpha: VISUAL.STAR_ALPHA_MIN + rng() * alphaRange });
+    const alpha = VISUAL.STAR_ALPHA_MIN + rng() * alphaRange;
+    stars.push({
+      x: cx + x,
+      y: cy + y,
+      alpha,
+      fillStyle: hexToRgba(PALETTE.STARS, alpha),
+    });
   }
   return stars;
 }
@@ -70,15 +77,13 @@ export function drawStarfield(shipPosition: Position): void {
   const offsetX = cvs.width / 2 - shipPosition.x;
   const offsetY = cvs.height / 2 - shipPosition.y;
 
-  ctx.save();
   for (const star of getStars()) {
     const sx = star.x + offsetX;
     const sy = star.y + offsetY;
     if (sx < -size || sy < -size || sx > cvs.width + size || sy > cvs.height + size) {
       continue;
     }
-    ctx.fillStyle = hexToRgba(PALETTE.STARS, star.alpha);
-    ctx.fillRect(Math.round(sx), Math.round(sy), size, size);
+    ctx.fillStyle = star.fillStyle;
+    ctx.fillRect((sx + 0.5) | 0, (sy + 0.5) | 0, size, size);
   }
-  ctx.restore();
 }

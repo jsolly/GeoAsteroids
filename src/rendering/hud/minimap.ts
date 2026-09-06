@@ -1,11 +1,13 @@
 import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
-import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
+import { NetworkManager } from '../../network/networkManager';
 
 import { getGameBoundary } from '../../physics/boundary';
 import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
+
+const miniMapPoint = { x: 0, y: 0 };
 
 type CircleBoundary = { cx: number; cy: number; radius: number };
 
@@ -32,7 +34,9 @@ function projectToMiniMap(
   ) {
     return null;
   }
-  return { x, y };
+  miniMapPoint.x = x;
+  miniMapPoint.y = y;
+  return miniMapPoint;
 }
 
 export function drawMiniMap(
@@ -71,11 +75,10 @@ export function drawMiniMap(
 
   try {
     const gameController = GameController.getInstance();
-    const playerNetwork = PlayerNetwork.getInstance();
-    const otherPlayers = playerNetwork.getOtherPlayers();
+    const otherPlayers = NetworkManager.getInstance().getAllPlayers();
 
     for (const player of otherPlayers) {
-      if (player.ship.exploding) {
+      if (player.type === 'local' || player.ship.exploding) {
         continue;
       }
       const color = getFactionColor(player.type === 'bot' ? 'bot' : 'remote');

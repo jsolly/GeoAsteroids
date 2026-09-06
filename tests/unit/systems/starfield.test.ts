@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
 
-import { VISUAL } from '../../../src/constants';
+import { PALETTE, VISUAL } from '../../../src/constants';
 import { getGameBoundary } from '../../../src/physics/boundary';
 import { generateStarfield } from '../../../src/rendering/starfield';
+import { hexToRgba } from '../../../src/utils/colorUtils';
 
 test('sky is identical every time it is generated so stars never twinkle or drift', () => {
   const a = generateStarfield(200, 1000, VISUAL.STAR_SEED);
@@ -18,6 +19,7 @@ test('every star sits inside the world boundary', () => {
     expect(Math.hypot(star.x - cx, star.y - cy)).toBeLessThanOrEqual(radius);
     expect(star.alpha).toBeGreaterThanOrEqual(VISUAL.STAR_ALPHA_MIN);
     expect(star.alpha).toBeLessThanOrEqual(VISUAL.STAR_ALPHA_MAX);
+    expect(star.fillStyle).toBe(hexToRgba(PALETTE.STARS, star.alpha));
   }
 });
 
