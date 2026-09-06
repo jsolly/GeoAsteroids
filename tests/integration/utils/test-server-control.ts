@@ -7,6 +7,7 @@ export type ServerWorldDiagnostics = {
   humanPlayers: number;
   bots: number;
   asteroids: number;
+  satellitePickups?: number;
 };
 
 type HealthResponse = {

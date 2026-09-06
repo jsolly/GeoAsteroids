@@ -55,6 +55,14 @@ export function drawScoreOverlay(
     ctx.textBaseline = 'top';
     ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, layout.killMessageY);
   }
+  if (gameStateManager.hasPickupMessage()) {
+    ctx.fillStyle = PALETTE.SATELLITE_PICKUP;
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const pickupY = gameStateManager.hasKillMessage() ? layout.killMessageY + 18 : layout.killMessageY;
+    ctx.fillText(gameStateManager.getPickupMessage(), canvas.width / 2, pickupY);
+  }
 
   ctx.restore();
 }

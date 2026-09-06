@@ -34,6 +34,9 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE).not.toHaveProperty('ACCENT_UI');
   expect(PALETTE.SHIELD).toBe('#67E8F9');
   expect(PALETTE.SHIELD.toLowerCase()).not.toBe('#ffffff');
+  expect(PALETTE.SATELLITE_PICKUP).toBe('#FBBF24');
+  expect(PALETTE.SATELLITE_PICKUP.toLowerCase()).not.toBe('#ffffff');
+  expect(PALETTE.SATELLITE_PICKUP.toLowerCase()).not.toBe('#67e8f9');
 });
 
 test('faction colors map local mint, remote sky, bot amber', () => {

@@ -1,6 +1,12 @@
 import { areAllied } from '../../shared/factions';
 import { consumeTickAccumulator } from '../../shared/gameClock';
-import type { AsteroidData, LootData, Position, ShipKitId } from '../../shared-types';
+import type {
+  AsteroidData,
+  LootData,
+  Position,
+  SatellitePickupCollected,
+  ShipKitId,
+} from '../../shared-types';
 import {
   replaceThrustSources,
   resetThrustSources,
@@ -16,6 +22,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { SatellitePickupManager } from '../entities/satellitePickup/SatellitePickupManager';
 import {
   bindHarpoonFieldSource,
   collectPlayHarpoonField,
@@ -515,6 +522,17 @@ export class GameController {
       }
     });
 
+    window.addEventListener('satellitePickupCollected', (event) => {
+      const customEvent = event as CustomEvent<SatellitePickupCollected>;
+      const localId = this.networkManager.getLocalPlayerId();
+      if (customEvent.detail.playerId === localId) {
+        this.gameStateManager.setPickupMessage(
+          customEvent.detail.pickupName,
+          customEvent.detail.scoreBonus
+        );
+      }
+    });
+
     // Listen for remote player deaths
     window.addEventListener('remotePlayerDied', (event) => {
       const customEvent = event as CustomEvent<{
@@ -553,6 +571,10 @@ export class GameController {
 
   getLoot(): LootData[] {
     return LootField.getInstance().getAll();
+  }
+
+  getSatellitePickups() {
+    return SatellitePickupManager.getInstance().getAll();
   }
 
   // Score management — the server is authoritative; the local player's entity
@@ -791,6 +813,7 @@ export class GameController {
 
     // Ship↔asteroid damage is server-owned. Keep local ship-ship overlap
     // for offline DOT / visual contact only. Factions still skip allies.
+    this.checkShipSatellitePickupCollisions();
     this.checkShipShipCollisions(allPlayers);
 
     // Check boundary collisions for ships
@@ -798,6 +821,7 @@ export class GameController {
 
     // Update game state manager
     this.gameStateManager.updateKillMessageTimer();
+    this.gameStateManager.updatePickupMessageTimer();
   }
 
   private snapshotHarpoonField(localPlayer?: Player | null) {
@@ -937,6 +961,17 @@ export class GameController {
     // local ship, and boundary damage is always attributed to the local
     // player. Bots are kept in-bounds server-side; remote players self-report.
     this.collisionManager.checkBoundaryCollisions([currPlayer.ship], currPlayer.id);
+  }
+
+  private checkShipSatellitePickupCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+    this.collisionManager.checkPlayerSatellitePickupCollisions(
+      currPlayer,
+      SatellitePickupManager.getInstance().getAll()
+    );
   }
 
   // Check ship collisions with other ships

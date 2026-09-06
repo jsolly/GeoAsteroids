@@ -4,6 +4,8 @@ import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { SoftFactionId } from '../../entities/player/softFactions';
 import { canDrawAsteroid } from '../../entities/roid/roidRenderer';
+import { SatellitePickupManager } from '../../entities/satellitePickup/SatellitePickupManager';
+import { drawSatellitePickupMiniMapDot } from '../../entities/satellitePickup/satellitePickupRenderer';
 import type { Ship } from '../../entities/ship/Ship';
 import { calculateShipTrianglePoints, strokePhosphorHull } from '../../entities/ship/shipRenderer';
 import type { CircleBoundary } from '../../physics/boundary';
@@ -183,6 +185,21 @@ export function drawMiniMap(
           heading: ship.angle,
           factionId: ship.factionId,
         });
+      }
+    }
+
+    for (const pickup of SatellitePickupManager.getInstance().getAll()) {
+      const p = projectWorldToMiniMap(
+        boundary,
+        miniMapX,
+        miniMapY,
+        miniMapSize,
+        pickup.position.x,
+        pickup.position.y,
+        10
+      );
+      if (p) {
+        drawSatellitePickupMiniMapDot(ctx, p.x, p.y);
       }
     }
   } catch (error: unknown) {

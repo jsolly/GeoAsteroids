@@ -1,8 +1,17 @@
 import { WebSocket } from 'ws';
-import type { AsteroidData, LootData, Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
+import type {
+  AsteroidData,
+  LootData,
+  Position,
+  SatellitePickupData,
+  ShipKitId,
+  SoftFactionId,
+  Velocity,
+} from '../../shared-types';
 import { asteroidRamDamage, shipShipTickDamage } from '../../shared/combat';
 import { applyFuelPickup, ensureFuelTank, isFuelLoot } from '../../shared/fuel';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
+import { isWithinCollectRange } from '../../src/entities/satellitePickup/satellitePickupMath';
 import {
   LOOT_BLAST,
   blastPush,
@@ -11,7 +20,7 @@ import {
   isSmallRoid,
 } from '../../shared/lootBlast';
 import { GROWTH, applyLootMass, applyShipMass, radiusFromMass } from '../../shared/shipGrowth';
-import { CANVAS, LASER } from '../../src/constants';
+import { CANVAS, LASER, SATELLITE_PICKUP, SHIP } from '../../src/constants';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import { activateAbilityOnHost, pullHarpoonTarget } from '../../src/entities/ship/shipAbilities';
@@ -43,6 +52,7 @@ import { CollisionAuthority } from './CollisionAuthority';
 import { EntityManager, GameEntity } from './EntityManager';
 import { LootManager } from './LootManager';
 import { RNGService } from './RNGService';
+import { SatellitePickupManager } from './SatellitePickupManager';
 
 export interface ServerLaser {
   id: string;
@@ -99,6 +109,7 @@ export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
   private lootManager: LootManager;
+  private satellitePickupManager: SatellitePickupManager;
   private rngService: RNGService;
   private collisionAuthority = new CollisionAuthority();
   private combatSink: CombatSink | null = null;
@@ -121,6 +132,7 @@ export class GameEngine {
     this.entityManager = new EntityManager(this.rngService);
     this.asteroidManager = new AsteroidManager(this.rngService);
     this.lootManager = new LootManager(this.rngService);
+    this.satellitePickupManager = new SatellitePickupManager(this.rngService);
     ensureTerrain(TERRAIN.DEFAULT_SEED);
 
     // Don't initialize pause state yet - will be called after initialization
@@ -182,6 +194,7 @@ export class GameEngine {
     this.entityManager.updateShields();
     this.lootManager.expire(this.gameTime);
     this.collectLoot();
+    this.tickSatellitePickups();
     this.asteroidManager.updateMotion();
     this.emitAsteroidHits(this.advanceLasersAndResolveHits());
     this.flushDueShockwaves();
@@ -235,6 +248,7 @@ export class GameEngine {
           logger.info(`🤖 Recreated ${bots.length} bots on resume`);
         }
       }
+      this.ensureSatellitePickups();
     }
   }
 
@@ -250,6 +264,7 @@ export class GameEngine {
     bots: number;
     asteroids: number;
     loot: number;
+    satellitePickups: number;
   } {
     return {
       isPaused: this.isPaused,
@@ -258,6 +273,7 @@ export class GameEngine {
       bots: this.entityManager.getBotCount(),
       asteroids: this.asteroidManager.getAsteroidCount(),
       loot: this.lootManager.getCount(),
+      satellitePickups: this.satellitePickupManager.getCount(),
     };
   }
 
@@ -290,6 +306,7 @@ export class GameEngine {
     this.lasers = [];
     this.laserSeq = 0;
     this.pendingAsteroidHits = [];
+    this.satellitePickupManager.clear();
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
@@ -314,6 +331,7 @@ export class GameEngine {
     factionId?: SoftFactionId
   ): GameEntity {
     const entity = this.entityManager.addHumanPlayer(id, name, ws, position, color, kitId, factionId);
+    this.ensureSatellitePickups();
     this.updatePauseState();
     return entity;
   }
@@ -324,6 +342,7 @@ export class GameEngine {
   }
 
   public removePlayer(id: string): GameEntity | undefined {
+    this.satellitePickupManager.releaseOwner(id);
     const entity = this.entityManager.removeEntity(id);
     this.updatePauseState();
     return entity;
@@ -575,6 +594,7 @@ export class GameEngine {
     if (attackerId) {
       entity.deathCause = attackerId;
     }
+    this.satellitePickupManager.releaseOwner(entity.id);
     this.lootManager.spawnFromKill(entity, this.gameTime);
     if (entity.type === 'human') {
       const prevLives = entity.lives;
@@ -594,6 +614,101 @@ export class GameEngine {
       this.awardPoints(attackerId, killPoints);
     }
     this.entityManager.scheduleShipRespawn(entity);
+  }
+
+
+  public createSatellitePickups(count = SATELLITE_PICKUP.MAX_COUNT): SatellitePickupData[] {
+    return this.satellitePickupManager.createPickups(count);
+  }
+
+  public getSatellitePickup(id: string): SatellitePickupData | undefined {
+    return this.satellitePickupManager.getAllPickups().find((item) => item.id === id);
+  }
+
+  public getAllSatellitePickups(): SatellitePickupData[] {
+    return this.satellitePickupManager.getAllPickups();
+  }
+
+  public getSatellitePickupCount(): number {
+    return this.satellitePickupManager.getCount();
+  }
+
+  public tickSatellitePickups(): SatellitePickupData[] {
+    this.satellitePickupManager.update(
+      this.entityManager.getAllEntities().map((entity) => ({
+        id: entity.id,
+        position: entity.position,
+        health: entity.health,
+        exploding: entity.exploding,
+      }))
+    );
+    return this.getAllSatellitePickups();
+  }
+
+  public handleSatellitePickupCollected(
+    pickupId: string,
+    playerId: string
+  ): { success: boolean; pickup?: SatellitePickupData; score?: number } {
+    const pickup = this.satellitePickupManager.getPickup(pickupId);
+    const collector = this.entityManager.getEntity(playerId);
+    if (!pickup || pickup.state !== 'loose') {
+      return { success: false };
+    }
+    if (
+      !collector ||
+      collector.type !== 'human' ||
+      collector.health <= 0 ||
+      collector.exploding ||
+      collector.respawnTimer !== undefined
+    ) {
+      return { success: false };
+    }
+    if (
+      !isWithinCollectRange(
+        collector.position,
+        pickup.position,
+        SHIP.SIZE / 2,
+        pickup.radius
+      )
+    ) {
+      return { success: false };
+    }
+
+    const attached = this.satellitePickupManager.collect(
+      pickupId,
+      playerId,
+      this.satellitePickupManager.countOrbitingFor(playerId)
+    );
+    if (!attached) {
+      return { success: false };
+    }
+
+    this.awardPoints(playerId, SATELLITE_PICKUP.SCORE_BONUS);
+    this.grantPickupShield(playerId, SATELLITE_PICKUP.SHIELD_FRAMES);
+    return {
+      success: true,
+      pickup: this.getSatellitePickup(pickupId),
+      score: collector.score,
+    };
+  }
+
+  private ensureSatellitePickups(): void {
+    if (
+      this.entityManager.getHumanPlayerCount() > 0 &&
+      this.satellitePickupManager.getCount() === 0
+    ) {
+      const created = this.satellitePickupManager.createPickups(SATELLITE_PICKUP.MAX_COUNT);
+      logger.info(`🛰️ Spawned ${created.length} satellite pickups`);
+    }
+  }
+
+  /** Pickup invuln is spawn-protection, not the F-key laser bubble. */
+  private grantPickupShield(entityId: string, frames: number): void {
+    const entity = this.entityManager.getEntity(entityId);
+    if (!entity) {
+      return;
+    }
+    entity.spawnProtectionTimer = Math.max(entity.spawnProtectionTimer ?? 0, frames);
   }
 
   public handleAsteroidHit(
@@ -912,6 +1027,7 @@ export class GameEngine {
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       loot: this.lootManager.getAll(),
+      satellitePickups: this.satellitePickupManager.getAllPickups(),
       gameTime: this.gameTime,
       isPaused: this.isPaused,
       terrainSeed: getTerrainSeed(),
