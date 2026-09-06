@@ -41,7 +41,10 @@ function startTone(
   const gain = ctx.createGain();
   osc.type = options.type;
   osc.frequency.setValueAtTime(options.startHz, options.start);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(40, options.endHz), options.start + options.duration);
+  osc.frequency.exponentialRampToValueAtTime(
+    Math.max(40, options.endHz),
+    options.start + options.duration
+  );
   gain.gain.setValueAtTime(0.0001, options.start);
   gain.gain.exponentialRampToValueAtTime(options.peak, options.start + 0.012);
   gain.gain.exponentialRampToValueAtTime(0.0001, options.start + options.duration);
@@ -66,7 +69,11 @@ export function synthesizeSplitCrack(volumeScale: number, ctx = getAudioContext(
   master.connect(ctx.destination);
 
   const noiseDuration = 0.055;
-  const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * noiseDuration), ctx.sampleRate);
+  const noiseBuffer = ctx.createBuffer(
+    1,
+    Math.floor(ctx.sampleRate * noiseDuration),
+    ctx.sampleRate
+  );
   const channel = noiseBuffer.getChannelData(0);
   for (let i = 0; i < channel.length; i++) {
     channel[i] = (Math.random() * 2 - 1) * (1 - i / channel.length);

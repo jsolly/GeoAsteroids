@@ -2,8 +2,8 @@ import type { Position } from '../../shared-types';
 import {
   framesToMs,
   SHOCKWAVE_WAVES,
-  shockwaveLifetimeMs,
   type ShockwaveWaveSpec,
+  shockwaveLifetimeMs,
 } from '../physics/shockwave';
 
 export type ActiveShockwave = {

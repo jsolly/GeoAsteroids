@@ -1,6 +1,6 @@
 import type { AsteroidData, Position } from '../../shared-types';
-import { playSplitSound } from '../audio/splitSound';
 import { bindGameAudio } from '../audio/spatialAudio';
+import { playSplitSound } from '../audio/splitSound';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';

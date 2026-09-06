@@ -4,8 +4,8 @@ import {
   easedRingRadius,
   ringAlpha,
   SHOCKWAVE_WAVES,
-  waveVisualProgress,
   type ShockwaveWaveId,
+  waveVisualProgress,
 } from '../physics/shockwave';
 import { hexToRgba } from '../utils/colorUtils';
 import { canvasManager } from './canvas';
@@ -20,7 +20,10 @@ const WAVE_PEAK_ALPHA: Record<ShockwaveWaveId, number> = {
   heavy: 0.95,
 };
 
-export function drawShockwaves(viewerPosition: { x: number; y: number }, now = performance.now()): void {
+export function drawShockwaves(
+  viewerPosition: { x: number; y: number },
+  now = performance.now()
+): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;

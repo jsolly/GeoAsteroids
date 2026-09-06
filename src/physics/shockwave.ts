@@ -38,7 +38,11 @@ export function clamp(value: number, min: number, max: number): number {
 export function sizeImpulseScale(size: number): number {
   const safeSize = Math.max(SHOCKWAVE.MIN_SIZE, size);
   const ratio = SHOCKWAVE.REFERENCE_SIZE / safeSize;
-  return clamp(ratio ** SHOCKWAVE.SIZE_EXPONENT, SHOCKWAVE.MIN_SIZE_SCALE, SHOCKWAVE.MAX_SIZE_SCALE);
+  return clamp(
+    ratio ** SHOCKWAVE.SIZE_EXPONENT,
+    SHOCKWAVE.MIN_SIZE_SCALE,
+    SHOCKWAVE.MAX_SIZE_SCALE
+  );
 }
 
 export function distanceFalloff(distance: number, radius: number): number {
