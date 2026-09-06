@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { isStaleDeathPose } from '../../../server/core/EntityManager';
 import { SHIP } from '../../../src/constants';
@@ -74,6 +74,7 @@ describe('server ship respawn lifecycle', () => {
   test('human explosion end does not reset an already-scheduled respawn timer', () => {
     const ws = {} as any;
     const player = engine.addPlayer('p1', 'Pilot', ws, { x: 0, y: 0 });
+    engine.entityManager.updateEntity('p1', { spawnProtectionTimer: undefined });
 
     engine.handlePlayerDamage('p1', 'boundary', player.health);
     const afterDeath = engine.getPlayer('p1');
@@ -96,6 +97,7 @@ describe('server ship respawn lifecycle', () => {
   test('respawn grants a full protection window and holds an anchor', () => {
     const ws = {} as any;
     const player = engine.addPlayer('p1', 'Pilot', ws, { x: 3100, y: 0 });
+    engine.entityManager.updateEntity('p1', { spawnProtectionTimer: undefined });
     engine.handlePlayerDamage('p1', 'asteroid', player.health);
 
     for (let i = 0; i < SHIP.RESPAWN_DELAY_FRAMES; i++) {
