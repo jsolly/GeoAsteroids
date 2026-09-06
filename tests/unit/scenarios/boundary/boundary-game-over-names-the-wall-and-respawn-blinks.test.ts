@@ -25,6 +25,12 @@ describe('Boundary game-over and respawn cues', () => {
     expect(
       resolveCombatDeathCause(undefined, { position: { x: 4000, y: 0 }, r: 20 })
     ).toBe('boundary');
+    expect(
+      resolveCombatDeathCause('server-damage', { position: { x: 4000, y: 0 }, r: 20 })
+    ).toBe('boundary');
+    expect(
+      resolveCombatDeathCause('unknown', { position: { x: 4000, y: 0 }, r: 20 })
+    ).toBe('boundary');
   });
 
   test('last-life wall contact flashes, explodes, and names the wall on playerDied', () => {
@@ -70,6 +76,53 @@ describe('Boundary game-over and respawn cues', () => {
 
     expect(deaths).toEqual(['boundary']);
     expect(player.deathCause).toBe('boundary');
+  });
+
+  test('a lagged inside pose does not turn a wall death into generic GO', () => {
+    const player = localPilot();
+    player.lives = 1;
+    player.ship.position = { x: 4000, y: 0 };
+    applyShipBoundaryDeath(player.ship, 'boundary');
+
+    const deaths: string[] = [];
+    const onDied = (event: Event): void => {
+      deaths.push((event as CustomEvent).detail.deathCause);
+    };
+    window.addEventListener('playerDied', onDied);
+    player.updateFromServer({
+      lives: 0,
+      health: 0,
+      exploding: true,
+      position: { x: 0, y: 0 },
+    });
+    window.removeEventListener('playerDied', onDied);
+
+    expect(deaths).toEqual(['boundary']);
+    expect(player.deathCause).toBe('boundary');
+    expect(formatDeathCauseForOverlay(player.deathCause)).toBe('the arena wall');
+  });
+
+  test('a snapshot deathCause of boundary names the wall even from center', () => {
+    const player = localPilot();
+    player.lives = 1;
+    player.ship.position = { x: 0, y: 0 };
+
+    const deaths: string[] = [];
+    const onDied = (event: Event): void => {
+      deaths.push((event as CustomEvent).detail.deathCause);
+    };
+    window.addEventListener('playerDied', onDied);
+    player.updateFromServer({
+      lives: 0,
+      health: 0,
+      exploding: true,
+      position: { x: 0, y: 0 },
+      deathCause: 'boundary',
+    });
+    window.removeEventListener('playerDied', onDied);
+
+    expect(deaths).toEqual(['boundary']);
+    expect(formatDeathCauseForOverlay(player.deathCause)).toBe('the arena wall');
   });
 
   test('death then alive after a wall hit arms blink so the next graze is ignored', () => {

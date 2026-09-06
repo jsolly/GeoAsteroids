@@ -41,6 +41,28 @@ describe('local player game-over state', () => {
     ]);
   });
 
+  test.each([
+    ['asteroid', 'asteroid'],
+    ['boundary', 'boundary'],
+    ['server-bot-0', 'server-bot-0'],
+    ['client-friend', 'client-friend'],
+  ] as const)('snapshot token %s is kept on playerDied', (token, expected) => {
+    deaths.length = 0;
+    player.lives = 1;
+    player.deathCause = undefined;
+    player.ship.lastExplodeCause = undefined;
+    player.ship.position = { x: 0, y: 0 };
+    player.updateFromServer({
+      lives: 0,
+      deathCause: token,
+      health: 0,
+      exploding: true,
+    });
+    expect(deaths).toEqual([
+      { playerId: 'local-player', deathCause: expected, isGameOver: true },
+    ]);
+  });
+
   test('ignores a server heal while lives are 0', () => {
     player.lives = 0;
     player.ship.health = 0;

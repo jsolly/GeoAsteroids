@@ -14,7 +14,6 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { publishHarpoonField } from '../entities/ship/harpoonField';
-import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
 import {
   applyAsteroidKinematics,
@@ -26,7 +25,7 @@ import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { setPlayView } from '../ui/uiUtils';
-import { describeDeathCause } from '../utils/deathCause';
+import { formatGameOverText, preferDeathCause } from '../utils/deathCause';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
@@ -299,13 +298,14 @@ export class GameController {
     }
     this.gameOverInProgress = true;
 
-    const described = describeDeathCause(
+    const localPlayer = this.playerManager.getLocalPlayer();
+    const raw = preferDeathCause(
       deathCause,
-      (id) => this.networkManager.getPlayer(id)?.name
+      localPlayer?.deathCause,
+      localPlayer?.ship.lastExplodeCause
     );
-    const killer = formatDeathCauseForOverlay(described);
-    const gameOverText = killer ? `Game Over: You were killed by ${killer}` : 'Game Over';
-    this.gameStateManager.updateTextProperties(gameOverText, 1.0);
+    const resolveName = (id: string): string | undefined => this.networkManager.getPlayer(id)?.name;
+    this.gameStateManager.updateTextProperties(formatGameOverText(raw, resolveName), 1.0);
 
     this.cleanupServerAsteroidListeners();
     PlayerNetwork.getInstance().stopNetworkUpdates();
