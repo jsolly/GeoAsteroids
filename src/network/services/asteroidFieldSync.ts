@@ -1,4 +1,8 @@
-import type { AsteroidData, AsteroidDestroyEvent, AsteroidTaggedEvent } from '../../../shared-types';
+import type {
+  AsteroidData,
+  AsteroidDestroyEvent,
+  AsteroidTaggedEvent,
+} from '../../../shared-types';
 import { containAsteroidPositionInto, isPoseInAsteroidField } from '../../physics/asteroidMotion';
 
 export interface AsteroidFieldSyncResult {

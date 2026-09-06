@@ -280,10 +280,7 @@ export class GameController {
     }
   };
 
-  private applyServerAsteroidTagged = (event: {
-    asteroidId: string;
-    expiresAt: number;
-  }): void => {
+  private applyServerAsteroidTagged = (event: { asteroidId: string; expiresAt: number }): void => {
     const { asteroidId, expiresAt } = event;
     const roid = this.currRoidBelt?.roids.find((r) => r.id === asteroidId);
     if (!roid) {
