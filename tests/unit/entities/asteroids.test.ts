@@ -63,13 +63,11 @@ test('Move Roids', () => {
 
   const previousX = roid.position.x;
   testRoidBelt.moveRoids();
-  
-  // Check behavior based on debug setting
-  if (!DEBUG.ROIDS.MOVEMENT) {
-    // When movement is disabled, roids should not move
+
+  // Production interpolates unless debug mode explicitly freezes movement.
+  if (DEBUG.ENABLED && !DEBUG.ROIDS.MOVEMENT) {
     expect(roid.position.x).toEqual(previousX);
   } else {
-    // When movement is enabled, roids should move
     expect(roid.position.x).not.toEqual(previousX);
   }
 });

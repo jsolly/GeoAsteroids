@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { RNGService } from '../../../server/core/RNGService';
+import { getGameBoundary } from '../../../src/physics/boundary';
+import { wrapAsteroidPosition } from '../../../src/physics/asteroidMotion';
 
 describe('authoritative asteroid motion', () => {
   let engine: GameEngine | undefined;
@@ -49,5 +51,28 @@ describe('authoritative asteroid motion', () => {
     const after = engine.getAsteroid(tracked!.id);
     expect(after).toBeDefined();
     expect(after!.position.x).toBeGreaterThan(2);
+  });
+
+  test('an escaped asteroid wraps back inside the playable arena', () => {
+    const { radius } = getGameBoundary();
+    const wrapped = wrapAsteroidPosition(10000, 8000);
+    expect(Math.hypot(wrapped.x, wrapped.y)).toBeLessThanOrEqual(radius);
+    expect(wrapped.x).toBeLessThan(0);
+    expect(wrapped.y).toBeLessThan(0);
+  });
+
+  test('a server tick wraps an escaped asteroid instead of leaving the camera', () => {
+    const manager = new AsteroidManager(new RNGService(1));
+    manager.createAsteroids(1);
+    const asteroid = manager.getAllAsteroids()[0];
+    expect(asteroid).toBeDefined();
+    manager.updateAsteroid(asteroid!.id, {
+      position: { x: 12000, y: 0 },
+      velocity: { x: 2, y: 0 },
+    });
+    manager.updateMotion();
+    const after = manager.getAsteroid(asteroid!.id);
+    const { radius } = getGameBoundary();
+    expect(Math.hypot(after!.position.x, after!.position.y)).toBeLessThanOrEqual(radius);
   });
 });

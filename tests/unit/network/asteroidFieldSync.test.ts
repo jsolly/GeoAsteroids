@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import type { AsteroidData } from '../../../shared-types';
 import {
+  applyAsteroidKinematics,
   asteroidKinematicUpdates,
   partitionAsteroidSnapshot,
 } from '../../../src/network/services/asteroidFieldSync';
@@ -46,4 +47,19 @@ test('a later snapshot updates known asteroids so a late joiner can share the li
   expect(updated).toEqual([live]);
   expect(asteroidKinematicUpdates(live).position).toEqual({ x: 80, y: -12 });
   expect(seen.has('server-asteroid-2')).toBe(true);
+});
+
+test('a duplicate create still writes the live pose onto the existing roid', () => {
+  const local = {
+    position: { x: 1, y: 2 },
+    velocity: { x: 0, y: 0 },
+    angle: 0,
+    angularVelocity: 0,
+    health: 10,
+    maxHealth: 10,
+    r: 20,
+  };
+  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
+  expect(local.position).toEqual({ x: 80, y: -12 });
+  expect(local.velocity).toEqual({ x: 1, y: 0 });
 });
