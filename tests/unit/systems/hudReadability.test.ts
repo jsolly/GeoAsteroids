@@ -35,7 +35,8 @@ test('lives glyphs stay tiny phosphor hulls, not full SHIP.SIZE', () => {
   expect(VISUAL.HUD_LIFE_SIZE).toBeLessThan(SHIP.SIZE / 2);
   expect(VISUAL.HUD_INSET).toBe(16);
   expect(livesSrc).toMatch(/layoutHudCluster/);
-  expect(livesSrc).toMatch(/strokePhosphorHull/);
+  expect(livesSrc).toMatch(/strokeKitHullOutline/);
+  expect(livesSrc).toMatch(/HUD_LIFE_HEADING/);
   expect(livesSrc).not.toMatch(/SHIP\.SIZE/);
 });
 
@@ -43,6 +44,7 @@ test('score sits in the same cluster in HUD cream', () => {
   expect(VISUAL.SCORE_FONT).toBe('14px Arial');
   expect(scoreSrc).toMatch(/layoutHudCluster\(lives\)/);
   expect(scoreSrc).toMatch(/PALETTE\.HUD/);
+  expect(scoreSrc).toMatch(/FACTION_LABELS\[faction\]/);
   expect(scoreSrc).not.toMatch(/SHIP\.SIZE/);
 });
 
@@ -82,6 +84,8 @@ test('radar uses a whisper void, a brighter ring, and a local heading mark', () 
   expect(radarSrc).toMatch(/strokePhosphorHull/);
   expect(radarSrc).toMatch(/kind: 'local'/);
   expect(radarSrc).toMatch(/MINIMAP_VOID_ALPHA/);
+  expect(radarSrc).toMatch(/drawSoftFactionMark/);
+  expect(radarSrc).toMatch(/getShipDisplayColor/);
   expect(radarSrc).not.toMatch(/Game Server/i);
   expect(radarSrc).not.toMatch(/drawServerInfo/);
   for (const src of [livesSrc, scoreSrc, radarSrc, clusterSrc]) {
