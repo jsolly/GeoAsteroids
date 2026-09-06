@@ -112,6 +112,19 @@ export function playfieldZoom(
   return fitFarthestRock(belt, ship, canvas);
 }
 
+/** PO / QA bar: if radar has dots, the playfield must show at least one rock. */
+export function radarBeltVisibleOnPlayfield(
+  roids: readonly PlayfieldRock[],
+  ship: Position,
+  canvas: PlayfieldSize
+): boolean {
+  const belt = roids.filter(isDrawablePlayfieldRock);
+  if (belt.length === 0) {
+    return false;
+  }
+  return countRocksOnCanvas(belt, ship, canvas, playfieldZoom(roids, ship, canvas)) > 0;
+}
+
 /** Stroke path for a roid. Empty offsets still paint a circle so radar dots are not holes. */
 export function drawingOffsets(offsets: readonly number[]): number[] {
   if (offsets.length > 0) {

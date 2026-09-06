@@ -8,6 +8,7 @@ import {
   countRocksOnCanvas,
   drawingOffsets,
   playfieldZoom,
+  radarBeltVisibleOnPlayfield,
 } from '../../../src/rendering/playfieldCamera';
 
 const SMALL = { width: 800, height: 600 };
@@ -170,6 +171,40 @@ describe('playfield zoom paints the radar belt when 1:1 would be empty', () => {
         ).toBeGreaterThan(0);
       }
     }
+  });
+
+  test('Pilot B pass 4: a left-edge speck at ~60s does not leave the belt on radar only', () => {
+    const ship = { x: 0, y: 0 };
+    const leftEdge = { position: { x: -(SMALL.width / 2) + 8, y: 40 }, r: 40 };
+    const pack = [
+      { position: { x: 820, y: 180 }, r: 20 },
+      { position: { x: 760, y: 240 }, r: 20 },
+      { position: { x: 880, y: 120 }, r: 20 },
+      { position: { x: 800, y: 300 }, r: 20 },
+    ];
+    const field = [leftEdge, ...pack];
+    expect(countRocksOnCanvas([leftEdge], ship, SMALL, 1)).toBe(1);
+    expect(countRocksOnCanvas(pack, ship, SMALL, 1)).toBe(0);
+    expect(playfieldZoom(field, ship, SMALL)).toBeLessThan(1);
+    expect(radarBeltVisibleOnPlayfield(field, ship, SMALL)).toBe(true);
+    expect(countRocksOnCanvas(field, ship, SMALL, playfieldZoom(field, ship, SMALL))).toBe(field.length);
+  });
+
+  test('Pilot B pass 4: T+60 empty 1:1 and T+90 recover both stay painted', () => {
+    const ships = [TAB_A_IN_BELT, TAB_B_OUTSIDE, RIM_1080P_MISS];
+    for (const seconds of [60, 75, 90]) {
+      const field = beltAfterTicks(11, 20, seconds * 60);
+      expect(field.length).toBeGreaterThan(0);
+      for (const ship of ships) {
+        expect(
+          radarBeltVisibleOnPlayfield(field, ship, SMALL),
+          `T+${seconds}s radar dots must stay on canvas at ${ship.x},${ship.y}`
+        ).toBe(true);
+      }
+    }
+    const emptyThenRecover = beltAfterTicks(11, 20, 60 * 60);
+    expect(countRocksOnCanvas(emptyThenRecover, TAB_B_OUTSIDE, SMALL, 1)).toBe(0);
+    expect(radarBeltVisibleOnPlayfield(emptyThenRecover, TAB_B_OUTSIDE, SMALL)).toBe(true);
   });
 
   test('a pending nearby rock does not hide the radar belt', () => {
