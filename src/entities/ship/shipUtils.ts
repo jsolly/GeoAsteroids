@@ -52,7 +52,8 @@ export function isSilentHudReset(
   }
   const nextLives = incomingLives ?? currentLives;
   const nextScore = incomingScore ?? currentScore;
-  const established = currentScore > 0 || currentLives < GAME.START_LIVES;
+  // Game-over (0 lives) may start a new ship at 3/0; mid-run progress must not.
+  const established = currentLives > 0 && (currentScore > 0 || currentLives < GAME.START_LIVES);
   return established && nextLives === GAME.START_LIVES && nextScore === GAME.STARTING_SCORE;
 }
 

@@ -24,9 +24,11 @@ describe('shared ship HUD and respawn timers', () => {
 
   test('established lives/score do not snap back to a fresh spawn', () => {
     expect(isSilentHudReset(2, 210, 3, 0)).toBe(true);
+    expect(isSilentHudReset(3, 210, 3, 0)).toBe(true);
     expect(isSilentHudReset(3, 0, 3, 0)).toBe(false);
     expect(isSilentHudReset(2, 210, 1, 210)).toBe(false);
     expect(isSilentHudReset(2, 210)).toBe(false);
+    expect(isSilentHudReset(0, 210, 3, 0)).toBe(false);
   });
 
   test.each(SHIP_KINDS)('$kind explodes and flashes on a boundary hit', ({ options }) => {

@@ -44,6 +44,30 @@ test('a fresh 3-life / 0-score snapshot does not clobber established HUD progres
   expect(player.score).toBe(210);
 });
 
+test('game-over HUD may accept a new 3-life ship', () => {
+  const player = localPilot();
+  player.lives = 0;
+  player.score = 210;
+
+  player.updateFromServer({ lives: GAME.START_LIVES, score: GAME.STARTING_SCORE });
+
+  expect(player.lives).toBe(GAME.START_LIVES);
+  expect(player.score).toBe(GAME.STARTING_SCORE);
+});
+
+test('death to alive without spawnProtectionTimer still arms blink', () => {
+  const player = localPilot();
+  player.ship.health = 0;
+  player.ship.exploding = true;
+  player.ship.blinkCount = 0;
+
+  player.updateFromServer({ health: 100, exploding: false });
+
+  expect(player.ship.health).toBe(100);
+  expect(player.ship.exploding).toBe(false);
+  expect(player.ship.blinkCount).toBeGreaterThan(0);
+});
+
 test('respawnTimer 0 does not latch the local ship as dead', () => {
   const player = localPilot();
   player.ship.health = 100;

@@ -21,6 +21,24 @@ test('rejoining the same human id keeps lives and swaps the socket', () => {
   expect(rejoined.color).toBe('#def');
 });
 
+test('game-over rejoin starts a new ship instead of restoring 0 lives', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 0;
+  first.score = 210;
+
+  manager.removeEntity('pilot-1');
+  const rejoined = manager.addHumanPlayer(
+    'pilot-1',
+    'Pilot',
+    { sent: 2 } as never,
+    { x: 3000, y: 0 }
+  );
+
+  expect(rejoined.lives).toBe(3);
+  expect(rejoined.score).toBe(0);
+});
+
 test('rejoining after the socket was removed restores lives and score, not a fresh 3/0', () => {
   const manager = new EntityManager(new RNGService(1));
   const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });

@@ -170,7 +170,7 @@ export class EntityManager {
   }
 
   private stashHumanForRejoin(entity: GameEntity): void {
-    if (entity.type !== 'human') {
+    if (entity.type !== 'human' || entity.lives <= 0) {
       return;
     }
     this.humanRejoinStash.set(entity.id, {

@@ -14,11 +14,6 @@ import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
-import {
-  type CanonicalGameState,
-  entityHasCreateIdentity,
-  mergeWireGameState,
-} from '../gameStateSnapshot';
 import type { ClientMessage, ServerMessage } from '../types';
 import { asteroidKinematicUpdates, partitionAsteroidSnapshot } from './asteroidFieldSync';
 import {
