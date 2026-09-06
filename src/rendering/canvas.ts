@@ -1,5 +1,5 @@
 import type { Position } from '../../shared-types';
-import { PALETTE } from '../constants';
+import { PALETTE, RENDER } from '../constants';
 import {
   CANVAS_DEFAULT_CENTER_X,
   CANVAS_DEFAULT_CENTER_Y,
@@ -161,7 +161,11 @@ class CanvasManager {
     };
   }
 
-  isWorldPositionVisible(worldPos: Position, shipPos: Position, margin: number = 100): boolean {
+  isWorldPositionVisible(
+    worldPos: Position,
+    shipPos: Position,
+    margin: number = RENDER.VISIBILITY_MARGIN
+  ): boolean {
     if (!this.canvas) {
       // Fallback to true if canvas is not available
       return true;
@@ -212,9 +216,10 @@ class CanvasManager {
       logger.debug('RENDERING', 'No asteroids to render');
     }
 
+    const localId = NetworkManager.getInstance().getLocalPlayerId();
+
     // Draw all players (including bots) using unified rendering
     try {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
         const factionColor = getFactionColor(player.type);
         if (player.ship.exploding) {
@@ -240,7 +245,6 @@ class CanvasManager {
 
     // Draw thrusters for all players (including bots) at their world positions
     try {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
         if (player.ship.exploding || player.ship.health <= 0) {
           continue;
@@ -277,7 +281,6 @@ class CanvasManager {
     drawLasers(currShip, getLaserColor(true));
 
     for (const player of allPlayers) {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
       if (player.id === localId) {
         continue;
       }

@@ -1,15 +1,23 @@
 import type { Position } from '../../../shared-types';
-import { GAME } from '../../constants';
+import { GAME, SHIP } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
 import { applyShipSpawnProtection } from '../ship/shipUtils';
+import {
+  isDeadOrExploding,
+  resolveLocalHealthFromServer,
+  shouldAcceptServerTransform,
+  shouldReleaseRespawnLatch,
+  snapshotHasSpawnProtection,
+} from './playerSync';
+import type { PlayerType, ServerPlayerSnapshot } from './playerTypes';
 
 export class Player {
   id: string;
   name: string;
-  type: 'local' | 'remote' | 'bot';
+  type: PlayerType;
   ship: Ship;
   score: number = 0;
   lastUpdate: number = Date.now();
@@ -44,7 +52,7 @@ export class Player {
   constructor(params: {
     id: string;
     name: string;
-    type: 'local' | 'remote' | 'bot';
+    type: PlayerType;
     input: PlayerInput;
   }) {
     this.id = params.id;
@@ -64,21 +72,7 @@ export class Player {
   }
 
   // Update player state from server data
-  updateFromServer(data: {
-    position?: Position;
-    velocity?: Position;
-    angle?: number;
-    lives?: number;
-    score?: number;
-    exploding?: boolean;
-    thrusting?: boolean;
-    color?: string;
-    deathCause?: string;
-    health?: number;
-    maxHealth?: number;
-    respawnTimer?: number;
-    spawnProtectionTimer?: number;
-  }): void {
+  updateFromServer(data: ServerPlayerSnapshot): void {
     this.serverSpawnProtectionTimer = data.spawnProtectionTimer ?? 0;
     // The local player predicts its own ship for responsiveness: while alive it
     // owns its position/velocity/angle and must NOT snap to the (lagging) server
@@ -90,19 +84,13 @@ export class Player {
     // position while alive again. This makes respawn placement deterministic
     // regardless of the exact ordering of health/position broadcasts.
     const isLocal = this.type === 'local';
-    if (isLocal) {
-      const deadOrExploding =
-        this.ship.health <= 0 || this.ship.exploding || data.respawnTimer !== undefined;
-      if (deadOrExploding) {
-        if (!this.adoptServerPosition) {
-          this.respawnLatchOrigin = data.position
-            ? { ...data.position }
-            : { ...this.ship.position };
-        }
-        this.adoptServerPosition = true;
+    if (isLocal && isDeadOrExploding(this.ship.health, this.ship.exploding, data.respawnTimer)) {
+      if (!this.adoptServerPosition) {
+        this.respawnLatchOrigin = data.position ? { ...data.position } : { ...this.ship.position };
       }
+      this.adoptServerPosition = true;
     }
-    const acceptServerTransform = !isLocal || this.adoptServerPosition;
+    const acceptServerTransform = shouldAcceptServerTransform(isLocal, this.adoptServerPosition);
 
     if (data.position && acceptServerTransform) {
       this.ship.position = data.position;
@@ -153,28 +141,19 @@ export class Player {
       const oldHealth = this.ship.health;
       const serverHealth = data.health;
 
-      // Local player health regen runs client-side; the server echo can lag
-      // behind regen progress. Accept authoritative damage and respawn heals,
-      // but don't let a stale server snapshot rewind regen.
-      if (isLocal && !wasDead && !wasExploding) {
-        if (serverHealth >= this.ship.maxHealth) {
-          this.ship.health = serverHealth;
-          this.lastServerHealthEcho = serverHealth;
-        } else if (
-          this.lastServerHealthEcho === undefined ||
-          serverHealth < this.lastServerHealthEcho
-        ) {
-          this.ship.health = serverHealth;
-          this.lastServerHealthEcho = serverHealth;
-        }
-      } else if (isLocal && (wasDead || wasExploding) && serverHealth >= this.ship.maxHealth) {
+      if (isLocal) {
+        const merged = resolveLocalHealthFromServer({
+          currentHealth: this.ship.health,
+          serverHealth,
+          maxHealth: this.ship.maxHealth,
+          wasDead,
+          wasExploding,
+          lastServerHealthEcho: this.lastServerHealthEcho,
+        });
+        this.ship.health = merged.health;
+        this.lastServerHealthEcho = merged.lastServerHealthEcho;
+      } else {
         this.ship.health = serverHealth;
-        this.lastServerHealthEcho = serverHealth;
-      } else if (!isLocal) {
-        this.ship.health = serverHealth;
-      } else if (isLocal && serverHealth > this.ship.health) {
-        this.ship.health = serverHealth;
-        this.lastServerHealthEcho = serverHealth;
       }
 
       const newHealth = this.ship.health;
@@ -216,7 +195,7 @@ export class Player {
       } else if (
         this.ship.health > 0 &&
         this.ship.blinkCount <= 0 &&
-        (data.spawnProtectionTimer ?? 0) > 0
+        snapshotHasSpawnProtection(data)
       ) {
         applyShipSpawnProtection(this.ship);
       } else if (this.ship.health > 0 && this.type === 'local') {
@@ -258,21 +237,18 @@ export class Player {
     // Resume local prediction only after adopting a live server transform
     // (health can land in an earlier gameState tick than the respawn position).
     if (
-      isLocal &&
-      this.adoptServerPosition &&
-      this.ship.health > 0 &&
-      !this.ship.exploding &&
-      data.respawnTimer === undefined &&
-      data.position
+      shouldReleaseRespawnLatch(
+        isLocal,
+        this.adoptServerPosition,
+        this.ship.health,
+        this.ship.exploding,
+        data.respawnTimer,
+        data.position,
+        this.respawnLatchOrigin
+      )
     ) {
-      const origin = this.respawnLatchOrigin;
-      const movedFromDeath = origin
-        ? Math.hypot(data.position.x - origin.x, data.position.y - origin.y) > 75
-        : true;
-      if (movedFromDeath) {
-        this.adoptServerPosition = false;
-        this.respawnLatchOrigin = null;
-      }
+      this.adoptServerPosition = false;
+      this.respawnLatchOrigin = null;
     }
 
     this.lastUpdate = Date.now();
@@ -338,31 +314,10 @@ export class Player {
   }
 
   /**
-   * Update player state using unified input system
-   */
-  updateFromInput(): void {
-    // Update thrusting state
-    this.ship.thrusting = this.input.getThrusting();
-
-    // Update angular velocity
-    this.ship.angularVelocity = this.input.getAngularVelocity();
-
-    // Update shooting state
-    if (this.input.getShooting()) {
-      this.ship.shoot();
-    }
-
-    // Update EMP pulse state
-    if (this.input.getEmpPulse()) {
-      this.ship.empPulse();
-    }
-  }
-
-  /**
    * Get friction coefficient based on player type
    */
   getFrictionCoefficient(): number {
-    return this.type === 'bot' ? 0.02 : 0.01; // Bot-specific friction
+    return this.type === 'bot' ? SHIP.BOT_CLIENT_FRICTION : SHIP.PLAYER_FRICTION;
   }
 
   // Update interpolation for smooth movement (disabled for now to fix popping issue)

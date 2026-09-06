@@ -23,6 +23,7 @@ export interface PlayerUpdate {
   lives: number;
   score: number;
   exploding: boolean;
+  thrusting?: boolean;
   health: number;
   maxHealth: number;
   lasers?: Array<{

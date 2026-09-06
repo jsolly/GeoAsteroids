@@ -1,3 +1,5 @@
+import { ARENA } from '../../src/constants';
+
 // Mulberry32 seeded PRNG for deterministic asteroid/bot generation
 export class RNGService {
   private rngState: number;
@@ -36,7 +38,7 @@ export class RNGService {
     if (bounds.radius) {
       // Circular boundary
       const angle = this.random() * Math.PI * 2;
-      const radius = this.random() * bounds.radius * 0.8; // Stay within 80% of boundary
+      const radius = this.random() * bounds.radius * ARENA.SPAWN_DISK_FRACTION;
       return {
         x: Math.cos(angle) * radius,
         y: Math.sin(angle) * radius,

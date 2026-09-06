@@ -4,13 +4,15 @@ import type {
   PlayerLeave,
   PlayerUpdate,
   Position,
+  ServerEntityData,
   ServerGameState,
   Velocity,
 } from '../../../shared-types';
-import { PALETTE } from '../../constants';
+import { PALETTE, ROID } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
+import type { ServerPlayerSnapshot } from '../../entities/player/playerTypes';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
@@ -36,6 +38,8 @@ export class ConnectionManager {
   private allPlayers: Map<string, Player> = new Map();
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
   private hasInitializedAsteroidsForConnection = false;
+  private readonly gameStateSnapshotIds = new Set<string>();
+  private readonly gameStateSnapshot: ServerPlayerSnapshot = {};
 
   // Heartbeat / half-open-socket detection (see connectionHealth.ts).
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -330,13 +334,13 @@ export class ConnectionManager {
 
     logger.debug('NETWORK', 'Sending initAsteroids message', {
       playerId: this.localPlayerId,
-      asteroidCount: 10,
+      asteroidCount: ROID.INITIAL_ROID_COUNT,
     });
 
     const message: ClientMessage = {
       type: 'initAsteroids',
       id: this.localPlayerId,
-      data: { asteroidCount: 10 },
+      data: { asteroidCount: ROID.INITIAL_ROID_COUNT },
       timestamp: Date.now(),
     };
 
@@ -449,83 +453,97 @@ export class ConnectionManager {
     }
   }
 
+  private resolveSnapshotEntity(entityData: ServerEntityData, isLocalPlayer: boolean): Player {
+    let entity = this.allPlayers.get(entityData.id);
+
+    if (!entity) {
+      if (isLocalPlayer) {
+        // Adopt the game-loop's local player as the single source of truth
+        // for the local ship, so server-authoritative state (health, score,
+        // lives, respawn) flows into the same object the game loop renders,
+        // collides, and attributes damage with. Align its id to the
+        // server-assigned id.
+        const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+        if (localPlayer) {
+          localPlayer.id = entityData.id;
+          if (this.localPlayerName) {
+            localPlayer.name = this.localPlayerName;
+          }
+          entity = localPlayer;
+        }
+      }
+
+      if (!entity) {
+        entity = entityFactory.createPlayer({
+          id: entityData.id,
+          name: entityData.name,
+          type: entityData.type === 'bot' ? 'bot' : 'remote',
+          color: entityData.color,
+        });
+      }
+
+      this.allPlayers.set(entityData.id, entity);
+      return entity;
+    }
+
+    if (isLocalPlayer) {
+      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+      if (localPlayer && entity !== localPlayer) {
+        this.allPlayers.delete(entityData.id);
+        localPlayer.id = entityData.id;
+        if (this.localPlayerName) {
+          localPlayer.name = this.localPlayerName;
+        }
+        this.allPlayers.set(entityData.id, localPlayer);
+        return localPlayer;
+      }
+    }
+
+    return entity;
+  }
+
+  private copyEntitySnapshot(dest: ServerPlayerSnapshot, entityData: ServerEntityData): void {
+    dest.position = entityData.position;
+    dest.velocity = entityData.velocity;
+    dest.angle = entityData.angle;
+    dest.lives = entityData.lives;
+    dest.score = entityData.score;
+    dest.exploding = entityData.exploding;
+    dest.thrusting = entityData.thrusting;
+    dest.color = entityData.color;
+    dest.health = entityData.health;
+    dest.maxHealth = entityData.maxHealth;
+    dest.respawnTimer = entityData.respawnTimer;
+    dest.spawnProtectionTimer = entityData.spawnProtectionTimer;
+  }
+
   private handleGameState(data: ServerGameState): void {
     // Update local game state from server using unified entity system
     if (data.entities) {
+      const snapshotIds = this.gameStateSnapshotIds;
+      snapshotIds.clear();
+      const snapshot = this.gameStateSnapshot;
+
       // Update entities in place - no clearing to prevent bot disappearance!
       for (const entityData of data.entities) {
+        snapshotIds.add(entityData.id);
         const isLocalPlayer =
           entityData.id === this.clientId || entityData.id === this.localPlayerId;
 
-        let entity = this.allPlayers.get(entityData.id);
-
-        if (!entity) {
-          if (isLocalPlayer) {
-            // Adopt the game-loop's local player as the single source of truth
-            // for the local ship, so server-authoritative state (health, score,
-            // lives, respawn) flows into the same object the game loop renders,
-            // collides, and attributes damage with. Align its id to the
-            // server-assigned id.
-            const localPlayer = PlayerManager.getInstance().getLocalPlayer();
-            if (localPlayer) {
-              localPlayer.id = entityData.id;
-              if (this.localPlayerName) {
-                localPlayer.name = this.localPlayerName;
-              }
-              entity = localPlayer;
-            }
-          }
-
-          if (!entity) {
-            entity = entityFactory.createPlayer({
-              id: entityData.id,
-              name: entityData.name,
-              type: entityData.type === 'bot' ? 'bot' : 'remote',
-              color: entityData.color,
-            });
-          }
-
-          this.allPlayers.set(entityData.id, entity);
-        } else if (isLocalPlayer) {
-          const localPlayer = PlayerManager.getInstance().getLocalPlayer();
-          if (localPlayer && entity !== localPlayer) {
-            this.allPlayers.delete(entityData.id);
-            localPlayer.id = entityData.id;
-            if (this.localPlayerName) {
-              localPlayer.name = this.localPlayerName;
-            }
-            entity = localPlayer;
-            this.allPlayers.set(entityData.id, entity);
-          }
-        }
-
-        const serverSnapshot = {
-          position: entityData.position,
-          velocity: entityData.velocity,
-          angle: entityData.angle,
-          lives: entityData.lives,
-          score: entityData.score,
-          exploding: entityData.exploding,
-          thrusting: entityData.thrusting,
-          color: entityData.color,
-          health: entityData.health,
-          maxHealth: entityData.maxHealth,
-          respawnTimer: entityData.respawnTimer,
-          spawnProtectionTimer: entityData.spawnProtectionTimer,
-        };
-        entity.updateFromServer(serverSnapshot);
+        const entity = this.resolveSnapshotEntity(entityData, isLocalPlayer);
+        this.copyEntitySnapshot(snapshot, entityData);
+        entity.updateFromServer(snapshot);
 
         if (isLocalPlayer) {
           const localPlayer = PlayerManager.getInstance().getLocalPlayer();
           if (localPlayer && localPlayer !== entity) {
-            localPlayer.updateFromServer(serverSnapshot);
+            localPlayer.updateFromServer(snapshot);
           }
         }
       }
 
       // Server never sends playerLeft; drop remotes that vanished from the
       // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
-      const snapshotIds = new Set(data.entities.map((entity) => entity.id));
       for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
         this.allPlayers.delete(id);
         logger.info('NETWORK', 'Removed departed remote player', { id });

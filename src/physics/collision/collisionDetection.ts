@@ -1,9 +1,11 @@
 import type { Position } from '../../../shared-types';
+import { LASER } from '../../constants';
 import { getGameBoundary } from '../boundary';
-import { Point } from '../Point';
+import { flooredDistance } from '../Point';
 
 /**
- * Check if two circular objects are colliding
+ * Check if two circular objects are colliding.
+ * Uses the same floored Euclidean distance as Point.distance — no Point alloc.
  */
 export function checkCircularCollision(
   pos1: Position,
@@ -11,10 +13,7 @@ export function checkCircularCollision(
   pos2: Position,
   radius2: number
 ): boolean {
-  const point1 = new Point(pos1.x, pos1.y);
-  const point2 = new Point(pos2.x, pos2.y);
-  const distance = point1.distance(point2);
-  return distance < radius1 + radius2;
+  return flooredDistance(pos1.x, pos1.y, pos2.x, pos2.y) < radius1 + radius2;
 }
 
 /**
@@ -22,9 +21,7 @@ export function checkCircularCollision(
  */
 export function checkBoundaryCollision(shipPos: Position, shipRadius: number): boolean {
   const boundary = getGameBoundary();
-  const point = new Point(shipPos.x, shipPos.y);
-  const boundaryCenter = new Point(boundary.cx, boundary.cy);
-  const distance = point.distance(boundaryCenter);
+  const distance = flooredDistance(shipPos.x, shipPos.y, boundary.cx, boundary.cy);
 
   // Ship is outside boundary if its edge is beyond the boundary radius
   return distance + shipRadius > boundary.radius;
@@ -38,9 +35,7 @@ export function checkLaserAsteroidCollision(
   asteroidPos: Position,
   asteroidRadius: number
 ): boolean {
-  // Lasers are small, so we use a small collision radius
-  const laserRadius = 2;
-  return checkCircularCollision(laserPos, laserRadius, asteroidPos, asteroidRadius);
+  return checkCircularCollision(laserPos, LASER.COLLISION_RADIUS, asteroidPos, asteroidRadius);
 }
 
 /**
@@ -51,9 +46,7 @@ export function checkLaserShipCollision(
   shipPos: Position,
   shipRadius: number
 ): boolean {
-  // Lasers are small, so we use a small collision radius
-  const laserRadius = 2;
-  return checkCircularCollision(laserPos, laserRadius, shipPos, shipRadius);
+  return checkCircularCollision(laserPos, LASER.COLLISION_RADIUS, shipPos, shipRadius);
 }
 
 /**
@@ -65,7 +58,5 @@ export function checkShipCollision(
   ship2Pos: Position,
   ship2Radius: number
 ): boolean {
-  const isColliding = checkCircularCollision(ship1Pos, ship1Radius, ship2Pos, ship2Radius);
-
-  return isColliding;
+  return checkCircularCollision(ship1Pos, ship1Radius, ship2Pos, ship2Radius);
 }

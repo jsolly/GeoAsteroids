@@ -29,10 +29,8 @@ export class Laser implements LaserData {
     if (this.explodeTime > 0) {
       this.explodeTime--;
     } else {
-      this.position = {
-        x: this.position.x + this.velocity.x,
-        y: this.position.y + this.velocity.y,
-      };
+      this.position.x += this.velocity.x;
+      this.position.y += this.velocity.y;
       this.distTraveled += getVelocityMagnitude(this.velocity);
     }
   }

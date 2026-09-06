@@ -5,7 +5,7 @@ import { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
-import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
+import { addPositionInPlace, capSpeedInPlace, scaleVelocityInPlace } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
 import { drawThruster } from './shipRenderer';
@@ -44,7 +44,7 @@ class Ship {
   lastCollisionTime: number = 0;
   blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
-  shotCooldown: number = 250;
+  shotCooldown: number = SHIP.SHOT_COOLDOWN_MS;
   thrusterActive: boolean = false;
   lastPosition?: Position; // Track previous position for movement analysis
   lastRotation?: number; // Track previous rotation for movement analysis
@@ -60,9 +60,6 @@ class Ship {
   targetAngle?: number;
   lastServerUpdateMs: number = 0;
   interpolationT: number = 0; // 0..1 blend factor toward target
-  // Smoothing controls
-  private static readonly INTERPOLATION_RATE = 0.15; // higher => faster catch-up
-  private static readonly ANGLE_INTERPOLATION_RATE = 0.2;
 
   // Player collision damage-over-time tracking
   isCollidingWithPlayer: boolean = false;
@@ -159,38 +156,16 @@ class Ship {
       this.lastThrusting = this.thrusting;
     }
 
+    this.applyThrustOrFriction();
     if (this.thrusting) {
-      const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
-        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
-      };
-      this.velocity = addVectors(this.velocity, thrust);
-
-      // Cap velocity to prevent excessive speed
-      const currentSpeed = Math.sqrt(
-        this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
-      );
-      if (currentSpeed > SHIP.MAX_VELOCITY) {
-        const scale = SHIP.MAX_VELOCITY / currentSpeed;
-        this.velocity.x *= scale;
-        this.velocity.y *= scale;
-      }
-
       drawThruster(this);
-    } else {
-      // Use bot-specific friction if this is a bot ship
-      const frictionCoeff = this.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
-      this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / GAME.FPS);
     }
   }
 
   move(): void {
     this.angle += this.angularVelocity;
     this.applyVelocity();
-
-    const newPosition = addPositionAndVelocity(this.position, this.velocity);
-    this.position = newPosition;
-
+    addPositionInPlace(this.position, this.velocity);
     this.updateHealth();
   }
 
@@ -301,80 +276,6 @@ class Ship {
     }
   }
 
-  updateFromNetwork(data: {
-    position?: Position;
-    velocity?: Velocity;
-    r?: number;
-    angle?: number;
-    lives?: number;
-    exploding?: boolean;
-    thrusting?: boolean;
-    health?: number;
-    maxHealth?: number;
-  }): void {
-    // Local player uses immediate state; bots/remote ships use smoothing targets
-    if (this.isBot) {
-      // Bots: set targets and smooth toward them
-      if (data.position) {
-        this.targetPosition = { x: data.position.x, y: data.position.y };
-      }
-      if (data.velocity) {
-        this.targetVelocity = { x: data.velocity.x, y: data.velocity.y };
-      }
-      if (data.angle !== undefined) {
-        this.targetAngle = data.angle;
-      }
-      if (data.r !== undefined) {
-        this.r = data.r;
-      }
-      if (data.thrusting !== undefined) {
-        this.thrusting = data.thrusting;
-      }
-      this.applyNetworkCombatFields(data);
-      this.lastServerUpdateMs = performance.now ? performance.now() : Date.now();
-      return;
-    }
-
-    // Non-bot ships: assign immediately (existing behavior)
-    if (data.position) {
-      this.position = data.position;
-    }
-    if (data.velocity) {
-      this.velocity = data.velocity;
-    }
-    if (data.r !== undefined) {
-      this.r = data.r;
-    }
-    if (data.angle !== undefined) {
-      this.angle = data.angle;
-    }
-    if (data.thrusting !== undefined) {
-      this.thrusting = data.thrusting;
-    }
-    this.applyNetworkCombatFields(data);
-  }
-
-  /** Apply health/explode fields; blink only on death → alive (player and bot). */
-  private applyNetworkCombatFields(data: {
-    exploding?: boolean;
-    health?: number;
-    maxHealth?: number;
-  }): void {
-    const wasDead = this.health <= 0 || this.exploding;
-    if (data.exploding !== undefined) {
-      this.exploding = data.exploding;
-    }
-    if (data.health !== undefined) {
-      this.health = data.health;
-    }
-    if (data.maxHealth !== undefined) {
-      this.maxHealth = data.maxHealth;
-    }
-    if (wasDead && this.health > 0) {
-      applyShipSpawnProtection(this);
-    }
-  }
-
   getNetworkData(): {
     position: { x: number; y: number };
     velocity: { x: number; y: number };
@@ -448,7 +349,7 @@ class Ship {
     }
   }
 
-  canTakeCollisionDamage(cooldownMs: number = 500): boolean {
+  canTakeCollisionDamage(cooldownMs: number = DAMAGE.COLLISION_COOLDOWN_MS): boolean {
     return canTakeCollisionDamage(this.lastCollisionTime, cooldownMs);
   }
 
@@ -617,62 +518,44 @@ class Ship {
     this.moveLasers();
   }
 
-  // Update ship movement (position, velocity, rotation)
   private updateMovement(): void {
-    // For bots, blend client position toward server target (client-side smoothing)
+    // Bots blend toward the server snapshot; local ships simulate thrust/friction.
     if (this.isBot) {
       this.stepInterpolation();
       return;
     }
 
-    // Apply angular velocity to rotation
     this.angle += this.angularVelocity;
+    this.applyThrustOrFriction();
+    addPositionInPlace(this.position, this.velocity);
+  }
 
-    // Apply thrust if thrusting
+  /** Shared thrust + cap / friction used by the live tick and the test-only move() path. */
+  private applyThrustOrFriction(): void {
     if (this.thrusting) {
-      const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
-        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
-      };
-      this.velocity = addVectors(this.velocity, thrust);
-
-      // Cap velocity to prevent excessive speed
-      const currentSpeed = Math.sqrt(
-        this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
-      );
-      if (currentSpeed > SHIP.MAX_VELOCITY) {
-        const scale = SHIP.MAX_VELOCITY / currentSpeed;
-        this.velocity.x *= scale;
-        this.velocity.y *= scale;
-      }
+      this.velocity.x += (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS;
+      this.velocity.y += (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS;
+      capSpeedInPlace(this.velocity, SHIP.MAX_VELOCITY);
     } else {
-      // Apply player-specific friction
-      this.velocity = multiplyVelocity(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
+      scaleVelocityInPlace(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
     }
-
-    // Update position based on velocity
-    this.position = addPositionAndVelocity(this.position, this.velocity);
   }
 
   // Smoothly approach target state for non-local ships
   private stepInterpolation(): void {
+    const posRate = SHIP.INTERPOLATION_RATE;
     if (this.targetPosition) {
-      const rate = Ship.INTERPOLATION_RATE;
-      const dx = this.targetPosition.x - this.position.x;
-      const dy = this.targetPosition.y - this.position.y;
-      this.position = { x: this.position.x + dx * rate, y: this.position.y + dy * rate };
+      this.position.x += (this.targetPosition.x - this.position.x) * posRate;
+      this.position.y += (this.targetPosition.y - this.position.y) * posRate;
     }
 
     if (this.targetVelocity) {
-      const rate = Ship.INTERPOLATION_RATE;
-      const dvx = this.targetVelocity.x - this.velocity.x;
-      const dvy = this.targetVelocity.y - this.velocity.y;
-      this.velocity = { x: this.velocity.x + dvx * rate, y: this.velocity.y + dvy * rate };
+      this.velocity.x += (this.targetVelocity.x - this.velocity.x) * posRate;
+      this.velocity.y += (this.targetVelocity.y - this.velocity.y) * posRate;
     }
 
     if (this.targetAngle !== undefined) {
-      const rate = Ship.ANGLE_INTERPOLATION_RATE;
-      // Shortest angle interpolation
+      const rate = SHIP.ANGLE_INTERPOLATION_RATE;
       let delta = this.targetAngle - this.angle;
       while (delta > Math.PI) {
         delta -= 2 * Math.PI;

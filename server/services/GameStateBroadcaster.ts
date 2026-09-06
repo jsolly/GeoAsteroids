@@ -55,16 +55,6 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message, playerId);
   }
 
-  public broadcastPlayerUpdate(playerId: string, updateData: any): void {
-    const message = {
-      type: 'playerUpdate',
-      data: { id: playerId, ...updateData },
-      timestamp: Date.now(),
-    };
-
-    this.broadcastToAll(message, playerId);
-  }
-
   public broadcastPlayerShoot(playerId: string, laserStart: any, laserDirection: any): void {
     const timestamp = Date.now();
     const message = {

@@ -3,7 +3,7 @@ import { GameEngine } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
-import { DEBUG } from '../../src/constants';
+import { ARENA, DEBUG } from '../../src/constants';
 import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
@@ -231,18 +231,9 @@ export class MessageHandler {
       sanitizedData.angularVelocity = sanitizedData.a;
     }
 
-    const player = this.gameEngine.updatePlayer(id, sanitizedData);
-    if (!player) {
-      return; // Player not found
-    }
-
-    // Include laser data if provided
-    const updateData: any = { ...sanitizedData };
-    if (sanitizedData.lasers !== undefined) {
-      updateData.lasers = sanitizedData.lasers;
-    }
-
-    this.broadcaster.broadcastPlayerUpdate(id, updateData);
+    this.gameEngine.updatePlayer(id, sanitizedData);
+    // Clients apply authoritative transforms from gameState (30 Hz). The
+    // 60 Hz playerUpdate echo is unused on the client and is not rebroadcast.
   }
 
   private handlePlayerShoot(ws: WebSocket, id: string, data: any): void {
@@ -442,7 +433,7 @@ export class MessageHandler {
       const playerPositions = humanPlayers.map(player => player.position);
       const botPositions = bots.map(bot => bot.position);
       
-      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: 3100 }, botPositions, playerPositions);
+      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: ARENA.BOUNDARY_RADIUS }, botPositions, playerPositions);
       this.broadcaster.broadcastAsteroidCreation(asteroids);
       logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids with ${playerPositions.length} player positions and ${botPositions.length} bot positions`);
     } else {

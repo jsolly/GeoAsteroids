@@ -1,6 +1,8 @@
 import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
+import type { CollisionActor } from '../../entities/player/playerTypes';
 import type { Roid } from '../../entities/roid/Roid';
+import { getAsteroidPoints } from '../../entities/roid/roidPoints';
 import type { Ship } from '../../entities/ship/Ship';
 import { isShipCollisionImmune } from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
@@ -87,10 +89,7 @@ export class CollisionManager {
   /**
    * Check player collisions with asteroids (unified for all player types)
    */
-  checkPlayerAsteroidCollisions(
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
-    asteroids: Roid[]
-  ): void {
+  checkPlayerAsteroidCollisions(player: CollisionActor, asteroids: Roid[]): void {
     const ship = player.ship;
 
     // Skip if ship is exploding, has no health, or is under spawn protection (blinking)
@@ -128,7 +127,7 @@ export class CollisionManager {
   /**
    * Check ship collisions with other ships (players/bots)
    */
-  checkShipShipCollisions(localShip: Ship, otherShips: Ship[], localPlayerId: string): void {
+  checkShipShipCollisions(localShip: Ship, others: CollisionActor[], localPlayerId: string): void {
     // Skip if local ship cannot collide: exploding, dead, or under spawn protection
     if (!localShip || isShipCollisionImmune(localShip)) {
       return;
@@ -136,9 +135,11 @@ export class CollisionManager {
 
     let isColliding = false;
 
-    // Check local ship against all other ships
-    for (const otherShip of otherShips) {
-      // Skip other ships that are exploding, dead, or under spawn protection
+    for (const other of others) {
+      if (other.id === localPlayerId) {
+        continue;
+      }
+      const otherShip = other.ship;
       if (isShipCollisionImmune(otherShip)) {
         continue;
       }
@@ -162,7 +163,7 @@ export class CollisionManager {
   checkLaserCollisions(
     lasers: Laser[],
     asteroids: Roid[],
-    players: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' }[],
+    players: CollisionActor[],
     localPlayerId: string
   ): void {
     for (let i = lasers.length - 1; i >= 0; i--) {
@@ -190,8 +191,10 @@ export class CollisionManager {
       // Check collisions with other players (if laser hasn't already hit something)
       if (!laser.hasExploded) {
         for (const player of players) {
+          if (player.type === 'local' || player.id === localPlayerId) {
+            continue;
+          }
           const ship = player.ship;
-          // Skip players that are exploding or have no health
           if (isShipCollisionImmune(ship)) {
             continue;
           }
@@ -219,24 +222,12 @@ export class CollisionManager {
       attackerId,
     });
 
-    // Send asteroid destruction message to server
-    this.networkManager.updatePlayerState({
-      position: { x: 0, y: 0 }, // Dummy position
-      velocity: { x: 0, y: 0 }, // Dummy velocity
-      r: 0, // Dummy radius
-      angle: 0, // Dummy angle
-      lives: 0, // This will be updated by server
-      score: 0, // This will be updated by server
-      exploding: false,
-    });
-
-    // Send asteroid destroyed message
     this.networkManager.sendMessage({
       type: 'asteroidDestroyed',
       data: {
         asteroidId: asteroid.id,
         playerId: attackerId,
-        points: this.getAsteroidPoints(asteroid.r),
+        points: getAsteroidPoints(asteroid.r),
       },
     });
   }
@@ -244,11 +235,7 @@ export class CollisionManager {
   /**
    * Handle laser hitting a player (unified for all player types)
    */
-  private handleLaserPlayerHit(
-    laser: Laser,
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
-    attackerId: string
-  ): void {
+  private handleLaserPlayerHit(laser: Laser, player: CollisionActor, attackerId: string): void {
     const ship = player.ship;
 
     logger.debug('COLLISION', 'Laser hit player', {
@@ -285,10 +272,7 @@ export class CollisionManager {
   /**
    * Handle player hitting an asteroid (unified for all player types)
    */
-  private handlePlayerAsteroidCollision(
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
-    asteroid: Roid
-  ): void {
+  private handlePlayerAsteroidCollision(player: CollisionActor, asteroid: Roid): void {
     const ship = player.ship;
 
     logger.debug('COLLISION', 'Player hit asteroid', {
@@ -327,7 +311,7 @@ export class CollisionManager {
           data: {
             asteroidId: asteroid.id,
             playerId: serverPlayerId,
-            points: this.getAsteroidPoints(asteroid.r),
+            points: getAsteroidPoints(asteroid.r),
           },
         });
       }
@@ -348,7 +332,7 @@ export class CollisionManager {
         data: {
           asteroidId: asteroid.id,
           playerId: player.id,
-          points: this.getAsteroidPoints(asteroid.r),
+          points: getAsteroidPoints(asteroid.r),
         },
       });
     }
@@ -369,18 +353,5 @@ export class CollisionManager {
 
     // Start collision damage-over-time for the local ship
     localShip.startPlayerCollision(otherShip.id);
-  }
-
-  /**
-   * Get points for destroying an asteroid based on its size
-   */
-  private getAsteroidPoints(radius: number): number {
-    if (radius >= 40) {
-      return 20; // Large asteroid
-    } else if (radius >= 20) {
-      return 50; // Medium asteroid
-    } else {
-      return 100; // Small asteroid
-    }
   }
 }

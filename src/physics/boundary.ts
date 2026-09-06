@@ -1,18 +1,17 @@
+import { ARENA } from '../constants';
+
 export interface CircleBoundary {
   cx: number;
   cy: number;
   radius: number;
 }
 
-export function getGameBoundary(): CircleBoundary {
-  // Circular world boundary centered at origin to match circular minimap
-  const boundarySize = 6000; // Diameter of playable area (3x larger)
-  const buffer = 100; // Extra buffer before ship is considered out
-  const radius = boundarySize / 2 + buffer; // 3000 + 100
+const GAME_BOUNDARY: CircleBoundary = {
+  cx: 0,
+  cy: 0,
+  radius: ARENA.BOUNDARY_DIAMETER / 2 + ARENA.BOUNDARY_BUFFER,
+};
 
-  return {
-    cx: 0,
-    cy: 0,
-    radius,
-  };
+export function getGameBoundary(): CircleBoundary {
+  return GAME_BOUNDARY;
 }

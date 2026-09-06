@@ -1,4 +1,5 @@
-import type { Position, Velocity } from '../../shared-types';
+import type { PlayerUpdate, Position, Velocity } from '../../shared-types';
+import { SHIP } from '../constants';
 import type { Player } from '../entities/player/Player';
 import { logger } from '../utils/Logger';
 import { ConnectionManager } from './services/ConnectionManager';
@@ -62,6 +63,20 @@ export class NetworkManager {
     return this.connectionManager.getPlayer(playerId);
   }
 
+  private outboundPlayerState: PlayerUpdate = {
+    id: '',
+    name: '',
+    position: { x: 0, y: 0 },
+    velocity: { x: 0, y: 0 },
+    r: 0,
+    angle: 0,
+    lives: 0,
+    score: 0,
+    exploding: false,
+    health: SHIP.MAX_HEALTH,
+    maxHealth: SHIP.MAX_HEALTH,
+  };
+
   // Player state synchronization - just send input to server
   updatePlayerState(playerState: {
     position: Position;
@@ -82,15 +97,29 @@ export class NetworkManager {
       hasExploded: boolean;
     }>;
   }): void {
-    // Add required fields for PlayerUpdate
-    const fullPlayerState = {
-      id: this.getLocalPlayerId() || this.connectionManager.getClientId(),
-      name: this.getLocalPlayerName(),
-      health: playerState.health ?? 100, // Default to 100 if not provided
-      maxHealth: playerState.maxHealth ?? 100, // Default to 100 if not provided
-      ...playerState,
-    };
-    this.connectionManager.sendPlayerState(fullPlayerState);
+    const dest = this.outboundPlayerState;
+    dest.id = this.getLocalPlayerId() || this.connectionManager.getClientId();
+    dest.name = this.getLocalPlayerName();
+    dest.position = playerState.position;
+    dest.velocity = playerState.velocity;
+    dest.r = playerState.r;
+    dest.angle = playerState.angle;
+    dest.lives = playerState.lives;
+    dest.score = playerState.score;
+    dest.exploding = playerState.exploding;
+    dest.health = playerState.health ?? SHIP.MAX_HEALTH;
+    dest.maxHealth = playerState.maxHealth ?? SHIP.MAX_HEALTH;
+    if (playerState.thrusting !== undefined) {
+      dest.thrusting = playerState.thrusting;
+    } else {
+      delete dest.thrusting;
+    }
+    if (playerState.lasers !== undefined) {
+      dest.lasers = playerState.lasers;
+    } else {
+      delete dest.lasers;
+    }
+    this.connectionManager.sendPlayerState(dest);
   }
 
   sendShootEvent(laserPosition: Position, laserVelocity: Velocity): void {

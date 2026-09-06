@@ -22,16 +22,32 @@ export const GAME = {
 } as const;
 
 // ============================================================================
+// ARENA CONFIGURATION
+// ============================================================================
+// getGameBoundary() uses diameter/2 + buffer. Server spawn/containment uses
+// the same radius so client and server stay on one playfield.
+export const ARENA = {
+  BOUNDARY_DIAMETER: 6000,
+  BOUNDARY_BUFFER: 100,
+  BOUNDARY_RADIUS: 3100, // BOUNDARY_DIAMETER / 2 + BOUNDARY_BUFFER
+  SPAWN_DISK_FRACTION: 0.8,
+  BOT_CONTAIN_MARGIN: 200,
+} as const;
+
+// ============================================================================
 // SPAWN CONFIGURATION
 // ============================================================================
 export const SPAWN = {
   // Radius (px) around the arena center within which human players spawn.
-  // The arena boundary radius is ~3100px, so spawning anywhere inside it puts
-  // players thousands of px apart — far outside each other's viewport, so two
-  // people joining the same server never see one another. Clustering spawns
-  // near the center keeps freshly-joined players within view of each other
-  // (max separation ~2x this radius) and near where bots/asteroids converge.
+  // The arena boundary radius is ARENA.BOUNDARY_RADIUS, so spawning anywhere
+  // inside it puts players thousands of px apart — far outside each other's
+  // viewport, so two people joining the same server never see one another.
+  // Clustering spawns near the center keeps freshly-joined players within view
+  // of each other (max separation ~2x this radius) and near where bots/asteroids
+  // converge.
   NEAR_CENTER_RADIUS: 150,
+  // Debug / bot clustering radius around a point (local player or canvas center).
+  NEAR_ALLY_RADIUS: 200,
 } as const;
 
 // ============================================================================
@@ -113,11 +129,16 @@ export const SHIP = {
   TURN_SPEED: 450, // degrees per second
   THRUST: 5, // pixels per second² (acceleration)
   MAX_VELOCITY: 8, // pixels per second
-  BOT_FRICTION: 2.0, // higher = more friction for bots
+  BOT_FRICTION: 2.0, // leftover of the unused move() path; live sim uses PLAYER/BOT_CLIENT_FRICTION
+  PLAYER_FRICTION: 0.01, // live local-player frictionCoefficient
+  BOT_CLIENT_FRICTION: 0.02, // live bot frictionCoefficient (bots interpolate; server uses BOT_AI.FRICTION)
   SIZE: 30, // height in pixels
 
   // Combat
   MAX_LASERS: 5, // maximum lasers a ship can have at once
+  SHOT_COOLDOWN_MS: 250,
+  BOT_SHOT_COOLDOWN_MIN_MS: 500,
+  BOT_SHOT_COOLDOWN_RANGE_MS: 500,
 
   // Health
   MAX_HEALTH: 100,
@@ -129,6 +150,11 @@ export const SHIP = {
   INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds
   INVINCIBILITY_BLINK_DURATION_FRAMES: 6, // 0.1 seconds
   RESPAWN_DELAY_FRAMES: 180, // 3 seconds — shared by player and bot ships
+  RESPAWN_LATCH_MIN_DISTANCE: 75, // px from death pose before local prediction resumes
+
+  // Remote/bot snapshot smoothing (client-only; does not change server physics)
+  INTERPOLATION_RATE: 0.15,
+  ANGLE_INTERPOLATION_RATE: 0.2,
 } as const;
 
 // ============================================================================
@@ -144,6 +170,15 @@ export const DAMAGE = {
 
   // Damage intervals (calculated from DPS)
   PLAYER_COLLISION_INTERVAL_MS: 50, // 1000ms / 20 DPS = 50ms per damage tick
+  COLLISION_COOLDOWN_MS: 500, // min gap between collision-damage reports
+} as const;
+
+// ============================================================================
+// SCORE AWARDS
+// ============================================================================
+export const SCORE = {
+  PLAYER_KILL: 200,
+  BOT_KILL: 50,
 } as const;
 
 // ============================================================================
@@ -154,6 +189,7 @@ export const LASER = {
   MAX_COUNT: 200, // limit of lasers that can exist
   TRAVEL_DISTANCE_RATIO: 0.6, // fraction of screen width
   EXPLODE_DURATION: 0.1, // seconds
+  COLLISION_RADIUS: 2, // lasers are treated as small circles
 } as const;
 
 // ============================================================================
@@ -166,10 +202,12 @@ export const ROID = {
   VERTICES: 10, // average number of vertices
   JAGGEDNESS: 0.5, // 0 = smooth, 1 = jagged
 
-  // Scoring
+  // Scoring (thresholds match CollisionManager / Roid.destroyRoid)
   POINTS_LARGE: 20,
   POINTS_MEDIUM: 50,
   POINTS_SMALL: 100,
+  LARGE_RADIUS: 40,
+  MEDIUM_RADIUS: 20,
 
   // Spawning (can be overridden by DEBUG.ROIDS.INITIAL_COUNT when in debug mode)
   INITIAL_ROID_COUNT: 10,
@@ -184,6 +222,36 @@ export const ROID = {
 export const EMP = {
   RADIUS: 250, // pixels
   DURATION: 0.5, // seconds
+} as const;
+
+// ============================================================================
+// SERVER BOT AI (EntityManager.updateBotMovement)
+// ============================================================================
+export const BOT_AI = {
+  TURN_CHANCE: 0.02,
+  TURN_AMOUNT: 0.3,
+  DRAMATIC_TURN_CHANCE: 0.005,
+  DRAMATIC_TURN_FRACTION: 0.5, // * Math.PI
+  THRUST_PER_FRAME: 1.5 / 60,
+  MAX_SPEED: 6,
+  THRUSTER_OFF_CHANCE: 0.1,
+  FRICTION: 0.995,
+  FRICTION_MIN_SPEED: 0.1,
+} as const;
+
+// ============================================================================
+// NETWORK TIMERS
+// ============================================================================
+export const NETWORK = {
+  STALE_PLAYER_MS: 30_000,
+  START_GAME_CONNECT_DELAY_MS: 100,
+} as const;
+
+// ============================================================================
+// RENDER
+// ============================================================================
+export const RENDER = {
+  VISIBILITY_MARGIN: 100,
 } as const;
 
 // ============================================================================

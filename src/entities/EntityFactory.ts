@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../shared-types';
-import { CANVAS, DEBUG, PALETTE, SPAWN } from '../constants';
+import { CANVAS, DEBUG, PALETTE, SHIP, SPAWN } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
 import { getFactionColor } from '../utils/colorUtils';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../utils/positionUtils';
 import { Laser } from './laser/Laser';
 import { Player } from './player/Player';
+import type { PlayerType } from './player/playerTypes';
 import { Roid, RoidBelt } from './roid/Roid';
 
 // Constants for entity creation limits
@@ -19,7 +20,7 @@ const MAX_BOTS = 20; // Maximum number of bots allowed
 export interface PlayerConfig {
   id?: string;
   name: string;
-  type: 'local' | 'remote' | 'bot';
+  type: PlayerType;
   position?: Position;
   color?: string;
   shotCooldown?: number;
@@ -183,7 +184,7 @@ export class EntityFactory {
     } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
       // Place near center when debug flag is enabled
       const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
-      position = getRandomPositionNearPoint(centerPosition, 150);
+      position = getRandomPositionNearPoint(centerPosition, SPAWN.NEAR_CENTER_RADIUS);
     } else {
       // Default: spawn near the arena center (world origin) so players joining
       // the same server appear within view of each other. Spawning anywhere in
@@ -227,7 +228,8 @@ export class EntityFactory {
     }
 
     if (config.shotCooldown === undefined) {
-      player.ship.shotCooldown = 500 + Math.random() * 500; // 0.5-1.0 seconds
+      player.ship.shotCooldown =
+        SHIP.BOT_SHOT_COOLDOWN_MIN_MS + Math.random() * SHIP.BOT_SHOT_COOLDOWN_RANGE_MS;
     }
   }
 
@@ -249,14 +251,16 @@ export class EntityFactory {
     for (let i = 0; i < config.count; i++) {
       if (config.debugPlaceNearLocal && config.localPlayerPosition) {
         // Place bots near the local player in debug mode
-        positions.push(getRandomPositionNearPoint(config.localPlayerPosition, 200));
+        positions.push(
+          getRandomPositionNearPoint(config.localPlayerPosition, SPAWN.NEAR_ALLY_RADIUS)
+        );
       } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
         // Place bots near boundary when debug flag is enabled
         positions.push(getRandomPositionNearBoundary());
       } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
         // Place bots near center when debug flag is enabled
         const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
-        positions.push(getRandomPositionNearPoint(centerPosition, 200));
+        positions.push(getRandomPositionNearPoint(centerPosition, SPAWN.NEAR_ALLY_RADIUS));
       } else {
         // Place bots randomly within the boundary (default behavior)
         positions.push(getRandomPositionWithinBoundary());

@@ -1,5 +1,5 @@
 import type { Position } from '../../../shared-types';
-import { GAME, SHIP } from '../../constants';
+import { DAMAGE, GAME, SHIP } from '../../constants';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
 /** Minimal ship shape shared by local players, remotes, and bots. */
@@ -44,7 +44,7 @@ export function shouldApplyDamagedHealth(
 
 export function canTakeCollisionDamage(
   lastCollisionTime: number,
-  cooldownMs: number = 500
+  cooldownMs: number = DAMAGE.COLLISION_COOLDOWN_MS
 ): boolean {
   const now = Date.now();
   if (now - lastCollisionTime < cooldownMs) {

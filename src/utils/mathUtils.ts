@@ -13,6 +13,34 @@ export function multiplyVelocity(vel: Velocity, scalar: number): Velocity {
   return { x: vel.x * scalar, y: vel.y * scalar };
 }
 
+/** Mutate `vel` by adding `add` — hot-path alternative to addVectors. */
+export function addVelocityInPlace(vel: Velocity, add: Velocity): void {
+  vel.x += add.x;
+  vel.y += add.y;
+}
+
+/** Mutate `pos` by adding `vel` — hot-path alternative to addPositionAndVelocity. */
+export function addPositionInPlace(pos: Position, vel: Velocity): void {
+  pos.x += vel.x;
+  pos.y += vel.y;
+}
+
+/** Mutate `vel` by a scalar — hot-path alternative to multiplyVelocity. */
+export function scaleVelocityInPlace(vel: Velocity, scalar: number): void {
+  vel.x *= scalar;
+  vel.y *= scalar;
+}
+
+/** Cap speed in place. Same formula as the previous alloc-heavy path. */
+export function capSpeedInPlace(vel: Velocity, maxSpeed: number): void {
+  const currentSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
+  if (currentSpeed > maxSpeed) {
+    const scale = maxSpeed / currentSpeed;
+    vel.x *= scale;
+    vel.y *= scale;
+  }
+}
+
 export function getVelocityMagnitude(vel: Velocity): number {
   return Math.sqrt(vel.x ** 2 + vel.y ** 2);
 }

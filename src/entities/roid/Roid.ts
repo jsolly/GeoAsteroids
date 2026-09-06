@@ -3,6 +3,7 @@ import { Sound } from '../../audio/Sound';
 import { DEBUG, GAME, ROID } from '../../constants';
 import { isDebugMode } from '../../utils/debugUtils';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import { getAsteroidPoints } from './roidPoints';
 
 class Roid {
   id: string;
@@ -61,12 +62,8 @@ class Roid {
 
   // Move the roid based on its velocity
   move(): void {
-    this.position = {
-      x: this.position.x + this.velocity.x,
-      y: this.position.y + this.velocity.y,
-    };
-
-    // Update rotation
+    this.position.x += this.velocity.x;
+    this.position.y += this.velocity.y;
     this.angle += this.angularVelocity;
   }
 }
@@ -102,14 +99,7 @@ class RoidBelt {
     }
     let score = 0;
 
-    // Award points based on size (server handles all splitting logic)
-    if (r.r >= 40) {
-      score += ROID.POINTS_LARGE;
-    } else if (r.r >= 20) {
-      score += ROID.POINTS_MEDIUM;
-    } else {
-      score += ROID.POINTS_SMALL;
-    }
+    score += getAsteroidPoints(r.r);
 
     // Client never creates new roids - server handles all splitting via network messages
     return { score, newRoids: [] };
@@ -126,12 +116,8 @@ class RoidBelt {
     }
 
     for (const roid of this.roids) {
-      // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
-      // let dt = 1/Math.sqrt(1-beta_squared)
-      roid.position = {
-        x: roid.position.x + roid.velocity.x,
-        y: roid.position.y + roid.velocity.y,
-      };
+      roid.position.x += roid.velocity.x;
+      roid.position.y += roid.velocity.y;
     }
   }
 

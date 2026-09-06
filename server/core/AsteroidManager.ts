@@ -1,6 +1,6 @@
 import type { AsteroidData, Position } from '../../shared-types';
 import { RNGService } from './RNGService';
-import { DEBUG } from '../../src/constants';
+import { ARENA, DEBUG } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
 
 export class AsteroidManager {
@@ -65,7 +65,7 @@ export class AsteroidManager {
     this.asteroids.clear();
   }
 
-  public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {
+  public createAsteroids(count: number, bounds = { radius: ARENA.BOUNDARY_RADIUS }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {
     // If we already have asteroids and no player positions are provided, return them instead of recreating
     // But if player positions are provided, we should recreate to place roids on players
     // Also recreate if we're in test mode (PLACE_ON_LOCAL_PLAYER is true)
