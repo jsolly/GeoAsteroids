@@ -18,6 +18,7 @@ const GAME_OVER_OVERLAY_MS = 3500;
 describe('Game-over returns to the menu', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    GameController.getInstance().cancelPendingGameOver();
     GameStateManager.getInstance().setIsGameRunning(true);
     GameStateManager.getInstance().updateTextProperties('', 1);
     toggleScreen('start-screen', false);
@@ -80,7 +81,7 @@ describe('Game-over returns to the menu', () => {
     );
 
     const text = GameStateManager.getInstance().getText();
-    expect(text).toBe('Game Over: You were killed by boundary');
+    expect(text).toBe('Game Over: You were killed by the boundary');
     expect(text.toLowerCase()).not.toContain('unknown');
   });
 });

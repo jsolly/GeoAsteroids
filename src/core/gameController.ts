@@ -254,12 +254,17 @@ export class GameController {
     window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
   }
 
-  private resetSessionForNewGame(): void {
+  /** Drop a pending return-to-menu so Start (or a test) can open a new session. */
+  cancelPendingGameOver(): void {
     if (this.gameOverTimer !== null) {
       clearTimeout(this.gameOverTimer);
       this.gameOverTimer = null;
     }
     this.gameOverInProgress = false;
+  }
+
+  private resetSessionForNewGame(): void {
+    this.cancelPendingGameOver();
     this.gameStateManager.clearOverlay();
     canvasManager.clearPlayfield();
     resetThrustSources();
