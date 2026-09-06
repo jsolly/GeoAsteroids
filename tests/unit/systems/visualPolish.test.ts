@@ -32,8 +32,8 @@ test('play loop still advances remote lasers from the #418 MP path', () => {
 });
 
 test('play canvas and mouse input bind to #gameCanvas, not the title starfield', () => {
-  expect(canvasSrc).toMatch(/querySelector\('#gameCanvas'\)/);
-  expect(inputSrc).toMatch(/querySelector\('#gameCanvas'\)/);
+  expect(canvasSrc).toMatch(/getElementById\('gameCanvas'\)/);
+  expect(inputSrc).toMatch(/getElementById\('gameCanvas'\)/);
   expect(canvasSrc).not.toMatch(/querySelector\('canvas'\)/);
   expect(inputSrc).not.toMatch(/querySelector\('canvas'\)/);
 });
