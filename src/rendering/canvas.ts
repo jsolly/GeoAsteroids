@@ -100,6 +100,16 @@ class CanvasManager {
     return this.context;
   }
 
+  clearPlayfield(): void {
+    const ctx = this.context;
+    const canvas = this.canvas;
+    if (!ctx || !canvas) {
+      return;
+    }
+    ctx.fillStyle = PALETTE.BG;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
   requireCanvas(): HTMLCanvasElement {
     if (!this.canvas) {
       throw new Error('Canvas not initialized');

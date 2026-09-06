@@ -1,10 +1,14 @@
 export const CLIENT_ID_STORAGE_KEY = 'georoids.clientId';
 
+function createClientId(): string {
+  return `client-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
+}
+
 /** Stable per-tab id so a refresh or reconnect can take over the same ship. */
 export function readOrCreateClientId(
   storage?: Pick<Storage, 'getItem' | 'setItem'> | null
 ): string {
-  const created = `client-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
+  const created = createClientId();
   if (!storage) {
     return created;
   }
@@ -13,5 +17,12 @@ export function readOrCreateClientId(
     return existing;
   }
   storage.setItem(CLIENT_ID_STORAGE_KEY, created);
+  return created;
+}
+
+/** Game-over / Start mint a new tab id so we do not rejoin a 0-life ship. */
+export function replaceStoredClientId(storage?: Pick<Storage, 'setItem'> | null): string {
+  const created = createClientId();
+  storage?.setItem(CLIENT_ID_STORAGE_KEY, created);
   return created;
 }

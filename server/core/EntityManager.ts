@@ -138,18 +138,25 @@ export class EntityManager {
   public addHumanPlayer(id: string, name: string, ws: WebSocket, position?: Position, color?: string): GameEntity {
     const existing = this.entities.get(id);
     if (existing && existing.type === 'human') {
-      existing.ws = ws;
-      existing.name = name;
-      existing.lastUpdate = Date.now();
-      if (color) {
-        existing.color = color;
+      if (existing.lives > 0) {
+        existing.ws = ws;
+        existing.name = name;
+        existing.lastUpdate = Date.now();
+        if (color) {
+          existing.color = color;
+        }
+        return existing;
       }
-      return existing;
+      // Leftover 0-life ship after game-over — Start must not rejoin it.
+      this.entities.delete(id);
     }
 
     const sameName = this.getHumanPlayers().find((human) => human.name === name);
-    if (sameName) {
+    if (sameName && sameName.lives > 0) {
       return this.takeOverHuman(sameName, id, name, ws, color);
+    }
+    if (sameName && sameName.lives <= 0) {
+      this.entities.delete(sameName.id);
     }
 
     const restored = this.consumeHumanRejoinStash(id, name);
@@ -339,16 +346,20 @@ export class EntityManager {
     return entity;
   }
 
+  private shouldScheduleRespawn(entity: GameEntity): boolean {
+    return entity.type === 'bot' || entity.lives > 0;
+  }
+
   /**
    * One schedule for humans and bots. Do not reset an existing countdown
    * (that stacked a second wait and felt like freeze-stick). Last-life
-   * humans stay dead — bots keep lives and always come back.
+   * humans stay dead; bots always come back.
    */
   public scheduleShipRespawn(entity: GameEntity): void {
     if (entity.respawnTimer !== undefined) {
       return;
     }
-    if (entity.lives <= 0) {
+    if (!this.shouldScheduleRespawn(entity)) {
       return;
     }
     entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
@@ -388,6 +399,12 @@ export class EntityManager {
         }
 
         if (entity.respawnTimer === 0) {
+          // A leftover timer must not resurrect a human who already spent their last life.
+          if (!this.shouldScheduleRespawn(entity)) {
+            entity.respawnTimer = undefined;
+            continue;
+          }
+
           this.respawnShip(entity);
           finishedRespawning.push(entityId);
           logger.debug('ENTITY', `Respawned ${entity.type} entity: ${entity.name} (${entityId})`, {

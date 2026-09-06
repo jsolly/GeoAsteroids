@@ -146,7 +146,11 @@ export class CollisionManager {
   /**
    * Check ship collisions with other ships (players/bots)
    */
-  checkShipShipCollisions(localShip: Ship, otherShips: Ship[], localPlayerId: string): void {
+  checkShipShipCollisions(
+    localShip: Ship,
+    otherShips: { ship: Ship; id: string }[],
+    localPlayerId: string
+  ): void {
     // Skip if local ship cannot collide: exploding, dead, or under spawn protection
     if (!localShip || isShipCollisionImmune(localShip)) {
       return;
@@ -154,17 +158,16 @@ export class CollisionManager {
 
     let isColliding = false;
 
-    // Check local ship against all other ships
-    for (const otherShip of otherShips) {
-      // Skip other ships that are exploding, dead, or under spawn protection
+    for (const other of otherShips) {
+      const otherShip = other.ship;
       if (isShipCollisionImmune(otherShip)) {
         continue;
       }
 
       if (checkShipCollision(localShip.position, localShip.r, otherShip.position, otherShip.r)) {
-        this.handleShipShipCollision(localShip, otherShip, localPlayerId);
+        this.handleShipShipCollision(localShip, otherShip, other.id, localPlayerId);
         isColliding = true;
-        break; // Only handle one collision per frame
+        break;
       }
     }
 
@@ -375,17 +378,22 @@ export class CollisionManager {
   /**
    * Handle ship hitting another ship
    */
-  private handleShipShipCollision(localShip: Ship, otherShip: Ship, localPlayerId: string): void {
+  private handleShipShipCollision(
+    localShip: Ship,
+    otherShip: Ship,
+    otherPlayerId: string,
+    localPlayerId: string
+  ): void {
     logger.debug('COLLISION', 'Ship hit ship', {
       localShipPos: localShip.position,
       otherShipPos: otherShip.position,
       localShipId: localShip.id,
       otherShipId: otherShip.id,
+      otherPlayerId,
       localPlayerId,
     });
 
-    // Start collision damage-over-time for the local ship
-    localShip.startPlayerCollision(otherShip.id);
+    localShip.startPlayerCollision(otherPlayerId);
   }
 
   /**

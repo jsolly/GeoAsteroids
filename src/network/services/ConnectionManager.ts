@@ -13,10 +13,11 @@ import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
+import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 import { partitionAsteroidSnapshot } from './asteroidFieldSync';
-import { readOrCreateClientId } from './clientIdentity';
+import { readOrCreateClientId, replaceStoredClientId } from './clientIdentity';
 import {
   CONNECTION_STALE_TIMEOUT_MS,
   HEARTBEAT_INTERVAL_MS,
@@ -181,19 +182,40 @@ export class ConnectionManager {
     });
   }
 
-  disconnect(): void {
+  disconnect(options?: { newSession?: boolean }): void {
     this.userRequestedDisconnect = true;
     this.clearReconnectTimer();
     this.reconnectAttempt = 0;
     this.stopHeartbeat();
-    if (this.state.socket) {
-      this.state.socket.close();
-      this.state.isConnected = false;
-      this.state.socket = null;
+    const socket = this.state.socket;
+    if (socket) {
+      // Drop handlers first so game-over disconnect does not re-enter via onclose.
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close();
+      }
     }
+    this.state.isConnected = false;
+    this.state.socket = null;
+    this.allPlayers.clear();
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
+    // pagehide / unexpected close keep the stored id (#467). Game-over Start
+    // mints a new one so we do not rejoin a 0-life ship.
+    this.hasConnectedOnce = false;
+    if (options?.newSession) {
+      this.clientId = replaceStoredClientId(
+        typeof sessionStorage === 'undefined' ? null : sessionStorage
+      );
+    }
+  }
+
+  private describeAttacker(attackerId: string): string {
+    return describeDeathCause(attackerId, (id) => this.allPlayers.get(id)?.name);
   }
 
   private clearReconnectTimer(): void {
@@ -886,7 +908,9 @@ export class ConnectionManager {
       data.remainingLives !== undefined &&
       prevLocalLives > data.remainingLives
     ) {
-      this.dispatchLocalPlayerDied(localPlayer, data.remainingLives, data.attackerId);
+      const deathCause = this.describeAttacker(data.attackerId);
+      localPlayer.deathCause = deathCause;
+      this.dispatchLocalPlayerDied(localPlayer, data.remainingLives, deathCause);
     }
   }
 

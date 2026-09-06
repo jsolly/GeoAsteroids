@@ -28,8 +28,8 @@ export class NetworkManager {
     await this.connectionManager.connect();
   }
 
-  disconnect(): void {
-    this.connectionManager.disconnect();
+  disconnect(options?: { newSession?: boolean }): void {
+    this.connectionManager.disconnect(options);
   }
 
   get isConnected(): boolean {

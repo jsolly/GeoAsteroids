@@ -23,6 +23,7 @@ import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFe
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { setPlayView } from '../ui/uiUtils';
+import { describeDeathCause } from '../utils/deathCause';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
@@ -37,6 +38,9 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private gameOverInProgress = false;
+  private gameOverTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly GAME_OVER_MENU_DELAY_MS = 3500;
   private lifecycleAccumulatorMs = 0;
 
   private constructor() {
@@ -96,9 +100,10 @@ export class GameController {
 
   async startGame(playerName?: string): Promise<void> {
     logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
+    this.resetSessionForNewGame();
     this.newGame(playerName);
     setPlayView(true);
-    this.gameStateManager.toggleIsGameRunning();
+    this.gameStateManager.setIsGameRunning(true);
 
     // Reset button text to default state
     this.inputManager.resetButtonText();
@@ -267,23 +272,50 @@ export class GameController {
     window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
   }
 
+  /** Drop a pending return-to-menu so Start (or a test) can open a new session. */
+  cancelPendingGameOver(): void {
+    if (this.gameOverTimer !== null) {
+      clearTimeout(this.gameOverTimer);
+      this.gameOverTimer = null;
+    }
+    this.gameOverInProgress = false;
+  }
+
+  private resetSessionForNewGame(): void {
+    this.cancelPendingGameOver();
+    this.gameStateManager.clearOverlay();
+    canvasManager.clearPlayfield();
+    resetThrustSources();
+    PlayerNetwork.getInstance().stopNetworkUpdates();
+    this.networkManager.disconnect({ newSession: true });
+  }
+
   gameOver(deathCause?: string): void {
-    const killer = formatDeathCauseForOverlay(deathCause);
+    if (this.gameOverInProgress) {
+      return;
+    }
+    this.gameOverInProgress = true;
+
+    const described = describeDeathCause(
+      deathCause,
+      (id) => this.networkManager.getPlayer(id)?.name
+    );
+    const killer = formatDeathCauseForOverlay(described);
     const gameOverText = killer ? `Game Over: You were killed by ${killer}` : 'Game Over';
     this.gameStateManager.updateTextProperties(gameOverText, 1.0);
 
-    // Clean up server asteroid listeners to prevent memory leaks
     this.cleanupServerAsteroidListeners();
+    PlayerNetwork.getInstance().stopNetworkUpdates();
+    this.networkManager.disconnect({ newSession: true });
 
-    // Don't stop the game loop yet - let the text render for a few seconds
-    setTimeout(() => {
-      // Stop the game loop and return to main menu
+    this.gameOverTimer = setTimeout(() => {
+      this.gameOverTimer = null;
       this.gameStateManager.setIsGameRunning(false);
       resetThrustSources();
       import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });
-    }, 3500); // Increased time to read the death message
+    }, GameController.GAME_OVER_MENU_DELAY_MS);
   }
 
   private setupShipExplodedHandler(): void {
@@ -736,9 +768,8 @@ export class GameController {
     const allPlayers = this.networkManager.getAllPlayers();
     const otherShips = allPlayers
       .filter((player) => player.id !== currPlayer.id)
-      .map((player) => player.ship);
+      .map((player) => ({ ship: player.ship, id: player.id }));
 
-    // Check ship-to-ship collisions
     this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);
   }
 

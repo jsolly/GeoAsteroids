@@ -2,6 +2,7 @@ import type { Position } from '../../../shared-types';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
+import { isStaleGameOverSnapshot } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
 import {
@@ -133,7 +134,17 @@ export class Player {
     }
 
     const skipHudReset = isSilentHudReset(this.lives, this.score, data.lives, data.score);
-    if (data.lives !== undefined && !skipHudReset) {
+    const staleSnapshot =
+      isLocal &&
+      data.lives !== undefined &&
+      isStaleGameOverSnapshot({
+        prevLives: this.lives,
+        nextLives: data.lives,
+        deathCause: this.deathCause ?? data.deathCause,
+        health: data.health ?? this.ship.health,
+        exploding: data.exploding ?? this.ship.exploding,
+      });
+    if (data.lives !== undefined && !skipHudReset && !staleSnapshot) {
       const prevLives = this.lives;
       this.lives = data.lives;
       if (isLocal && prevLives > this.lives) {
@@ -161,80 +172,84 @@ export class Player {
       this.ship.color = data.color;
     }
     if (data.health !== undefined) {
-      const wasDead = this.ship.health <= 0;
-      const wasExploding = this.ship.exploding;
-      const oldHealth = this.ship.health;
-      const serverHealth = data.health;
+      if (isLocal && this.lives <= 0) {
+        this.ship.health = 0;
+        this.lastServerHealthEcho = 0;
+      } else {
+        const wasDead = this.ship.health <= 0;
+        const wasExploding = this.ship.exploding;
+        const oldHealth = this.ship.health;
+        const serverHealth = data.health;
 
-      // Local player health regen runs client-side; the server echo can lag
-      // behind regen progress. Accept authoritative damage and respawn heals,
-      // but don't let a stale server snapshot rewind regen.
-      if (isLocal && !wasDead && !wasExploding) {
-        if (serverHealth >= this.ship.maxHealth) {
+        // Local player health regen runs client-side; the server echo can lag
+        // behind regen progress. Accept authoritative damage and respawn heals,
+        // but don't let a stale server snapshot rewind regen.
+        if (isLocal && !wasDead && !wasExploding) {
+          if (serverHealth >= this.ship.maxHealth) {
+            this.ship.health = serverHealth;
+            this.lastServerHealthEcho = serverHealth;
+          } else if (
+            this.lastServerHealthEcho === undefined ||
+            serverHealth < this.lastServerHealthEcho
+          ) {
+            this.ship.health = serverHealth;
+            this.lastServerHealthEcho = serverHealth;
+          }
+        } else if (isLocal && (wasDead || wasExploding) && serverHealth >= this.ship.maxHealth) {
           this.ship.health = serverHealth;
           this.lastServerHealthEcho = serverHealth;
-        } else if (
-          this.lastServerHealthEcho === undefined ||
-          serverHealth < this.lastServerHealthEcho
-        ) {
+        } else if (!isLocal) {
+          this.ship.health = serverHealth;
+        } else if (isLocal && serverHealth > this.ship.health) {
           this.ship.health = serverHealth;
           this.lastServerHealthEcho = serverHealth;
         }
-      } else if (isLocal && (wasDead || wasExploding) && serverHealth >= this.ship.maxHealth) {
-        this.ship.health = serverHealth;
-        this.lastServerHealthEcho = serverHealth;
-      } else if (!isLocal) {
-        this.ship.health = serverHealth;
-      } else if (isLocal && serverHealth > this.ship.health) {
-        this.ship.health = serverHealth;
-        this.lastServerHealthEcho = serverHealth;
-      }
 
-      const newHealth = this.ship.health;
+        const newHealth = this.ship.health;
 
-      if (oldHealth !== newHealth) {
-        logger.debug('HEALTH_UPDATE', 'Health changed', {
-          playerId: this.id,
-          oldHealth,
-          newHealth,
-          wasDead,
-          wasExploding,
-          exploding: this.ship.exploding,
-          type: this.type,
-        });
-      }
-
-      if (this.ship.health <= 0 && oldHealth > 0) {
-        logger.debug('HEALTH_UPDATE', 'Health reached 0, triggering explosion', {
-          playerId: this.id,
-          oldHealth,
-          newHealth: this.ship.health,
-          type: this.type,
-        });
-        this.ship.explode('server-damage');
-      }
-
-      applySharedShipRespawnCue(this.ship, wasDead || wasExploding, data.spawnProtectionTimer);
-      if (
-        this.ship.health > 0 &&
-        this.ship.blinkCount <= 0 &&
-        (data.spawnProtectionTimer === undefined || data.spawnProtectionTimer <= 0) &&
-        this.type === 'local'
-      ) {
-        // Additional debug for local player health updates that don't trigger respawn protection
-        logger.debug(
-          'HEALTH_UPDATE_LOCAL',
-          'Local player health update without respawn protection',
-          {
+        if (oldHealth !== newHealth) {
+          logger.debug('HEALTH_UPDATE', 'Health changed', {
             playerId: this.id,
             oldHealth,
-            newHealth: data.health,
+            newHealth,
             wasDead,
             wasExploding,
             exploding: this.ship.exploding,
-            condition: `wasDead: ${wasDead}, wasExploding: ${wasExploding}, health > 0: ${this.ship.health > 0}`,
-          }
-        );
+            type: this.type,
+          });
+        }
+
+        if (this.ship.health <= 0 && oldHealth > 0) {
+          logger.debug('HEALTH_UPDATE', 'Health reached 0, triggering explosion', {
+            playerId: this.id,
+            oldHealth,
+            newHealth: this.ship.health,
+            type: this.type,
+          });
+          this.ship.explode('server-damage');
+        }
+
+        applySharedShipRespawnCue(this.ship, wasDead || wasExploding, data.spawnProtectionTimer);
+        if (
+          this.ship.health > 0 &&
+          this.ship.blinkCount <= 0 &&
+          (data.spawnProtectionTimer === undefined || data.spawnProtectionTimer <= 0) &&
+          this.type === 'local'
+        ) {
+          logger.debug(
+            'HEALTH_UPDATE_LOCAL',
+            'Local player health update without respawn protection',
+            {
+              playerId: this.id,
+              oldHealth,
+              newHealth: data.health,
+              wasDead,
+              wasExploding,
+              exploding: this.ship.exploding,
+              condition: `wasDead: ${wasDead}, wasExploding: ${wasExploding}, health > 0: ${this.ship.health > 0}`,
+            }
+          );
+        }
       }
     }
     if (data.maxHealth !== undefined) {

@@ -76,22 +76,21 @@ export function drawTextOverlay(
 
   const isDeathMessage = text.toLowerCase().includes('killed by');
   const isGameOver = text.toLowerCase().includes('game over');
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
 
-  if (isDeathMessage) {
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+  if (isGameOver) {
+    ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.8);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (isGameOver) {
-      ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.8);
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = hexToRgba(PALETTE.DANGER, alpha);
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GAME OVER', centerX, centerY - 80);
 
-      ctx.fillStyle = hexToRgba(PALETTE.DANGER, alpha);
-      ctx.font = 'bold 48px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('GAME OVER', centerX, centerY - 80);
-
-      const deathCause = text.replace('Game Over: ', '');
+    if (isDeathMessage) {
+      const deathCause = text.replace(/^Game Over:\s*/i, '');
       ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
@@ -99,22 +98,22 @@ export function drawTextOverlay(
 
       const maxWidth = canvas.width * 0.8;
       drawMultiLineText(ctx, deathCause, centerX, centerY + 20, maxWidth, 32, alpha);
-
-      ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, alpha * 0.8);
-      ctx.font = '16px Arial';
-      ctx.fillText('Returning to main menu...', centerX, centerY + 120);
-    } else {
-      ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.7);
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
-      ctx.font = 'bold 28px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const maxWidth = canvas.width * 0.8;
-      drawMultiLineText(ctx, text, centerX, centerY, maxWidth, 36, alpha);
     }
+
+    ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, alpha * 0.8);
+    ctx.font = '16px Arial';
+    ctx.fillText('Returning to main menu...', centerX, centerY + 120);
+  } else if (isDeathMessage) {
+    ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.7);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
+    ctx.font = 'bold 28px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const maxWidth = canvas.width * 0.8;
+    drawMultiLineText(ctx, text, centerX, centerY, maxWidth, 36, alpha);
   } else {
     ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
     ctx.font = '32px Arial';

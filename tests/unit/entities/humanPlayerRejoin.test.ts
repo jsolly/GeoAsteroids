@@ -79,6 +79,46 @@ test('game-over rejoin starts a new ship instead of restoring 0 lives', () => {
   expect(rejoined.score).toBe(0);
 });
 
+test('leftover 0-life same-name ship is deleted so Start gets a fresh 3/0', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-old', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 0;
+  first.score = 210;
+
+  const started = manager.addHumanPlayer(
+    'pilot-new',
+    'Pilot',
+    { sent: 2 } as never,
+    { x: 3000, y: 0 }
+  );
+
+  expect(started).not.toBe(first);
+  expect(started.id).toBe('pilot-new');
+  expect(started.lives).toBe(3);
+  expect(started.score).toBe(0);
+  expect(manager.getHumanPlayerCount()).toBe(1);
+  expect(manager.getEntity('pilot-old')).toBeUndefined();
+});
+
+test('leftover 0-life same-id ship is replaced instead of taken over', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 0;
+  first.score = 210;
+
+  const started = manager.addHumanPlayer(
+    'pilot-1',
+    'Pilot',
+    { sent: 2 } as never,
+    { x: 3000, y: 0 }
+  );
+
+  expect(started).not.toBe(first);
+  expect(started.lives).toBe(3);
+  expect(started.score).toBe(0);
+  expect(manager.getHumanPlayerCount()).toBe(1);
+});
+
 test('rejoining after the socket was removed restores lives and score, not a fresh 3/0', () => {
   const manager = new EntityManager(new RNGService(1));
   const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });

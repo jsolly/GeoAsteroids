@@ -1059,8 +1059,14 @@ export class GameInteractions {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const ready = await this.page.evaluate(() => {
-        const lp = (window as any).gameController?.playerManager?.getLocalPlayer?.();
-        return (lp?.serverSpawnProtectionTimer ?? 0) === 0;
+        const ship = (window as any).gameController?.playerManager?.getLocalPlayer?.()?.ship;
+        if (!ship) {
+          return false;
+        }
+        // #467 lean snapshots omit expired spawnProtectionTimer; the last
+        // positive echo sticks on serverSpawnProtectionTimer. Collisions
+        // use the ship blink window, so that is what "combat ready" means.
+        return ship.health > 0 && !ship.exploding && (ship.blinkCount ?? 0) === 0;
       });
       if (ready) {
         return;
