@@ -603,6 +603,8 @@ export function drawShipAtPosition(
   const screenX = screen.x;
   const screenY = screen.y;
   const shipR = ship.r * scale;
+  // Cable first — a barely-off-screen hull must not hide the cream tether.
+  drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, shipPosition);
   const cull = shipR * 3;
   if (
     screenX < -cull ||
@@ -612,9 +614,6 @@ export function drawShipAtPosition(
   ) {
     return;
   }
-
-  // Spawn blink must not hide the Hauler cable — QA samples the cream+tip pixels.
-  drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, shipPosition);
 
   if (ship.blinkCount > 0 && !ship.blinkOn) {
     return;
@@ -645,8 +644,13 @@ export function canDrawHaulerHarpoon(ship: {
   kitId: string;
   harpoonTimer: number;
   harpoonTargetId?: string;
+  harpoonLatchPos?: { x: number; y: number };
 }): boolean {
-  return ship.kitId === 'hauler' && ship.harpoonTimer > 0 && Boolean(ship.harpoonTargetId);
+  return (
+    ship.kitId === 'hauler' &&
+    ship.harpoonTimer > 0 &&
+    (Boolean(ship.harpoonTargetId) || Boolean(ship.harpoonLatchPos))
+  );
 }
 
 /** Zoomed playfields shrink nearby latches; dashes must not eat the cable. */
@@ -656,10 +660,11 @@ export function harpoonTetherStyle(
 ): { dash: number[]; ring: number; lineWidth: number; tipRadius: number } {
   const scale = Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : 1;
   return {
-    dash: screenDist > 20 ? [8, 5] : [],
+    // Solid cream — dashes ate the GD lock pixels on zoomed 1:1 samples.
+    dash: [],
     ring: Math.max(14, Math.min(22, 10 + screenDist * 0.12)),
-    lineWidth: Math.max(4, 3.25 / scale),
-    tipRadius: Math.max(7, 6 / scale),
+    lineWidth: Math.max(5, 4 / scale),
+    tipRadius: Math.max(8, 7 / scale),
   };
 }
 

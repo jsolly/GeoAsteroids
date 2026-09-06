@@ -84,10 +84,13 @@ export const HAULER_TETHER_TIP_COLOR = '#FDE68A';
 export const SHIP_ABILITY = {
   DASH_BOOST: 6,
   HARPOON_RANGE: 280,
-  /** Screen pixels from the ship that still count as "nearby" at any zoom. */
-  HARPOON_VISUAL_PX: 320,
-  /** Cap so a 1:1 or zoomed latch cannot reach across the whole arena. */
-  HARPOON_RANGE_MAX: 1600,
+  /** Fallback "nearby" disk when the canvas size is unknown. */
+  HARPOON_VISUAL_PX: 720,
+  /**
+   * Sanity only. Live latch is screen-space (half-diagonal / scale).
+   * #480's 1600wu cap dropped zoomed rocks that looked adjacent.
+   */
+  HARPOON_RANGE_MAX: 8000,
   HARPOON_FRAMES: 90,
   HARPOON_PULL: 0.42,
   HARPOON_SLACK: 1.25,

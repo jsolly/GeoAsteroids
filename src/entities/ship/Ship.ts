@@ -18,6 +18,7 @@ import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser, createLaserAtAngle } from '../laser/laserUtils';
+import { getHarpoonFieldCanvas, getHarpoonFieldScale } from './harpoonField';
 import {
   type AbilityWorld,
   activateAbilityOnHost,
@@ -350,10 +351,17 @@ class Ship {
     if (this.isLocalPlayer && !this.isBot && canTry) {
       const networkManager = NetworkManager.getInstance();
       if (networkManager.isConnected) {
+        const canvas = getHarpoonFieldCanvas();
         networkManager.sendMessage({
           type: 'useAbility',
           id: networkManager.getLocalPlayerId(),
-          data: { kitId: this.kitId, abilityId: result.abilityId ?? kit.abilityId },
+          data: {
+            kitId: this.kitId,
+            abilityId: result.abilityId ?? kit.abilityId,
+            playfieldScale: getHarpoonFieldScale(),
+            canvasWidth: canvas?.width,
+            canvasHeight: canvas?.height,
+          },
         });
       }
     }

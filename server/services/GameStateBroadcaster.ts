@@ -334,6 +334,7 @@ export class GameStateBroadcaster {
           shieldTimer: bot.shieldTimer,
           harpoonTimer: bot.harpoonTimer,
           harpoonTargetId: bot.harpoonTargetId,
+          harpoonLatchPos: bot.harpoonLatchPos,
           shieldActive: bot.shieldActive,
           shieldTime: bot.shieldTime,
           shieldCooldown: bot.shieldCooldown,

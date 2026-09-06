@@ -89,6 +89,29 @@ test('zoomed playfields widen local latch range so a visually-near rock hooks', 
   expect(findHarpoonTarget(hauler, [almostNear], harpoonLatchRange(0.25))?.id).toBe('zoom-rock');
 });
 
+test('1:1 large canvas latches a rock past the old 320wu / 1600wu #480 cap', () => {
+  const hd = { width: 1920, height: 1080 };
+  expect(harpoonLatchRange(1, hd)).toBeGreaterThan(500);
+  expect(harpoonLatchRange(0.1, hd)).toBeGreaterThan(2000);
+  const hauler = host('hauler');
+  const liveNear = {
+    id: 'live-near',
+    position: { x: 520, y: 0 },
+    velocity: { x: 0, y: 0 },
+  };
+  expect(findHarpoonTarget(hauler, [liveNear])).toBeUndefined();
+  expect(findHarpoonTarget(hauler, [liveNear], harpoonLatchRange(1, hd))?.id).toBe('live-near');
+  const result = activateAbilityOnHost(hauler, {
+    asteroids: [liveNear],
+    entities: [],
+    playfieldScale: 1,
+    canvas: hd,
+  });
+  expect(result.activated).toBe(true);
+  expect(hauler.harpoonTargetId).toBe('live-near');
+  expect(hauler.harpoonLatchPos?.x).toBe(520);
+});
+
 test('a large rock whose surface is within 280wu latches even if its center is farther', () => {
   const hauler = host('hauler');
   hauler.r = 19;
@@ -213,6 +236,20 @@ test('harpoon skips a timed ship shield', () => {
   };
   const foe = { id: 'dart-2', position: { x: 90, y: 0 }, velocity: { x: 0, y: 0 }, health: 100 };
   expect(findHarpoonTarget(hauler, [shielded, foe])?.id).toBe('dart-2');
+});
+
+test('server latch copies the field pose so the cream tip has a world point', () => {
+  publishHarpoonField([{ id: 'bot-1', position: { x: 90, y: 10 }, velocity: { x: 0, y: 0 } }]);
+  const local = host('hauler');
+  applySharedHarpoonLatch(local, { harpoonTimer: 80, harpoonTargetId: 'bot-1' }, 'predicting');
+  expect(local.harpoonLatchPos?.x).toBe(90);
+  expect(local.harpoonLatchPos?.y).toBe(10);
+  applySharedHarpoonLatch(
+    local,
+    { harpoonTimer: 70, harpoonTargetId: 'bot-1', harpoonLatchPos: { x: 95, y: 12 } },
+    'predicting'
+  );
+  expect(local.harpoonLatchPos?.x).toBe(95);
 });
 
 test('local and remote adopt the same server latch', () => {

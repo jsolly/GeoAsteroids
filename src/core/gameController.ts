@@ -808,15 +808,17 @@ export class GameController {
       .map((player) =>
         harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
       );
+    const canvas = canvasManager.getCanvas();
     return {
       bodies: collectPlayHarpoonField(this.currRoidBelt?.roids ?? [], ships),
       playfieldScale: canvasManager.getPlayfieldScale(),
+      canvas: canvas ? { width: canvas.width, height: canvas.height } : undefined,
     };
   }
 
   private publishLiveHarpoonField(localPlayer?: Player | null): void {
     const snapshot = this.snapshotHarpoonField(localPlayer);
-    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale);
+    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale, snapshot.canvas);
   }
 
   private playersWithLocal(local: Player, allPlayers: Player[]): Player[] {

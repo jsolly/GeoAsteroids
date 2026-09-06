@@ -901,6 +901,7 @@ export class GameEngine {
         shieldTimer: entity.shieldTimer,
         harpoonTimer: entity.harpoonTimer,
         harpoonTargetId: entity.harpoonTargetId,
+        harpoonLatchPos: entity.harpoonLatchPos,
         ...(entity.deathCause ? { deathCause: entity.deathCause } : {}),
         ...shieldSnapshot(entity),
       })),
@@ -938,7 +939,11 @@ export class GameEngine {
     return canDealCombatDamage(attacker?.factionId, target?.factionId);
   }
 
-  public useAbility(entityId: string, requestedKitId?: unknown): boolean {
+  public useAbility(
+    entityId: string,
+    requestedKitId?: unknown,
+    latchView?: { playfieldScale?: number; canvas?: { width: number; height: number } }
+  ): boolean {
     const entity = this.entityManager.getEntity(entityId);
     if (!entity) {
       return false;
@@ -952,6 +957,8 @@ export class GameEngine {
         r: asteroid.size,
       })),
       entities: this.entityManager.getAllEntities().filter((other) => other.id !== entityId),
+      playfieldScale: latchView?.playfieldScale,
+      canvas: latchView?.canvas,
     };
     return activateAbilityOnHost(entity, world).activated;
   }

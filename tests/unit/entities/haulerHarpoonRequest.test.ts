@@ -27,7 +27,7 @@ test('local Hauler still asks the server when the local field has no target', ()
     expect.objectContaining({
       type: 'useAbility',
       id: 'alice',
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: expect.objectContaining({ kitId: 'hauler', abilityId: 'harpoon' }),
     })
   );
   expect(ship.abilityCooldownFrames).toBe(0);
@@ -53,7 +53,7 @@ test('local Hauler still sends useAbility after a local latch', () => {
     expect.objectContaining({
       type: 'useAbility',
       id: 'alice',
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: expect.objectContaining({ kitId: 'hauler', abilityId: 'harpoon' }),
     })
   );
 });
