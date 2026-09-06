@@ -79,7 +79,9 @@ export class Player {
     respawnTimer?: number;
     spawnProtectionTimer?: number;
   }): void {
-    this.serverSpawnProtectionTimer = data.spawnProtectionTimer ?? 0;
+    if (data.spawnProtectionTimer !== undefined) {
+      this.serverSpawnProtectionTimer = data.spawnProtectionTimer;
+    }
     // The local player predicts its own ship for responsiveness: while alive it
     // owns its position/velocity/angle and must NOT snap to the (lagging) server
     // echo. Remote players and bots are always server-driven.
@@ -216,7 +218,7 @@ export class Player {
       } else if (
         this.ship.health > 0 &&
         this.ship.blinkCount <= 0 &&
-        (data.spawnProtectionTimer ?? 0) > 0
+        data.spawnProtectionTimer !== undefined && data.spawnProtectionTimer > 0
       ) {
         applyShipSpawnProtection(this.ship);
       } else if (this.ship.health > 0 && this.type === 'local') {

@@ -49,6 +49,31 @@ test('a later snapshot updates known asteroids so a late joiner can share the li
   expect(seen.has('server-asteroid-2')).toBe(true);
 });
 
+test('a lean delta without shape does not create or mark an unseen asteroid', () => {
+  const seen = new Set<string>();
+  const { created, updated } = partitionAsteroidSnapshot(
+    [{ id: 'server-asteroid-0', position: { x: 80, y: -12 }, rotation: 1.2 }],
+    seen
+  );
+
+  expect(created).toEqual([]);
+  expect(updated).toEqual([]);
+  expect(seen.size).toBe(0);
+});
+
+test('a lean delta updates pose for a known asteroid without touching shape', () => {
+  const seen = new Set(['server-asteroid-0']);
+  const lean = { id: 'server-asteroid-0', position: { x: 80, y: -12 }, rotation: 1.2 };
+  const { created, updated } = partitionAsteroidSnapshot([lean], seen);
+
+  expect(created).toEqual([]);
+  expect(updated).toEqual([lean]);
+  expect(asteroidKinematicUpdates(lean)).toEqual({
+    position: { x: 80, y: -12 },
+    rotation: 1.2,
+  });
+});
+
 test('a duplicate create still writes the live pose onto the existing roid', () => {
   const local = {
     position: { x: 1, y: 2 },
