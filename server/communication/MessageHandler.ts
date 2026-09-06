@@ -217,6 +217,7 @@ export class MessageHandler {
     const sanitizedData: any = { ...data };
     delete (sanitizedData as any).health;
     delete (sanitizedData as any).maxHealth;
+    delete (sanitizedData as any).mass;
     delete (sanitizedData as any).score;
     delete (sanitizedData as any).lives;
     delete (sanitizedData as any).respawnTimer;
@@ -615,6 +616,7 @@ export class MessageHandler {
         lives: bot.lives,
         health: bot.health,
         maxHealth: bot.maxHealth,
+        mass: bot.mass,
       },
       timestamp: Date.now(),
     });

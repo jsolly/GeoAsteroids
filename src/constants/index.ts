@@ -66,6 +66,7 @@ export const PALETTE = {
   HUD_MUTED: '#64748B',
   DANGER: '#F43F5E',
   HEALTH: '#4ADE80',
+  LOOT: '#FBBF24',
 } as const;
 
 export const TITLE = {
@@ -113,6 +114,8 @@ export const VISUAL = {
   STAR_SEED: 0x9e3779b9,
   STAR_ALPHA_MIN: 0.3,
   STAR_ALPHA_MAX: 0.8,
+  LOOT_STROKE_WIDTH: 1.25,
+  LOOT_GLOW: 1.25,
   // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
   TITLE_STARS_PER_1080P: 48,
   MINIMAP_SIZE: 96,

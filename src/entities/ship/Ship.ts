@@ -4,6 +4,7 @@ import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
+import { GROWTH, maxVelocityFromMass, radiusFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import { NetworkManager } from '../../network/networkManager';
 import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
 import { isGenericDeathCause } from '../../utils/deathCause';
@@ -32,7 +33,8 @@ class Ship {
   id: string = uuidv4(); // Unique identifier for event handling
   position: Position = { x: 0, y: 0 };
   velocity: Velocity = { x: 0, y: 0 };
-  r: number = SHIP.SIZE / 2;
+  r: number = radiusFromMass(GROWTH.BASE_MASS);
+  mass: number = GROWTH.BASE_MASS;
   angle: number = (90 / 180) * Math.PI;
   blinkCount: number = 0;
   spawnProtectionTimer: number = 0;
@@ -197,9 +199,11 @@ class Ship {
     }
 
     if (this.thrusting) {
+      const thrustScale = thrustScaleFromMass(this.mass);
+      const maxVelocity = maxVelocityFromMass(this.mass);
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * this.thrust) / GAME.FPS,
-        y: (-Math.sin(this.angle) * this.thrust) / GAME.FPS,
+        x: (Math.cos(this.angle) * this.thrust * thrustScale) / GAME.FPS,
+        y: (-Math.sin(this.angle) * this.thrust * thrustScale) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -207,8 +211,9 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > this.maxVelocity) {
-        const scale = this.maxVelocity / currentSpeed;
+      const speedCap = this.maxVelocity * (maxVelocity / SHIP.MAX_VELOCITY);
+      if (currentSpeed > speedCap) {
+        const scale = speedCap / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }
@@ -392,6 +397,7 @@ class Ship {
     thrusting?: boolean;
     health?: number;
     maxHealth?: number;
+    mass?: number;
   }): void {
     // Local player uses immediate state; bots/remote ships use smoothing targets
     if (this.isBot) {
@@ -440,8 +446,13 @@ class Ship {
     exploding?: boolean;
     health?: number;
     maxHealth?: number;
+    mass?: number;
     spawnProtectionTimer?: number;
   }): void {
+    if (data.mass !== undefined) {
+      this.mass = data.mass;
+      this.r = radiusFromMass(data.mass);
+    }
     const wasDeadOrExploding = this.health <= 0 || this.exploding;
     applySharedShipExplodingFlag(this, data.exploding);
     if (data.health !== undefined) {
@@ -726,9 +737,11 @@ class Ship {
 
     // Apply thrust if thrusting
     if (this.thrusting) {
+      const thrustScale = thrustScaleFromMass(this.mass);
+      const maxVelocity = maxVelocityFromMass(this.mass);
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * this.thrust) / GAME.FPS,
-        y: (-Math.sin(this.angle) * this.thrust) / GAME.FPS,
+        x: (Math.cos(this.angle) * this.thrust * thrustScale) / GAME.FPS,
+        y: (-Math.sin(this.angle) * this.thrust * thrustScale) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -736,8 +749,9 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > this.maxVelocity) {
-        const scale = this.maxVelocity / currentSpeed;
+      const speedCap = this.maxVelocity * (maxVelocity / SHIP.MAX_VELOCITY);
+      if (currentSpeed > speedCap) {
+        const scale = speedCap / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }

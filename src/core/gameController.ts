@@ -1,6 +1,6 @@
 import { areAllied } from '../../shared/factions';
 import { consumeTickAccumulator } from '../../shared/gameClock';
-import type { AsteroidData, Position, ShipKitId } from '../../shared-types';
+import type { AsteroidData, LootData, Position, ShipKitId } from '../../shared-types';
 import { playExplosionSound } from '../audio/explosionSound';
 import {
   replaceThrustSources,
@@ -10,6 +10,7 @@ import {
 import { bindGameAudio } from '../audio/spatialAudio';
 import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
+import { LootField } from '../entities/loot/LootField';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
@@ -484,6 +485,10 @@ export class GameController {
 
   getCurrRoidCount(): number {
     return this.currRoidBelt.roids.length;
+  }
+
+  getLoot(): LootData[] {
+    return LootField.getInstance().getAll();
   }
 
   // Score management — the server is authoritative; the local player's entity

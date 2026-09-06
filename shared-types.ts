@@ -36,6 +36,7 @@ export interface PlayerUpdate {
   maxHealth: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
+  mass?: number;
   lasers?: Array<{
     position: Position;
     velocity: Velocity;
@@ -97,6 +98,14 @@ export interface BotData {
   maxHealth: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
+  mass?: number;
+}
+
+export interface LootData {
+  id: string;
+  position: Position;
+  mass: number;
+  radius: number;
 }
 
 // Server game state structure (what the server actually sends)
@@ -136,6 +145,7 @@ export interface AsteroidDestroyEvent {
 export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];
+  loot: LootData[];
   gameTime: number;
   isPaused: boolean;
   /** Same seed on every client → same contours and slope field. */
@@ -156,6 +166,7 @@ export interface ServerEntityData {
   score: number;
   health: number;
   maxHealth: number;
+  mass: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
   kitId?: ShipKitId;

@@ -8,6 +8,13 @@ import { RNGService } from './RNGService';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { applySharedShipSlope } from '../../src/physics/terrain/applyShipSlope';
+import {
+  GROWTH,
+  applyShipMass,
+  maxVelocityFromMass,
+  resetShipMass,
+  thrustScaleFromMass,
+} from '../../shared/shipGrowth';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
@@ -35,6 +42,7 @@ export interface GameEntity {
   score: number;
   health: number;
   maxHealth: number;
+  mass: number;
   lastUpdate: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
@@ -128,6 +136,11 @@ export class EntityManager {
     // Ignore any updates to id since it's the Map key
     const { id: ignoredId, ...allowedUpdates } = updates;
 
+    // Validate and apply mass first so maxHealth/health follow growth.
+    if (typeof allowedUpdates.mass === 'number' && Number.isFinite(allowedUpdates.mass)) {
+      applyShipMass(entity, allowedUpdates.mass);
+    }
+
     // Validate and apply maxHealth first
     if (typeof allowedUpdates.maxHealth === 'number' && Number.isFinite(allowedUpdates.maxHealth)) {
       entity.maxHealth = Math.max(1, allowedUpdates.maxHealth);
@@ -139,7 +152,12 @@ export class EntityManager {
     }
 
     // Apply other allowed properties
-    const { maxHealth: ignoredMaxHealth, health: ignoredHealth, ...otherUpdates } = allowedUpdates;
+    const {
+      maxHealth: ignoredMaxHealth,
+      health: ignoredHealth,
+      mass: ignoredMass,
+      ...otherUpdates
+    } = allowedUpdates;
     Object.assign(entity, otherUpdates);
 
     // Update lastUpdate timestamp
@@ -210,6 +228,7 @@ export class EntityManager {
       score: restored?.score ?? 0,
       health: 100,
       maxHealth: 100,
+      mass: GROWTH.BASE_MASS,
       lastUpdate: Date.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       ws,
@@ -340,6 +359,7 @@ export class EntityManager {
         score: 0,
         health: 100,
         maxHealth: 100,
+        mass: GROWTH.BASE_MASS,
         lastUpdate: Date.now(),
         spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
         kitId: DEFAULT_SHIP_KIT_ID,
@@ -487,6 +507,8 @@ export class EntityManager {
 
   private respawnShip(entity: GameEntity): void {
     entity.respawnTimer = undefined;
+    resetShipMass(entity);
+    applyShipKitStats(entity, entity.kitId);
     entity.health = entity.maxHealth;
     entity.exploding = false;
     entity.explodeTime = undefined;
@@ -538,7 +560,8 @@ export class EntityManager {
       }
 
       // Apply thrust in current direction with optimized calculation
-      const thrustMagnitude = 1.5 / 60; // Reduced from 2.0 to 1.5 for smoother movement
+      const mass = bot.mass ?? GROWTH.BASE_MASS;
+      const thrustMagnitude = (1.5 / 60) * thrustScaleFromMass(mass);
       const cosAngle = Math.cos(bot.angle);
       const sinAngle = Math.sin(bot.angle);
       
@@ -550,7 +573,7 @@ export class EntityManager {
 
       // Optimized velocity capping using faster approximation
       const speedSquared = bot.velocity.x * bot.velocity.x + bot.velocity.y * bot.velocity.y;
-      const maxSpeed = 6; // Reduced from 8 to 6 for more controlled movement
+      const maxSpeed = 6 * (maxVelocityFromMass(mass) / SHIP.MAX_VELOCITY);
       if (speedSquared > maxSpeed * maxSpeed) {
         const scale = maxSpeed / Math.sqrt(speedSquared);
         bot.velocity.x *= scale;

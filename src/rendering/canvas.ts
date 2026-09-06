@@ -8,6 +8,8 @@ import {
 } from '../constants/canvas';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { LootField } from '../entities/loot/LootField';
+import { drawLootRelative } from '../entities/loot/lootRenderer';
 import { drawRoidsRelative, rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
@@ -239,6 +241,8 @@ class CanvasManager {
     } else {
       logger.debug('RENDERING', 'No asteroids to render');
     }
+
+    drawLootRelative(currShip, LootField.getInstance().getAll());
 
     // Draw all players (including bots) using unified rendering
     try {

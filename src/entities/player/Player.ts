@@ -1,4 +1,5 @@
 import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
+import { radiusFromMass } from '../../../shared/shipGrowth';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
@@ -92,6 +93,7 @@ export class Player {
     deathCause?: string;
     health?: number;
     maxHealth?: number;
+    mass?: number;
     respawnTimer?: number;
     spawnProtectionTimer?: number;
     kitId?: ShipKitId;
@@ -153,6 +155,11 @@ export class Player {
     }
     if (data.angle !== undefined && acceptServerTransform) {
       this.ship.angle = data.angle;
+    }
+
+    if (data.mass !== undefined) {
+      this.ship.mass = data.mass;
+      this.ship.r = radiusFromMass(data.mass);
     }
 
     if (data.deathCause) {
@@ -505,6 +512,7 @@ export class Player {
     thrusting: boolean;
     health?: number;
     maxHealth?: number;
+    mass?: number;
   } {
     return {
       position: this.ship.position,
@@ -517,6 +525,7 @@ export class Player {
       thrusting: this.ship.thrusting,
       health: this.ship.health,
       maxHealth: this.ship.maxHealth,
+      mass: this.ship.mass,
     };
   }
 }
