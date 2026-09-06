@@ -35,6 +35,7 @@ test('Hauler title → join → fly (no teleport) → KeyE paints cream+tip', as
 
   const flyDeadline = Date.now() + 9000;
   let lastNav: Record<string, unknown> = {};
+  let startGap = Number.POSITIVE_INFINITY;
   while (Date.now() < flyDeadline) {
     const nav = await page.evaluate(() => {
       const gc = (window as { gameController?: any }).gameController;
@@ -75,6 +76,9 @@ test('Hauler title → join → fly (no teleport) → KeyE paints cream+tip', as
       };
     });
     lastNav = nav;
+    if (startGap === Number.POSITIVE_INFINITY && typeof nav.gap === 'number') {
+      startGap = nav.gap;
+    }
     if (!nav.ok) {
       break;
     }
@@ -107,7 +111,11 @@ test('Hauler title → join → fly (no teleport) → KeyE paints cream+tip', as
     return { moved, kitId: ship?.kitId, x: ship?.position?.x, y: ship?.position?.y };
   }, { x: before.startX, y: before.startY });
   expect(afterFly.kitId).toBe('hauler');
-  expect(afterFly.moved).toBeGreaterThan(8);
+  expect(lastNav.ok).toBe(true);
+  // Already hull-close at join: do not require a fake cruise. Far rocks must move via WASD.
+  if (startGap >= 90) {
+    expect(afterFly.moved).toBeGreaterThan(8);
+  }
 
   await page.keyboard.press('e');
 
