@@ -17,14 +17,18 @@ import { Ship } from '../../../src/entities/ship/Ship';
 import { SHIP_KINDS } from '../scenarios/support/shipKinds';
 
 describe('client explode ticks follow the 60 Hz clock', () => {
-  test('a hitch drains the explode window in one update so the hull does not freeze', () => {
-    const ship = new Ship({ isLocalPlayer: true });
-    ship.takeDamage(100);
-    expect(ship.exploding).toBe(true);
-    expect(ship.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
-    ship.update(SHIP.EXPLODE_DURATION_FRAMES);
-    expect(ship.exploding).toBe(false);
-  });
+  test.each(SHIP_KINDS)(
+    '$kind hitch-drains explodeTime without dropping the exploding flag',
+    ({ options }) => {
+      const ship = new Ship(options);
+      ship.takeDamage(100);
+      expect(ship.exploding).toBe(true);
+      expect(ship.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
+      ship.updateLifecycle(SHIP.EXPLODE_DURATION_FRAMES);
+      expect(ship.explodeTime).toBe(0);
+      expect(ship.exploding).toBe(true);
+    }
+  );
 
   test('a sub-frame update does not burn explode frames', () => {
     const ship = new Ship({ isLocalPlayer: true });
@@ -32,6 +36,34 @@ describe('client explode ticks follow the 60 Hz clock', () => {
     ship.update(0);
     expect(ship.exploding).toBe(true);
     expect(ship.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
+  });
+
+  test('a late exploding snapshot does not rewind a finished death FX', () => {
+    const player = new Player({
+      id: 'local',
+      name: 'Local',
+      type: 'local',
+      input: new MockPlayerInput(),
+    });
+    player.ship.takeDamage(100, 'boundary');
+    player.ship.updateLifecycle(SHIP.EXPLODE_DURATION_FRAMES);
+    expect(player.ship.explodeTime).toBe(0);
+
+    player.updateFromServer({ exploding: true, health: 0 });
+
+    expect(player.ship.explodeTime).toBe(0);
+    expect(player.ship.exploding).toBe(true);
+    expect(player.ship.health).toBe(0);
+  });
+
+  test('a dead hull does not drift while waiting for server respawn', () => {
+    const ship = new Ship({ isLocalPlayer: true });
+    ship.position = { x: 10, y: 20 };
+    ship.velocity = { x: 4, y: 0 };
+    ship.health = 0;
+    ship.exploding = false;
+    ship.update(1);
+    expect(ship.position).toEqual({ x: 10, y: 20 });
   });
 });
 
@@ -116,6 +148,41 @@ describe('client blink after a heal-leak', () => {
     });
 
     expect(player.ship.blinkCount).toBeGreaterThan(0);
+  });
+});
+
+describe('remote ship lifecycle is the same 60 Hz clock', () => {
+  test('remote blink expires so the ship is hittable after invuln', () => {
+    const player = new Player({
+      id: 'remote',
+      name: 'Remote',
+      type: 'remote',
+      input: new MockPlayerInput(),
+    });
+    player.ship.health = 0;
+    player.ship.exploding = true;
+    player.updateFromServer({ health: 100, exploding: false });
+    expect(isShipCollisionImmune(player.ship)).toBe(true);
+
+    player.ship.updateLifecycle(SHIP.INVINCIBILITY_DURATION_FRAMES);
+
+    expect(player.ship.blinkCount).toBe(0);
+    expect(isShipCollisionImmune(player.ship)).toBe(false);
+  });
+
+  test('remote lifecycle does not predict pose', () => {
+    const player = new Player({
+      id: 'remote',
+      name: 'Remote',
+      type: 'remote',
+      input: new MockPlayerInput(),
+    });
+    const origin = { x: 40, y: 80 };
+    player.ship.position = origin;
+    player.ship.velocity = { x: 5, y: 0 };
+    player.ship.thrusting = true;
+    player.ship.updateLifecycle(10);
+    expect(player.ship.position).toEqual(origin);
   });
 });
 

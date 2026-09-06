@@ -51,7 +51,8 @@ describe.each(SHIP_KINDS)('A laser hits a $kind', ({ options }) => {
     for (let frame = 0; frame < EXPLOSION_FRAMES; frame++) {
       ship.update();
     }
-    expect(ship.exploding).toBe(false);
+    expect(ship.explodeTime).toBe(0);
+    expect(ship.exploding).toBe(true);
     expect(EXPLOSION_FRAMES / GAME.FPS).toBeCloseTo(0.3);
   });
 });

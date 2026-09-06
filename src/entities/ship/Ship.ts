@@ -561,9 +561,8 @@ class Ship {
   updateExplosion(): void {
     if (this.exploding && this.explodeTime > 0) {
       this.explodeTime--;
-      if (this.explodeTime <= 0) {
-        this.exploding = false;
-      }
+      // Stay exploding at t=0 so a late exploding=true snapshot cannot
+      // restart the FX, and the dead hull does not resume movement.
     }
   }
 
@@ -596,10 +595,10 @@ class Ship {
   }
 
   /**
-   * @param lifecycleFrames whole 60 Hz steps for explode / blink / regen.
-   * Movement still runs once per display frame so high-refresh stays smooth.
+   * 60 Hz explode / blink / regen. Shared by local, remote, and bot ships.
+   * Movement is not applied here so remotes can tick death FX without predicting pose.
    */
-  update(lifecycleFrames = 1): void {
+  updateLifecycle(lifecycleFrames = 1): void {
     const steps = Math.max(0, Math.floor(lifecycleFrames));
     if (this.exploding) {
       for (let i = 0; i < steps; i++) {
@@ -607,11 +606,25 @@ class Ship {
       }
       return;
     }
+    if (this.health <= 0) {
+      return;
+    }
 
     for (let i = 0; i < steps; i++) {
       this.updateInvincibility();
       tickShipImpactFlash(this);
       this.updateHealth();
+    }
+  }
+
+  /**
+   * @param lifecycleFrames whole 60 Hz steps for explode / blink / regen.
+   * Movement still runs once per display frame so high-refresh stays smooth.
+   */
+  update(lifecycleFrames = 1): void {
+    this.updateLifecycle(lifecycleFrames);
+    if (this.exploding || this.health <= 0) {
+      return;
     }
 
     this.updateMovement();

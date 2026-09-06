@@ -27,8 +27,8 @@ test('live ship and laser strokes never use white', () => {
   expect(shipSrc).toMatch(/VISUAL\.LASER_LENGTH/);
 });
 
-test('play loop still advances remote lasers from the #418 MP path', () => {
-  expect(loopSrc).toMatch(/advanceRemotePlayerLasers\(allPlayers\)/);
+test('play loop ticks remote ships on the shared 60 Hz lifecycle clock', () => {
+  expect(loopSrc).toMatch(/advanceRemotePlayerShips\(allPlayers, lifecycleFrames\)/);
 });
 
 test('play canvas and mouse input bind to #gameCanvas, not the title starfield', () => {
