@@ -17,16 +17,9 @@ import {
 import { BOT_AI, BotBrain, makeBotShot, type BotShot } from '../ai/botController';
 import { applyShipMotionSteps, containShipInArena } from '../ai/shipMotion';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
-import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
+import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { applyShockwaveToBody } from '../../src/physics/shockwave';
-import { applySharedShipSlope } from '../../src/physics/terrain/applyShipSlope';
-import {
-  GROWTH,
-  applyShipMass,
-  maxVelocityFromMass,
-  resetShipMass,
-  thrustScaleFromMass,
-} from '../../shared/shipGrowth';
+import { GROWTH, applyShipMass, resetShipMass } from '../../shared/shipGrowth';
 import { logger } from '../../setup/serverLogger';
 import { RNGService } from './RNGService';
 
