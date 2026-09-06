@@ -5,6 +5,7 @@ import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
 
+import { CLASSIC_HULL, getShipKit, type HullProfile } from './shipKits';
 import type { Ship } from './Ship';
 
 // Helper function to calculate ship triangle points for consistent ship rendering
@@ -12,24 +13,24 @@ export function calculateShipTrianglePoints(
   centerX: number,
   centerY: number,
   radius: number,
-  angle: number
+  angle: number,
+  hull: HullProfile = CLASSIC_HULL
 ): {
   nose: { x: number; y: number };
   rearLeft: { x: number; y: number };
   rearRight: { x: number; y: number };
 } {
-  // Create a more isosceles triangle shape for better ship appearance
   const nose = {
-    x: centerX + radius * Math.cos(angle), // Pointed nose
-    y: centerY - radius * Math.sin(angle),
+    x: centerX + radius * hull.nose * Math.cos(angle),
+    y: centerY - radius * hull.nose * Math.sin(angle),
   };
   const rearLeft = {
-    x: centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle), // Wider back
-    y: centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle),
+    x: centerX - radius * hull.rear * Math.cos(angle) + radius * hull.beam * Math.sin(angle),
+    y: centerY + radius * hull.rear * Math.sin(angle) + radius * hull.beam * Math.cos(angle),
   };
   const rearRight = {
-    x: centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle), // Wider back
-    y: centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle),
+    x: centerX - radius * hull.rear * Math.cos(angle) - radius * hull.beam * Math.sin(angle),
+    y: centerY + radius * hull.rear * Math.sin(angle) - radius * hull.beam * Math.cos(angle),
   };
 
   return { nose, rearLeft, rearRight };
@@ -493,14 +494,17 @@ export function drawShipAtPosition(
   const shipColor = color || ship.color;
 
   // Use the shared ship triangle calculation function for consistency
+  const hull = getShipKit(ship.kitId).hull;
   const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
     screenX,
     screenY,
     shipR,
-    ship.angle
+    ship.angle,
+    hull
   );
 
   strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
+  drawAbilityFx(ctx, ship, screenX, screenY, shipR);
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
@@ -508,6 +512,38 @@ export function drawShipAtPosition(
   // Draw player name under ship if provided
   if (playerName) {
     drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
+  }
+}
+
+/** Ability rings only — kit hulls stay the shared placeholder triangle until the AD pack. */
+function drawAbilityFx(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  shipR: number
+): void {
+  if (ship.shieldTimer > 0) {
+    const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 90);
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, shipR + 10, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(PALETTE.HUD, pulse);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  if (ship.abilityActiveFrames > 0 && ship.magnetTimer <= 0 && ship.shieldTimer <= 0) {
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, shipR + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(PALETTE.ACCENT_UI, 0.45);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  if (ship.magnetTimer > 0) {
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, shipR + 14, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.35);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   }
 }
 

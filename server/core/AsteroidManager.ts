@@ -181,6 +181,13 @@ export class AsteroidManager {
         offsets,
       };
 
+      // One voluntary coop rock in live fields. Test placement (on-player) stays one-shot.
+      if (i === 0 && !DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER) {
+        asteroid.isCollabTarget = true;
+        asteroid.health = 100;
+        asteroid.maxHealth = 100;
+      }
+
       this.asteroids.set(asteroidId, asteroid);
       newAsteroids.push(asteroid);
     }

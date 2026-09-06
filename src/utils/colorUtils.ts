@@ -44,4 +44,6 @@ export function applyLockedPaletteCss(
   root.setProperty('--palette-bg', PALETTE.BG);
   root.setProperty('--palette-stars', PALETTE.STARS);
   root.setProperty('--palette-accent', PALETTE.ACCENT_UI);
+  root.setProperty('--palette-hud', PALETTE.HUD);
+  root.setProperty('--palette-hud-muted', PALETTE.HUD_MUTED);
 }

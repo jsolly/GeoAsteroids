@@ -1,6 +1,8 @@
 import { WebSocket } from 'ws';
-import type { Position, AsteroidData } from '../../shared-types';
+import type { AsteroidData, Position, ShipKitId, SoftFactionId } from '../../shared-types';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
+import { canDealCombatDamage } from '../../src/entities/player/softFactions';
+import { activateAbilityOnHost, pullMagnetTargets } from '../../src/entities/ship/shipAbilities';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
@@ -74,6 +76,7 @@ export class GameEngine {
     this.entityManager.cleanupStaleEntities();
     this.entityManager.updateExplosions();
     this.entityManager.updateRespawns();
+    this.tickAbilities();
     this.asteroidManager.updateMotion();
     if (this.gameTime % 2 === 0) {
       this.entityManager.updateBotMovement();
@@ -88,6 +91,7 @@ export class GameEngine {
     }
     this.entityManager.updateExplosions();
     this.entityManager.updateRespawns();
+    this.tickAbilities();
   }
 
   public stopGameLoop(): void {
@@ -180,8 +184,16 @@ export class GameEngine {
   }
 
   // Entity operations
-  public addPlayer(id: string, name: string, ws: WebSocket, position?: Position, color?: string): GameEntity {
-    const entity = this.entityManager.addHumanPlayer(id, name, ws, position, color);
+  public addPlayer(
+    id: string,
+    name: string,
+    ws: WebSocket,
+    position?: Position,
+    color?: string,
+    kitId?: ShipKitId,
+    factionId?: SoftFactionId
+  ): GameEntity {
+    const entity = this.entityManager.addHumanPlayer(id, name, ws, position, color, kitId, factionId);
     this.updatePauseState();
     return entity;
   }
@@ -280,6 +292,9 @@ export class GameEngine {
       logger.debug('ignoring damage during respawn or while dead');
       return false;
     }
+    if (!this.combatSidesAllowDamage(attackerId, targetPlayerId)) {
+      return false;
+    }
 
     const damagedPlayer = this.entityManager.damageEntity(targetPlayerId, damage);
     if (!damagedPlayer) {
@@ -305,6 +320,9 @@ export class GameEngine {
   public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
     const existing = this.getBot(botId);
     if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
+      return false;
+    }
+    if (!this.combatSidesAllowDamage(attackerId, botId)) {
       return false;
     }
 
@@ -380,6 +398,12 @@ export class GameEngine {
         maxHealth: entity.maxHealth,
         respawnTimer: entity.respawnTimer,
         spawnProtectionTimer: entity.spawnProtectionTimer,
+        kitId: entity.kitId,
+        factionId: entity.factionId,
+        abilityCooldownFrames: entity.abilityCooldownFrames,
+        abilityActiveFrames: entity.abilityActiveFrames,
+        shieldTimer: entity.shieldTimer,
+        magnetTimer: entity.magnetTimer,
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
@@ -402,6 +426,51 @@ export class GameEngine {
     }
     
     return gameState;
+  }
+
+  private combatSidesAllowDamage(attackerId: string, targetId: string): boolean {
+    if (!attackerId || attackerId === 'asteroid' || attackerId === 'boundary') {
+      return true;
+    }
+    const attacker = this.entityManager.getEntity(attackerId);
+    const target = this.entityManager.getEntity(targetId);
+    return canDealCombatDamage(attacker?.factionId, target?.factionId);
+  }
+
+  public useAbility(entityId: string): boolean {
+    const entity = this.entityManager.getEntity(entityId);
+    if (!entity) {
+      return false;
+    }
+    const world = {
+      asteroids: this.asteroidManager.getAllAsteroids(),
+      entities: this.entityManager.getAllEntities().filter((other) => other.id !== entityId),
+    };
+    return activateAbilityOnHost(entity, world).activated;
+  }
+
+  public tickAbilities(): void {
+    this.entityManager.tickAbilityState();
+    for (const entity of this.entityManager.getAllEntities()) {
+      pullMagnetTargets(entity, this.asteroidManager.getAllAsteroids());
+    }
+  }
+
+  public handleAsteroidDamage(
+    asteroidId: string,
+    playerId: string,
+    damage: number,
+    points: number
+  ): { destroyed: boolean; asteroid: AsteroidData | null; newAsteroids: AsteroidData[] } {
+    const asteroid = this.asteroidManager.damageAsteroid(asteroidId, damage);
+    if (!asteroid) {
+      return { destroyed: false, asteroid: null, newAsteroids: [] };
+    }
+    if (asteroid.health > 0) {
+      return { destroyed: false, asteroid, newAsteroids: [] };
+    }
+    const result = this.handleAsteroidDestruction(asteroidId, playerId, points);
+    return { destroyed: result.success, asteroid, newAsteroids: result.newAsteroids };
   }
 
   // Award points to an entity

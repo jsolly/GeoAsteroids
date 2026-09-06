@@ -26,9 +26,17 @@ test('Enter Game is an outline phosphor control, not a solid green fill', () => 
 test('title menu shows a phosphor WASD + Space / arrows hint', () => {
   const startScreen = html.slice(html.indexOf('id="start-screen"'), html.indexOf('id="gameArea"'));
   expect(startScreen).toMatch(/id="controls-hint"/);
-  expect(startScreen).toMatch(/WASD \+ Space \/ arrows/);
+  expect(startScreen).toMatch(/WASD \+ Space \/ arrows · E ability/);
   expect(css).toMatch(/\.controls-hint/);
   expect(css).toMatch(/--palette-accent/);
+});
+
+test('title menu lets a pilot pick a ship kit before enter', () => {
+  const startScreen = html.slice(html.indexOf('id="start-screen"'), html.indexOf('id="gameArea"'));
+  expect(startScreen).toMatch(/id="ship-kit-grid"/);
+  expect(startScreen).toMatch(/Hull outlines temporary/);
+  expect(startScreen).not.toMatch(/no factions/i);
+  expect(css).toMatch(/\.ship-kit-grid/);
 });
 
 test('controls hint stays off the live playfield', () => {

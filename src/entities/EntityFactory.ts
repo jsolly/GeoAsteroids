@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, Velocity } from '../../shared-types';
+import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
 import { CANVAS, DEBUG, PALETTE, SPAWN } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
 import { getFactionColor } from '../utils/colorUtils';
@@ -23,6 +23,8 @@ export interface PlayerConfig {
   position?: Position;
   color?: string;
   shotCooldown?: number;
+  kitId?: ShipKitId;
+  factionId?: SoftFactionId;
 }
 
 export interface BotConfig {
@@ -61,11 +63,12 @@ export class EntityFactory {
     return player;
   }
 
-  createLocalPlayer(name: string, position?: Position): Player {
+  createLocalPlayer(name: string, position?: Position, kitId?: ShipKitId): Player {
     return this.createPlayer({
       name,
       type: 'local',
       position,
+      kitId,
     });
   }
 
@@ -168,6 +171,8 @@ export class EntityFactory {
       name: config.name,
       type: config.type,
       input: new MockPlayerInput(),
+      kitId: config.kitId,
+      factionId: config.factionId,
     });
   }
 

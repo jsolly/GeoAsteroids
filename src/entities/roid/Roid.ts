@@ -16,6 +16,8 @@ class Roid {
   maxHealth: number;
   pendingDestruction: boolean = false; // Track asteroids waiting for server confirmation
   pendingUntilMs: number = 0;
+  /** Shared multi-pilot HP rock. Lasers chip; do not pending-lock. */
+  isCollabTarget: boolean = false;
   private _jaggedness: number = ROID.JAGGEDNESS; // Store jaggedness value
 
   playHitSound(): void {

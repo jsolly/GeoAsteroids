@@ -178,6 +178,66 @@ a {
   opacity: 0.82;
 }
 
+.ship-kit-select {
+  border: 0;
+  margin: 0 0 1.1em;
+  padding: 0;
+}
+
+.ship-kit-select legend {
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--palette-hud-muted, #64748b);
+  margin-bottom: 0.55em;
+}
+
+.ship-kit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 0.45em;
+}
+
+.ship-kit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  padding: 0.55em 0.4em;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--palette-hud-muted, #64748b) 55%, transparent);
+  color: var(--palette-hud, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 64px;
+}
+
+.ship-kit-card.is-selected,
+.ship-kit-card:focus-visible {
+  border-color: var(--palette-accent, #a78bfa);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--palette-accent, #a78bfa) 35%, transparent);
+}
+
+.ship-kit-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ship-kit-ability {
+  font-size: 0.55rem;
+  letter-spacing: 0.03em;
+  color: var(--palette-hud-muted, #64748b);
+}
+
+.ship-kit-placeholder-note {
+  margin: 0.45em 0 0;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--palette-hud-muted, #64748b);
+}
+
 /* Game modes section */
 .game-modes {
   margin-bottom: 1.5em; /* Further reduced margin */

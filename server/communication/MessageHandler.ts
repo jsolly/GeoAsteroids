@@ -64,6 +64,14 @@ export class MessageHandler {
           this.handleJoin(ws, id, name, restData);
           break;
 
+        case 'useAbility':
+          this.handleUseAbility(ws, id, restData);
+          break;
+
+        case 'asteroidDamage':
+          this.handleAsteroidDamage(ws, restData);
+          break;
+
         case 'update':
           this.handlePlayerUpdate(ws, id, restData);
           break;
@@ -150,9 +158,11 @@ export class MessageHandler {
     const validatedPosition = this.gameEngine.validatePosition(data.position);
     const joinPosition = validatedPosition || { x: 0, y: 0 };
     const joinColor = data.color || '#00ff00'; // Default to green if no color provided
-    logger.debug('Player join', { id, position: joinPosition, color: joinColor });
+    const kitId = data.kitId ?? data.data?.kitId;
+    const factionId = data.factionId ?? data.data?.factionId;
+    logger.debug('Player join', { id, position: joinPosition, color: joinColor, kitId, factionId });
 
-    this.gameEngine.addPlayer(id, name, ws, joinPosition, joinColor);
+    this.gameEngine.addPlayer(id, name, ws, joinPosition, joinColor, kitId, factionId);
     logger.info('✅ Player added to game engine', { id, name });
 
     // Send confirmation to the joining player
@@ -208,6 +218,12 @@ export class MessageHandler {
     delete (sanitizedData as any).lives;
     delete (sanitizedData as any).respawnTimer;
     delete (sanitizedData as any).spawnProtectionTimer;
+    delete (sanitizedData as any).kitId;
+    delete (sanitizedData as any).factionId;
+    delete (sanitizedData as any).abilityCooldownFrames;
+    delete (sanitizedData as any).abilityActiveFrames;
+    delete (sanitizedData as any).shieldTimer;
+    delete (sanitizedData as any).magnetTimer;
 
     // Normalize client fields to server schema
     if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {
@@ -369,6 +385,61 @@ export class MessageHandler {
       if (targetBot) {
         this.broadcaster.broadcastPlayerKilled(data.botId, targetBot.name, data.attackerId);
       }
+    }
+  }
+
+  private handleUseAbility(ws: WebSocket, id: string, data: any): void {
+    const playerId = id || data.id;
+    if (!playerId) {
+      this.broadcaster.sendError(ws, 'Missing player ID for useAbility');
+      return;
+    }
+    const activated = this.gameEngine.useAbility(playerId);
+    if (!activated) {
+      return;
+    }
+    const entity = this.gameEngine.getPlayer(playerId) ?? this.gameEngine.getBot(playerId);
+    this.broadcaster.broadcastToAll({
+      type: 'abilityUsed',
+      data: {
+        id: playerId,
+        kitId: entity?.kitId,
+        abilityId: data.abilityId,
+      },
+      timestamp: Date.now(),
+    });
+  }
+
+  private handleAsteroidDamage(ws: WebSocket, data: any): void {
+    if (!data.asteroidId || !data.playerId || data.damage === undefined) {
+      this.broadcaster.sendError(ws, 'Missing required fields for asteroidDamage');
+      return;
+    }
+
+    const result = this.gameEngine.handleAsteroidDamage(
+      data.asteroidId,
+      data.playerId,
+      data.damage,
+      data.points ?? 0
+    );
+
+    if (result.destroyed) {
+      const player = this.gameEngine.getPlayer(data.playerId);
+      if (player) {
+        this.broadcaster.broadcastScoreUpdate(data.playerId, player.score);
+      }
+      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
+      if (result.newAsteroids.length > 0) {
+        this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
+      }
+      return;
+    }
+
+    if (result.asteroid) {
+      this.broadcaster.broadcastAsteroidUpdate(data.asteroidId, {
+        health: result.asteroid.health,
+        maxHealth: result.asteroid.maxHealth,
+      });
     }
   }
 

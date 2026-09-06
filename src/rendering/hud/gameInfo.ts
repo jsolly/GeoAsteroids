@@ -1,5 +1,7 @@
 import { PALETTE, SHIP, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
+import { PlayerManager } from '../../entities/player/PlayerManager';
+import { getShipKit } from '../../entities/ship/shipKits';
 import { hexToRgba } from '../../utils/colorUtils';
 
 export function drawScoreOverlay(
@@ -15,6 +17,13 @@ export function drawScoreOverlay(
 
   const scoreY = 20 + SHIP.SIZE + 8;
   ctx.fillText(score.toString(), 20, scoreY);
+
+  const localShip = PlayerManager.getInstance().getLocalShip();
+  if (localShip) {
+    const kit = getShipKit(localShip.kitId);
+    ctx.font = VISUAL.NAME_LABEL_FONT;
+    ctx.fillText(kit.name, 20, scoreY + 18);
+  }
 
   const gameStateManager = GameStateManager.getInstance();
   if (gameStateManager.hasKillMessage()) {

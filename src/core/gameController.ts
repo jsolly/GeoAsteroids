@@ -7,8 +7,10 @@ import {
 } from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { GAME } from '../constants';
+import type { ShipKitId } from '../../shared-types';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
+import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
@@ -85,10 +87,10 @@ export class GameController {
   }
 
   // Game lifecycle methods
-  newGame(playerName?: string): void {
+  newGame(playerName?: string, kitId?: ShipKitId): void {
     this.lifecycleAccumulatorMs = 0;
     // Create new player
-    this.playerManager.createLocalPlayer();
+    this.playerManager.createLocalPlayer(kitId ?? getSelectedShipKitId());
 
     // Set the player name if provided
     if (playerName) {
@@ -98,10 +100,10 @@ export class GameController {
     // Note: Asteroid belt creation is now handled in startGame() to support server-authoritative mode
   }
 
-  async startGame(playerName?: string): Promise<void> {
-    logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
+  async startGame(playerName?: string, kitId?: ShipKitId): Promise<void> {
+    logger.debug('GAME_CONTROLLER', 'startGame called', { playerName, kitId });
     this.resetSessionForNewGame();
-    this.newGame(playerName);
+    this.newGame(playerName, kitId ?? getSelectedShipKitId());
     setPlayView(true);
     this.gameStateManager.setIsGameRunning(true);
 

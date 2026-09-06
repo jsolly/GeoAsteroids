@@ -8,6 +8,7 @@ import { getBuildInfoString } from '../utils/buildInfo';
 import { applyLockedPaletteCss } from '../utils/colorUtils';
 import { attachEventListener, getElementById } from '../utils/dom';
 import { logger } from '../utils/Logger';
+import { mountShipKitSelect } from './shipKitSelect';
 import { setPlayView } from './uiUtils';
 
 // UI element references
@@ -206,6 +207,7 @@ function displayBuildInfo(): void {
 displayBuildInfo();
 applyLockedPaletteCss();
 initTitleStarfield();
+mountShipKitSelect();
 
 // Generate a nickname once and use it consistently
 const generatedNickname = generateFunNickname();
