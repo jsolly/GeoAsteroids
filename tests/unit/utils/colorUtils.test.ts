@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { DEBUG, PALETTE, ROID, SHIP, VISUAL } from '../../../src/constants';
+import { DEBUG, PALETTE, ROID, SHIP, TITLE, VISUAL } from '../../../src/constants';
 import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Player } from '../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
@@ -29,7 +29,8 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.HUD_MUTED).toBe('#64748B');
   expect(PALETTE.DANGER).toBe('#F43F5E');
   expect(PALETTE.HEALTH).toBe('#4ADE80');
-  expect(PALETTE.ACCENT_UI).toBe('#A78BFA');
+  expect(TITLE.ACCENT).toBe('#A78BFA');
+  expect(PALETTE).not.toHaveProperty('ACCENT_UI');
 });
 
 test('faction colors map local mint, remote sky, bot amber', () => {
@@ -143,5 +144,5 @@ test('applyLockedPaletteCss writes title/menu custom properties', () => {
   } as CSSStyleDeclaration);
   expect(props.get('--palette-bg')).toBe(PALETTE.BG);
   expect(props.get('--palette-stars')).toBe(PALETTE.STARS);
-  expect(props.get('--palette-accent')).toBe(PALETTE.ACCENT_UI);
+  expect(props.get('--palette-accent')).toBe(TITLE.ACCENT);
 });

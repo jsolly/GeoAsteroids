@@ -189,5 +189,3 @@ export function drawMiniMap(
 
   ctx.restore();
 }
-
-export function drawServerInfo(_ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement): void {}

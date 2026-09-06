@@ -1,5 +1,5 @@
 import type { FactionId } from '../../shared-types';
-import { PALETTE } from '../constants';
+import { PALETTE, TITLE } from '../constants';
 
 export type FactionType = 'local' | 'remote' | 'bot';
 
@@ -54,7 +54,7 @@ export function applyLockedPaletteCss(
 ): void {
   root.setProperty('--palette-bg', PALETTE.BG);
   root.setProperty('--palette-stars', PALETTE.STARS);
-  root.setProperty('--palette-accent', PALETTE.ACCENT_UI);
+  root.setProperty('--palette-accent', TITLE.ACCENT);
   root.setProperty('--palette-hud', PALETTE.HUD);
   root.setProperty('--palette-hud-muted', PALETTE.HUD_MUTED);
 }

@@ -22,7 +22,7 @@ import { canvasManager } from './canvas';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
-import { drawMiniMap, drawServerInfo } from './hud/minimap';
+import { drawMiniMap } from './hud/minimap';
 
 export interface RenderFrame {
   readonly player: Player;
@@ -279,7 +279,6 @@ export class RenderEngine {
 
     if (showMinimap) {
       drawMiniMap(this.ctx, this.canvas, player.ship);
-      drawServerInfo(this.ctx, this.canvas);
     }
 
     // Render debug information

@@ -16,7 +16,7 @@ export function drawLivesIndicator(
 
   ctx.save();
   for (const center of lifeCenters) {
-    strokeKitHullOutline(ctx, center.x, center.y, radius, Math.PI / 2, color, kitId);
+    strokeKitHullOutline(ctx, center.x, center.y, radius, VISUAL.HUD_LIFE_HEADING, color, kitId);
   }
   ctx.restore();
 }
