@@ -207,7 +207,13 @@ export class RenderEngine {
         }
       } else {
         // Render ship
-        drawShipAtPosition(player.ship, localShip.position, player.ship.color, player.name);
+        drawShipAtPosition(
+          player.ship,
+          localShip.position,
+          player.ship.color,
+          player.name,
+          player.factionId
+        );
       }
 
       // Render thruster if thrusting (local player thruster handled by Ship.applyVelocity())

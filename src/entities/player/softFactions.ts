@@ -3,6 +3,12 @@ export const SOFT_FACTION_IDS = ['ion', 'ember'] as const;
 
 export type SoftFactionId = (typeof SOFT_FACTION_IDS)[number];
 
+/** Display names stay ION / EMBER. Art is marks only — see `FACTION_MARK_PAINTERS`. */
+export const SOFT_FACTION_NAMES = {
+  ion: 'ION',
+  ember: 'EMBER',
+} as const;
+
 export function isSoftFactionId(value: unknown): value is SoftFactionId {
   return value === 'ion' || value === 'ember';
 }

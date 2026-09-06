@@ -17,7 +17,16 @@ There is **no Hook sixth ship class**. Harpoon is a **Hauler-only** ability.
 | Skirmisher | Y-fork — two forward prongs; pointed aft | Burst fire |
 | Quake | terraced mountain — stepped tiers; triangular peak | Shock pulse |
 
-Do not invent competing faction-mark art. Soft factions stay on the factions stream (#465).
+Soft factions stay on the factions stream (#465). Names stay **ION** / **EMBER**.
+Art is tiny marks only via `FACTION_MARK_PAINTERS`:
+
+| Side | Mark | Stroke |
+| --- | --- | --- |
+| ION | chevron | `#A8A0C8` |
+| EMBER | diamond | `#D4B896` |
+
+Never paint full hulls with `#5EEAD4` or `#FB923C` — those are local/bot ownership
+only. Hull stroke stays local / remote / bot.
 
 ## Harpoon (Hauler only)
 

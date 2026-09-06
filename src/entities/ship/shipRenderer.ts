@@ -1,9 +1,11 @@
+import type { SoftFactionId } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
+import { drawSoftFactionMark } from '../player/factionMarkPainters';
 import { findHarpoonFieldBody } from './harpoonField';
 import type { Ship } from './Ship';
 import { CLASSIC_HULL, getShipKit, HAULER_TETHER_COLOR, type HullProfile } from './shipKits';
@@ -470,7 +472,8 @@ export function drawShipAtPosition(
   ship: Ship,
   shipPosition: { x: number; y: number },
   color?: string,
-  playerName?: string
+  playerName?: string,
+  factionId?: SoftFactionId
 ): void {
   const ctx = canvasManager.getContext();
   const cvs = canvasManager.getCanvas();
@@ -504,6 +507,12 @@ export function drawShipAtPosition(
   );
 
   strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
+  drawSoftFactionMark(ctx, factionId, {
+    x: screenX,
+    y: screenY,
+    radius: shipR,
+    angle: ship.angle,
+  });
   drawAbilityFx(ctx, ship, screenX, screenY, shipR, shipPosition);
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);

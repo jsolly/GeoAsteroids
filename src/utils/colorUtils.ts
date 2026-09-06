@@ -2,6 +2,7 @@ import { PALETTE } from '../constants';
 
 export type FactionType = 'local' | 'remote' | 'bot';
 
+/** Ownership stroke (local / remote / bot). Not ION / EMBER hull paint. */
 export function getFactionColor(type: FactionType): string {
   switch (type) {
     case 'local':

@@ -242,18 +242,30 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        const factionColor = getFactionColor(player.type);
+        const ownerColor = getFactionColor(player.type);
         if (player.ship.exploding) {
           if (player.id === localId) {
-            drawShipExplosion(currShip, factionColor);
+            drawShipExplosion(currShip, ownerColor);
           } else {
-            drawShipExplosionAtPosition(player.ship, currShip.position, factionColor);
+            drawShipExplosionAtPosition(player.ship, currShip.position, ownerColor);
           }
         } else if (player.ship.health <= 0) {
         } else if (player.id === localId) {
-          drawShipAtPosition(currShip, currShip.position, factionColor, currPlayer.name);
+          drawShipAtPosition(
+            currShip,
+            currShip.position,
+            ownerColor,
+            currPlayer.name,
+            player.factionId
+          );
         } else {
-          drawShipAtPosition(player.ship, currShip.position, factionColor, player.name);
+          drawShipAtPosition(
+            player.ship,
+            currShip.position,
+            ownerColor,
+            player.name,
+            player.factionId
+          );
         }
       }
     } catch (error: unknown) {
@@ -272,7 +284,7 @@ class CanvasManager {
           continue;
         }
 
-        const factionColor = getFactionColor(player.type);
+        const ownerColor = getFactionColor(player.type);
         if (player.id === localId) {
           if (!currShip.exploding && currShip.thrusting) {
             logger.debug('RENDERING', 'Drawing local player thruster', {
@@ -280,7 +292,7 @@ class CanvasManager {
               blinkOn: currShip.blinkOn,
               exploding: currShip.exploding,
             });
-            drawThruster(currShip, factionColor);
+            drawThruster(currShip, ownerColor);
           } else {
             logger.debug('RENDERING', 'Local player thruster not drawn', {
               thrusting: currShip.thrusting,
@@ -289,7 +301,7 @@ class CanvasManager {
             });
           }
         } else if (!player.ship.exploding && player.ship.thrusting) {
-          drawThrusterAtPosition(player.ship, currShip.position, factionColor);
+          drawThrusterAtPosition(player.ship, currShip.position, ownerColor);
         }
       }
     } catch (error: unknown) {

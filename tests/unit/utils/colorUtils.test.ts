@@ -34,6 +34,8 @@ test('faction colors map local mint, remote sky, bot amber', () => {
   expect(getFactionColor('local')).toBe(PALETTE.LOCAL);
   expect(getFactionColor('remote')).toBe(PALETTE.REMOTE);
   expect(getFactionColor('bot')).toBe(PALETTE.BOT);
+  expect(getFactionColor('local')).toBe('#5EEAD4');
+  expect(getFactionColor('bot')).toBe('#FB923C');
 });
 
 test('laser colors never use white', () => {
