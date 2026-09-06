@@ -682,7 +682,7 @@ a {
   opacity: 1;
 }
 
-/* On-screen stick + fire. Hidden unless body.touch-play (phone/tablet / coarse pointer). */
+/* On-screen stick + fire + kit ability. Hidden unless body.touch-play. */
 .touch-controls {
   display: none;
   position: absolute;
@@ -700,7 +700,8 @@ body.touch-play .touch-controls:not([hidden]) {
 }
 
 .touch-stick,
-.touch-fire {
+.touch-fire,
+.touch-ability {
   pointer-events: auto;
   touch-action: none;
   user-select: none;
@@ -716,7 +717,7 @@ body.touch-play .touch-controls:not([hidden]) {
   border-radius: 50%;
   border: 1.5px solid color-mix(in srgb, var(--palette-hud-muted, #64748b) 70%, transparent);
   background: color-mix(in srgb, var(--palette-bg, #000011) 55%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--palette-accent, #a78bfa) 22%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--palette-local, #5eead4) 22%, transparent);
 }
 
 .touch-stick-knob {
@@ -756,6 +757,41 @@ body.touch-play .touch-controls:not([hidden]) {
   box-shadow: 0 0 16px color-mix(in srgb, var(--palette-laser, #fde68a) 55%, transparent);
 }
 
+.touch-ability {
+  --ability-cool: 0;
+  position: absolute;
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 82px);
+  bottom: calc(max(20px, env(safe-area-inset-bottom, 0px)) + 8px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  padding: 0;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--palette-hud, #e2e8f0);
+  background: color-mix(in srgb, var(--palette-bg, #000011) 55%, transparent);
+  border: 1.5px solid var(--palette-hud, #e2e8f0);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--palette-hud, #e2e8f0) 28%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--palette-hud, #e2e8f0) 35%, transparent);
+}
+
+.touch-ability.is-pressed,
+.touch-ability.is-active {
+  background: color-mix(in srgb, var(--palette-hud, #e2e8f0) 16%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--palette-hud, #e2e8f0) 45%, transparent);
+}
+
+.touch-ability.is-cooling {
+  opacity: 0.55;
+  background: conic-gradient(
+    color-mix(in srgb, var(--palette-hud-muted, #64748b) 45%, transparent)
+      calc(var(--ability-cool) * 360deg),
+    color-mix(in srgb, var(--palette-bg, #000011) 55%, transparent) 0
+  );
+}
+
 @media (orientation: landscape) and (max-height: 500px) {
   .touch-stick {
     width: 96px;
@@ -775,6 +811,14 @@ body.touch-play .touch-controls:not([hidden]) {
     right: max(20px, env(safe-area-inset-right, 0px));
     bottom: max(12px, env(safe-area-inset-bottom, 0px));
     font-size: 0.64rem;
+  }
+
+  .touch-ability {
+    width: 48px;
+    height: 48px;
+    right: calc(max(20px, env(safe-area-inset-right, 0px)) + 72px);
+    bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 8px);
+    font-size: 0.5rem;
   }
 
   .screen {
@@ -811,9 +855,37 @@ body.touch-play .touch-controls:not([hidden]) {
     letter-spacing: 0.1em;
   }
 
+  .ship-kit-grid {
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    gap: 0.4em;
+  }
+
+  .ship-kit-card {
+    min-height: 96px;
+    padding: 0.65em 0.3em;
+  }
+
+  .ship-kit-name {
+    font-size: 0.78rem;
+  }
+
+  .ship-kit-ability {
+    font-size: 0.6rem;
+  }
+
   .game-modes .nav-item,
   .game-modes .btn {
     max-width: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .ship-kit-card {
+    min-height: 96px;
+  }
+
+  .game-modes .btn-phosphor {
+    min-height: 48px;
   }
 }
 

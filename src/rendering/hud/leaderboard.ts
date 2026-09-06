@@ -2,7 +2,7 @@ import { PALETTE } from '../../constants';
 import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import type { Player } from '../../entities/player/Player';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
-import { hudLayoutForCanvas } from './hudLayout';
+import { hudLayoutForCanvas, scaleHudFont } from './hudLayout';
 
 interface LeaderboardEntry {
   name: string;
@@ -68,7 +68,7 @@ export function drawLeaderboard(
     const alpha = entry.isCurrentPlayer ? 0.92 : 0.78;
 
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.4);
-    ctx.font = '11px Arial';
+    ctx.font = scaleHudFont('11px Arial', layout.hudTypeScale);
     ctx.textAlign = 'left';
     ctx.fillText(`${index + 1}.`, boardX + 4, y);
 

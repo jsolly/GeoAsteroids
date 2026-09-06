@@ -44,6 +44,7 @@ test('phone-sized play view unhides the stick and fire overlay', () => {
   expect(root?.hidden).toBe(false);
   expect(document.getElementById('touch-stick')).toBeTruthy();
   expect(document.getElementById('touch-fire')).toBeTruthy();
+  expect(document.getElementById('touch-ability')).toBeTruthy();
 });
 
 test('desktop-sized play view keeps the overlay hidden', () => {

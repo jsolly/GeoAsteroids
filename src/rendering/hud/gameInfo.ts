@@ -7,7 +7,7 @@ import { getShipKit } from '../../entities/ship/shipKits';
 import { hexToRgba } from '../../utils/colorUtils';
 import { layoutHudCluster } from './cluster';
 import { drawFuelGauge } from './fuel';
-import { hudLayoutForCanvas } from './hudLayout';
+import { hudLayoutForCanvas, scaleHudFont } from './hudLayout';
 
 export function drawScoreOverlay(
   ctx: CanvasRenderingContext2D,
@@ -17,40 +17,36 @@ export function drawScoreOverlay(
   faction?: FactionId
 ): void {
   ctx.save();
+  const layout = hudLayoutForCanvas(canvas);
   ctx.fillStyle = PALETTE.HUD;
-  ctx.font = VISUAL.SCORE_FONT;
+  ctx.font = scaleHudFont(VISUAL.SCORE_FONT, layout.hudTypeScale);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
 
-  const layout = hudLayoutForCanvas(canvas);
   const { score: origin } = layoutHudCluster(lives);
   const dx = layout.lives.x - VISUAL.HUD_INSET;
   const dy = layout.lives.y - VISUAL.HUD_INSET;
   ctx.fillText(score.toString(), origin.x + dx, origin.y + dy);
 
-  const metaY = origin.y + dy + VISUAL.HUD_LIFE_SIZE / 2 + 8;
-  ctx.font = VISUAL.NAME_LABEL_FONT;
+  ctx.font = scaleHudFont(VISUAL.NAME_LABEL_FONT, layout.hudTypeScale);
   ctx.textBaseline = 'top';
   if (faction) {
     ctx.fillStyle = hexToRgba(getSideColor(faction), 0.85);
-    ctx.fillText(FACTION_LABELS[faction], VISUAL.HUD_INSET + dx, metaY);
+    ctx.fillText(FACTION_LABELS[faction], VISUAL.HUD_INSET + dx, layout.factionY);
   }
 
   const localShip = PlayerManager.getInstance().getLocalShip();
   if (localShip) {
     const kit = getShipKit(localShip.kitId);
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
-    ctx.fillText(kit.name, VISUAL.HUD_INSET + dx, metaY + 14);
-    drawFuelGauge(ctx, localShip.fuel, localShip.maxFuel, {
-      x: VISUAL.HUD_INSET + dx,
-      y: metaY + 32,
-    });
+    ctx.fillText(kit.name, VISUAL.HUD_INSET + dx, layout.kitNameY);
+    drawFuelGauge(ctx, localShip.fuel, localShip.maxFuel, layout.fuel);
   }
 
   const gameStateManager = GameStateManager.getInstance();
   if (gameStateManager.hasKillMessage()) {
     ctx.fillStyle = PALETTE.DANGER;
-    ctx.font = 'bold 14px Arial';
+    ctx.font = scaleHudFont('bold 14px Arial', layout.hudTypeScale);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, layout.killMessageY);

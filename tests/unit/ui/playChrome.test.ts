@@ -45,14 +45,16 @@ test('controls hint stays off the live playfield', () => {
   expect(css).toMatch(/body\.in-play \.controls-hint/);
 });
 
-test('document opts into safe-area cover and ships a hidden stick + fire overlay', () => {
+test('document opts into safe-area cover and ships a hidden stick + fire + ability overlay', () => {
   expect(html).toMatch(/viewport-fit=cover/);
   expect(html).toMatch(/id="safe-area-probe"/);
   expect(html).toMatch(/id="touch-controls"/);
   expect(html).toMatch(/id="touch-stick"/);
   expect(html).toMatch(/id="touch-fire"/);
+  expect(html).toMatch(/id="touch-ability"/);
   expect(html).toMatch(/type="button"/);
   expect(css).toMatch(/\.touch-controls/);
+  expect(css).toMatch(/\.touch-ability/);
   expect(css).toMatch(/body\.touch-play \.touch-controls/);
   expect(css).toMatch(/100dvh/);
 });

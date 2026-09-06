@@ -4,16 +4,20 @@ import { shouldUseTouchControls } from '../ui/viewportChrome';
 import { logger } from '../utils/Logger';
 import { controlSources, resetTouchSources } from './controlSources';
 import { reconcilePlayerInput } from './keybindings';
+import { readAbilityChrome } from './touchAbility';
 import { readStickSample, type StickSample } from './touchStick';
 
 const STICK_ID = 'touch-stick';
 const KNOB_ID = 'touch-stick-knob';
 const FIRE_ID = 'touch-fire';
+const ABILITY_ID = 'touch-ability';
 const ROOT_ID = 'touch-controls';
 
 let initialized = false;
 let stickPointerId: number | null = null;
 let firePointerId: number | null = null;
+let abilityPointerId: number | null = null;
+let lastAbilityChromeKey = '';
 
 export function applyStickSample(player: Player, sample: StickSample | null): void {
   if (!sample?.aim) {
@@ -42,6 +46,7 @@ export function setTouchFire(player: Player, held: boolean): void {
 }
 
 export function tickTouchControls(player: Player): void {
+  syncAbilityChrome(player);
   if (player.lives <= 0 || player.ship.exploding) {
     return;
   }
@@ -51,6 +56,13 @@ export function tickTouchControls(player: Player): void {
   if (controlSources.touchStickActive) {
     reconcilePlayerInput(player);
   }
+}
+
+export function triggerTouchAbility(player: Player): boolean {
+  if (player.lives <= 0 || player.ship.exploding) {
+    return false;
+  }
+  return player.ship.activateAbility();
 }
 
 export function isTouchChromeVisible(): boolean {
@@ -74,9 +86,17 @@ export function syncTouchChrome(
   if (!use) {
     stickPointerId = null;
     firePointerId = null;
+    abilityPointerId = null;
+    lastAbilityChromeKey = '';
     resetTouchSources();
     resetKnob();
     setFirePressed(false);
+    setAbilityPressed(false);
+  } else {
+    const player = requireLocalPlayer();
+    if (player) {
+      syncAbilityChrome(player);
+    }
   }
 }
 
@@ -89,6 +109,32 @@ function resetKnob(): void {
 
 function setFirePressed(pressed: boolean): void {
   document.getElementById(FIRE_ID)?.classList.toggle('is-pressed', pressed);
+}
+
+function setAbilityPressed(pressed: boolean): void {
+  document.getElementById(ABILITY_ID)?.classList.toggle('is-pressed', pressed);
+}
+
+function syncAbilityChrome(player: Player): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  const button = document.getElementById(ABILITY_ID);
+  if (!button) {
+    return;
+  }
+  const state = readAbilityChrome(player.ship);
+  const key = `${state.label}|${state.ready}|${state.active}|${state.cooldownRatio.toFixed(2)}`;
+  if (key === lastAbilityChromeKey) {
+    return;
+  }
+  lastAbilityChromeKey = key;
+  button.textContent = state.label;
+  button.setAttribute('aria-label', state.name);
+  button.classList.toggle('is-ready', state.ready);
+  button.classList.toggle('is-cooling', !state.ready);
+  button.classList.toggle('is-active', state.active);
+  button.style.setProperty('--ability-cool', state.cooldownRatio.toFixed(2));
 }
 
 function requireLocalPlayer(): Player | null {
@@ -109,6 +155,7 @@ function ensureTouchDom(): {
   stick: HTMLElement;
   knob: HTMLElement;
   fire: HTMLElement;
+  ability: HTMLElement;
 } {
   let root = document.getElementById(ROOT_ID);
   if (!root) {
@@ -149,7 +196,18 @@ function ensureTouchDom(): {
     root.appendChild(fire);
   }
 
-  return { root, stick, knob, fire };
+  let ability = document.getElementById(ABILITY_ID);
+  if (!ability) {
+    ability = document.createElement('button');
+    ability.id = ABILITY_ID;
+    ability.className = 'touch-ability';
+    ability.setAttribute('type', 'button');
+    ability.setAttribute('aria-label', 'Ability');
+    ability.textContent = 'E';
+    root.appendChild(ability);
+  }
+
+  return { root, stick, knob, fire, ability };
 }
 
 function stickOrigin(stick: HTMLElement): { x: number; y: number } {
@@ -237,12 +295,39 @@ function onFirePointerUp(ev: PointerEvent, fire: HTMLElement): void {
   }
 }
 
+function onAbilityPointerDown(ev: PointerEvent, ability: HTMLElement): void {
+  if (abilityPointerId !== null) {
+    return;
+  }
+  ev.preventDefault();
+  abilityPointerId = ev.pointerId;
+  ability.setPointerCapture(ev.pointerId);
+  setAbilityPressed(true);
+  const player = requireLocalPlayer();
+  if (player) {
+    triggerTouchAbility(player);
+    syncAbilityChrome(player);
+  }
+}
+
+function onAbilityPointerUp(ev: PointerEvent, ability: HTMLElement): void {
+  if (ev.pointerId !== abilityPointerId) {
+    return;
+  }
+  ev.preventDefault();
+  abilityPointerId = null;
+  if (ability.hasPointerCapture(ev.pointerId)) {
+    ability.releasePointerCapture(ev.pointerId);
+  }
+  setAbilityPressed(false);
+}
+
 export function initializeTouchControls(): void {
   if (initialized || typeof document === 'undefined') {
     return;
   }
 
-  const { stick, knob, fire } = ensureTouchDom();
+  const { stick, knob, fire, ability } = ensureTouchDom();
 
   stick.addEventListener('pointerdown', (ev) => onStickPointerDown(ev, stick, knob));
   stick.addEventListener('pointermove', (ev) => onStickPointerMove(ev, stick, knob));
@@ -252,6 +337,10 @@ export function initializeTouchControls(): void {
   fire.addEventListener('pointerdown', (ev) => onFirePointerDown(ev, fire));
   fire.addEventListener('pointerup', (ev) => onFirePointerUp(ev, fire));
   fire.addEventListener('pointercancel', (ev) => onFirePointerUp(ev, fire));
+
+  ability.addEventListener('pointerdown', (ev) => onAbilityPointerDown(ev, ability));
+  ability.addEventListener('pointerup', (ev) => onAbilityPointerUp(ev, ability));
+  ability.addEventListener('pointercancel', (ev) => onAbilityPointerUp(ev, ability));
 
   window.addEventListener('playViewOn', () => syncTouchChrome(true));
   window.addEventListener('playViewOff', () => syncTouchChrome(false));

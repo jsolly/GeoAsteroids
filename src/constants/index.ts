@@ -56,6 +56,8 @@ export const TOUCH = {
   STICK_DEADZONE: 0.18,
   STICK_THRUST: 0.38,
   FIRE_SIZE: 72,
+  ABILITY_SIZE: 56,
+  ABILITY_GAP: 10,
   // Canvas space reserved above the fire button so the radar stays readable.
   FIRE_RESERVE: 112,
   PHONE_MAX_WIDTH: 500,
