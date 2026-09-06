@@ -125,8 +125,7 @@ export function playfieldZoom(
     containAsteroidPositionInto(containScratch, roid.position.x, roid.position.y);
     sx += containScratch.x;
     sy += containScratch.y;
-    const reach =
-      Math.hypot(containScratch.x - ship.x, containScratch.y - ship.y) + (roid.r ?? 0);
+    const reach = Math.hypot(containScratch.x - ship.x, containScratch.y - ship.y) + (roid.r ?? 0);
     if (Number.isFinite(reach) && reach > maxDist) {
       maxDist = reach;
     }
