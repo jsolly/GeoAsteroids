@@ -351,9 +351,7 @@ export class GameController {
       this.gameOverTimer = null;
       this.gameStateManager.setIsGameRunning(false);
       resetThrustSources();
-      import('../ui/mainMenu').then(({ showGameOverMenu }) => {
-        showGameOverMenu();
-      });
+      setPlayView(false);
     }, GameController.GAME_OVER_MENU_DELAY_MS);
   }
 
