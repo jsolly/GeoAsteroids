@@ -1,5 +1,5 @@
-import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
 import { areAllied } from '../../../shared/factions';
+import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
 import { getHarpoonField } from './harpoonField';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId, type ShipKitId } from './shipKits';
 
