@@ -18,6 +18,7 @@ import {
   calculateHealthRegenPerFrame,
   canTakeCollisionDamage,
   shouldStartHealthRegeneration,
+  tickShipImpactFlash,
 } from './shipUtils';
 
 class Ship {
@@ -42,6 +43,7 @@ class Ship {
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
+  impactFlashFrames: number = 0;
   blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
   shotCooldown: number = 250;
@@ -602,6 +604,7 @@ class Ship {
 
     // Update invincibility and blinking
     this.updateInvincibility();
+    tickShipImpactFlash(this);
 
     // Update health
     this.updateHealth();

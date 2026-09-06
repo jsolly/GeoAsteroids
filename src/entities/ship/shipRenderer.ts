@@ -502,12 +502,35 @@ export function drawShipAtPosition(
 
   strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
 
+  drawShipImpactFlash(ctx, ship, screenX, screenY);
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY);
 
   // Draw player name under ship if provided
   if (playerName) {
     drawPlayerName(playerName, screenX, screenY, ship.r, shipColor);
   }
+}
+
+function drawShipImpactFlash(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number
+): void {
+  if (ship.impactFlashFrames <= 0) {
+    return;
+  }
+
+  const t = 1 - ship.impactFlashFrames / SHIP.IMPACT_FLASH_FRAMES;
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(PALETTE.DANGER, 1 - t * 0.7);
+  ctx.lineWidth = 1;
+  ctx.shadowColor = PALETTE.DANGER;
+  ctx.shadowBlur = VISUAL.SHIP_GLOW;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, ship.r * (1.15 + t * 0.35), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawFloatingHealthCapsule(
@@ -517,7 +540,7 @@ function drawFloatingHealthCapsule(
   screenY: number
 ): void {
   const damaged = ship.health < ship.maxHealth;
-  if (!damaged && !isDebugMode()) {
+  if (!damaged && ship.impactFlashFrames <= 0 && !isDebugMode()) {
     return;
   }
 

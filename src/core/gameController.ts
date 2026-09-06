@@ -6,6 +6,8 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
+import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
+import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { setPlayView } from '../ui/uiUtils';
@@ -149,7 +151,8 @@ export class GameController {
     if (this.currRoidBelt) {
       const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
       if (existingRoid) {
-        return; // Skip duplicate
+        applyAsteroidKinematics(existingRoid, asteroid, { snapPosition: true });
+        return;
       }
     }
 
@@ -160,12 +163,7 @@ export class GameController {
       id: asteroid.id,
     });
 
-    // Override properties with server data
-    roid.velocity = asteroid.velocity;
-    roid.angle = asteroid.rotation;
-    roid.angularVelocity = asteroid.angularVelocity;
-    roid.health = asteroid.health;
-    roid.maxHealth = asteroid.maxHealth;
+    applyAsteroidKinematics(roid, asteroid, { snapPosition: true });
 
     // Override shape properties to match server exactly
     roid.jaggedness = asteroid.jaggedness;
@@ -197,28 +195,7 @@ export class GameController {
     if (this.currRoidBelt) {
       const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
       if (roid && updates) {
-        if (updates.position) {
-          roid.position = { x: updates.position.x, y: updates.position.y };
-        }
-        if (updates.velocity) {
-          roid.velocity = { x: updates.velocity.x, y: updates.velocity.y };
-        }
-        if (updates.size !== undefined) {
-          roid.r = updates.size;
-        }
-        // jaggedness is read-only in Roid class, skip updating it
-        if (updates.rotation !== undefined) {
-          roid.angle = updates.rotation;
-        }
-        if (updates.angularVelocity !== undefined) {
-          roid.angularVelocity = updates.angularVelocity;
-        }
-        if (updates.health !== undefined) {
-          roid.health = updates.health;
-        }
-        if (updates.maxHealth !== undefined) {
-          roid.maxHealth = updates.maxHealth;
-        }
+        applyAsteroidKinematics(roid, updates);
       }
     }
   };
@@ -624,12 +601,27 @@ export class GameController {
     // reconciles the local player — asteroids can arrive before that.
     const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
 
-    this.collisionManager.checkLaserCollisions(
-      currPlayer.ship.lasers,
-      this.currRoidBelt.roids,
-      laserTargets,
-      attackerId
-    );
+    const seenIds = new Set<string>();
+    const ships = [currPlayer, ...allPlayers];
+    for (const player of ships) {
+      if (seenIds.has(player.id)) {
+        continue;
+      }
+      seenIds.add(player.id);
+      if (!player.ship?.lasers.length) {
+        continue;
+      }
+      const ownerType = player.type;
+      const reportAsteroidHits = shouldReportLaserAsteroidHit(ownerType);
+      const ownerAttackerId = ownerType === 'local' ? attackerId : player.id;
+      this.collisionManager.checkLaserCollisions(
+        player.ship.lasers,
+        this.currRoidBelt.roids,
+        ownerType === 'local' ? laserTargets : [],
+        ownerAttackerId,
+        { reportAsteroidHits }
+      );
+    }
   }
 
   // Check boundary collisions for ships

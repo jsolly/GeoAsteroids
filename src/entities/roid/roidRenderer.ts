@@ -1,5 +1,6 @@
 import { PALETTE, ROID, VISUAL } from '../../constants';
 import type { Ship } from '../../entities/ship/Ship';
+import { isAsteroidPending } from '../../physics/collision/asteroidHitFeel';
 import { canvasManager } from '../../rendering/canvas';
 
 import type { Roid } from './Roid';
@@ -21,6 +22,9 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   }
 
   for (const roid of roids) {
+    if (isAsteroidPending(roid)) {
+      continue;
+    }
     ctx.strokeStyle = PALETTE.ROID;
     ctx.lineWidth = getRoidStrokeWidth(roid.r);
     ctx.shadowColor = PALETTE.ROID;

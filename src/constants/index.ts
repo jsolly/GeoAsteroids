@@ -133,6 +133,7 @@ export const SHIP = {
   INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds
   INVINCIBILITY_BLINK_DURATION_FRAMES: 6, // 0.1 seconds
   RESPAWN_DELAY_FRAMES: 180, // 3 seconds — shared by player and bot ships
+  IMPACT_FLASH_FRAMES: 10, // hairline ring after a ship↔roid graze
 } as const;
 
 // ============================================================================

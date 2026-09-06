@@ -1,5 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { Sound } from '../../audio/Sound';
+import { playWorldSound } from '../../audio/spatialAudio';
 import { DEBUG, GAME, ROID } from '../../constants';
 import { isDebugMode } from '../../utils/debugUtils';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
@@ -14,8 +15,13 @@ class Roid {
   health: number;
   maxHealth: number;
   pendingDestruction: boolean = false; // Track asteroids waiting for server confirmation
+  pendingUntilMs: number = 0;
   private _jaggedness: number = ROID.JAGGEDNESS; // Store jaggedness value
   static fxHit = new Sound('sounds/hit.m4a', 5);
+
+  playHitSound(): void {
+    playWorldSound(Roid.fxHit, this.position);
+  }
 
   constructor(
     public position: Position,
@@ -120,14 +126,14 @@ class RoidBelt {
   }
 
   moveRoids(): void {
-    // Check if asteroid movement is disabled in debug mode
-    if (!DEBUG.ROIDS.MOVEMENT) {
+    // Freeze only when debug mode explicitly disables movement.
+    // Production interpolates from the last server velocity so the field
+    // does not look stepped between 30 Hz gameState snapshots.
+    if (DEBUG.ENABLED && !DEBUG.ROIDS.MOVEMENT) {
       return;
     }
 
     for (const roid of this.roids) {
-      // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
-      // let dt = 1/Math.sqrt(1-beta_squared)
       roid.position = {
         x: roid.position.x + roid.velocity.x,
         y: roid.position.y + roid.velocity.y,
