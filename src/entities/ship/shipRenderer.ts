@@ -29,7 +29,7 @@ import {
   type HullProfile,
   type ShipKitId,
 } from './shipKits';
-import { isShieldBlockingLasers, shieldCooldownFrames } from './shipShield';
+import { isReadableShieldUp, shieldCooldownFrames } from './shipShield';
 
 const shipTriangle = {
   nose: { x: 0, y: 0 },
@@ -749,13 +749,8 @@ function drawAbilityFx(
   shipR: number,
   _cameraShipPosition: { x: number; y: number }
 ): void {
-  if (ship.shieldTimer > 0) {
-    const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 90);
-    ctx.beginPath();
-    ctx.arc(screenX, screenY, shipR + 10, 0, Math.PI * 2);
-    ctx.strokeStyle = hexToRgba(PALETTE.HUD, pulse);
-    ctx.lineWidth = 2;
-    ctx.stroke();
+  if (isReadableShieldUp(ship)) {
+    return;
   }
   if (canDrawGenericAbilityRing(ship)) {
     ctx.beginPath();
@@ -763,6 +758,27 @@ function drawAbilityFx(
     ctx.strokeStyle = hexToRgba(TITLE.ACCENT, 0.45);
     ctx.lineWidth = 3;
     ctx.stroke();
+  }
+}
+
+function drawWardenShieldArcBlush(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  shipR: number
+): void {
+  if (ship.kitId !== 'warden') {
+    return;
+  }
+  const outline = getKitHullOutline('warden');
+  for (const extra of outline.extras) {
+    strokePhosphorPolyline(
+      ctx,
+      projectHullPolyline(screenX, screenY, shipR, ship.angle, extra),
+      PALETTE.SHIELD,
+      extra.closed
+    );
   }
 }
 
@@ -779,18 +795,20 @@ export function drawShipShield(
 
   const radius = shipR * SHIELD.RADIUS_RATIO;
 
-  if (isShieldBlockingLasers(ship)) {
+  if (isReadableShieldUp(ship)) {
     const flashing = ship.shieldFlashTime > 0;
+    const alpha = flashing ? SHIELD.FLASH_ALPHA : SHIELD.IDLE_ALPHA;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineWidth = flashing ? VISUAL.SHIELD_STROKE_WIDTH + 0.5 : VISUAL.SHIELD_STROKE_WIDTH;
     ctx.shadowColor = PALETTE.SHIELD;
     ctx.shadowBlur = VISUAL.SHIELD_GLOW;
-    ctx.strokeStyle = hexToRgba(PALETTE.SHIELD, flashing ? 1 : 0.9);
+    ctx.strokeStyle = hexToRgba(PALETTE.SHIELD, alpha);
     ctx.beginPath();
     ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+    drawWardenShieldArcBlush(ctx, ship, screenX, screenY, shipR);
     return;
   }
 

@@ -143,7 +143,7 @@ const KITS: Record<ShipKitId, ShipKit> = {
     name: 'Warden',
     abilityId: 'shieldFocus',
     abilityName: 'Shield',
-    abilityHint: 'Absorb hits for a moment',
+    abilityHint: 'Timed shield that blocks enemy lasers',
     flavor: 'combat',
     maxHealth: 120,
     size: 32,

@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { DAMAGE } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
-import { activateShield, isShieldBlockingLasers } from '../../../src/entities/ship/shipShield';
+import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
+import {
+  activateShield,
+  isShieldBlockingLasers,
+  shieldDurationFrames,
+} from '../../../src/entities/ship/shipShield';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 describe('authoritative shield: lasers blocked, collisions still hurt', () => {
@@ -120,5 +125,58 @@ describe('authoritative shield: lasers blocked, collisions still hurt', () => {
     const after = engine.getPlayer('a');
     expect(after?.shieldActive).toBe(true);
     expect(after?.position).toEqual({ x: 5, y: 5 });
+  });
+
+  test('shield expires and then an enemy laser cuts health', () => {
+    const ws = {} as any;
+    engine.addPlayer('target', 'Target', ws, { x: 0, y: 0 }, undefined, 'dart', 'ember');
+    engine.addPlayer('attacker', 'Attacker', ws, { x: 20, y: 0 }, undefined, 'dart', 'ion');
+    engine.entityManager.updateEntity('target', { spawnProtectionTimer: undefined });
+    expect(engine.requestShield('target', true)).toBe(true);
+
+    for (let i = 0; i < shieldDurationFrames(); i++) {
+      engine.entityManager.updateShields();
+    }
+
+    const after = engine.getPlayer('target');
+    expect(after?.shieldActive).toBe(false);
+    expect(after?.shieldCooldown).toBeGreaterThan(0);
+
+    const health = after?.health ?? 0;
+    engine.handlePlayerDamage('target', 'attacker', DAMAGE.LASER_HIT, 'laser');
+    expect(engine.getPlayer('target')?.health).toBe(health - DAMAGE.LASER_HIT);
+  });
+
+  test('same-side laser skips damage and does not flash a raised shield', () => {
+    const ws = {} as any;
+    engine.addPlayer('mate', 'Mate', ws, { x: 0, y: 0 }, undefined, 'warden', 'ion');
+    engine.addPlayer('ally', 'Ally', ws, { x: 20, y: 0 }, undefined, 'dart', 'ion');
+    engine.entityManager.updateEntity('mate', { spawnProtectionTimer: undefined });
+    expect(engine.requestShield('mate', true)).toBe(true);
+
+    const healthBefore = engine.getPlayer('mate')?.health;
+    engine.handlePlayerDamage('mate', 'ally', DAMAGE.LASER_HIT, 'laser');
+    const after = engine.getPlayer('mate');
+    expect(after?.health).toBe(healthBefore);
+    expect(after?.shieldActive).toBe(true);
+    expect(after?.shieldFlashTime).toBe(0);
+  });
+
+  test('Warden E raises the same timed shield that blocks an enemy laser', () => {
+    const ws = {} as any;
+    const warden = engine.addPlayer('warden', 'Warden', ws, { x: 0, y: 0 }, undefined, 'warden', 'ember');
+    engine.addPlayer('foe', 'Foe', ws, { x: 20, y: 0 }, undefined, 'dart', 'ion');
+    engine.entityManager.updateEntity('warden', { spawnProtectionTimer: undefined });
+
+    expect(engine.useAbility('warden', 'warden')).toBe(true);
+    expect(warden.shieldTimer).toBe(SHIP_ABILITY.SHIELD_FRAMES);
+    expect(warden.shieldActive).toBe(true);
+    expect(warden.shieldTime).toBe(SHIP_ABILITY.SHIELD_FRAMES);
+
+    const healthBefore = warden.health;
+    engine.handlePlayerDamage('warden', 'foe', DAMAGE.LASER_HIT, 'laser');
+    const after = engine.getPlayer('warden');
+    expect(after?.health).toBe(healthBefore);
+    expect(after?.shieldActive).toBe(true);
   });
 });

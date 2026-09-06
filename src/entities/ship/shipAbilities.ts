@@ -9,6 +9,7 @@ import {
   syncHarpoonFieldFromPlay,
 } from './harpoonField';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId, type ShipKitId } from './shipKits';
+import { raiseReadableShield } from './shipShield';
 
 export interface AbilityHost {
   id?: string;
@@ -28,6 +29,11 @@ export interface AbilityHost {
   r?: number;
   fuel?: number;
   maxFuel?: number;
+  /** Shared timed shield (#454). Warden E raises these with `shieldTimer`. */
+  shieldActive?: boolean;
+  shieldTime?: number;
+  shieldCooldown?: number;
+  shieldFlashTime?: number;
 }
 
 export interface AbilityBody {
@@ -485,6 +491,7 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
     case 'shieldFocus':
       host.shieldTimer = SHIP_ABILITY.SHIELD_FRAMES;
       host.abilityActiveFrames = SHIP_ABILITY.SHIELD_FRAMES;
+      raiseReadableShield(host, SHIP_ABILITY.SHIELD_FRAMES);
       break;
     case 'burstFire':
       host.abilityActiveFrames = 8;

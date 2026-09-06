@@ -374,6 +374,8 @@ export interface GameConstants {
     readonly FLASH_SECONDS: number;
     readonly BOT_HEALTH_THRESHOLD: number;
     readonly BOT_ACTIVATE_CHANCE: number;
+    readonly IDLE_ALPHA: number;
+    readonly FLASH_ALPHA: number;
   };
 }
 

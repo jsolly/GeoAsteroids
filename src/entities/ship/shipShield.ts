@@ -107,8 +107,34 @@ export function isShieldBlockingLasers(state: ShieldState): boolean {
   return state.shieldActive && state.shieldTime > 0;
 }
 
+/** F-key bubble or Warden kit `shieldTimer` — one readable ring. */
+export function isReadableShieldUp(state: ShieldState & { shieldTimer?: number }): boolean {
+  return isShieldBlockingLasers(state) || (state.shieldTimer ?? 0) > 0;
+}
+
+/**
+ * Kit ability (Warden E) raises the same laser-block fields as F.
+ * Bypasses F-key cooldown so the kit slot still works.
+ */
+export function raiseReadableShield(
+  state: Partial<ShieldState>,
+  frames = shieldDurationFrames()
+): void {
+  state.shieldActive = true;
+  state.shieldTime = Math.max(state.shieldTime ?? 0, frames);
+}
+
 export function shouldBlockDamage(state: ShieldState, source: CombatDamageSource): boolean {
   return source === 'laser' && isShieldBlockingLasers(state);
+}
+
+/** Same-side lasers never flash the ring — factions already skip that damage. */
+export function shouldNoteShieldBlock(
+  state: ShieldState,
+  source: CombatDamageSource,
+  sameSide: boolean
+): boolean {
+  return !sameSide && shouldBlockDamage(state, source);
 }
 
 export function isEnvironmentalAttacker(attackerId: string): boolean {

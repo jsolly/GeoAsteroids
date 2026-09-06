@@ -344,11 +344,14 @@ test('Warden shield absorbs a hit', () => {
   const warden = host('warden');
   activateAbilityOnHost(warden);
   expect(absorbDamageWithShield(warden)).toBe(true);
+  expect(warden.shieldActive).toBe(true);
+  expect(warden.shieldTime).toBe(SHIP_ABILITY.SHIELD_FRAMES);
   const ship = new Ship({ kitId: 'warden' });
   ship.activateAbility();
   const before = ship.health;
   ship.takeDamage(25);
   expect(ship.health).toBe(before);
+  expect(ship.shieldActive).toBe(true);
 });
 
 test('Skirmisher burst marks a volley and the ship fires three lasers', () => {
