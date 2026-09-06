@@ -31,9 +31,6 @@ const shipTriangle = {
 
 const thrusterGeom = {
   rearCenter: { x: 0, y: 0 },
-  flameTip: { x: 0, y: 0 },
-  leftFlame: { x: 0, y: 0 },
-  rightFlame: { x: 0, y: 0 },
 };
 
 const laserScreen = { x: 0, y: 0 };
