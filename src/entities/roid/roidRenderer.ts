@@ -24,7 +24,7 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
     ctx.strokeStyle = PALETTE.ROID;
     ctx.lineWidth = getRoidStrokeWidth(roid.r);
     ctx.shadowColor = PALETTE.ROID;
-    ctx.shadowBlur = Math.min(ctx.lineWidth, VISUAL.SHIP_GLOW);
+    ctx.shadowBlur = Math.min(ctx.lineWidth, VISUAL.ROID_GLOW);
 
     const screenPos = canvasManager.worldToScreen(roid.position, ship.position);
 

@@ -22,6 +22,19 @@ export const GAME = {
 } as const;
 
 // ============================================================================
+// SPAWN CONFIGURATION
+// ============================================================================
+export const SPAWN = {
+  // Radius (px) around the arena center within which human players spawn.
+  // The arena boundary radius is ~3100px, so spawning anywhere inside it puts
+  // players thousands of px apart — far outside each other's viewport, so two
+  // people joining the same server never see one another. Clustering spawns
+  // near the center keeps freshly-joined players within view of each other
+  // (max separation ~2x this radius) and near where bots/asteroids converge.
+  NEAR_CENTER_RADIUS: 150,
+} as const;
+
+// ============================================================================
 // CANVAS CONFIGURATION
 // ============================================================================
 export const CANVAS = {
@@ -55,22 +68,40 @@ export const PALETTE = {
   ACCENT_UI: '#A78BFA',
 } as const;
 
-// Stroke / glow caps. Soft glow must stay ≤ stroke width so beams cannot wash the field.
+// Retro vector pass: hairline polylines, no entity fills, phosphor glow hard-capped ≤ stroke
+// so nothing blooms or washes the void.
 export const VISUAL = {
-  SHIP_STROKE_WIDTH: 1.5,
-  SHIP_GLOW: 1.5,
-  LASER_RADIUS: 3,
-  LASER_EXPLODE_RADIUS: 5,
-  LASER_GLOW: 3,
-  HEALTH_CAPSULE_HEIGHT: 2,
+  SHIP_STROKE_WIDTH: 1.25,
+  SHIP_GLOW: 1.25,
+  // Classic Atari shot: a short hard-edged segment along the heading, not a beam or disc.
+  LASER_STROKE_WIDTH: 2,
+  LASER_LENGTH: 4,
+  LASER_EXPLODE_RADIUS: 4,
+  LASER_GLOW: 2,
+  HEALTH_CAPSULE_HEIGHT: 1.5,
   BOUNDARY_STROKE_WIDTH: 1.25,
   BOUNDARY_GLOW: 1.25,
-  ROID_STROKE_LARGE: 2.25,
-  ROID_STROKE_MEDIUM: 1.5,
+  ROID_STROKE_LARGE: 1.5,
+  ROID_STROKE_MEDIUM: 1.25,
   ROID_STROKE_SMALL: 1,
+  ROID_GLOW: 1,
+  // Tiny open-V thruster trail in faction colour; flickers between two lengths like a vector flame.
+  THRUSTER_STROKE_WIDTH: 1,
+  THRUSTER_GLOW: 1,
+  THRUSTER_LENGTH_RATIO: 0.5,
+  THRUSTER_FLICKER_RATIO: 0.3,
+  THRUSTER_FLICKER_MS: 60,
+  // Ship break-up: hull edges drift apart as hairline fragments, no filled fireball.
+  EXPLOSION_STROKE_WIDTH: 1,
+  EXPLOSION_SPREAD_RATIO: 1.6,
+  // Sparse world-anchored star points seeded deterministically so they never twinkle or shift.
+  STAR_COUNT: 900,
+  STAR_SIZE: 1,
+  STAR_SEED: 0x9e3779b9,
+  STAR_ALPHA_MIN: 0.3,
+  STAR_ALPHA_MAX: 0.8,
   MINIMAP_SIZE: 96,
   MINIMAP_DOT: 3,
-  THRUSTER_LENGTH_RATIO: 0.65,
   SCORE_FONT: '12px Arial',
 } as const;
 
