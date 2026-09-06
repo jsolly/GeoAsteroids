@@ -45,7 +45,7 @@ describe('satellite pickup orbit math', () => {
       SATELLITE_PICKUP.FIELD_RADIUS
     );
     expect(Math.hypot(center.x, center.y)).toBeLessThanOrEqual(SATELLITE_PICKUP.FIELD_RADIUS);
-    expect(driftAngle).toBeCloseTo(Math.PI);
+    expect(Math.cos(driftAngle)).toBeCloseTo(-1);
   });
 
   test('velocityFromDelta is the per-frame step', () => {

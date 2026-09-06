@@ -1,4 +1,9 @@
-import type { Position, SatellitePickupData, SatellitePickupState, Velocity } from '../../../shared-types';
+import type {
+  Position,
+  SatellitePickupData,
+  SatellitePickupState,
+  Velocity,
+} from '../../../shared-types';
 
 export class SatellitePickup {
   id: string;

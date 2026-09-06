@@ -59,7 +59,7 @@ export function isWithinCollectRange(
   pickup: Position,
   shipRadius: number,
   pickupRadius: number,
-  slack = SATELLITE_PICKUP.COLLECT_SLACK
+  slack: number = SATELLITE_PICKUP.COLLECT_SLACK
 ): boolean {
   const limit = shipRadius + pickupRadius + slack;
   return Math.hypot(pickup.x - ship.x, pickup.y - ship.y) <= limit;
