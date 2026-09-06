@@ -1,10 +1,9 @@
 /**
  * Client-side laser/ship ↔ roid feel on the moving field (#436 / #444 / #445).
  *
- * Server authority for hits stays on the existing client-report path
- * (open #426). This module only makes the local picture crisp: lock a
- * rock so it cannot be re-hit or re-drawn as a ghost, then release if
- * the server never confirms.
+ * Server authority for destroy/score/split lives in GameEngine.applyLaserAsteroidHit.
+ * This module only makes the local picture crisp: lock a rock so it cannot
+ * be re-hit or re-drawn as a ghost, then release if the server never confirms.
  */
 
 export const ASTEROID_PENDING_MS = 800;

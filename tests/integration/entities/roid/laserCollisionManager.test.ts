@@ -57,6 +57,8 @@ describe('Laser Collision Manager Integration', () => {
       position: { x: 100, y: 100 },
       r: 20,
       id: 'test-asteroid-1',
+      pendingDestruction: false,
+      pendingUntilMs: 0,
     } as Roid;
 
     // Create mock bot
@@ -96,6 +98,50 @@ describe('Laser Collision Manager Integration', () => {
           playerId: localPlayerId,
           points: 50, // Medium asteroid points (radius 20)
           cause: 'laser',
+          laserPosition: { x: 100, y: 100 },
+        },
+      });
+    });
+
+    test('does not double-apply the same laser-asteroid hit', () => {
+      const lasers = [mockLaser];
+      const asteroids = [mockAsteroid];
+      const localPlayerId = 'test-player';
+
+      collisionManager.checkLaserCollisions(lasers, asteroids, [], localPlayerId);
+      mockLaser.hasExploded = true;
+      collisionManager.checkLaserCollisions(lasers, asteroids, [], localPlayerId);
+
+      expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    test('skips asteroids already pending server confirmation', () => {
+      mockAsteroid.pendingDestruction = true;
+      mockAsteroid.pendingUntilMs = Date.now() + 800;
+      const secondLaser = {
+        ...mockLaser,
+        hasExploded: false,
+        updateExplodeTime: vi.fn(),
+        playHitSound: vi.fn(),
+      } as unknown as Laser;
+
+      collisionManager.checkLaserCollisions([secondLaser], [mockAsteroid], [], 'test-player');
+
+      expect(secondLaser.updateExplodeTime).not.toHaveBeenCalled();
+      expect(mockSendMessage).not.toHaveBeenCalled();
+    });
+
+    test('bot lasers report through the same asteroidDestroyed path', () => {
+      collisionManager.checkLaserCollisions([mockLaser], [mockAsteroid], [], 'server-bot-1');
+
+      expect(mockSendMessage).toHaveBeenCalledWith({
+        type: 'asteroidDestroyed',
+        data: {
+          asteroidId: 'test-asteroid-1',
+          playerId: 'server-bot-1',
+          points: 50,
+          cause: 'laser',
+          laserPosition: { x: 100, y: 100 },
         },
       });
     });
@@ -116,6 +162,7 @@ describe('Laser Collision Manager Integration', () => {
           playerId: localPlayerId,
           points: 100, // Small asteroid points
           cause: 'laser',
+          laserPosition: { x: 100, y: 100 },
         },
       });
     });
@@ -136,6 +183,7 @@ describe('Laser Collision Manager Integration', () => {
           playerId: localPlayerId,
           points: 20, // Large asteroid points
           cause: 'laser',
+          laserPosition: { x: 100, y: 100 },
         },
       });
     });
@@ -227,6 +275,7 @@ describe('Laser Collision Manager Integration', () => {
           playerId: localPlayerId,
           points: 50, // Medium asteroid points (radius 20)
           cause: 'laser',
+          laserPosition: { x: 100, y: 100 },
         },
       });
 

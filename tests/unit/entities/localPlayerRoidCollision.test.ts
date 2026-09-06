@@ -32,6 +32,10 @@ vi.mock('../../../src/utils/Logger', () => ({
 // Mock collision detection
 vi.mock('../../../src/physics/collision/collisionDetection', () => ({
   checkShipCollision: vi.fn(),
+  checkLaserAsteroidCollision: vi.fn(),
+  checkLaserAsteroidCollisionSwept: vi.fn(),
+  checkLaserShipCollision: vi.fn(),
+  asteroidPointsForRadius: vi.fn((radius: number) => (radius >= 20 ? 50 : 100)),
 }));
 
 describe('Local Player Roid Collision Damage', () => {
