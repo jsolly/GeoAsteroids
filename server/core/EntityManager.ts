@@ -14,9 +14,10 @@ import {
   type CombatDamageSource,
   type ShieldState,
 } from '../../src/entities/ship/shipShield';
+import { createFuelTank } from '../../shared/fuel';
 import { BOT_AI, BotBrain, makeBotShot, type BotShot } from '../ai/botController';
 import { applyShipMotionSteps, containShipInArena } from '../ai/shipMotion';
-import { DEBUG, PALETTE, SHIP } from '../../src/constants';
+import { DEBUG, FUEL, PALETTE, SHIP } from '../../src/constants';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { applyShockwaveToBody } from '../../src/physics/shockwave';
 import { GROWTH, applyShipMass, resetShipMass } from '../../shared/shipGrowth';
@@ -48,6 +49,8 @@ export interface GameEntity extends ShieldState {
   score: number;
   health: number;
   maxHealth: number;
+  fuel: number;
+  maxFuel: number;
   mass: number;
   lastUpdate: number;
   respawnTimer?: number;
@@ -189,6 +192,8 @@ export class EntityManager {
       maxHealth: ignoredMaxHealth,
       health: ignoredHealth,
       mass: ignoredMass,
+      maxFuel: _ignoredMaxFuel,
+      fuel: _ignoredFuel,
       shieldActive: _ignoredShieldActive,
       shieldTime: _ignoredShieldTime,
       shieldCooldown: _ignoredShieldCooldown,
@@ -266,6 +271,7 @@ export class EntityManager {
       score: restored?.score ?? 0,
       health: 100,
       maxHealth: 100,
+      ...createFuelTank(FUEL.START, FUEL.MAX),
       mass: GROWTH.BASE_MASS,
       lastUpdate: Date.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
@@ -407,6 +413,7 @@ export class EntityManager {
         score: 0,
         health: 100,
         maxHealth: 100,
+        ...createFuelTank(FUEL.START, FUEL.MAX),
         mass: GROWTH.BASE_MASS,
         lastUpdate: Date.now(),
         spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
@@ -579,6 +586,8 @@ export class EntityManager {
     resetShipMass(entity);
     applyShipKitStats(entity, entity.kitId);
     entity.health = entity.maxHealth;
+    entity.fuel = FUEL.START;
+    entity.maxFuel = FUEL.MAX;
     entity.exploding = false;
     entity.explodeTime = undefined;
     entity.deathCause = undefined;

@@ -51,9 +51,18 @@ export function drawLootRelative(ship: Ship, loot: readonly LootData[]): void {
       continue;
     }
 
+    const isFuel = drop.kind === 'fuel';
     const color = lootStrokeColor(drop.kind);
     const trace = (): void => {
       ctx.beginPath();
+      if (isFuel) {
+        ctx.arc(screen.x, screen.y, r, 0, Math.PI * 2);
+        ctx.moveTo(screen.x, screen.y - r * 0.45);
+        ctx.lineTo(screen.x, screen.y + r * 0.45);
+        ctx.moveTo(screen.x - r * 0.45, screen.y);
+        ctx.lineTo(screen.x + r * 0.45, screen.y);
+        return;
+      }
       ctx.moveTo(screen.x, screen.y - r);
       ctx.lineTo(screen.x + r, screen.y);
       ctx.lineTo(screen.x, screen.y + r);

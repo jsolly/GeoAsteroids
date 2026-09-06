@@ -133,6 +133,8 @@ export const VISUAL = {
   STAR_ALPHA_MAX: 0.8,
   LOOT_STROKE_WIDTH: 1.25,
   LOOT_GLOW: 1.25,
+  FUEL_BAR_WIDTH: 72,
+  FUEL_BAR_HEIGHT: 2,
   // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
   TITLE_STARS_PER_1080P: 48,
   MINIMAP_SIZE: 96,
@@ -286,6 +288,20 @@ export const SHOCKWAVE = {
     impulse: 7.0,
     strokeWidth: 2.25,
   },
+} as const;
+
+// ============================================================================
+// FUEL CONFIGURATION
+// ============================================================================
+// Shared tank on every kit. Biggest rocks drop fuel; Quake shock / leftover
+// EMP spends it. Reuses PALETTE.LOOT (matt amber) — do not add a sixth kit.
+export const FUEL = {
+  MAX: 100,
+  START: 50,
+  EMP_COST: 25,
+  DROP_AMOUNT: 25,
+  DROP_RADIUS: 8,
+  MIN_ROID_SIZE_TO_DROP: ROID.COLLAB_SPLIT_MIN_SIZE,
 } as const;
 
 // ============================================================================

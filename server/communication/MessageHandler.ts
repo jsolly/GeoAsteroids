@@ -233,6 +233,8 @@ export class MessageHandler {
     const sanitizedData: any = { ...data };
     delete (sanitizedData as any).health;
     delete (sanitizedData as any).maxHealth;
+    delete (sanitizedData as any).fuel;
+    delete (sanitizedData as any).maxFuel;
     delete (sanitizedData as any).mass;
     delete (sanitizedData as any).score;
     delete (sanitizedData as any).lives;
@@ -687,6 +689,8 @@ export class MessageHandler {
         lives: bot.lives,
         health: bot.health,
         maxHealth: bot.maxHealth,
+        fuel: bot.fuel,
+        maxFuel: bot.maxFuel,
         mass: bot.mass,
         kitId: bot.kitId,
         factionId: bot.factionId,

@@ -34,6 +34,8 @@ export interface PlayerUpdate {
   exploding: boolean;
   health: number;
   maxHealth: number;
+  fuel?: number;
+  maxFuel?: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
   mass?: number;
@@ -96,6 +98,8 @@ export interface BotData {
   lives: number;
   health: number;
   maxHealth: number;
+  fuel?: number;
+  maxFuel?: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
   mass?: number;
@@ -105,7 +109,7 @@ export interface BotData {
   shieldFlashTime?: number;
 }
 
-/** Shared world pickups. Kill loot is wreckage; destroy-drop is shard; fuel later. */
+/** Shared world pickups. Kill loot is wreckage; destroy-drop is shard; fuel fills the EMP tank. */
 export type LootKind = 'shard' | 'wreckage' | 'fuel';
 
 export interface LootData {
@@ -114,6 +118,7 @@ export interface LootData {
   mass: number;
   radius: number;
   kind: LootKind;
+  fuel?: number;
 }
 
 // Server game state structure (what the server actually sends)
@@ -131,6 +136,8 @@ export interface ServerPlayerData {
   color: string;
   health: number;
   maxHealth: number;
+  fuel?: number;
+  maxFuel?: number;
   respawnTimer?: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
@@ -183,6 +190,8 @@ export interface ServerEntityData {
   score: number;
   health: number;
   maxHealth: number;
+  fuel: number;
+  maxFuel: number;
   mass: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;

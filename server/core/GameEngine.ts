@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import type { AsteroidData, LootData, Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
 import { asteroidRamDamage, shipShipTickDamage } from '../../shared/combat';
+import { applyFuelPickup, ensureFuelTank, isFuelLoot } from '../../shared/fuel';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
 import {
   LOOT_BLAST,
@@ -604,6 +605,7 @@ export class GameEngine {
     if (result.outcome === 'destroyed' && result.destroyed) {
       this.awardPoints(playerId, pointsForRoidSize(result.destroyed.size));
       this.dropShardAt(result.destroyed.position);
+      this.maybeDropFuel(result.destroyed);
     }
 
     return result;
@@ -670,6 +672,7 @@ export class GameEngine {
     for (const item of expired) {
       this.awardPoints(item.playerId, item.points);
       this.dropShardAt(item.destroyed.position);
+      this.maybeDropFuel(item.destroyed);
       this.resolvedCollabHits.push(item);
     }
     return expired;
@@ -887,6 +890,7 @@ export class GameEngine {
         score: entity.score,
         health: entity.health,
         maxHealth: entity.maxHealth,
+        ...ensureFuelTank(entity),
         mass: entity.mass ?? GROWTH.BASE_MASS,
         respawnTimer: entity.respawnTimer,
         spawnProtectionTimer: entity.spawnProtectionTimer,
@@ -982,6 +986,7 @@ export class GameEngine {
     if (result.destroyed) {
       this.awardPoints(playerId, pointsForRoidSize(result.destroyed.size));
       this.dropShardAt(result.destroyed.position);
+      this.maybeDropFuel(result.destroyed);
     }
     return {
       destroyed: result.outcome === 'destroyed',
@@ -999,6 +1004,17 @@ export class GameEngine {
     const collected = this.lootManager.collectOverlaps(this.entityManager.getAllEntities());
     const results: Array<{ collectorId: string; lootId: string; mass: number }> = [];
     for (const { collector, loot } of collected) {
+      if (isFuelLoot(loot)) {
+        applyFuelPickup(ensureFuelTank(collector), loot.fuel ?? 0);
+        collector.lastUpdate = Date.now();
+        results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
+        logger.debug('LOOT', 'Collected fuel drop', {
+          collectorId: collector.id,
+          lootId: loot.id,
+          fuel: collector.fuel,
+        });
+        continue;
+      }
       applyShipMass(collector, applyLootMass(collector.mass ?? GROWTH.BASE_MASS, loot.mass));
       if (loot.kind === 'shard') {
         this.awardPoints(collector.id, GROWTH.SHARD_SCORE);
@@ -1088,6 +1104,13 @@ export class GameEngine {
       return 'killed';
     }
     return 'hit';
+  }
+
+  private maybeDropFuel(asteroid?: AsteroidData): void {
+    if (!asteroid) {
+      return;
+    }
+    this.lootManager.spawnFuelFromAsteroid(asteroid, this.gameTime);
   }
 
   // Award points to an entity
