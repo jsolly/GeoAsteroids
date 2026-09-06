@@ -37,10 +37,14 @@ export function calculateShipTrianglePoints(
   // Create a more isosceles triangle shape for better ship appearance
   shipTriangle.nose.x = centerX + radius * Math.cos(angle);
   shipTriangle.nose.y = centerY - radius * Math.sin(angle);
-  shipTriangle.rearLeft.x = centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle);
-  shipTriangle.rearLeft.y = centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle);
-  shipTriangle.rearRight.x = centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle);
-  shipTriangle.rearRight.y = centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle);
+  shipTriangle.rearLeft.x =
+    centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle);
+  shipTriangle.rearLeft.y =
+    centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle);
+  shipTriangle.rearRight.x =
+    centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle);
+  shipTriangle.rearRight.y =
+    centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle);
   return shipTriangle;
 }
 
@@ -149,7 +153,12 @@ export function drawThrusterAtPosition(
     const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
     const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
     const cull = ship.r * 3;
-    if (screenX < -cull || screenY < -cull || screenX > cvs.width + cull || screenY > cvs.height + cull) {
+    if (
+      screenX < -cull ||
+      screenY < -cull ||
+      screenX > cvs.width + cull ||
+      screenY > cvs.height + cull
+    ) {
       return;
     }
     drawGenericThruster(screenX, screenY, ship.angle, ship.r, color);
@@ -410,7 +419,12 @@ export function drawShipAtPosition(
   const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
 
   const cull = ship.r * 3;
-  if (screenX < -cull || screenY < -cull || screenX > cvs.width + cull || screenY > cvs.height + cull) {
+  if (
+    screenX < -cull ||
+    screenY < -cull ||
+    screenX > cvs.width + cull ||
+    screenY > cvs.height + cull
+  ) {
     return;
   }
 

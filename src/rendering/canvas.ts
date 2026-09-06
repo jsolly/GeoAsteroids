@@ -178,7 +178,10 @@ class CanvasManager {
     const x = this.canvas.width / 2 - shipPos.x + worldPos.x;
     const y = this.canvas.height / 2 - shipPos.y + worldPos.y;
     return (
-      x >= -margin && x <= this.canvas.width + margin && y >= -margin && y <= this.canvas.height + margin
+      x >= -margin &&
+      x <= this.canvas.width + margin &&
+      y >= -margin &&
+      y <= this.canvas.height + margin
     );
   }
 
