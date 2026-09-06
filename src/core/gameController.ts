@@ -1,13 +1,13 @@
 import { areAllied } from '../../shared/factions';
 import { consumeTickAccumulator } from '../../shared/gameClock';
 import type { AsteroidData, LootData, Position, ShipKitId } from '../../shared-types';
-import { playExplosionSound } from '../audio/explosionSound';
 import {
   replaceThrustSources,
   resetThrustSources,
   thrustSourcesFromPlayers,
 } from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
+import { playSplitSound } from '../audio/splitSound';
 import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
 import { LootField } from '../entities/loot/LootField';
@@ -23,6 +23,7 @@ import {
   publishHarpoonField,
 } from '../entities/ship/harpoonField';
 import type { Ship } from '../entities/ship/Ship';
+import { shockwaveManager } from '../fx/ShockwaveManager';
 import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
 import {
@@ -38,6 +39,7 @@ import {
   type LaserCollisionOptions,
   type LaserTarget,
 } from '../physics/collision/CollisionManager';
+import { applyShockwaveToBody, type ShockwaveWaveSpec } from '../physics/shockwave';
 import { contourSegmentCount } from '../physics/terrain/contours';
 import { sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
 import {
@@ -63,6 +65,7 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private recentShockwaveKeys = new Set<string>();
   private readonly otherShips: { ship: Ship; id: string }[] = [];
   private readonly laserTargets: LaserTarget[] = [];
   private readonly localFirstPlayers: Player[] = [];
@@ -89,6 +92,10 @@ export class GameController {
         }
         return { width: canvas.width, height: canvas.height };
       },
+    });
+
+    shockwaveManager.setWaveFireHandler((origin, wave) => {
+      this.applyLocalShockwaveKick(origin, wave);
     });
 
     // Initialize with empty asteroid belt - will be populated by server
@@ -161,6 +168,7 @@ export class GameController {
     // Empty belt + listeners must be ready before join so the first
     // asteroidCreateBatch / gameState cannot land on a static local set.
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    shockwaveManager.clear();
     this.setupServerAsteroidListeners();
     this.networkManager.initializeAsteroidSync();
 
@@ -274,7 +282,7 @@ export class GameController {
         const roid = this.currRoidBelt.roids[index];
         if (roid !== undefined) {
           if (collabSplit) {
-            playExplosionSound(origin ?? roid.position);
+            this.spawnCollabShockwave(origin ?? roid.position, asteroidId);
           }
           // Clear pending destruction flag before removing
           roid.pendingDestruction = false;
@@ -285,6 +293,62 @@ export class GameController {
       }
     }
   };
+
+  private handleServerShockwave = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ origin: Position; asteroidId?: string }>;
+    const { origin, asteroidId } = customEvent.detail;
+    if (!origin) {
+      return;
+    }
+    this.spawnCollabShockwave(origin, asteroidId);
+  };
+
+  private spawnCollabShockwave(origin: Position, asteroidId?: string): void {
+    const key = asteroidId ?? `${Math.round(origin.x)}:${Math.round(origin.y)}`;
+    if (this.recentShockwaveKeys.has(key)) {
+      return;
+    }
+    this.recentShockwaveKeys.add(key);
+    window.setTimeout(() => this.recentShockwaveKeys.delete(key), 1000);
+    playSplitSound(origin);
+    shockwaveManager.spawn(origin);
+  }
+
+  private applyLocalShockwaveKick(origin: Position, wave: ShockwaveWaveSpec): void {
+    const ship = this.playerManager.getLocalShip();
+    if (ship && !ship.exploding) {
+      const next = applyShockwaveToBody(
+        { position: ship.position, velocity: ship.velocity, size: ship.r },
+        origin,
+        wave
+      );
+      if (next) {
+        ship.velocity = next;
+      }
+    }
+
+    if (!this.currRoidBelt) {
+      return;
+    }
+    for (const roid of this.currRoidBelt.roids) {
+      const next = applyShockwaveToBody(
+        { position: roid.position, velocity: roid.velocity, size: roid.r },
+        origin,
+        wave
+      );
+      if (next) {
+        roid.velocity = next;
+      }
+    }
+  }
+
+  getActiveShockwaves(): ReturnType<typeof shockwaveManager.getActive> {
+    return shockwaveManager.getActive();
+  }
+
+  getShockwaveDebug(): ReturnType<typeof shockwaveManager.getDebugState> {
+    return shockwaveManager.getDebugState();
+  }
 
   private applyServerAsteroidTagged = (event: { asteroidId: string; expiresAt: number }): void => {
     const { asteroidId, expiresAt } = event;
@@ -304,10 +368,12 @@ export class GameController {
       onDestroyed: this.applyServerAsteroidDestroyed,
       onTagged: this.applyServerAsteroidTagged,
     });
+    window.addEventListener('serverShockwave', this.handleServerShockwave);
   }
 
   private cleanupServerAsteroidListeners(): void {
     unbindAsteroidFieldApply();
+    window.removeEventListener('serverShockwave', this.handleServerShockwave);
   }
 
   /** Drop a pending return-to-menu so Start (or a test) can open a new session. */
@@ -694,6 +760,7 @@ export class GameController {
     tickTouchControls(currPlayer);
     this.publishLiveHarpoonField(currPlayer);
     currPlayer.ship.update(lifecycleFrames);
+    shockwaveManager.update();
 
     // Bots predict locally; remotes share the same 60 Hz explode/blink clock
     // so a hitch does not freeze their corpse or latch blink forever.

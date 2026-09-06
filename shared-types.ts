@@ -143,11 +143,16 @@ export interface AsteroidTaggedEvent {
   expiresAt: number;
 }
 
-/** Authoritative destroy. `origin` + `collabSplit` are the #443 shockwave hook. */
+/** Authoritative destroy. `origin` + `collabSplit` are the #447 shockwave hook. */
 export interface AsteroidDestroyEvent {
   asteroidId: string;
   collabSplit?: boolean;
   origin?: Position;
+}
+
+export interface ShockwaveEvent {
+  origin: Position;
+  asteroidId?: string;
 }
 
 export interface ServerGameState {

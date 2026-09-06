@@ -8,6 +8,7 @@ import type {
   PlayerUpdate,
   Position,
   ServerGameState,
+  ShockwaveEvent,
   Velocity,
 } from '../../../shared-types';
 import { playLaserSound } from '../../audio/gameSounds';
@@ -541,6 +542,9 @@ export class ConnectionManager {
       case 'asteroidTagged':
         this.handleAsteroidTagged(data as AsteroidTaggedEvent);
         break;
+      case 'shockwave':
+        this.handleShockwave(data as ShockwaveEvent);
+        break;
       case 'botCreated':
         this.handleBotCreated(data as { botId: string; botName: string; position: Position });
         break;
@@ -822,6 +826,20 @@ export class ConnectionManager {
       return;
     }
     notifyAsteroidTagged(data);
+  }
+
+  private handleShockwave(data: ShockwaveEvent): void {
+    if (!data?.origin) {
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent('serverShockwave', {
+        detail: {
+          origin: { x: data.origin.x, y: data.origin.y },
+          asteroidId: data.asteroidId,
+        },
+      })
+    );
   }
 
   private handleBotCreated(data: { botId: string; botName: string; position: Position }): void {

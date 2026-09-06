@@ -17,6 +17,7 @@ export interface ServerMessage {
     | 'asteroidUpdate'
     | 'asteroidDestroy'
     | 'asteroidTagged'
+    | 'shockwave'
     | 'botCreated'
     | 'botUpdate'
     | 'botDestroyed'
