@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { LOCAL_STORAGE_KEYS } from '../../../../src/constants/user-preferences';
 import { Player } from '../../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { Ship } from '../../../../src/entities/ship/Ship';
@@ -17,6 +18,7 @@ let isPlayingStub: ReturnType<typeof vi.spyOn>;
 let testCanvas: HTMLCanvasElement;
 
 beforeEach(() => {
+  localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
   // Set predictable viewport size used by canvasManager.initialize()
   Object.defineProperty(window, 'innerWidth', { value: 800, writable: true });
   Object.defineProperty(window, 'innerHeight', { value: 600, writable: true });

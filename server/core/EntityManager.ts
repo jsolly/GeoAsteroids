@@ -124,6 +124,17 @@ export class EntityManager {
 
   // Human player management
   public addHumanPlayer(id: string, name: string, ws: WebSocket, position?: Position, color?: string): GameEntity {
+    const existing = this.entities.get(id);
+    if (existing && existing.type === 'human') {
+      existing.ws = ws;
+      existing.name = name;
+      existing.lastUpdate = Date.now();
+      if (color) {
+        existing.color = color;
+      }
+      return existing;
+    }
+
     const entity: GameEntity = {
       id,
       name,

@@ -1,6 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from '../setup/serverLogger';
+import { shouldLogInboundGameplayMessage } from './communication/inboundMessageLog';
 import { WebSocketCore } from './communication/WebSocketCore';
 import { GameEngine } from './core/GameEngine';
 import { ClientLogger } from './services/ClientLogger';
@@ -244,10 +245,10 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       ws.on('message', (data) => {
         const rawData = String(data);
         try {
-          console.log('🔌 SERVER: Raw WebSocket data:', rawData);
           const message = JSON.parse(rawData);
-          console.log('🔌 SERVER: Parsed message:', JSON.stringify(message, null, 2));
-          logger.debug('SERVER: Received WebSocket message', { type: message.type, id: message.id });
+          if (shouldLogInboundGameplayMessage(message.type)) {
+            logger.debug('SERVER: Received WebSocket message', { type: message.type, id: message.id });
+          }
           wsCore.handleClientMessage(message, ws);
         } catch (error) {
           const rawPrefix =

@@ -73,10 +73,10 @@ export const PALETTE = {
 export const VISUAL = {
   SHIP_STROKE_WIDTH: 1.25,
   SHIP_GLOW: 1.25,
-  // Classic Atari shot: a short hard-edged segment along the heading, not a beam or disc.
+  // Short cream dash (not a 4px pin, not a beam). Soft round caps + glow ≤ stroke.
   LASER_STROKE_WIDTH: 2,
-  LASER_LENGTH: 4,
-  LASER_EXPLODE_RADIUS: 4,
+  LASER_LENGTH: 12,
+  LASER_EXPLODE_RADIUS: 5,
   LASER_GLOW: 2,
   HEALTH_CAPSULE_HEIGHT: 1.5,
   BOUNDARY_STROKE_WIDTH: 1.25,
@@ -100,9 +100,13 @@ export const VISUAL = {
   STAR_SEED: 0x9e3779b9,
   STAR_ALPHA_MIN: 0.3,
   STAR_ALPHA_MAX: 0.8,
+  // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
+  TITLE_STARS_PER_1080P: 48,
   MINIMAP_SIZE: 96,
   MINIMAP_DOT: 3,
-  SCORE_FONT: '12px Arial',
+  SCORE_FONT: '10px Arial',
+  NAME_LABEL_FONT: '11px Arial',
+  NAME_LABEL_ALPHA: 0.4,
 } as const;
 
 // ============================================================================
@@ -176,6 +180,13 @@ export const ROID = {
   MIN_COUNT: 5,
   MAX_COUNT: 20,
   SPAWN_TIME_FRAMES: 180, // 3 seconds at 60 FPS
+
+  // Shared moving belt. The ship-kill wall is ~3100px; a 1080p camera around a
+  // center-spawned ship only sees ~960×540. Opposite-side wrap at the wall
+  // parked every roid at ~3000px (minimap dots, empty canvas). Keep the belt
+  // inside the same "nearby" radius the audio/network layer already uses.
+  FIELD_RADIUS: 1200,
+  FIELD_INNER_SCALE: 0.96,
 } as const;
 
 // ============================================================================
@@ -191,10 +202,21 @@ export const EMP = {
 // ============================================================================
 export const AUDIO = {
   EXPLOSION_PATH: 'sounds/explode.m4a',
+  LASER_PATH: 'sounds/laser.m4a',
+  HIT_PATH: 'sounds/hit.m4a',
+  THRUST_PATH: 'sounds/thrust.m4a',
   EXPLOSION_MAX_STREAMS: 5,
+  LASER_MAX_STREAMS: 5,
+  HIT_MAX_STREAMS: 5,
+  THRUST_MAX_STREAMS: 2,
+  // Soft matt-blush levels — quieter than arcade default, loops stay under one-shots.
+  EXPLOSION_VOLUME: 0.055,
+  LASER_VOLUME: 0.04,
+  HIT_VOLUME: 0.035,
+  THRUST_VOLUME: 0.03,
   // Used when the canvas size is unknown (matches PlayerNetwork nearby radius).
   FALLBACK_MAX_DISTANCE: 1200,
-  // Floor so an on-screen explosion at the viewport edge stays audible.
+  // Floor so an on-screen source at the viewport edge stays a soft blush, not silent.
   MIN_IN_VIEWPORT_VOLUME: 0.2,
 } as const;
 
@@ -252,11 +274,12 @@ export const PREFERENCES = {
 // LOGGING CONFIGURATION
 // ============================================================================
 export const LOGGING = {
-  // Global log level that affects both client and server logging
-  // This controls what gets written to both server.log and client.log
-  GLOBAL_LOG_LEVEL: 'debug' as 'error' | 'warn' | 'info' | 'debug',
+  // Opt in to `debug` locally when chasing a bug. Production must stay
+  // `info` or quieter — per-frame `logger.debug` at 60 FPS stalls the
+  // main thread, misses heartbeats, and disconnects both tabs.
+  GLOBAL_LOG_LEVEL: 'info' as 'error' | 'warn' | 'info' | 'debug',
 
-  // Whether to forward client logs to the server
+  // Whether to forward client logs to the server (warn+ only; see Logger)
   FORWARD_TO_SERVER: true,
 
   // Whether to write logs to browser console

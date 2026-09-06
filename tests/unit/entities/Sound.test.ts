@@ -35,6 +35,35 @@ test('Set Sound', () => {
   expect(localStorage.getItem(LOCAL_STORAGE_KEYS.soundOn)).toBe('false');
 });
 
+test('Sound play skips when Sound is off', async () => {
+  setSound(false);
+  const initialStreamNum = testSound.streamNum;
+  await testSound.play(1);
+  expect(testSound.streamNum).toBe(initialStreamNum);
+  expect(mockPlay).not.toHaveBeenCalled();
+});
+
+test('setSound(false) stops every stream that is already playing', () => {
+  setSound(true);
+  const extra = new Sound('../public/sounds/laser.m4a', 2);
+  extra.streams[0]!.pause = mockPause;
+  extra.streams[1]!.pause = mockPause;
+  extra.playing = true;
+  testSound.playing = true;
+
+  setSound(false);
+
+  expect(mockPause).toHaveBeenCalled();
+  expect(testSound.playing).toBe(false);
+  expect(extra.playing).toBe(false);
+});
+
+test('loop option marks every stream as looping', () => {
+  const looped = new Sound('../public/sounds/thrust.m4a', 2, 0.03, { loop: true });
+  expect(looped.streams[0]?.loop).toBe(true);
+  expect(looped.streams[1]?.loop).toBe(true);
+});
+
 test('Sound play applies volume scale to the stream', async () => {
   const initialStreamNum = testSound.streamNum;
   await testSound.play(0.5);

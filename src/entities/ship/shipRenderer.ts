@@ -35,6 +35,71 @@ export function calculateShipTrianglePoints(
   return { nose, rearLeft, rearRight };
 }
 
+/** Shared phosphor hull stroke for local, remote, and bot ships (and HUD lives). */
+export function strokePhosphorHull(
+  ctx: CanvasRenderingContext2D,
+  hull: {
+    nose: { x: number; y: number };
+    rearLeft: { x: number; y: number };
+    rearRight: { x: number; y: number };
+  },
+  color: string
+): void {
+  const trace = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(hull.nose.x, hull.nose.y);
+    ctx.lineTo(hull.rearLeft.x, hull.rearLeft.y);
+    ctx.lineTo(hull.rearRight.x, hull.rearRight.y);
+    ctx.closePath();
+  };
+
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = VISUAL.SHIP_GLOW;
+  ctx.strokeStyle = hexToRgba(color, 0.4);
+  trace();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = color;
+  trace();
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function strokePhosphorSegment(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  width: number,
+  glow: number
+): void {
+  const trace = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+  };
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = width;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = glow;
+  ctx.strokeStyle = hexToRgba(color, 0.5);
+  trace();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = color;
+  trace();
+  ctx.stroke();
+  ctx.restore();
+}
+
 // Helper function to draw a targeting line extending from the ship
 export function drawTargetingLine(
   centerX: number,
@@ -168,12 +233,9 @@ export function drawThrusterAtPosition(
   }
 
   if (!ship.exploding && ship.thrusting) {
-    // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
-    const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
-    const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
-
-    // Use the generic thruster function at the calculated screen position
-    drawGenericThruster(screenX, screenY, ship.angle, ship.r, color);
+    const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+    const scale = canvasManager.getPlayfieldScale();
+    drawGenericThruster(screen.x, screen.y, ship.angle, ship.r * scale, color);
   }
 }
 
@@ -193,8 +255,8 @@ export function drawPlayerName(
   const nameY = y + shipRadius + 14;
 
   ctx.save();
-  ctx.fillStyle = hexToRgba(color, 0.7);
-  ctx.font = '11px Arial';
+  ctx.fillStyle = hexToRgba(color, VISUAL.NAME_LABEL_ALPHA);
+  ctx.font = VISUAL.NAME_LABEL_FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(name, x, nameY);
@@ -279,7 +341,7 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
     ctx,
     screenCenter.x,
     screenCenter.y,
-    ship.r,
+    ship.r * canvasManager.getPlayfieldScale(),
     ship.angle,
     explosionProgress(ship),
     color || ship.color || PALETTE.LOCAL
@@ -297,13 +359,13 @@ export function drawShipExplosionAtPosition(
     return;
   }
 
-  const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
-  const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+  const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+  const scale = canvasManager.getPlayfieldScale();
   drawVectorExplosion(
     ctx,
-    screenX,
-    screenY,
-    ship.r,
+    screen.x,
+    screen.y,
+    ship.r * scale,
     ship.angle,
     explosionProgress(ship),
     color || ship.color || PALETTE.REMOTE
@@ -326,33 +388,36 @@ export function drawLasers(
     const referencePos = viewerShipPosition || ship.position;
     const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
 
-    ctx.save();
-    ctx.shadowColor = boltColor;
-    ctx.shadowBlur = VISUAL.LASER_GLOW;
     if (laser.explodeTime === 0) {
-      // Classic Asteroids shot: a short hard-edged segment centred on the laser position,
-      // aligned to its heading. Butt caps keep it a crisp vector dash, not a bloomed pill.
+      // Short cream dash along heading — soft round caps + glow ≤ stroke (pins were invisible).
       const speed = Math.hypot(laser.velocity.x, laser.velocity.y);
-      const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * (VISUAL.LASER_LENGTH / 2);
-      const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * (VISUAL.LASER_LENGTH / 2);
-      ctx.strokeStyle = boltColor;
-      ctx.lineWidth = VISUAL.LASER_STROKE_WIDTH;
-      ctx.lineCap = 'butt';
-      ctx.beginPath();
-      ctx.moveTo(screenPos.x - halfX, screenPos.y - halfY);
-      ctx.lineTo(screenPos.x + halfX, screenPos.y + halfY);
-      ctx.stroke();
+      const bolt = (VISUAL.LASER_LENGTH / 2) * canvasManager.getPlayfieldScale();
+      const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * bolt;
+      const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * bolt;
+      strokePhosphorSegment(
+        ctx,
+        screenPos.x - halfX,
+        screenPos.y - halfY,
+        screenPos.x + halfX,
+        screenPos.y + halfY,
+        boltColor,
+        VISUAL.LASER_STROKE_WIDTH,
+        VISUAL.LASER_GLOW
+      );
     } else {
       // Impact flash: a hairline ring that expands and fades over the short explode window.
       const t = 1 - laser.explodeTime / Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
       const ringRadius = VISUAL.LASER_EXPLODE_RADIUS * (0.5 + t);
+      ctx.save();
+      ctx.shadowColor = boltColor;
+      ctx.shadowBlur = VISUAL.LASER_GLOW;
       ctx.strokeStyle = hexToRgba(boltColor, 1 - t * 0.7);
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, ringRadius, 0, Math.PI * 2, false);
       ctx.stroke();
+      ctx.restore();
     }
-    ctx.restore();
   }
 }
 
@@ -418,9 +483,11 @@ export function drawShipAtPosition(
     return; // Skip rendering this frame
   }
 
-  // Convert world coordinates to screen coordinates
-  const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
-  const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+  const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+  const scale = canvasManager.getPlayfieldScale();
+  const screenX = screen.x;
+  const screenY = screen.y;
+  const shipR = ship.r * scale;
 
   // Use ship's own color or provided color
   const shipColor = color || ship.color;
@@ -429,28 +496,17 @@ export function drawShipAtPosition(
   const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
     screenX,
     screenY,
-    ship.r,
+    shipR,
     ship.angle
   );
 
-  ctx.save();
-  ctx.strokeStyle = shipColor;
-  ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
-  ctx.shadowColor = shipColor;
-  ctx.shadowBlur = VISUAL.SHIP_GLOW;
-  ctx.beginPath();
-  ctx.moveTo(nose.x, nose.y);
-  ctx.lineTo(rearLeft.x, rearLeft.y);
-  ctx.lineTo(rearRight.x, rearRight.y);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.restore();
+  strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
 
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY);
 
   // Draw player name under ship if provided
   if (playerName) {
-    drawPlayerName(playerName, screenX, screenY, ship.r, shipColor);
+    drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
   }
 }
 

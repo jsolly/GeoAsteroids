@@ -3,7 +3,11 @@ import { AUDIO } from '../constants';
 import { Sound } from './Sound';
 import { playWorldSound } from './spatialAudio';
 
-const fxExplode = new Sound(AUDIO.EXPLOSION_PATH, AUDIO.EXPLOSION_MAX_STREAMS);
+const fxExplode = new Sound(
+  AUDIO.EXPLOSION_PATH,
+  AUDIO.EXPLOSION_MAX_STREAMS,
+  AUDIO.EXPLOSION_VOLUME
+);
 
 export function getExplosionSound(): Sound {
   return fxExplode;

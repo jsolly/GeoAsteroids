@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
-import { Sound } from '../../audio/Sound';
+import { getThrustSound } from '../../audio/gameSounds';
+import type { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
@@ -70,7 +71,9 @@ class Ship {
   lastPlayerCollisionDamageTime: number = 0;
   collidingPlayerId?: string;
 
-  static fxThrust = new Sound('sounds/thrust.m4a', 5);
+  static get fxThrust(): Sound {
+    return getThrustSound();
+  }
 
   constructor(options?: {
     position?: Position;
@@ -361,8 +364,12 @@ class Ship {
     maxHealth?: number;
   }): void {
     const wasDead = this.health <= 0 || this.exploding;
-    if (data.exploding !== undefined) {
-      this.exploding = data.exploding;
+    if (data.exploding === true) {
+      if (!this.exploding) {
+        this.explode('server-damage');
+      }
+    } else if (data.exploding === false) {
+      this.exploding = false;
     }
     if (data.health !== undefined) {
       this.health = data.health;

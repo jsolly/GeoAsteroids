@@ -130,7 +130,7 @@ export class GameInteractions {
         }
 
         const gameArea = document.querySelector('#gameArea');
-        const canvas = document.querySelector('canvas');
+        const canvas = document.querySelector('#gameCanvas');
         if (!gameArea || !canvas) {
           return false;
         }
@@ -150,7 +150,7 @@ export class GameInteractions {
    */
   async verifyGameCanvas(): Promise<void> {
     await this.page.waitForFunction(() => {
-      const canvas = document.querySelector('canvas');
+      const canvas = document.querySelector('#gameCanvas');
       if (!canvas) return false;
       
       const computedStyle = window.getComputedStyle(canvas);
@@ -507,6 +507,16 @@ export class GameInteractions {
   /**
    * Get asteroid positions. (Roid exposes its radius as `r`, not `radius`.)
    */
+  async getCanvasSize(): Promise<{ width: number; height: number }> {
+    return await this.page.evaluate(() => {
+      const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
+      return {
+        width: canvas?.width || 800,
+        height: canvas?.height || 600,
+      };
+    });
+  }
+
   async getAsteroidPositions(): Promise<Array<{ x: number; y: number; radius: number; id: string }>> {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;

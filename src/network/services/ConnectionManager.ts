@@ -7,6 +7,7 @@ import type {
   ServerGameState,
   Velocity,
 } from '../../../shared-types';
+import { playLaserSound } from '../../audio/gameSounds';
 import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
@@ -15,11 +16,13 @@ import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
+import { asteroidKinematicUpdates, partitionAsteroidSnapshot } from './asteroidFieldSync';
 import {
   CONNECTION_STALE_TIMEOUT_MS,
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
 } from './connectionHealth';
+import { nextReconnectDelayMs } from './connectionReconnect';
 import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
 
 export interface ConnectionState {
@@ -41,6 +44,13 @@ export class ConnectionManager {
   // Heartbeat / half-open-socket detection (see connectionHealth.ts).
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastServerMessageAt = 0;
+
+  // Unexpected close retries. Intentional disconnect() / pagehide do not retry.
+  private userRequestedDisconnect = false;
+  private reconnectAttempt = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private hasConnectedOnce = false;
+  private connectPromise: Promise<void> | null = null;
 
   private constructor() {
     this.state = {
@@ -79,6 +89,22 @@ export class ConnectionManager {
   }
 
   async connect(): Promise<void> {
+    if (this.state.isConnected) {
+      return;
+    }
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+    this.userRequestedDisconnect = false;
+    this.connectPromise = this.openSocket();
+    try {
+      await this.connectPromise;
+    } finally {
+      this.connectPromise = null;
+    }
+  }
+
+  private openSocket(): Promise<void> {
     if (this.state.isConnected || this.state.socket) {
       return Promise.resolve();
     }
@@ -95,11 +121,16 @@ export class ConnectionManager {
         this.state.socket = new WebSocket(wsUrl);
 
         this.state.socket.onopen = (): void => {
+          const wasReconnect = this.hasConnectedOnce;
           this.state.isConnected = true;
           this.lastServerMessageAt = Date.now();
+          this.reconnectAttempt = 0;
           this.startHeartbeat();
-          logger.info('NETWORK', 'Connected to server');
-          window.dispatchEvent(new CustomEvent('networkConnected'));
+          this.hasConnectedOnce = true;
+          logger.info('NETWORK', wasReconnect ? 'Reconnected to server' : 'Connected to server');
+          window.dispatchEvent(
+            new CustomEvent(wasReconnect ? 'networkReconnected' : 'networkConnected')
+          );
           resolve();
         };
 
@@ -112,12 +143,21 @@ export class ConnectionManager {
           this.state.isConnected = false;
           this.state.socket = null;
           this.stopHeartbeat();
+          this.hasInitializedAsteroidsForConnection = false;
           logger.warn('NETWORK', 'WebSocket connection closed');
-          window.dispatchEvent(
-            new CustomEvent('networkDisconnected', {
-              detail: { reason: 'Connection closed' },
-            })
-          );
+          if (this.userRequestedDisconnect) {
+            window.dispatchEvent(
+              new CustomEvent('networkDisconnected', {
+                detail: { reason: 'Connection closed' },
+              })
+            );
+            return;
+          }
+          // First-connect failure is fatal for startGame; do not retry there.
+          if (!this.hasConnectedOnce) {
+            return;
+          }
+          this.scheduleReconnect();
         };
 
         this.state.socket.onmessage = (event: MessageEvent): void => {
@@ -141,6 +181,9 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.userRequestedDisconnect = true;
+    this.clearReconnectTimer();
+    this.reconnectAttempt = 0;
     this.stopHeartbeat();
     const socket = this.state.socket;
     if (socket) {
@@ -159,11 +202,54 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
+    // Next Start is a new session, not a #444 unexpected-drop rejoin.
+    this.hasConnectedOnce = false;
     this.clientId = this.generateClientId();
   }
 
   private describeAttacker(attackerId: string): string {
     return describeDeathCause(attackerId, (id) => this.allPlayers.get(id)?.name);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.userRequestedDisconnect || this.reconnectTimer !== null) {
+      return;
+    }
+    const delay = nextReconnectDelayMs(this.reconnectAttempt);
+    if (delay === null) {
+      window.dispatchEvent(
+        new CustomEvent('networkDisconnected', {
+          detail: { reason: 'Reconnect exhausted' },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('networkPermanentlyDisconnected', {
+          detail: { reason: 'Reconnect exhausted' },
+        })
+      );
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent('networkReconnecting', {
+        detail: { attempt: this.reconnectAttempt + 1, delayMs: delay },
+      })
+    );
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.reconnectAttempt += 1;
+      void this.connect().catch(() => {
+        if (!this.state.socket && !this.userRequestedDisconnect) {
+          this.scheduleReconnect();
+        }
+      });
+    }, delay);
   }
 
   private startHeartbeat(): void {
@@ -202,15 +288,15 @@ export class ConnectionManager {
         timeoutMs: CONNECTION_STALE_TIMEOUT_MS,
       });
       this.stopHeartbeat();
-      // close() drives onclose -> networkDisconnected -> disconnect banner.
+      // close() drives onclose -> scheduleReconnect (not the permanent banner).
       try {
         socket.close();
       } catch {
         this.state.isConnected = false;
         this.state.socket = null;
-        window.dispatchEvent(
-          new CustomEvent('networkDisconnected', { detail: { reason: 'Connection timed out' } })
-        );
+        if (this.hasConnectedOnce && !this.userRequestedDisconnect) {
+          this.scheduleReconnect();
+        }
       }
     }
   }
@@ -538,8 +624,8 @@ export class ConnectionManager {
         }
       }
 
-      // Server never sends playerLeft; drop remotes that vanished from the
-      // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
+      // Drop remotes that vanished from the snapshot so a closed tab leaves
+      // the leaderboard even if `playerLeft` was missed. Bots are left alone.
       const snapshotIds = new Set(data.entities.map((entity) => entity.id));
       for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
         this.allPlayers.delete(id);
@@ -547,19 +633,41 @@ export class ConnectionManager {
       }
     }
 
-    // Dispatch asteroid events only for NEW asteroids
+    // Apply the authoritative field: create unseen roids, then keep pose in sync
+    // so late joiners and every client share the same moving asteroids.
     if (data.asteroids) {
-      for (const asteroidData of data.asteroids) {
-        // Only dispatch event if we haven't seen this asteroid before
-        if (!this.seenAsteroidIds.has(asteroidData.id)) {
-          this.seenAsteroidIds.add(asteroidData.id);
-          window.dispatchEvent(
-            new CustomEvent('serverAsteroidCreated', {
-              detail: { asteroid: asteroidData },
-            })
-          );
-        }
-      }
+      this.applyAuthoritativeAsteroids(data.asteroids);
+    }
+  }
+
+  private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
+    const { created, updated, removed } = partitionAsteroidSnapshot(
+      asteroids,
+      this.seenAsteroidIds
+    );
+    for (const asteroid of created) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidCreated', {
+          detail: { asteroid },
+        })
+      );
+    }
+    for (const asteroid of updated) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidUpdated', {
+          detail: {
+            asteroidId: asteroid.id,
+            updates: asteroidKinematicUpdates(asteroid),
+          },
+        })
+      );
+    }
+    for (const asteroidId of removed) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidDestroyed', {
+          detail: { asteroidId },
+        })
+      );
     }
   }
 
@@ -593,6 +701,9 @@ export class ConnectionManager {
   }
 
   private handleAsteroidCreated(data: { asteroid: AsteroidData }): void {
+    if (data.asteroid?.id) {
+      this.seenAsteroidIds.add(data.asteroid.id);
+    }
     window.dispatchEvent(
       new CustomEvent('serverAsteroidCreated', {
         detail: { asteroid: data.asteroid },
@@ -602,17 +713,7 @@ export class ConnectionManager {
 
   private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
     if (data.asteroids && Array.isArray(data.asteroids)) {
-      for (const asteroid of data.asteroids) {
-        if (this.seenAsteroidIds.has(asteroid.id)) {
-          continue;
-        }
-        this.seenAsteroidIds.add(asteroid.id);
-        window.dispatchEvent(
-          new CustomEvent('serverAsteroidCreated', {
-            detail: { asteroid },
-          })
-        );
-      }
+      this.applyAuthoritativeAsteroids(data.asteroids);
     }
   }
 
@@ -702,6 +803,10 @@ export class ConnectionManager {
 
     // Add the laser to the player's ship
     player.ship.lasers.push(laser);
+    // Local shots already played in fireLaser; remote/bot shots share playLaserSound.
+    if (player.type !== 'local') {
+      playLaserSound(laser.position);
+    }
     logger.debug('NETWORK', 'Added laser to remote player', {
       playerId: data.id,
       laserCount: player.ship.lasers.length,

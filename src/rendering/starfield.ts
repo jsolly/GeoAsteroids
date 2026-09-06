@@ -43,6 +43,66 @@ export function generateStarfield(
   return stars;
 }
 
+export function titleStarCountForViewport(width: number, height: number): number {
+  const scale = (width * height) / (1920 * 1080);
+  return Math.max(24, Math.round(VISUAL.TITLE_STARS_PER_1080P * scale));
+}
+
+/** Viewport-local sparse points for the title void — same seed, size, and colour as play. */
+export function generateViewportStars(
+  width: number,
+  height: number,
+  count: number,
+  seed: number
+): Star[] {
+  const rng = createRng(seed);
+  const stars: Star[] = [];
+  const alphaRange = VISUAL.STAR_ALPHA_MAX - VISUAL.STAR_ALPHA_MIN;
+  for (let i = 0; i < count; i++) {
+    stars.push({
+      x: rng() * width,
+      y: rng() * height,
+      alpha: VISUAL.STAR_ALPHA_MIN + rng() * alphaRange,
+    });
+  }
+  return stars;
+}
+
+export function paintStars(ctx: CanvasRenderingContext2D, stars: Star[]): void {
+  const size = VISUAL.STAR_SIZE;
+  for (const star of stars) {
+    ctx.fillStyle = hexToRgba(PALETTE.STARS, star.alpha);
+    ctx.fillRect(Math.round(star.x), Math.round(star.y), size, size);
+  }
+}
+
+export function paintTitleStarfield(canvas: HTMLCanvasElement): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return;
+  }
+  ctx.fillStyle = PALETTE.BG;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const count = titleStarCountForViewport(canvas.width, canvas.height);
+  paintStars(ctx, generateViewportStars(canvas.width, canvas.height, count, VISUAL.STAR_SEED));
+}
+
+export function initTitleStarfield(): void {
+  const canvas = document.getElementById('title-starfield');
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    return;
+  }
+
+  const resize = (): void => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    paintTitleStarfield(canvas);
+  };
+
+  resize();
+  window.addEventListener('resize', resize);
+}
+
 let cachedStars: Star[] | null = null;
 
 function getStars(): Star[] {
@@ -67,13 +127,12 @@ export function drawStarfield(shipPosition: Position): void {
   }
 
   const size = VISUAL.STAR_SIZE;
-  const offsetX = cvs.width / 2 - shipPosition.x;
-  const offsetY = cvs.height / 2 - shipPosition.y;
 
   ctx.save();
   for (const star of getStars()) {
-    const sx = star.x + offsetX;
-    const sy = star.y + offsetY;
+    const screen = canvasManager.worldToScreen({ x: star.x, y: star.y }, shipPosition);
+    const sx = screen.x;
+    const sy = screen.y;
     if (sx < -size || sy < -size || sx > cvs.width + size || sy > cvs.height + size) {
       continue;
     }

@@ -23,14 +23,17 @@ if (document.readyState === 'loading') {
 
 // Game loop with updates and rendering
 window.addEventListener('gameStart', () => {
-  function gameLoop(): void {
+  let lastTime = performance.now();
+
+  function gameLoop(now: number): void {
     if (!gameController.getIsGameRunning()) {
       return;
     }
 
     try {
-      // Update game state first
-      gameController.updateGame();
+      const dtMs = now - lastTime;
+      lastTime = now;
+      gameController.updateGame(dtMs);
 
       // Then render the current game state
       gameController.renderGame();

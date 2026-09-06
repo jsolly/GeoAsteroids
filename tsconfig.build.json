@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "server",
+    "server.ts",
+    "setup",
+    "shared-types.ts",
+    "vite.config.ts"
+  ]
+}

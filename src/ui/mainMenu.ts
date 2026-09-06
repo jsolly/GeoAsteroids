@@ -3,12 +3,12 @@
 import { setSound } from '../audio/Sound';
 // Simple logging - removed complex logger dependency
 import { GameController } from '../core/gameController';
+import { initTitleStarfield } from '../rendering/starfield';
 import { getBuildInfoString } from '../utils/buildInfo';
+import { applyLockedPaletteCss } from '../utils/colorUtils';
 import { attachEventListener, getElementById } from '../utils/dom';
 import { logger } from '../utils/Logger';
-import { toggleScreen } from './uiUtils';
-
-// toggleScreen lives in uiUtils
+import { setPlayView } from './uiUtils';
 
 // UI element references
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
@@ -186,11 +186,7 @@ attachEventListener(soundCheckBox, 'change', (ev) => {
 });
 
 export function showGameOverMenu(): void {
-  // Return to main menu
-  toggleScreen('start-screen', true);
-  toggleScreen('gameArea', false);
-
-  // Do not reset game state here; let the next start initialize cleanly
+  setPlayView(false);
 }
 
 // Export function to set up periodic updates
@@ -208,6 +204,8 @@ function displayBuildInfo(): void {
 
 // Initialize build info display
 displayBuildInfo();
+applyLockedPaletteCss();
+initTitleStarfield();
 
 // Generate a nickname once and use it consistently
 const generatedNickname = generateFunNickname();

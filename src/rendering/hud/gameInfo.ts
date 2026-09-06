@@ -8,7 +8,7 @@ export function drawScoreOverlay(
   score: number
 ): void {
   ctx.save();
-  ctx.fillStyle = PALETTE.HUD;
+  ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
   ctx.font = VISUAL.SCORE_FONT;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';

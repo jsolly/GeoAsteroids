@@ -1,14 +1,22 @@
 import type { AsteroidData } from '../../shared-types';
+import {
+  replaceThrustSources,
+  resetThrustSources,
+  thrustSourcesFromPlayers,
+} from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
+import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
+import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
+import { asteroidTickScale } from '../physics/asteroidMotion';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
-import { toggleScreen } from '../ui/uiUtils';
+import { setPlayView } from '../ui/uiUtils';
 import { describeDeathCause, formatGameOverText } from '../utils/deathCause';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
@@ -85,8 +93,7 @@ export class GameController {
     logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
     this.resetSessionForNewGame();
     this.newGame(playerName);
-    toggleScreen('start-screen', false);
-    toggleScreen('gameArea', true);
+    setPlayView(true);
     this.gameStateManager.setIsGameRunning(true);
 
     // Reset button text to default state
@@ -111,10 +118,11 @@ export class GameController {
       this.showConnectionFailureMessage(errorType, 'Cannot connect');
       throw new Error(`Network connection failed: ${errorMessage}`);
     }
-    this.networkManager.initializeAsteroidSync();
-
-    // Create an empty asteroid belt - server will populate with authoritative asteroids
+    // Empty belt + listeners must be ready before join so the first
+    // asteroidCreateBatch / gameState cannot land on a static local set.
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    this.setupServerAsteroidListeners();
+    this.networkManager.initializeAsteroidSync();
 
     // Initialize listeners
     if (this.playerManager.getLocalPlayer()) {
@@ -123,9 +131,6 @@ export class GameController {
     } else {
       logger.warn('GAME_CONTROLLER', 'No local player found, cannot initialize input listeners');
     }
-
-    // Set up server asteroid event listeners
-    this.setupServerAsteroidListeners();
 
     // Begin sending continuous local player updates to server
     PlayerNetwork.getInstance().startNetworkUpdates();
@@ -151,11 +156,13 @@ export class GameController {
       this.currRoidBelt.roids.length = 0;
     }
 
-    // Check if asteroid already exists to prevent duplicates
+    // Duplicate create (late join / rejoined snapshot) must still take the
+    // live pose — skipping here left a private static copy on prod.
     if (this.currRoidBelt) {
       const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
       if (existingRoid) {
-        return; // Skip duplicate
+        applyAsteroidKinematics(existingRoid, asteroid);
+        return;
       }
     }
 
@@ -166,18 +173,17 @@ export class GameController {
       id: asteroid.id,
     });
 
-    // Override properties with server data
-    roid.velocity = asteroid.velocity;
-    roid.angle = asteroid.rotation;
-    roid.angularVelocity = asteroid.angularVelocity;
-    roid.health = asteroid.health;
-    roid.maxHealth = asteroid.maxHealth;
+    applyAsteroidKinematics(roid, asteroid);
 
-    // Override shape properties to match server exactly
+    // Override shape properties to match server exactly. Keep the factory
+    // silhouette when the snapshot omits offsets — wiping to [] made the
+    // playfield skip every rock while the minimap still dotted positions.
     roid.jaggedness = asteroid.jaggedness;
     roid.vertices = asteroid.vertices;
-    roid.offsets.length = 0; // Clear existing offsets
-    roid.offsets.push(...asteroid.offsets); // Copy server offsets
+    if (asteroid.offsets && asteroid.offsets.length > 0) {
+      roid.offsets.length = 0;
+      roid.offsets.push(...asteroid.offsets);
+    }
 
     // Add to current asteroid belt if it exists
     if (this.currRoidBelt) {
@@ -203,28 +209,7 @@ export class GameController {
     if (this.currRoidBelt) {
       const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
       if (roid && updates) {
-        if (updates.position) {
-          roid.position = updates.position;
-        }
-        if (updates.velocity) {
-          roid.velocity = updates.velocity;
-        }
-        if (updates.size !== undefined) {
-          roid.r = updates.size;
-        }
-        // jaggedness is read-only in Roid class, skip updating it
-        if (updates.rotation !== undefined) {
-          roid.angle = updates.rotation;
-        }
-        if (updates.angularVelocity !== undefined) {
-          roid.angularVelocity = updates.angularVelocity;
-        }
-        if (updates.health !== undefined) {
-          roid.health = updates.health;
-        }
-        if (updates.maxHealth !== undefined) {
-          roid.maxHealth = updates.maxHealth;
-        }
+        applyAsteroidKinematics(roid, updates);
       }
     }
   };
@@ -249,6 +234,7 @@ export class GameController {
   };
 
   private setupServerAsteroidListeners(): void {
+    this.cleanupServerAsteroidListeners();
     // Listen for server asteroid creation events
     window.addEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
 
@@ -274,6 +260,7 @@ export class GameController {
     this.gameOverInProgress = false;
     this.gameStateManager.clearOverlay();
     canvasManager.clearPlayfield();
+    resetThrustSources();
     PlayerNetwork.getInstance().stopNetworkUpdates();
     this.networkManager.disconnect();
   }
@@ -297,6 +284,7 @@ export class GameController {
     this.gameOverTimer = setTimeout(() => {
       this.gameOverTimer = null;
       this.gameStateManager.setIsGameRunning(false);
+      resetThrustSources();
       import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });
@@ -569,8 +557,8 @@ export class GameController {
 
     // Listen for successful reconnection
     window.addEventListener('networkReconnected', () => {
-      logger.info('NETWORK', 'Successfully reconnected to server - game continues');
-      // Game continues running normally - no action needed
+      logger.info('NETWORK', 'Successfully reconnected to server - re-joining the live field');
+      this.networkManager.initializeAsteroidSync();
     });
 
     // Listen for permanent disconnection (after all reconnection attempts fail)
@@ -583,8 +571,8 @@ export class GameController {
 
       // Only stop the game when reconnection has permanently failed
       this.gameStateManager.toggleIsGameRunning();
-      toggleScreen('gameArea', false);
-      toggleScreen('start-screen', true);
+      resetThrustSources();
+      setPlayView(false);
 
       // Show permanent disconnection message
       this.showConnectionFailureMessage('network', 'Connection permanently lost');
@@ -592,7 +580,7 @@ export class GameController {
   }
 
   // Update game state (movement, physics, etc.)
-  updateGame(): void {
+  updateGame(dtMs: number = 1000 / GAME.FPS): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer) {
       return;
@@ -619,9 +607,12 @@ export class GameController {
     // freezing at the muzzle.
     advanceRemotePlayerLasers(allPlayers);
 
+    // One thrust loop for local + bot + remote ships; volume is the loudest in-range source.
+    replaceThrustSources(thrustSourcesFromPlayers([currPlayer, ...allPlayers]));
+
     // Update asteroids
     if (this.currRoidBelt) {
-      this.currRoidBelt.moveRoids();
+      this.currRoidBelt.moveRoids(asteroidTickScale(dtMs));
     }
 
     // Check laser collisions with asteroids and bots

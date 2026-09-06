@@ -7,9 +7,11 @@ const dom = new JSDOM(
   `<!DOCTYPE html>
 <html lang="en">
   <body>
+    <canvas id="title-starfield"></canvas>
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
         <h1 class="text-center fs-1">GeoRoids</h1>
+        <p id="controls-hint" class="controls-hint">WASD + Space / arrows</p>
         <ul class="nav flex-column">
           <li class="nav-item">
             
@@ -72,10 +74,7 @@ const dom = new JSDOM(
     </div>
   </body>
   <div id="attribution">
-    <a
-      href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search"
-      >Image by kjpargeter on Freepik</a
-    >
+    <span id="buildInfo" class="build-info"></span>
   </div>
 </html>`
 );

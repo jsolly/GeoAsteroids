@@ -14,14 +14,25 @@ body {
 }
 
 body {
-  background-color: #000011; /* Dark blue-black fallback */
-  background-image: url('/spaceBackground.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed; /* Ensure background stays fixed */
+  background-color: var(--palette-bg, #000011);
   min-height: 100vh;
   position: relative;
+}
+
+#title-starfield {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--palette-bg, #000011);
+}
+
+body.in-play #title-starfield,
+body.in-play #attribution,
+body.in-play .controls-hint {
+  display: none;
 }
 
 /* Ensure the game wrapper doesn't create black areas */
@@ -34,6 +45,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 1;
   background: transparent; /* Remove any background color */
   overflow: hidden;
 }
@@ -129,10 +141,10 @@ a {
   font-weight: bold;
   margin-bottom: 1em; /* Reduced margin */
   text-shadow:
-    0 0 20px rgba(255, 255, 255, 0.4),
-    0 0 40px rgba(255, 255, 255, 0.2);
+    0 0 16px color-mix(in srgb, var(--palette-accent, #a78bfa) 55%, transparent),
+    0 0 36px color-mix(in srgb, var(--palette-accent, #a78bfa) 25%, transparent);
   letter-spacing: 2px;
-  color: #ffffff;
+  color: var(--palette-accent, #a78bfa);
   position: relative;
 }
 
@@ -147,10 +159,23 @@ a {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.6),
+    color-mix(in srgb, var(--palette-accent, #a78bfa) 70%, transparent),
     transparent
   );
   border-radius: 2px;
+}
+
+/* Title/menu only — phosphor control legend. Hidden in live play via body.in-play. */
+.controls-hint {
+  margin: 0.35em 0 1.15em;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--palette-accent, #a78bfa);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--palette-accent, #a78bfa) 45%, transparent);
+  opacity: 0.82;
 }
 
 /* Game modes section */
@@ -182,6 +207,23 @@ a {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
+}
+
+.game-modes .btn.btn-phosphor {
+  background: transparent;
+  color: var(--palette-accent, #a78bfa);
+  border: 1.5px solid var(--palette-accent, #a78bfa);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--palette-accent, #a78bfa) 35%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--palette-accent, #a78bfa) 55%, transparent);
+}
+
+.game-modes .btn.btn-phosphor:hover,
+.game-modes .btn.btn-phosphor:focus-visible {
+  background: color-mix(in srgb, var(--palette-accent, #a78bfa) 12%, transparent);
+  color: var(--palette-accent, #a78bfa);
+  border-color: var(--palette-accent, #a78bfa);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--palette-accent, #a78bfa) 50%, transparent);
+  transform: translateY(-1px);
 }
 
 .game-modes .btn::before {
@@ -281,7 +323,7 @@ a {
   height: 1.3em;
   margin: 0;
   cursor: pointer;
-  accent-color: #007bff;
+  accent-color: var(--palette-accent, #a78bfa);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
@@ -379,9 +421,10 @@ a {
 
 
 #start-game.active-mode {
-  background-color: #0dcaf0 !important;
-  border-color: #fff !important;
-  box-shadow: 0 0 25px rgba(13, 202, 240, 0.6);
+  background-color: color-mix(in srgb, var(--palette-accent, #a78bfa) 16%, transparent);
+  border-color: var(--palette-accent, #a78bfa);
+  color: var(--palette-accent, #a78bfa);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--palette-accent, #a78bfa) 45%, transparent);
 }
 
 /* Responsive adjustments */
@@ -394,6 +437,11 @@ a {
   .screen h1 {
     font-size: 2.8em;
     margin-bottom: 1em;
+  }
+
+  .controls-hint {
+    font-size: 0.64rem;
+    margin-bottom: 0.9em;
   }
 
   .game-modes {
@@ -481,8 +529,8 @@ a {
 
 .game-modes .form-control:focus {
   background-color: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  border-color: var(--palette-accent, #a78bfa);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--palette-accent, #a78bfa) 35%, transparent);
   outline: none;
 }
 
