@@ -55,7 +55,12 @@ test('roid shatter occupies only the first slice of the pending lock', () => {
 });
 
 test('laser juice is a short dash plus a shorter heading ghost', () => {
-  const { halfX, halfY, trailX, trailY } = laserBoltOffsets(10, 0, VISUAL.LASER_LENGTH / 2, VISUAL.LASER_TRAIL_LENGTH);
+  const { halfX, halfY, trailX } = laserBoltOffsets(
+    10,
+    0,
+    VISUAL.LASER_LENGTH / 2,
+    VISUAL.LASER_TRAIL_LENGTH
+  );
   expect(halfX).toBeCloseTo(VISUAL.LASER_LENGTH / 2);
   expect(halfY).toBe(0);
   expect(trailX).toBeCloseTo(VISUAL.LASER_TRAIL_LENGTH);
