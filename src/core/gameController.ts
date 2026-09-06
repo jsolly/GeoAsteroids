@@ -1,4 +1,5 @@
 import type { AsteroidData } from '../../shared-types';
+import { playExplosionSound } from '../audio/explosionSound';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
@@ -225,9 +226,9 @@ export class GameController {
   };
 
   private handleServerAsteroidDestroyed = (event: Event): void => {
-    const customEvent = event as CustomEvent<{ asteroidId: string }>;
-    const { asteroidId } = customEvent.detail;
-    logger.debug('GAME', 'Removing server asteroid from local belt', { asteroidId });
+    const customEvent = event as CustomEvent<{ asteroidId: string; collabSplit?: boolean }>;
+    const { asteroidId, collabSplit } = customEvent.detail;
+    logger.debug('GAME', 'Removing server asteroid from local belt', { asteroidId, collabSplit });
 
     // Remove the asteroid from the local belt
     if (this.currRoidBelt) {
@@ -235,6 +236,9 @@ export class GameController {
       if (index !== -1) {
         const roid = this.currRoidBelt.roids[index];
         if (roid !== undefined) {
+          if (collabSplit) {
+            playExplosionSound(roid.position);
+          }
           // Clear pending destruction flag before removing
           roid.pendingDestruction = false;
           this.currRoidBelt.roids.splice(index, 1);

@@ -94,6 +94,7 @@ describe('Laser Collision Manager Integration', () => {
           asteroidId: 'test-asteroid-1',
           playerId: localPlayerId,
           points: 50, // Medium asteroid points (radius 20)
+          cause: 'laser',
         },
       });
     });
@@ -113,6 +114,7 @@ describe('Laser Collision Manager Integration', () => {
           asteroidId: 'test-asteroid-1',
           playerId: localPlayerId,
           points: 100, // Small asteroid points
+          cause: 'laser',
         },
       });
     });
@@ -132,6 +134,7 @@ describe('Laser Collision Manager Integration', () => {
           asteroidId: 'test-asteroid-1',
           playerId: localPlayerId,
           points: 20, // Large asteroid points
+          cause: 'laser',
         },
       });
     });
@@ -222,6 +225,7 @@ describe('Laser Collision Manager Integration', () => {
           asteroidId: 'test-asteroid-1',
           playerId: localPlayerId,
           points: 50, // Medium asteroid points (radius 20)
+          cause: 'laser',
         },
       });
 

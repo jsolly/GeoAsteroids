@@ -17,6 +17,7 @@ export class GameStateBroadcaster {
 
     // Periodic game state broadcast (30 FPS for smooth bot movement)
     this.broadcastInterval = setInterval(() => {
+      this.flushExpiredCollabHits();
       if (this.gameEngine.getPlayerCount() > 0) {
         this.broadcastGameState();
       }
@@ -147,14 +148,28 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message);
   }
 
-  public broadcastAsteroidDestruction(asteroidId: string): void {
+  public broadcastAsteroidDestruction(
+    asteroidId: string,
+    extras?: { collabSplit?: boolean }
+  ): void {
     const message = {
       type: 'asteroidDestroy',
-      data: { asteroidId },
+      data: { asteroidId, collabSplit: extras?.collabSplit === true },
       timestamp: Date.now(),
     };
 
     this.broadcastToAll(message);
+  }
+
+  private flushExpiredCollabHits(): void {
+    const expired = this.gameEngine.flushExpiredCollabHits();
+    for (const item of expired) {
+      const player = this.gameEngine.getPlayer(item.playerId);
+      if (player) {
+        this.broadcastScoreUpdate(item.playerId, player.score);
+      }
+      this.broadcastAsteroidDestruction(item.destroyed.id);
+    }
   }
 
   public broadcastAsteroidUpdate(asteroidId: string, updates: any): void {

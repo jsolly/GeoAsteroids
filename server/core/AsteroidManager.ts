@@ -1,10 +1,37 @@
 import type { AsteroidData, Position } from '../../shared-types';
-import { RNGService } from './RNGService';
-import { DEBUG } from '../../src/constants';
+import { DEBUG, ROID } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
+import { RNGService } from './RNGService';
+
+export type AsteroidHitCause = 'laser' | 'collision';
+
+export type AsteroidHitOutcome = {
+  outcome: 'missing' | 'tagged' | 'destroyed';
+  destroyed?: AsteroidData;
+  newAsteroids: AsteroidData[];
+  split: boolean;
+};
+
+export type ExpiredCollabHit = {
+  playerId: string;
+  points: number;
+  destroyed: AsteroidData;
+  newAsteroids: AsteroidData[];
+};
+
+type LaserHitRecord = {
+  shooterId: string;
+  at: number;
+  points: number;
+};
+
+export function isBiggestAsteroid(size: number): boolean {
+  return size >= ROID.COLLAB_SPLIT_MIN_SIZE;
+}
 
 export class AsteroidManager {
   private asteroids = new Map<string, AsteroidData>();
+  private laserHits = new Map<string, LaserHitRecord[]>();
   private rng: RNGService;
   
   // Asteroid splitting constants - can be overridden by DEBUG settings
@@ -37,6 +64,7 @@ export class AsteroidManager {
     const asteroid = this.asteroids.get(asteroidId);
     if (asteroid) {
       this.asteroids.delete(asteroidId);
+      this.laserHits.delete(asteroidId);
     }
     return asteroid;
   }
@@ -63,6 +91,7 @@ export class AsteroidManager {
 
   public clearAsteroids(): void {
     this.asteroids.clear();
+    this.laserHits.clear();
   }
 
   public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {
@@ -78,6 +107,7 @@ export class AsteroidManager {
 
     // Clear existing asteroids only if we're creating new ones
     this.asteroids.clear();
+    this.laserHits.clear();
 
     // Reset RNG for deterministic asteroid generation
     this.rng.reset();
@@ -136,8 +166,9 @@ export class AsteroidManager {
       if (DEBUG.ROIDS.ALL_LARGE && !isTestMode) {
         size = 50; // Large size
       } else if (isTestMode) {
-        // In test mode, create medium-sized asteroids that can split (size 20-30)
-        size = this.rng.random() * 10 + 20; // Random between 20 and 30 (medium roids that can split)
+        // In test mode, create medium asteroids (size 20-30). Only the biggest
+        // class (>= COLLAB_SPLIT_MIN_SIZE) can split, and only via collab hits.
+        size = this.rng.random() * 10 + 20;
       } else {
         // Create small roids (size < 25) when ALL_LARGE is false
         size = this.rng.random() * 10 + 10; // Random between 10 and 20 (small roids)
@@ -175,74 +206,164 @@ export class AsteroidManager {
   }
 
   /**
-   * Destroys an asteroid and potentially creates smaller ones
-   * @param asteroidId - ID of the asteroid to destroy
-   * @returns Object containing the destroyed asteroid and any new asteroids created
+   * Record a laser hit from any ship (player or bot). Biggest asteroids only
+   * split when two distinct shooters land within COLLAB_SPLIT_WINDOW_MS.
+   * A second hit from the same shooter destroys without splitting.
    */
-  public destroyAsteroid(asteroidId: string): { destroyed: AsteroidData | undefined; newAsteroids: AsteroidData[] } {
-    
-    const destroyed = this.asteroids.get(asteroidId);
-    if (!destroyed) {
-      return { destroyed: undefined, newAsteroids: [] };
+  public registerLaserHit(
+    asteroidId: string,
+    shooterId: string,
+    points: number,
+    now = Date.now()
+  ): AsteroidHitOutcome {
+    const asteroid = this.asteroids.get(asteroidId);
+    if (!asteroid) {
+      return { outcome: 'missing', newAsteroids: [], split: false };
     }
 
-    // Remove the destroyed asteroid
-    this.asteroids.delete(asteroidId);
+    if (!isBiggestAsteroid(asteroid.size)) {
+      return this.finishDestroy(asteroidId, false);
+    }
 
-    const newAsteroids: AsteroidData[] = [];
+    const windowHits = this.recordHit(asteroidId, shooterId, points, now);
+    const distinctShooters = new Set(windowHits.map((hit) => hit.shooterId));
 
-    // Check if asteroid is large enough to split and we're under the limit
-    // In test mode, split all asteroids (size >= 5)
-    const isTestMode = DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER;
-    const minSplitSize = isTestMode ? 5 : 25;
-    if (destroyed.size >= minSplitSize && this.asteroids.size + 2 <= this.maxAsteroidCount) {
-      
-      // Create two smaller asteroids
-      for (let i = 0; i < 2; i++) {
-        const newSize = Math.max(this.minAsteroidSize, destroyed.size * this.splitSizeRatio);
-        
-        // Add small offset to prevent overlapping - asteroids should be slightly separated
-        const offsetDistance = newSize * 0.3; // 30% of new asteroid size
-        const angle = (i === 0) ? 0 : Math.PI; // Opposite directions
-        const offsetX = Math.cos(angle) * offsetDistance;
-        const offsetY = Math.sin(angle) * offsetDistance;
-        
-        // Generate shape data for new asteroid
-        const newJaggedness = Math.max(0.3, destroyed.jaggedness * 0.8); // Slightly less jagged
-        const newVertices = Math.floor(this.rng.random() * 8 + 6); // 6-13 vertices
-        const newOffsets: number[] = [];
-        
-        // Generate shape offsets based on jaggedness
-        for (let j = 0; j < newVertices; j++) {
-          newOffsets.push(this.rng.random() * newJaggedness * 2 + 1 - newJaggedness);
-        }
+    if (distinctShooters.size >= 2) {
+      return this.finishDestroy(asteroidId, true);
+    }
 
-        // Create new asteroids with slight position offset and divergent velocities
-        const newAsteroid: AsteroidData = {
-          id: `server-asteroid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          position: {
-            x: destroyed.position.x + offsetX,
-            y: destroyed.position.y + offsetY
-          },
-          velocity: {
-            x: destroyed.velocity.x + (this.rng.random() - 0.5) * 3 + offsetX * 0.1,
-            y: destroyed.velocity.y + (this.rng.random() - 0.5) * 3 + offsetY * 0.1
-          },
-          size: newSize,
-          jaggedness: newJaggedness,
-          rotation: this.rng.random() * Math.PI * 2,
-          angularVelocity: (this.rng.random() - 0.5) * 0.01, // Angular velocity between -0.005 and 0.005 (matches client)
-          health: Math.floor(newSize * 0.8), // Health proportional to size
-          maxHealth: Math.floor(newSize * 0.8),
-          vertices: newVertices,
-          offsets: newOffsets
-        };
+    const shotsByThisShooter = windowHits.filter((hit) => hit.shooterId === shooterId);
+    if (shotsByThisShooter.length >= 2) {
+      return this.finishDestroy(asteroidId, false);
+    }
 
-        newAsteroids.push(newAsteroid);
-        this.asteroids.set(newAsteroid.id, newAsteroid);
+    return { outcome: 'tagged', newAsteroids: [], split: false };
+  }
+
+  /** Ship-ram / non-laser destroy: never splits. */
+  public destroyFromCollision(asteroidId: string): AsteroidHitOutcome {
+    return this.finishDestroy(asteroidId, false);
+  }
+
+  /**
+   * After the collab window closes with only one shooter, the tagged biggest
+   * asteroid is destroyed without splitting.
+   */
+  public expireStaleHits(now = Date.now()): ExpiredCollabHit[] {
+    const expired: ExpiredCollabHit[] = [];
+    const staleIds: string[] = [];
+
+    for (const [asteroidId, hits] of this.laserHits) {
+      const windowHits = hits.filter((hit) => now - hit.at <= ROID.COLLAB_SPLIT_WINDOW_MS);
+      if (windowHits.length > 0) {
+        this.laserHits.set(asteroidId, windowHits);
+      } else {
+        staleIds.push(asteroidId);
       }
     }
 
-    return { destroyed, newAsteroids };
+    for (const asteroidId of staleIds) {
+      const hits = this.laserHits.get(asteroidId);
+      const lastHit = hits?.[hits.length - 1];
+      const result = this.finishDestroy(asteroidId, false);
+      if (result.destroyed && lastHit) {
+        expired.push({
+          playerId: lastHit.shooterId,
+          points: lastHit.points,
+          destroyed: result.destroyed,
+          newAsteroids: result.newAsteroids,
+        });
+      }
+    }
+
+    return expired;
+  }
+
+  /**
+   * Destroys an asteroid. Splits only when `split` is true, the asteroid is
+   * biggest-class, and the field is under the cap.
+   */
+  public destroyAsteroid(
+    asteroidId: string,
+    options?: { split?: boolean }
+  ): { destroyed: AsteroidData | undefined; newAsteroids: AsteroidData[] } {
+    const result = this.finishDestroy(asteroidId, options?.split === true);
+    return { destroyed: result.destroyed, newAsteroids: result.newAsteroids };
+  }
+
+  private recordHit(asteroidId: string, shooterId: string, points: number, now: number): LaserHitRecord[] {
+    const existing = this.laserHits.get(asteroidId) ?? [];
+    const windowHits = existing.filter((hit) => now - hit.at <= ROID.COLLAB_SPLIT_WINDOW_MS);
+    windowHits.push({ shooterId, at: now, points });
+    this.laserHits.set(asteroidId, windowHits);
+    return windowHits;
+  }
+
+  private finishDestroy(asteroidId: string, split: boolean): AsteroidHitOutcome {
+    const destroyed = this.asteroids.get(asteroidId);
+    if (!destroyed) {
+      this.laserHits.delete(asteroidId);
+      return { outcome: 'missing', newAsteroids: [], split: false };
+    }
+
+    this.asteroids.delete(asteroidId);
+    this.laserHits.delete(asteroidId);
+
+    const newAsteroids =
+      split && isBiggestAsteroid(destroyed.size) && this.asteroids.size + 2 <= this.maxAsteroidCount
+        ? this.createSplitFragments(destroyed)
+        : [];
+
+    for (const fragment of newAsteroids) {
+      this.asteroids.set(fragment.id, fragment);
+    }
+
+    return {
+      outcome: 'destroyed',
+      destroyed,
+      newAsteroids,
+      split: newAsteroids.length > 0,
+    };
+  }
+
+  private createSplitFragments(destroyed: AsteroidData): AsteroidData[] {
+    const newAsteroids: AsteroidData[] = [];
+
+    for (let i = 0; i < 2; i++) {
+      const newSize = Math.max(this.minAsteroidSize, destroyed.size * this.splitSizeRatio);
+      const offsetDistance = newSize * 0.3;
+      const angle = i === 0 ? 0 : Math.PI;
+      const offsetX = Math.cos(angle) * offsetDistance;
+      const offsetY = Math.sin(angle) * offsetDistance;
+
+      const newJaggedness = Math.max(0.3, destroyed.jaggedness * 0.8);
+      const newVertices = Math.floor(this.rng.random() * 8 + 6);
+      const newOffsets: number[] = [];
+      for (let j = 0; j < newVertices; j++) {
+        newOffsets.push(this.rng.random() * newJaggedness * 2 + 1 - newJaggedness);
+      }
+
+      newAsteroids.push({
+        id: `server-asteroid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        position: {
+          x: destroyed.position.x + offsetX,
+          y: destroyed.position.y + offsetY,
+        },
+        velocity: {
+          x: destroyed.velocity.x + (this.rng.random() - 0.5) * 3 + offsetX * 0.1,
+          y: destroyed.velocity.y + (this.rng.random() - 0.5) * 3 + offsetY * 0.1,
+        },
+        size: newSize,
+        jaggedness: newJaggedness,
+        rotation: this.rng.random() * Math.PI * 2,
+        angularVelocity: (this.rng.random() - 0.5) * 0.01,
+        health: Math.floor(newSize * 0.8),
+        maxHealth: Math.floor(newSize * 0.8),
+        vertices: newVertices,
+        offsets: newOffsets,
+      });
+    }
+
+    return newAsteroids;
   }
 }

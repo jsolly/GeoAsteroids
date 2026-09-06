@@ -392,19 +392,17 @@ export class MessageHandler {
       return;
     }
 
-    const result = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
+    const cause = data.cause === 'collision' ? 'collision' : 'laser';
+    const result = this.gameEngine.handleAsteroidHit(data.asteroidId, data.playerId, data.points, cause);
 
-    if (result.success) {
-      // Broadcast score update
+    if (result.outcome === 'destroyed') {
       const player = this.gameEngine.getPlayer(data.playerId);
       if (player) {
         this.broadcaster.broadcastScoreUpdate(data.playerId, player.score);
       }
 
-      // Broadcast asteroid destruction
-      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
+      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId, { collabSplit: result.split });
 
-      // Broadcast new asteroids created from splitting if any
       if (result.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
       }
