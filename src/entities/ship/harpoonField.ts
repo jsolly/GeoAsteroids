@@ -19,6 +19,8 @@ let field: readonly HarpoonFieldBody[] = [];
 let fieldScale = 1;
 let fieldCanvas: { width: number; height: number } | undefined;
 const lastKnown = new Map<string, HarpoonFieldBody>();
+/** Keep the last live latch list across a WS flap empty publish. */
+let holdEmptyField = false;
 
 export type HarpoonFieldSnapshot = {
   bodies: readonly HarpoonFieldBody[];
@@ -44,19 +46,30 @@ export function syncHarpoonFieldFromPlay(): readonly HarpoonFieldBody[] {
   return field;
 }
 
+/** Mid-reconnect: an empty belt tick must not wipe rocks the pilot still sees. */
+export function setHoldEmptyHarpoonField(hold: boolean): void {
+  holdEmptyField = hold;
+}
+
 /** Playfield snapshot for local latch + tether VFX. Server uses its own lists. */
 export function publishHarpoonField(
   bodies: readonly HarpoonFieldBody[],
   playfieldScale = 1,
   canvas?: { width: number; height: number }
 ): void {
-  field = bodies;
   if (Number.isFinite(playfieldScale) && playfieldScale > 0) {
     fieldScale = playfieldScale;
   }
   if (canvas && canvas.width > 0 && canvas.height > 0) {
     fieldCanvas = { width: canvas.width, height: canvas.height };
   }
+  if (bodies.length === 0 && holdEmptyField && field.length > 0) {
+    return;
+  }
+  if (bodies.length > 0) {
+    holdEmptyField = false;
+  }
+  field = bodies;
   for (const body of bodies) {
     lastKnown.set(body.id, body);
   }

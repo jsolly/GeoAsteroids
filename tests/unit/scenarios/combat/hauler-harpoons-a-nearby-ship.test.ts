@@ -39,7 +39,7 @@ describe('A Hauler fires harpoon at a nearby ship', () => {
     expect(world.entity(bob).velocity.x).toBeLessThan(before);
   });
 
-  test('same-side mates are not latched', () => {
+  test('same-side mates are latched — haul is utility, not combat', () => {
     alice = world.join('Alice', { x: 0, y: 0 }, { kitId: 'hauler', factionId: 'ion' });
     bob = world.join('Bob', { x: 80, y: 0 }, { kitId: 'dart', factionId: 'ion' });
     world.parkBots();
@@ -50,8 +50,8 @@ describe('A Hauler fires harpoon at a nearby ship', () => {
       data: { kitId: 'hauler', abilityId: 'harpoon' },
     });
 
-    expect(world.entity(alice).harpoonTargetId).toBeUndefined();
-    expect(world.entity(alice).harpoonTimer).toBe(0);
+    expect(world.entity(alice).harpoonTargetId).toBe(bob.id);
+    expect(world.entity(alice).harpoonTimer).toBeGreaterThan(0);
   });
 
   test('timed ship shield blocks a Hauler latch', () => {
