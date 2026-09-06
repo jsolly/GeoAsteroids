@@ -1,10 +1,37 @@
 import { WebSocket } from 'ws';
-import type { Position, AsteroidData } from '../../shared-types';
+import type { Position, Velocity, AsteroidData } from '../../shared-types';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
-import { SHIP } from '../../src/constants';
+import { CANVAS, LASER, SHIP } from '../../src/constants';
+import {
+  asteroidPointsForRadius,
+  checkLaserAsteroidCollisionSwept,
+  isLaserNearAsteroid,
+} from '../../src/physics/collision/collisionDetection';
+import { getVelocityMagnitude } from '../../src/utils/mathUtils';
 import { logger } from '../../setup/serverLogger';
+
+export interface ServerLaser {
+  id: string;
+  ownerId: string;
+  position: Position;
+  prevPosition: Position;
+  velocity: Velocity;
+  distTraveled: number;
+  hasExploded: boolean;
+}
+
+export interface AppliedAsteroidHit {
+  applied: boolean;
+  asteroidId: string;
+  playerId: string;
+  points: number;
+  newAsteroids: AsteroidData[];
+}
+
+/** Matches client Laser.isExpired: TRAVEL_DISTANCE_RATIO + canvas width. */
+const SERVER_LASER_MAX_DISTANCE = LASER.TRAVEL_DISTANCE_RATIO + CANVAS.INTERNAL_WIDTH;
 
 export class GameEngine {
   public entityManager: EntityManager;
@@ -13,6 +40,10 @@ export class GameEngine {
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
+  private lasers: ServerLaser[] = [];
+  private laserSeq = 0;
+  private onAsteroidHits?: (hits: AppliedAsteroidHit[]) => void;
+  private pendingAsteroidHits: AppliedAsteroidHit[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -38,6 +69,8 @@ export class GameEngine {
         this.entityManager.cleanupStaleEntities();
         this.entityManager.updateExplosions();
         this.entityManager.updateRespawns();
+        this.asteroidManager.moveAsteroids();
+        this.emitAsteroidHits(this.advanceLasersAndResolveHits());
         
         // Update bot movement at reduced frequency for better performance
         // Update every 2 frames (30 FPS instead of 60 FPS)
@@ -123,6 +156,9 @@ export class GameEngine {
   private resetGameState(): void {
     // Clear all asteroids
     this.asteroidManager.clearAsteroids();
+    this.lasers = [];
+    this.laserSeq = 0;
+    this.pendingAsteroidHits = [];
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
@@ -292,21 +328,187 @@ export class GameEngine {
     return false; // Bot was damaged but not destroyed
   }
 
-  public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {
-    // Use the new destroyAsteroid method that handles splitting
-    const result = this.asteroidManager.destroyAsteroid(asteroidId);
-    if (!result.destroyed) {
-      return { success: false, newAsteroids: [] };
+  /**
+   * Sole path that breaks a roid. Second call for the same id is a no-op so
+   * two tabs (or a client hint plus the server laser tick) cannot double-split
+   * or double-score.
+   */
+  public applyLaserAsteroidHit(
+    asteroidId: string,
+    playerId: string,
+    laserPosition?: Position
+  ): AppliedAsteroidHit {
+    const empty: AppliedAsteroidHit = {
+      applied: false,
+      asteroidId,
+      playerId,
+      points: 0,
+      newAsteroids: [],
+    };
+
+    const asteroid = this.asteroidManager.getAsteroid(asteroidId);
+    if (!asteroid) {
+      return empty;
     }
 
-    // Award points to the player
-    this.awardPoints(playerId, points);
+    if (laserPosition && !isLaserNearAsteroid(laserPosition, asteroid.position, asteroid.size)) {
+      return empty;
+    }
 
-    // Return success status and any new asteroids created from splitting
-    return { 
-      success: true, 
-      newAsteroids: result.newAsteroids 
+    const points = asteroidPointsForRadius(asteroid.size);
+    const result = this.asteroidManager.destroyAsteroid(asteroidId);
+    if (!result.destroyed) {
+      return empty;
+    }
+
+    this.awardPoints(playerId, points);
+    this.consumeOwnerLaserNear(playerId, result.destroyed.position);
+    return {
+      applied: true,
+      asteroidId,
+      playerId,
+      points,
+      newAsteroids: result.newAsteroids,
     };
+  }
+
+  public handleAsteroidDestruction(asteroidId: string, playerId: string, _points?: number): { success: boolean; newAsteroids: AsteroidData[] } {
+    const result = this.applyLaserAsteroidHit(asteroidId, playerId);
+    return {
+      success: result.applied,
+      newAsteroids: result.newAsteroids,
+    };
+  }
+
+  public setOnAsteroidHits(listener: (hits: AppliedAsteroidHit[]) => void): void {
+    this.onAsteroidHits = listener;
+    if (this.pendingAsteroidHits.length > 0) {
+      listener(this.pendingAsteroidHits.splice(0));
+    }
+  }
+
+  public spawnPlayerLaser(ownerId: string, start: Position, velocity: Velocity): ServerLaser | null {
+    const position = this.validatePosition(start);
+    const vx = typeof velocity?.x === 'number' && Number.isFinite(velocity.x) ? velocity.x : NaN;
+    const vy = typeof velocity?.y === 'number' && Number.isFinite(velocity.y) ? velocity.y : NaN;
+    if (!position || !Number.isFinite(vx) || !Number.isFinite(vy)) {
+      return null;
+    }
+
+    this.laserSeq += 1;
+    const laser: ServerLaser = {
+      id: `server-laser-${ownerId}-${this.laserSeq}`,
+      ownerId,
+      position: { x: position.x, y: position.y },
+      prevPosition: { x: position.x, y: position.y },
+      velocity: { x: vx, y: vy },
+      distTraveled: 0,
+      hasExploded: false,
+    };
+    this.lasers.push(laser);
+    return laser;
+  }
+
+  public getServerLasers(): readonly ServerLaser[] {
+    return this.lasers;
+  }
+
+  /** Move live lasers and apply at most one break per asteroid / laser. */
+  public advanceLasersAndResolveHits(): AppliedAsteroidHit[] {
+    const hits: AppliedAsteroidHit[] = [];
+
+    for (let i = this.lasers.length - 1; i >= 0; i--) {
+      const laser = this.lasers[i];
+      if (laser === undefined) {
+        continue;
+      }
+      if (laser.hasExploded) {
+        this.lasers.splice(i, 1);
+        continue;
+      }
+
+      laser.prevPosition = { x: laser.position.x, y: laser.position.y };
+      laser.position = {
+        x: laser.position.x + laser.velocity.x,
+        y: laser.position.y + laser.velocity.y,
+      };
+      laser.distTraveled += getVelocityMagnitude(laser.velocity);
+
+      if (laser.distTraveled >= SERVER_LASER_MAX_DISTANCE) {
+        this.lasers.splice(i, 1);
+        continue;
+      }
+
+      const hit = this.resolveLaserAgainstAsteroids(laser);
+      if (hit) {
+        hits.push(hit);
+        this.lasers.splice(i, 1);
+      }
+    }
+
+    return hits;
+  }
+
+  /** Immediate overlap check used when a shot is spawned on top of a roid. */
+  public resolveSpawnedLaserHits(): AppliedAsteroidHit[] {
+    const hits: AppliedAsteroidHit[] = [];
+    for (let i = this.lasers.length - 1; i >= 0; i--) {
+      const laser = this.lasers[i];
+      if (laser === undefined || laser.hasExploded) {
+        continue;
+      }
+      const hit = this.resolveLaserAgainstAsteroids(laser);
+      if (hit) {
+        hits.push(hit);
+        this.lasers.splice(i, 1);
+      }
+    }
+    return hits;
+  }
+
+  private resolveLaserAgainstAsteroids(laser: ServerLaser): AppliedAsteroidHit | null {
+    for (const asteroid of this.asteroidManager.getAllAsteroids()) {
+      if (
+        !checkLaserAsteroidCollisionSwept(
+          laser.prevPosition,
+          laser.position,
+          asteroid.position,
+          asteroid.size
+        )
+      ) {
+        continue;
+      }
+      const hit = this.applyLaserAsteroidHit(asteroid.id, laser.ownerId);
+      if (hit.applied) {
+        laser.hasExploded = true;
+        return hit;
+      }
+    }
+    return null;
+  }
+
+  private consumeOwnerLaserNear(ownerId: string, asteroidPos: Position): void {
+    for (const laser of this.lasers) {
+      if (laser.hasExploded || laser.ownerId !== ownerId) {
+        continue;
+      }
+      if (isLaserNearAsteroid(laser.position, asteroidPos, 0)) {
+        laser.hasExploded = true;
+        return;
+      }
+    }
+  }
+
+  private emitAsteroidHits(hits: AppliedAsteroidHit[]): void {
+    const applied = hits.filter((hit) => hit.applied);
+    if (applied.length === 0) {
+      return;
+    }
+    if (this.onAsteroidHits) {
+      this.onAsteroidHits(applied);
+      return;
+    }
+    this.pendingAsteroidHits.push(...applied);
   }
 
   // Game state

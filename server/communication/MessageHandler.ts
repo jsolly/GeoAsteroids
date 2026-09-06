@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { GameEngine } from '../core/GameEngine';
+import { GameEngine, type AppliedAsteroidHit } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
@@ -252,6 +252,8 @@ export class MessageHandler {
       return;
     }
 
+    this.gameEngine.spawnPlayerLaser(id, data.laserStart, data.laserDirection);
+    this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits());
     this.broadcaster.broadcastPlayerShoot(id, data.laserStart, data.laserDirection);
   }
 
@@ -387,26 +389,32 @@ export class MessageHandler {
   }
 
   private handleAsteroidDestroyed(ws: WebSocket, data: any): void {
-    if (!data.asteroidId || !data.playerId || data.points === undefined) {
+    if (!data.asteroidId || !data.playerId) {
       this.broadcaster.sendError(ws, 'Missing required fields for asteroidDestroyed');
       return;
     }
 
-    const result = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
+    const result = this.gameEngine.applyLaserAsteroidHit(
+      data.asteroidId,
+      data.playerId,
+      data.laserPosition
+    );
+    this.broadcastAppliedAsteroidHits([result]);
+  }
 
-    if (result.success) {
-      // Broadcast score update
-      const player = this.gameEngine.getPlayer(data.playerId);
-      if (player) {
-        this.broadcaster.broadcastScoreUpdate(data.playerId, player.score);
+  public broadcastAppliedAsteroidHits(hits: AppliedAsteroidHit[]): void {
+    for (const hit of hits) {
+      if (!hit.applied) {
+        continue;
       }
 
-      // Broadcast asteroid destruction
-      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
-
-      // Broadcast new asteroids created from splitting if any
-      if (result.newAsteroids.length > 0) {
-        this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
+      const player = this.gameEngine.getPlayer(hit.playerId);
+      if (player) {
+        this.broadcaster.broadcastScoreUpdate(hit.playerId, player.score);
+      }
+      this.broadcaster.broadcastAsteroidDestruction(hit.asteroidId);
+      if (hit.newAsteroids.length > 0) {
+        this.broadcaster.broadcastAsteroidCreation(hit.newAsteroids);
       }
     }
   }
@@ -475,7 +483,10 @@ export class MessageHandler {
       return;
     }
 
-    this.gameEngine.removeAsteroid(data.asteroidId);
+    const removed = this.gameEngine.removeAsteroid(data.asteroidId);
+    if (!removed) {
+      return;
+    }
     this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
   }
 

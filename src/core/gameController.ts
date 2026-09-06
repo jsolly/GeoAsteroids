@@ -197,6 +197,9 @@ export class GameController {
     // Find and update the asteroid in the local belt
     if (this.currRoidBelt) {
       const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
+      if (roid?.pendingDestruction) {
+        return;
+      }
       if (roid && updates) {
         if (updates.position) {
           roid.position = updates.position;
@@ -632,6 +635,21 @@ export class GameController {
       laserTargets,
       attackerId
     );
+
+    // Remote and bot lasers are the same ship type — collide them with
+    // asteroids so the viewing tab sees the break instead of a ghost
+    // pass-through. Server apply-once drops a duplicate report.
+    const localIds = new Set([currPlayer.id, attackerId]);
+    for (const player of allPlayers) {
+      if (localIds.has(player.id) || !player.ship) {
+        continue;
+      }
+      this.collisionManager.checkLaserAsteroidCollisions(
+        player.ship.lasers,
+        this.currRoidBelt.roids,
+        player.id
+      );
+    }
   }
 
   // Check boundary collisions for ships

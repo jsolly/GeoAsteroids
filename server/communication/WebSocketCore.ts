@@ -58,4 +58,8 @@ export class WebSocketCore {
   public getBroadcaster(): GameStateBroadcaster {
     return this.broadcaster;
   }
+
+  public getMessageHandler(): MessageHandler {
+    return this.messageHandler;
+  }
 }
