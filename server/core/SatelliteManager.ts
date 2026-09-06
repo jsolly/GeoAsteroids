@@ -49,7 +49,9 @@ export class SatelliteManager {
   }
 
   public getAllSatellites(): SatelliteData[] {
-    return Array.from(this.satellites.values()).map((satellite) => this.toPublic(satellite));
+    return Array.from(this.satellites.values())
+      .filter((satellite) => satellite.respawnTimer <= 0)
+      .map((satellite) => this.toPublic(satellite));
   }
 
   public clearSatellites(): void {

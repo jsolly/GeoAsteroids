@@ -134,6 +134,32 @@ describe('Ambient hostile NPC saucers', () => {
     expect(gameEngine.getPlayer(ember.id)?.health).toBeLessThan(ember.maxHealth);
   });
 
+  test('a destroyed NPC leaves the snapshot until it re-enters', () => {
+    const satellite = firstSatellite(gameEngine);
+    const mockWs = {} as GameEntity['ws'];
+    gameEngine.addPlayer('pilot', 'Pilot', mockWs as never, { x: 0, y: 0 });
+    gameEngine.handleSatelliteDamage(satellite.id, 'pilot', SATELLITE.HEALTH);
+
+    expect(gameEngine.getGameState().satellites.find((row) => row.id === satellite.id)?.exploding).toBe(
+      true
+    );
+
+    for (let i = 0; i < SATELLITE.EXPLODE_DURATION_FRAMES; i++) {
+      gameEngine.tickSatellites();
+    }
+
+    expect(gameEngine.getGameState().satellites.find((row) => row.id === satellite.id)).toBeUndefined();
+
+    for (let i = 0; i < SATELLITE.RESPAWN_FRAMES; i++) {
+      gameEngine.tickSatellites();
+    }
+
+    const returned = gameEngine.getGameState().satellites.find((row) => row.id === satellite.id);
+    expect(returned).toBeDefined();
+    expect(returned?.health).toBe(SATELLITE.HEALTH);
+    expect(returned?.exploding).toBe(false);
+  });
+
   test('resetting the world clears satellites', () => {
     firstSatellite(gameEngine);
     expect(gameEngine.getSatelliteCount()).toBeGreaterThan(0);
