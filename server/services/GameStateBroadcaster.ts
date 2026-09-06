@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import {
   encodeGameStateSnapshot,
+  mergeAsteroidsIntoBaseline,
   quantizeAsteroids,
   shouldSendFullKeyframe,
   type CanonicalGameState,
@@ -152,10 +153,12 @@ export class GameStateBroadcaster {
   }
 
   public broadcastAsteroidCreation(asteroids: any[]): void {
+    const quantized = quantizeAsteroids(asteroids);
+    this.lastBaseline = mergeAsteroidsIntoBaseline(this.lastBaseline, quantized);
     const message = {
       type: 'asteroidCreateBatch',
       data: {
-        asteroids: quantizeAsteroids(asteroids),
+        asteroids: quantized,
       },
       timestamp: Date.now(),
     };

@@ -218,7 +218,8 @@ export class Player {
       } else if (
         this.ship.health > 0 &&
         this.ship.blinkCount <= 0 &&
-        data.spawnProtectionTimer !== undefined && data.spawnProtectionTimer > 0
+        data.spawnProtectionTimer !== undefined &&
+        data.spawnProtectionTimer > 0
       ) {
         applyShipSpawnProtection(this.ship);
       } else if (this.ship.health > 0 && this.type === 'local') {

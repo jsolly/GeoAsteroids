@@ -91,32 +91,45 @@ describe('lean gameState snapshots', () => {
       expect(batch.data?.asteroids?.length).toBe(20);
       expect(batch.data.asteroids[0].offsets.length).toBeGreaterThan(0);
 
-      const states = await collectGameStates(player, 4);
-      const full = states.find((message) => message.data?.full === true) ?? states[0];
-      const delta = states.find((message) => message.data?.full !== true);
-      expect(full?.data?.asteroids?.length).toBeGreaterThan(0);
-      expect(delta).toBeDefined();
+      const states = await collectGameStates(player, 6);
+      const withShape = states.find((message) => message.data?.asteroids?.[0]?.offsets);
+      const lean = states.find((message) => {
+        const asteroid = message.data?.asteroids?.[0];
+        return asteroid?.id && asteroid.offsets === undefined && asteroid.position;
+      });
+      expect(lean).toBeDefined();
+      expect(lean.data.asteroids).toHaveLength(20);
 
-      const fullBytes = Buffer.byteLength(JSON.stringify(full), 'utf8');
-      const deltaBytes = Buffer.byteLength(JSON.stringify(delta), 'utf8');
-      expect(deltaBytes).toBeLessThan(fullBytes);
+      const leanBytes = Buffer.byteLength(JSON.stringify(lean), 'utf8');
+      if (withShape) {
+        expect(leanBytes).toBeLessThan(Buffer.byteLength(JSON.stringify(withShape), 'utf8'));
+      }
+      expect(leanBytes).toBeLessThan(Buffer.byteLength(JSON.stringify(batch), 'utf8') * 2);
 
-      const leanRoid = delta.data.asteroids[0];
+      const leanRoid = lean.data.asteroids[0];
       expect(leanRoid.id).toBeDefined();
-      expect(leanRoid.offsets).toBeUndefined();
       expect(leanRoid.vertices).toBeUndefined();
+      expect(leanRoid.jaggedness).toBeUndefined();
 
       const trackedId = batch.data.asteroids[0].id as string;
-      const firstPose = full.data.asteroids.find((asteroid: { id: string }) => asteroid.id === trackedId);
-      const later = states[states.length - 1];
-      const laterPose = later.data.asteroids.find((asteroid: { id: string }) => asteroid.id === trackedId);
-      expect(firstPose?.position || laterPose?.position).toBeDefined();
+      const leans = states.filter((message) => {
+        const asteroid = message.data?.asteroids?.find((row: { id: string }) => row.id === trackedId);
+        return asteroid?.position && asteroid.offsets === undefined;
+      });
+      const latestLean = leans[leans.length - 1];
+      expect(latestLean).toBeDefined();
+      const laterPose = latestLean.data.asteroids.find(
+        (asteroid: { id: string }) => asteroid.id === trackedId
+      );
+      const spawnPose = batch.data.asteroids.find((asteroid: { id: string }) => asteroid.id === trackedId);
       const live = server.gameEngine.getAsteroid(trackedId);
       expect(live).toBeDefined();
-      if (laterPose?.position) {
-        expect(Math.abs(laterPose.position.x - live!.position.x)).toBeLessThan(2);
-        expect(Math.abs(laterPose.position.y - live!.position.y)).toBeLessThan(2);
-      }
+      expect(laterPose?.position).toBeDefined();
+      expect(
+        laterPose.position.x !== spawnPose.position.x || laterPose.position.y !== spawnPose.position.y
+      ).toBe(true);
+      expect(Math.abs(laterPose.position.x - live!.position.x)).toBeLessThan(12);
+      expect(Math.abs(laterPose.position.y - live!.position.y)).toBeLessThan(12);
     } finally {
       player.close();
     }

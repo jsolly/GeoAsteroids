@@ -512,7 +512,9 @@ export class ConnectionManager {
           ...(entityData.color !== undefined ? { color: entityData.color } : {}),
           ...(entityData.health !== undefined ? { health: entityData.health } : {}),
           ...(entityData.maxHealth !== undefined ? { maxHealth: entityData.maxHealth } : {}),
-          ...(entityData.respawnTimer !== undefined ? { respawnTimer: entityData.respawnTimer } : {}),
+          ...(entityData.respawnTimer !== undefined
+            ? { respawnTimer: entityData.respawnTimer }
+            : {}),
           ...(entityData.spawnProtectionTimer !== undefined
             ? { spawnProtectionTimer: entityData.spawnProtectionTimer }
             : {}),

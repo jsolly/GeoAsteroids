@@ -3,6 +3,7 @@ import type { AsteroidData, ServerEntityData } from '../../../shared-types';
 import {
   encodeGameStateSnapshot,
   jsonUtf8Bytes,
+  mergeAsteroidsIntoBaseline,
   mergeWireGameState,
   quantizeAsteroid,
   quantizeNumber,
@@ -174,6 +175,29 @@ test('a 20-asteroid moving field plus two ships shrinks on the wire', () => {
   expect(deltaBytes).toBeLessThan(keyframeBytes * 0.55);
   expect(delta.wire.asteroids).toHaveLength(20);
   expect(delta.wire.entities).toHaveLength(2);
+});
+
+test('remembering a create-batch in the baseline lets the next tick omit shape', () => {
+  const asteroids = fieldOf20();
+  const join = encodeGameStateSnapshot(
+    { entities: [ship('human-1')], asteroids: [], gameTime: 1, isPaused: false },
+    null,
+    { full: true }
+  );
+  const afterCreate = mergeAsteroidsIntoBaseline(join.baseline, asteroids);
+  expect(afterCreate?.asteroids).toHaveLength(20);
+
+  const moved = asteroids.map((asteroid) => ({
+    ...asteroid,
+    position: { x: asteroid.position.x + 3, y: asteroid.position.y },
+    rotation: asteroid.rotation + 0.02,
+  }));
+  const delta = encodeGameStateSnapshot(
+    { entities: [ship('human-1')], asteroids: moved, gameTime: 2, isPaused: false },
+    afterCreate
+  );
+  expect(delta.wire.asteroids[0]?.offsets).toBeUndefined();
+  expect(delta.wire.asteroids[0]?.position).toBeDefined();
 });
 
 test('encode does not mutate the live server asteroid objects', () => {

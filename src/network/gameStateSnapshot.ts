@@ -301,9 +301,7 @@ export function mergeWireGameState(
   };
 }
 
-export function asteroidHasWireShape(
-  asteroid: WireAsteroidSnapshot
-): asteroid is AsteroidData {
+export function asteroidHasWireShape(asteroid: WireAsteroidSnapshot): asteroid is AsteroidData {
   return (
     asteroid.position !== undefined &&
     asteroid.velocity !== undefined &&
@@ -325,4 +323,22 @@ export function jsonUtf8Bytes(value: unknown): number {
 
 export function shouldSendFullKeyframe(broadcastSeq: number): boolean {
   return broadcastSeq % GAME_STATE_KEYFRAME_EVERY === 0;
+}
+
+/** After asteroidCreateBatch, remember shape so the next gameState can omit it. */
+export function mergeAsteroidsIntoBaseline(
+  baseline: CanonicalGameState | null,
+  asteroids: AsteroidData[]
+): CanonicalGameState | null {
+  if (!baseline) {
+    return null;
+  }
+  const byId = new Map(baseline.asteroids.map((asteroid) => [asteroid.id, asteroid]));
+  for (const asteroid of quantizeAsteroids(asteroids)) {
+    byId.set(asteroid.id, asteroid);
+  }
+  return {
+    ...baseline,
+    asteroids: [...byId.values()],
+  };
 }
