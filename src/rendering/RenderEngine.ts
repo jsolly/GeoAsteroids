@@ -14,6 +14,7 @@ import {
   drawShipExplosionAtPosition,
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
+import { shouldDrawShipHull } from '../entities/ship/shipUtils';
 import { GameError } from '../types';
 import { errorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
@@ -193,20 +194,13 @@ export class RenderEngine {
     const localPlayer = allPlayers.find((p) => p.type === 'local');
 
     for (const player of allPlayers) {
-      // Skip rendering players who are exploding (truly dead)
       if (player.ship.exploding) {
-        continue;
-      }
-
-      if (player.ship.exploding) {
-        // Render explosion - use cached local player reference
         if (player.id === localPlayer?.id) {
           drawShipExplosion(player.ship, player.ship.color);
         } else {
           drawShipExplosionAtPosition(player.ship, localShip.position, player.ship.color);
         }
-      } else {
-        // Render ship
+      } else if (shouldDrawShipHull(player.ship)) {
         drawShipAtPosition(
           player.ship,
           localShip.position,
@@ -216,9 +210,8 @@ export class RenderEngine {
         );
       }
 
-      // Render thruster if thrusting (local player thruster handled by Ship.applyVelocity())
       if (
-        !player.ship.exploding &&
+        shouldDrawShipHull(player.ship) &&
         player.ship.thrusting &&
         localPlayer &&
         player.id !== localPlayer.id

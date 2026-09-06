@@ -156,6 +156,71 @@ test('leftover 0-life same-id ship is replaced instead of taken over', () => {
   expect(manager.getHumanPlayerCount()).toBe(1);
 });
 
+test('same-id reconnect mid-explosion finishes respawn instead of inheriting a corpse', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 2;
+  first.score = 210;
+  first.health = 0;
+  first.exploding = true;
+  first.explodeTime = 8;
+  first.respawnTimer = 8;
+  first.velocity = { x: 0, y: 0 };
+  first.spawnProtectionTimer = undefined;
+
+  const rejoined = manager.addHumanPlayer(
+    'pilot-1',
+    'Pilot',
+    { sent: 2 } as never,
+    { x: 0, y: 0 }
+  );
+
+  expect(rejoined).toBe(first);
+  expect(rejoined.health).toBe(rejoined.maxHealth);
+  expect(rejoined.exploding).toBe(false);
+  expect(rejoined.respawnTimer).toBeUndefined();
+  expect(rejoined.spawnProtectionTimer).toBeGreaterThan(0);
+  expect(rejoined.lives).toBe(2);
+  expect(rejoined.score).toBe(210);
+  expect(rejoined.velocity).toEqual({ x: 0, y: 0 });
+});
+
+test('same-name takeover mid-death respawns and reports the old id', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-old', 'PilotB', { sent: 1 } as never, { x: 8, y: 9 });
+  first.lives = 2;
+  first.health = 0;
+  first.exploding = true;
+  first.respawnTimer = 8;
+
+  const taken = manager.addHumanPlayer(
+    'pilot-new',
+    'PilotB',
+    { sent: 2 } as never,
+    { x: 3000, y: 0 }
+  );
+
+  expect(taken.health).toBe(taken.maxHealth);
+  expect(taken.exploding).toBe(false);
+  expect(taken.respawnTimer).toBeUndefined();
+  expect(taken.id).toBe('pilot-new');
+  expect(manager.getEntity('pilot-old')).toBeUndefined();
+  expect(manager.consumeReplacedHumanId()).toBe('pilot-old');
+});
+
+test('live same-id reuse keeps velocity and does not report a replaced id', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });
+  first.velocity = { x: 4, y: -2 };
+  first.health = 40;
+
+  const rejoined = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 2 } as never, { x: 0, y: 0 });
+
+  expect(rejoined.velocity).toEqual({ x: 4, y: -2 });
+  expect(rejoined.health).toBe(40);
+  expect(manager.consumeReplacedHumanId()).toBeUndefined();
+});
+
 test('rejoining after the socket was removed restores lives and score, not a fresh 3/0', () => {
   const manager = new EntityManager(new RNGService(1));
   const first = manager.addHumanPlayer('pilot-1', 'Pilot', { sent: 1 } as never, { x: 8, y: 9 });
