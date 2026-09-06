@@ -1,5 +1,5 @@
-import { PALETTE, SHIP, VISUAL } from '../../constants';
-import { calculateShipTrianglePoints } from '../../entities/ship/shipRenderer';
+import { PALETTE, SHIP } from '../../constants';
+import { calculateShipTrianglePoints, strokePhosphorHull } from '../../entities/ship/shipRenderer';
 
 // Helper function to draw player lives indicator
 export function drawLivesIndicator(
@@ -31,15 +31,7 @@ export function drawLivesIndicator(
       angle
     );
 
-    // Draw ship outline using the exact same style as actual ships
-    ctx.strokeStyle = shipColor || PALETTE.LOCAL;
-    ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
-    ctx.beginPath();
-    ctx.moveTo(nose.x, nose.y);
-    ctx.lineTo(rearLeft.x, rearLeft.y);
-    ctx.lineTo(rearRight.x, rearRight.y);
-    ctx.closePath();
-    ctx.stroke();
+    strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor || PALETTE.LOCAL);
   }
 
   ctx.restore();

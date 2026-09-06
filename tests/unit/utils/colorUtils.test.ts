@@ -6,6 +6,7 @@ import { Player } from '../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { Ship } from '../../../src/entities/ship/Ship';
 import {
+  applyLockedPaletteCss,
   generateRandomPlayerColor,
   getFactionColor,
   getLaserColor,
@@ -80,9 +81,10 @@ test('roid stroke weights follow three size tiers', () => {
   expect(getRoidStrokeWidth(ROID.SIZE * 0.2)).toBe(VISUAL.ROID_STROKE_SMALL);
 });
 
-test('shots are classic short segments, never beams or oversized discs', () => {
+test('shots are short cream segments, never pins or beams', () => {
   expect(VISUAL.LASER_STROKE_WIDTH).toBeLessThanOrEqual(2);
-  expect(VISUAL.LASER_LENGTH).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH * 2);
+  expect(VISUAL.LASER_LENGTH).toBeGreaterThanOrEqual(10);
+  expect(VISUAL.LASER_LENGTH).toBeLessThanOrEqual(14);
   expect(VISUAL.LASER_EXPLODE_RADIUS).toBeLessThanOrEqual(VISUAL.LASER_LENGTH);
 });
 
@@ -111,4 +113,22 @@ test('phosphor glow never exceeds its stroke', () => {
 test('default play path keeps debug chrome gated off', () => {
   expect(DEBUG.ENABLED).toBe(false);
   expect(isDebugMode()).toBe(false);
+});
+
+test('HUD score stays whispered and name labels stay faded', () => {
+  expect(VISUAL.SCORE_FONT).toBe('10px Arial');
+  expect(VISUAL.NAME_LABEL_ALPHA).toBeLessThanOrEqual(0.45);
+  expect(VISUAL.NAME_LABEL_ALPHA).toBeGreaterThan(0);
+});
+
+test('applyLockedPaletteCss writes title/menu custom properties', () => {
+  const props = new Map<string, string>();
+  applyLockedPaletteCss({
+    setProperty(name: string, value: string) {
+      props.set(name, value);
+    },
+  } as CSSStyleDeclaration);
+  expect(props.get('--palette-bg')).toBe(PALETTE.BG);
+  expect(props.get('--palette-stars')).toBe(PALETTE.STARS);
+  expect(props.get('--palette-accent')).toBe(PALETTE.ACCENT_UI);
 });
