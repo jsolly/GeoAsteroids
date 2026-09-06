@@ -11,6 +11,7 @@ const dom = new JSDOM(
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
         <h1 class="text-center fs-1">GeoRoids</h1>
+        <p id="controls-hint" class="controls-hint">WASD + Space / arrows</p>
         <ul class="nav flex-column">
           <li class="nav-item">
             
