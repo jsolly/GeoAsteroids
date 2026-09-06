@@ -19,4 +19,13 @@ Do not invent competing faction-mark art. Soft factions stay on the factions str
 
 ## Saucer NPC (separate language)
 
-Higher-fidelity SVG-ish. Not player line-ship DNA. See `src/entities/npc/saucerRenderHook.ts`.
+Higher-fidelity SVG-ish. Not player line-ship DNA. Ambient, not a faction mark.
+
+- Hull `#C4B5FD`, shot `#E9D5FF`
+- Outer + inner flattened ellipses
+- 8 perpendicular ticks on the outer ring
+- Cabin oval with fill opacity 0.18
+- Vertical antenna capped with an empty dish circle
+- Firing: short segment off the outer ring
+
+See `src/entities/npc/saucerRenderHook.ts`.
