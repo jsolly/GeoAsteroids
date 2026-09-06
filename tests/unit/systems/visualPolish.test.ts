@@ -13,9 +13,11 @@ const contourSrc = readFileSync(resolve(process.cwd(), 'src/rendering/contourRen
 test('player and bot ships share the phosphor hull draw path', () => {
   expect(shipSrc).toMatch(/export function strokePhosphorPolyline/);
   expect(shipSrc).toMatch(/export function strokeKitHullOutline/);
-  expect(shipSrc).toMatch(/strokeKitHullOutline\(ctx, screenX, screenY, shipR, ship\.angle, shipColor, ship\.kitId\)/);
-  expect(canvasSrc).toMatch(/drawShipAtPosition\(\s*currShip,\s*currShip\.position,\s*ownerColor/);
-  expect(canvasSrc).toMatch(/drawShipAtPosition\(\s*player\.ship,\s*currShip\.position,\s*ownerColor/);
+  expect(shipSrc).toMatch(
+    /strokeKitHullOutline\(ctx, screenX, screenY, shipR, ship\.angle, shipColor, ship\.kitId\)/
+  );
+  expect(canvasSrc).toMatch(/const ship = isLocal \? currShip : player\.ship/);
+  expect(canvasSrc).toMatch(/drawShipAtPosition\(\s*ship,/);
   expect(shipSrc).toMatch(/drawSoftFactionMark\(ctx, factionId/);
   expect(canvasSrc).toMatch(/drawLootRelative/);
   expect(canvasSrc).not.toMatch(/drawBotShip|drawLocalShip|drawRemoteShip/);

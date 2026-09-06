@@ -91,7 +91,7 @@ class Logger {
 
     // Never forward debug — even if someone opts into a debug console —
     // so a verbose client cannot stall the gameplay socket or Railway.
-    if (LOGGING.FORWARD_TO_SERVER && level <= LogLevel.WARN) {
+    if (LOGGING.FORWARD_TO_SERVER && level <= LogLevel.WARN && category !== 'LOG_FORWARD') {
       this.forwardToServer(formattedMessage);
     }
   }

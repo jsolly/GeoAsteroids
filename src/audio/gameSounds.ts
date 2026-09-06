@@ -63,26 +63,39 @@ export function resetThrustSources(): void {
   fxThrust.stop();
 }
 
+const thrustSourceScratch: ThrustSource[] = [];
+const thrustSeenIds = new Set<string>();
+
 export function thrustSourcesFromPlayers(
   players: readonly {
     id: string;
     ship: { thrusting: boolean; exploding: boolean; position: Position };
   }[]
 ): ThrustSource[] {
-  const seen = new Set<string>();
-  const sources: ThrustSource[] = [];
+  thrustSeenIds.clear();
+  let count = 0;
   for (const player of players) {
-    if (seen.has(player.id)) {
+    if (thrustSeenIds.has(player.id)) {
       continue;
     }
-    seen.add(player.id);
-    sources.push({
-      id: player.id,
-      thrusting: player.ship.thrusting && !player.ship.exploding,
-      position: player.ship.position,
-    });
+    thrustSeenIds.add(player.id);
+    const thrusting = player.ship.thrusting && !player.ship.exploding;
+    const existing = thrustSourceScratch[count];
+    if (existing) {
+      existing.id = player.id;
+      existing.thrusting = thrusting;
+      existing.position = player.ship.position;
+    } else {
+      thrustSourceScratch[count] = {
+        id: player.id,
+        thrusting,
+        position: player.ship.position,
+      };
+    }
+    count += 1;
   }
-  return sources;
+  thrustSourceScratch.length = count;
+  return thrustSourceScratch;
 }
 
 function applyThrustPlayback(): void {

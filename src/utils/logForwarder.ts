@@ -62,6 +62,22 @@ function connectWebSocket(): void {
 
       isConnecting = true;
 
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        isConnecting = false;
+        return;
+      }
+      if (ws) {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onopen = null;
+        try {
+          ws.close();
+        } catch {
+          // Previous socket already dead.
+        }
+        ws = null;
+      }
+
       const wsUrl = getLogsWebSocketUrl();
       logger.info('LOG_FORWARD', 'Attempting to connect to WebSocket', { wsUrl });
 

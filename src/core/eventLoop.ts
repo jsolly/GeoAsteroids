@@ -22,11 +22,17 @@ if (document.readyState === 'loading') {
 })();
 
 // Game loop with updates and rendering
+let gameLoopScheduled = false;
 window.addEventListener('gameStart', () => {
+  if (gameLoopScheduled) {
+    return;
+  }
+  gameLoopScheduled = true;
   let lastTime = performance.now();
 
   function gameLoop(now: number): void {
     if (!gameController.getIsGameRunning()) {
+      gameLoopScheduled = false;
       return;
     }
 

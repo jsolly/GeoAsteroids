@@ -12,17 +12,29 @@ export function getAsteroidFieldRadius(): number {
  * ~3000px — on the minimap, off the ship camera — which is the >60s empty
  * canvas. Same-ray contain keeps late-join / live-server 10k poses in view.
  */
-export function containAsteroidPosition(x: number, y: number): { x: number; y: number } {
+export function containAsteroidPositionInto(
+  dest: { x: number; y: number },
+  x: number,
+  y: number
+): { x: number; y: number } {
   const { cx, cy } = getGameBoundary();
   const radius = getAsteroidFieldRadius();
   const dx = x - cx;
   const dy = y - cy;
   const dist = Math.hypot(dx, dy);
   if (dist <= radius || dist === 0) {
-    return { x, y };
+    dest.x = x;
+    dest.y = y;
+    return dest;
   }
   const scale = (radius * ROID.FIELD_INNER_SCALE) / dist;
-  return { x: cx + dx * scale, y: cy + dy * scale };
+  dest.x = cx + dx * scale;
+  dest.y = cy + dy * scale;
+  return dest;
+}
+
+export function containAsteroidPosition(x: number, y: number): { x: number; y: number } {
+  return containAsteroidPositionInto({ x: 0, y: 0 }, x, y);
 }
 
 /** @deprecated Use containAsteroidPosition — kept for call sites during the belt fix. */
@@ -30,11 +42,13 @@ export function wrapAsteroidPosition(x: number, y: number): { x: number; y: numb
   return containAsteroidPosition(x, y);
 }
 
-export function stepAsteroidMotion(
+export function stepAsteroidMotionInto(
   position: { x: number; y: number },
   velocity: { x: number; y: number },
-  tickScale = 1
-): { position: { x: number; y: number }; velocity: { x: number; y: number } } {
+  tickScale: number,
+  outPosition: { x: number; y: number },
+  outVelocity: { x: number; y: number }
+): void {
   const { cx, cy } = getGameBoundary();
   const radius = getAsteroidFieldRadius();
   let x = position.x + velocity.x * tickScale;
@@ -46,9 +60,9 @@ export function stepAsteroidMotion(
   const dy = y - cy;
   const dist = Math.hypot(dx, dy);
   if (dist > radius && dist > 0) {
-    const contained = containAsteroidPosition(x, y);
-    x = contained.x;
-    y = contained.y;
+    containAsteroidPositionInto(outPosition, x, y);
+    x = outPosition.x;
+    y = outPosition.y;
     const nx = dx / dist;
     const ny = dy / dist;
     const radial = vx * nx + vy * ny;
@@ -58,7 +72,21 @@ export function stepAsteroidMotion(
     }
   }
 
-  return { position: { x, y }, velocity: { x: vx, y: vy } };
+  outPosition.x = x;
+  outPosition.y = y;
+  outVelocity.x = vx;
+  outVelocity.y = vy;
+}
+
+export function stepAsteroidMotion(
+  position: { x: number; y: number },
+  velocity: { x: number; y: number },
+  tickScale = 1
+): { position: { x: number; y: number }; velocity: { x: number; y: number } } {
+  const nextPosition = { x: 0, y: 0 };
+  const nextVelocity = { x: 0, y: 0 };
+  stepAsteroidMotionInto(position, velocity, tickScale, nextPosition, nextVelocity);
+  return { position: nextPosition, velocity: nextVelocity };
 }
 
 /** Advance one 60 FPS tick (or a dt-scaled fraction), then keep the belt in-field. */

@@ -31,7 +31,7 @@ import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
-import { playfieldZoom, projectWorldToScreen } from './playfieldCamera';
+import { playfieldZoom, projectWorldToScreenInto } from './playfieldCamera';
 import { drawStarfield } from './starfield';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
@@ -40,11 +40,12 @@ class CanvasManager {
   private context: CanvasRenderingContext2D | null = null;
   private resizeHandler: (() => void) | null = null;
   private playfieldScale = 1;
+  private readonly screenPos = { x: 0, y: 0 };
 
   // Initialize canvas with proper scaling
   initialize(): void {
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
-    this.context = this.canvas?.getContext('2d') || null;
+    this.context = this.canvas?.getContext('2d', { alpha: false }) || null;
 
     if (this.canvas && this.context) {
       this.applyViewportSize();
@@ -178,14 +179,24 @@ class CanvasManager {
     return this.playfieldScale;
   }
 
-  // Viewport transformation methods
-  worldToScreen(worldPos: Position, shipPos: Position): Point {
+  worldToScreenInto(
+    out: { x: number; y: number },
+    worldPos: Position,
+    shipPos: Position
+  ): { x: number; y: number } {
     const scale = this.playfieldScale;
     if (!this.canvas) {
-      return new Point((worldPos.x - shipPos.x) * scale, (worldPos.y - shipPos.y) * scale);
+      out.x = (worldPos.x - shipPos.x) * scale;
+      out.y = (worldPos.y - shipPos.y) * scale;
+      return out;
     }
-    const screen = projectWorldToScreen(worldPos, shipPos, this.canvas, scale);
-    return new Point(screen.x, screen.y);
+    return projectWorldToScreenInto(out, worldPos, shipPos, this.canvas, scale);
+  }
+
+  // Viewport transformation methods
+  worldToScreen(worldPos: Position, shipPos: Position): Point {
+    const pos = this.worldToScreenInto(this.screenPos, worldPos, shipPos);
+    return new Point(pos.x, pos.y);
   }
 
   screenToWorld(screenPos: Point, shipPos: Position): Position {
@@ -206,7 +217,7 @@ class CanvasManager {
       return true;
     }
 
-    const screenPos = this.worldToScreen(worldPos, shipPos);
+    const screenPos = this.worldToScreenInto(this.screenPos, worldPos, shipPos);
     return (
       screenPos.x >= -margin &&
       screenPos.x <= this.canvas.width + margin &&
@@ -248,42 +259,49 @@ class CanvasManager {
     drawFieryBoundary(currShip.position);
 
     if (roids.length > 0) {
-      logger.debug('RENDERING', `Rendering ${roids.length} asteroids`);
       drawRoidsRelative(currShip, roids);
-    } else {
-      logger.debug('RENDERING', 'No asteroids to render');
     }
 
     drawLootRelative(currShip, LootField.getInstance().getAll());
 
-    // Draw all players (including bots) using unified rendering
+    const localId = NetworkManager.getInstance().getLocalPlayerId();
+    const localLaserColor = getLaserColor(true);
+    const enemyLaserColor = getLaserColor(false);
+
     try {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        const ownerColor = getFactionColor(player.type);
-        if (player.ship.exploding) {
-          if (player.id === localId) {
-            drawShipExplosion(currShip, ownerColor);
+        const factionColor = getFactionColor(player.type);
+        const isLocal = player.id === localId;
+        const ship = isLocal ? currShip : player.ship;
+
+        if (ship.exploding) {
+          if (isLocal) {
+            drawShipExplosion(currShip, factionColor);
           } else {
-            drawShipExplosionAtPosition(player.ship, currShip.position, ownerColor);
+            drawShipExplosionAtPosition(ship, currShip.position, factionColor);
           }
-        } else if (player.ship.health <= 0) {
-        } else if (player.id === localId) {
+        } else if (ship.health > 0) {
           drawShipAtPosition(
-            currShip,
+            ship,
             currShip.position,
-            ownerColor,
-            currPlayer.name,
+            factionColor,
+            isLocal ? currPlayer.name : player.name,
             player.factionId
           );
+        }
+      }
+
+      for (const player of allPlayers) {
+        const isLocal = player.id === localId;
+        const ship = isLocal ? currShip : player.ship;
+        if (ship.exploding || ship.health <= 0 || !ship.thrusting) {
+          continue;
+        }
+        const factionColor = getFactionColor(player.type);
+        if (isLocal) {
+          drawThruster(currShip, factionColor);
         } else {
-          drawShipAtPosition(
-            player.ship,
-            currShip.position,
-            ownerColor,
-            player.name,
-            player.factionId
-          );
+          drawThrusterAtPosition(ship, currShip.position, factionColor);
         }
       }
     } catch (error: unknown) {
@@ -294,54 +312,13 @@ class CanvasManager {
       );
     }
 
-    // Draw thrusters for all players (including bots) at their world positions
-    try {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
-      for (const player of allPlayers) {
-        if (player.ship.exploding || player.ship.health <= 0) {
-          continue;
-        }
-
-        const ownerColor = getFactionColor(player.type);
-        if (player.id === localId) {
-          if (!currShip.exploding && currShip.thrusting) {
-            logger.debug('RENDERING', 'Drawing local player thruster', {
-              thrusting: currShip.thrusting,
-              blinkOn: currShip.blinkOn,
-              exploding: currShip.exploding,
-            });
-            drawThruster(currShip, ownerColor);
-          } else {
-            logger.debug('RENDERING', 'Local player thruster not drawn', {
-              thrusting: currShip.thrusting,
-              blinkOn: currShip.blinkOn,
-              exploding: currShip.exploding,
-            });
-          }
-        } else if (!player.ship.exploding && player.ship.thrusting) {
-          drawThrusterAtPosition(player.ship, currShip.position, ownerColor);
-        }
-      }
-    } catch (error: unknown) {
-      logger.error(
-        'RENDERING',
-        'Error drawing thrusters',
-        error instanceof Error ? error : new Error(String(error))
-      );
-    }
-
-    drawLasers(currShip, getLaserColor(true));
+    drawLasers(currShip, localLaserColor);
 
     for (const player of allPlayers) {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
-      if (player.id === localId) {
+      if (player.id === localId || player.ship.exploding || player.ship.health <= 0) {
         continue;
       }
-      if (player.ship.exploding || player.ship.health <= 0) {
-        continue;
-      }
-
-      drawLasers(player.ship, getLaserColor(false), currShip.position);
+      drawLasers(player.ship, enemyLaserColor, currShip.position);
     }
 
     this.drawMiniMapWithPlayers(currShip);

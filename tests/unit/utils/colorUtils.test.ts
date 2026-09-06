@@ -88,6 +88,12 @@ test('hexToRgba preserves locked hex channels', () => {
   expect(hexToRgba(PALETTE.LOCAL, 0.5)).toBe('rgba(94, 234, 212, 0.5)');
 });
 
+test('hexToRgba returns the same string instance for the same quantized alpha', () => {
+  const a = hexToRgba(PALETTE.STARS, 0.42);
+  const b = hexToRgba(PALETTE.STARS, 0.42);
+  expect(a).toBe(b);
+});
+
 test('roid stroke weights follow three size tiers', () => {
   expect(getRoidStrokeWidth(ROID.SIZE)).toBe(VISUAL.ROID_STROKE_LARGE);
   expect(getRoidStrokeWidth(ROID.SIZE * 0.5)).toBe(VISUAL.ROID_STROKE_MEDIUM);

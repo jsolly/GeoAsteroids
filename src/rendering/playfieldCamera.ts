@@ -1,5 +1,5 @@
 import type { Position } from '../../shared-types';
-import { containAsteroidPosition } from '../physics/asteroidMotion';
+import { containAsteroidPositionInto } from '../physics/asteroidMotion';
 
 export type PlayfieldSize = { width: number; height: number };
 export type PlayfieldRock = {
@@ -8,6 +8,10 @@ export type PlayfieldRock = {
   angle?: number;
   pendingDestruction?: boolean;
 };
+
+const projectScratch = { x: 0, y: 0 };
+const centroidScratch = { x: 0, y: 0 };
+const containScratch = { x: 0, y: 0 };
 
 /** Floor: stay 1:1 only when at least this many drawable rocks sit inside the inset. */
 export const PLAYFIELD_MIN_VISIBLE = 2;
@@ -22,16 +26,26 @@ export function playfieldMinVisible(beltCount: number): number {
 }
 
 /** Ship-centered projection. Scale 1 matches today's 1:1 camera. */
+export function projectWorldToScreenInto(
+  out: { x: number; y: number },
+  world: Position,
+  ship: Position,
+  canvas: PlayfieldSize,
+  scale = 1
+): { x: number; y: number } {
+  out.x = canvas.width / 2 + (world.x - ship.x) * scale;
+  out.y = canvas.height / 2 + (world.y - ship.y) * scale;
+  return out;
+}
+
 export function projectWorldToScreen(
   world: Position,
   ship: Position,
   canvas: PlayfieldSize,
   scale = 1
 ): { x: number; y: number } {
-  return {
-    x: canvas.width / 2 + (world.x - ship.x) * scale,
-    y: canvas.height / 2 + (world.y - ship.y) * scale,
-  };
+  const projected = projectWorldToScreenInto(projectScratch, world, ship, canvas, scale);
+  return { x: projected.x, y: projected.y };
 }
 
 export function isRockOnCanvas(
@@ -41,7 +55,7 @@ export function isRockOnCanvas(
   scale = 1,
   margin = 0
 ): boolean {
-  const screen = projectWorldToScreen(world, ship, canvas, scale);
+  const screen = projectWorldToScreenInto(projectScratch, world, ship, canvas, scale);
   return (
     screen.x >= -margin &&
     screen.x <= canvas.width + margin &&
@@ -73,48 +87,13 @@ export function countRocksOnCanvas(
   scale = 1,
   margin = 0
 ): number {
-  return roids.filter((roid) => isRockOnCanvas(roid.position, ship, canvas, scale, margin)).length;
-}
-
-function beltCentroid(roids: readonly PlayfieldRock[]): Position {
-  let x = 0;
-  let y = 0;
+  let count = 0;
   for (const roid of roids) {
-    x += roid.position.x;
-    y += roid.position.y;
-  }
-  const n = roids.length;
-  return { x: x / n, y: y / n };
-}
-
-function farthestReach(roids: readonly PlayfieldRock[], ship: Position): number {
-  let maxDist = 1;
-  for (const roid of roids) {
-    const reach = Math.hypot(roid.position.x - ship.x, roid.position.y - ship.y) + (roid.r ?? 0);
-    if (Number.isFinite(reach) && reach > maxDist) {
-      maxDist = reach;
+    if (isRockOnCanvas(roid.position, ship, canvas, scale, margin)) {
+      count += 1;
     }
   }
-  return maxDist;
-}
-
-function fitFarthestRock(
-  roids: readonly PlayfieldRock[],
-  ship: Position,
-  canvas: PlayfieldSize
-): number {
-  const inset = Math.min(canvas.width, canvas.height) / 2 - 24;
-  if (inset <= 0) {
-    return 1;
-  }
-  return Math.min(1, inset / farthestReach(roids, ship));
-}
-
-function frameRock(roid: PlayfieldRock): PlayfieldRock {
-  return {
-    ...roid,
-    position: containAsteroidPosition(roid.position.x, roid.position.y),
-  };
+  return count;
 }
 
 /**
@@ -133,18 +112,44 @@ export function playfieldZoom(
   ship: Position,
   canvas: PlayfieldSize
 ): number {
-  const belt = roids.filter(isDrawablePlayfieldRock).map(frameRock);
-  if (belt.length === 0) {
+  let drawable = 0;
+  let sx = 0;
+  let sy = 0;
+  let maxDist = 1;
+  let comfortable = 0;
+  for (const roid of roids) {
+    if (!isDrawablePlayfieldRock(roid)) {
+      continue;
+    }
+    drawable += 1;
+    containAsteroidPositionInto(containScratch, roid.position.x, roid.position.y);
+    sx += containScratch.x;
+    sy += containScratch.y;
+    const reach =
+      Math.hypot(containScratch.x - ship.x, containScratch.y - ship.y) + (roid.r ?? 0);
+    if (Number.isFinite(reach) && reach > maxDist) {
+      maxDist = reach;
+    }
+    if (isRockOnCanvas(containScratch, ship, canvas, 1, -PLAYFIELD_COMFORT_INSET)) {
+      comfortable += 1;
+    }
+  }
+  if (drawable === 0) {
     return 1;
   }
-  const comfortable = countRocksOnCanvas(belt, ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
+  centroidScratch.x = sx / drawable;
+  centroidScratch.y = sy / drawable;
   const lookingAtPack =
-    comfortable >= playfieldMinVisible(belt.length) &&
-    isRockOnCanvas(beltCentroid(belt), ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
+    comfortable >= playfieldMinVisible(drawable) &&
+    isRockOnCanvas(centroidScratch, ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
   if (lookingAtPack) {
     return 1;
   }
-  return fitFarthestRock(belt, ship, canvas);
+  const inset = Math.min(canvas.width, canvas.height) / 2 - 24;
+  if (inset <= 0) {
+    return 1;
+  }
+  return Math.min(1, inset / maxDist);
 }
 
 /** PO / QA bar: if radar has dots, the playfield must show at least one rock. */
@@ -153,17 +158,27 @@ export function radarBeltVisibleOnPlayfield(
   ship: Position,
   canvas: PlayfieldSize
 ): boolean {
-  const belt = roids.filter(isDrawablePlayfieldRock);
-  if (belt.length === 0) {
+  let drawable = 0;
+  for (const roid of roids) {
+    if (isDrawablePlayfieldRock(roid)) {
+      drawable += 1;
+    }
+  }
+  if (drawable === 0) {
     return false;
   }
-  return countRocksOnCanvas(belt, ship, canvas, playfieldZoom(roids, ship, canvas)) > 0;
+  const scale = playfieldZoom(roids, ship, canvas);
+  for (const roid of roids) {
+    if (isDrawablePlayfieldRock(roid) && isRockOnCanvas(roid.position, ship, canvas, scale)) {
+      return true;
+    }
+  }
+  return false;
 }
 
+const EMPTY_OFFSETS = [1];
+
 /** Stroke path for a roid. Empty offsets still paint a circle so radar dots are not holes. */
-export function drawingOffsets(offsets: readonly number[]): number[] {
-  if (offsets.length > 0) {
-    return [...offsets];
-  }
-  return [1];
+export function drawingOffsets(offsets: readonly number[]): readonly number[] {
+  return offsets.length > 0 ? offsets : EMPTY_OFFSETS;
 }

@@ -4,9 +4,11 @@ import { GameEngine } from '../../../server/core/GameEngine';
 import { RNGService } from '../../../server/core/RNGService';
 import {
   containAsteroidPosition,
+  containAsteroidPositionInto,
   getAsteroidFieldRadius,
   isOnPlayfieldCanvas,
   stepAsteroidMotion,
+  stepAsteroidMotionInto,
   wrapAsteroidPosition,
 } from '../../../src/physics/asteroidMotion';
 
@@ -163,5 +165,20 @@ describe('authoritative asteroid motion', () => {
     expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(1);
     expect(Math.hypot(clientA.position.x, clientA.position.y)).toBeLessThanOrEqual(fieldRadius + 1);
     expect(Math.hypot(clientB.position.x, clientB.position.y)).toBeLessThanOrEqual(fieldRadius + 1);
+  });
+
+  test('stepAsteroidMotionInto writes into the provided vectors', () => {
+    const position = { x: 10, y: 20 };
+    const velocity = { x: 3, y: -4 };
+    stepAsteroidMotionInto(position, velocity, 1, position, velocity);
+    expect(position).toEqual({ x: 13, y: 16 });
+    expect(velocity).toEqual({ x: 3, y: -4 });
+  });
+
+  test('containAsteroidPositionInto reuses the destination object', () => {
+    const dest = { x: 0, y: 0 };
+    const same = containAsteroidPositionInto(dest, 40, -15);
+    expect(same).toBe(dest);
+    expect(dest).toEqual({ x: 40, y: -15 });
   });
 });

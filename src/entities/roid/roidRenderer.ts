@@ -13,9 +13,21 @@ import {
 
 import type { Roid } from './Roid';
 
+const zoomRockScratch: PlayfieldRock[] = [];
+const roidScreen = { x: 0, y: 0 };
+
 /** Zoom from rocks the playfield will actually stroke — not pending or NaN poses. */
 export function rocksForPlayfieldZoom(roids: readonly Roid[]): PlayfieldRock[] {
-  return roids.filter((roid) => !isAsteroidPending(roid) && canDrawAsteroid(roid));
+  let count = 0;
+  for (const roid of roids) {
+    if (isAsteroidPending(roid) || !canDrawAsteroid(roid)) {
+      continue;
+    }
+    zoomRockScratch[count] = roid;
+    count += 1;
+  }
+  zoomRockScratch.length = count;
+  return zoomRockScratch;
 }
 
 export function getRoidStrokeWidth(radius: number): number {
@@ -130,19 +142,25 @@ function drawRoidShatter(
 
 export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   const ctx = canvasManager.getContext();
+  const cvs = canvasManager.getCanvas();
   if (!ctx) {
     return;
   }
 
   const scale = canvasManager.getPlayfieldScale();
+  const viewW = cvs?.width ?? Number.POSITIVE_INFINITY;
+  const viewH = cvs?.height ?? Number.POSITIVE_INFINITY;
 
   for (const roid of roids) {
     if (!canDrawAsteroid(roid)) {
       continue;
     }
 
-    const screenPos = canvasManager.worldToScreen(roid.position, ship.position);
+    const screenPos = canvasManager.worldToScreenInto(roidScreen, roid.position, ship.position);
     const r = roid.r * scale;
+    if (screenPos.x < -r || screenPos.y < -r || screenPos.x > viewW + r || screenPos.y > viewH + r) {
+      continue;
+    }
     const offsets = drawingOffsets(roid.offsets);
     const vertices = Math.max(roid.vertices, 1);
     const outline = roidOutline(screenPos, r, roid.angle, vertices, offsets);

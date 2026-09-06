@@ -54,30 +54,15 @@ export class CollisionManager {
    * Check boundary collisions for ships
    */
   checkBoundaryCollisions(ships: Ship[], localPlayerId: string): void {
-    logger.debug('COLLISION', 'Checking boundary collisions', {
-      shipCount: ships.length,
-      localPlayerId,
-    });
-
     for (const ship of ships) {
       // Same immunity as asteroid / ship-ship: exploding, dead, or blinking.
       // Boundary previously skipped only exploding, so a dead or freshly
       // respawned hull kept sending 100-damage collisionDamage at 60 Hz.
       if (isShipCollisionImmune(ship)) {
-        logger.debug('COLLISION', 'Skipping immune ship for boundary', { shipId: ship.id });
         continue;
       }
 
-      // Check if ship is outside the boundary
-      const isOutsideBoundary = checkBoundaryCollision(ship.position, ship.r);
-      logger.debug('COLLISION', 'Boundary collision check', {
-        shipId: ship.id,
-        shipPosition: ship.position,
-        shipRadius: ship.r,
-        isOutsideBoundary,
-      });
-
-      if (isOutsideBoundary) {
+      if (checkBoundaryCollision(ship.position, ship.r)) {
         this.handleBoundaryCollision(ship, localPlayerId);
       }
     }

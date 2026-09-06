@@ -1,7 +1,7 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { playHitSound as playHitSoundAt } from '../../audio/gameSounds';
 import { DEBUG, GAME, ROID } from '../../constants';
-import { stepAsteroidMotion } from '../../physics/asteroidMotion';
+import { stepAsteroidMotionInto } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
 import { getRandomPositionInAsteroidField } from '../../utils/spawnPosition';
 
@@ -136,9 +136,7 @@ class RoidBelt {
     }
 
     for (const roid of this.roids) {
-      const next = stepAsteroidMotion(roid.position, roid.velocity, tickScale);
-      roid.position = next.position;
-      roid.velocity = next.velocity;
+      stepAsteroidMotionInto(roid.position, roid.velocity, tickScale, roid.position, roid.velocity);
     }
   }
 
