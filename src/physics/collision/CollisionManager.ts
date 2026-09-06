@@ -459,16 +459,17 @@ export class CollisionManager {
     const collectorId = this.networkManager.getLocalPlayerId() || player.id;
 
     for (const pickup of pickups) {
-      if (pickup.state !== 'loose' || pickupManager.isCollectPending(pickup.id)) {
+      if (pickup.state !== 'loose' || pickupManager.shouldDebounceCollect(pickup.id)) {
         continue;
       }
       if (checkShipCollision(ship.position, ship.r, pickup.position, pickup.radius)) {
-        pickupManager.markCollectPending(pickup.id);
+        pickupManager.markCollectAttempt(pickup.id);
         this.networkManager.sendMessage({
           type: 'satellitePickupCollected',
           data: {
             pickupId: pickup.id,
             playerId: collectorId,
+            position: { ...ship.position },
           },
         });
         break;

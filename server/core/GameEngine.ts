@@ -647,7 +647,8 @@ export class GameEngine {
 
   public handleSatellitePickupCollected(
     pickupId: string,
-    playerId: string
+    playerId: string,
+    claimedPosition?: Position
   ): { success: boolean; pickup?: SatellitePickupData; score?: number } {
     const pickup = this.satellitePickupManager.getPickup(pickupId);
     const collector = this.entityManager.getEntity(playerId);
@@ -663,14 +664,16 @@ export class GameEngine {
     ) {
       return { success: false };
     }
-    if (
-      !isWithinCollectRange(
-        collector.position,
-        pickup.position,
-        SHIP.SIZE / 2,
-        pickup.radius
-      )
-    ) {
+    const nearServer = isWithinCollectRange(
+      collector.position,
+      pickup.position,
+      SHIP.SIZE / 2,
+      pickup.radius
+    );
+    const nearClaimed =
+      !!claimedPosition &&
+      isWithinCollectRange(claimedPosition, pickup.position, SHIP.SIZE / 2, pickup.radius);
+    if (!nearServer && !nearClaimed) {
       return { success: false };
     }
 

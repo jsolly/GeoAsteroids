@@ -72,6 +72,7 @@ describe('satellite pickup collection', () => {
       data: {
         pickupId: 'server-sat-pickup-0',
         playerId: 'local-player-123',
+        position: { x: 400, y: 300 },
       },
     });
     expect(NetworkManager.getInstance()).toBeTruthy();

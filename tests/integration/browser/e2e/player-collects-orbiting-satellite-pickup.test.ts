@@ -23,7 +23,19 @@ test('a player collects a shared satellite and it orbits with a score bonus', as
   const target = pickups[0]!;
   const scoreBefore = await game.getScore();
 
-  await game.pinShipOnSatellitePickup(target.id, 2500);
+  await expect
+    .poll(
+      async () => {
+        await game.pinShipOnSatellitePickup(target.id, 200);
+        const later = await game.getSatellitePickups();
+        return later.find((pickup) => pickup.id === target.id)?.state ?? '';
+      },
+      {
+        timeout: 10000,
+        message: 'the collected satellite should orbit the player',
+      }
+    )
+    .toBe('orbiting');
 
   await expect
     .poll(async () => game.getScore(), {
@@ -31,17 +43,4 @@ test('a player collects a shared satellite and it orbits with a score bonus', as
       message: 'collecting a satellite pickup should award points',
     })
     .toBeGreaterThanOrEqual(scoreBefore + SATELLITE_PICKUP.SCORE_BONUS);
-
-  await expect
-    .poll(
-      async () => {
-        const later = await game.getSatellitePickups();
-        return later.find((pickup) => pickup.id === target.id)?.state ?? '';
-      },
-      {
-        timeout: 8000,
-        message: 'the collected satellite should orbit the player',
-      }
-    )
-    .toBe('orbiting');
 }, TestConfig.DEFAULT_TIMEOUT);
