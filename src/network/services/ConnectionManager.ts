@@ -667,7 +667,7 @@ export class ConnectionManager {
         }
 
         // Apply the parsed entity directly — no per-tick snapshot wrapper.
-        // Kit / faction / ability / deathCause / mass stay on the row.
+        // Kit / faction / ability / deathCause / mass / F-key shield stay on the row.
         entity.updateFromServer(entityData);
 
         if (isLocalPlayer && localPlayer && localPlayer !== entity) {

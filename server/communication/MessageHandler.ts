@@ -80,6 +80,10 @@ export class MessageHandler {
           this.handlePlayerShoot(ws, id, restData);
           break;
 
+        case 'shield':
+          this.handleShield(ws, id, restData);
+          break;
+
         case 'chat':
           this.handleChat(ws, id, restData);
           break;
@@ -231,6 +235,10 @@ export class MessageHandler {
     delete (sanitizedData as any).shieldTimer;
     delete (sanitizedData as any).harpoonTimer;
     delete (sanitizedData as any).harpoonTargetId;
+    delete (sanitizedData as any).shieldActive;
+    delete (sanitizedData as any).shieldTime;
+    delete (sanitizedData as any).shieldCooldown;
+    delete (sanitizedData as any).shieldFlashTime;
 
     // Normalize client fields to server schema
     if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {
@@ -264,6 +272,20 @@ export class MessageHandler {
     this.broadcaster.broadcastPlayerShoot(id, data.laserStart, data.laserDirection);
   }
 
+  private handleShield(ws: WebSocket, id: string, data: any): void {
+    if (!id) {
+      this.broadcaster.sendError(ws, 'Missing player ID for shield');
+      return;
+    }
+    if (typeof data.active !== 'boolean') {
+      this.broadcaster.sendError(ws, 'Missing active flag for shield');
+      return;
+    }
+
+    this.gameEngine.requestShield(id, data.active);
+    this.broadcaster.broadcastGameState();
+  }
+
   private handleChat(ws: WebSocket, id: string, data: any): void {
     if (!id || !data.message) {
       this.broadcaster.sendError(ws, 'Missing player ID or message');
@@ -284,23 +306,29 @@ export class MessageHandler {
 
     const before = this.gameEngine.getPlayer(data.targetPlayerId);
     const healthBefore = before?.health;
-    const isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
+    const isDestroyed = this.gameEngine.handlePlayerDamage(
+      data.targetPlayerId,
+      data.attackerId,
+      data.damage,
+      'laser'
+    );
 
     const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
     if (targetPlayer) {
       const remainingHealth = targetPlayer.health ?? 0;
       const healthDropped = healthBefore !== undefined && remainingHealth < healthBefore;
-      if (!isDestroyed && !healthDropped) {
-        return;
+      if (isDestroyed || healthDropped) {
+        this.broadcaster.broadcastPlayerDamaged(
+          data.targetPlayerId,
+          data.attackerId,
+          data.damage,
+          remainingHealth,
+          isDestroyed,
+          targetPlayer.lives
+        );
+      } else if (targetPlayer.shieldActive || targetPlayer.shieldTimer > 0) {
+        this.broadcaster.broadcastGameState();
       }
-      this.broadcaster.broadcastPlayerDamaged(
-        data.targetPlayerId,
-        data.attackerId,
-        data.damage,
-        remainingHealth,
-        isDestroyed,
-        targetPlayer.lives
-      );
 
       // Broadcast score update if points were awarded
       if (isDestroyed) {
@@ -308,7 +336,7 @@ export class MessageHandler {
         if (attacker) {
           this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
         }
-        
+
         // Broadcast player killed event to notify the killer
         this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetPlayer.name, data.attackerId);
       }
@@ -617,6 +645,17 @@ export class MessageHandler {
         health: bot.health,
         maxHealth: bot.maxHealth,
         mass: bot.mass,
+        kitId: bot.kitId,
+        factionId: bot.factionId,
+        abilityCooldownFrames: bot.abilityCooldownFrames,
+        abilityActiveFrames: bot.abilityActiveFrames,
+        shieldTimer: bot.shieldTimer,
+        harpoonTimer: bot.harpoonTimer,
+        harpoonTargetId: bot.harpoonTargetId,
+        shieldActive: bot.shieldActive,
+        shieldTime: bot.shieldTime,
+        shieldCooldown: bot.shieldCooldown,
+        shieldFlashTime: bot.shieldFlashTime,
       },
       timestamp: Date.now(),
     });

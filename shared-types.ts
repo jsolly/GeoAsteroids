@@ -99,6 +99,10 @@ export interface BotData {
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
   mass?: number;
+  shieldActive?: boolean;
+  shieldTime?: number;
+  shieldCooldown?: number;
+  shieldFlashTime?: number;
 }
 
 export interface LootData {
@@ -126,6 +130,10 @@ export interface ServerPlayerData {
   respawnTimer?: number;
   kitId?: ShipKitId;
   factionId?: SoftFactionId;
+  shieldActive?: boolean;
+  shieldTime?: number;
+  shieldCooldown?: number;
+  shieldFlashTime?: number;
 }
 
 /** Server-owned collab tag. Clients must not destroy the roid until asteroidDestroy. */
@@ -178,4 +186,8 @@ export interface ServerEntityData {
   harpoonTargetId?: string;
   /** Last killer token (boundary, asteroid, player/bot id). Omitted after respawn. */
   deathCause?: string;
+  shieldActive?: boolean;
+  shieldTime?: number;
+  shieldCooldown?: number;
+  shieldFlashTime?: number;
 }

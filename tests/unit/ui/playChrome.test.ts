@@ -26,7 +26,7 @@ test('Enter Game is an outline phosphor control, not a solid green fill', () => 
 test('title menu shows a phosphor WASD + Space / arrows hint', () => {
   const startScreen = html.slice(html.indexOf('id="start-screen"'), html.indexOf('id="gameArea"'));
   expect(startScreen).toMatch(/id="controls-hint"/);
-  expect(startScreen).toMatch(/WASD \+ Space \/ arrows · E ability/);
+  expect(startScreen).toMatch(/WASD \+ Space \/ arrows · E ability · F shield/);
   expect(css).toMatch(/\.controls-hint/);
   expect(css).toMatch(/--palette-accent/);
 });

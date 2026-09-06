@@ -83,6 +83,7 @@ export const PALETTE = {
   DANGER: '#F43F5E',
   HEALTH: '#4ADE80',
   LOOT: '#FBBF24',
+  SHIELD: '#67E8F9',
 } as const;
 
 export const TITLE = {
@@ -153,6 +154,9 @@ export const VISUAL = {
   CONTOUR_ALPHA: 0.16,
   CONTOUR_INDEX_ALPHA: 0.24,
   CONTOUR_INDEX_EVERY: 3,
+  // Hairline shield ring; glow capped to stroke so it stays a vector outline.
+  SHIELD_STROKE_WIDTH: 1.25,
+  SHIELD_GLOW: 1.25,
 } as const;
 
 // ============================================================================
@@ -254,6 +258,20 @@ export const ROID = {
 export const EMP = {
   RADIUS: 250, // pixels
   DURATION: 0.5, // seconds
+} as const;
+
+// ============================================================================
+// SHIELD CONFIGURATION
+// ============================================================================
+// Timed bubble that blocks enemy lasers only. Duration is short and cooldown
+// is longer so camping the shield is never free. Shared by players and bots.
+export const SHIELD = {
+  DURATION_SECONDS: 2,
+  COOLDOWN_SECONDS: 6,
+  RADIUS_RATIO: 1.55,
+  FLASH_SECONDS: 0.12,
+  BOT_HEALTH_THRESHOLD: 0.7,
+  BOT_ACTIVATE_CHANCE: 0.02,
 } as const;
 
 // ============================================================================

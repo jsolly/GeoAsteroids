@@ -94,6 +94,10 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   readonly explodeTime: number;
   readonly empPulseActive: boolean;
   readonly empPulseTime: number;
+  readonly shieldActive: boolean;
+  readonly shieldTime: number;
+  readonly shieldCooldown: number;
+  readonly shieldFlashTime: number;
   readonly lastPosition?: Position;
   readonly lastRotation?: number;
   readonly isBot: boolean;
@@ -103,6 +107,7 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   setExploding(): void;
   empPulse(): void;
   updateEmpPulse(): void;
+  requestShieldToggle(): boolean;
   updateExplosion(): void;
   updateLifecycle(lifecycleFrames?: number): void;
   updateInvincibility(): void;
@@ -323,6 +328,15 @@ export interface GameConstants {
   readonly EMP: {
     readonly RADIUS: number;
     readonly DURATION: number;
+  };
+
+  readonly SHIELD: {
+    readonly DURATION_SECONDS: number;
+    readonly COOLDOWN_SECONDS: number;
+    readonly RADIUS_RATIO: number;
+    readonly FLASH_SECONDS: number;
+    readonly BOT_HEALTH_THRESHOLD: number;
+    readonly BOT_ACTIVATE_CHANCE: number;
   };
 }
 

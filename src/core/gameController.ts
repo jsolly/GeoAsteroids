@@ -804,6 +804,13 @@ export class GameController {
         this.laserHitOptions
       );
     }
+
+    for (const other of allPlayers) {
+      if (other.type === 'local') {
+        continue;
+      }
+      this.collisionManager.explodeIncomingLasersOnShieldedShip(other.ship.lasers, currPlayer.ship);
+    }
   }
 
   // Check boundary collisions for ships

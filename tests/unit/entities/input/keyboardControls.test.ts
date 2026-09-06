@@ -70,6 +70,20 @@ test('KeyE activates the ship kit ability', () => {
   expect(activateSpy).toHaveBeenCalledTimes(1);
 });
 
+test('KeyF toggles the local ship shield and KeyF again drops it into cooldown', () => {
+  expect(player.ship.shieldActive).toBe(false);
+  press('KeyF');
+  expect(player.ship.shieldActive).toBe(true);
+  expect(player.ship.shieldTime).toBeGreaterThan(0);
+
+  press('KeyF');
+  expect(player.ship.shieldActive).toBe(false);
+  expect(player.ship.shieldCooldown).toBeGreaterThan(0);
+
+  press('KeyF');
+  expect(player.ship.shieldActive).toBe(false);
+});
+
 test('WASD is ignored while dead', () => {
   player.lives = 0;
   press('KeyW');
