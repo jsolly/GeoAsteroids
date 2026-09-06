@@ -221,9 +221,7 @@ export class CollisionManager {
       if (!laser.hasExploded) {
         const from = laser.prevPosition ?? laser.position;
         for (const drop of LootField.getInstance().getAll()) {
-          if (
-            !checkLaserAsteroidCollisionSwept(from, laser.position, drop.position, drop.radius)
-          ) {
+          if (!checkLaserAsteroidCollisionSwept(from, laser.position, drop.position, drop.radius)) {
             continue;
           }
           if (reportAsteroidHits) {

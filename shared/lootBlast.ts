@@ -14,11 +14,7 @@ export const LOOT_BLAST = {
   ARM_RANGE: 900,
 } as const;
 
-export function inBlastRadius(
-  origin: Position,
-  target: Position,
-  extraRadius = 0
-): boolean {
+export function inBlastRadius(origin: Position, target: Position, extraRadius = 0): boolean {
   const reach = LOOT_BLAST.RADIUS + extraRadius;
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
