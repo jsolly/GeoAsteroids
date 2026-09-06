@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import {
   SAUCER_ART_PACK,
   SAUCER_CABIN_FILL_ALPHA,
@@ -15,7 +15,15 @@ import {
   drawSaucerNpc,
   drawSaucerNpcFiring,
   drawSaucerNpcPlaceholder,
+  getSaucerNpcArtId,
+  isSaucerNpcArtTemporary,
+  registerSaucerNpcPainter,
+  setSaucerNpcArtId,
 } from '../../../src/entities/npc/saucerRenderHook';
+
+afterEach(() => {
+  setSaucerNpcArtId('disc-temp');
+});
 
 test('saucer NPC is allowed SVG-like fidelity and is not a kit outline', () => {
   expect(SAUCER_NPC_RENDER_LANGUAGE).toBe('svg-fidelity');
@@ -28,6 +36,24 @@ test('saucer NPC is allowed SVG-like fidelity and is not a kit outline', () => {
   expect(SAUCER_FIRING_SEGMENTS).toBe(2);
   expect(SAUCER_NPC_ART_IS_TEMPORARY).toBe(true);
   expect(SAUCER_NPC_ART_ID).toBe('disc-temp');
+  expect(getSaucerNpcArtId()).toBe('disc-temp');
+  expect(isSaucerNpcArtTemporary()).toBe(true);
+});
+
+test('registering a Landsat painter swaps art without rewriting callers', () => {
+  const calls: string[] = [];
+  registerSaucerNpcPainter({
+    id: 'landsat',
+    temporary: false,
+    draw: () => {
+      calls.push('landsat');
+    },
+  });
+  setSaucerNpcArtId('landsat');
+  expect(getSaucerNpcArtId()).toBe('landsat');
+  expect(isSaucerNpcArtTemporary()).toBe(false);
+  drawSaucerNpc({} as CanvasRenderingContext2D, { x: 0, y: 0, radius: 12 });
+  expect(calls).toEqual(['landsat']);
 });
 
 test('AD art-pack SVGs match the confirmed box spec', () => {

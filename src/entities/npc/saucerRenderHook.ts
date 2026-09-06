@@ -1,21 +1,49 @@
 /**
- * Saucer NPC — higher-fidelity SVG-ish, not player line-ship DNA.
- *
- * Stacked ellipses, 8 ring ticks, vertical antenna + dish circle,
- * soft cabin fill. Ambient hull, not a faction mark.
- * Player kits stay on the placeholder triangle until AD v2 is locked.
- *
- * AD-confirmed art-pack sources (box paths):
- *   georoids-art/saucer-npc.svg
- *   georoids-art/saucer-npc-firing.svg
- *   georoids-art/saucer-silhouette-svgish.png
+ * Saucer NPC art. The UFO-disc is a TEMPORARY stand-in (John rejected it).
+ * Register a Landsat painter and call `setSaucerNpcArtId('landsat')` to swap —
+ * do not grow the disc. Ambient NPC, not a kit, not a faction mark.
  */
 
 export const SAUCER_NPC_RENDER_LANGUAGE = 'svg-fidelity' as const;
 
-/** Disc silhouette is a temporary stand-in. Swap via `SAUCER_NPC_ART_ID`. */
-export const SAUCER_NPC_ART_ID = 'disc-temp' as const;
+/** Reserved id for the Game Director Landsat redo. No painter yet. */
+export type SaucerNpcArtId = 'disc-temp' | 'landsat';
+
+export const SAUCER_NPC_ART_ID: SaucerNpcArtId = 'disc-temp';
 export const SAUCER_NPC_ART_IS_TEMPORARY = true;
+
+export interface SaucerNpcPainter {
+  id: SaucerNpcArtId;
+  temporary: boolean;
+  draw: (
+    ctx: CanvasRenderingContext2D,
+    target: SaucerNpcDrawTarget,
+    options?: SaucerNpcDrawOptions
+  ) => void;
+}
+
+const painters = new Map<SaucerNpcArtId, SaucerNpcPainter>();
+let activeArtId: SaucerNpcArtId = SAUCER_NPC_ART_ID;
+
+export function registerSaucerNpcPainter(painter: SaucerNpcPainter): void {
+  painters.set(painter.id, painter);
+}
+
+export function getSaucerNpcArtId(): SaucerNpcArtId {
+  return activeArtId;
+}
+
+export function setSaucerNpcArtId(id: SaucerNpcArtId): void {
+  activeArtId = id;
+}
+
+export function getSaucerNpcPainter(id: SaucerNpcArtId = activeArtId): SaucerNpcPainter {
+  return painters.get(id) ?? painters.get(SAUCER_NPC_ART_ID) ?? discTempPainter;
+}
+
+export function isSaucerNpcArtTemporary(): boolean {
+  return getSaucerNpcPainter().temporary;
+}
 
 export const SAUCER_USES_OUTLINE_ASTEROIDS_KIT_LANGUAGE = false;
 
@@ -100,10 +128,8 @@ function drawRingTicks(
   }
 }
 
-/**
- * Idle SVG-ish saucer. Rings are stroked; only the cabin takes a soft fill.
- */
-export function drawSaucerNpc(
+/** Temporary UFO-disc. Landsat replaces this via `registerSaucerNpcPainter`. */
+function drawDiscTempSaucerNpc(
   ctx: CanvasRenderingContext2D,
   target: SaucerNpcDrawTarget,
   options: SaucerNpcDrawOptions = {}
@@ -162,6 +188,22 @@ export function drawSaucerNpc(
   }
 
   ctx.restore();
+}
+
+const discTempPainter: SaucerNpcPainter = {
+  id: 'disc-temp',
+  temporary: true,
+  draw: drawDiscTempSaucerNpc,
+};
+registerSaucerNpcPainter(discTempPainter);
+
+/** Dispatches through the active painter. Callers do not branch on art id. */
+export function drawSaucerNpc(
+  ctx: CanvasRenderingContext2D,
+  target: SaucerNpcDrawTarget,
+  options: SaucerNpcDrawOptions = {}
+): void {
+  getSaucerNpcPainter().draw(ctx, target, options);
 }
 
 /** @deprecated Use drawSaucerNpc. Kept so existing callers keep compiling. */

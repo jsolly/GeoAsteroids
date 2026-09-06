@@ -21,34 +21,29 @@ Do not invent competing faction-mark art. Soft factions stay on the factions str
 
 ## Harpoon (Hauler only)
 
-John lock via Game Director. Mechanics and VFX may ship now; hull bake stays on hold.
+John lock via Game Director. This **is** the Hauler ability — latch, haul, and
+tether VFX. It is not a sixth class and not “VFX-only until Hook.”
 
 - Only the Hauler kit may activate or draw harpoon
 - Latch one nearby rock (forward hemisphere preferred, else nearest in range)
 - While latched, haul that rock toward the Hauler
 - Tether line + latch ring VFX on Hauler only — never on Dart / Warden / Skirmisher / Quake
-- Not a shared all-kit hook, and not a sixth class
 
 See `src/entities/ship/shipAbilities.ts` and `drawHaulerHarpoonVfx`.
+Hull bake stays on hold until silhouette v2 lock.
 
 ## Saucer NPC (separate language)
 
-Higher-fidelity SVG-ish. Not player line-ship DNA. Ambient, not a faction mark.
-AD confirmed these box paths — canvas drawer replicates them.
+Ambient NPC. Not player line-ship DNA. Not a faction mark.
+
+The current UFO-disc is **TEMPORARY** (John rejected it). Game Director will
+deliver a Landsat-style satellite. Swap art with
+`registerSaucerNpcPainter` + `setSaucerNpcArtId('landsat')` — do not grow the disc.
+
+Temporary disc files (box paths, do not polish):
 
 | State | Path |
 | --- | --- |
 | Idle | `georoids-art/saucer-npc.svg` |
 | Firing | `georoids-art/saucer-npc-firing.svg` |
 | Preview | `georoids-art/saucer-silhouette-svgish.png` |
-
-- Hull `#C4B5FD`, shot `#E9D5FF`
-- Outer + inner flattened ellipses
-- 8 perpendicular ticks on the outer ring
-- Cabin oval with fill opacity 0.18
-- Vertical antenna capped with an empty dish circle
-- Firing: short `#E9D5FF` segments off both rims
-
-See `src/entities/npc/saucerRenderHook.ts`. Independent of kit hull lock.
-The UFO-disc is a **temporary** stand-in (`SAUCER_NPC_ART_ID = disc-temp`) so a
-later Landsat-style satellite can swap without rewriting callers.
