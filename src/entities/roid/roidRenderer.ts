@@ -28,9 +28,9 @@ export function getRoidStrokeWidth(radius: number): number {
   return VISUAL.ROID_STROKE_SMALL;
 }
 
-/** Classic Asteroids inner facet on medium+ rocks; small rocks stay a single outline. */
+/** Classic Asteroids inner facet on large rocks only — medium/small stay one outline. */
 export function shouldDrawRoidInnerFacet(radius: number): boolean {
-  return radius >= ROID.SIZE * 0.4;
+  return radius >= ROID.SIZE * 0.8;
 }
 
 /** Skip a pose that would throw during path construction and crash the frame. */

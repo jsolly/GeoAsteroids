@@ -21,9 +21,9 @@ const shipSrc = readFileSync(resolve(process.cwd(), 'src/entities/ship/shipRende
 const roidSrc = readFileSync(resolve(process.cwd(), 'src/entities/roid/roidRenderer.ts'), 'utf8');
 const laserSrc = readFileSync(resolve(process.cwd(), 'src/entities/laser/laserRenderer.ts'), 'utf8');
 
-test('medium and large roids get an inner Asteroids facet; pebbles stay one outline', () => {
+test('large roids get an inner Asteroids facet; medium and pebbles stay one outline', () => {
   expect(shouldDrawRoidInnerFacet(ROID.SIZE)).toBe(true);
-  expect(shouldDrawRoidInnerFacet(ROID.SIZE * 0.5)).toBe(true);
+  expect(shouldDrawRoidInnerFacet(ROID.SIZE * 0.5)).toBe(false);
   expect(shouldDrawRoidInnerFacet(ROID.SIZE * 0.2)).toBe(false);
   expect(VISUAL.ROID_INNER_SCALE).toBeGreaterThan(0.3);
   expect(VISUAL.ROID_INNER_SCALE).toBeLessThan(0.7);
