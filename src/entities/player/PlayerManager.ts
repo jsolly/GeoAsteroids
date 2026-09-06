@@ -1,6 +1,6 @@
+import type { ShipKitId } from '../../../shared-types';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
-import type { ShipKitId } from '../../../shared-types';
 import { entityFactory } from '../EntityFactory';
 import type { Player } from './Player';
 

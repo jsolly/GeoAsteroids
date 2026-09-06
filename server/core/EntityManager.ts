@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
-import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, parseShipKitId, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
+import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
 import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
 import { parseSoftFactionId } from '../../src/entities/player/softFactions';
 import { RNGService } from './RNGService';

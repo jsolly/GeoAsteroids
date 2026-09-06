@@ -32,7 +32,15 @@ export function drawSaucerNpcPlaceholder(
   ctx.ellipse(target.x, target.y, target.radius * 1.6, target.radius * 0.55, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(target.x, target.y - target.radius * 0.15, target.radius * 0.7, target.radius * 0.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(
+    target.x,
+    target.y - target.radius * 0.15,
+    target.radius * 0.7,
+    target.radius * 0.4,
+    0,
+    0,
+    Math.PI * 2
+  );
   ctx.fill();
   ctx.restore();
 }

@@ -1,4 +1,9 @@
-import { DEFAULT_SHIP_KIT_ID, listShipKits, parseShipKitId, type ShipKitId } from '../entities/ship/shipKits';
+import {
+  DEFAULT_SHIP_KIT_ID,
+  listShipKits,
+  parseShipKitId,
+  type ShipKitId,
+} from '../entities/ship/shipKits';
 import { attachEventListener, getElementById } from '../utils/dom';
 
 let selectedKitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
@@ -18,7 +23,8 @@ function syncKitButtons(): void {
   if (!grid) {
     return;
   }
-  for (const button of grid.querySelectorAll<HTMLButtonElement>('[data-kit-id]')) {
+  const buttons = Array.from(grid.querySelectorAll<HTMLButtonElement>('[data-kit-id]'));
+  for (const button of buttons) {
     const isSelected = button.dataset.kitId === selectedKitId;
     button.classList.toggle('is-selected', isSelected);
     button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');

@@ -1,5 +1,5 @@
 import { upsertThrustSource } from '../audio/gameSounds';
-import { GAME, SHIP } from '../constants';
+import { GAME } from '../constants';
 import type { Player } from '../entities/player/Player';
 import { logger } from '../utils/Logger';
 

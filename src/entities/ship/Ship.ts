@@ -1,16 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, Velocity } from '../../../shared-types';
+import type { Position, ShipKitId, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
-import type { ShipKitId } from '../../../shared-types';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser, createLaserAtAngle } from '../laser/laserUtils';
-import { activateAbilityOnHost, tickAbilityHost, type AbilityWorld } from './shipAbilities';
+import { type AbilityWorld, activateAbilityOnHost, tickAbilityHost } from './shipAbilities';
 import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from './shipKits';
 import { drawThruster } from './shipRenderer';
 

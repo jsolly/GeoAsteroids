@@ -4,9 +4,8 @@ import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
-
-import { CLASSIC_HULL, getShipKit, type HullProfile } from './shipKits';
 import type { Ship } from './Ship';
+import { CLASSIC_HULL, getShipKit, type HullProfile } from './shipKits';
 
 // Helper function to calculate ship triangle points for consistent ship rendering
 export function calculateShipTrianglePoints(

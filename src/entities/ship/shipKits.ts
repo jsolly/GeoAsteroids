@@ -10,12 +10,7 @@ export const DEFAULT_SHIP_KIT_ID: ShipKitId = 'dart';
 /** Ability flavor — geo is optional spice, not a kit requirement. */
 export type ShipAbilityFlavor = 'combat' | 'utility' | 'geo';
 
-export type ShipAbilityId =
-  | 'boostDash'
-  | 'lootMagnet'
-  | 'shieldFocus'
-  | 'burstFire'
-  | 'shockPulse';
+export type ShipAbilityId = 'boostDash' | 'lootMagnet' | 'shieldFocus' | 'burstFire' | 'shockPulse';
 
 export interface HullProfile {
   nose: number;

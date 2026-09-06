@@ -1,5 +1,5 @@
 import { consumeTickAccumulator } from '../../shared/gameClock';
-import type { AsteroidData } from '../../shared-types';
+import type { AsteroidData, ShipKitId } from '../../shared-types';
 import {
   replaceThrustSources,
   resetThrustSources,
@@ -7,10 +7,8 @@ import {
 } from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { GAME } from '../constants';
-import type { ShipKitId } from '../../shared-types';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
-import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
@@ -24,6 +22,7 @@ import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
+import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { setPlayView } from '../ui/uiUtils';
 import { describeDeathCause } from '../utils/deathCause';
 import { logger } from '../utils/Logger';

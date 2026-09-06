@@ -1,12 +1,11 @@
 import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
-import { parseSoftFactionId } from './softFactions';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
 import { isStaleGameOverSnapshot } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
-import { applyShipKitToShip } from '../ship/shipKits';
 import { Ship } from '../ship/Ship';
+import { applyShipKitToShip } from '../ship/shipKits';
 import {
   applySharedShipExplodingFlag,
   applySharedShipRespawnCue,
@@ -15,6 +14,7 @@ import {
   isSilentHudReset,
   resolveCombatDeathCause,
 } from '../ship/shipUtils';
+import { parseSoftFactionId } from './softFactions';
 
 export class Player {
   id: string;
