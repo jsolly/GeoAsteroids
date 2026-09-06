@@ -21,6 +21,7 @@ import {
   shieldSnapshot,
   type CombatDamageSource,
 } from '../../src/entities/ship/shipShield';
+import type { BotShot } from '../ai/botController';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import {
   checkLaserAsteroidCollisionSwept,
@@ -112,6 +113,7 @@ export class GameEngine {
   private onAsteroidHits?: (hits: AppliedAsteroidHit[]) => void;
   private pendingAsteroidHits: AppliedAsteroidHit[] = [];
   private pendingShockwaves: PendingShockwave[] = [];
+  private pendingBotShots: BotShot[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -184,7 +186,7 @@ export class GameEngine {
     this.flushDueShockwaves();
     this.flushExpiredCollabHits();
     if (this.gameTime % 2 === 0) {
-      this.entityManager.updateBotMovement();
+      this.queueBotShots(this.entityManager.updateBotMovement());
     }
     this.resolveAuthoritativeCombat();
   }
@@ -291,6 +293,7 @@ export class GameEngine {
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
     this.collisionAuthority.reset();
+    this.pendingBotShots = [];
 
     // Keep gameTime monotonic for the process lifetime. Zeroing it when the
     // last player leaves makes /health.world.gameTime look frozen on prod
@@ -1099,8 +1102,22 @@ export class GameEngine {
   // Bot-specific update methods for testing
   // Health regeneration is now handled client-side
 
-  public updateBotMovement(): void {
-    this.entityManager.updateBotMovement();
+  public updateBotMovement(): BotShot[] {
+    const shots = this.entityManager.updateBotMovement();
+    this.queueBotShots(shots);
+    return shots;
+  }
+
+  public consumeBotShots(): BotShot[] {
+    const shots = this.pendingBotShots;
+    this.pendingBotShots = [];
+    return shots;
+  }
+
+  private queueBotShots(shots: BotShot[]): void {
+    if (shots.length > 0) {
+      this.pendingBotShots.push(...shots);
+    }
   }
 
   public getTerrainSeed(): number {

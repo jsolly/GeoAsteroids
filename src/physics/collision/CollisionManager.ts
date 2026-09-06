@@ -349,7 +349,7 @@ export class CollisionManager {
           damage: DAMAGE.LASER_HIT,
         },
       });
-    } else if (player.type === 'remote') {
+    } else if (player.type === 'remote' || player.type === 'local') {
       this.networkManager.sendMessage({
         type: 'laserDamage',
         data: {
@@ -359,7 +359,6 @@ export class CollisionManager {
         },
       });
     }
-    // Local players are handled by the ship's takeDamage method directly
   }
 
   /**

@@ -14,6 +14,8 @@ import {
   type CombatDamageSource,
   type ShieldState,
 } from '../../src/entities/ship/shipShield';
+import { BOT_AI, BotBrain, makeBotShot, type BotShot } from '../ai/botController';
+import { applyShipMotionSteps, containShipInArena } from '../ai/shipMotion';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { applyShockwaveToBody } from '../../src/physics/shockwave';
@@ -90,6 +92,7 @@ export class EntityManager {
   private isCreatingBots = false;
   private humanRejoinStash = new Map<string, HumanRejoinStash>();
   private humanRejoinByName = new Map<string, HumanRejoinStash>();
+  private readonly botBrain = new BotBrain();
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
@@ -604,100 +607,41 @@ export class EntityManager {
     entity.velocity = { x: 0, y: 0 };
   }
 
-  // Movement updates (for bots)
-  public updateBotMovement(): void {
-    // Skip bot movement if disabled in DEBUG mode
+  // Controller-driven bot step. Same hull physics as players; only the brain is unique.
+  public updateBotMovement(): BotShot[] {
     if (!DEBUG.BOT_PLAYER.MOVEMENT) {
-      return;
+      return [];
     }
 
     const bots = this.getBots();
-    
-    // Reduced debug logging frequency
-    if (bots.length > 0 && Math.random() < 0.002) { // ~1/500 chance (once every 8+ seconds)
+    this.botBrain.forgetMissing(bots.map((bot) => bot.id));
+
+    if (bots.length > 0 && this.rng.random() < 0.002) {
       logger.info('🤖', `Updating movement for ${bots.length} bots`);
     }
-    
+
+    const humans = this.getHumanPlayers();
+    const shots: BotShot[] = [];
+
     for (const bot of bots) {
-      if (bot.exploding || bot.health <= 0) {
-        continue; // Skip exploding or dead bots
+      if (bot.exploding || bot.health <= 0 || bot.respawnTimer !== undefined) {
+        continue;
       }
 
-      // Optimized AI: less frequent but more meaningful direction changes
-      if (Math.random() < 0.02) { // Reduced from 5% to 2% chance per frame
-        bot.angle += (Math.random() - 0.5) * 0.3; // Reduced rotation amount for smoother movement
+      const decision = this.botBrain.decide(bot, humans, this.rng);
+      bot.angle = decision.angle;
+      bot.thrusting = decision.thrusting;
+
+      if (decision.fire) {
+        shots.push(makeBotShot(bot));
       }
 
-      // Less frequent dramatic direction changes
-      if (Math.random() < 0.005) { // Reduced from 1% to 0.5% chance per frame
-        bot.angle += (Math.random() - 0.5) * Math.PI * 0.5; // Reduced from full 180 to 90 degrees
-      }
-
-      // Apply thrust in current direction with optimized calculation
-      const mass = bot.mass ?? GROWTH.BASE_MASS;
-      const thrustMagnitude = (1.5 / 60) * thrustScaleFromMass(mass);
-      const cosAngle = Math.cos(bot.angle);
-      const sinAngle = Math.sin(bot.angle);
-      
-      // Set thruster state based on movement
-      bot.thrusting = true;
-      
-      bot.velocity.x += cosAngle * thrustMagnitude;
-      bot.velocity.y -= sinAngle * thrustMagnitude; // Negative for screen coordinates
-
-      // Optimized velocity capping using faster approximation
-      const speedSquared = bot.velocity.x * bot.velocity.x + bot.velocity.y * bot.velocity.y;
-      const maxSpeed = 6 * (maxVelocityFromMass(mass) / SHIP.MAX_VELOCITY);
-      if (speedSquared > maxSpeed * maxSpeed) {
-        const scale = maxSpeed / Math.sqrt(speedSquared);
-        bot.velocity.x *= scale;
-        bot.velocity.y *= scale;
-      }
-
-      applySharedShipSlope(bot.velocity, bot.position);
-
-      // Turn off thrusters occasionally for more realistic behavior
-      if (Math.random() < 0.1) { // 10% chance to turn off thrusters
-        bot.thrusting = false;
-      }
-
-      // Update position based on velocity
-      bot.position.x += bot.velocity.x;
-      bot.position.y += bot.velocity.y;
-
-      // Keep bots inside the circular play boundary. Without this they thrust
-      // in a straight line forever and escape the arena, so the player never
-      // encounters them. Bounce off the boundary and steer back toward center.
-      const CONTAIN_RADIUS = getAsteroidFieldRadius();
-      const distFromCenter = Math.sqrt(
-        bot.position.x * bot.position.x + bot.position.y * bot.position.y
-      );
-      if (distFromCenter > CONTAIN_RADIUS && distFromCenter > 0) {
-        const nx = bot.position.x / distFromCenter;
-        const ny = bot.position.y / distFromCenter;
-        const contained = containAsteroidPosition(bot.position.x, bot.position.y);
-        bot.position.x = contained.x;
-        bot.position.y = contained.y;
-        // Reflect outward velocity component back inward
-        const vDotN = bot.velocity.x * nx + bot.velocity.y * ny;
-        if (vDotN > 0) {
-          bot.velocity.x -= 2 * vDotN * nx;
-          bot.velocity.y -= 2 * vDotN * ny;
-        }
-        // Steer heading toward the center (forward vector is (cos a, -sin a))
-        bot.angle = Math.atan2(ny, -nx);
-      }
-
-      // Optimized friction - only apply if velocity is significant
-      const velocityMagnitude = Math.sqrt(speedSquared);
-      if (velocityMagnitude > 0.1) {
-        const frictionFactor = 0.995; // Slightly reduced friction for smoother movement
-        bot.velocity.x *= frictionFactor;
-        bot.velocity.y *= frictionFactor;
-      }
-
+      applyShipMotionSteps(bot, BOT_AI.MOTION_STEPS);
+      containShipInArena(bot);
       bot.lastUpdate = Date.now();
     }
+
+    return shots;
   }
 
   // Cleanup
@@ -749,5 +693,6 @@ export class EntityManager {
 
   public clearAll(): void {
     this.entities.clear();
+    this.botBrain.clear();
   }
 }
