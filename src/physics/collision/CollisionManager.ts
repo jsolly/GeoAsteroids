@@ -463,5 +463,4 @@ export class CollisionManager {
 
     localShip.startPlayerCollision(otherPlayerId);
   }
-
 }

@@ -29,10 +29,17 @@ describe('A roid break is visible to both pilots', () => {
 
     alice.socket.clear();
     bob.socket.clear();
-    world.send(alice, {
+    const hit = (pilot: Pilot) => ({
       type: 'asteroidDestroyed',
-      data: { asteroidId: roid!.id, playerId: alice.id, points: ROID.POINTS_LARGE },
+      data: {
+        asteroidId: roid!.id,
+        playerId: pilot.id,
+        points: ROID.POINTS_LARGE,
+        cause: 'laser' as const,
+      },
     });
+    world.send(alice, hit(alice));
+    world.send(bob, hit(bob));
 
     for (const socket of [alice.socket, bob.socket]) {
       expect(socket.lastReceived('asteroidDestroy')?.data).toMatchObject({
