@@ -10,3 +10,8 @@ test('kill toast does not replace the score', () => {
   expect(scoreDraw).toBeGreaterThan(0);
   expect(killDraw).toBeGreaterThan(scoreDraw);
 });
+
+test('HUD shows personal score and side label, not a team score', () => {
+  expect(gameInfoSrc).toMatch(/FACTION_LABELS\[faction\]/);
+  expect(gameInfoSrc).not.toMatch(/teamScore|team win|TEAM SCORE/i);
+});

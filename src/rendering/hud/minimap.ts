@@ -1,10 +1,10 @@
 import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
+import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
-
 import { getGameBoundary } from '../../physics/boundary';
-import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
+import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 
 type CircleBoundary = { cx: number; cy: number; radius: number };
@@ -67,7 +67,15 @@ export function drawMiniMap(
   ctx.arc(boundaryOffsetX, boundaryOffsetY, boundary.radius * boundaryScale, 0, Math.PI * 2);
   ctx.stroke();
 
-  drawShipMiniMap(ctx, ship, PALETTE.LOCAL, boundary, miniMapX, miniMapY, miniMapSize);
+  drawShipMiniMap(
+    ctx,
+    ship,
+    getShipDisplayColor({ type: 'local', color: ship.color }),
+    boundary,
+    miniMapX,
+    miniMapY,
+    miniMapSize
+  );
 
   try {
     const gameController = GameController.getInstance();
@@ -78,7 +86,7 @@ export function drawMiniMap(
       if (player.ship.exploding) {
         continue;
       }
-      const color = getFactionColor(player.type === 'bot' ? 'bot' : 'remote');
+      const color = getShipDisplayColor(player);
       drawShipMiniMap(ctx, player.ship, color, boundary, miniMapX, miniMapY, miniMapSize);
     }
 
@@ -136,6 +144,12 @@ export function drawShipMiniMap(
   ctx.beginPath();
   ctx.arc(p.x, p.y, dotSize / 2, 0, Math.PI * 2);
   ctx.fill();
+  drawSoftFactionMark(ctx, ship.factionId, {
+    x: p.x,
+    y: p.y,
+    radius: 6,
+    angle: ship.angle,
+  });
   ctx.restore();
 }
 

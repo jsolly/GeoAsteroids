@@ -1,8 +1,9 @@
 import { WebSocket } from 'ws';
 import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
-import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
-import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
+import { pickBalancedFactionFromShips } from '../../shared/factions';
 import { parseSoftFactionId } from '../../src/entities/player/softFactions';
+import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
+import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
 import { RNGService } from './RNGService';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
@@ -144,13 +145,17 @@ export class EntityManager {
     return entity;
   }
 
+  private nextFaction(): SoftFactionId {
+    return pickBalancedFactionFromShips(this.getAllEntities());
+  }
+
   // Human player management
   public addHumanPlayer(
     id: string,
     name: string,
     ws: WebSocket,
     position?: Position,
-    color?: string,
+    _color?: string,
     kitId?: ShipKitId,
     factionId?: SoftFactionId
   ): GameEntity {
@@ -160,11 +165,8 @@ export class EntityManager {
         existing.ws = ws;
         existing.name = name;
         existing.lastUpdate = Date.now();
-        if (color) {
-          existing.color = color;
-        }
-        if (factionId !== undefined) {
-          existing.factionId = parseSoftFactionId(factionId);
+        if (!existing.factionId) {
+          existing.factionId = this.nextFaction();
         }
         return existing;
       }
@@ -174,7 +176,7 @@ export class EntityManager {
 
     const sameName = this.getHumanPlayers().find((human) => human.name === name);
     if (sameName && sameName.lives > 0) {
-      return this.takeOverHuman(sameName, id, name, ws, color);
+      return this.takeOverHuman(sameName, id, name, ws);
     }
     if (sameName && sameName.lives <= 0) {
       this.entities.delete(sameName.id);
@@ -190,7 +192,7 @@ export class EntityManager {
       angle: 0,
       exploding: false,
       thrusting: false,
-      color: color || PALETTE.REMOTE,
+      color: PALETTE.REMOTE,
       lives: restored?.lives ?? 3,
       score: restored?.score ?? 0,
       health: 100,
@@ -199,7 +201,7 @@ export class EntityManager {
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       ws,
       kitId: DEFAULT_SHIP_KIT_ID,
-      factionId: parseSoftFactionId(factionId),
+      factionId: parseSoftFactionId(factionId) ?? this.nextFaction(),
       abilityCooldownFrames: 0,
       abilityActiveFrames: 0,
       shieldTimer: 0,
@@ -215,8 +217,7 @@ export class EntityManager {
     existing: GameEntity,
     id: string,
     name: string,
-    ws: WebSocket,
-    color?: string
+    ws: WebSocket
   ): GameEntity {
     const oldWs = existing.ws;
     if (existing.id !== id) {
@@ -227,8 +228,8 @@ export class EntityManager {
     existing.ws = ws;
     existing.name = name;
     existing.lastUpdate = Date.now();
-    if (color) {
-      existing.color = color;
+    if (!existing.factionId) {
+      existing.factionId = this.nextFaction();
     }
     if (oldWs && oldWs !== ws) {
       try {
@@ -329,6 +330,7 @@ export class EntityManager {
         lastUpdate: Date.now(),
         spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
         kitId: DEFAULT_SHIP_KIT_ID,
+        factionId: this.nextFaction(),
         abilityCooldownFrames: 0,
         abilityActiveFrames: 0,
         shieldTimer: 0,

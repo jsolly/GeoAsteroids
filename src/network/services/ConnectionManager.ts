@@ -732,6 +732,13 @@ export class ConnectionManager {
     if (data.id) {
       this.localPlayerId = data.id;
     }
+    if (data.factionId) {
+      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+      if (localPlayer) {
+        localPlayer.factionId = data.factionId;
+        localPlayer.ship.factionId = data.factionId;
+      }
+    }
     this.initializeAsteroids();
   }
 

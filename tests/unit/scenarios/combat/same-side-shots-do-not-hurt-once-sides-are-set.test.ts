@@ -21,7 +21,7 @@ describe('Soft-faction compose leaves same-side shots harmless', () => {
     world.dispose();
   });
 
-  test('unset sides still take laser damage', () => {
+  test('auto-balanced opposite sides still take laser damage', () => {
     alice = world.join('Alice', { x: -80, y: 0 });
     bob = world.join('Bob', { x: 80, y: 0 });
     world.wearOffJoinInvulnerability();

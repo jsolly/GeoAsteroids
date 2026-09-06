@@ -1,6 +1,9 @@
 // Shared types between client and server
 // These types are used in network communication and should be identical on both sides
 
+/** Soft sides for readability + same-side cooperation. Not a team win condition. */
+export type FactionId = 'ion' | 'ember';
+
 // Common position and velocity types used throughout the system
 export interface Position {
   x: number;
@@ -110,6 +113,8 @@ export interface ServerPlayerData {
   health: number;
   maxHealth: number;
   respawnTimer?: number;
+  kitId?: ShipKitId;
+  factionId?: SoftFactionId;
 }
 
 export interface ServerGameState {
