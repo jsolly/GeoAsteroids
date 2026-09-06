@@ -59,6 +59,7 @@ export class GameController {
 
     // Set up game over handler
     this.setupGameOverHandler();
+    this.setupShipExplodedHandler();
 
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
@@ -265,6 +266,33 @@ export class GameController {
         showGameOverMenu();
       });
     }, 3500); // Increased time to read the death message
+  }
+
+  private setupShipExplodedHandler(): void {
+    window.addEventListener('shipExploded', (event) => {
+      const customEvent = event as CustomEvent<{
+        shipId: string;
+        cause?: string;
+        killerName?: string;
+      }>;
+      const cause = customEvent.detail.cause;
+      if (!cause) {
+        return;
+      }
+
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (localPlayer?.ship.id === customEvent.detail.shipId) {
+        localPlayer.onShipExploded({ cause });
+        return;
+      }
+
+      for (const player of this.networkManager.getAllPlayers()) {
+        if (player.ship.id === customEvent.detail.shipId) {
+          player.onShipExploded({ cause });
+          return;
+        }
+      }
+    });
   }
 
   private setupGameOverHandler(): void {

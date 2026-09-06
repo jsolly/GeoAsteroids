@@ -5,6 +5,14 @@ import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
+/** Keep lives/score after a dropped socket so the same id can rejoin. */
+export const HUMAN_REJOIN_STASH_TTL_MS = 5 * 60 * 1000;
+
+interface HumanRejoinStash {
+  lives: number;
+  score: number;
+  savedAt: number;
+}
 
 export interface GameEntity {
   id: string;
@@ -45,6 +53,7 @@ export class EntityManager {
   private entities = new Map<string, GameEntity>();
   private rng: RNGService;
   private isCreatingBots = false;
+  private humanRejoinStash = new Map<string, HumanRejoinStash>();
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
@@ -116,6 +125,7 @@ export class EntityManager {
   public removeEntity(entityId: string): GameEntity | undefined {
     const entity = this.entities.get(entityId);
     if (entity) {
+      this.stashHumanForRejoin(entity);
       this.entities.delete(entityId);
       logger.debug('ENTITY', `Removed ${entity.type} entity: ${entity.name} (${entityId})`);
     }
@@ -135,6 +145,7 @@ export class EntityManager {
       return existing;
     }
 
+    const restored = this.consumeHumanRejoinStash(id);
     const entity: GameEntity = {
       id,
       name,
@@ -145,8 +156,8 @@ export class EntityManager {
       exploding: false,
       thrusting: false,
       color: color || PALETTE.REMOTE,
-      lives: 3,
-      score: 0,
+      lives: restored?.lives ?? 3,
+      score: restored?.score ?? 0,
       health: 100,
       maxHealth: 100,
       lastUpdate: Date.now(),
@@ -156,6 +167,29 @@ export class EntityManager {
 
     this.addEntity(entity);
     return entity;
+  }
+
+  private stashHumanForRejoin(entity: GameEntity): void {
+    if (entity.type !== 'human') {
+      return;
+    }
+    this.humanRejoinStash.set(entity.id, {
+      lives: entity.lives,
+      score: entity.score,
+      savedAt: Date.now(),
+    });
+  }
+
+  private consumeHumanRejoinStash(id: string): HumanRejoinStash | undefined {
+    const stash = this.humanRejoinStash.get(id);
+    if (!stash) {
+      return undefined;
+    }
+    this.humanRejoinStash.delete(id);
+    if (Date.now() - stash.savedAt > HUMAN_REJOIN_STASH_TTL_MS) {
+      return undefined;
+    }
+    return stash;
   }
 
   // Bot management

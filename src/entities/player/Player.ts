@@ -4,7 +4,13 @@ import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
-import { applyShipSpawnProtection } from '../ship/shipUtils';
+import {
+  applySharedShipExplodingFlag,
+  applySharedShipRespawnCue,
+  applyShipSpawnProtection,
+  isServerRespawnActive,
+  isSilentHudReset,
+} from '../ship/shipUtils';
 
 export class Player {
   id: string;
@@ -79,7 +85,9 @@ export class Player {
     respawnTimer?: number;
     spawnProtectionTimer?: number;
   }): void {
-    this.serverSpawnProtectionTimer = data.spawnProtectionTimer ?? 0;
+    if (data.spawnProtectionTimer !== undefined) {
+      this.serverSpawnProtectionTimer = data.spawnProtectionTimer;
+    }
     // The local player predicts its own ship for responsiveness: while alive it
     // owns its position/velocity/angle and must NOT snap to the (lagging) server
     // echo. Remote players and bots are always server-driven.
@@ -92,7 +100,9 @@ export class Player {
     const isLocal = this.type === 'local';
     if (isLocal) {
       const deadOrExploding =
-        this.ship.health <= 0 || this.ship.exploding || data.respawnTimer !== undefined;
+        this.ship.health <= 0 ||
+        this.ship.exploding ||
+        isServerRespawnActive(data.respawnTimer);
       if (deadOrExploding) {
         if (!this.adoptServerPosition) {
           this.respawnLatchOrigin = data.position
@@ -114,7 +124,8 @@ export class Player {
       this.ship.angle = data.angle;
     }
 
-    if (data.lives !== undefined) {
+    const skipHudReset = isSilentHudReset(this.lives, this.score, data.lives, data.score);
+    if (data.lives !== undefined && !skipHudReset) {
       const prevLives = this.lives;
       this.lives = data.lives;
       if (isLocal && prevLives > this.lives) {
@@ -129,17 +140,14 @@ export class Player {
         );
       }
     }
-    if (data.score !== undefined) {
+    if (data.score !== undefined && !skipHudReset) {
       this.score = data.score;
     }
-    if (data.exploding === true) {
-      // Shared explode() path for local, remote, and bot — plays once, never doubles.
-      if (!this.ship.exploding) {
-        this.ship.explode(this.deathCause ?? data.deathCause ?? 'server-damage');
-      }
-    } else if (data.exploding === false) {
-      this.ship.exploding = false;
-    }
+    applySharedShipExplodingFlag(
+      this.ship,
+      data.exploding,
+      this.deathCause ?? data.deathCause ?? 'server-damage'
+    );
     // Thrusting is client-owned for the local player (keyboard/mouse input).
     // The server echo lacks thrusting when updates omit it, which flickers the flame.
     if (data.thrusting !== undefined && this.type !== 'local') {
@@ -206,25 +214,13 @@ export class Player {
         this.ship.explode('server-damage');
       }
 
-      // Arm blink on death → alive, or whenever the server still has
-      // spawn protection and the client lost the visual (heal-leak).
-      if ((wasDead || wasExploding) && this.ship.health > 0) {
-        if (this.ship.exploding) {
-          this.ship.exploding = false;
-          this.ship.explodeTime = 0;
-        }
-        logger.debug('RESPAWN_PROTECTION', 'Setting respawn protection', {
-          playerId: this.id,
-          type: this.type,
-        });
-        applyShipSpawnProtection(this.ship);
-      } else if (
+      applySharedShipRespawnCue(this.ship, wasDead || wasExploding, data.spawnProtectionTimer);
+      if (
         this.ship.health > 0 &&
         this.ship.blinkCount <= 0 &&
-        (data.spawnProtectionTimer ?? 0) > 0
+        (data.spawnProtectionTimer === undefined || data.spawnProtectionTimer <= 0) &&
+        this.type === 'local'
       ) {
-        applyShipSpawnProtection(this.ship);
-      } else if (this.ship.health > 0 && this.type === 'local') {
         // Additional debug for local player health updates that don't trigger respawn protection
         logger.debug(
           'HEALTH_UPDATE_LOCAL',
@@ -267,7 +263,7 @@ export class Player {
       this.adoptServerPosition &&
       this.ship.health > 0 &&
       !this.ship.exploding &&
-      data.respawnTimer === undefined &&
+      !isServerRespawnActive(data.respawnTimer) &&
       data.position
     ) {
       const origin = this.respawnLatchOrigin;

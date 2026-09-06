@@ -327,7 +327,10 @@ export class ConnectionManager {
   }
 
   // Send player state to server
-  sendPlayerState(playerState: PlayerUpdate): void {
+  sendPlayerState(playerState: Omit<PlayerUpdate, 'lives' | 'score'> & {
+    lives?: number;
+    score?: number;
+  }): void {
     if (!this.state.isConnected || !this.state.socket) {
       return;
     }
@@ -561,6 +564,9 @@ export class ConnectionManager {
           }
 
           if (!entity) {
+            if (!entityData.name || !entityData.type) {
+              continue;
+            }
             entity = entityFactory.createPlayer({
               id: entityData.id,
               name: entityData.name,
@@ -584,18 +590,22 @@ export class ConnectionManager {
         }
 
         const serverSnapshot = {
-          position: entityData.position,
-          velocity: entityData.velocity,
-          angle: entityData.angle,
-          lives: entityData.lives,
-          score: entityData.score,
-          exploding: entityData.exploding,
-          thrusting: entityData.thrusting,
-          color: entityData.color,
-          health: entityData.health,
-          maxHealth: entityData.maxHealth,
-          respawnTimer: entityData.respawnTimer,
-          spawnProtectionTimer: entityData.spawnProtectionTimer,
+          ...(entityData.position ? { position: entityData.position } : {}),
+          ...(entityData.velocity ? { velocity: entityData.velocity } : {}),
+          ...(entityData.angle !== undefined ? { angle: entityData.angle } : {}),
+          ...(entityData.lives !== undefined ? { lives: entityData.lives } : {}),
+          ...(entityData.score !== undefined ? { score: entityData.score } : {}),
+          ...(entityData.exploding !== undefined ? { exploding: entityData.exploding } : {}),
+          ...(entityData.thrusting !== undefined ? { thrusting: entityData.thrusting } : {}),
+          ...(entityData.color !== undefined ? { color: entityData.color } : {}),
+          ...(entityData.health !== undefined ? { health: entityData.health } : {}),
+          ...(entityData.maxHealth !== undefined ? { maxHealth: entityData.maxHealth } : {}),
+          ...(entityData.respawnTimer !== undefined
+            ? { respawnTimer: entityData.respawnTimer }
+            : {}),
+          ...(entityData.spawnProtectionTimer !== undefined
+            ? { spawnProtectionTimer: entityData.spawnProtectionTimer }
+            : {}),
         };
         entity.updateFromServer(serverSnapshot);
 
@@ -609,10 +619,12 @@ export class ConnectionManager {
 
       // Drop remotes that vanished from the snapshot so a closed tab leaves
       // the leaderboard even if `playerLeft` was missed. Bots are left alone.
-      const snapshotIds = new Set(data.entities.map((entity) => entity.id));
-      for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
-        this.allPlayers.delete(id);
-        logger.info('NETWORK', 'Removed departed remote player', { id });
+      if (data.entities.length > 0) {
+        const snapshotIds = new Set(data.entities.map((entity) => entity.id));
+        for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
+          this.allPlayers.delete(id);
+          logger.info('NETWORK', 'Removed departed remote player', { id });
+        }
       }
     }
 
@@ -837,6 +849,9 @@ export class ConnectionManager {
       return;
     }
 
+    if (data.attackerId) {
+      targetPlayer.deathCause = data.attackerId;
+    }
     if (data.remainingLives !== undefined) {
       targetPlayer.lives = data.remainingLives;
     }
@@ -899,6 +914,9 @@ export class ConnectionManager {
     }
 
     this.applyAuthoritativeDamageHealth(localPlayer, data.remainingHealth, data.isDestroyed);
+    if (data.attackerId) {
+      localPlayer.deathCause = data.attackerId;
+    }
     if (data.remainingLives !== undefined) {
       localPlayer.lives = data.remainingLives;
     }

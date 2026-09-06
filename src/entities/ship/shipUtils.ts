@@ -1,5 +1,5 @@
 import type { Position } from '../../../shared-types';
-import { GAME, SHIP } from '../../constants';
+import { DAMAGE, GAME, SHIP } from '../../constants';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
 /** Minimal ship shape shared by local players, remotes, and bots. */
@@ -13,6 +13,96 @@ export interface ShipSpawnProtectionState {
   blinkCount: number;
   spawnProtectionTimer: number;
   setBlinkOn(): void;
+}
+
+export interface SharedShipCombatVisuals extends ShipSpawnProtectionState {
+  exploding: boolean;
+  explodeTime: number;
+  health: number;
+  explode(cause?: string, killerName?: string): void;
+}
+
+export interface ShipImpactFlashState {
+  impactFlashFrames: number;
+}
+
+export interface ShipLethalHitState extends ShipImpactFlashState {
+  health: number;
+  exploding: boolean;
+  takeDamage(amount: number, cause?: string, killerName?: string): void;
+}
+
+/** Only a positive timer is an active respawn countdown. Omitted or 0 is not dead. */
+export function isServerRespawnActive(respawnTimer?: number): boolean {
+  return respawnTimer !== undefined && respawnTimer > 0;
+}
+
+/**
+ * Established session progress must not snap back to a fresh 3-life / 0-score
+ * spawn unless this really is a new local player object.
+ */
+export function isSilentHudReset(
+  currentLives: number,
+  currentScore: number,
+  incomingLives?: number,
+  incomingScore?: number
+): boolean {
+  if (incomingLives === undefined && incomingScore === undefined) {
+    return false;
+  }
+  const nextLives = incomingLives ?? currentLives;
+  const nextScore = incomingScore ?? currentScore;
+  const established = currentScore > 0 || currentLives < GAME.START_LIVES;
+  return established && nextLives === GAME.START_LIVES && nextScore === GAME.STARTING_SCORE;
+}
+
+/** Explode / clear the exploding flag. Shared by local, remote, and bot ships. */
+export function applySharedShipExplodingFlag(
+  ship: Pick<SharedShipCombatVisuals, 'exploding' | 'explode'>,
+  exploding: boolean | undefined,
+  cause = 'server-damage'
+): void {
+  if (exploding === true) {
+    if (!ship.exploding) {
+      ship.explode(cause);
+    }
+    return;
+  }
+  if (exploding === false) {
+    ship.exploding = false;
+  }
+}
+
+/** Arm blink after death→alive or when the server still has spawn protection. */
+export function applySharedShipRespawnCue(
+  ship: SharedShipCombatVisuals,
+  wasDeadOrExploding: boolean,
+  spawnProtectionTimer?: number
+): void {
+  if (wasDeadOrExploding && ship.health > 0) {
+    if (ship.exploding) {
+      ship.exploding = false;
+      ship.explodeTime = 0;
+    }
+    applyShipSpawnProtection(ship);
+    return;
+  }
+  if (
+    ship.health > 0 &&
+    ship.blinkCount <= 0 &&
+    spawnProtectionTimer !== undefined &&
+    spawnProtectionTimer > 0
+  ) {
+    applyShipSpawnProtection(ship);
+  }
+}
+
+/** Instant-kill wall contact: flash + shared takeDamage/explode path. */
+export function applyShipBoundaryDeath(ship: ShipLethalHitState, cause = 'boundary'): void {
+  applyShipImpactFlash(ship);
+  if (!ship.exploding) {
+    ship.takeDamage(DAMAGE.BOUNDARY_COLLISION, cause);
+  }
 }
 
 /** True when a ship must not report or receive collision damage. */
@@ -51,10 +141,6 @@ export function canTakeCollisionDamage(
     return false;
   }
   return true;
-}
-
-export interface ShipImpactFlashState {
-  impactFlashFrames: number;
 }
 
 /** Short phosphor ring so a roid graze is visible before the server health packet. */

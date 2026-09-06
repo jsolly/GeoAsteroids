@@ -68,8 +68,8 @@ export class NetworkManager {
     velocity: Velocity;
     r: number;
     angle: number;
-    lives: number;
-    score: number;
+    lives?: number;
+    score?: number;
     exploding: boolean;
     thrusting?: boolean;
     health?: number;

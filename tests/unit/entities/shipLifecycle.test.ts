@@ -4,12 +4,40 @@ import { isStaleDeathPose } from '../../../server/core/EntityManager';
 import { SHIP } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import {
+  applyShipBoundaryDeath,
   applyShipSpawnProtection,
+  isServerRespawnActive,
   isShipCollisionImmune,
+  isSilentHudReset,
   shouldApplyDamagedHealth,
 } from '../../../src/entities/ship/shipUtils';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { Ship } from '../../../src/entities/ship/Ship';
+import { SHIP_KINDS } from '../scenarios/support/shipKinds';
+
+describe('shared ship HUD and respawn timers', () => {
+  test('respawnTimer 0 is not an active countdown', () => {
+    expect(isServerRespawnActive(undefined)).toBe(false);
+    expect(isServerRespawnActive(0)).toBe(false);
+    expect(isServerRespawnActive(12)).toBe(true);
+  });
+
+  test('established lives/score do not snap back to a fresh spawn', () => {
+    expect(isSilentHudReset(2, 210, 3, 0)).toBe(true);
+    expect(isSilentHudReset(3, 0, 3, 0)).toBe(false);
+    expect(isSilentHudReset(2, 210, 1, 210)).toBe(false);
+    expect(isSilentHudReset(2, 210)).toBe(false);
+  });
+
+  test.each(SHIP_KINDS)('$kind explodes and flashes on a boundary hit', ({ options }) => {
+    const ship = new Ship(options);
+    ship.health = 100;
+    applyShipBoundaryDeath(ship);
+    expect(ship.health).toBe(0);
+    expect(ship.exploding).toBe(true);
+    expect(ship.impactFlashFrames).toBeGreaterThan(0);
+  });
+});
 
 describe('shared ship collision immunity', () => {
   test('treats exploding, dead, and blinking ships as immune', () => {

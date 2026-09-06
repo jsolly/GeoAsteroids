@@ -12,6 +12,8 @@ import { createLaser } from '../laser/laserUtils';
 import { drawThruster } from './shipRenderer';
 
 import {
+  applySharedShipExplodingFlag,
+  applySharedShipRespawnCue,
   applyShipSpawnProtection,
   calculateHealthAfterDamage,
   calculateHealthAfterHeal,
@@ -297,8 +299,6 @@ class Ship {
           velocity: this.velocity,
           r: this.r,
           angle: this.angle,
-          lives: 0, // This will be updated by server
-          score: 0, // This will be updated by server
           exploding: this.exploding,
           thrusting: this.thrusting,
         });
@@ -364,24 +364,17 @@ class Ship {
     exploding?: boolean;
     health?: number;
     maxHealth?: number;
+    spawnProtectionTimer?: number;
   }): void {
-    const wasDead = this.health <= 0 || this.exploding;
-    if (data.exploding === true) {
-      if (!this.exploding) {
-        this.explode('server-damage');
-      }
-    } else if (data.exploding === false) {
-      this.exploding = false;
-    }
+    const wasDeadOrExploding = this.health <= 0 || this.exploding;
+    applySharedShipExplodingFlag(this, data.exploding);
     if (data.health !== undefined) {
       this.health = data.health;
     }
     if (data.maxHealth !== undefined) {
       this.maxHealth = data.maxHealth;
     }
-    if (wasDead && this.health > 0) {
-      applyShipSpawnProtection(this);
-    }
+    applySharedShipRespawnCue(this, wasDeadOrExploding, data.spawnProtectionTimer);
   }
 
   getNetworkData(): {
