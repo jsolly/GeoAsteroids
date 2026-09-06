@@ -6,9 +6,18 @@ no v1 silhouettes.
 
 Stroke `#5EEAD4` on `#000011`. Play-scale target ~32px. Matt-blush outline Asteroids.
 
-Canonical sheets: `ship-silhouettes-contact-v2` / `ship-silhouettes-play-scale-v2`.
-Runtime + SVG source: `src/entities/ship/hullOutlines.ts`. Pack copies:
+Canonical sheets (John lock): `ship-silhouettes-contact-v2.png` /
+`ship-silhouettes-play-scale-v2.png`. Runtime + SVG source:
+`src/entities/ship/hullOutlines.ts`. Pack copies:
 `georoids-art/ships-v2/{dart,hauler,warden,skirmisher,quake}.svg`.
+
+Sheet construction (play-scale must still read class at a glance):
+
+- Dart — 4-point needle; two downward tail fins; small inverted-V notch
+- Hauler — squat barge; flat keel; vertical sides; single bow apex
+- Warden — tall delta with a large aft triangular notch + detached shield arc
+- Skirmisher — vertical parallel prongs; inners meet; outers taper to a point
+- Quake — triangular peak on two 90° rectangular terraces; wide flat base
 
 ## Kits (John lock — exactly five)
 

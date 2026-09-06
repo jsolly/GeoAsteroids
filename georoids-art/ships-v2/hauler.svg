@@ -4,6 +4,6 @@
   <title>hauler — barge-hex</title>
   <rect width="64" height="64" fill="#000011"/>
   <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M32 13.6 L23.2 24 L20 37.2 L24.8 52.4 L39.2 52.4 L44 37.2 L40.8 24 Z"/>
+    <path d="M32 19.6 L13.2 31.6 L13.2 41.2 L20.8 48 L43.2 48 L50.8 41.2 L50.8 31.6 Z"/>
   </g>
 </svg>

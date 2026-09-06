@@ -33,16 +33,14 @@ const DART_NEEDLE: HullOutline = {
   hull: {
     closed: true,
     points: [
-      { f: 1.28, p: 0 },
-      { f: 0.18, p: -0.14 },
-      { f: -0.98, p: -0.18 },
-      { f: -0.5, p: 0 },
-      { f: -0.98, p: 0.18 },
-      { f: 0.18, p: 0.14 },
+      { f: 1.34, p: 0 },
+      { f: -0.98, p: -0.15 },
+      { f: -0.64, p: 0 },
+      { f: -0.98, p: 0.15 },
     ],
   },
   extras: [],
-  thruster: { f: -0.5, p: 0 },
+  thruster: { f: -0.64, p: 0 },
 };
 
 const HAULER_BARGE_HEX: HullOutline = {
@@ -51,17 +49,17 @@ const HAULER_BARGE_HEX: HullOutline = {
   hull: {
     closed: true,
     points: [
-      { f: 1.02, p: 0 },
-      { f: 0.5, p: -0.44 },
-      { f: -0.16, p: -0.6 },
-      { f: -0.92, p: -0.36 },
-      { f: -0.92, p: 0.36 },
-      { f: -0.16, p: 0.6 },
-      { f: 0.5, p: 0.44 },
+      { f: 0.72, p: 0 },
+      { f: 0.12, p: -0.94 },
+      { f: -0.36, p: -0.94 },
+      { f: -0.7, p: -0.56 },
+      { f: -0.7, p: 0.56 },
+      { f: -0.36, p: 0.94 },
+      { f: 0.12, p: 0.94 },
     ],
   },
   extras: [],
-  thruster: { f: -0.92, p: 0 },
+  thruster: { f: -0.7, p: 0 },
 };
 
 const WARDEN_DELTA: HullOutline = {
@@ -70,26 +68,27 @@ const WARDEN_DELTA: HullOutline = {
   hull: {
     closed: true,
     points: [
-      { f: 1.02, p: 0 },
-      { f: -0.76, p: -0.54 },
-      { f: -0.76, p: 0.54 },
+      { f: 1.08, p: 0 },
+      { f: -0.88, p: -0.56 },
+      { f: -0.26, p: 0 },
+      { f: -0.88, p: 0.56 },
     ],
   },
   extras: [
     {
       closed: false,
       points: [
-        { f: 1.39, p: -0.33 },
-        { f: 1.49, p: -0.24 },
-        { f: 1.56, p: -0.13 },
+        { f: 1.4, p: -0.32 },
+        { f: 1.5, p: -0.22 },
+        { f: 1.56, p: -0.11 },
         { f: 1.58, p: 0 },
-        { f: 1.56, p: 0.13 },
-        { f: 1.49, p: 0.24 },
-        { f: 1.39, p: 0.33 },
+        { f: 1.56, p: 0.11 },
+        { f: 1.5, p: 0.22 },
+        { f: 1.4, p: 0.32 },
       ],
     },
   ],
-  thruster: { f: -0.76, p: 0 },
+  thruster: { f: -0.26, p: 0 },
 };
 
 const SKIRMISHER_Y_FORK: HullOutline = {
@@ -98,18 +97,18 @@ const SKIRMISHER_Y_FORK: HullOutline = {
   hull: {
     closed: true,
     points: [
-      { f: 1.22, p: 0.46 },
-      { f: 0.16, p: 0.1 },
-      { f: 0.06, p: 0 },
-      { f: 0.16, p: -0.1 },
-      { f: 1.22, p: -0.46 },
-      { f: 0, p: -0.28 },
-      { f: -1.1, p: 0 },
-      { f: 0, p: 0.28 },
+      { f: 1.26, p: 0.4 },
+      { f: 0.22, p: 0.12 },
+      { f: 0.1, p: 0 },
+      { f: 0.22, p: -0.12 },
+      { f: 1.26, p: -0.4 },
+      { f: 0.22, p: -0.4 },
+      { f: -1.08, p: 0 },
+      { f: 0.22, p: 0.4 },
     ],
   },
   extras: [],
-  thruster: { f: -1.1, p: 0 },
+  thruster: { f: -1.08, p: 0 },
 };
 
 const QUAKE_TERRACED_MOUNTAIN: HullOutline = {
@@ -118,25 +117,21 @@ const QUAKE_TERRACED_MOUNTAIN: HullOutline = {
   hull: {
     closed: true,
     points: [
-      { f: 1.16, p: 0 },
-      { f: 0.52, p: -0.2 },
-      { f: 0.52, p: -0.36 },
-      { f: -0.08, p: -0.36 },
-      { f: -0.08, p: -0.54 },
-      { f: -0.72, p: -0.54 },
-      { f: -0.72, p: -0.7 },
-      { f: -1, p: -0.7 },
-      { f: -1, p: 0.7 },
-      { f: -0.72, p: 0.7 },
-      { f: -0.72, p: 0.54 },
-      { f: -0.08, p: 0.54 },
-      { f: -0.08, p: 0.36 },
-      { f: 0.52, p: 0.36 },
-      { f: 0.52, p: 0.2 },
+      { f: 1.18, p: 0 },
+      { f: 0.4, p: -0.24 },
+      { f: 0.4, p: -0.5 },
+      { f: -0.18, p: -0.5 },
+      { f: -0.18, p: -0.8 },
+      { f: -0.98, p: -0.8 },
+      { f: -0.98, p: 0.8 },
+      { f: -0.18, p: 0.8 },
+      { f: -0.18, p: 0.5 },
+      { f: 0.4, p: 0.5 },
+      { f: 0.4, p: 0.24 },
     ],
   },
   extras: [],
-  thruster: { f: -1, p: 0 },
+  thruster: { f: -0.98, p: 0 },
 };
 
 const V2_HULL_OUTLINES: Record<ShipKitId, HullOutline> = {

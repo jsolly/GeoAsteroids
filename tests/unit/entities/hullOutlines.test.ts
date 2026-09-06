@@ -45,9 +45,10 @@ test('each kit bakes a unique v2 topology', () => {
   expect(new Set(fingerprints).size).toBe(5);
 });
 
-test('Dart needle keeps an inverted-V aft notch', () => {
+test('Dart needle is a four-point isosceles with an inverted-V aft notch', () => {
   const dart = getKitHullOutline('dart');
   expect(dart.topology).toBe('needle');
+  expect(dart.hull.points).toHaveLength(4);
   const minF = Math.min(...dart.hull.points.map((point) => point.f));
   const wings = dart.hull.points.filter((point) => point.f === minF);
   expect(wings).toHaveLength(2);
@@ -55,20 +56,32 @@ test('Dart needle keeps an inverted-V aft notch', () => {
   expect(notch).toBeTruthy();
 });
 
-test('Hauler barge hex has a faceted bow and a flat keel', () => {
+test('Hauler barge hex is squat with a pointed bow, vertical sides, and a flat keel', () => {
   const hauler = getKitHullOutline('hauler');
   expect(hauler.topology).toBe('barge-hex');
   const minF = Math.min(...hauler.hull.points.map((point) => point.f));
+  const maxF = Math.max(...hauler.hull.points.map((point) => point.f));
+  const maxP = Math.max(...hauler.hull.points.map((point) => Math.abs(point.p)));
   const keel = hauler.hull.points.filter((point) => point.f === minF);
   expect(keel).toHaveLength(2);
   const bow = hauler.hull.points.reduce((best, point) => (point.f > best.f ? point : best));
   expect(bow.p).toBe(0);
+  expect(maxP * 2).toBeGreaterThan(maxF - minF);
+  const vertical = [...new Set(hauler.hull.points.map((point) => point.p))].filter(
+    (p) => hauler.hull.points.filter((point) => point.p === p).length >= 2
+  );
+  expect(vertical.length).toBeGreaterThanOrEqual(2);
 });
 
-test('Warden keeps a detached forward shield arc', () => {
+test('Warden is a notched delta with a detached forward shield arc', () => {
   const warden = getKitHullOutline('warden');
   expect(warden.topology).toBe('delta-shield-arc');
-  expect(warden.hull.points).toHaveLength(3);
+  expect(warden.hull.points).toHaveLength(4);
+  const minF = Math.min(...warden.hull.points.map((point) => point.f));
+  const aft = warden.hull.points.filter((point) => point.f === minF);
+  expect(aft).toHaveLength(2);
+  const notch = warden.hull.points.find((point) => point.p === 0 && point.f > minF && point.f < 0);
+  expect(notch).toBeTruthy();
   expect(warden.extras).toHaveLength(1);
   const arc = warden.extras[0];
   expect(arc?.closed).toBe(false);
@@ -77,16 +90,21 @@ test('Warden keeps a detached forward shield arc', () => {
   expect(arcMinF).toBeGreaterThan(apex.f);
 });
 
-test('Skirmisher is a Y-fork with two forward prongs', () => {
+test('Skirmisher is a Y-fork with vertical prongs and a pointed aft', () => {
   const skirmisher = getKitHullOutline('skirmisher');
   expect(skirmisher.topology).toBe('y-fork');
   const tips = skirmisher.hull.points.filter((point) => point.f > 1);
   expect(tips).toHaveLength(2);
   expect(tips.every((tip) => Math.abs(tip.p) > 0.3)).toBe(true);
+  expect(tips[0] && tips[1] && tips[0].f === tips[1].f).toBe(true);
   const valley = skirmisher.hull.points.find(
     (point) => point.p === 0 && point.f > 0 && point.f < 0.2
   );
   expect(valley).toBeTruthy();
+  const vertical = tips.filter((tip) =>
+    skirmisher.hull.points.some((point) => point.p === tip.p && point.f < tip.f)
+  );
+  expect(vertical).toHaveLength(2);
 });
 
 test('Quake is a terraced mountain with a triangular peak', () => {

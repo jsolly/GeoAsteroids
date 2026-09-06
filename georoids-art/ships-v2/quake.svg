@@ -4,6 +4,6 @@
   <title>quake — terraced-mountain</title>
   <rect width="64" height="64" fill="#000011"/>
   <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M32 10.8 L28 23.6 L24.8 23.6 L24.8 35.6 L21.2 35.6 L21.2 48.4 L18 48.4 L18 54 L46 54 L46 48.4 L42.8 48.4 L42.8 35.6 L39.2 35.6 L39.2 23.6 L36 23.6 Z"/>
+    <path d="M32 10.4 L27.2 26 L22 26 L22 37.6 L16 37.6 L16 53.6 L48 53.6 L48 37.6 L42 37.6 L42 26 L36.8 26 Z"/>
   </g>
 </svg>

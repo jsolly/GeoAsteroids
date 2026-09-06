@@ -40,4 +40,6 @@ dist/*
 !/georoids-art/saucer-silhouette-svgish.png
 # AD v2 player-kit hull bake (topology only; no v1 sheets)
 !/georoids-art/ships-v2/*.svg
+!/georoids-art/ship-silhouettes-contact-v2.png
+!/georoids-art/ship-silhouettes-play-scale-v2.png
 

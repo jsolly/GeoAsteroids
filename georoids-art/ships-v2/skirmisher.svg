@@ -4,6 +4,6 @@
   <title>skirmisher — y-fork</title>
   <rect width="64" height="64" fill="#000011"/>
   <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M41.2 9.6 L34 30.8 L32 32.8 L30 30.8 L22.8 9.6 L26.4 34 L32 56 L37.6 34 Z"/>
+    <path d="M40 8.8 L34.4 29.6 L32 32 L29.6 29.6 L24 8.8 L24 29.6 L32 55.6 L40 29.6 Z"/>
   </g>
 </svg>
