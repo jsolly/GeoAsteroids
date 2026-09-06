@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { WebSocket } from 'ws';
+import type { BotShot } from '../../../server/ai/botController';
 import { ARENA_RADIUS, CONTAIN_RADIUS } from '../../../server/ai/shipMotion';
 import { GameEngine } from '../../../server/core/GameEngine';
 import type { GameEntity } from '../../../server/core/EntityManager';
@@ -56,7 +57,7 @@ describe('bot combat feel on the shared ship hull', () => {
     bot.angle = 0;
     parkHumanInFront(engine, bot);
 
-    let shots = [];
+    let shots: BotShot[] = [];
     for (let i = 0; i < 20; i++) {
       shots = engine.updateBotMovement();
       if (shots.length > 0) {
