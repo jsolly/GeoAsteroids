@@ -13,7 +13,10 @@ import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
-import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
+import {
+  applyAsteroidKinematics,
+  applyAsteroidRowToBelt,
+} from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
@@ -174,10 +177,14 @@ export class GameController {
     applyAsteroidKinematics(roid, asteroid, { snapPosition: true });
 
     // Override shape properties to match server exactly. Keep the factory
-    // silhouette when the snapshot omits offsets — wiping to [] made the
-    // playfield skip every rock while the minimap still dotted positions.
-    roid.jaggedness = asteroid.jaggedness;
-    roid.vertices = asteroid.vertices;
+    // silhouette when the snapshot omits offsets / vertices — wiping those
+    // made the playfield skip every rock while the minimap still dotted.
+    if (asteroid.jaggedness !== undefined) {
+      roid.jaggedness = asteroid.jaggedness;
+    }
+    if (asteroid.vertices !== undefined) {
+      roid.vertices = asteroid.vertices;
+    }
     if (asteroid.offsets && asteroid.offsets.length > 0) {
       roid.offsets.length = 0;
       roid.offsets.push(...asteroid.offsets);
@@ -203,13 +210,19 @@ export class GameController {
     const { asteroidId, updates } = customEvent.detail;
     logger.debug('GAME', 'Updating server asteroid in local belt', { asteroidId });
 
-    // Find and update the asteroid in the local belt
-    if (this.currRoidBelt) {
-      const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
-      if (roid && updates) {
-        applyAsteroidKinematics(roid, updates);
-      }
+    if (!this.currRoidBelt || !updates) {
+      return;
     }
+    applyAsteroidRowToBelt(
+      (id) => this.currRoidBelt.roids.find((roid) => roid.id === id),
+      asteroidId,
+      updates,
+      (asteroid) => {
+        this.handleServerAsteroidCreated(
+          new CustomEvent('serverAsteroidCreated', { detail: { asteroid } })
+        );
+      }
+    );
   };
 
   private handleServerAsteroidDestroyed = (event: Event): void => {

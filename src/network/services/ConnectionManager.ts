@@ -15,7 +15,7 @@ import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
-import { asteroidKinematicUpdates, partitionAsteroidSnapshot } from './asteroidFieldSync';
+import { partitionAsteroidSnapshot } from './asteroidFieldSync';
 import { readOrCreateClientId } from './clientIdentity';
 import {
   CONNECTION_STALE_TIMEOUT_MS,
@@ -663,7 +663,8 @@ export class ConnectionManager {
         new CustomEvent('serverAsteroidUpdated', {
           detail: {
             asteroidId: asteroid.id,
-            updates: asteroidKinematicUpdates(asteroid),
+            // Full row so a missing local rock can still be created (heal).
+            updates: asteroid,
           },
         })
       );
