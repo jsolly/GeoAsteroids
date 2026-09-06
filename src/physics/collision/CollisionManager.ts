@@ -18,13 +18,13 @@ import { applyShipBoundaryDeath, isShipCollisionImmune } from '../../entities/sh
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { isAsteroidPending, lockAsteroidPending } from './asteroidHitFeel';
-import { asteroidDestroyedMessage, laserHitDamageMessage } from './combatMessages';
 import {
   checkBoundaryCollision,
   checkLaserAsteroidCollisionSwept,
   checkLaserShipCollision,
   checkShipCollision,
 } from './collisionDetection';
+import { asteroidDestroyedMessage, laserHitDamageMessage } from './combatMessages';
 
 export interface LaserTarget {
   ship: Ship;

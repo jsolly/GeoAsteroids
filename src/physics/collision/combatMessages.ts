@@ -1,5 +1,5 @@
 import { DAMAGE } from '../../constants';
-import { isBot, isLocal, isRemote, type Combatant } from '../../entities/player/playerKinds';
+import { type Combatant, isBot, isLocal, isRemote } from '../../entities/player/playerKinds';
 import { pointsForRoidSize } from '../../entities/roid/roidScore';
 
 export function laserHitDamageMessage(
