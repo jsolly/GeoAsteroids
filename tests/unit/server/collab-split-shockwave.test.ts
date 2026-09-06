@@ -27,11 +27,16 @@ function waitForOneShotLargeId(ws: WebSocket): Promise<string> {
             size?: number;
             isCollabTarget?: boolean;
           }>;
+          const fallback = rocks[0];
           const oneShot = rocks.find(
             (rock) => !rock.isCollabTarget && (rock.size ?? 0) >= ROID.COLLAB_SPLIT_MIN_SIZE
           );
+          const target = oneShot ?? fallback;
+          if (!target) {
+            return;
+          }
           clearTimeout(timeout);
-          resolve((oneShot ?? rocks[0]).id);
+          resolve(target.id);
         } else if (msg?.type === 'asteroidCreate' && msg?.data?.asteroid?.id) {
           clearTimeout(timeout);
           resolve(msg.data.asteroid.id);

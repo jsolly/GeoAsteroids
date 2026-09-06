@@ -6,8 +6,8 @@ import {
   resetThrustSources,
   thrustSourcesFromPlayers,
 } from '../audio/gameSounds';
-import { playSplitSound } from '../audio/splitSound';
 import { bindGameAudio } from '../audio/spatialAudio';
+import { playSplitSound } from '../audio/splitSound';
 import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
 import { LootField } from '../entities/loot/LootField';
@@ -16,7 +16,6 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
-import { shockwaveManager } from '../fx/ShockwaveManager';
 import {
   bindHarpoonFieldSource,
   collectPlayHarpoonField,
@@ -24,6 +23,7 @@ import {
   publishHarpoonField,
 } from '../entities/ship/harpoonField';
 import type { Ship } from '../entities/ship/Ship';
+import { shockwaveManager } from '../fx/ShockwaveManager';
 import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
 import {
@@ -33,13 +33,13 @@ import {
   unbindAsteroidFieldApply,
 } from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
-import { applyShockwaveToBody, type ShockwaveWaveSpec } from '../physics/shockwave';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import {
   CollisionManager,
   type LaserCollisionOptions,
   type LaserTarget,
 } from '../physics/collision/CollisionManager';
+import { applyShockwaveToBody, type ShockwaveWaveSpec } from '../physics/shockwave';
 import { contourSegmentCount } from '../physics/terrain/contours';
 import { sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
 import {
