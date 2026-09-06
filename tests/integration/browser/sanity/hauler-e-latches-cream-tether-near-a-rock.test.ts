@@ -31,8 +31,9 @@ test('Hauler E near a rock latches and paints cream tether plus amber tip', asyn
     if (!ship || !rock) {
       return { ok: false, reason: 'missing ship or rock' };
     }
-    // Live QA: ~280wu, KeyE — not an 80wu teleport + activateAbility() cheat.
-    ship.position.x = rock.position.x - 220;
+    // Live QA: 1:1 "near" is often 400–900wu. #480's 220wu KeyE sat inside
+    // the old 320wu cap and passed while production still missed.
+    ship.position.x = rock.position.x - 520;
     ship.position.y = rock.position.y;
     ship.angle = 0;
     ship.abilityCooldownFrames = 0;

@@ -140,6 +140,7 @@ export class Player {
     shieldTimer?: number;
     harpoonTimer?: number;
     harpoonTargetId?: string;
+    harpoonLatchPos?: { x: number; y: number };
     shieldActive?: boolean;
     shieldTime?: number;
     shieldCooldown?: number;
@@ -373,6 +374,7 @@ export class Player {
       {
         ...(data.harpoonTimer !== undefined ? { harpoonTimer: data.harpoonTimer } : {}),
         ...(data.harpoonTargetId !== undefined ? { harpoonTargetId: data.harpoonTargetId } : {}),
+        ...(data.harpoonLatchPos !== undefined ? { harpoonLatchPos: data.harpoonLatchPos } : {}),
       },
       this.type === 'local' ? 'predicting' : 'authoritative'
     );

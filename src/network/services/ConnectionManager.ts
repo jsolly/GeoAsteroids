@@ -18,6 +18,7 @@ import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyRemoteShoot } from '../../entities/player/remoteLasers';
+import { applyShipKitToShip } from '../../entities/ship/shipKits';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { applyTerrainSeed } from '../../physics/terrain/terrainSession';
 import { getSelectedShipKitId } from '../../ui/shipKitSelect';
@@ -447,6 +448,10 @@ export class ConnectionManager {
     const localPlayer = PlayerManager.getInstance().getLocalPlayer();
     if (localPlayer) {
       localPlayer.id = this.clientId;
+      const selectedKit = getSelectedShipKitId();
+      if (localPlayer.ship.kitId !== selectedKit) {
+        applyShipKitToShip(localPlayer.ship, selectedKit);
+      }
     }
 
     // Get the player's current position
@@ -615,6 +620,7 @@ export class ConnectionManager {
             abilityId?: string;
             harpoonTimer?: number;
             harpoonTargetId?: string;
+            harpoonLatchPos?: Position;
           }
         );
         break;
@@ -631,6 +637,7 @@ export class ConnectionManager {
     id?: string;
     harpoonTimer?: number;
     harpoonTargetId?: string;
+    harpoonLatchPos?: Position;
   }): void {
     if (!data.id) {
       return;
@@ -641,15 +648,14 @@ export class ConnectionManager {
     if (!entity) {
       return;
     }
-    entity.updateFromServer({
+    const latch = {
       ...(data.harpoonTimer !== undefined ? { harpoonTimer: data.harpoonTimer } : {}),
       ...(data.harpoonTargetId !== undefined ? { harpoonTargetId: data.harpoonTargetId } : {}),
-    });
+      ...(data.harpoonLatchPos !== undefined ? { harpoonLatchPos: data.harpoonLatchPos } : {}),
+    };
+    entity.updateFromServer(latch);
     if (localPlayer && localPlayer !== entity && localPlayer.id === data.id) {
-      localPlayer.updateFromServer({
-        ...(data.harpoonTimer !== undefined ? { harpoonTimer: data.harpoonTimer } : {}),
-        ...(data.harpoonTargetId !== undefined ? { harpoonTargetId: data.harpoonTargetId } : {}),
-      });
+      localPlayer.updateFromServer(latch);
     }
   }
 

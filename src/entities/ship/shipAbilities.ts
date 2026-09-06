@@ -1,7 +1,13 @@
 import { areAllied } from '../../../shared/factions';
 import { trySpendTrackedEmpFuel } from '../../../shared/fuel';
 import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
-import { getHarpoonField, getHarpoonFieldScale, syncHarpoonFieldFromPlay } from './harpoonField';
+import {
+  findHarpoonFieldBody,
+  getHarpoonField,
+  getHarpoonFieldCanvas,
+  getHarpoonFieldScale,
+  syncHarpoonFieldFromPlay,
+} from './harpoonField';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId, type ShipKitId } from './shipKits';
 
 export interface AbilityHost {
@@ -41,6 +47,8 @@ export interface AbilityBody {
 export interface AbilityWorld {
   asteroids: AbilityBody[];
   entities: AbilityBody[];
+  playfieldScale?: number;
+  canvas?: { width: number; height: number };
 }
 
 export interface AbilityActivation {
@@ -51,6 +59,24 @@ export interface AbilityActivation {
 export interface HarpoonLatchSnapshot {
   harpoonTimer?: number;
   harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
+}
+
+/** Used when KeyE fires before the first render publishes a canvas. */
+const DEFAULT_LATCH_CANVAS = { width: 1280, height: 720 };
+
+function rememberLatchPos(
+  host: Pick<AbilityHost, 'harpoonTargetId' | 'harpoonLatchPos'>,
+  snapshot?: HarpoonLatchSnapshot
+): void {
+  if (snapshot?.harpoonLatchPos) {
+    host.harpoonLatchPos = { x: snapshot.harpoonLatchPos.x, y: snapshot.harpoonLatchPos.y };
+    return;
+  }
+  const body = findHarpoonFieldBody(host.harpoonTargetId);
+  if (body) {
+    host.harpoonLatchPos = { x: body.position.x, y: body.position.y };
+  }
 }
 
 function headingVelocity(angle: number, magnitude: number): Velocity {
@@ -144,6 +170,7 @@ export function applySharedHarpoonLatch(
     if (snapshot.harpoonTargetId !== undefined) {
       host.harpoonTargetId = snapshot.harpoonTargetId || undefined;
     }
+    rememberLatchPos(host, snapshot);
     return;
   }
   if (role === 'predicting') {
@@ -197,14 +224,24 @@ export function harpoonSurfaceGap(
 }
 
 /**
- * World-unit latch reach. A rock that looks next to the ship (zoomed or 1:1
- * on a large canvas) must still hook — #477's 2.5x cap left 700–1200wu
- * "adjacent" rocks outside range, and scale>=1 never widened at all.
+ * World-unit latch reach from what the pilot can see.
+ * #480 used max(280, 320px / scale) capped at 1600wu. On a 1:1 1080p view
+ * that is 320wu — a rock 400–900px from the ship looks adjacent and misses.
+ * Deep zoom (scale 0.1) turned a 200px-near rock into 2000wu and the cap
+ * dropped it. Reach is the on-screen half-diagonal / scale so "near on
+ * this canvas" latches at 1:1 and zoomed.
  */
-export function harpoonLatchRange(playfieldScale = 1): number {
+export function harpoonLatchRange(
+  playfieldScale = 1,
+  canvas?: { width: number; height: number }
+): number {
   const scale = Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : 1;
-  const visual = SHIP_ABILITY.HARPOON_VISUAL_PX / scale;
-  return Math.min(Math.max(SHIP_ABILITY.HARPOON_RANGE, visual), SHIP_ABILITY.HARPOON_RANGE_MAX);
+  const view = canvas && canvas.width > 0 && canvas.height > 0 ? canvas : DEFAULT_LATCH_CANVAS;
+  const onScreen = Math.hypot(view.width, view.height) / 2 / scale;
+  return Math.min(
+    Math.max(SHIP_ABILITY.HARPOON_RANGE, onScreen, SHIP_ABILITY.HARPOON_VISUAL_PX / scale),
+    SHIP_ABILITY.HARPOON_RANGE_MAX
+  );
 }
 
 export function findHarpoonTarget(
@@ -340,9 +377,10 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
     if (host.kitId !== 'hauler') {
       return { activated: false };
     }
-    const latchRange = world
-      ? SHIP_ABILITY.HARPOON_RANGE
-      : harpoonLatchRange(getHarpoonFieldScale());
+    const latchRange = harpoonLatchRange(
+      world?.playfieldScale ?? getHarpoonFieldScale(),
+      world?.canvas ?? getHarpoonFieldCanvas()
+    );
     const target = findHarpoonTarget(host, listHarpoonCandidates(resolved), latchRange);
     if (!target?.id) {
       return { activated: false };

@@ -8,7 +8,7 @@ import { getBuildInfoString } from '../utils/buildInfo';
 import { applyLockedPaletteCss } from '../utils/colorUtils';
 import { attachEventListener, getElementById } from '../utils/dom';
 import { logger } from '../utils/Logger';
-import { mountShipKitSelect } from './shipKitSelect';
+import { getSelectedShipKitId, mountShipKitSelect } from './shipKitSelect';
 import { controlsHintFor } from './viewportChrome';
 
 // UI element references
@@ -164,7 +164,7 @@ function startGameWithName(): void {
   startGameBtn?.classList.add('active-mode');
 
   // Start the game (this will set the player name)
-  getGameController().startGame(playerName);
+  getGameController().startGame(playerName, getSelectedShipKitId());
 }
 
 // Set up player name input to allow Enter key to start game

@@ -202,6 +202,7 @@ export interface ServerEntityData {
   shieldTimer?: number;
   harpoonTimer?: number;
   harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
   /** Last killer token (boundary, asteroid, player/bot id). Omitted after respawn. */
   deathCause?: string;
   shieldActive?: boolean;

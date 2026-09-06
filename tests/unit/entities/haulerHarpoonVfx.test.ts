@@ -19,6 +19,13 @@ test('tether VFX is Hauler-only while latched', () => {
     false
   );
   expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTimer: 40 })).toBe(false);
+  expect(
+    canDrawHaulerHarpoon({
+      kitId: 'hauler',
+      harpoonTimer: 40,
+      harpoonLatchPos: { x: 40, y: 0 },
+    })
+  ).toBe(true);
 });
 
 test('PASS bar cream line and amber tip are exact hex', () => {
@@ -26,12 +33,12 @@ test('PASS bar cream line and amber tip are exact hex', () => {
   expect(HAULER_TETHER_TIP_COLOR).toBe('#FDE68A');
 });
 
-test('short zoomed tethers stay solid and thicken under playfield zoom', () => {
+test('tethers stay solid cream and thicken under playfield zoom', () => {
   expect(harpoonTetherStyle(8).dash).toEqual([]);
   expect(harpoonTetherStyle(8).ring).toBeGreaterThanOrEqual(14);
-  expect(harpoonTetherStyle(80).dash).toEqual([8, 5]);
+  expect(harpoonTetherStyle(80).dash).toEqual([]);
   expect(harpoonTetherStyle(80, 0.25).lineWidth).toBeGreaterThan(harpoonTetherStyle(80, 1).lineWidth);
-  expect(harpoonTetherStyle(80, 1).lineWidth).toBeGreaterThanOrEqual(4);
+  expect(harpoonTetherStyle(80, 1).lineWidth).toBeGreaterThanOrEqual(5);
 });
 
 test('tether VFX can resolve a latched ship from the shared field', () => {

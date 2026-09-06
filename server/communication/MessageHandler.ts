@@ -426,7 +426,20 @@ export class MessageHandler {
       this.broadcaster.sendError(ws, 'Missing player ID for useAbility');
       return;
     }
-    const activated = this.gameEngine.useAbility(playerId, data.kitId);
+    const canvasWidth = Number(data.canvasWidth);
+    const canvasHeight = Number(data.canvasHeight);
+    const playfieldScale = Number(data.playfieldScale);
+    const activated = this.gameEngine.useAbility(playerId, data.kitId, {
+      playfieldScale:
+        Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : undefined,
+      canvas:
+        Number.isFinite(canvasWidth) &&
+        Number.isFinite(canvasHeight) &&
+        canvasWidth > 0 &&
+        canvasHeight > 0
+          ? { width: canvasWidth, height: canvasHeight }
+          : undefined,
+    });
     if (!activated) {
       return;
     }
@@ -439,6 +452,7 @@ export class MessageHandler {
         abilityId: data.abilityId,
         harpoonTimer: entity?.harpoonTimer,
         harpoonTargetId: entity?.harpoonTargetId,
+        harpoonLatchPos: entity?.harpoonLatchPos,
       },
       timestamp: Date.now(),
     });

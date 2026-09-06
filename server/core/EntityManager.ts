@@ -66,6 +66,7 @@ export interface GameEntity extends ShieldState {
   shieldTimer: number;
   harpoonTimer: number;
   harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
   /** Killer of the current death (cleared on respawn). */
   deathCause?: string;
 }

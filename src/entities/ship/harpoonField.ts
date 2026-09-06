@@ -17,11 +17,13 @@ export interface HarpoonFieldBody {
 
 let field: readonly HarpoonFieldBody[] = [];
 let fieldScale = 1;
+let fieldCanvas: { width: number; height: number } | undefined;
 const lastKnown = new Map<string, HarpoonFieldBody>();
 
 export type HarpoonFieldSnapshot = {
   bodies: readonly HarpoonFieldBody[];
   playfieldScale?: number;
+  canvas?: { width: number; height: number };
 };
 
 type HarpoonFieldSource = () => HarpoonFieldSnapshot | null | undefined;
@@ -37,16 +39,23 @@ export function bindHarpoonFieldSource(source: HarpoonFieldSource | null): void 
 export function syncHarpoonFieldFromPlay(): readonly HarpoonFieldBody[] {
   const snapshot = fieldSource?.();
   if (snapshot) {
-    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale ?? fieldScale);
+    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale ?? fieldScale, snapshot.canvas);
   }
   return field;
 }
 
 /** Playfield snapshot for local latch + tether VFX. Server uses its own lists. */
-export function publishHarpoonField(bodies: readonly HarpoonFieldBody[], playfieldScale = 1): void {
+export function publishHarpoonField(
+  bodies: readonly HarpoonFieldBody[],
+  playfieldScale = 1,
+  canvas?: { width: number; height: number }
+): void {
   field = bodies;
   if (Number.isFinite(playfieldScale) && playfieldScale > 0) {
     fieldScale = playfieldScale;
+  }
+  if (canvas && canvas.width > 0 && canvas.height > 0) {
+    fieldCanvas = { width: canvas.width, height: canvas.height };
   }
   for (const body of bodies) {
     lastKnown.set(body.id, body);
@@ -59,6 +68,10 @@ export function getHarpoonField(): readonly HarpoonFieldBody[] {
 
 export function getHarpoonFieldScale(): number {
   return fieldScale;
+}
+
+export function getHarpoonFieldCanvas(): { width: number; height: number } | undefined {
+  return fieldCanvas;
 }
 
 function idsMatch(left: string, right: string): boolean {
