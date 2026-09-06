@@ -48,15 +48,21 @@ describe('Game-over returns to the menu', () => {
     expect(text.toLowerCase()).not.toContain('unknown');
   });
 
-  test('the menu comes back after the short overlay, not a long stall', async () => {
+  test('the overlay is 3.5s — the game stops then, not after a long stall', async () => {
     GameController.getInstance().gameOver('boundary');
 
     expect(GameStateManager.getInstance().getIsGameRunning()).toBe(true);
-    expect(document.getElementById('gameArea')?.style.display).not.toBe('none');
+    await vi.advanceTimersByTimeAsync(GAME_OVER_OVERLAY_MS - 1);
+    expect(GameStateManager.getInstance().getIsGameRunning()).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(GAME_OVER_OVERLAY_MS);
-
+    await vi.advanceTimersByTimeAsync(1);
     expect(GameStateManager.getInstance().getIsGameRunning()).toBe(false);
+  });
+
+  test('the game-over menu returns to the start screen', async () => {
+    const { showGameOverMenu } = await import('../../../../src/ui/mainMenu');
+    showGameOverMenu();
+
     expect(document.getElementById('start-screen')?.style.display).toBe('block');
     expect(document.getElementById('gameArea')?.style.display).toBe('none');
   });
