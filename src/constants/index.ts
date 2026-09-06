@@ -58,6 +58,8 @@ export const PALETTE = {
   REMOTE: '#7DD3FC',
   BOT: '#FB923C',
   ROID: '#94A3B8',
+  /** Darker than HUD_MUTED so topo lines stay behind ships/lasers/roids. */
+  CONTOUR: '#334155',
   LASER_LOCAL: '#FDE68A',
   LASER_ENEMY: '#FCA5A5',
   HUD: '#E2E8F0',
@@ -127,6 +129,11 @@ export const VISUAL = {
   SCORE_FONT: '14px Arial',
   NAME_LABEL_FONT: '11px Arial',
   NAME_LABEL_ALPHA: 0.4,
+  // Iso-contours: hairline slate, no glow. Index lines are only slightly stronger.
+  CONTOUR_STROKE_WIDTH: 1,
+  CONTOUR_ALPHA: 0.16,
+  CONTOUR_INDEX_ALPHA: 0.24,
+  CONTOUR_INDEX_EVERY: 3,
 } as const;
 
 // ============================================================================

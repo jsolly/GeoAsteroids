@@ -23,6 +23,13 @@ import {
 import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
+import { contourSegmentCount } from '../physics/terrain/contours';
+import { sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
+import {
+  getTerrainContours,
+  getTerrainField,
+  getTerrainSeed,
+} from '../physics/terrain/terrainSession';
 import { canvasManager } from '../rendering/canvas';
 import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { setPlayView } from '../ui/uiUtils';
@@ -539,6 +546,23 @@ export class GameController {
 
   getPlayerManager(): PlayerManager {
     return this.playerManager;
+  }
+
+  /** Probe the shared heightfield — used by tests to read elevation / slope. */
+  getTerrainProbe(position?: { x: number; y: number }): {
+    seed: number;
+    height: number;
+    gradient: { x: number; y: number };
+    contourCount: number;
+  } {
+    const field = getTerrainField();
+    const at = position ?? this.playerManager.getLocalShip()?.position ?? { x: 0, y: 0 };
+    return {
+      seed: getTerrainSeed(),
+      height: sampleHeight(field, at.x, at.y),
+      gradient: sampleGradient(field, at.x, at.y),
+      contourCount: contourSegmentCount(getTerrainContours()),
+    };
   }
 
   // Connection error handling methods

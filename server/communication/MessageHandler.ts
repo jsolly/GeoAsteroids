@@ -174,6 +174,7 @@ export class MessageHandler {
         color: player.color,
         kitId: player.kitId,
         factionId: player.factionId,
+        terrainSeed: this.gameEngine.getTerrainSeed(),
       },
       timestamp: Date.now(),
     });

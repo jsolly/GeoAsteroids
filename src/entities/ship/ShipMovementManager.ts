@@ -1,5 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { GAME, SHIP } from '../../constants';
+import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 
 export interface ShipMovementState {
@@ -39,6 +40,14 @@ export function applyVelocity(state: ShipMovementState): void {
     // Use player-specific friction coefficient
     state.velocity = multiplyVelocity(state.velocity, 1 - state.frictionCoefficient / GAME.FPS);
     state.thrusterActive = false;
+  }
+
+  applySharedShipSlope(state.velocity, state.position);
+  const currentSpeed = Math.hypot(state.velocity.x, state.velocity.y);
+  if (currentSpeed > SHIP.MAX_VELOCITY) {
+    const scale = SHIP.MAX_VELOCITY / currentSpeed;
+    state.velocity.x *= scale;
+    state.velocity.y *= scale;
   }
 }
 

@@ -5,6 +5,7 @@ import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
+import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
 import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
@@ -218,6 +219,9 @@ class Ship {
       const frictionCoeff = this.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
       this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / GAME.FPS);
     }
+
+    applySharedShipSlope(this.velocity, this.position);
+    this.capVelocity();
   }
 
   move(): void {
@@ -742,8 +746,20 @@ class Ship {
       this.velocity = multiplyVelocity(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
     }
 
+    applySharedShipSlope(this.velocity, this.position);
+    this.capVelocity();
+
     // Update position based on velocity
     this.position = addPositionAndVelocity(this.position, this.velocity);
+  }
+
+  private capVelocity(): void {
+    const currentSpeed = Math.hypot(this.velocity.x, this.velocity.y);
+    if (currentSpeed > this.maxVelocity) {
+      const scale = this.maxVelocity / currentSpeed;
+      this.velocity.x *= scale;
+      this.velocity.y *= scale;
+    }
   }
 
   // Smoothly approach target state for non-local ships
