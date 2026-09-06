@@ -2,8 +2,10 @@ import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
 import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
+import { canDrawAsteroid } from '../../entities/roid/roidRenderer';
 import type { Ship } from '../../entities/ship/Ship';
 import { getGameBoundary } from '../../physics/boundary';
+import { isAsteroidPending } from '../../physics/collision/asteroidHitFeel';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 
@@ -94,6 +96,9 @@ export function drawMiniMap(
     if (currRoidBelt) {
       const roids = currRoidBelt.getRoids();
       for (const roid of roids) {
+        if (isAsteroidPending(roid) || !canDrawAsteroid(roid)) {
+          continue;
+        }
         drawRoidMiniMap(ctx, roid, boundary, miniMapX, miniMapY, miniMapSize);
       }
     }

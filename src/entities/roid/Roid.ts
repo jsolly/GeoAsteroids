@@ -3,7 +3,7 @@ import { playHitSound as playHitSoundAt } from '../../audio/gameSounds';
 import { DEBUG, GAME, ROID } from '../../constants';
 import { stepAsteroidMotion } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
-import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import { getRandomPositionInAsteroidField } from '../../utils/spawnPosition';
 
 class Roid {
   id: string;
@@ -96,7 +96,7 @@ class RoidBelt {
 
   addRoid(): void {
     // Generate random position within boundary since roidSpawn was removed
-    const roidPosition = getRandomPositionWithinBoundary();
+    const roidPosition = getRandomPositionInAsteroidField();
     const size = DEBUG.ROIDS.ALL_LARGE ? ROID.SIZE : Math.ceil(ROID.SIZE / 2);
     this.roids.push(new Roid(roidPosition, size));
   }

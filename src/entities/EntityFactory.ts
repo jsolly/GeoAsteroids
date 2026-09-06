@@ -1,13 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
-import { CANVAS, DEBUG, PALETTE, SPAWN } from '../constants';
+import { PALETTE } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
 import { getFactionColor } from '../utils/colorUtils';
-import {
-  getRandomPositionNearBoundary,
-  getRandomPositionNearPoint,
-  getRandomPositionWithinBoundary,
-} from '../utils/positionUtils';
+import { getRandomPositionNearPoint } from '../utils/positionUtils';
+import { getRandomPositionInAsteroidField, resolveSpawnPosition } from '../utils/spawnPosition';
 import { Laser } from './laser/Laser';
 import { Player } from './player/Player';
 import { Roid, RoidBelt } from './roid/Roid';
@@ -177,27 +174,7 @@ export class EntityFactory {
   }
 
   private applyPlayerConfiguration(player: Player, config: PlayerConfig): void {
-    // Set position based on debug flags if none provided
-    // Priority: PLACE_PLAYERS_NEAR_BOUNDARY > PLACE_PLAYERS_NEAR_CENTER > default
-    let position: Position;
-    if (config.position) {
-      position = config.position;
-    } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
-      // Place near boundary when debug flag is enabled
-      position = getRandomPositionNearBoundary();
-    } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
-      // Place near center when debug flag is enabled
-      const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
-      position = getRandomPositionNearPoint(centerPosition, 150);
-    } else {
-      // Default: spawn near the arena center (world origin) so players joining
-      // the same server appear within view of each other. Spawning anywhere in
-      // the full boundary radius (~3100px) scatters players thousands of px
-      // apart, leaving them permanently off each other's screens even though
-      // the leaderboard lists everyone. See SPAWN.NEAR_CENTER_RADIUS.
-      position = getRandomPositionNearPoint({ x: 0, y: 0 }, SPAWN.NEAR_CENTER_RADIUS);
-    }
-    player.ship.position = position;
+    player.ship.position = resolveSpawnPosition(config.position);
 
     // Apply customizations
     if (config.color) {
@@ -253,18 +230,9 @@ export class EntityFactory {
 
     for (let i = 0; i < config.count; i++) {
       if (config.debugPlaceNearLocal && config.localPlayerPosition) {
-        // Place bots near the local player in debug mode
         positions.push(getRandomPositionNearPoint(config.localPlayerPosition, 200));
-      } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
-        // Place bots near boundary when debug flag is enabled
-        positions.push(getRandomPositionNearBoundary());
-      } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
-        // Place bots near center when debug flag is enabled
-        const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
-        positions.push(getRandomPositionNearPoint(centerPosition, 200));
       } else {
-        // Place bots randomly within the boundary (default behavior)
-        positions.push(getRandomPositionWithinBoundary());
+        positions.push(resolveSpawnPosition());
       }
     }
 
@@ -303,8 +271,7 @@ export class EntityFactory {
   }
 
   private generateRandomRoidPosition(): Position {
-    // Generate random position within boundary since roidSpawn was removed
-    return getRandomPositionWithinBoundary();
+    return getRandomPositionInAsteroidField();
   }
 }
 
