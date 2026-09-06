@@ -1,26 +1,30 @@
-import { PALETTE, SHIP, VISUAL } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
 import { hexToRgba } from '../../utils/colorUtils';
+
+import { layoutHudCluster } from './cluster';
 
 export function drawScoreOverlay(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  score: number
+  score: number,
+  lives: number
 ): void {
   ctx.save();
-  ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
+  ctx.fillStyle = PALETTE.HUD;
   ctx.font = VISUAL.SCORE_FONT;
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'middle';
 
-  const scoreY = 20 + SHIP.SIZE + 8;
-  ctx.fillText(score.toString(), 20, scoreY);
+  const { score: origin } = layoutHudCluster(lives);
+  ctx.fillText(score.toString(), origin.x, origin.y);
 
   const gameStateManager = GameStateManager.getInstance();
   if (gameStateManager.hasKillMessage()) {
     ctx.fillStyle = PALETTE.DANGER;
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
     ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, 12);
   }
 

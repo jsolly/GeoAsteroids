@@ -257,7 +257,7 @@ export class RenderEngine {
     } = frame;
 
     // Render HUD elements
-    drawScoreOverlay(this.ctx, this.canvas, score);
+    drawScoreOverlay(this.ctx, this.canvas, score, lives);
     drawLivesIndicator(this.ctx, lives, player.ship.color);
 
     if (text && textAlpha > 0) {
