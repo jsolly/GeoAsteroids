@@ -4,6 +4,7 @@ import { DEBUG, GAME, ROID } from '../../constants';
 import { stepAsteroidMotionInto } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
 import { getRandomPositionInAsteroidField } from '../../utils/spawnPosition';
+import { pointsForRoidSize } from './roidScore';
 
 class Roid {
   id: string;
@@ -110,14 +111,7 @@ class RoidBelt {
     }
     let score = 0;
 
-    // Award points based on size (server handles all splitting logic)
-    if (r.r >= 40) {
-      score += ROID.POINTS_LARGE;
-    } else if (r.r >= 20) {
-      score += ROID.POINTS_MEDIUM;
-    } else {
-      score += ROID.POINTS_SMALL;
-    }
+    score += pointsForRoidSize(r.r);
 
     // Client never creates new roids - server handles all splitting via network messages
     return { score, newRoids: [] };

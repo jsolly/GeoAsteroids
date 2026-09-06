@@ -4,6 +4,7 @@ import type { Laser } from '../../entities/laser/Laser';
 import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
+import type { Combatant } from '../../entities/player/playerKinds';
 import { canDealCombatDamage } from '../../entities/player/softFactions';
 import type { Roid } from '../../entities/roid/Roid';
 import { isBiggestAsteroid, pointsForRoidSize } from '../../entities/roid/roidScore';
@@ -23,6 +24,7 @@ import {
   checkLaserShipCollision,
   checkShipCollision,
 } from './collisionDetection';
+import { asteroidDestroyedMessage, laserHitDamageMessage } from './combatMessages';
 
 export interface LaserTarget {
   ship: Ship;
@@ -36,6 +38,8 @@ export interface LaserCollisionOptions {
   reportAsteroidHits?: boolean;
   attackerFaction?: FactionId;
 }
+
+type CollisionPlayer = Combatant & { ship: Ship };
 
 export class CollisionManager {
   private static instance: CollisionManager;
@@ -98,10 +102,7 @@ export class CollisionManager {
   /**
    * Check player collisions with asteroids (unified for all player types)
    */
-  checkPlayerAsteroidCollisions(
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
-    asteroids: Roid[]
-  ): void {
+  checkPlayerAsteroidCollisions(player: CollisionPlayer, asteroids: Roid[]): void {
     const ship = player.ship;
 
     // Skip if ship is exploding, has no health, or is under spawn protection (blinking)
@@ -313,16 +314,9 @@ export class CollisionManager {
     cause: 'laser' | 'collision',
     laserPosition?: { x: number; y: number }
   ): void {
-    this.networkManager.sendMessage({
-      type: 'asteroidDestroyed',
-      data: {
-        asteroidId,
-        playerId,
-        points: pointsForRoidSize(radius),
-        cause,
-        ...(laserPosition ? { laserPosition: { x: laserPosition.x, y: laserPosition.y } } : {}),
-      },
-    });
+    this.networkManager.sendMessage(
+      asteroidDestroyedMessage(asteroidId, playerId, radius, cause, laserPosition)
+    );
   }
 
   /**
@@ -339,25 +333,9 @@ export class CollisionManager {
       attackerId,
     });
 
-    // Send appropriate damage message based on player type
-    if (player.type === 'bot') {
-      this.networkManager.sendMessage({
-        type: 'botDamage',
-        data: {
-          botId: player.id,
-          attackerId: attackerId,
-          damage: DAMAGE.LASER_HIT,
-        },
-      });
-    } else if (player.type === 'remote' || player.type === 'local') {
-      this.networkManager.sendMessage({
-        type: 'laserDamage',
-        data: {
-          targetPlayerId: player.id,
-          attackerId: attackerId,
-          damage: DAMAGE.LASER_HIT,
-        },
-      });
+    const message = laserHitDamageMessage(player, attackerId);
+    if (message) {
+      this.networkManager.sendMessage(message);
     }
   }
 
@@ -386,10 +364,7 @@ export class CollisionManager {
   /**
    * Handle player hitting an asteroid (unified for all player types)
    */
-  private handlePlayerAsteroidCollision(
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
-    asteroid: Roid
-  ): void {
+  private handlePlayerAsteroidCollision(player: CollisionPlayer, asteroid: Roid): void {
     const ship = player.ship;
 
     logger.debug('COLLISION', 'Player hit asteroid', {

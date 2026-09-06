@@ -1,11 +1,17 @@
-import type { Position } from '../../../shared-types';
+import { GROWTH, maxVelocityFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
+import type { Position, Velocity } from '../../../shared-types';
 import { DAMAGE, GAME, SHIP } from '../../constants';
 import { checkBoundaryCollision } from '../../physics/collision/collisionDetection';
 import {
   isGenericDeathCause,
   formatDeathCauseForOverlay as overlayDeathCause,
 } from '../../utils/deathCause';
-import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
+import {
+  addPositions,
+  addVectors,
+  createPositionFromAngle,
+  multiplyVelocity,
+} from '../../utils/mathUtils';
 
 /** Overlay copy. Never print "unknown". */
 export function formatDeathCauseForOverlay(
@@ -264,4 +270,49 @@ export function calculateLaserStartPosition(
 ): Position {
   const noseOffset = createPositionFromAngle(shipAngle, (4 / 3) * shipRadius);
   return addPositions(shipPosition, noseOffset);
+}
+
+/** Friction used by the test-only `Ship.move()` path (live tick uses frictionCoefficient). */
+export function moveFrictionForShip(isBot: boolean): number {
+  return isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
+}
+
+export type ThrustFrictionOptions = {
+  thrust?: number;
+  mass?: number;
+  maxVelocity?: number;
+};
+
+/**
+ * Shared thrust / friction step for local ships, remotes, and bots.
+ * Callers pass their own friction so move() and update() keep their policies.
+ * Mass/kit options keep loot growth and Hauler thrust on the same formula.
+ */
+export function applyThrustOrFriction(
+  velocity: Velocity,
+  angle: number,
+  thrusting: boolean,
+  frictionCoefficient: number,
+  options: ThrustFrictionOptions = {}
+): Velocity {
+  if (thrusting) {
+    const thrust = options.thrust ?? SHIP.THRUST;
+    const mass = options.mass ?? GROWTH.BASE_MASS;
+    const hullMax = options.maxVelocity ?? SHIP.MAX_VELOCITY;
+    const thrustScale = thrustScaleFromMass(mass);
+    const massMax = maxVelocityFromMass(mass);
+    const step: Velocity = {
+      x: (Math.cos(angle) * thrust * thrustScale) / GAME.FPS,
+      y: (-Math.sin(angle) * thrust * thrustScale) / GAME.FPS,
+    };
+    const next = addVectors(velocity, step);
+    const currentSpeed = Math.sqrt(next.x * next.x + next.y * next.y);
+    const speedCap = hullMax * (massMax / SHIP.MAX_VELOCITY);
+    if (currentSpeed > speedCap) {
+      const scale = speedCap / currentSpeed;
+      return { x: next.x * scale, y: next.y * scale };
+    }
+    return next;
+  }
+  return multiplyVelocity(velocity, 1 - frictionCoefficient / GAME.FPS);
 }

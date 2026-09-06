@@ -13,6 +13,7 @@ import { entityFactory } from '../entities/EntityFactory';
 import { LootField } from '../entities/loot/LootField';
 import type { Player } from '../entities/player/Player';
 import { PlayerManager } from '../entities/player/PlayerManager';
+import { isBot, isRemote } from '../entities/player/playerKinds';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
@@ -797,7 +798,7 @@ export class GameController {
     // so a hitch does not freeze their corpse or latch blink forever.
     const allPlayers = this.networkManager.getAllPlayers();
     for (const player of allPlayers) {
-      if (player.type === 'bot' && player.ship) {
+      if (isBot(player) && player.ship) {
         player.ship.update(lifecycleFrames);
       }
     }
@@ -816,9 +817,7 @@ export class GameController {
       this.publishLiveHarpoonField(currPlayer);
     }
 
-    // Check laser collisions with asteroids and bots
     this.checkLaserCollisions(allPlayers);
-
     // Ship↔asteroid damage is server-owned. Keep local ship-ship overlap
     // for offline DOT / visual contact only. Factions still skip allies.
     this.checkShipShipCollisions(allPlayers);
@@ -870,7 +869,7 @@ export class GameController {
   private fillLaserTargets(allPlayers: Player[]): void {
     let count = 0;
     for (const player of allPlayers) {
-      if (player.type !== 'bot' && player.type !== 'remote') {
+      if (!isBot(player) && !isRemote(player)) {
         continue;
       }
       const existing = this.laserTargets[count];
