@@ -7,6 +7,8 @@ import { PlayerManager } from '../../entities/player/PlayerManager';
 import { canDealCombatDamage } from '../../entities/player/softFactions';
 import type { Roid } from '../../entities/roid/Roid';
 import { isBiggestAsteroid, pointsForRoidSize } from '../../entities/roid/roidScore';
+import type { SatellitePickup } from '../../entities/satellitePickup/SatellitePickup';
+import { SatellitePickupManager } from '../../entities/satellitePickup/SatellitePickupManager';
 import type { Ship } from '../../entities/ship/Ship';
 import {
   isShieldBlockingLasers,
@@ -435,6 +437,44 @@ export class CollisionManager {
   private factionForShip(ship: Ship): Player['factionId'] {
     const match = this.networkManager.getAllPlayers().find((player) => player.ship === ship);
     return match?.factionId;
+  }
+
+  /**
+   * Local ship collects a loose satellite. Dead/exploding hulls skip;
+   * spawn-protection blink still collects (beneficial).
+   */
+  checkPlayerSatellitePickupCollisions(
+    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
+    pickups: SatellitePickup[]
+  ): void {
+    if (player.type !== 'local') {
+      return;
+    }
+    const ship = player.ship;
+    if (!ship || ship.exploding || ship.health <= 0) {
+      return;
+    }
+
+    const pickupManager = SatellitePickupManager.getInstance();
+    const collectorId = this.networkManager.getLocalPlayerId() || player.id;
+
+    for (const pickup of pickups) {
+      if (pickup.state !== 'loose' || pickupManager.shouldDebounceCollect(pickup.id)) {
+        continue;
+      }
+      if (checkShipCollision(ship.position, ship.r, pickup.position, pickup.radius)) {
+        pickupManager.markCollectAttempt(pickup.id);
+        this.networkManager.sendMessage({
+          type: 'satellitePickupCollected',
+          data: {
+            pickupId: pickup.id,
+            playerId: collectorId,
+            position: { ...ship.position },
+          },
+        });
+        break;
+      }
+    }
   }
 
   /**

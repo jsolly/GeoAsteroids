@@ -11,6 +11,8 @@ import { drawLootRelative } from '../entities/loot/lootRenderer';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative, rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
+import { SatellitePickupManager } from '../entities/satellitePickup/SatellitePickupManager';
+import { drawSatellitePickups } from '../entities/satellitePickup/satellitePickupRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
   drawLasers,
@@ -265,6 +267,7 @@ class CanvasManager {
     }
 
     drawLootRelative(currShip, LootField.getInstance().getAll());
+    drawSatellitePickups(SatellitePickupManager.getInstance().getAll(), currShip.position);
 
     const localId = NetworkManager.getInstance().getLocalPlayerId();
     const localLaserColor = getLaserColor(true);

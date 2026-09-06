@@ -7,6 +7,7 @@ import type {
   PlayerLeave,
   PlayerUpdate,
   Position,
+  SatellitePickupCollected,
   ServerGameState,
   ShockwaveEvent,
   Velocity,
@@ -18,6 +19,7 @@ import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyRemoteShoot } from '../../entities/player/remoteLasers';
+import { SatellitePickupManager } from '../../entities/satellitePickup/SatellitePickupManager';
 import { applyShipKitToShip } from '../../entities/ship/shipKits';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { applyTerrainSeed } from '../../physics/terrain/terrainSession';
@@ -235,6 +237,7 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     LootField.getInstance().clear();
+    SatellitePickupManager.getInstance().clear();
     this.localPlayerId = '';
     // pagehide / unexpected close keep the stored id (#467). Game-over Start
     // mints a new one so we do not rejoin a 0-life ship.
@@ -573,6 +576,9 @@ export class ConnectionManager {
       case 'botDestroyed':
         this.handleBotDestroyed(data as { botId: string });
         break;
+      case 'satellitePickupCollected':
+        this.handleSatellitePickupCollected(data as SatellitePickupCollected);
+        break;
       case 'playerShoot':
         this.handlePlayerShoot(
           data as {
@@ -760,6 +766,9 @@ export class ConnectionManager {
     if (Array.isArray(data.loot)) {
       LootField.getInstance().applySnapshot(data.loot as LootData[]);
     }
+    if (data.satellitePickups) {
+      SatellitePickupManager.getInstance().syncFromServer(data.satellitePickups);
+    }
   }
 
   private handleLootExploded(data: {
@@ -794,6 +803,7 @@ export class ConnectionManager {
     if (!keepField) {
       this.seenAsteroidIds.clear();
       LootField.getInstance().clear();
+      SatellitePickupManager.getInstance().clear();
     }
     this.hasInitializedAsteroidsForConnection = keepField;
 
@@ -1095,6 +1105,14 @@ export class ConnectionManager {
     if (player.type === 'local') {
       player.syncServerHealthEcho(remainingHealth);
     }
+  }
+
+  private handleSatellitePickupCollected(data: SatellitePickupCollected): void {
+    window.dispatchEvent(
+      new CustomEvent('satellitePickupCollected', {
+        detail: data,
+      })
+    );
   }
 
   private handlePlayerKilled(data: {

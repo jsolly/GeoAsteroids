@@ -22,7 +22,8 @@ export interface ServerMessage {
     | 'botUpdate'
     | 'botDestroyed'
     | 'abilityUsed'
-    | 'lootExploded';
+    | 'lootExploded'
+    | 'satellitePickupCollected';
   // Prefer `data`; accept `payload` temporarily during transition
   data?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
   payload?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
@@ -50,6 +51,7 @@ export interface ClientMessage {
     | 'asteroidCreate'
     | 'asteroidUpdate'
     | 'asteroidDestroy'
+    | 'satellitePickupCollected'
     | 'clientLog'
     | 'useAbility'
     | 'lootExplode';

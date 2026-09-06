@@ -3,7 +3,7 @@ import { GameEngine, type AppliedAsteroidHit } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
-import { DAMAGE, DEBUG } from '../../src/constants';
+import { DAMAGE, DEBUG, SATELLITE_PICKUP } from '../../src/constants';
 import {
   clampLaserDamage,
   isAllowedLaserReporter,
@@ -114,6 +114,10 @@ export class MessageHandler {
 
         case 'lootExplode':
           this.handleLootExplode(ws, id, restData);
+          break;
+
+        case 'satellitePickupCollected':
+          this.handleSatellitePickupCollected(ws, restData);
           break;
 
         case 'initAsteroids':
@@ -460,6 +464,39 @@ export class MessageHandler {
         harpoonLatchPos: entity?.harpoonLatchPos,
       },
       timestamp: Date.now(),
+    });
+    this.broadcaster.broadcastGameState();
+  }
+
+  private handleSatellitePickupCollected(ws: WebSocket, data: any): void {
+    const pickupId = data.pickupId ?? data.satellitePickupId;
+    const playerId = data.playerId;
+    if (!pickupId || !playerId) {
+      this.broadcaster.sendError(ws, 'Missing required fields for satellitePickupCollected');
+      return;
+    }
+
+    const claimedPosition = this.gameEngine.validatePosition(data.position);
+    const result = this.gameEngine.handleSatellitePickupCollected(
+      pickupId,
+      playerId,
+      claimedPosition ?? undefined
+    );
+    if (!result.success || !result.pickup) {
+      return;
+    }
+
+    const player = this.gameEngine.getPlayer(playerId);
+    if (player) {
+      this.broadcaster.broadcastScoreUpdate(playerId, player.score);
+    }
+    this.broadcaster.broadcastSatellitePickupCollected({
+      pickupId: result.pickup.id,
+      playerId,
+      playerName: player?.name ?? '',
+      pickupName: result.pickup.name,
+      scoreBonus: SATELLITE_PICKUP.SCORE_BONUS,
+      shieldFrames: result.pickup.shieldFramesRemaining,
     });
     this.broadcaster.broadcastGameState();
   }

@@ -166,10 +166,36 @@ export interface ShockwaveEvent {
   asteroidId?: string;
 }
 
+export type SatellitePickupState = 'loose' | 'orbiting';
+
+/** Server-owned collectible. Loose in the arena, then orbits the collector. */
+export interface SatellitePickupData {
+  id: string;
+  name: string;
+  position: Position;
+  velocity: Velocity;
+  angle: number;
+  radius: number;
+  color: string;
+  state: SatellitePickupState;
+  ownerId: string | null;
+  shieldFramesRemaining: number;
+}
+
+export interface SatellitePickupCollected {
+  pickupId: string;
+  playerId: string;
+  playerName: string;
+  pickupName: string;
+  scoreBonus: number;
+  shieldFrames: number;
+}
+
 export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];
   loot: LootData[];
+  satellitePickups?: SatellitePickupData[];
   gameTime: number;
   isPaused: boolean;
   /** Same seed on every client → same contours and slope field. */
