@@ -14,7 +14,6 @@ import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
 import { drawSoftFactionMark } from '../player/factionMarkPainters';
 import { findHarpoonFieldBody, getHarpoonField } from './harpoonField';
-import { findHarpoonTarget } from './shipAbilities';
 import {
   getKitHullOutline,
   projectHullPoint,
@@ -22,6 +21,7 @@ import {
   projectKitHullEdges,
 } from './hullOutlines';
 import type { Ship } from './Ship';
+import { findHarpoonTarget } from './shipAbilities';
 import {
   CLASSIC_HULL,
   HAULER_TETHER_COLOR,
@@ -698,7 +698,11 @@ export function drawHaulerHarpoonVfx(
   const target = findHarpoonFieldBody(ship.harpoonTargetId);
   let latchWorld = target?.position ?? ship.harpoonLatchPos;
   if (!latchWorld) {
-    latchWorld = findHarpoonTarget(ship, [...getHarpoonField()], Number.POSITIVE_INFINITY)?.position;
+    latchWorld = findHarpoonTarget(
+      ship,
+      [...getHarpoonField()],
+      Number.POSITIVE_INFINITY
+    )?.position;
   }
   if (!latchWorld) {
     return;
