@@ -10,6 +10,7 @@ export interface HarpoonFieldBody {
   exploding?: boolean;
   health?: number;
   shieldTimer?: number;
+  shieldActive?: boolean;
 }
 
 let field: readonly HarpoonFieldBody[] = [];
@@ -39,6 +40,7 @@ export function harpoonBodyFromShip(
     exploding?: boolean;
     health?: number;
     shieldTimer?: number;
+    shieldActive?: boolean;
   },
   factionId?: SoftFactionId
 ): HarpoonFieldBody {
@@ -51,6 +53,7 @@ export function harpoonBodyFromShip(
     exploding: ship.exploding,
     health: ship.health,
     shieldTimer: ship.shieldTimer,
+    shieldActive: ship.shieldActive,
   };
 }
 

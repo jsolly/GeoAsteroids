@@ -138,6 +138,20 @@ test('harpoon skips self, same-side mates, and a Warden shield', () => {
   expect(findHarpoonTarget(hauler, [self, mate, shielded, foe])?.id).toBe('foe');
 });
 
+test('harpoon skips a timed ship shield', () => {
+  const hauler = host('hauler');
+  hauler.id = 'hauler-1';
+  const shielded = {
+    id: 'dart-1',
+    position: { x: 50, y: 0 },
+    velocity: { x: 0, y: 0 },
+    health: 100,
+    shieldActive: true,
+  };
+  const foe = { id: 'dart-2', position: { x: 90, y: 0 }, velocity: { x: 0, y: 0 }, health: 100 };
+  expect(findHarpoonTarget(hauler, [shielded, foe])?.id).toBe('dart-2');
+});
+
 test('local and remote adopt the same server latch', () => {
   const local = host('hauler');
   applySharedHarpoonLatch(local, { harpoonTimer: 80, harpoonTargetId: 'bot-1' }, 'predicting');

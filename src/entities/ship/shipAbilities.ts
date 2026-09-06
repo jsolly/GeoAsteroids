@@ -27,6 +27,8 @@ export interface AbilityBody {
   exploding?: boolean;
   health?: number;
   shieldTimer?: number;
+  /** Timed ship shield (#454). Separate from Warden kit `shieldTimer`. */
+  shieldActive?: boolean;
 }
 
 export interface AbilityWorld {
@@ -84,7 +86,7 @@ export function isHarpoonableBody(
   if (body.exploding || (body.health !== undefined && body.health <= 0)) {
     return false;
   }
-  if ((body.shieldTimer ?? 0) > 0) {
+  if ((body.shieldTimer ?? 0) > 0 || body.shieldActive) {
     return false;
   }
   if (areAllied(host.factionId, body.factionId)) {
