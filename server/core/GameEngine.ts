@@ -570,6 +570,12 @@ export class GameEngine {
     return this.handleShipDamage(botId, attackerId, damage, source).isDestroyed;
   }
 
+  /**
+   * Server-owned ship↔asteroid, ship↔satellite, and ship↔ship resolution.
+   * Humans and bots share the same overlap + handleShipDamage path. Asteroid
+   * motion already ran in the game loop (`updateMotion`); this only applies
+   * health. Ram uses the tip collision destroy path so laser collab stays intact.
+   */
   public resolveAuthoritativeCombat(now: number = Date.now()): CombatBroadcast[] {
     if (this.isPaused) {
       return [];
@@ -604,6 +610,23 @@ export class GameEngine {
         }
       }
       results.push(result);
+    }
+
+    const satHits = this.collisionAuthority.collectShipSatelliteHits(
+      entities,
+      this.satelliteManager.getAllSatellites()
+    );
+    for (const hit of satHits) {
+      const result = this.applyDirectedHit(
+        hit.shipId,
+        hit.satelliteId,
+        SATELLITE.COLLISION_DAMAGE,
+        'collision'
+      );
+      if (result) {
+        results.push(result);
+      }
+      this.handleSatelliteDamage(hit.satelliteId, hit.shipId, SATELLITE.COLLISION_DAMAGE);
     }
 
     const pairTicks = this.collisionAuthority.collectShipShipTicks(entities, now);

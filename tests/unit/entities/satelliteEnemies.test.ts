@@ -61,6 +61,26 @@ describe('Ambient hostile NPC saucers', () => {
     expect(gameEngine.getSatellite(satellite.id)?.exploding).toBe(true);
     expect(gameEngine.getPlayer('pilot')?.score).toBe(SATELLITE.POINTS);
     expect(gameEngine.getLoot().length).toBeGreaterThan(0);
+    expect(gameEngine.getLoot().every((drop) => drop.kind === 'wreckage')).toBe(true);
+  });
+
+  test('ramming a satellite on the server damages the ship and drops wreckage', () => {
+    const satellite = firstSatellite(gameEngine);
+    const mockWs = {} as GameEntity['ws'];
+    const pilot = gameEngine.addPlayer('pilot', 'Pilot', mockWs as never, {
+      x: satellite.position.x,
+      y: satellite.position.y,
+    });
+    pilot.spawnProtectionTimer = 0;
+    const startHealth = pilot.health;
+
+    const results = gameEngine.resolveAuthoritativeCombat();
+
+    expect(results.some((result) => result.attackerId === satellite.id)).toBe(true);
+    expect(gameEngine.getPlayer('pilot')?.health).toBe(startHealth - SATELLITE.COLLISION_DAMAGE);
+    expect(gameEngine.getSatellite(satellite.id)?.exploding).toBe(true);
+    expect(gameEngine.getLoot().every((drop) => drop.kind === 'wreckage')).toBe(true);
+    expect(gameEngine.getLoot().length).toBeGreaterThan(0);
   });
 
   test('a second killing shot does not award points again', () => {

@@ -796,7 +796,6 @@ export class GameController {
     // Check laser collisions with asteroids and bots
     this.checkLaserCollisions(allPlayers);
     this.checkLaserSatelliteCollisions();
-    this.checkShipSatelliteCollisions();
     this.checkSatelliteLaserCollisions();
 
     // Ship↔asteroid damage is server-owned. Keep local ship-ship overlap
@@ -945,19 +944,6 @@ export class GameController {
       currPlayer.ship.lasers,
       SatelliteManager.getInstance().getAll(),
       attackerId
-    );
-  }
-
-  private checkShipSatelliteCollisions(): void {
-    const currPlayer = this.playerManager.getLocalPlayer();
-    if (!currPlayer) {
-      return;
-    }
-    const localPlayerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
-    this.collisionManager.checkShipSatelliteCollisions(
-      currPlayer.ship,
-      SatelliteManager.getInstance().getAll(),
-      localPlayerId
     );
   }
 
