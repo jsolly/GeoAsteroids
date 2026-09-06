@@ -6,6 +6,7 @@ import { getFactionColor } from '../../utils/colorUtils';
 import { isStaleGameOverSnapshot, preferDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
+import { applySharedHarpoonLatch } from '../ship/shipAbilities';
 import { applyShipKitToShip } from '../ship/shipKits';
 import { applyShieldSnapshot, clearShield } from '../ship/shipShield';
 import {
@@ -359,14 +360,16 @@ export class Player {
       if (data.shieldTimer !== undefined) {
         this.ship.shieldTimer = data.shieldTimer;
       }
-      if (data.harpoonTimer !== undefined) {
-        this.ship.harpoonTimer = data.harpoonTimer;
-      }
-    }
-    if (data.harpoonTargetId !== undefined) {
-      this.ship.harpoonTargetId = data.harpoonTargetId || undefined;
     }
     applyShieldSnapshot(this.ship, data);
+    applySharedHarpoonLatch(
+      this.ship,
+      {
+        ...(data.harpoonTimer !== undefined ? { harpoonTimer: data.harpoonTimer } : {}),
+        ...(data.harpoonTargetId !== undefined ? { harpoonTargetId: data.harpoonTargetId } : {}),
+      },
+      this.type === 'local' ? 'predicting' : 'authoritative'
+    );
     // Handle respawn timer from server
     if (data.respawnTimer !== undefined) {
       // When respawnTimer is 0, the server has finished the countdown. Remote

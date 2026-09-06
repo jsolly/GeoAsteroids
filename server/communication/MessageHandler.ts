@@ -455,9 +455,12 @@ export class MessageHandler {
         id: playerId,
         kitId: entity?.kitId,
         abilityId: data.abilityId,
+        harpoonTimer: entity?.harpoonTimer,
+        harpoonTargetId: entity?.harpoonTargetId,
       },
       timestamp: Date.now(),
     });
+    this.broadcaster.broadcastGameState();
   }
 
   private handleAsteroidDamage(ws: WebSocket, data: any): void {

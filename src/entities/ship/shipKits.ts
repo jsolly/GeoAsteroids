@@ -119,7 +119,7 @@ const KITS: Record<ShipKitId, ShipKit> = {
     name: 'Hauler',
     abilityId: 'harpoon',
     abilityName: 'Harpoon',
-    abilityHint: 'Latch and haul a nearby rock',
+    abilityHint: 'Latch and haul a nearby rock or ship',
     flavor: 'utility',
     maxHealth: 140,
     size: 38,

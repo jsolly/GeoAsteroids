@@ -17,8 +17,13 @@ import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
 import { createLaser, createLaserAtAngle } from '../laser/laserUtils';
-import { type AbilityWorld, activateAbilityOnHost, tickAbilityHost } from './shipAbilities';
-import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from './shipKits';
+import {
+  type AbilityWorld,
+  activateAbilityOnHost,
+  canActivateAbility,
+  tickAbilityHost,
+} from './shipAbilities';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit, SHIP_ABILITY } from './shipKits';
 import { drawThruster } from './shipRenderer';
 
 import {
@@ -323,25 +328,29 @@ class Ship {
     if (this.exploding) {
       return false;
     }
+    const kit = getShipKit(this.kitId);
+    const canTry = canActivateAbility(this);
     const result = activateAbilityOnHost(this, world);
-    if (!result.activated) {
-      return false;
-    }
     if (result.abilityId === 'burstFire') {
-      const kit = getShipKit(this.kitId);
       this.fireBurst(kit.burstCount, 0.12);
     }
+    // Harpoon latch is server-authoritative. Local prediction may miss a ship
+    // that the server can see — still send so both clients agree on the tether.
+    const requestHarpoon = kit.abilityId === 'harpoon' && canTry && !result.activated;
     if (this.isLocalPlayer && !this.isBot) {
       const networkManager = NetworkManager.getInstance();
-      if (networkManager.isConnected) {
+      if (networkManager.isConnected && (result.activated || requestHarpoon)) {
+        if (requestHarpoon) {
+          this.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.hauler;
+        }
         networkManager.sendMessage({
           type: 'useAbility',
           id: networkManager.getLocalPlayerId(),
-          data: { kitId: this.kitId, abilityId: result.abilityId },
+          data: { kitId: this.kitId, abilityId: result.abilityId ?? kit.abilityId },
         });
       }
     }
-    return true;
+    return result.activated;
   }
 
   moveLasers(): void {

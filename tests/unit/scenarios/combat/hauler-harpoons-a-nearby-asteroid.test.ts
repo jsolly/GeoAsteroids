@@ -35,6 +35,7 @@ describe('A Hauler fires harpoon at a nearby rock', () => {
     });
 
     alice = world.join('Alice', { x: 0, y: 0 }, { kitId: 'hauler' });
+    world.parkBots();
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
@@ -67,6 +68,7 @@ describe('A Hauler fires harpoon at a nearby rock', () => {
     });
 
     alice = world.join('Alice', { x: 0, y: 0 }, { kitId: 'dart' });
+    world.parkBots();
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,

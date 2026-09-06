@@ -597,12 +597,49 @@ export class ConnectionManager {
           }
         );
         break;
+      case 'abilityUsed':
+        this.handleAbilityUsed(
+          data as {
+            id?: string;
+            kitId?: string;
+            abilityId?: string;
+            harpoonTimer?: number;
+            harpoonTargetId?: string;
+          }
+        );
+        break;
       case 'error':
         // Handle error messages from server
         logger.warn('NETWORK', 'Server error', { error: data });
         break;
       default:
         logger.debug('NETWORK', 'Unhandled server message type', { type: message.type });
+    }
+  }
+
+  private handleAbilityUsed(data: {
+    id?: string;
+    harpoonTimer?: number;
+    harpoonTargetId?: string;
+  }): void {
+    if (!data.id) {
+      return;
+    }
+    const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+    const entity =
+      this.allPlayers.get(data.id) ?? (localPlayer?.id === data.id ? localPlayer : undefined);
+    if (!entity) {
+      return;
+    }
+    entity.updateFromServer({
+      ...(data.harpoonTimer !== undefined ? { harpoonTimer: data.harpoonTimer } : {}),
+      ...(data.harpoonTargetId !== undefined ? { harpoonTargetId: data.harpoonTargetId } : {}),
+    });
+    if (localPlayer && localPlayer !== entity && localPlayer.id === data.id) {
+      localPlayer.updateFromServer({
+        ...(data.harpoonTimer !== undefined ? { harpoonTimer: data.harpoonTimer } : {}),
+        ...(data.harpoonTargetId !== undefined ? { harpoonTargetId: data.harpoonTargetId } : {}),
+      });
     }
   }
 

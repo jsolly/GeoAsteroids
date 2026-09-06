@@ -16,7 +16,11 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
-import { publishHarpoonField } from '../entities/ship/harpoonField';
+import {
+  collectPlayHarpoonField,
+  harpoonBodyFromShip,
+  publishHarpoonField,
+} from '../entities/ship/harpoonField';
 import type { Ship } from '../entities/ship/Ship';
 import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
@@ -710,7 +714,12 @@ export class GameController {
     // Update asteroids
     if (this.currRoidBelt) {
       this.currRoidBelt.moveRoids(asteroidTickScale(dtMs));
-      publishHarpoonField(this.currRoidBelt.roids);
+      const shipBodies = allPlayers
+        .filter((player) => player.id && player.id !== currPlayer.id && player.ship)
+        .map((player) =>
+          harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
+        );
+      publishHarpoonField(collectPlayHarpoonField(this.currRoidBelt.roids, shipBodies));
     }
 
     // Check laser collisions with asteroids and bots

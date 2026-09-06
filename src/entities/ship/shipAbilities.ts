@@ -1,9 +1,12 @@
-import type { Position, Velocity } from '../../../shared-types';
+import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
+import { areAllied } from '../../../shared/factions';
 import { getHarpoonField } from './harpoonField';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId, type ShipKitId } from './shipKits';
 
 export interface AbilityHost {
+  id?: string;
   kitId: ShipKitId;
+  factionId?: SoftFactionId;
   position: Position;
   velocity: Velocity;
   angle: number;
@@ -20,6 +23,10 @@ export interface AbilityBody {
   id?: string;
   position: Position;
   velocity: Velocity;
+  factionId?: SoftFactionId;
+  exploding?: boolean;
+  health?: number;
+  shieldTimer?: number;
 }
 
 export interface AbilityWorld {
@@ -30,6 +37,11 @@ export interface AbilityWorld {
 export interface AbilityActivation {
   activated: boolean;
   abilityId?: ShipAbilityId;
+}
+
+export interface HarpoonLatchSnapshot {
+  harpoonTimer?: number;
+  harpoonTargetId?: string;
 }
 
 function headingVelocity(angle: number, magnitude: number): Velocity {
@@ -54,6 +66,33 @@ export function clearHarpoonLatch(
   host.harpoonTargetId = undefined;
 }
 
+/** Rocks + ships share one latch list. Server and client use the same helper. */
+export function listHarpoonCandidates(world?: AbilityWorld): AbilityBody[] {
+  if (world) {
+    return [...world.asteroids, ...world.entities];
+  }
+  return [...getHarpoonField()];
+}
+
+export function isHarpoonableBody(
+  host: Pick<AbilityHost, 'id' | 'factionId'>,
+  body: AbilityBody
+): boolean {
+  if (!body.id || body.id === host.id) {
+    return false;
+  }
+  if (body.exploding || (body.health !== undefined && body.health <= 0)) {
+    return false;
+  }
+  if ((body.shieldTimer ?? 0) > 0) {
+    return false;
+  }
+  if (areAllied(host.factionId, body.factionId)) {
+    return false;
+  }
+  return true;
+}
+
 export function tickAbilityHost(host: AbilityHost): void {
   if (host.abilityCooldownFrames > 0) {
     host.abilityCooldownFrames -= 1;
@@ -71,6 +110,43 @@ export function tickAbilityHost(host: AbilityHost): void {
     }
   } else if (host.kitId !== 'hauler' && host.harpoonTargetId) {
     clearHarpoonLatch(host);
+  }
+}
+
+/**
+ * Local predicts; remotes stay snapshot-driven. A later server latch
+ * (timer > 0) wins so both clients draw the same tether.
+ */
+export function applySharedHarpoonLatch(
+  host: Pick<AbilityHost, 'kitId' | 'harpoonTimer' | 'harpoonTargetId'>,
+  snapshot: HarpoonLatchSnapshot,
+  role: 'predicting' | 'authoritative' = 'authoritative'
+): void {
+  if (host.kitId !== 'hauler') {
+    clearHarpoonLatch(host);
+    return;
+  }
+  if (snapshot.harpoonTimer === undefined && snapshot.harpoonTargetId === undefined) {
+    return;
+  }
+  if (snapshot.harpoonTimer !== undefined && snapshot.harpoonTimer > 0) {
+    host.harpoonTimer = snapshot.harpoonTimer;
+    if (snapshot.harpoonTargetId !== undefined) {
+      host.harpoonTargetId = snapshot.harpoonTargetId || undefined;
+    }
+    return;
+  }
+  if (role === 'predicting') {
+    return;
+  }
+  if (snapshot.harpoonTimer !== undefined) {
+    host.harpoonTimer = snapshot.harpoonTimer;
+  }
+  if (snapshot.harpoonTargetId !== undefined) {
+    host.harpoonTargetId = snapshot.harpoonTargetId || undefined;
+  }
+  if (host.harpoonTimer <= 0) {
+    host.harpoonTargetId = undefined;
   }
 }
 
@@ -97,20 +173,20 @@ function pullBody(body: AbilityBody, toward: Position, force: number): void {
 }
 
 export function findHarpoonTarget(
-  host: Pick<AbilityHost, 'position' | 'angle'>,
-  asteroids: AbilityBody[]
+  host: Pick<AbilityHost, 'id' | 'factionId' | 'position' | 'angle'>,
+  bodies: AbilityBody[]
 ): AbilityBody | undefined {
   const range = SHIP_ABILITY.HARPOON_RANGE;
   const hx = Math.cos(host.angle);
   const hy = -Math.sin(host.angle);
   let best: { body: AbilityBody; dist: number; facing: number } | undefined;
 
-  for (const asteroid of asteroids) {
-    if (!asteroid.id) {
+  for (const body of bodies) {
+    if (!isHarpoonableBody(host, body)) {
       continue;
     }
-    const dx = asteroid.position.x - host.position.x;
-    const dy = asteroid.position.y - host.position.y;
+    const dx = body.position.x - host.position.x;
+    const dy = body.position.y - host.position.y;
     const dist = Math.hypot(dx, dy);
     if (dist > range || dist < 1) {
       continue;
@@ -121,15 +197,23 @@ export function findHarpoonTarget(
       (facing > 0 && best.facing <= 0) ||
       (facing > 0 === best.facing > 0 && dist < best.dist)
     ) {
-      best = { body: asteroid, dist, facing };
+      best = { body, dist, facing };
     }
   }
 
   return best?.body;
 }
 
-/** Hauler-only: haul the latched rock. Other kits never pull. */
-export function pullHarpoonTarget(host: AbilityHost, asteroids: AbilityBody[]): void {
+function latchStillValid(host: AbilityHost, target: AbilityBody): boolean {
+  if (!isHarpoonableBody(host, target)) {
+    return false;
+  }
+  const dist = Math.hypot(target.position.x - host.position.x, target.position.y - host.position.y);
+  return dist <= SHIP_ABILITY.HARPOON_RANGE * SHIP_ABILITY.HARPOON_SLACK;
+}
+
+/** Hauler-only: haul the latched rock or ship. Other kits never pull. */
+export function pullHarpoonTarget(host: AbilityHost, bodies: AbilityBody[]): void {
   if (host.kitId !== 'hauler' || host.harpoonTimer <= 0 || !host.harpoonTargetId) {
     if (host.kitId !== 'hauler') {
       clearHarpoonLatch(host);
@@ -137,18 +221,13 @@ export function pullHarpoonTarget(host: AbilityHost, asteroids: AbilityBody[]): 
     return;
   }
 
-  const target = asteroids.find((asteroid) => asteroid.id === host.harpoonTargetId);
-  if (!target) {
+  const target = bodies.find((body) => body.id === host.harpoonTargetId);
+  if (!target || !latchStillValid(host, target)) {
     clearHarpoonLatch(host);
     return;
   }
 
   const dist = Math.hypot(target.position.x - host.position.x, target.position.y - host.position.y);
-  if (dist > SHIP_ABILITY.HARPOON_RANGE * SHIP_ABILITY.HARPOON_SLACK) {
-    clearHarpoonLatch(host);
-    return;
-  }
-
   const falloff = 1 - Math.min(dist, SHIP_ABILITY.HARPOON_RANGE) / SHIP_ABILITY.HARPOON_RANGE;
   pullBody(target, host.position, SHIP_ABILITY.HARPOON_PULL * Math.max(0.25, falloff));
 }
@@ -182,11 +261,20 @@ export function resolveAbilityWorld(world?: AbilityWorld): AbilityWorld | undefi
   if (world) {
     return world;
   }
-  const asteroids = getHarpoonField();
-  if (asteroids.length === 0) {
+  const field = getHarpoonField();
+  if (field.length === 0) {
     return undefined;
   }
-  return { asteroids: [...asteroids], entities: [] };
+  const asteroids: AbilityBody[] = [];
+  const entities: AbilityBody[] = [];
+  for (const body of field) {
+    if (body.kind === 'ship') {
+      entities.push(body);
+    } else {
+      asteroids.push(body);
+    }
+  }
+  return { asteroids, entities };
 }
 
 /**
@@ -205,7 +293,7 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
     if (host.kitId !== 'hauler') {
       return { activated: false };
     }
-    const target = findHarpoonTarget(host, resolved?.asteroids ?? []);
+    const target = findHarpoonTarget(host, listHarpoonCandidates(resolved));
     if (!target?.id) {
       return { activated: false };
     }

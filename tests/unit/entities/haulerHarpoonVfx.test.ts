@@ -16,6 +16,21 @@ test('tether VFX is Hauler-only while latched', () => {
   expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTimer: 40 })).toBe(false);
 });
 
+test('tether VFX can resolve a latched ship from the shared field', () => {
+  publishHarpoonField([
+    {
+      id: 'bob',
+      position: { x: 80, y: 0 },
+      velocity: { x: 0, y: 0 },
+      kind: 'ship',
+      health: 100,
+    },
+  ]);
+  expect(
+    canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTimer: 40, harpoonTargetId: 'bob' })
+  ).toBe(true);
+});
+
 test('non-Hauler draw is a no-op even if a latch is spoofed', () => {
   const calls: string[] = [];
   const ctx = {

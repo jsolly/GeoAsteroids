@@ -157,6 +157,14 @@ export class GameServerWorld {
     this.engine.startGameLoop();
   }
 
+  /** Park bots far from the origin so kit-ability tests can isolate one target. */
+  parkBots(position: Position = { x: 2500, y: 2500 }): void {
+    for (const bot of this.engine.entityManager.getBots()) {
+      bot.position = { ...position };
+      bot.velocity = { x: 0, y: 0 };
+    }
+  }
+
   entity(pilot: Pilot): GameEntity {
     const entity = this.engine.getPlayer(pilot.id);
     if (!entity) {
