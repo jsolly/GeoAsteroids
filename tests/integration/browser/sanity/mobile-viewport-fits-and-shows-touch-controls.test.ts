@@ -64,10 +64,9 @@ test('mobile viewport fits chrome and shows stick + fire + ability', async () =>
   expect(chrome.ability?.bottom).toBeLessThanOrEqual(chrome.innerHeight + 1);
   expect(chrome.ability?.right ?? 0).toBeLessThan(chrome.fire?.left ?? 0);
 
-  await page.touchscreen.tap(
-    Math.round((chrome.fire?.left ?? 0) + 20),
-    Math.round((chrome.fire?.top ?? 0) + 20)
-  );
+  // Pointer events — same path as a thumb. Avoid Playwright touchscreen
+  // (requires hasTouch on the shared desktop browser context).
+  await page.locator('#touch-fire').click();
 
   const fired = await page.evaluate(() => {
     const gc = window as unknown as {
@@ -82,10 +81,7 @@ test('mobile viewport fits chrome and shows stick + fire + ability', async () =>
   });
   expect(fired).toBe(true);
 
-  await page.touchscreen.tap(
-    Math.round((chrome.ability?.left ?? 0) + 16),
-    Math.round((chrome.ability?.top ?? 0) + 16)
-  );
+  await page.locator('#touch-ability').click();
 
   const abilityUsed = await page.evaluate(() => {
     const gc = window as unknown as {
