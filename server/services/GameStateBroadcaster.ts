@@ -19,6 +19,9 @@ export class GameStateBroadcaster {
     this.broadcastInterval = setInterval(() => {
       this.flushExpiredCollabHits();
       if (this.gameEngine.getPlayerCount() > 0) {
+        for (const shot of this.gameEngine.drainSatelliteShots()) {
+          this.broadcastSatelliteShoot(shot);
+        }
         this.broadcastGameState();
         this.broadcastPendingBotShots();
       }
@@ -85,6 +88,18 @@ export class GameStateBroadcaster {
     };
 
     this.broadcastToAll(message, playerId);
+  }
+
+  public broadcastSatelliteShoot(shot: {
+    id: string;
+    laserStart: { x: number; y: number };
+    laserDirection: { x: number; y: number };
+  }): void {
+    this.broadcastToAll({
+      type: 'satelliteShoot',
+      data: shot,
+      timestamp: Date.now(),
+    });
   }
 
   public broadcastPlayerShoot(playerId: string, laserStart: any, laserDirection: any): void {

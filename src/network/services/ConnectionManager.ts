@@ -7,6 +7,7 @@ import type {
   PlayerLeave,
   PlayerUpdate,
   Position,
+  SatelliteShoot,
   ServerGameState,
   ShockwaveEvent,
   Velocity,
@@ -18,6 +19,7 @@ import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyRemoteShoot } from '../../entities/player/remoteLasers';
+import { SatelliteManager } from '../../entities/satellite/SatelliteManager';
 import { applyShipKitToShip } from '../../entities/ship/shipKits';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { applyTerrainSeed } from '../../physics/terrain/terrainSession';
@@ -235,6 +237,7 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     LootField.getInstance().clear();
+    SatelliteManager.getInstance().clear();
     this.localPlayerId = '';
     // pagehide / unexpected close keep the stored id (#467). Game-over Start
     // mints a new one so we do not rejoin a 0-life ship.
@@ -573,6 +576,9 @@ export class ConnectionManager {
       case 'botDestroyed':
         this.handleBotDestroyed(data as { botId: string });
         break;
+      case 'satelliteShoot':
+        this.handleSatelliteShoot(data as SatelliteShoot);
+        break;
       case 'playerShoot':
         this.handlePlayerShoot(
           data as {
@@ -760,6 +766,10 @@ export class ConnectionManager {
     if (Array.isArray(data.loot)) {
       LootField.getInstance().applySnapshot(data.loot as LootData[]);
     }
+
+    if (Array.isArray(data.satellites)) {
+      SatelliteManager.getInstance().syncFromServer(data.satellites);
+    }
   }
 
   private handleLootExploded(data: {
@@ -794,6 +804,7 @@ export class ConnectionManager {
     if (!keepField) {
       this.seenAsteroidIds.clear();
       LootField.getInstance().clear();
+      SatelliteManager.getInstance().clear();
     }
     this.hasInitializedAsteroidsForConnection = keepField;
 
@@ -913,6 +924,15 @@ export class ConnectionManager {
       exploding: data.exploding,
     });
     // Bot handling is now done through unified entity system in handleGameState
+  }
+
+  private handleSatelliteShoot(data: SatelliteShoot): void {
+    logger.debug('NETWORK', 'Satellite shot laser', {
+      satelliteId: data.id,
+      laserStart: data.laserStart,
+      laserDirection: data.laserDirection,
+    });
+    SatelliteManager.getInstance().addLaser(data.id, data.laserStart, data.laserDirection);
   }
 
   private handleBotDestroyed(data: { botId: string }): void {
