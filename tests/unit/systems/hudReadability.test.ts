@@ -31,7 +31,7 @@ test('locked palette hexes stay the #415/#435 swatch with no extras', () => {
 });
 
 test('lives glyphs stay tiny phosphor hulls, not full SHIP.SIZE', () => {
-  expect(VISUAL.HUD_LIFE_SIZE).toBe(12);
+  expect(VISUAL.HUD_LIFE_SIZE).toBe(14);
   expect(VISUAL.HUD_LIFE_SIZE).toBeLessThan(SHIP.SIZE / 2);
   expect(VISUAL.HUD_INSET).toBe(16);
   expect(livesSrc).toMatch(/layoutHudCluster/);
@@ -40,7 +40,7 @@ test('lives glyphs stay tiny phosphor hulls, not full SHIP.SIZE', () => {
 });
 
 test('score sits in the same cluster in HUD cream', () => {
-  expect(VISUAL.SCORE_FONT).toBe('13px Arial');
+  expect(VISUAL.SCORE_FONT).toBe('14px Arial');
   expect(scoreSrc).toMatch(/layoutHudCluster\(lives\)/);
   expect(scoreSrc).toMatch(/PALETTE\.HUD/);
   expect(scoreSrc).not.toMatch(/SHIP\.SIZE/);
