@@ -1,5 +1,5 @@
 import type { FactionId } from '../../../shared-types';
-import { DAMAGE, SATELLITE } from '../../constants';
+import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
@@ -466,43 +466,6 @@ export class CollisionManager {
           laser.playHitSound();
           break;
         }
-      }
-    }
-  }
-
-  checkShipSatelliteCollisions(
-    localShip: Ship,
-    satellites: Satellite[],
-    localPlayerId: string
-  ): void {
-    if (!localShip || isShipCollisionImmune(localShip)) {
-      return;
-    }
-
-    for (const satellite of satellites) {
-      if (satellite.exploding || satellite.health <= 0) {
-        continue;
-      }
-      if (
-        checkShipCollision(localShip.position, localShip.r, satellite.position, satellite.radius)
-      ) {
-        this.networkManager.sendMessage({
-          type: 'collisionDamage',
-          data: {
-            targetPlayerId: localPlayerId,
-            attackerId: satellite.id,
-            damage: SATELLITE.COLLISION_DAMAGE,
-          },
-        });
-        this.networkManager.sendMessage({
-          type: 'satelliteDamage',
-          data: {
-            satelliteId: satellite.id,
-            attackerId: localPlayerId,
-            damage: SATELLITE.COLLISION_DAMAGE,
-          },
-        });
-        break;
       }
     }
   }
