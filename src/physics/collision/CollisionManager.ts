@@ -419,5 +419,4 @@ export class CollisionManager {
     // Start collision damage-over-time for the local ship
     localShip.startPlayerCollision(otherShip.id);
   }
-
 }
