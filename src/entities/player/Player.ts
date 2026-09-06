@@ -153,7 +153,10 @@ export class Player {
       this.ship.maxFuel = data.maxFuel;
     }
     if (data.fuel !== undefined) {
-      this.ship.fuel = data.fuel;
+      const recentlyWroteLocally = Date.now() - this.ship.lastLocalFuelWriteMs < 400;
+      if (!recentlyWroteLocally || data.fuel === this.ship.fuel) {
+        this.ship.fuel = data.fuel;
+      }
     }
     if (data.health !== undefined) {
       const wasDead = this.ship.health <= 0;

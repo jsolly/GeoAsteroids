@@ -42,6 +42,7 @@ class Ship {
   maxHealth: number = SHIP.MAX_HEALTH;
   fuel: number = FUEL.START;
   maxFuel: number = FUEL.MAX;
+  lastLocalFuelWriteMs: number = 0;
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
@@ -381,7 +382,10 @@ class Ship {
       this.maxFuel = data.maxFuel;
     }
     if (data.fuel !== undefined) {
-      this.fuel = data.fuel;
+      const recentlyWroteLocally = Date.now() - this.lastLocalFuelWriteMs < 400;
+      if (!recentlyWroteLocally || data.fuel === this.fuel) {
+        this.fuel = data.fuel;
+      }
     }
     if (wasDead && this.health > 0) {
       applyShipSpawnProtection(this);
@@ -413,6 +417,7 @@ class Ship {
     if (!trySpendEmpFuel(this)) {
       return false;
     }
+    this.lastLocalFuelWriteMs = Date.now();
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
@@ -442,7 +447,9 @@ class Ship {
   }
 
   addFuel(amount: number): number {
-    return applyFuelPickup(this, amount);
+    const next = applyFuelPickup(this, amount);
+    this.lastLocalFuelWriteMs = Date.now();
+    return next;
   }
 
   updateEmpPulse(): void {

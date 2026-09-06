@@ -78,6 +78,23 @@ describe('ship picks up fuel when flying over a drop', () => {
     expect(applyFuelPickup(tank, FUEL.DROP_AMOUNT)).toBe(FUEL.MAX);
   });
 
+  test('a stale server echo does not rewind a fresh pickup', async () => {
+    const { Player } = await import('../../../src/entities/player/Player');
+    const { MockPlayerInput } = await import('../../../src/input/MockPlayerInput');
+    const player = new Player({
+      id: 'local-player-123',
+      name: 'Pilot',
+      type: 'local',
+      input: new MockPlayerInput(),
+    });
+    player.ship.fuel = 50;
+    player.ship.addFuel(25);
+    expect(player.ship.fuel).toBe(75);
+
+    player.updateFromServer({ fuel: 50 });
+    expect(player.ship.fuel).toBe(75);
+  });
+
   test('a full tank leaves the drop in the world', () => {
     ship.fuel = FUEL.MAX;
     const drop = FuelDrop.createAt('fuel-full', { x: 400, y: 300 }, 25, 10);
