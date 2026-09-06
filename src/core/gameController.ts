@@ -11,7 +11,7 @@ import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
-import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
+import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { publishHarpoonField } from '../entities/ship/harpoonField';
 import { formatDeathCauseForOverlay } from '../entities/ship/shipUtils';
@@ -643,7 +643,8 @@ export class GameController {
     });
     currPlayer.ship.update(lifecycleFrames);
 
-    // Update all bot ships
+    // Bots predict locally; remotes share the same 60 Hz explode/blink clock
+    // so a hitch does not freeze their corpse or latch blink forever.
     const allPlayers = this.networkManager.getAllPlayers();
     const botPlayers = allPlayers.filter((player) => player.type === 'bot');
     for (const botPlayer of botPlayers) {
@@ -651,11 +652,7 @@ export class GameController {
         botPlayer.ship.update(lifecycleFrames);
       }
     }
-
-    // Remote human ships are server-driven and never run Ship.update(); advance
-    // their lasers so other players' shots visibly travel and expire instead of
-    // freezing at the muzzle.
-    advanceRemotePlayerLasers(allPlayers);
+    advanceRemotePlayerShips(allPlayers, lifecycleFrames);
 
     // One thrust loop for local + bot + remote ships; volume is the loudest in-range source.
     replaceThrustSources(thrustSourcesFromPlayers([currPlayer, ...allPlayers]));

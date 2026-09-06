@@ -60,12 +60,14 @@ export function isSilentHudReset(
 
 /** Explode / clear the exploding flag. Shared by local, remote, and bot ships. */
 export function applySharedShipExplodingFlag(
-  ship: Pick<SharedShipCombatVisuals, 'exploding' | 'explode'>,
+  ship: Pick<SharedShipCombatVisuals, 'exploding' | 'health' | 'explode'>,
   exploding: boolean | undefined,
   cause = 'server-damage'
 ): void {
   if (exploding === true) {
-    if (!ship.exploding) {
+    // Hitch catch-up can finish the local FX while the server is still
+    // exploding. Do not rewind explodeTime — that restacked the death window.
+    if (!ship.exploding && ship.health > 0) {
       ship.explode(cause);
     }
     return;

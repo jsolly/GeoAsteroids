@@ -104,6 +104,7 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   empPulse(): void;
   updateEmpPulse(): void;
   updateExplosion(): void;
+  updateLifecycle(lifecycleFrames?: number): void;
   updateInvincibility(): void;
   canTakeCollisionDamage(cooldownMs?: number): boolean;
 }
