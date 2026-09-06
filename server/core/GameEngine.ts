@@ -1,11 +1,24 @@
 import { WebSocket } from 'ws';
-import type { Position, AsteroidData } from '../../shared-types';
-import { EntityManager, GameEntity } from './EntityManager';
-import { AsteroidManager } from './AsteroidManager.ts';
-import { RNGService } from './RNGService';
-import { SHIP } from '../../src/constants';
+import type { AsteroidData, Position, ServerGameState } from '../../shared-types';
 import { logger } from '../../setup/serverLogger';
+import { AsteroidManager } from './AsteroidManager.ts';
+import {
+  ARENA_RADIUS,
+  COMBAT_REWARDS,
+  LIFECYCLE,
+  shouldAcceptClientMovement,
+  snapshotAsteroid,
+  snapshotEntity,
+} from './entityLifecycle';
+import { EntityManager, GameEntity } from './EntityManager';
+import { RNGService } from './RNGService';
 
+/**
+ * Rules + tick owner: combat scoring, lives, when a kill starts a respawn
+ * countdown, and the 60 FPS loop that advances EntityManager lifecycle.
+ * Does not parse WebSocket frames (MessageHandler) or own raw timer fields
+ * (EntityManager).
+ */
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
@@ -33,14 +46,8 @@ export class GameEngine {
       // Always increment game time, even when paused, to maintain consistency
       this.gameTime++;
       
-      // Only update game state if not paused
       if (!this.isPaused) {
-        this.entityManager.cleanupStaleEntities();
-        this.entityManager.updateExplosions();
-        this.entityManager.updateRespawns();
-        
-        // Update bot movement at reduced frequency for better performance
-        // Update every 2 frames (30 FPS instead of 60 FPS)
+        this.tickWorld();
         if (this.gameTime % 2 === 0) {
           this.entityManager.updateBotMovement();
         }
@@ -53,6 +60,13 @@ export class GameEngine {
       clearInterval(this.gameLoopInterval);
       this.gameLoopInterval = null;
     }
+  }
+
+  /** Advance explosion → respawn → spawn protection for every ship. */
+  public tickWorld(): void {
+    this.entityManager.cleanupStaleEntities();
+    this.entityManager.updateExplosions();
+    this.entityManager.updateRespawns();
   }
 
   // Pause/resume functionality
@@ -151,8 +165,34 @@ export class GameEngine {
     return this.entityManager.updateEntity(id, updates);
   }
 
+  public getEntity(id: string): GameEntity | undefined {
+    return this.entityManager.getEntity(id);
+  }
+
+  public getAllEntities(): GameEntity[] {
+    return this.entityManager.getAllEntities();
+  }
+
   public getPlayer(id: string): GameEntity | undefined {
     return this.entityManager.getEntity(id);
+  }
+
+  /**
+   * Protocol gate for inbound `update` messages. Rejects death-pose writes
+   * and releases the respawn anchor once the client echoes a nearby transform.
+   */
+  public acceptClientMovement(id: string, incomingPosition?: Position): boolean {
+    const entity = this.entityManager.getEntity(id);
+    if (!entity) {
+      return false;
+    }
+    if (!shouldAcceptClientMovement(entity, incomingPosition)) {
+      return false;
+    }
+    if (entity.respawnAnchor && incomingPosition) {
+      entity.respawnAnchor = undefined;
+    }
+    return true;
   }
 
   public getAllPlayers(): GameEntity[] {
@@ -188,7 +228,7 @@ export class GameEngine {
     return this.asteroidManager.getAsteroidCount();
   }
 
-  public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Array<{ x: number; y: number }> = [], playerPositions: Array<{ x: number; y: number }> = []): AsteroidData[] {
+  public createAsteroids(count: number, bounds = { radius: ARENA_RADIUS }, botPositions: Array<{ x: number; y: number }> = [], playerPositions: Array<{ x: number; y: number }> = []): AsteroidData[] {
     return this.asteroidManager.createAsteroids(count, bounds, botPositions, playerPositions);
   }
 
@@ -217,79 +257,85 @@ export class GameEngine {
     return this.entityManager.removeEntity(botId);
   }
 
-  // Game logic operations
   public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
-    console.log('DEBUG: handlePlayerDamage called', { targetPlayerId, attackerId, damage });
-    // Ignore damage if player is already in respawn countdown or already at 0 health
-    const existing = this.getPlayer(targetPlayerId);
-    if (!existing) {
-      console.log('DEBUG: damagedPlayer is null');
-      return false;
-    }
-    if (existing.respawnTimer !== undefined || existing.health <= 0) {
-      console.log('DEBUG: ignoring damage during respawn or while dead');
-      return false;
-    }
-
-    const damagedPlayer = this.entityManager.damageEntity(targetPlayerId, damage);
-    if (!damagedPlayer) {
-      console.log('DEBUG: damagedPlayer is null');
-      return false;
-    }
-    console.log('DEBUG: damagedPlayer after damage', { health: damagedPlayer.health, exploding: damagedPlayer.exploding });
-
-    // Handle destruction: decrement lives, award points, and schedule respawn if any lives remain
-    if (damagedPlayer.health <= 0) {
-      // Decrement lives for the destroyed player (min 0)
-      const destroyedEntity = this.entityManager.getEntity(targetPlayerId);
-      if (destroyedEntity) {
-        const prevLives = destroyedEntity.lives;
-        destroyedEntity.lives = Math.max(0, destroyedEntity.lives - 1);
-        logger.info('PLAYER', `Life lost`, {
-          playerId: targetPlayerId,
-          name: destroyedEntity.name,
-          livesBefore: prevLives,
-          livesAfter: destroyedEntity.lives,
-        });
-      }
-
-      // Only award points if attacker is a valid, different player
-      const attackerIsValidPlayer = !!attackerId && attackerId !== targetPlayerId && !!this.entityManager.getEntity(attackerId);
-      if (attackerIsValidPlayer) {
-        this.awardPoints(attackerId, 200);
-      }
-
-      // Schedule respawn only if player still has lives remaining
-      if (destroyedEntity && destroyedEntity.lives > 0) {
-        this.entityManager.updateEntity(targetPlayerId, {
-          respawnTimer: SHIP.RESPAWN_DELAY_FRAMES,
-        });
-      }
-
-      return true; // Player was destroyed
-    }
-
-    return false;
+    return this.applyCombatDamage(targetPlayerId, attackerId, damage, {
+      kind: 'human',
+      killPoints: COMBAT_REWARDS.playerKill,
+      decrementLives: true,
+      scheduleRespawnOnKill: true,
+      requireValidAttacker: true,
+    });
   }
 
   public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
-    const existing = this.getBot(botId);
-    if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
+    return this.applyCombatDamage(botId, attackerId, damage, {
+      kind: 'bot',
+      killPoints: COMBAT_REWARDS.botKill,
+      decrementLives: false,
+      scheduleRespawnOnKill: false,
+      requireValidAttacker: false,
+    });
+  }
+
+  public handleTargetDamage(targetId: string, attackerId: string, damage: number): boolean {
+    const target = this.entityManager.getEntity(targetId);
+    if (!target) {
+      return false;
+    }
+    return target.type === 'bot'
+      ? this.handleBotDamage(targetId, attackerId, damage)
+      : this.handlePlayerDamage(targetId, attackerId, damage);
+  }
+
+  private applyCombatDamage(
+    targetId: string,
+    attackerId: string,
+    damage: number,
+    rules: {
+      kind: 'human' | 'bot';
+      killPoints: number;
+      decrementLives: boolean;
+      scheduleRespawnOnKill: boolean;
+      requireValidAttacker: boolean;
+    }
+  ): boolean {
+    const existing = this.entityManager.getEntity(targetId);
+    if (!existing || existing.type !== rules.kind) {
       return false;
     }
 
-    const damagedBot = this.entityManager.damageEntity(botId, damage);
-    if (!damagedBot) {
+    const damaged = this.entityManager.damageEntity(targetId, damage);
+    if (!damaged) {
+      return false;
+    }
+    if (damaged.health > 0) {
       return false;
     }
 
-    // Award points to attacker for destroying a bot
-    if (damagedBot.health <= 0) {
-      this.awardPoints(attackerId, 50);
-      return true; // Bot was destroyed
+    if (rules.decrementLives) {
+      const prevLives = damaged.lives;
+      damaged.lives = Math.max(0, damaged.lives - 1);
+      logger.info('PLAYER', `Life lost`, {
+        playerId: targetId,
+        name: damaged.name,
+        livesBefore: prevLives,
+        livesAfter: damaged.lives,
+      });
     }
 
-    return false; // Bot was damaged but not destroyed
+    const attackerIsValid =
+      !!attackerId && attackerId !== targetId && !!this.entityManager.getEntity(attackerId);
+    if (!rules.requireValidAttacker || attackerIsValid) {
+      this.awardPoints(attackerId, rules.killPoints);
+    }
+
+    if (rules.scheduleRespawnOnKill && damaged.lives > 0) {
+      this.entityManager.updateEntity(targetId, {
+        respawnTimer: LIFECYCLE.respawnFrames,
+      });
+    }
+
+    return true;
   }
 
   public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {
@@ -309,47 +355,29 @@ export class GameEngine {
     };
   }
 
-  // Game state
-  public getGameState() {
+  public getGameState(): ServerGameState {
     const allEntities = this.entityManager.getAllEntities();
-    const gameState = {
-      entities: allEntities.map(entity => ({
-        id: entity.id,
-        name: entity.name,
-        type: entity.type,
-        position: entity.position,
-        velocity: entity.velocity,
-        angle: entity.angle,
-        exploding: entity.exploding,
-        thrusting: entity.thrusting,
-        color: entity.color,
-        lives: entity.lives,
-        score: entity.score,
-        health: entity.health,
-        maxHealth: entity.maxHealth,
-        respawnTimer: entity.respawnTimer,
-        spawnProtectionTimer: entity.spawnProtectionTimer,
-      })),
-      asteroids: this.asteroidManager.getAllAsteroids(),
+    const gameState: ServerGameState = {
+      entities: allEntities.map((entity) => snapshotEntity(entity)),
+      asteroids: this.asteroidManager.getAllAsteroids().map(snapshotAsteroid),
       gameTime: this.gameTime,
       isPaused: this.isPaused,
     };
-    
-    // Debug logging for health values
-    const humanPlayers = allEntities.filter(e => e.type === 'human');
+
+    const humanPlayers = allEntities.filter((entity) => entity.type === 'human');
     if (humanPlayers.length > 0) {
       logger.debug('GAME_STATE', 'Sending game state with health values', {
-        players: humanPlayers.map(p => ({
-          id: p.id,
-          name: p.name,
-          health: p.health,
-          maxHealth: p.maxHealth,
-          exploding: p.exploding,
-          respawnTimer: p.respawnTimer
-        }))
+        players: humanPlayers.map((player) => ({
+          id: player.id,
+          name: player.name,
+          health: player.health,
+          maxHealth: player.maxHealth,
+          exploding: player.exploding,
+          respawnTimer: player.respawnTimer,
+        })),
       });
     }
-    
+
     return gameState;
   }
 

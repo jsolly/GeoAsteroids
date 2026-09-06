@@ -1,10 +1,17 @@
 import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
-import { RNGService } from './RNGService';
-import { DEBUG, PALETTE, SHIP } from '../../src/constants';
+import { GAME, DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
+import { RNGService } from './RNGService';
+import {
+  ARENA_RADIUS,
+  LIFECYCLE,
+  isCombatInvulnerable,
+  isExploding,
+  isOutOfHealth,
+} from './entityLifecycle';
 
-export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
+export { RESPAWN_ANCHOR_ACK_DISTANCE, isStaleDeathPose } from './entityLifecycle';
 
 export interface GameEntity {
   id: string;
@@ -26,21 +33,16 @@ export interface GameEntity {
   /** Server spawn point held until the client echoes a nearby transform. */
   respawnAnchor?: Position;
   ws?: WebSocket; // Only for human players
-  explodeTime?: number; // For bot explosion handling
-}
-
-/** True when a client update is still the death pose, not the new spawn. */
-export function isStaleDeathPose(
-  anchor: Position | undefined,
-  position: Position | undefined
-): boolean {
-  if (!anchor || !position) {
-    return false;
-  }
-  return Math.hypot(position.x - anchor.x, position.y - anchor.y) > RESPAWN_ANCHOR_ACK_DISTANCE;
+  explodeTime?: number;
 }
 
 
+/**
+ * State-machine owner for every ship (human and bot):
+ * exploding → respawn countdown → spawn protection.
+ * GameEngine applies combat rules and ticks this manager; MessageHandler
+ * only reads status through GameEngine helpers.
+ */
 export class EntityManager {
   private entities = new Map<string, GameEntity>();
   private rng: RNGService;
@@ -134,12 +136,12 @@ export class EntityManager {
       exploding: false,
       thrusting: false,
       color: color || PALETTE.REMOTE,
-      lives: 3,
-      score: 0,
-      health: 100,
-      maxHealth: 100,
+      lives: GAME.START_LIVES,
+      score: GAME.STARTING_SCORE,
+      health: SHIP.MAX_HEALTH,
+      maxHealth: SHIP.MAX_HEALTH,
       lastUpdate: Date.now(),
-      spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
+      spawnProtectionTimer: LIFECYCLE.spawnProtectionFrames,
       ws,
     };
 
@@ -148,7 +150,7 @@ export class EntityManager {
   }
 
   // Bot management
-  public createBots(count: number, bounds = { radius: 3100 }): GameEntity[] {
+  public createBots(count: number, bounds = { radius: ARENA_RADIUS }): GameEntity[] {
     // Clear existing bots
     const existingBots = this.getBots();
     for (const bot of existingBots) {
@@ -195,12 +197,12 @@ export class EntityManager {
         exploding: false,
         thrusting: false,
         color: PALETTE.BOT,
-        lives: 3,
-        score: 0,
-        health: 100,
-        maxHealth: 100,
+        lives: GAME.START_LIVES,
+        score: GAME.STARTING_SCORE,
+        health: SHIP.MAX_HEALTH,
+        maxHealth: SHIP.MAX_HEALTH,
         lastUpdate: Date.now(),
-        spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
+        spawnProtectionTimer: LIFECYCLE.spawnProtectionFrames,
       };
 
       this.addEntity(bot);
@@ -216,31 +218,16 @@ export class EntityManager {
   // Damage system
   public damageEntity(entityId: string, damage: number): GameEntity | null {
     const entity = this.entities.get(entityId);
-    if (!entity || entity.exploding || entity.health <= 0) {
+    if (!entity || isCombatInvulnerable(entity)) {
       return null;
-    }
-
-    // Check spawn protection for both humans and bots
-    if (entity.spawnProtectionTimer !== undefined && entity.spawnProtectionTimer > 0) {
-      if (entity.type === 'bot') {
-        // Bot spawn protection can be disabled via debug flag
-        if (DEBUG.BOT_PLAYER.SPAWN_PROTECTION) {
-          return null;
-        }
-      } else {
-        // Humans always have spawn protection when timer > 0
-        return null;
-      }
     }
 
     const wasAlive = entity.health > 0;
     entity.health = Math.max(0, entity.health - damage);
 
-    // If entity is destroyed, set exploding state
     if (entity.health <= 0 && wasAlive) {
       entity.exploding = true;
-      // Set explosion timer for all entity types
-      entity.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
+      entity.explodeTime = LIFECYCLE.explodeFrames;
     }
 
     entity.lastUpdate = Date.now();
@@ -265,7 +252,7 @@ export class EntityManager {
 
       entity.exploding = false;
       if (entity.respawnTimer === undefined && entity.lives > 0) {
-        entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
+        entity.respawnTimer = LIFECYCLE.respawnFrames;
       }
       finishedExploding.push(entityId);
     }
@@ -316,11 +303,11 @@ export class EntityManager {
     entity.exploding = false;
     entity.explodeTime = undefined;
     this.placeEntityInArena(entity);
-    entity.spawnProtectionTimer = SHIP.INVINCIBILITY_DURATION_FRAMES;
+    entity.spawnProtectionTimer = LIFECYCLE.spawnProtectionFrames;
     entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };
   }
 
-  private placeEntityInArena(entity: GameEntity, boundsRadius = 3100): void {
+  private placeEntityInArena(entity: GameEntity, boundsRadius = ARENA_RADIUS): void {
     const respawnRadius = boundsRadius * 0.8;
     const angle = this.rng.random() * Math.PI * 2;
     const radius = this.rng.random() * respawnRadius;
@@ -347,8 +334,8 @@ export class EntityManager {
     }
     
     for (const bot of bots) {
-      if (bot.exploding || bot.health <= 0) {
-        continue; // Skip exploding or dead bots
+      if (isExploding(bot) || isOutOfHealth(bot)) {
+        continue;
       }
 
       // Optimized AI: less frequent but more meaningful direction changes
@@ -393,7 +380,7 @@ export class EntityManager {
       // Keep bots inside the circular play boundary. Without this they thrust
       // in a straight line forever and escape the arena, so the player never
       // encounters them. Bounce off the boundary and steer back toward center.
-      const BOUNDARY_RADIUS = 3100;
+      const BOUNDARY_RADIUS = ARENA_RADIUS;
       const CONTAIN_RADIUS = BOUNDARY_RADIUS - 200; // stay safely inside the wall
       const distFromCenter = Math.sqrt(
         bot.position.x * bot.position.x + bot.position.y * bot.position.y
@@ -443,7 +430,7 @@ export class EntityManager {
   }
 
   // Atomic bot creation to prevent race conditions
-  public createBotsSafely(count: number, bounds = { radius: 3100 }): GameEntity[] | null {
+  public createBotsSafely(count: number, bounds = { radius: ARENA_RADIUS }): GameEntity[] | null {
     if (this.isCreatingBots) {
       return null; // Already creating bots
     }

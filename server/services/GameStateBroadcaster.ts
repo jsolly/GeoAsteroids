@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import { snapshotVec } from '../core/entityLifecycle';
 import { GameEngine } from '../core/GameEngine';
 import { logger } from '../../setup/serverLogger';
 
@@ -171,7 +172,7 @@ export class GameStateBroadcaster {
     const botSummaries = bots.map(bot => ({
       botId: bot.id,
       botName: bot.name,
-      position: bot.position,
+      position: snapshotVec(bot.position),
     }));
 
     const message = {
@@ -193,8 +194,8 @@ export class GameStateBroadcaster {
         data: {
           botId: bot.id,
           playerId: 'server',
-          position: bot.position,
-          velocity: bot.velocity,
+          position: snapshotVec(bot.position),
+          velocity: snapshotVec(bot.velocity),
           angle: bot.angle,
           exploding: bot.exploding,
           thrusting: bot.thrusting,

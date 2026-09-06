@@ -4,7 +4,8 @@ import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
 import { DEBUG } from '../../src/constants';
-import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
+import { ARENA_RADIUS, snapshotVec } from '../core/entityLifecycle';
+import type { GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
 
@@ -24,6 +25,11 @@ function boundedPayloadPreview(value: unknown): string {
   return `${serialized.slice(0, PAYLOAD_PREVIEW_MAX_CHARS)}…`;
 }
 
+/**
+ * Protocol owner: validate inbound messages, reject illegal client writes,
+ * and translate GameEngine results into broadcasts.
+ * Does not advance explosion → respawn → spawn-protection timers.
+ */
 export class MessageHandler {
   private gameEngine: GameEngine;
   private broadcaster: GameStateBroadcaster;
@@ -193,23 +199,8 @@ export class MessageHandler {
       return;
     }
 
-    // Ignore movement updates while the player is dead, exploding, or waiting to
-    // respawn. Otherwise the client's stale position keeps overwriting the
-    // server-chosen respawn position, leaving the ship frozen where it died
-    // (e.g. stuck outside the boundary at full health).
-    const existing = this.gameEngine.getPlayer(id);
-    if (existing && (existing.exploding || existing.respawnTimer !== undefined || existing.health <= 0)) {
+    if (!this.gameEngine.acceptClientMovement(id, data.position)) {
       return;
-    }
-
-    // Hold the server spawn point until the client echoes a nearby transform.
-    // The instant respawn clears dead/exploding flags, a stale death-pose
-    // update would otherwise teleport the ship back onto the wall/roid.
-    if (existing && isStaleDeathPose(existing.respawnAnchor, data.position)) {
-      return;
-    }
-    if (existing?.respawnAnchor && data.position) {
-      existing.respawnAnchor = undefined;
     }
 
     // Server-authoritative fields: the client only mirrors these back from our
@@ -300,66 +291,48 @@ export class MessageHandler {
   }
 
   private handleCollisionDamage(ws: WebSocket, data: any): void {
-    console.log('DEBUG: handleCollisionDamage called with data:', data);
     if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
       this.broadcaster.sendError(ws, 'Missing required fields for collisionDamage');
       return;
     }
 
-    let isDestroyed = false;
-    let remainingHealth = 0;
-    let targetName = '';
+    const before = this.gameEngine.getEntity(data.targetPlayerId);
+    const healthBefore = before?.health;
+    const isDestroyed = this.gameEngine.handleTargetDamage(
+      data.targetPlayerId,
+      data.attackerId,
+      data.damage
+    );
+    const after = this.gameEngine.getEntity(data.targetPlayerId);
+    if (!after) {
+      return;
+    }
 
-    // Check if target is a bot or player
-    if (data.targetPlayerId.startsWith('server-bot-')) {
-      // Target is a bot
-      isDestroyed = this.gameEngine.handleBotDamage(data.targetPlayerId, data.attackerId, data.damage);
-      const targetBot = this.gameEngine.getBot(data.targetPlayerId);
-      if (targetBot) {
-        remainingHealth = targetBot.health;
-        targetName = targetBot.name;
-        // Always broadcast bot update after damage
-        this.broadcaster.broadcastBotUpdate(data.targetPlayerId);
-      }
+    if (after.type === 'bot') {
+      this.broadcaster.broadcastBotUpdate(data.targetPlayerId);
     } else {
-      // Target is a player
-      const before = this.gameEngine.getPlayer(data.targetPlayerId);
-      const healthBefore = before?.health;
-      isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
-      const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
-      if (targetPlayer) {
-        remainingHealth = targetPlayer.health ?? 0;
-        targetName = targetPlayer.name;
-        const healthDropped =
-          healthBefore !== undefined && remainingHealth < healthBefore;
-        // Do not echo ignored hits (spawn protection / already dead). Those
-        // bounces arrive as remainingHealth=100 and heal the client hull.
-        if (isDestroyed || healthDropped) {
-          this.broadcaster.broadcastPlayerDamaged(
-            data.targetPlayerId,
-            data.attackerId,
-            data.damage,
-            remainingHealth,
-            isDestroyed,
-            targetPlayer.lives
-          );
-        }
+      const remainingHealth = after.health ?? 0;
+      const healthDropped = healthBefore !== undefined && remainingHealth < healthBefore;
+      // Do not echo ignored hits (spawn protection / already dead). Those
+      // bounces arrive as remainingHealth=100 and heal the client hull.
+      if (isDestroyed || healthDropped) {
+        this.broadcaster.broadcastPlayerDamaged(
+          data.targetPlayerId,
+          data.attackerId,
+          data.damage,
+          remainingHealth,
+          isDestroyed,
+          after.lives
+        );
       }
     }
 
-    // Handle destruction for both players and bots
     if (isDestroyed) {
       const attacker = this.gameEngine.getPlayer(data.attackerId);
       if (attacker) {
         this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
       }
-
-      if (data.targetPlayerId.startsWith('server-bot-')) {
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
-      } else {
-        // Player was destroyed
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
-      }
+      this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, after.name, data.attackerId);
     }
   }
 
@@ -427,9 +400,9 @@ export class MessageHandler {
       const asteroidCount = data.asteroidCount || 10;
       
       // Get current entity positions for roid placement
-      const allEntities = this.gameEngine.entityManager.getAllEntities();
-      const humanPlayers = allEntities.filter(entity => entity.type === 'human');
-      const bots = allEntities.filter(entity => entity.type === 'bot');
+      const allEntities = this.gameEngine.getAllEntities();
+      const humanPlayers = allEntities.filter((entity) => entity.type === 'human');
+      const bots = allEntities.filter((entity) => entity.type === 'bot');
       
       console.log('🪨 SERVER: Available entities for asteroid placement:', {
         allEntities: allEntities.length,
@@ -442,7 +415,7 @@ export class MessageHandler {
       const playerPositions = humanPlayers.map(player => player.position);
       const botPositions = bots.map(bot => bot.position);
       
-      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: 3100 }, botPositions, playerPositions);
+      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: ARENA_RADIUS }, botPositions, playerPositions);
       this.broadcaster.broadcastAsteroidCreation(asteroids);
       logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids with ${playerPositions.length} player positions and ${botPositions.length} bot positions`);
     } else {
@@ -485,7 +458,7 @@ export class MessageHandler {
       data: {
         botId: bot.id,
         botName: bot.name,
-        position: bot.position,
+        position: snapshotVec(bot.position),
       },
       timestamp: Date.now(),
     });
@@ -495,8 +468,8 @@ export class MessageHandler {
       data: {
         botId: bot.id,
         playerId: 'server',
-        position: bot.position,
-        velocity: bot.velocity,
+        position: snapshotVec(bot.position),
+        velocity: snapshotVec(bot.velocity),
         angle: bot.angle,
         exploding: bot.exploding,
         lives: bot.lives,
@@ -528,7 +501,7 @@ export class MessageHandler {
       logger.debug(`Player ${id} requested bot initialization but bots already exist or creation in progress`);
 
       // Send current bot state if bots already exist
-      const existingBots = this.gameEngine.entityManager.getBots();
+      const existingBots = this.gameEngine.getAllBots();
       for (const bot of existingBots) {
         this.sendBotStateToSocket(ws, bot);
       }

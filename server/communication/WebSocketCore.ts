@@ -3,6 +3,11 @@ import { GameEngine } from '../core/GameEngine';
 import { MessageHandler } from './MessageHandler';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 
+/**
+ * Transport owner: WebSocket I/O and routing only.
+ * Does not own explosion → respawn → spawn-protection state.
+ * Messages go to MessageHandler; world ticks live on GameEngine.
+ */
 export class WebSocketCore {
   private gameEngine: GameEngine;
   private messageHandler: MessageHandler;
