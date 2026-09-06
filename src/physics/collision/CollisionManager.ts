@@ -230,13 +230,26 @@ export class CollisionManager {
       exploding: false,
     });
 
-    // Send asteroid destroyed message
+    this.reportAsteroidHit(asteroid.id, attackerId, asteroid.r, 'laser');
+  }
+
+  /**
+   * Report a laser or ram hit. `playerId` is any ship id (human or bot) so
+   * collab split stays DRY across ship kinds.
+   */
+  private reportAsteroidHit(
+    asteroidId: string,
+    playerId: string,
+    radius: number,
+    cause: 'laser' | 'collision'
+  ): void {
     this.networkManager.sendMessage({
       type: 'asteroidDestroyed',
       data: {
-        asteroidId: asteroid.id,
-        playerId: attackerId,
-        points: this.getAsteroidPoints(asteroid.r),
+        asteroidId,
+        playerId,
+        points: this.getAsteroidPoints(radius),
+        cause,
       },
     });
   }
@@ -321,15 +334,7 @@ export class CollisionManager {
           },
         });
 
-        // Send asteroid destruction message to server to trigger splitting
-        this.networkManager.sendMessage({
-          type: 'asteroidDestroyed',
-          data: {
-            asteroidId: asteroid.id,
-            playerId: serverPlayerId,
-            points: this.getAsteroidPoints(asteroid.r),
-          },
-        });
+        this.reportAsteroidHit(asteroid.id, serverPlayerId, asteroid.r, 'collision');
       }
     } else if (player.type === 'bot') {
       // For bots, send bot damage message
@@ -342,15 +347,7 @@ export class CollisionManager {
         },
       });
 
-      // Send asteroid destruction message to server to trigger splitting
-      this.networkManager.sendMessage({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: asteroid.id,
-          playerId: player.id,
-          points: this.getAsteroidPoints(asteroid.r),
-        },
-      });
+      this.reportAsteroidHit(asteroid.id, player.id, asteroid.r, 'collision');
     }
     // Remote players are handled by server, no client-side network message needed
   }

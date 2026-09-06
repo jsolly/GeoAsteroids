@@ -1,10 +1,15 @@
 import { WebSocket } from 'ws';
-import type { Position, AsteroidData } from '../../shared-types';
-import { EntityManager, GameEntity } from './EntityManager';
-import { AsteroidManager } from './AsteroidManager.ts';
-import { RNGService } from './RNGService';
+import type { AsteroidData, Position } from '../../shared-types';
 import { SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
+import {
+  AsteroidManager,
+  type AsteroidHitCause,
+  type AsteroidHitOutcome,
+  type ExpiredCollabHit,
+} from './AsteroidManager.ts';
+import { EntityManager, GameEntity } from './EntityManager';
+import { RNGService } from './RNGService';
 
 export class GameEngine {
   public entityManager: EntityManager;
@@ -294,21 +299,31 @@ export class GameEngine {
     return false; // Bot was damaged but not destroyed
   }
 
-  public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {
-    // Use the new destroyAsteroid method that handles splitting
-    const result = this.asteroidManager.destroyAsteroid(asteroidId);
-    if (!result.destroyed) {
-      return { success: false, newAsteroids: [] };
+  public handleAsteroidHit(
+    asteroidId: string,
+    playerId: string,
+    points: number,
+    cause: AsteroidHitCause = 'laser',
+    now = Date.now()
+  ): AsteroidHitOutcome {
+    const result =
+      cause === 'collision'
+        ? this.asteroidManager.destroyFromCollision(asteroidId)
+        : this.asteroidManager.registerLaserHit(asteroidId, playerId, points, now);
+
+    if (result.outcome === 'destroyed') {
+      this.awardPoints(playerId, points);
     }
 
-    // Award points to the player
-    this.awardPoints(playerId, points);
+    return result;
+  }
 
-    // Return success status and any new asteroids created from splitting
-    return { 
-      success: true, 
-      newAsteroids: result.newAsteroids 
-    };
+  public flushExpiredCollabHits(now = Date.now()): ExpiredCollabHit[] {
+    const expired = this.asteroidManager.expireStaleHits(now);
+    for (const item of expired) {
+      this.awardPoints(item.playerId, item.points);
+    }
+    return expired;
   }
 
   // Game state

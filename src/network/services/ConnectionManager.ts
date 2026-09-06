@@ -382,7 +382,7 @@ export class ConnectionManager {
         this.handleAsteroidUpdated(data as { asteroidId: string; updates: Partial<AsteroidData> });
         break;
       case 'asteroidDestroy':
-        this.handleAsteroidDestroyed(data as { asteroidId: string });
+        this.handleAsteroidDestroyed(data as { asteroidId: string; collabSplit?: boolean });
         break;
       case 'botCreated':
         this.handleBotCreated(data as { botId: string; botName: string; position: Position });
@@ -621,10 +621,10 @@ export class ConnectionManager {
     );
   }
 
-  private handleAsteroidDestroyed(data: { asteroidId: string }): void {
+  private handleAsteroidDestroyed(data: { asteroidId: string; collabSplit?: boolean }): void {
     window.dispatchEvent(
       new CustomEvent('serverAsteroidDestroyed', {
-        detail: { asteroidId: data.asteroidId },
+        detail: { asteroidId: data.asteroidId, collabSplit: data.collabSplit === true },
       })
     );
   }
