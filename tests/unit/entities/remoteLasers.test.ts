@@ -26,9 +26,14 @@ test('advances lasers only for remote players', () => {
 });
 
 test("a remote player's laser travels instead of freezing at the muzzle", () => {
-  // Provide a canvas so lasers do not immediately expire (isExpired needs one).
-  const canvas = document.createElement('canvas');
-  document.body.appendChild(canvas);
+  // Play canvas is #gameCanvas (title starfield is a second canvas).
+  const canvas =
+    (document.getElementById('gameCanvas') as HTMLCanvasElement | null) ??
+    Object.assign(document.createElement('canvas'), { id: 'gameCanvas' });
+  if (!canvas.isConnected) {
+    document.body.appendChild(canvas);
+  }
+  canvas.width = 800;
   canvasManager.initialize();
 
   const remote = makePlayer('remote');
@@ -38,6 +43,4 @@ test("a remote player's laser travels instead of freezing at the muzzle", () => 
 
   expect(remote.ship.lasers.length).toBe(1);
   expect(remote.ship.lasers[0]?.position.x).toBeCloseTo(5, 5);
-
-  canvas.remove();
 });
