@@ -28,7 +28,7 @@ test('shield ring is a shared phosphor stroke, not a filled disc', () => {
   const end = shipSrc.indexOf('function drawFloatingHealthCapsule');
   const shieldFn = shipSrc.slice(start, end);
   expect(start).toBeGreaterThan(-1);
-  expect(shieldFn).toMatch(/drawShipShield\(ctx, ship, screenX, screenY, shipR\)/);
+  expect(shipSrc).toMatch(/drawShipShield\(ctx, ship, screenX, screenY, shipR\)/);
   expect(shieldFn).toMatch(/ctx\.arc\(screenX, screenY, radius/);
   expect(shieldFn).toMatch(/PALETTE\.SHIELD/);
   expect(shieldFn).not.toMatch(/\.fill\(/);

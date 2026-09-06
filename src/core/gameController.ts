@@ -809,10 +809,7 @@ export class GameController {
       if (other.type === 'local') {
         continue;
       }
-      this.collisionManager.explodeIncomingLasersOnShieldedShip(
-        other.ship.lasers,
-        currPlayer.ship
-      );
+      this.collisionManager.explodeIncomingLasersOnShieldedShip(other.ship.lasers, currPlayer.ship);
     }
   }
 
