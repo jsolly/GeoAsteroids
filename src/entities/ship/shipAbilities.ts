@@ -112,9 +112,7 @@ export function listHarpoonCandidates(world?: AbilityWorld): AbilityBody[] {
 }
 
 /** Rocks are environment. Ship combat filters must not reject a visible belt row. */
-export function isEnvironmentLatchBody(
-  body: Pick<AbilityBody, 'kind' | 'factionId' | 'shieldActive' | 'shieldTimer'>
-): boolean {
+export function isEnvironmentLatchBody(body: AbilityBody): boolean {
   if (body.kind === 'ship' || body.factionId !== undefined) {
     return false;
   }
