@@ -25,7 +25,7 @@ export function laserHitDamageMessage(
 export function asteroidCollisionDamageMessage(
   target: Combatant,
   localPlayerId: string | null,
-  damage: number = DAMAGE.LASER_HIT
+  damage: number = DAMAGE.ASTEROID_COLLISION
 ): Record<string, unknown> | null {
   if (isLocal(target)) {
     if (!localPlayerId) {
