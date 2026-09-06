@@ -316,48 +316,6 @@ export function drawPlayerName(
   ctx.restore();
 }
 
-export function drawFactionMark(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  faction: FactionId,
-  color: string,
-  options: { size?: number; filled?: boolean } = {}
-): void {
-  const size = options.size ?? 3;
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = 1;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  if (faction === 'ion') {
-    ctx.beginPath();
-    ctx.moveTo(x - size, y - size);
-    ctx.lineTo(x + size * 0.7, y);
-    ctx.lineTo(x - size, y + size);
-    if (options.filled) {
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      ctx.stroke();
-    }
-  } else {
-    ctx.beginPath();
-    ctx.moveTo(x, y - size * 1.3);
-    ctx.lineTo(x + size, y);
-    ctx.lineTo(x, y + size * 1.3);
-    ctx.lineTo(x - size, y);
-    ctx.closePath();
-    if (options.filled) {
-      ctx.fill();
-    } else {
-      ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
 // Classic vector break-up: the three hull edges drift apart along their outward normals and fade,
 // with a few hairline sparks — no filled fireball.
 function drawVectorExplosion(

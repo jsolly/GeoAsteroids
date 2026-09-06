@@ -6,7 +6,6 @@ import type { Ship } from '../../entities/ship/Ship';
 import { getGameBoundary } from '../../physics/boundary';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
-import { drawFactionMark } from '../factionMarks';
 
 type CircleBoundary = { cx: number; cy: number; radius: number };
 
