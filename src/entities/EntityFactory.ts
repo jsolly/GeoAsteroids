@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../shared-types';
 import { CANVAS, DEBUG, PALETTE, SPAWN } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
-import { randomShipSpawnPosition } from '../physics/playVolume';
 import { getFactionColor } from '../utils/colorUtils';
 import {
   getRandomPositionNearBoundary,
@@ -259,7 +258,8 @@ export class EntityFactory {
         const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
         positions.push(getRandomPositionNearPoint(centerPosition, 200));
       } else {
-        positions.push(randomShipSpawnPosition());
+        // Place bots randomly within the boundary (default behavior)
+        positions.push(getRandomPositionWithinBoundary());
       }
     }
 

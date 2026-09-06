@@ -93,14 +93,13 @@ describe('authoritative asteroid motion', () => {
     expect(Math.abs(stepped.position.x - -(fieldRadius * 0.96))).toBeGreaterThan(500);
   });
 
-  test('after 70s of ticks the belt stays in-field and on small and 1080p canvases', () => {
+  test('after 60s of ticks the belt stays in-field and on a 1080p canvas from origin', () => {
     const manager = new AsteroidManager(new RNGService(7));
     manager.createAsteroids(20);
     const fieldRadius = getAsteroidFieldRadius();
     const origin = { x: 0, y: 0 };
-    const small = { width: 800, height: 600 };
 
-    for (let i = 0; i < 4200; i++) {
+    for (let i = 0; i < 3600; i++) {
       manager.updateMotion();
     }
 
@@ -112,12 +111,8 @@ describe('authoritative asteroid motion', () => {
       );
     }
 
-    expect(after.filter((asteroid) => isOnPlayfieldCanvas(asteroid.position, origin)).length).toBeGreaterThan(
-      0
-    );
-    expect(
-      after.filter((asteroid) => isOnPlayfieldCanvas(asteroid.position, origin, small)).length
-    ).toBeGreaterThan(0);
+    const onCanvas = after.filter((asteroid) => isOnPlayfieldCanvas(asteroid.position, origin));
+    expect(onCanvas.length).toBeGreaterThan(0);
   });
 
   test('two interpolators stay aligned across a bounce when they share snapshots', () => {

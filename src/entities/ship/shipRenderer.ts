@@ -233,12 +233,9 @@ export function drawThrusterAtPosition(
   }
 
   if (!ship.exploding && ship.thrusting) {
-    // Convert world coordinates to screen coordinates (same as drawShipAtPosition)
-    const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
-    const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
-
-    // Use the generic thruster function at the calculated screen position
-    drawGenericThruster(screenX, screenY, ship.angle, ship.r, color);
+    const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+    const scale = canvasManager.getPlayfieldScale();
+    drawGenericThruster(screen.x, screen.y, ship.angle, ship.r * scale, color);
   }
 }
 
@@ -344,7 +341,7 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
     ctx,
     screenCenter.x,
     screenCenter.y,
-    ship.r,
+    ship.r * canvasManager.getPlayfieldScale(),
     ship.angle,
     explosionProgress(ship),
     color || ship.color || PALETTE.LOCAL
@@ -362,13 +359,13 @@ export function drawShipExplosionAtPosition(
     return;
   }
 
-  const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
-  const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+  const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+  const scale = canvasManager.getPlayfieldScale();
   drawVectorExplosion(
     ctx,
-    screenX,
-    screenY,
-    ship.r,
+    screen.x,
+    screen.y,
+    ship.r * scale,
     ship.angle,
     explosionProgress(ship),
     color || ship.color || PALETTE.REMOTE
@@ -394,8 +391,9 @@ export function drawLasers(
     if (laser.explodeTime === 0) {
       // Short cream dash along heading — soft round caps + glow ≤ stroke (pins were invisible).
       const speed = Math.hypot(laser.velocity.x, laser.velocity.y);
-      const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * (VISUAL.LASER_LENGTH / 2);
-      const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * (VISUAL.LASER_LENGTH / 2);
+      const bolt = (VISUAL.LASER_LENGTH / 2) * canvasManager.getPlayfieldScale();
+      const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * bolt;
+      const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * bolt;
       strokePhosphorSegment(
         ctx,
         screenPos.x - halfX,
@@ -485,9 +483,11 @@ export function drawShipAtPosition(
     return; // Skip rendering this frame
   }
 
-  // Convert world coordinates to screen coordinates
-  const screenX = ship.position.x - shipPosition.x + cvs.width / 2;
-  const screenY = ship.position.y - shipPosition.y + cvs.height / 2;
+  const screen = canvasManager.worldToScreen(ship.position, shipPosition);
+  const scale = canvasManager.getPlayfieldScale();
+  const screenX = screen.x;
+  const screenY = screen.y;
+  const shipR = ship.r * scale;
 
   // Use ship's own color or provided color
   const shipColor = color || ship.color;
@@ -496,7 +496,7 @@ export function drawShipAtPosition(
   const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
     screenX,
     screenY,
-    ship.r,
+    shipR,
     ship.angle
   );
 
@@ -506,7 +506,7 @@ export function drawShipAtPosition(
 
   // Draw player name under ship if provided
   if (playerName) {
-    drawPlayerName(playerName, screenX, screenY, ship.r, shipColor);
+    drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
   }
 }
 

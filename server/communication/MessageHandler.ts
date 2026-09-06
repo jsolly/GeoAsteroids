@@ -5,7 +5,6 @@ import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
 import { DEBUG } from '../../src/constants';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
-import { containShipUnlessPastKillWall } from '../../src/physics/playVolume';
 import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
@@ -216,17 +215,6 @@ export class MessageHandler {
     }
     if (sanitizedData.a !== undefined && sanitizedData.angularVelocity === undefined) {
       sanitizedData.angularVelocity = sanitizedData.a;
-    }
-
-    if (sanitizedData.position) {
-      const contained = containShipUnlessPastKillWall(
-        sanitizedData.position,
-        sanitizedData.velocity ?? existing?.velocity ?? { x: 0, y: 0 }
-      );
-      sanitizedData.position = contained.position;
-      if (sanitizedData.velocity) {
-        sanitizedData.velocity = contained.velocity;
-      }
     }
 
     const player = this.gameEngine.updatePlayer(id, sanitizedData);

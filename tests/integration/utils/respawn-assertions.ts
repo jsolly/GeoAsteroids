@@ -1,11 +1,10 @@
 import { expect } from 'vitest';
-import { getShipSpawnRadius } from '../../../src/physics/playVolume';
 
 /** Circular world boundary radius (must match server/client). */
 export const BOUNDARY_RADIUS = 3100;
 
-/** Server respawns inside the shared on-canvas ship disk. */
-export const RESPAWN_MAX_RADIUS = getShipSpawnRadius();
+/** Server respawns within 80% of the boundary radius. */
+export const RESPAWN_MAX_RADIUS = BOUNDARY_RADIUS * 0.8;
 
 /** Respawn must land noticeably away from the death location. */
 export const MIN_RESPAWN_DISTANCE_FROM_DEATH = 75;

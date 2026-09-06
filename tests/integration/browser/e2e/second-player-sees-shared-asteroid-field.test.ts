@@ -2,6 +2,7 @@ import { test, expect } from 'vitest';
 import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
 import { TestConfig } from '../../utils/test-config';
+import { countRocksOnCanvas, playfieldZoom } from '../../../../src/rendering/playfieldCamera';
 
 const { browserManager } = createBrowserScenarioHooks(__dirname);
 
@@ -9,11 +10,9 @@ async function onCanvasAsteroidCount(game: GameInteractions): Promise<number> {
   const ship = await game.getShipPosition();
   const field = await game.getAsteroidPositions();
   const canvas = await game.getCanvasSize();
-  return field.filter((roid) => {
-    const screenX = canvas.width / 2 - ship.x + roid.x;
-    const screenY = canvas.height / 2 - ship.y + roid.y;
-    return screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height;
-  }).length;
+  const roids = field.map((roid) => ({ position: { x: roid.x, y: roid.y }, r: roid.radius }));
+  const scale = playfieldZoom(roids, ship, canvas);
+  return countRocksOnCanvas(roids, ship, canvas, scale);
 }
 
 test('second player sees shared asteroid field', async () => {

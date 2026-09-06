@@ -7,17 +7,14 @@ export function getAsteroidFieldRadius(): number {
 }
 
 /**
- * Pull an escaped pose back onto `radius` along the same ray.
- * Opposite-side wrap at the 3100 arena wall parked the field at ~3000px —
- * on the minimap, off the ship camera. Same-ray contain keeps late-join
- * / live-server 10k poses in the shared belt.
+ * Pull an escaped pose back onto the shared belt along the same ray.
+ * Opposite-side wrap at the 3100 arena wall (see #437) parked the field at
+ * ~3000px — on the minimap, off the ship camera — which is the >60s empty
+ * canvas. Same-ray contain keeps late-join / live-server 10k poses in view.
  */
-export function containInsideRadius(
-  x: number,
-  y: number,
-  radius: number
-): { x: number; y: number } {
+export function containAsteroidPosition(x: number, y: number): { x: number; y: number } {
   const { cx, cy } = getGameBoundary();
+  const radius = getAsteroidFieldRadius();
   const dx = x - cx;
   const dy = y - cy;
   const dist = Math.hypot(dx, dy);
@@ -26,37 +23,6 @@ export function containInsideRadius(
   }
   const scale = (radius * ROID.FIELD_INNER_SCALE) / dist;
   return { x: cx + dx * scale, y: cy + dy * scale };
-}
-
-export function containAsteroidPosition(x: number, y: number): { x: number; y: number } {
-  return containInsideRadius(x, y, getAsteroidFieldRadius());
-}
-
-/** Bounce an in-play pose back into `radius`. Same math for rocks and ships. */
-export function bounceInsideRadius(
-  position: { x: number; y: number },
-  velocity: { x: number; y: number },
-  radius: number
-): { position: { x: number; y: number }; velocity: { x: number; y: number } } {
-  const { cx, cy } = getGameBoundary();
-  const dx = position.x - cx;
-  const dy = position.y - cy;
-  const dist = Math.hypot(dx, dy);
-  if (dist <= radius || dist === 0) {
-    return { position, velocity };
-  }
-
-  const contained = containInsideRadius(position.x, position.y, radius);
-  let vx = velocity.x;
-  let vy = velocity.y;
-  const nx = dx / dist;
-  const ny = dy / dist;
-  const radial = vx * nx + vy * ny;
-  if (radial > 0) {
-    vx -= 2 * radial * nx;
-    vy -= 2 * radial * ny;
-  }
-  return { position: contained, velocity: { x: vx, y: vy } };
 }
 
 /** @deprecated Use containAsteroidPosition — kept for call sites during the belt fix. */
@@ -69,14 +35,30 @@ export function stepAsteroidMotion(
   velocity: { x: number; y: number },
   tickScale = 1
 ): { position: { x: number; y: number }; velocity: { x: number; y: number } } {
-  return bounceInsideRadius(
-    {
-      x: position.x + velocity.x * tickScale,
-      y: position.y + velocity.y * tickScale,
-    },
-    { x: velocity.x, y: velocity.y },
-    getAsteroidFieldRadius()
-  );
+  const { cx, cy } = getGameBoundary();
+  const radius = getAsteroidFieldRadius();
+  let x = position.x + velocity.x * tickScale;
+  let y = position.y + velocity.y * tickScale;
+  let vx = velocity.x;
+  let vy = velocity.y;
+
+  const dx = x - cx;
+  const dy = y - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist > radius && dist > 0) {
+    const contained = containAsteroidPosition(x, y);
+    x = contained.x;
+    y = contained.y;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const radial = vx * nx + vy * ny;
+    if (radial > 0) {
+      vx -= 2 * radial * nx;
+      vy -= 2 * radial * ny;
+    }
+  }
+
+  return { position: { x, y }, velocity: { x: vx, y: vy } };
 }
 
 /** Advance one 60 FPS tick (or a dt-scaled fraction), then keep the belt in-field. */

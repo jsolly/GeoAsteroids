@@ -25,17 +25,13 @@ export const GAME = {
 // SPAWN CONFIGURATION
 // ============================================================================
 export const SPAWN = {
-  // Radius (px) around the arena center within which ships spawn and respawn.
+  // Radius (px) around the arena center within which human players spawn.
   // The arena boundary radius is ~3100px, so spawning anywhere inside it puts
   // players thousands of px apart — far outside each other's viewport, so two
   // people joining the same server never see one another. Clustering spawns
   // near the center keeps freshly-joined players within view of each other
-  // (max separation ~2x this radius) and inside the shared asteroid belt.
+  // (max separation ~2x this radius) and near where bots/asteroids converge.
   NEAR_CENTER_RADIUS: 150,
-  // Reject a respawn that lands on the death pose so the ship actually moves.
-  MIN_RESPAWN_SEPARATION: 75,
-  // Smallest playfield we still promise rocks on (HTML canvas default / small laptop).
-  CONSERVATIVE_CANVAS: { width: 800, height: 600 },
 } as const;
 
 // ============================================================================
@@ -185,12 +181,11 @@ export const ROID = {
   MAX_COUNT: 20,
   SPAWN_TIME_FRAMES: 180, // 3 seconds at 60 FPS
 
-  // Shared moving belt. A 1080p camera around the ship sees ~960×540; an 800×600
-  // canvas sees ~400×300. #444 bounced rocks at 1200 (the audio fallback) which
-  // is taller than a 1080p view, and ships still spawned/respawned/flew out to
-  // the 3100 kill wall — minimap dots, empty canvas. Keep the belt inside a
-  // 1080p half-height so a spawn-disk ship still sees rocks on a small canvas.
-  FIELD_RADIUS: 520,
+  // Shared moving belt. The ship-kill wall is ~3100px; a 1080p camera around a
+  // center-spawned ship only sees ~960×540. Opposite-side wrap at the wall
+  // parked every roid at ~3000px (minimap dots, empty canvas). Keep the belt
+  // inside the same "nearby" radius the audio/network layer already uses.
+  FIELD_RADIUS: 1200,
   FIELD_INNER_SCALE: 0.96,
 } as const;
 

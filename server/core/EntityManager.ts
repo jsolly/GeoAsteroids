@@ -2,12 +2,6 @@ import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
-import {
-  containShipUnlessPastKillWall,
-  getShipSpawnRadius,
-  randomPositionInDisk,
-  randomShipSpawnPosition,
-} from '../../src/physics/playVolume';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
@@ -189,11 +183,13 @@ export class EntityManager {
 
     for (let i = 0; i < Math.min(botCount, botNames.length); i++) {
       const botId = `server-bot-${i}`;
-      const position = randomPositionInDisk(
-        Math.min(getShipSpawnRadius(), bounds.radius),
-        () => this.rng.random()
-      );
+      // Generate random position within circular boundary
       const angle = this.rng.random() * Math.PI * 2;
+      const radius = this.rng.random() * bounds.radius * 0.8; // Stay within 80% of boundary
+      const position = {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius
+      };
 
       const botName = botNames[i];
       if (botName === undefined) {
@@ -335,8 +331,14 @@ export class EntityManager {
     entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };
   }
 
-  private placeEntityInArena(entity: GameEntity): void {
-    entity.position = randomShipSpawnPosition(() => this.rng.random(), entity.position);
+  private placeEntityInArena(entity: GameEntity, boundsRadius = 3100): void {
+    const respawnRadius = boundsRadius * 0.8;
+    const angle = this.rng.random() * Math.PI * 2;
+    const radius = this.rng.random() * respawnRadius;
+    entity.position = {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+    };
     entity.angle = this.rng.random() * Math.PI * 2;
     entity.velocity = { x: 0, y: 0 };
   }
@@ -399,14 +401,27 @@ export class EntityManager {
       bot.position.x += bot.velocity.x;
       bot.position.y += bot.velocity.y;
 
-      // Same play-volume bounce as human ships and rocks — one DRY disk.
-      const before = { x: bot.position.x, y: bot.position.y };
-      const contained = containShipUnlessPastKillWall(bot.position, bot.velocity);
-      bot.position = contained.position;
-      bot.velocity = contained.velocity;
-      if (contained.position.x !== before.x || contained.position.y !== before.y) {
-        const nx = bot.position.x;
-        const ny = bot.position.y;
+      // Keep bots inside the circular play boundary. Without this they thrust
+      // in a straight line forever and escape the arena, so the player never
+      // encounters them. Bounce off the boundary and steer back toward center.
+      const BOUNDARY_RADIUS = 3100;
+      const CONTAIN_RADIUS = BOUNDARY_RADIUS - 200; // stay safely inside the wall
+      const distFromCenter = Math.sqrt(
+        bot.position.x * bot.position.x + bot.position.y * bot.position.y
+      );
+      if (distFromCenter > CONTAIN_RADIUS) {
+        const nx = bot.position.x / distFromCenter;
+        const ny = bot.position.y / distFromCenter;
+        // Clamp back onto the containment circle
+        bot.position.x = nx * CONTAIN_RADIUS;
+        bot.position.y = ny * CONTAIN_RADIUS;
+        // Reflect outward velocity component back inward
+        const vDotN = bot.velocity.x * nx + bot.velocity.y * ny;
+        if (vDotN > 0) {
+          bot.velocity.x -= 2 * vDotN * nx;
+          bot.velocity.y -= 2 * vDotN * ny;
+        }
+        // Steer heading toward the center (forward vector is (cos a, -sin a))
         bot.angle = Math.atan2(ny, -nx);
       }
 

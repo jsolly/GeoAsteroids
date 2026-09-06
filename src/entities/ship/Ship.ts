@@ -5,7 +5,6 @@ import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
-import { containShipUnlessPastKillWall } from '../../physics/playVolume';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
@@ -193,9 +192,7 @@ class Ship {
     this.applyVelocity();
 
     const newPosition = addPositionAndVelocity(this.position, this.velocity);
-    const contained = containShipUnlessPastKillWall(newPosition, this.velocity);
-    this.position = contained.position;
-    this.velocity = contained.velocity;
+    this.position = newPosition;
 
     this.updateHealth();
   }
@@ -660,10 +657,8 @@ class Ship {
       this.velocity = multiplyVelocity(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
     }
 
-    const next = addPositionAndVelocity(this.position, this.velocity);
-    const contained = containShipUnlessPastKillWall(next, this.velocity);
-    this.position = contained.position;
-    this.velocity = contained.velocity;
+    // Update position based on velocity
+    this.position = addPositionAndVelocity(this.position, this.velocity);
   }
 
   // Smoothly approach target state for non-local ships

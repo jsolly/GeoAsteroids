@@ -28,6 +28,7 @@ import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
+import { playfieldZoom, projectWorldToScreen } from './playfieldCamera';
 import { drawStarfield } from './starfield';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
@@ -35,6 +36,7 @@ class CanvasManager {
   private canvas: HTMLCanvasElement | null = null;
   private context: CanvasRenderingContext2D | null = null;
   private resizeHandler: (() => void) | null = null;
+  private playfieldScale = 1;
 
   // Initialize canvas with proper scaling
   initialize(): void {
@@ -136,28 +138,40 @@ class CanvasManager {
     };
   }
 
+  beginPlayfieldFrame(
+    shipPos: Position,
+    roids: ReadonlyArray<{ position: Position; r?: number }>
+  ): void {
+    if (!this.canvas) {
+      this.playfieldScale = 1;
+      return;
+    }
+    this.playfieldScale = playfieldZoom(roids, shipPos, this.canvas);
+  }
+
+  getPlayfieldScale(): number {
+    return this.playfieldScale;
+  }
+
   // Viewport transformation methods
   worldToScreen(worldPos: Position, shipPos: Position): Point {
+    const scale = this.playfieldScale;
     if (!this.canvas) {
-      // Fallback to default values if canvas is not available
-      return new Point(worldPos.x - shipPos.x, worldPos.y - shipPos.y);
+      return new Point((worldPos.x - shipPos.x) * scale, (worldPos.y - shipPos.y) * scale);
     }
-
-    return new Point(
-      this.canvas.width / 2 - shipPos.x + worldPos.x,
-      this.canvas.height / 2 - shipPos.y + worldPos.y
-    );
+    const screen = projectWorldToScreen(worldPos, shipPos, this.canvas, scale);
+    return new Point(screen.x, screen.y);
   }
 
   screenToWorld(screenPos: Point, shipPos: Position): Position {
+    const scale = this.playfieldScale || 1;
     if (!this.canvas) {
-      // Fallback to default values if canvas is not available
-      return { x: screenPos.x + shipPos.x, y: screenPos.y + shipPos.y };
+      return { x: screenPos.x / scale + shipPos.x, y: screenPos.y / scale + shipPos.y };
     }
 
     return {
-      x: screenPos.x - this.canvas.width / 2 + shipPos.x,
-      y: screenPos.y - this.canvas.height / 2 + shipPos.y,
+      x: (screenPos.x - this.canvas.width / 2) / scale + shipPos.x,
+      y: (screenPos.y - this.canvas.height / 2) / scale + shipPos.y,
     };
   }
 
@@ -198,13 +212,15 @@ class CanvasManager {
     ctx.fillStyle = PALETTE.BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Draw roids
+    const roids = currRoidBelt.getRoids();
+    this.beginPlayfieldFrame(currShip.position, roids);
+
     drawStarfield(currShip.position);
 
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
 
-    // Draw roids
-    const roids = currRoidBelt.getRoids();
     if (roids.length > 0) {
       logger.debug('RENDERING', `Rendering ${roids.length} asteroids`);
       drawRoidsRelative(currShip, roids);
