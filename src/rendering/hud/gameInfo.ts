@@ -1,6 +1,20 @@
-import { PALETTE, SHIP, VISUAL } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
+import { SCORE_LABEL } from '../../ui/copy';
 import { hexToRgba } from '../../utils/colorUtils';
+import { drawHudHealthBar } from './healthBar';
+import { formatScore, parseOverlayText } from './overlayCopy';
+import { hudFont } from './typography';
+
+const LIVES_CLUSTER_HEIGHT = VISUAL.LIVES_ICON_SIZE + 6;
+
+export function hudScoreTop(): number {
+  return VISUAL.HUD_PAD + LIVES_CLUSTER_HEIGHT;
+}
+
+export function hudHealthTop(): number {
+  return hudScoreTop() + 22;
+}
 
 export function drawScoreOverlay(
   ctx: CanvasRenderingContext2D,
@@ -8,23 +22,37 @@ export function drawScoreOverlay(
   score: number
 ): void {
   ctx.save();
-  ctx.fillStyle = PALETTE.HUD;
-  ctx.font = VISUAL.SCORE_FONT;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
+
+  const x = VISUAL.HUD_PAD;
+  const y = hudScoreTop();
+
+  ctx.fillStyle = PALETTE.HUD_MUTED;
+  ctx.font = hudFont(10);
+  ctx.fillText(SCORE_LABEL, x, y);
+
+  ctx.fillStyle = PALETTE.HUD;
+  ctx.font = hudFont(16);
+  ctx.fillText(formatScore(score), x + 52, y - 2);
 
   const gameStateManager = GameStateManager.getInstance();
   if (gameStateManager.hasKillMessage()) {
     ctx.fillStyle = PALETTE.DANGER;
-    ctx.font = 'bold 14px Arial';
+    ctx.font = hudFont(13);
     ctx.textAlign = 'center';
-    ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, 12);
-  } else {
-    const scoreY = 20 + SHIP.SIZE + 8;
-    ctx.fillText(score.toString(), 20, scoreY);
+    ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, VISUAL.HUD_PAD);
   }
 
   ctx.restore();
+}
+
+export function drawLocalHudHealth(
+  ctx: CanvasRenderingContext2D,
+  health: number,
+  maxHealth: number
+): void {
+  drawHudHealthBar(ctx, health, maxHealth, VISUAL.HUD_PAD, hudHealthTop());
 }
 
 function drawMultiLineText(
@@ -33,8 +61,7 @@ function drawMultiLineText(
   x: number,
   y: number,
   maxWidth: number,
-  lineHeight: number,
-  _alpha: number
+  lineHeight: number
 ): void {
   const words = text.split(' ');
   const lines: string[] = [];
@@ -72,57 +99,47 @@ export function drawTextOverlay(
   text: string,
   alpha: number
 ): void {
+  const copy = parseOverlayText(text);
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const maxWidth = canvas.width * 0.72;
+
   ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
-  const isDeathMessage = text.toLowerCase().includes('killed by');
-  const isGameOver = text.toLowerCase().includes('game over');
+  if (copy.kind === 'gameOver') {
+    ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.45);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (isDeathMessage) {
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-
-    if (isGameOver) {
-      ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.8);
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+    if (copy.title) {
       ctx.fillStyle = hexToRgba(PALETTE.DANGER, alpha);
-      ctx.font = 'bold 48px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('GAME OVER', centerX, centerY - 80);
-
-      const deathCause = text.replace('Game Over: ', '');
-      ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
-      ctx.font = '24px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const maxWidth = canvas.width * 0.8;
-      drawMultiLineText(ctx, deathCause, centerX, centerY + 20, maxWidth, 32, alpha);
-
-      ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, alpha * 0.8);
-      ctx.font = '16px Arial';
-      ctx.fillText('Returning to main menu...', centerX, centerY + 120);
-    } else {
-      ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.7);
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
-      ctx.font = 'bold 28px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const maxWidth = canvas.width * 0.8;
-      drawMultiLineText(ctx, text, centerX, centerY, maxWidth, 36, alpha);
+      ctx.font = hudFont(36);
+      ctx.fillText(copy.title, centerX, centerY - 36);
     }
+
+    if (copy.detail) {
+      ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
+      ctx.font = hudFont(16);
+      drawMultiLineText(ctx, copy.detail, centerX, centerY + 8, maxWidth, 22);
+    }
+
+    if (copy.hint) {
+      ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, alpha);
+      ctx.font = hudFont(12);
+      ctx.fillText(copy.hint, centerX, centerY + 64);
+    }
+  } else if (copy.kind === 'death') {
+    ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.3);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
+    ctx.font = hudFont(18);
+    drawMultiLineText(ctx, copy.detail, centerX, centerY, maxWidth, 24);
   } else {
     ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
-    ctx.font = '32px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const maxWidth = canvas.width * 0.8;
-    drawMultiLineText(ctx, text, canvas.width / 2, canvas.height / 2, maxWidth, 40, alpha);
+    ctx.font = hudFont(20);
+    drawMultiLineText(ctx, copy.detail, centerX, centerY, maxWidth, 26);
   }
 
   ctx.restore();
@@ -140,12 +157,9 @@ export function drawDebugInfo(
 
   ctx.save();
   ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.7);
-  ctx.font = '12px Arial';
+  ctx.font = hudFont(11);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-
-  const canvasHeight = _canvas.height;
-  ctx.fillText(`debug  asteroids ${roidCount}`, 10, canvasHeight - 28);
-
+  ctx.fillText(`debug  asteroids ${roidCount}`, VISUAL.HUD_PAD, _canvas.height - 28);
   ctx.restore();
 }

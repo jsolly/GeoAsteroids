@@ -24,7 +24,12 @@ import { getFactionColor, getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
-import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
+import {
+  drawDebugInfo,
+  drawLocalHudHealth,
+  drawScoreOverlay,
+  drawTextOverlay,
+} from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
@@ -293,6 +298,8 @@ class CanvasManager {
     drawScoreOverlay(ctx, canvas, currScore);
 
     drawLivesIndicator(ctx, lives, PALETTE.LOCAL);
+
+    drawLocalHudHealth(ctx, currShip.health, currShip.maxHealth);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(ctx, canvas, text, textAlpha);

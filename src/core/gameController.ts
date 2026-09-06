@@ -8,6 +8,8 @@ import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
+import { connectionFailureText } from '../ui/copy';
+import { showNetworkBanner } from '../ui/networkStatus';
 import { toggleScreen } from '../ui/uiUtils';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
@@ -490,29 +492,9 @@ export class GameController {
   }
 
   private showConnectionFailureMessage(errorType: string, reason: string): void {
-    let message = '';
-
-    switch (errorType) {
-      case 'network':
-        message = `Network connection failed. ${reason}.`;
-        break;
-      case 'timeout':
-        message = `Connection timed out. ${reason}.`;
-        break;
-      case 'auth':
-        message = `Authentication failed. Please check your credentials.`;
-        break;
-      case 'server':
-        message = `Server error occurred. ${reason}.`;
-        break;
-      default:
-        message = `Connection failed: ${reason}.`;
-    }
-
-    // Show user feedback - could be enhanced with toast/modal system
-    logger.warn('NETWORK', message);
-    // TODO: Implement proper UI feedback (toast/modal with retry button)
-    // this.uiManager.showToast(message, { action: 'Retry', onAction: () => this.retryConnection() });
+    const message = connectionFailureText(errorType);
+    logger.warn('NETWORK', message, { errorType, reason });
+    showNetworkBanner(message);
   }
 
   private setupNetworkDisconnectionHandler(): void {

@@ -1,7 +1,6 @@
-import { PALETTE, SHIP, VISUAL } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { calculateShipTrianglePoints } from '../../entities/ship/shipRenderer';
 
-// Helper function to draw player lives indicator
 export function drawLivesIndicator(
   ctx: CanvasRenderingContext2D,
   lives: number,
@@ -9,20 +8,16 @@ export function drawLivesIndicator(
 ): void {
   ctx.save();
 
-  // Draw ship icons for lives
-  const spacing = SHIP.SIZE + 10; // Space between ships
-  const startX = 20;
-  const startY = 20;
+  const size = VISUAL.LIVES_ICON_SIZE;
+  const spacing = size + 8;
+  const startX = VISUAL.HUD_PAD;
+  const startY = VISUAL.HUD_PAD;
 
   for (let i = 0; i < lives; i++) {
-    const x = startX + i * spacing;
-    const y = startY;
-
-    // Use the exact same geometry calculation as the actual player ships
-    const centerX = x + SHIP.SIZE / 2;
-    const centerY = y + SHIP.SIZE / 2;
-    const radius = SHIP.SIZE / 2;
-    const angle = Math.PI / 2; // Face upward in lives display
+    const centerX = startX + i * spacing + size / 2;
+    const centerY = startY + size / 2;
+    const radius = size / 2;
+    const angle = Math.PI / 2;
 
     const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
       centerX,
@@ -31,7 +26,6 @@ export function drawLivesIndicator(
       angle
     );
 
-    // Draw ship outline using the exact same style as actual ships
     ctx.strokeStyle = shipColor || PALETTE.LOCAL;
     ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
     ctx.beginPath();

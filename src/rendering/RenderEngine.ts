@@ -18,7 +18,12 @@ import { GameError } from '../types';
 import { errorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
-import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
+import {
+  drawDebugInfo,
+  drawLocalHudHealth,
+  drawScoreOverlay,
+  drawTextOverlay,
+} from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap, drawServerInfo } from './hud/minimap';
@@ -257,6 +262,7 @@ export class RenderEngine {
     // Render HUD elements
     drawScoreOverlay(this.ctx, this.canvas, score);
     drawLivesIndicator(this.ctx, lives, player.ship.color);
+    drawLocalHudHealth(this.ctx, player.ship.health, player.ship.maxHealth);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(this.ctx, this.canvas, text, textAlpha);

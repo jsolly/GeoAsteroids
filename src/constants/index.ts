@@ -102,7 +102,12 @@ export const VISUAL = {
   STAR_ALPHA_MAX: 0.8,
   MINIMAP_SIZE: 96,
   MINIMAP_DOT: 3,
-  SCORE_FONT: '12px Arial',
+  // Quiet vector HUD — monospace, never Arial / never #FFFFFF.
+  HUD_FONT_FAMILY: '"Courier New", "Lucida Console", ui-monospace, monospace',
+  HUD_PAD: 16,
+  LIVES_ICON_SIZE: 14,
+  HUD_HEALTH_WIDTH: 132,
+  HUD_HEALTH_LOW: 0.3,
 } as const;
 
 // ============================================================================

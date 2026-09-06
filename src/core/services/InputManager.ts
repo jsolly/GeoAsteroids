@@ -6,6 +6,7 @@ import {
   handleMouseUp,
   preventContextMenu,
 } from '../../input/mouse';
+import { MENU_PLAY_LABEL } from '../../ui/copy';
 import { logger } from '../../utils/Logger';
 import { GameStateManager } from './GameStateManager';
 
@@ -104,7 +105,7 @@ export class InputManager {
     const gameBtn = document.getElementById('start-game') as HTMLButtonElement;
 
     if (gameBtn) {
-      gameBtn.innerText = '🌐 Start Game';
+      gameBtn.innerText = MENU_PLAY_LABEL;
     }
   }
 }

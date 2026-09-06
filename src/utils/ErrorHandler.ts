@@ -3,7 +3,9 @@
  * Provides consistent error handling patterns and recovery strategies
  */
 
+import { PALETTE, VISUAL } from '../constants';
 import type { GameError, ValidationError } from '../types';
+import { hexToRgba } from './colorUtils';
 import { logger } from './Logger';
 
 export interface ErrorHandlerConfig {
@@ -348,13 +350,14 @@ export class ErrorHandler {
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(255, 0, 0, 0.9);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
+        background: ${hexToRgba(PALETTE.BG, 0.92)};
+        color: ${PALETTE.HUD};
+        padding: 8px 16px;
+        border: 1px solid ${PALETTE.DANGER};
         z-index: 10000;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
+        font-family: ${VISUAL.HUD_FONT_FAMILY};
+        font-size: 13px;
+        letter-spacing: 0.08em;
         max-width: 400px;
         text-align: center;
       `;

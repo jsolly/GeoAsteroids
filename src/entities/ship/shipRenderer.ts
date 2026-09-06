@@ -1,6 +1,8 @@
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
+import { drawHealthCapsule } from '../../rendering/hud/healthBar';
+import { hudFont } from '../../rendering/hud/typography';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
@@ -194,7 +196,7 @@ export function drawPlayerName(
 
   ctx.save();
   ctx.fillStyle = hexToRgba(color, 0.7);
-  ctx.font = '11px Arial';
+  ctx.font = hudFont(11);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(name, x, nameY);
@@ -468,91 +470,15 @@ function drawFloatingHealthCapsule(
   const barWidth = ship.r * 2.4;
   const barY = screenY - ship.r - 10;
   const barX = screenX - barWidth / 2;
-  const healthPercent = Math.max(0, ship.health / ship.maxHealth);
-  const currentWidth = barWidth * healthPercent;
 
-  // Two hairline strokes: a muted track and the remaining-health segment on top.
-  ctx.save();
-  ctx.lineWidth = VISUAL.HEALTH_CAPSULE_HEIGHT;
-  ctx.lineCap = 'butt';
-  ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.45);
-  ctx.beginPath();
-  ctx.moveTo(barX, barY);
-  ctx.lineTo(barX + barWidth, barY);
-  ctx.stroke();
-  if (currentWidth > 0) {
-    ctx.strokeStyle = PALETTE.HEALTH;
-    ctx.beginPath();
-    ctx.moveTo(barX, barY);
-    ctx.lineTo(barX + currentWidth, barY);
-    ctx.stroke();
-  }
+  drawHealthCapsule(ctx, barX, barY, barWidth, ship.health, ship.maxHealth);
 
   if (isDebugMode()) {
+    ctx.save();
     ctx.fillStyle = PALETTE.HUD;
-    ctx.font = '10px Arial';
+    ctx.font = hudFont(10);
     ctx.textAlign = 'center';
     ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenX, barY - 10);
+    ctx.restore();
   }
-  ctx.restore();
-}
-
-// Helper function to draw player health bar in the HUD
-export function drawPlayerHealthBar(health: number, maxHealth: number): void {
-  const ctx = canvasManager.getContext();
-  const canvas = canvasManager.getCanvas();
-  if (!ctx || !canvas) {
-    return;
-  }
-
-  // Debug logging for health bar values
-  if (health !== maxHealth) {
-    logger.debug('HEALTH_BAR', 'Drawing health bar with non-full health', {
-      health,
-      maxHealth,
-      healthPercent: health / maxHealth,
-    });
-  }
-
-  const barWidth = 200;
-  const barHeight = 20;
-  const barX = canvas.width - barWidth - 20;
-  const barY = 20;
-
-  // Health percentage
-  const healthPercent = health / maxHealth;
-  const currentWidth = barWidth * healthPercent;
-
-  ctx.save();
-
-  // Background (empty health bar)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(barX, barY, barWidth, barHeight);
-
-  // Health bar color based on health level
-  let healthColor: string;
-  if (healthPercent > 0.6) {
-    healthColor = '#00ff00'; // Green for high health
-  } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00'; // Yellow for medium health
-  } else {
-    healthColor = '#ff0000'; // Red for low health
-  }
-
-  // Current health
-  ctx.fillStyle = healthColor;
-  ctx.fillRect(barX, barY, currentWidth, barHeight);
-
-  // Border
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(barX, barY, barWidth, barHeight);
-
-  // Health text
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '14px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${Math.ceil(health)}/${maxHealth}`, barX + barWidth / 2, barY - 8);
-
-  ctx.restore();
 }

@@ -1,16 +1,36 @@
+import { PALETTE, VISUAL } from '../constants';
+import { hexToRgba } from '../utils/colorUtils';
 import { logger } from '../utils/Logger';
+import { DISCONNECT_BANNER_TEXT } from './copy';
 
 /**
- * Visible network-status banner.
- *
- * Previously a dropped WebSocket only produced a log line: the game kept
- * rendering the last-known snapshot with no indication that the connection was
- * gone. This surfaces a clear banner when the socket drops (and hides it again
- * on (re)connect) so players know when they've been disconnected.
+ * Matte blush disconnect bar — palette danger on a quiet hairline strip.
+ * No CRT red wash, no #FFFFFF, no drop-shadow glow.
  */
 
 const BANNER_ID = 'network-status-banner';
 let initialized = false;
+
+function applyBannerStyle(el: HTMLElement): void {
+  el.className = 'network-status-banner';
+  Object.assign(el.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    right: '0',
+    zIndex: '10000',
+    padding: '8px 16px',
+    textAlign: 'center',
+    background: hexToRgba(PALETTE.DANGER, 0.16),
+    color: PALETTE.HUD,
+    borderBottom: `1px solid ${PALETTE.DANGER}`,
+    font: `13px/1.4 ${VISUAL.HUD_FONT_FAMILY}`,
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    boxShadow: 'none',
+    display: 'none',
+  });
+}
 
 function getOrCreateBanner(): HTMLElement | null {
   if (typeof document === 'undefined') {
@@ -21,21 +41,7 @@ function getOrCreateBanner(): HTMLElement | null {
     el = document.createElement('div');
     el.id = BANNER_ID;
     el.setAttribute('role', 'alert');
-    Object.assign(el.style, {
-      position: 'fixed',
-      top: '0',
-      left: '0',
-      right: '0',
-      zIndex: '10000',
-      padding: '10px 16px',
-      textAlign: 'center',
-      background: 'rgba(180, 0, 0, 0.92)',
-      color: '#ffffff',
-      font: '600 15px/1.4 Arial, sans-serif',
-      letterSpacing: '0.3px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-      display: 'none',
-    });
+    applyBannerStyle(el);
     (document.body ?? document.documentElement).appendChild(el);
   }
   return el;
@@ -82,7 +88,7 @@ export function initNetworkStatusUI(): void {
   window.addEventListener('networkReconnected', () => hideNetworkBanner());
   window.addEventListener('networkDisconnected', (event) => {
     const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason;
-    showNetworkBanner('Disconnected from game server. Refresh the page to rejoin.');
+    showNetworkBanner(DISCONNECT_BANNER_TEXT);
     logger.warn('NETWORK', 'Displayed disconnect banner', { reason });
   });
 }
