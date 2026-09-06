@@ -1,10 +1,10 @@
+import { GROWTH, maxVelocityFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import type { Position, Velocity } from '../../../shared-types';
-import { maxVelocityFromMass, thrustScaleFromMass, GROWTH } from '../../../shared/shipGrowth';
 import { DAMAGE, GAME, SHIP } from '../../constants';
 import { checkBoundaryCollision } from '../../physics/collision/collisionDetection';
 import {
-  formatDeathCauseForOverlay as overlayDeathCause,
   isGenericDeathCause,
+  formatDeathCauseForOverlay as overlayDeathCause,
 } from '../../utils/deathCause';
 import {
   addPositions,
