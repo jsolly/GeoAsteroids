@@ -7,9 +7,24 @@ export interface AsteroidFieldSyncResult {
   removed: string[];
 }
 
+/** Enough pose to spawn a visible rock. Lean rows without size must wait. */
+export function asteroidHasSpawnPose(
+  asteroid: Partial<AsteroidData> & { id?: string }
+): asteroid is AsteroidData {
+  return (
+    asteroid.position !== undefined &&
+    Number.isFinite(asteroid.position.x) &&
+    Number.isFinite(asteroid.position.y) &&
+    typeof asteroid.size === 'number' &&
+    Number.isFinite(asteroid.size)
+  );
+}
+
 /**
  * Split an authoritative asteroid snapshot into first-seen creates vs
  * kinematic updates for asteroids the client already spawned.
+ * Incomplete first-seen rows (lean pose-only) do not mark seen — a later
+ * full row can still create so the belt is not permanently empty.
  */
 export function partitionAsteroidSnapshot(
   asteroids: AsteroidData[],
@@ -23,7 +38,7 @@ export function partitionAsteroidSnapshot(
     snapshotIds.add(asteroid.id);
     if (seenIds.has(asteroid.id)) {
       updated.push(asteroid);
-    } else {
+    } else if (asteroidHasSpawnPose(asteroid)) {
       seenIds.add(asteroid.id);
       created.push(asteroid);
     }
@@ -47,15 +62,53 @@ export function partitionAsteroidSnapshot(
 }
 
 /** Pose + health fields that must stay server-authoritative after first create. */
-export function asteroidKinematicUpdates(asteroid: AsteroidData): Partial<AsteroidData> {
-  return {
-    position: asteroid.position,
-    velocity: asteroid.velocity,
-    rotation: asteroid.rotation,
-    angularVelocity: asteroid.angularVelocity,
-    health: asteroid.health,
-    maxHealth: asteroid.maxHealth,
-  };
+export function asteroidKinematicUpdates(asteroid: Partial<AsteroidData>): Partial<AsteroidData> {
+  const updates: Partial<AsteroidData> = {};
+  if (asteroid.position) {
+    updates.position = asteroid.position;
+  }
+  if (asteroid.velocity) {
+    updates.velocity = asteroid.velocity;
+  }
+  if (asteroid.rotation !== undefined) {
+    updates.rotation = asteroid.rotation;
+  }
+  if (asteroid.angularVelocity !== undefined) {
+    updates.angularVelocity = asteroid.angularVelocity;
+  }
+  if (asteroid.health !== undefined) {
+    updates.health = asteroid.health;
+  }
+  if (asteroid.maxHealth !== undefined) {
+    updates.maxHealth = asteroid.maxHealth;
+  }
+  if (asteroid.size !== undefined) {
+    updates.size = asteroid.size;
+  }
+  return updates;
+}
+
+/**
+ * Apply a snapshot row to the local belt. A shaped update for a missing id
+ * creates instead of no-op — heals seenIds/belt skew from a lean-first race.
+ */
+export function applyAsteroidRowToBelt(
+  findById: (id: string) => AsteroidKinematicTarget | undefined,
+  asteroidId: string,
+  updates: Partial<AsteroidData>,
+  createMissing: (asteroid: AsteroidData) => void
+): 'updated' | 'created' | 'skipped' {
+  const roid = findById(asteroidId);
+  if (roid) {
+    applyAsteroidKinematics(roid, updates);
+    return 'updated';
+  }
+  const candidate = { id: asteroidId, ...updates };
+  if (asteroidHasSpawnPose(candidate)) {
+    createMissing(candidate);
+    return 'created';
+  }
+  return 'skipped';
 }
 
 /** Snap only when dead-reckoning has drifted; avoids 30 Hz teleport jitter. */

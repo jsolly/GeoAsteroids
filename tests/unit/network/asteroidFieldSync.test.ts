@@ -2,6 +2,8 @@ import { expect, test } from 'vitest';
 import type { AsteroidData } from '../../../shared-types';
 import {
   applyAsteroidKinematics,
+  applyAsteroidRowToBelt,
+  asteroidHasSpawnPose,
   asteroidKinematicUpdates,
   partitionAsteroidSnapshot,
   shouldSnapAsteroidPose,
@@ -118,4 +120,54 @@ test('a large pose error snaps so a late joiner shares the live field', () => {
   const local = localRoid(1, 2);
   applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
   expect(local.position).toEqual({ x: 80, y: -12 });
+});
+
+test('a lean first-seen row does not mark seen so a later full row can still create', () => {
+  const seen = new Set<string>();
+  const lean = { id: 'server-asteroid-0', position: { x: 80, y: -12 }, rotation: 1.2 } as AsteroidData;
+  const first = partitionAsteroidSnapshot([lean], seen);
+  expect(first.created).toEqual([]);
+  expect(first.updated).toEqual([]);
+  expect(seen.size).toBe(0);
+  expect(asteroidHasSpawnPose(lean)).toBe(false);
+
+  const full = roid('server-asteroid-0', 80, -12);
+  const later = partitionAsteroidSnapshot([full], seen);
+  expect(later.created.map((asteroid) => asteroid.id)).toEqual(['server-asteroid-0']);
+  expect(seen.has('server-asteroid-0')).toBe(true);
+});
+
+test('a shaped update for a missing belt id creates instead of no-op', () => {
+  const belt = new Map<string, ReturnType<typeof localRoid>>();
+  const created: string[] = [];
+  const action = applyAsteroidRowToBelt(
+    (id) => belt.get(id),
+    'server-asteroid-0',
+    roid('server-asteroid-0', 80, -12),
+    (asteroid) => {
+      created.push(asteroid.id);
+      belt.set(asteroid.id, localRoid(asteroid.position.x, asteroid.position.y));
+    }
+  );
+  expect(action).toBe('created');
+  expect(created).toEqual(['server-asteroid-0']);
+  expect(belt.size).toBe(1);
+});
+
+test('lean kinematics without size do not invent a belt rock', () => {
+  const action = applyAsteroidRowToBelt(
+    () => undefined,
+    'server-asteroid-0',
+    { position: { x: 80, y: -12 }, rotation: 1.2 },
+    () => {
+      throw new Error('must not create from pose-only lean');
+    }
+  );
+  expect(action).toBe('skipped');
+});
+
+test('kinematic updates omit undefined fields so a lean row cannot wipe pose', () => {
+  expect(asteroidKinematicUpdates({ id: 'server-asteroid-0', position: { x: 3, y: 4 } })).toEqual({
+    position: { x: 3, y: 4 },
+  });
 });
