@@ -55,7 +55,7 @@ test('client bots spawn on the same near-center path as humans', () => {
 
 test('server bots spawn and bounce inside the shared asteroid field', () => {
   const engine = new GameEngine(3);
-  const bots = engine.createBots(2);
+  const bots = engine.entityManager.createBots(2);
   const field = getAsteroidFieldRadius();
   expect(bots.length).toBeGreaterThan(0);
   for (const bot of bots) {
