@@ -198,10 +198,10 @@ export class GameController {
       const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
       if (roid && updates) {
         if (updates.position) {
-          roid.position = updates.position;
+          roid.position = { x: updates.position.x, y: updates.position.y };
         }
         if (updates.velocity) {
-          roid.velocity = updates.velocity;
+          roid.velocity = { x: updates.velocity.x, y: updates.velocity.y };
         }
         if (updates.size !== undefined) {
           roid.r = updates.size;
