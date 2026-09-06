@@ -1,7 +1,8 @@
 import { WebSocket } from 'ws';
-import type { Position, Velocity } from '../../shared-types';
+import type { FactionId, Position, Velocity } from '../../shared-types';
+import { getTeamColor, pickBalancedFaction } from '../../shared/factions';
 import { RNGService } from './RNGService';
-import { DEBUG, PALETTE, SHIP } from '../../src/constants';
+import { DEBUG, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
@@ -16,6 +17,7 @@ export interface GameEntity {
   exploding: boolean;
   thrusting: boolean;
   color: string;
+  faction: FactionId;
   lives: number;
   score: number;
   health: number;
@@ -122,6 +124,10 @@ export class EntityManager {
     return entity;
   }
 
+  private nextFaction(): FactionId {
+    return pickBalancedFaction(this.getAllEntities().map((entity) => entity.faction));
+  }
+
   // Human player management
   public addHumanPlayer(id: string, name: string, ws: WebSocket, position?: Position, color?: string): GameEntity {
     const existing = this.entities.get(id);
@@ -135,6 +141,7 @@ export class EntityManager {
       return existing;
     }
 
+    const faction = this.nextFaction();
     const entity: GameEntity = {
       id,
       name,
@@ -144,7 +151,8 @@ export class EntityManager {
       angle: 0,
       exploding: false,
       thrusting: false,
-      color: color || PALETTE.REMOTE,
+      color: color || getTeamColor(faction),
+      faction,
       lives: 3,
       score: 0,
       health: 100,
@@ -196,6 +204,7 @@ export class EntityManager {
         continue;
       }
 
+      const faction = this.nextFaction();
       const bot: GameEntity = {
         id: botId,
         name: botName,
@@ -205,7 +214,8 @@ export class EntityManager {
         angle,
         exploding: false,
         thrusting: false,
-        color: PALETTE.BOT,
+        color: getTeamColor(faction),
+        faction,
         lives: 3,
         score: 0,
         health: 100,

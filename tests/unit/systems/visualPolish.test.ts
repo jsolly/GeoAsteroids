@@ -14,6 +14,7 @@ test('player and bot ships share the phosphor hull draw path', () => {
   expect(shipSrc).toMatch(/strokePhosphorHull\(ctx, \{ nose, rearLeft, rearRight \}, shipColor\)/);
   expect(canvasSrc).toMatch(/drawShipAtPosition\(currShip, currShip\.position, factionColor/);
   expect(canvasSrc).toMatch(/drawShipAtPosition\(player\.ship, currShip\.position, factionColor/);
+  expect(shipSrc).toMatch(/export function drawFactionMark/);
   expect(canvasSrc).not.toMatch(/drawBotShip|drawLocalShip|drawRemoteShip/);
 });
 

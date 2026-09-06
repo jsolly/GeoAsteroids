@@ -1,3 +1,4 @@
+import type { FactionId } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
@@ -263,6 +264,36 @@ export function drawPlayerName(
   ctx.restore();
 }
 
+export function drawFactionMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  faction: FactionId,
+  color: string
+): void {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  if (faction === 'ion') {
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y - 3);
+    ctx.lineTo(x + 2, y);
+    ctx.lineTo(x - 3, y + 3);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x, y - 4);
+    ctx.lineTo(x + 3, y);
+    ctx.lineTo(x, y + 4);
+    ctx.lineTo(x - 3, y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // Classic vector break-up: the three hull edges drift apart along their outward normals and fade,
 // with a few hairline sparks — no filled fireball.
 function drawVectorExplosion(
@@ -501,6 +532,10 @@ export function drawShipAtPosition(
   );
 
   strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
+
+  if (ship.faction) {
+    drawFactionMark(ctx, screenX, screenY - shipR - 8, ship.faction, shipColor);
+  }
 
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY);
 

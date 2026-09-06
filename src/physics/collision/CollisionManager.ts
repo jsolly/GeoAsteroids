@@ -1,3 +1,5 @@
+import { areAllied } from '../../../shared/factions';
+import type { FactionId } from '../../../shared-types';
 import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
@@ -162,8 +164,9 @@ export class CollisionManager {
   checkLaserCollisions(
     lasers: Laser[],
     asteroids: Roid[],
-    players: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' }[],
-    localPlayerId: string
+    players: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot'; faction?: FactionId }[],
+    localPlayerId: string,
+    attackerFaction?: FactionId
   ): void {
     for (let i = lasers.length - 1; i >= 0; i--) {
       const laser = lasers[i];
@@ -193,6 +196,10 @@ export class CollisionManager {
           const ship = player.ship;
           // Skip players that are exploding or have no health
           if (isShipCollisionImmune(ship)) {
+            continue;
+          }
+
+          if (areAllied(attackerFaction, player.faction)) {
             continue;
           }
 
@@ -246,7 +253,7 @@ export class CollisionManager {
    */
   private handleLaserPlayerHit(
     laser: Laser,
-    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
+    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot'; faction?: FactionId },
     attackerId: string
   ): void {
     const ship = player.ship;

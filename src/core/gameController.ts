@@ -1,3 +1,4 @@
+import { areAllied } from '../../shared/factions';
 import type { AsteroidData } from '../../shared-types';
 import {
   replaceThrustSources,
@@ -609,6 +610,7 @@ export class GameController {
         ship: player.ship,
         id: player.id,
         type: player.type as 'bot' | 'remote',
+        faction: player.faction,
       }));
 
     // Attribute kills to the server-assigned player id (set at join time), not
@@ -620,7 +622,8 @@ export class GameController {
       currPlayer.ship.lasers,
       this.currRoidBelt.roids,
       laserTargets,
-      attackerId
+      attackerId,
+      currPlayer.faction
     );
   }
 
@@ -665,7 +668,9 @@ export class GameController {
     // Get all players (including bots) from network manager
     const allPlayers = this.networkManager.getAllPlayers();
     const otherShips = allPlayers
-      .filter((player) => player.id !== currPlayer.id)
+      .filter(
+        (player) => player.id !== currPlayer.id && !areAllied(currPlayer.faction, player.faction)
+      )
       .map((player) => player.ship);
 
     // Check ship-to-ship collisions

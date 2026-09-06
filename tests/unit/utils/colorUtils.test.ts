@@ -5,11 +5,13 @@ import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Player } from '../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { Ship } from '../../../src/entities/ship/Ship';
+import { FACTION_COLORS } from '../../../shared/factions';
 import {
   applyLockedPaletteCss,
   generateRandomPlayerColor,
   getFactionColor,
   getLaserColor,
+  getShipDisplayColor,
   hexToRgba,
 } from '../../../src/utils/colorUtils';
 import { isDebugMode } from '../../../src/utils/debugUtils';
@@ -34,6 +36,12 @@ test('faction colors map local mint, remote sky, bot amber', () => {
   expect(getFactionColor('local')).toBe(PALETTE.LOCAL);
   expect(getFactionColor('remote')).toBe(PALETTE.REMOTE);
   expect(getFactionColor('bot')).toBe(PALETTE.BOT);
+});
+
+test('assigned team color overrides player-kind color', () => {
+  expect(getShipDisplayColor({ type: 'local', faction: 'ember' })).toBe(FACTION_COLORS.ember);
+  expect(getShipDisplayColor({ type: 'bot', faction: 'ion' })).toBe(FACTION_COLORS.ion);
+  expect(getShipDisplayColor({ type: 'remote' })).toBe(PALETTE.REMOTE);
 });
 
 test('laser colors never use white', () => {

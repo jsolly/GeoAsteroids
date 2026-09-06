@@ -1,3 +1,5 @@
+import { FACTION_LABELS, getTeamColor } from '../../../shared/factions';
+import type { FactionId } from '../../../shared-types';
 import { PALETTE, SHIP, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
 import { hexToRgba } from '../../utils/colorUtils';
@@ -5,7 +7,8 @@ import { hexToRgba } from '../../utils/colorUtils';
 export function drawScoreOverlay(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  score: number
+  score: number,
+  faction?: FactionId
 ): void {
   ctx.save();
   ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
@@ -22,6 +25,10 @@ export function drawScoreOverlay(
   } else {
     const scoreY = 20 + SHIP.SIZE + 8;
     ctx.fillText(score.toString(), 20, scoreY);
+    if (faction) {
+      ctx.fillStyle = hexToRgba(getTeamColor(faction), 0.85);
+      ctx.fillText(FACTION_LABELS[faction], 20, scoreY + 14);
+    }
   }
 
   ctx.restore();

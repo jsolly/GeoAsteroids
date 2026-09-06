@@ -4,7 +4,7 @@ import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
 
 import { getGameBoundary } from '../../physics/boundary';
-import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
+import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 
 type CircleBoundary = { cx: number; cy: number; radius: number };
@@ -78,7 +78,7 @@ export function drawMiniMap(
       if (player.ship.exploding) {
         continue;
       }
-      const color = getFactionColor(player.type === 'bot' ? 'bot' : 'remote');
+      const color = getShipDisplayColor(player);
       drawShipMiniMap(ctx, player.ship, color, boundary, miniMapX, miniMapY, miniMapSize);
     }
 

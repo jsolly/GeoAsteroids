@@ -1,4 +1,5 @@
-import type { Position } from '../../../shared-types';
+import { getTeamColor } from '../../../shared/factions';
+import type { FactionId, Position } from '../../../shared-types';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
@@ -10,6 +11,7 @@ export class Player {
   id: string;
   name: string;
   type: 'local' | 'remote' | 'bot';
+  faction?: FactionId;
   ship: Ship;
   score: number = 0;
   lastUpdate: number = Date.now();
@@ -46,6 +48,7 @@ export class Player {
     name: string;
     type: 'local' | 'remote' | 'bot';
     input: PlayerInput;
+    faction?: FactionId;
   }) {
     this.id = params.id;
     this.name = params.name;
@@ -61,6 +64,18 @@ export class Player {
       isLocalPlayer: this.type === 'local',
       frictionCoefficient: this.getFrictionCoefficient(),
     });
+
+    if (params.faction) {
+      this.applyFaction(params.faction);
+    }
+  }
+
+  applyFaction(faction: FactionId, color?: string): void {
+    this.faction = faction;
+    this.ship.faction = faction;
+    const teamColor = color || getTeamColor(faction);
+    this.color = teamColor;
+    this.ship.color = teamColor;
   }
 
   // Update player state from server data
@@ -78,6 +93,7 @@ export class Player {
     maxHealth?: number;
     respawnTimer?: number;
     spawnProtectionTimer?: number;
+    faction?: FactionId;
   }): void {
     this.serverSpawnProtectionTimer = data.spawnProtectionTimer ?? 0;
     // The local player predicts its own ship for responsiveness: while alive it
@@ -145,7 +161,9 @@ export class Player {
     if (data.thrusting !== undefined && this.type !== 'local') {
       this.ship.thrusting = data.thrusting;
     }
-    if (data.color !== undefined) {
+    if (data.faction) {
+      this.applyFaction(data.faction, data.color);
+    } else if (data.color !== undefined) {
       this.color = data.color;
       this.ship.color = data.color;
     }

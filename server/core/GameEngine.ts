@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import type { Position, AsteroidData } from '../../shared-types';
+import { canApplyCombatDamage } from '../../shared/factions';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
@@ -225,9 +226,22 @@ export class GameEngine {
     return this.entityManager.removeEntity(botId);
   }
 
-  // Game logic operations
+  private isFriendlyFire(attackerId: string, targetId: string): boolean {
+    const target = this.entityManager.getEntity(targetId);
+    if (!target) {
+      return false;
+    }
+    const attacker = this.entityManager.getEntity(attackerId);
+    return !canApplyCombatDamage(attackerId, attacker?.faction, target.faction);
+  }
+
+  // Game logic operations — humans and bots share the same friendly-fire gate.
   public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
     logger.debug('handlePlayerDamage called', { targetPlayerId, attackerId, damage });
+    if (this.isFriendlyFire(attackerId, targetPlayerId)) {
+      logger.debug('friendly fire ignored', { attackerId, targetPlayerId });
+      return false;
+    }
     // Ignore damage if player is already in respawn countdown or already at 0 health
     const existing = this.getPlayer(targetPlayerId);
     if (!existing) {
@@ -284,6 +298,10 @@ export class GameEngine {
   }
 
   public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
+    if (this.isFriendlyFire(attackerId, botId)) {
+      logger.debug('friendly fire ignored', { attackerId, botId });
+      return false;
+    }
     const existing = this.getBot(botId);
     if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
       return false;
@@ -340,6 +358,7 @@ export class GameEngine {
         maxHealth: entity.maxHealth,
         respawnTimer: entity.respawnTimer,
         spawnProtectionTimer: entity.spawnProtectionTimer,
+        faction: entity.faction,
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,

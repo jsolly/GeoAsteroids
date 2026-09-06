@@ -149,11 +149,10 @@ export class MessageHandler {
 
     const validatedPosition = this.gameEngine.validatePosition(data.position);
     const joinPosition = validatedPosition || { x: 0, y: 0 };
-    const joinColor = data.color || '#00ff00'; // Default to green if no color provided
-    logger.debug('Player join', { id, position: joinPosition, color: joinColor });
+    logger.debug('Player join', { id, position: joinPosition });
 
-    this.gameEngine.addPlayer(id, name, ws, joinPosition, joinColor);
-    logger.info('✅ Player added to game engine', { id, name });
+    const player = this.gameEngine.addPlayer(id, name, ws, joinPosition);
+    logger.info('✅ Player added to game engine', { id, name, faction: player.faction });
 
     // Send confirmation to the joining player
     this.broadcaster.sendToWebSocket(ws, {
@@ -162,6 +161,8 @@ export class MessageHandler {
         id,
         name,
         position: joinPosition,
+        color: player.color,
+        faction: player.faction,
       },
       timestamp: Date.now(),
     });
@@ -259,15 +260,22 @@ export class MessageHandler {
       return;
     }
 
+    const before = this.gameEngine.getPlayer(data.targetPlayerId);
+    const healthBefore = before?.health;
     const isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
 
     const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
     if (targetPlayer) {
+      const remainingHealth = targetPlayer.health ?? 0;
+      const healthDropped = healthBefore !== undefined && remainingHealth < healthBefore;
+      if (!isDestroyed && !healthDropped) {
+        return;
+      }
       this.broadcaster.broadcastPlayerDamaged(
         data.targetPlayerId,
         data.attackerId,
         data.damage,
-        targetPlayer.health ?? 0,
+        remainingHealth,
         isDestroyed,
         targetPlayer.lives
       );

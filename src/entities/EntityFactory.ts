@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, Velocity } from '../../shared-types';
+import type { FactionId, Position, Velocity } from '../../shared-types';
 import { CANVAS, DEBUG, PALETTE, SPAWN } from '../constants';
 import { MockPlayerInput } from '../input/MockPlayerInput';
 import { getFactionColor } from '../utils/colorUtils';
@@ -22,6 +22,7 @@ export interface PlayerConfig {
   type: 'local' | 'remote' | 'bot';
   position?: Position;
   color?: string;
+  faction?: FactionId;
   shotCooldown?: number;
 }
 
@@ -168,6 +169,7 @@ export class EntityFactory {
       name: config.name,
       type: config.type,
       input: new MockPlayerInput(),
+      faction: config.faction,
     });
   }
 
@@ -221,7 +223,7 @@ export class EntityFactory {
 
   private applyBotConfiguration(player: Player, config: PlayerConfig): void {
     // Apply bot-specific defaults if not specified
-    if (!config.color) {
+    if (!config.color && !config.faction) {
       player.color = PALETTE.BOT;
       player.ship.color = player.color;
     }

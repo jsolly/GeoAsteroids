@@ -1,11 +1,14 @@
+import type { FactionId } from '../../../shared-types';
 import { PALETTE } from '../../constants';
 import type { Player } from '../../entities/player/Player';
-import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
+import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 
 interface LeaderboardEntry {
   name: string;
   score: number;
   type: 'local' | 'remote' | 'bot';
+  faction?: FactionId;
+  color?: string;
   isCurrentPlayer?: boolean;
 }
 
@@ -24,6 +27,8 @@ export function drawLeaderboard(
       name: player.name,
       score: player.score,
       type: player.type,
+      faction: player.faction,
+      color: player.color,
       isCurrentPlayer: player.id === currentPlayerId,
     }))
     .sort((a, b) => b.score - a.score)
@@ -37,7 +42,7 @@ export function drawLeaderboard(
 
   entries.forEach((entry, index) => {
     const y = boardY + 6 + index * 16;
-    const nameColor = getFactionColor(entry.type);
+    const nameColor = getShipDisplayColor(entry);
     const alpha = entry.isCurrentPlayer ? 0.92 : 0.78;
 
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.4);

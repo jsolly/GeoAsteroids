@@ -20,7 +20,7 @@ import {
 } from '../entities/ship/shipRenderer';
 import { NetworkManager } from '../network/networkManager';
 import { Point } from '../physics/Point';
-import { getFactionColor, getLaserColor } from '../utils/colorUtils';
+import { getLaserColor, getShipDisplayColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
@@ -232,7 +232,7 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        const factionColor = getFactionColor(player.type);
+        const factionColor = getShipDisplayColor(player);
         if (player.ship.exploding) {
           if (player.id === localId) {
             drawShipExplosion(currShip, factionColor);
@@ -262,7 +262,7 @@ class CanvasManager {
           continue;
         }
 
-        const factionColor = getFactionColor(player.type);
+        const factionColor = getShipDisplayColor(player);
         if (player.id === localId) {
           if (!currShip.exploding && currShip.thrusting) {
             logger.debug('RENDERING', 'Drawing local player thruster', {
@@ -306,9 +306,9 @@ class CanvasManager {
 
     this.drawMiniMapWithPlayers(currShip);
 
-    drawScoreOverlay(ctx, canvas, currScore);
+    drawScoreOverlay(ctx, canvas, currScore, currPlayer.faction);
 
-    drawLivesIndicator(ctx, lives, PALETTE.LOCAL);
+    drawLivesIndicator(ctx, lives, getShipDisplayColor(currPlayer));
 
     if (text && textAlpha > 0) {
       drawTextOverlay(ctx, canvas, text, textAlpha);

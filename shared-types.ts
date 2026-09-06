@@ -1,6 +1,9 @@
 // Shared types between client and server
 // These types are used in network communication and should be identical on both sides
 
+/** Two teamwork sides. Humans and bots share this id. */
+export type FactionId = 'ion' | 'ember';
+
 // Common position and velocity types used throughout the system
 export interface Position {
   x: number;
@@ -39,6 +42,7 @@ export interface PlayerJoin {
   name: string;
   position: Position;
   color: string;
+  faction?: FactionId;
 }
 
 export interface PlayerLeave {
@@ -78,6 +82,7 @@ export interface BotData {
   lives: number;
   health: number;
   maxHealth: number;
+  faction?: FactionId;
 }
 
 // Server game state structure (what the server actually sends)
@@ -96,6 +101,7 @@ export interface ServerPlayerData {
   health: number;
   maxHealth: number;
   respawnTimer?: number;
+  faction?: FactionId;
 }
 
 export interface ServerGameState {
@@ -121,4 +127,5 @@ export interface ServerEntityData {
   maxHealth: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
+  faction: FactionId;
 }

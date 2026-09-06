@@ -566,6 +566,7 @@ export class ConnectionManager {
               name: entityData.name,
               type: entityData.type === 'bot' ? 'bot' : 'remote',
               color: entityData.color,
+              faction: entityData.faction,
             });
           }
 
@@ -596,6 +597,7 @@ export class ConnectionManager {
           maxHealth: entityData.maxHealth,
           respawnTimer: entityData.respawnTimer,
           spawnProtectionTimer: entityData.spawnProtectionTimer,
+          faction: entityData.faction,
         };
         entity.updateFromServer(serverSnapshot);
 
@@ -667,6 +669,10 @@ export class ConnectionManager {
     // Store the local player ID from server response
     if (data.id) {
       this.localPlayerId = data.id;
+    }
+    if (data.faction) {
+      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+      localPlayer?.applyFaction(data.faction, data.color);
     }
     this.initializeAsteroids();
   }

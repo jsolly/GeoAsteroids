@@ -1,6 +1,22 @@
+import { getTeamColor } from '../../shared/factions';
+import type { FactionId } from '../../shared-types';
 import { PALETTE } from '../constants';
 
 export type FactionType = 'local' | 'remote' | 'bot';
+
+export function getShipDisplayColor(player: {
+  type: FactionType;
+  faction?: FactionId;
+  color?: string;
+}): string {
+  if (player.faction) {
+    return getTeamColor(player.faction);
+  }
+  if (player.color) {
+    return player.color;
+  }
+  return getFactionColor(player.type);
+}
 
 export function getFactionColor(type: FactionType): string {
   switch (type) {
