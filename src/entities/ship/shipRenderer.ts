@@ -641,6 +641,14 @@ export function canDrawHaulerHarpoon(ship: {
   return ship.kitId === 'hauler' && ship.harpoonTimer > 0 && Boolean(ship.harpoonTargetId);
 }
 
+/** Zoomed playfields shrink nearby latches; dashes must not eat the cable. */
+export function harpoonTetherStyle(screenDist: number): { dash: number[]; ring: number } {
+  return {
+    dash: screenDist > 20 ? [8, 5] : [],
+    ring: Math.max(14, Math.min(22, 10 + screenDist * 0.12)),
+  };
+}
+
 /** Tether + latch ring. Hauler only — other kits never draw this. */
 export function drawHaulerHarpoonVfx(
   ctx: CanvasRenderingContext2D,
@@ -658,19 +666,26 @@ export function drawHaulerHarpoonVfx(
   }
 
   const latch = canvasManager.worldToScreen(target.position, cameraShipPosition);
-  const pulse = 0.55 + 0.25 * Math.sin(Date.now() / 80);
+  const screenDist = Math.hypot(latch.x - screenX, latch.y - screenY);
+  const style = harpoonTetherStyle(screenDist);
+  const pulse = 0.7 + 0.25 * Math.sin(Date.now() / 80);
   ctx.save();
   ctx.strokeStyle = hexToRgba(HAULER_TETHER_COLOR, pulse);
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([6, 4]);
+  ctx.shadowColor = HAULER_TETHER_COLOR;
+  ctx.shadowBlur = 8;
+  ctx.lineWidth = 2.75;
+  ctx.setLineDash(style.dash);
   ctx.beginPath();
   ctx.moveTo(screenX, screenY);
   ctx.lineTo(latch.x, latch.y);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.lineWidth = 2.25;
   ctx.beginPath();
-  ctx.arc(latch.x, latch.y, 7, 0, Math.PI * 2);
-  ctx.lineWidth = 1.25;
+  ctx.arc(screenX, screenY, Math.max(10, style.ring * 0.7), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(latch.x, latch.y, style.ring, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
 }

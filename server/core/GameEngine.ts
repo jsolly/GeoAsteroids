@@ -542,8 +542,13 @@ export class GameEngine {
 
   public tickAbilities(): void {
     this.entityManager.tickAbilityState();
-    for (const entity of this.entityManager.getAllEntities()) {
-      pullHarpoonTarget(entity, this.asteroidManager.getAllAsteroids());
+    const asteroids = this.asteroidManager.getAllAsteroids();
+    const entities = this.entityManager.getAllEntities();
+    for (const entity of entities) {
+      pullHarpoonTarget(entity, [
+        ...asteroids,
+        ...entities.filter((other) => other.id !== entity.id),
+      ]);
     }
   }
 
