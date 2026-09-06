@@ -21,6 +21,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
 } from './connectionHealth';
+import { nextReconnectDelayMs } from './connectionReconnect';
 import { bindPageHideDisconnect, staleRemotePlayerIds } from './playerPresence';
 
 export interface ConnectionState {
@@ -42,6 +43,13 @@ export class ConnectionManager {
   // Heartbeat / half-open-socket detection (see connectionHealth.ts).
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastServerMessageAt = 0;
+
+  // Unexpected close retries. Intentional disconnect() / pagehide do not retry.
+  private userRequestedDisconnect = false;
+  private reconnectAttempt = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private hasConnectedOnce = false;
+  private connectPromise: Promise<void> | null = null;
 
   private constructor() {
     this.state = {
@@ -80,6 +88,22 @@ export class ConnectionManager {
   }
 
   async connect(): Promise<void> {
+    if (this.state.isConnected) {
+      return;
+    }
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+    this.userRequestedDisconnect = false;
+    this.connectPromise = this.openSocket();
+    try {
+      await this.connectPromise;
+    } finally {
+      this.connectPromise = null;
+    }
+  }
+
+  private openSocket(): Promise<void> {
     if (this.state.isConnected || this.state.socket) {
       return Promise.resolve();
     }
@@ -96,11 +120,16 @@ export class ConnectionManager {
         this.state.socket = new WebSocket(wsUrl);
 
         this.state.socket.onopen = (): void => {
+          const wasReconnect = this.hasConnectedOnce;
           this.state.isConnected = true;
           this.lastServerMessageAt = Date.now();
+          this.reconnectAttempt = 0;
           this.startHeartbeat();
-          logger.info('NETWORK', 'Connected to server');
-          window.dispatchEvent(new CustomEvent('networkConnected'));
+          this.hasConnectedOnce = true;
+          logger.info('NETWORK', wasReconnect ? 'Reconnected to server' : 'Connected to server');
+          window.dispatchEvent(
+            new CustomEvent(wasReconnect ? 'networkReconnected' : 'networkConnected')
+          );
           resolve();
         };
 
@@ -113,12 +142,21 @@ export class ConnectionManager {
           this.state.isConnected = false;
           this.state.socket = null;
           this.stopHeartbeat();
+          this.hasInitializedAsteroidsForConnection = false;
           logger.warn('NETWORK', 'WebSocket connection closed');
-          window.dispatchEvent(
-            new CustomEvent('networkDisconnected', {
-              detail: { reason: 'Connection closed' },
-            })
-          );
+          if (this.userRequestedDisconnect) {
+            window.dispatchEvent(
+              new CustomEvent('networkDisconnected', {
+                detail: { reason: 'Connection closed' },
+              })
+            );
+            return;
+          }
+          // First-connect failure is fatal for startGame; do not retry there.
+          if (!this.hasConnectedOnce) {
+            return;
+          }
+          this.scheduleReconnect();
         };
 
         this.state.socket.onmessage = (event: MessageEvent): void => {
@@ -142,6 +180,9 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.userRequestedDisconnect = true;
+    this.clearReconnectTimer();
+    this.reconnectAttempt = 0;
     this.stopHeartbeat();
     if (this.state.socket) {
       this.state.socket.close();
@@ -151,6 +192,47 @@ export class ConnectionManager {
     this.seenAsteroidIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.userRequestedDisconnect || this.reconnectTimer !== null) {
+      return;
+    }
+    const delay = nextReconnectDelayMs(this.reconnectAttempt);
+    if (delay === null) {
+      window.dispatchEvent(
+        new CustomEvent('networkDisconnected', {
+          detail: { reason: 'Reconnect exhausted' },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('networkPermanentlyDisconnected', {
+          detail: { reason: 'Reconnect exhausted' },
+        })
+      );
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent('networkReconnecting', {
+        detail: { attempt: this.reconnectAttempt + 1, delayMs: delay },
+      })
+    );
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.reconnectAttempt += 1;
+      void this.connect().catch(() => {
+        if (!this.state.socket && !this.userRequestedDisconnect) {
+          this.scheduleReconnect();
+        }
+      });
+    }, delay);
   }
 
   private startHeartbeat(): void {
@@ -189,15 +271,15 @@ export class ConnectionManager {
         timeoutMs: CONNECTION_STALE_TIMEOUT_MS,
       });
       this.stopHeartbeat();
-      // close() drives onclose -> networkDisconnected -> disconnect banner.
+      // close() drives onclose -> scheduleReconnect (not the permanent banner).
       try {
         socket.close();
       } catch {
         this.state.isConnected = false;
         this.state.socket = null;
-        window.dispatchEvent(
-          new CustomEvent('networkDisconnected', { detail: { reason: 'Connection timed out' } })
-        );
+        if (this.hasConnectedOnce && !this.userRequestedDisconnect) {
+          this.scheduleReconnect();
+        }
       }
     }
   }
@@ -525,8 +607,8 @@ export class ConnectionManager {
         }
       }
 
-      // Server never sends playerLeft; drop remotes that vanished from the
-      // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
+      // Drop remotes that vanished from the snapshot so a closed tab leaves
+      // the leaderboard even if `playerLeft` was missed. Bots are left alone.
       const snapshotIds = new Set(data.entities.map((entity) => entity.id));
       for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
         this.allPlayers.delete(id);
@@ -542,7 +624,10 @@ export class ConnectionManager {
   }
 
   private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
-    const { created, updated } = partitionAsteroidSnapshot(asteroids, this.seenAsteroidIds);
+    const { created, updated, removed } = partitionAsteroidSnapshot(
+      asteroids,
+      this.seenAsteroidIds
+    );
     for (const asteroid of created) {
       window.dispatchEvent(
         new CustomEvent('serverAsteroidCreated', {
@@ -557,6 +642,13 @@ export class ConnectionManager {
             asteroidId: asteroid.id,
             updates: asteroidKinematicUpdates(asteroid),
           },
+        })
+      );
+    }
+    for (const asteroidId of removed) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidDestroyed', {
+          detail: { asteroidId },
         })
       );
     }

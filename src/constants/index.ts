@@ -180,6 +180,13 @@ export const ROID = {
   MIN_COUNT: 5,
   MAX_COUNT: 20,
   SPAWN_TIME_FRAMES: 180, // 3 seconds at 60 FPS
+
+  // Shared moving belt. The ship-kill wall is ~3100px; a 1080p camera around a
+  // center-spawned ship only sees ~960×540. Opposite-side wrap at the wall
+  // parked every roid at ~3000px (minimap dots, empty canvas). Keep the belt
+  // inside the same "nearby" radius the audio/network layer already uses.
+  FIELD_RADIUS: 1200,
+  FIELD_INNER_SCALE: 0.96,
 } as const;
 
 // ============================================================================
@@ -267,11 +274,12 @@ export const PREFERENCES = {
 // LOGGING CONFIGURATION
 // ============================================================================
 export const LOGGING = {
-  // Global log level that affects both client and server logging
-  // This controls what gets written to both server.log and client.log
-  GLOBAL_LOG_LEVEL: 'debug' as 'error' | 'warn' | 'info' | 'debug',
+  // Opt in to `debug` locally when chasing a bug. Production must stay
+  // `info` or quieter — per-frame `logger.debug` at 60 FPS stalls the
+  // main thread, misses heartbeats, and disconnects both tabs.
+  GLOBAL_LOG_LEVEL: 'info' as 'error' | 'warn' | 'info' | 'debug',
 
-  // Whether to forward client logs to the server
+  // Whether to forward client logs to the server (warn+ only; see Logger)
   FORWARD_TO_SERVER: true,
 
   // Whether to write logs to browser console

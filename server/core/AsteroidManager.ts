@@ -1,6 +1,6 @@
 import type { AsteroidData, Position } from '../../shared-types';
 import { DEBUG } from '../../src/constants';
-import { stepAsteroidPosition } from '../../src/physics/asteroidMotion';
+import { getAsteroidFieldRadius, stepAsteroidMotion } from '../../src/physics/asteroidMotion';
 import { logger } from '../../setup/serverLogger';
 import { RNGService } from './RNGService';
 
@@ -77,12 +77,19 @@ export class AsteroidManager {
     }
 
     for (const asteroid of this.asteroids.values()) {
-      asteroid.position = stepAsteroidPosition(asteroid.position, asteroid.velocity);
+      const next = stepAsteroidMotion(asteroid.position, asteroid.velocity);
+      asteroid.position = next.position;
+      asteroid.velocity = next.velocity;
       asteroid.rotation += asteroid.angularVelocity;
     }
   }
 
-  public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {
+  public createAsteroids(
+    count: number,
+    bounds = { radius: getAsteroidFieldRadius() },
+    botPositions: Position[] = [],
+    playerPositions: Position[] = []
+  ): AsteroidData[] {
     // If we already have asteroids and no player positions are provided, return them instead of recreating
     // But if player positions are provided, we should recreate to place roids on players
     // Also recreate if we're in test mode (PLACE_ON_LOCAL_PLAYER is true)
@@ -121,15 +128,15 @@ export class AsteroidManager {
             y: playerPos.y,
           };
         }
-        console.log(`🪨 SERVER: Placing asteroid ${i} exactly on player at position:`, position);
+        logger.debug('Placing asteroid on player', { index: i, position });
       } else if (DEBUG.ROIDS.PLACE_ON_BOT && botPositions.length > 0) {
         // Place all asteroids on bots when PLACE_ON_BOT is true
         const botPos = botPositions[i % botPositions.length];
         position = botPos ?? this.rng.randomPosition(bounds);
-        console.log(`🪨 SERVER: Placing asteroid ${i} on bot at position:`, position);
+        logger.debug('Placing asteroid on bot', { index: i, position });
       } else {
         position = this.rng.randomPosition(bounds);
-        console.log(`🪨 SERVER: Placing asteroid ${i} randomly at position:`, position);
+        logger.debug('Placing asteroid randomly', { index: i, position });
       }
       
       const velocity = this.rng.randomVelocity(4);

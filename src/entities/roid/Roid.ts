@@ -1,6 +1,6 @@
 import type { Position, Velocity } from '../../../shared-types';
 import { DEBUG, GAME, ROID } from '../../constants';
-import { stepAsteroidPosition } from '../../physics/asteroidMotion';
+import { stepAsteroidMotion } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
 import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
 
@@ -118,16 +118,18 @@ class RoidBelt {
     return this.roids;
   }
 
-  moveRoids(): void {
+  moveRoids(tickScale = 1): void {
     // Freeze only when debug mode explicitly disables movement.
-    // Production always interpolates using the last server velocity so the
-    // field does not look static between 30 Hz gameState snapshots.
+    // Production interpolates with a dt scale so 120 Hz tabs do not race
+    // 60 Hz tabs (or the 60 FPS server) to the wrap/bounce edge.
     if (DEBUG.ENABLED && !DEBUG.ROIDS.MOVEMENT) {
       return;
     }
 
     for (const roid of this.roids) {
-      roid.position = stepAsteroidPosition(roid.position, roid.velocity);
+      const next = stepAsteroidMotion(roid.position, roid.velocity, tickScale);
+      roid.position = next.position;
+      roid.velocity = next.velocity;
     }
   }
 

@@ -5,7 +5,7 @@
 
 import { LOGGING } from '../constants';
 // Logging system with automatic server forwarding
-import { LogLevel } from './logLevel';
+import { LogLevel, shouldEmitLog } from './logLevel';
 
 class Logger {
   private static instance: Logger;
@@ -77,8 +77,7 @@ class Logger {
     context?: Record<string, unknown>,
     error?: Error
   ): void {
-    // Only log if it meets the current level threshold
-    if (level < this.currentLevel) {
+    if (!shouldEmitLog(level, this.currentLevel)) {
       return;
     }
 
@@ -90,8 +89,9 @@ class Logger {
       this.writeToConsole(level, formattedMessage);
     }
 
-    // Forward to server if enabled
-    if (LOGGING.FORWARD_TO_SERVER) {
+    // Never forward debug — even if someone opts into a debug console —
+    // so a verbose client cannot stall the gameplay socket or Railway.
+    if (LOGGING.FORWARD_TO_SERVER && level <= LogLevel.WARN) {
       this.forwardToServer(formattedMessage);
     }
   }

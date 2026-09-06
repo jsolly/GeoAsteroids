@@ -1,10 +1,10 @@
 /**
  * Remote-player presence helpers.
  *
- * The server removes a human on socket close but never broadcasts `playerLeft`.
- * `handleGameState` also updates entities in place and never prunes the map
- * (clearing it used to make bots flicker). Together that leaves a closed tab
- * on everyone else's leaderboard until a refresh.
+ * The server removes a human on socket close and now also broadcasts
+ * `playerLeft`. `handleGameState` still updates entities in place (clearing
+ * the map used to make bots flicker), so snapshot pruning remains the
+ * fallback if a `playerLeft` is dropped.
  *
  * These helpers drop only `type === 'remote'` humans missing from the latest
  * authoritative snapshot. Local and bot entries stay — bots can be omitted
