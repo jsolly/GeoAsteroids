@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../../shared-types';
 import {
   GROWTH,
   maxVelocityFromMass,
   radiusFromMass,
   thrustScaleFromMass,
 } from '../../../shared/shipGrowth';
+import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
