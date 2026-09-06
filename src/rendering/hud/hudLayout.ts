@@ -36,7 +36,10 @@ export function scaleHudFont(font: string, scale: number): string {
   if (scale === 1) {
     return font;
   }
-  return font.replace(/(\d+(?:\.\d+)?)px/, (_, px: string) => `${Math.round(Number(px) * scale)}px`);
+  return font.replace(
+    /(\d+(?:\.\d+)?)px/,
+    (_, px: string) => `${Math.round(Number(px) * scale)}px`
+  );
 }
 
 const ZERO_SAFE: SafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -134,7 +137,11 @@ export function computeHudLayout(
   // Compact cluster + faction + kit + fuel sit under lives; park radar below that stack.
   const clusterClear = fuel.y + 16;
   const miniMap = compactHeight
-    ? { x: padLeft, y: Math.max(padTop + VISUAL.HUD_LIFE_SIZE + 52, clusterClear), size: miniMapSize }
+    ? {
+        x: padLeft,
+        y: Math.max(padTop + VISUAL.HUD_LIFE_SIZE + 52, clusterClear),
+        size: miniMapSize,
+      }
     : {
         x: canvas.width - padRight - miniMapSize,
         y: canvas.height - padBottom - TOUCH.FIRE_RESERVE - miniMapSize,
