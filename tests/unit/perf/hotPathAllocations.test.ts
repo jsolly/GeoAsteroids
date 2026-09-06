@@ -78,7 +78,7 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
       expect(partitioned.created).toHaveLength(1);
     } else {
       expect(partitioned.updated).toHaveLength(1);
-      applyAsteroidKinematics(localRoid, live);
+      applyAsteroidKinematics(localRoid, live, { snapPosition: true });
     }
 
     expect(scratch.created).toBe(firstCreated);

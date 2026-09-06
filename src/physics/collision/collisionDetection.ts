@@ -2,8 +2,8 @@ import type { Position } from '../../../shared-types';
 import { getGameBoundary } from '../boundary';
 
 /** Same rounding as `Point.distance` — keep combat feel, drop Point allocs. */
-function flooredDistance(a: Position, b: { x: number; y: number }): number {
-  return Math.floor(Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2));
+function flooredDistance(ax: number, ay: number, bx: number, by: number): number {
+  return Math.floor(Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2));
 }
 
 /**
@@ -15,7 +15,7 @@ export function checkCircularCollision(
   pos2: Position,
   radius2: number
 ): boolean {
-  return flooredDistance(pos1, pos2) < radius1 + radius2;
+  return flooredDistance(pos1.x, pos1.y, pos2.x, pos2.y) < radius1 + radius2;
 }
 
 /**
@@ -25,7 +25,9 @@ export function checkBoundaryCollision(shipPos: Position, shipRadius: number): b
   const boundary = getGameBoundary();
 
   // Ship is outside boundary if its edge is beyond the boundary radius
-  return flooredDistance(shipPos, boundary) + shipRadius > boundary.radius;
+  return (
+    flooredDistance(shipPos.x, shipPos.y, boundary.cx, boundary.cy) + shipRadius > boundary.radius
+  );
 }
 
 const LASER_RADIUS = 2;

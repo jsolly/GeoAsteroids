@@ -605,7 +605,12 @@ export function drawShipAtPosition(
   const screenY = screen.y;
   const shipR = ship.r * scale;
   const cull = shipR * 3;
-  if (screenX < -cull || screenY < -cull || screenX > cvs.width + cull || screenY > cvs.height + cull) {
+  if (
+    screenX < -cull ||
+    screenY < -cull ||
+    screenX > cvs.width + cull ||
+    screenY > cvs.height + cull
+  ) {
     return;
   }
 

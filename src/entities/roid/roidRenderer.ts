@@ -158,7 +158,12 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
 
     const screenPos = canvasManager.worldToScreenInto(roidScreen, roid.position, ship.position);
     const r = roid.r * scale;
-    if (screenPos.x < -r || screenPos.y < -r || screenPos.x > viewW + r || screenPos.y > viewH + r) {
+    if (
+      screenPos.x < -r ||
+      screenPos.y < -r ||
+      screenPos.x > viewW + r ||
+      screenPos.y > viewH + r
+    ) {
       continue;
     }
     const offsets = drawingOffsets(roid.offsets);
