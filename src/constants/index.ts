@@ -195,10 +195,21 @@ export const EMP = {
 // ============================================================================
 export const AUDIO = {
   EXPLOSION_PATH: 'sounds/explode.m4a',
+  LASER_PATH: 'sounds/laser.m4a',
+  HIT_PATH: 'sounds/hit.m4a',
+  THRUST_PATH: 'sounds/thrust.m4a',
   EXPLOSION_MAX_STREAMS: 5,
+  LASER_MAX_STREAMS: 5,
+  HIT_MAX_STREAMS: 5,
+  THRUST_MAX_STREAMS: 2,
+  // Soft matt-blush levels — quieter than arcade default, loops stay under one-shots.
+  EXPLOSION_VOLUME: 0.055,
+  LASER_VOLUME: 0.04,
+  HIT_VOLUME: 0.035,
+  THRUST_VOLUME: 0.03,
   // Used when the canvas size is unknown (matches PlayerNetwork nearby radius).
   FALLBACK_MAX_DISTANCE: 1200,
-  // Floor so an on-screen explosion at the viewport edge stays audible.
+  // Floor so an on-screen source at the viewport edge stays a soft blush, not silent.
   MIN_IN_VIEWPORT_VOLUME: 0.2,
 } as const;
 

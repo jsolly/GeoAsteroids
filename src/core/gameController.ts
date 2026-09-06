@@ -1,4 +1,9 @@
 import type { AsteroidData } from '../../shared-types';
+import {
+  replaceThrustSources,
+  resetThrustSources,
+  thrustSourcesFromPlayers,
+} from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
@@ -247,6 +252,7 @@ export class GameController {
     setTimeout(() => {
       // Stop the game loop and return to main menu
       this.gameStateManager.setIsGameRunning(false);
+      resetThrustSources();
       import('../ui/mainMenu').then(({ showGameOverMenu }) => {
         showGameOverMenu();
       });
@@ -519,6 +525,7 @@ export class GameController {
 
       // Only stop the game when reconnection has permanently failed
       this.gameStateManager.toggleIsGameRunning();
+      resetThrustSources();
       setPlayView(false);
 
       // Show permanent disconnection message
@@ -553,6 +560,9 @@ export class GameController {
     // their lasers so other players' shots visibly travel and expire instead of
     // freezing at the muzzle.
     advanceRemotePlayerLasers(allPlayers);
+
+    // One thrust loop for local + bot + remote ships; volume is the loudest in-range source.
+    replaceThrustSources(thrustSourcesFromPlayers([currPlayer, ...allPlayers]));
 
     // Update asteroids
     if (this.currRoidBelt) {

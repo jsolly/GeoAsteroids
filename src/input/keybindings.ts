@@ -1,7 +1,6 @@
-import { playSound } from '../audio/Sound';
+import { upsertThrustSource } from '../audio/gameSounds';
 import { GAME, SHIP } from '../constants';
 import type { Player } from '../entities/player/Player';
-import { Ship } from '../entities/ship/Ship';
 import { logger } from '../utils/Logger';
 
 const TURN_SPEED_RAD_PER_FRAME = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
@@ -20,9 +19,6 @@ export const keys: KeyStates = {
   Space: false,
   ArrowUp: false,
 };
-
-// Track whether we've started thrust sound to avoid relying on HTMLAudioElement state in tests
-let thrustSoundActive = false;
 
 // Track pressed keys per-player to avoid cross-player/global interference (e.g., parallel tests)
 const playerPressedKeys = new WeakMap<Player, Set<string>>();
@@ -60,15 +56,11 @@ export function updateThrustFromKeys(player: Player): void {
       to: shouldThrust,
     });
     player.ship.thrusting = shouldThrust;
-    if (shouldThrust) {
-      if (!thrustSoundActive) {
-        playSound(Ship.fxThrust);
-        thrustSoundActive = true;
-      }
-    } else {
-      Ship.fxThrust.stop();
-      thrustSoundActive = false;
-    }
+    upsertThrustSource({
+      id: player.id,
+      thrusting: shouldThrust,
+      position: player.ship.position,
+    });
   } else {
     logger.debug('KEYBINDINGS', 'Thrust state unchanged', {
       thrusting: shouldThrust,

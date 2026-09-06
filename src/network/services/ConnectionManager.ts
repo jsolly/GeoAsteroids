@@ -7,6 +7,7 @@ import type {
   ServerGameState,
   Velocity,
 } from '../../../shared-types';
+import { playLaserSound } from '../../audio/gameSounds';
 import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
@@ -693,6 +694,10 @@ export class ConnectionManager {
 
     // Add the laser to the player's ship
     player.ship.lasers.push(laser);
+    // Local shots already played in fireLaser; remote/bot shots share playLaserSound.
+    if (player.type !== 'local') {
+      playLaserSound(laser.position);
+    }
     logger.debug('NETWORK', 'Added laser to remote player', {
       playerId: data.id,
       laserCount: player.ship.lasers.length,

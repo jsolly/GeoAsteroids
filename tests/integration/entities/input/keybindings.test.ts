@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { GAME, SHIP } from '../../../../src/constants';
+import { LOCAL_STORAGE_KEYS } from '../../../../src/constants/user-preferences';
 import { Player } from '../../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { Ship } from '../../../../src/entities/ship/Ship';
@@ -27,6 +28,7 @@ const releaseKey = (code: string): void => {
 };
 
 beforeEach(() => {
+  localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
   // Reset global key states to ensure clean test state
   keys.ArrowLeft = false;
   keys.ArrowRight = false;
