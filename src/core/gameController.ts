@@ -1,6 +1,6 @@
-import type { AsteroidData, Position, ShipKitId } from '../../shared-types';
 import { areAllied } from '../../shared/factions';
 import { consumeTickAccumulator } from '../../shared/gameClock';
+import type { AsteroidData, Position, ShipKitId } from '../../shared-types';
 import { playExplosionSound } from '../audio/explosionSound';
 import {
   replaceThrustSources,
