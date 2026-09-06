@@ -19,6 +19,8 @@ test('player and bot ships share the phosphor hull draw path', () => {
   expect(canvasSrc).toMatch(/const ship = isLocal \? currShip : player\.ship/);
   expect(canvasSrc).toMatch(/drawShipAtPosition\(\s*ship,/);
   expect(shipSrc).toMatch(/drawSoftFactionMark\(ctx, factionId/);
+  expect(shipSrc).toMatch(/park: 'hull'/);
+  expect(shipSrc).toMatch(/drawPlayerName\(playerName, screenX, screenY, shipR, shipColor, factionId\)/);
   expect(canvasSrc).toMatch(/drawLootRelative/);
   expect(canvasSrc).not.toMatch(/drawBotShip|drawLocalShip|drawRemoteShip/);
 });

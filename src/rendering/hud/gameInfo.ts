@@ -2,6 +2,7 @@ import { FACTION_LABELS, getSideColor } from '../../../shared/factions';
 import type { FactionId } from '../../../shared-types';
 import { PALETTE, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
+import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { getShipKit } from '../../entities/ship/shipKits';
 import { hexToRgba } from '../../utils/colorUtils';
@@ -32,8 +33,15 @@ export function drawScoreOverlay(
   ctx.font = VISUAL.NAME_LABEL_FONT;
   ctx.textBaseline = 'top';
   if (faction) {
+    drawSoftFactionMark(ctx, faction, {
+      x: VISUAL.HUD_INSET + dx + 6,
+      y: metaY + 6,
+      radius: 8,
+      angle: Math.PI / 2,
+      park: 'point',
+    });
     ctx.fillStyle = hexToRgba(getSideColor(faction), 0.85);
-    ctx.fillText(FACTION_LABELS[faction], VISUAL.HUD_INSET + dx, metaY);
+    ctx.fillText(FACTION_LABELS[faction], VISUAL.HUD_INSET + dx + 16, metaY);
   }
 
   const localShip = PlayerManager.getInstance().getLocalShip();
