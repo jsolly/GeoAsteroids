@@ -293,11 +293,7 @@ export class CollisionManager {
   /**
    * Handle laser hitting a player (unified for all player types)
    */
-  private handleLaserPlayerHit(
-    laser: Laser,
-    player: LaserTarget,
-    attackerId: string
-  ): void {
+  private handleLaserPlayerHit(laser: Laser, player: LaserTarget, attackerId: string): void {
     const ship = player.ship;
 
     logger.debug('COLLISION', 'Laser hit player', {

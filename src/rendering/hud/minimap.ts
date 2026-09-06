@@ -1,10 +1,9 @@
 import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
+import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
 import type { Ship } from '../../entities/ship/Ship';
-
 import { getGameBoundary } from '../../physics/boundary';
-import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 
