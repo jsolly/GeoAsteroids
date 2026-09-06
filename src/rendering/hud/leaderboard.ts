@@ -1,6 +1,6 @@
 import { PALETTE } from '../../constants';
-import type { Player } from '../../entities/player/Player';
 import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
+import type { Player } from '../../entities/player/Player';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 
 interface LeaderboardEntry {

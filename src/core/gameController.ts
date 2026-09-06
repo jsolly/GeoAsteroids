@@ -773,7 +773,8 @@ export class GameController {
     const allPlayers = this.networkManager.getAllPlayers();
     const otherShips = allPlayers
       .filter(
-        (player) => player.id !== currPlayer.id && !areAllied(currPlayer.factionId, player.factionId)
+        (player) =>
+          player.id !== currPlayer.id && !areAllied(currPlayer.factionId, player.factionId)
       )
       .map((player) => ({ ship: player.ship, id: player.id }));
 

@@ -36,8 +36,11 @@ describe('A pilot joins with a chosen ship kit', () => {
     expect(world.entity(alice).health).toBe(warden.maxHealth);
   });
 
-  test('join leaves side assignment unset so factions can compose later', () => {
+  test('join assigns a soft side without changing the chosen kit', () => {
     alice = world.join('Alice', { x: 0, y: 0 }, { kitId: 'skirmisher' });
-    expect(world.entity(alice).factionId).toBeUndefined();
+    expect(world.entity(alice).kitId).toBe('skirmisher');
+    expect(world.entity(alice).factionId === 'ion' || world.entity(alice).factionId === 'ember').toBe(
+      true
+    );
   });
 });

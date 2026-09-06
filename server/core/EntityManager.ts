@@ -155,7 +155,7 @@ export class EntityManager {
     name: string,
     ws: WebSocket,
     position?: Position,
-    color?: string,
+    _color?: string,
     kitId?: ShipKitId,
     factionId?: SoftFactionId
   ): GameEntity {
@@ -176,7 +176,7 @@ export class EntityManager {
 
     const sameName = this.getHumanPlayers().find((human) => human.name === name);
     if (sameName && sameName.lives > 0) {
-      return this.takeOverHuman(sameName, id, name, ws, color);
+      return this.takeOverHuman(sameName, id, name, ws);
     }
     if (sameName && sameName.lives <= 0) {
       this.entities.delete(sameName.id);
@@ -217,8 +217,7 @@ export class EntityManager {
     existing: GameEntity,
     id: string,
     name: string,
-    ws: WebSocket,
-    color?: string
+    ws: WebSocket
   ): GameEntity {
     const oldWs = existing.ws;
     if (existing.id !== id) {

@@ -158,9 +158,10 @@ export class MessageHandler {
     const validatedPosition = this.gameEngine.validatePosition(data.position);
     const joinPosition = validatedPosition || { x: 0, y: 0 };
     const kitId = data.kitId ?? data.data?.kitId;
-    logger.debug('Player join', { id, position: joinPosition, kitId });
+    const factionId = data.factionId ?? data.data?.factionId;
+    logger.debug('Player join', { id, position: joinPosition, kitId, factionId });
 
-    const player = this.gameEngine.addPlayer(id, name, ws, joinPosition, undefined, kitId);
+    const player = this.gameEngine.addPlayer(id, name, ws, joinPosition, undefined, kitId, factionId);
     logger.info('✅ Player added to game engine', { id, name, factionId: player.factionId });
 
     // Send confirmation to the joining player
