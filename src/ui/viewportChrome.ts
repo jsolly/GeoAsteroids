@@ -52,7 +52,7 @@ export function shouldUseTouchControls(query: ViewportQuery = queryViewport()): 
 }
 
 export const DESKTOP_CONTROLS_HINT = 'WASD + Space / arrows · E ability';
-export const TOUCH_CONTROLS_HINT = 'Stick + fire · landscape recommended';
+export const TOUCH_CONTROLS_HINT = 'Stick · fire · ability · landscape';
 
 export function controlsHintFor(query: ViewportQuery = queryViewport()): string {
   return shouldUseTouchControls(query) ? TOUCH_CONTROLS_HINT : DESKTOP_CONTROLS_HINT;

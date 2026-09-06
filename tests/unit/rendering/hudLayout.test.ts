@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 
 import { VISUAL } from '../../../src/constants';
-import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
+import { computeHudLayout, scaleHudFont } from '../../../src/rendering/hud/hudLayout';
 
 const ZERO = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -43,6 +43,24 @@ test('phone landscape parks the radar under lives so it misses the stick', () =>
   expect(layout.miniMap.y).toBeGreaterThan(layout.score.y + 28);
   expect(layout.miniMap.x).toBe(layout.lives.x);
   expect(layout.leaderboard.maxRows).toBe(4);
+});
+
+test('phone HUD type is larger than the desktop 14px lock', () => {
+  const phone = computeHudLayout({ width: 390, height: 844 }, { touchControls: true, safeArea: ZERO });
+  const desktop = computeHudLayout({ width: 800, height: 600 }, { touchControls: false, safeArea: ZERO });
+  expect(desktop.hudTypeScale).toBe(1);
+  expect(phone.hudTypeScale).toBeGreaterThan(1);
+  expect(scaleHudFont(VISUAL.SCORE_FONT, phone.hudTypeScale)).toBe('17px Arial');
+  expect(phone.fuel.height).toBeGreaterThan(desktop.fuel.height);
+  expect(phone.fuel.y).toBeGreaterThan(phone.kitNameY);
+});
+
+test('landscape radar sits below the fuel tick so kit + tank stay readable', () => {
+  const layout = computeHudLayout(
+    { width: 844, height: 390 },
+    { touchControls: true, safeArea: ZERO }
+  );
+  expect(layout.miniMap.y).toBeGreaterThanOrEqual(layout.fuel.y + 12);
 });
 
 test('safe-area insets push lives off the notch', () => {

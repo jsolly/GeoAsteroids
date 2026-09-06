@@ -5,14 +5,14 @@ export function drawFuelGauge(
   ctx: CanvasRenderingContext2D,
   fuel: number,
   maxFuel: number,
-  origin: { x: number; y: number }
+  origin: { x: number; y: number; width?: number; height?: number }
 ): void {
   if (maxFuel <= 0) {
     return;
   }
 
-  const barWidth = VISUAL.FUEL_BAR_WIDTH;
-  const barHeight = VISUAL.FUEL_BAR_HEIGHT;
+  const barWidth = origin.width ?? VISUAL.FUEL_BAR_WIDTH;
+  const barHeight = origin.height ?? VISUAL.FUEL_BAR_HEIGHT;
   const filled = barWidth * Math.max(0, Math.min(1, fuel / maxFuel));
 
   ctx.save();

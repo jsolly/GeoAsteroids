@@ -25,7 +25,19 @@ export type HudLayout = {
   };
   miniMap: { x: number; y: number; size: number };
   overlayFontScale: number;
+  hudTypeScale: number;
+  fuel: { x: number; y: number; width: number; height: number };
+  kitNameY: number;
+  factionY: number;
 };
+
+/** Scale a canvas font like `14px Arial` without changing the locked desktop constants. */
+export function scaleHudFont(font: string, scale: number): string {
+  if (scale === 1) {
+    return font;
+  }
+  return font.replace(/(\d+(?:\.\d+)?)px/, (_, px: string) => `${Math.round(Number(px) * scale)}px`);
+}
 
 const ZERO_SAFE: SafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DESKTOP_EDGE = VISUAL.HUD_INSET;
@@ -63,15 +75,18 @@ export function computeHudLayout(
       height: canvas.height,
     });
 
-  const overlayFontScale = canvas.width < 480 ? 0.62 : canvas.width < 700 ? 0.8 : 1;
+  const overlayFontScale = canvas.width < 480 ? 0.72 : canvas.width < 700 ? 0.85 : 1;
+  const hudTypeScale = touch ? (canvas.width < 480 ? 1.2 : 1.12) : 1;
 
   if (!touch) {
+    const lives = { x: VISUAL.HUD_INSET, y: VISUAL.HUD_INSET };
+    const factionY = lives.y + VISUAL.HUD_LIFE_SIZE + 8;
     return {
       padTop: 0,
       padLeft: 0,
       padRight: 0,
       padBottom: 0,
-      lives: { x: VISUAL.HUD_INSET, y: VISUAL.HUD_INSET },
+      lives,
       score: { x: VISUAL.HUD_INSET, y: VISUAL.HUD_INSET },
       killMessageY: 12,
       leaderboard: {
@@ -87,6 +102,15 @@ export function computeHudLayout(
         size: VISUAL.MINIMAP_SIZE,
       },
       overlayFontScale,
+      hudTypeScale,
+      factionY,
+      kitNameY: factionY + 14,
+      fuel: {
+        x: lives.x,
+        y: factionY + 32,
+        width: VISUAL.FUEL_BAR_WIDTH,
+        height: VISUAL.FUEL_BAR_HEIGHT,
+      },
     };
   }
 
@@ -95,12 +119,22 @@ export function computeHudLayout(
   const padTop = Math.max(12, safe.top + 8);
   const padBottom = Math.max(12, safe.bottom + 8);
   const compactHeight = canvas.height < 500;
-  const boardWidth = canvas.width < 400 ? 140 : 160;
+  const boardWidth = canvas.width < 400 ? 148 : 168;
   const miniMapSize = compactHeight ? 64 : 80;
+  const lives = { x: padLeft, y: padTop };
+  const factionY = lives.y + VISUAL.HUD_LIFE_SIZE + 8;
+  const kitNameY = factionY + Math.round(14 * hudTypeScale);
+  const fuel = {
+    x: lives.x,
+    y: factionY + Math.round(32 * hudTypeScale),
+    width: Math.round(VISUAL.FUEL_BAR_WIDTH * Math.max(1, hudTypeScale)),
+    height: 3,
+  };
 
-  // Compact cluster + faction + kit sit under lives; park radar below that stack.
+  // Compact cluster + faction + kit + fuel sit under lives; park radar below that stack.
+  const clusterClear = fuel.y + 16;
   const miniMap = compactHeight
-    ? { x: padLeft, y: padTop + VISUAL.HUD_LIFE_SIZE + 52, size: miniMapSize }
+    ? { x: padLeft, y: Math.max(padTop + VISUAL.HUD_LIFE_SIZE + 52, clusterClear), size: miniMapSize }
     : {
         x: canvas.width - padRight - miniMapSize,
         y: canvas.height - padBottom - TOUCH.FIRE_RESERVE - miniMapSize,
@@ -112,18 +146,22 @@ export function computeHudLayout(
     padLeft,
     padRight,
     padBottom,
-    lives: { x: padLeft, y: padTop },
+    lives,
     score: { x: padLeft, y: padTop },
     killMessageY: padTop,
     leaderboard: {
       x: canvas.width - boardWidth - padRight,
       y: padTop,
       width: boardWidth,
-      rowHeight: 15,
+      rowHeight: compactHeight ? 16 : 18,
       maxRows: compactHeight ? 4 : 6,
     },
     miniMap,
     overlayFontScale,
+    hudTypeScale,
+    factionY,
+    kitNameY,
+    fuel,
   };
 }
 
