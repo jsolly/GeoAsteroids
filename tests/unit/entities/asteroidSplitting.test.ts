@@ -1,157 +1,159 @@
-import { expect, test, describe, beforeEach } from 'vitest';
-import { AsteroidManager } from '../../../server/core/AsteroidManager';
+import { beforeEach, describe, expect, test } from 'vitest';
+import { AsteroidManager, isBiggestAsteroid } from '../../../server/core/AsteroidManager';
 import { RNGService } from '../../../server/core/RNGService';
+import { ROID } from '../../../src/constants';
+import type { AsteroidData } from '../../../shared-types';
 
-describe('Asteroid Splitting System', () => {
+function makeAsteroid(overrides: Partial<AsteroidData> & Pick<AsteroidData, 'id' | 'size'>): AsteroidData {
+  return {
+    position: { x: 400, y: 300 },
+    velocity: { x: 1, y: 1 },
+    jaggedness: 0.5,
+    rotation: 0,
+    angularVelocity: 0,
+    health: 50,
+    maxHealth: 50,
+    vertices: 8,
+    offsets: [1, 1, 1, 1, 1, 1, 1, 1],
+    ...overrides,
+  };
+}
+
+describe('Collaborative asteroid split', () => {
   let asteroidManager: AsteroidManager;
-  let rng: RNGService;
 
   beforeEach(() => {
-    rng = new RNGService();
-    asteroidManager = new AsteroidManager(rng);
+    asteroidManager = new AsteroidManager(new RNGService());
   });
 
-  test('large asteroid splits into two smaller asteroids', () => {
-    // Create a large asteroid that should split (size 30)
-    const largeAsteroid = {
-      id: 'test-asteroid-large',
-      position: { x: 400, y: 300 },
-      velocity: { x: 1, y: 1 },
-      size: 30, // Should be large enough to split (>= 25)
-      jaggedness: 0.5,
-      rotation: 0,
-      angularVelocity: 0,
-      health: 50,
-      maxHealth: 50,
-      vertices: 8,
-      offsets: [1, 1, 1, 1, 1, 1, 1, 1]
-    };
+  test('two players hit big roid within 1s → split', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-1', size: ROID.SIZE }));
 
-    asteroidManager.addAsteroid(largeAsteroid);
+    const first = asteroidManager.registerLaserHit('big-1', 'player-a', 0);
+    expect(first.outcome).toBe('tagged');
+    expect(first.split).toBe(false);
+    expect(first.expiresAt).toBe(ROID.COLLAB_SPLIT_WINDOW_MS);
     expect(asteroidManager.getAsteroidCount()).toBe(1);
 
-    // Destroy the asteroid
-    const result = asteroidManager.destroyAsteroid('test-asteroid-large');
-
-    // Should successfully destroy and create new asteroids
-    expect(result.destroyed).toBeDefined();
-    expect(result.destroyed?.size).toBe(30);
-    expect(result.newAsteroids.length).toBe(2);
+    const second = asteroidManager.registerLaserHit('big-1', 'player-b', 999);
+    expect(second.outcome).toBe('destroyed');
+    expect(second.split).toBe(true);
+    expect(second.newAsteroids).toHaveLength(2);
     expect(asteroidManager.getAsteroidCount()).toBe(2);
-
-    // Check that new asteroids are smaller
-    result.newAsteroids.forEach((asteroid) => {
-      expect(asteroid.size).toBeLessThan(30);
-      expect(asteroid.size).toBeGreaterThanOrEqual(10); // minAsteroidSize
-    });
+    for (const fragment of second.newAsteroids) {
+      expect(fragment.size).toBeLessThan(ROID.SIZE);
+      expect(isBiggestAsteroid(fragment.size)).toBe(false);
+    }
   });
 
-  test('medium asteroid splits into two smaller asteroids', () => {
-    // Create a medium asteroid that should split (size 25)
-    const mediumAsteroid = {
-      id: 'test-asteroid-medium',
-      position: { x: 400, y: 300 },
-      velocity: { x: 1, y: 1 },
-      size: 25, // Should be large enough to split (>= 25)
-      jaggedness: 0.5,
-      rotation: 0,
-      angularVelocity: 0,
-      health: 40,
-      maxHealth: 40,
-      vertices: 8,
-      offsets: [1, 1, 1, 1, 1, 1, 1, 1]
-    };
+  test('player and bot hitting a big roid within 1s also splits', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-bot', size: ROID.SIZE }));
 
-    asteroidManager.addAsteroid(mediumAsteroid);
-    expect(asteroidManager.getAsteroidCount()).toBe(1);
+    asteroidManager.registerLaserHit('big-bot', 'human-1', 0);
+    const result = asteroidManager.registerLaserHit('big-bot', 'server-bot-1', 400);
 
-    // Destroy the asteroid
-    const result = asteroidManager.destroyAsteroid('test-asteroid-medium');
-
-    // Should successfully destroy and create new asteroids
-    expect(result.destroyed).toBeDefined();
-    expect(result.destroyed?.size).toBe(25);
-    expect(result.newAsteroids.length).toBe(2);
-    expect(asteroidManager.getAsteroidCount()).toBe(2);
+    expect(result.split).toBe(true);
+    expect(result.newAsteroids).toHaveLength(2);
   });
 
-  test('small asteroid does not split', () => {
-    // Create a small asteroid that should not split (size 20)
-    const smallAsteroid = {
-      id: 'test-asteroid-small',
-      position: { x: 400, y: 300 },
-      velocity: { x: 1, y: 1 },
-      size: 4, // Should not split (< 5 in test mode, < 25 in normal mode)
-      jaggedness: 0.5,
-      rotation: 0,
-      angularVelocity: 0,
-      health: 30,
-      maxHealth: 30,
-      vertices: 8,
-      offsets: [1, 1, 1, 1, 1, 1, 1, 1]
-    };
+  test('solo player destroying a big roid does not split', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-solo', size: ROID.SIZE }));
 
-    asteroidManager.addAsteroid(smallAsteroid);
-    expect(asteroidManager.getAsteroidCount()).toBe(1);
+    asteroidManager.registerLaserHit('big-solo', 'player-a', 0);
+    const result = asteroidManager.registerLaserHit(
+      'big-solo',
+      'player-a',
+      ROID.COLLAB_HIT_DEDUPE_MS + 1
+    );
 
-    // Destroy the asteroid
-    const result = asteroidManager.destroyAsteroid('test-asteroid-small');
-
-    // Should destroy but not create new asteroids
-    expect(result.destroyed).toBeDefined();
-    expect(result.destroyed?.size).toBe(4);
-    expect(result.newAsteroids.length).toBe(0);
+    expect(result.outcome).toBe('destroyed');
+    expect(result.split).toBe(false);
+    expect(result.newAsteroids).toHaveLength(0);
     expect(asteroidManager.getAsteroidCount()).toBe(0);
   });
 
+  test('same-shooter echo inside the dedupe window is ignored', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-echo', size: ROID.SIZE }));
+
+    asteroidManager.registerLaserHit('big-echo', 'player-a', 0);
+    const echo = asteroidManager.registerLaserHit('big-echo', 'player-a', 40);
+
+    expect(echo.outcome).toBe('ignored');
+    expect(asteroidManager.getAsteroid('big-echo')).toBeDefined();
+    expect(asteroidManager.getAsteroidCount()).toBe(1);
+  });
+
+  test('two players hitting a big roid after the 1s window does not split', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-late', size: ROID.SIZE }));
+
+    asteroidManager.registerLaserHit('big-late', 'player-a', 0);
+    const late = asteroidManager.registerLaserHit(
+      'big-late',
+      'player-b',
+      ROID.COLLAB_SPLIT_WINDOW_MS + 1
+    );
+
+    expect(late.outcome).toBe('tagged');
+    expect(late.split).toBe(false);
+    expect(asteroidManager.getAsteroidCount()).toBe(1);
+  });
+
+  test('expired solo tag destroys a big roid without splitting', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-expire', size: ROID.SIZE }));
+
+    asteroidManager.registerLaserHit('big-expire', 'player-a', 0);
+    const expired = asteroidManager.expireStaleHits(ROID.COLLAB_SPLIT_WINDOW_MS + 1);
+
+    expect(expired).toHaveLength(1);
+    expect(expired[0]?.playerId).toBe('player-a');
+    expect(asteroidManager.getAsteroidCount()).toBe(0);
+    expect(asteroidManager.getAsteroid('big-expire')).toBeUndefined();
+  });
+
+  test('medium asteroid never splits', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'medium-1', size: 30 }));
+
+    const result = asteroidManager.registerLaserHit('medium-1', 'player-a', 0);
+
+    expect(result.outcome).toBe('destroyed');
+    expect(result.split).toBe(false);
+    expect(result.newAsteroids).toHaveLength(0);
+  });
+
+  test('small asteroid never splits', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'small-1', size: 12 }));
+
+    const result = asteroidManager.registerLaserHit('small-1', 'player-a', 0);
+
+    expect(result.outcome).toBe('destroyed');
+    expect(result.split).toBe(false);
+    expect(result.newAsteroids).toHaveLength(0);
+  });
+
+  test('ship collision destroys without splitting even on a biggest asteroid', () => {
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-ram', size: ROID.SIZE }));
+
+    const result = asteroidManager.destroyFromCollision('big-ram');
+
+    expect(result.outcome).toBe('destroyed');
+    expect(result.split).toBe(false);
+    expect(result.newAsteroids).toHaveLength(0);
+  });
+
   test('asteroid splitting respects max count limit', () => {
-    // Fill up the asteroid manager to near max capacity
-    const maxCount = 200; // From DEBUG.ROIDS.MAX_COUNT
-    const asteroidsToCreate = maxCount - 1; // Leave room for 1 more
-
-    for (let i = 0; i < asteroidsToCreate; i++) {
-      const asteroid = {
-        id: `test-asteroid-${i}`,
-        position: { x: 400, y: 300 },
-        velocity: { x: 1, y: 1 },
-        size: 15, // Small asteroids that won't split
-        jaggedness: 0.5,
-        rotation: 0,
-        angularVelocity: 0,
-        health: 20,
-        maxHealth: 20,
-        vertices: 8,
-        offsets: [1, 1, 1, 1, 1, 1, 1, 1]
-      };
-      asteroidManager.addAsteroid(asteroid);
+    const maxCount = 200;
+    for (let i = 0; i < maxCount - 1; i++) {
+      asteroidManager.addAsteroid(makeAsteroid({ id: `filler-${i}`, size: 15 }));
     }
-
-    expect(asteroidManager.getAsteroidCount()).toBe(asteroidsToCreate);
-
-    // Add one large asteroid that would normally split
-    const largeAsteroid = {
-      id: 'test-asteroid-large',
-      position: { x: 400, y: 300 },
-      velocity: { x: 1, y: 1 },
-      size: 30,
-      jaggedness: 0.5,
-      rotation: 0,
-      angularVelocity: 0,
-      health: 50,
-      maxHealth: 50,
-      vertices: 8,
-      offsets: [1, 1, 1, 1, 1, 1, 1, 1]
-    };
-
-    asteroidManager.addAsteroid(largeAsteroid);
+    asteroidManager.addAsteroid(makeAsteroid({ id: 'big-capped', size: ROID.SIZE }));
     expect(asteroidManager.getAsteroidCount()).toBe(maxCount);
 
-    // Try to destroy the large asteroid - should not split due to max count
-    const result = asteroidManager.destroyAsteroid('test-asteroid-large');
+    asteroidManager.registerLaserHit('big-capped', 'player-a', 0);
+    const result = asteroidManager.registerLaserHit('big-capped', 'player-b', 10);
 
-    // Should destroy but not create new asteroids due to max count limit
-    expect(result.destroyed).toBeDefined();
-    expect(result.newAsteroids.length).toBe(0);
-    expect(asteroidManager.getAsteroidCount()).toBe(asteroidsToCreate);
+    expect(result.outcome).toBe('destroyed');
+    expect(result.split).toBe(false);
+    expect(result.newAsteroids).toHaveLength(0);
+    expect(asteroidManager.getAsteroidCount()).toBe(maxCount - 1);
   });
 });

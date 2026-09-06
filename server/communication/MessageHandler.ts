@@ -469,23 +469,55 @@ export class MessageHandler {
       return;
     }
 
-    const result = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
+    const shooterId = this.resolveAsteroidShooter(ws, data.playerId);
+    if (!shooterId) {
+      this.broadcaster.sendError(ws, 'Unknown shooter for asteroidDestroyed');
+      return;
+    }
 
-    if (result.success) {
-      // Broadcast score update
-      const player = this.gameEngine.getPlayer(data.playerId);
+    const cause = data.cause === 'collision' ? 'collision' : 'laser';
+    const result = this.gameEngine.handleAsteroidHit(data.asteroidId, shooterId, cause);
+
+    if (result.outcome === 'tagged' && result.expiresAt) {
+      this.broadcaster.broadcastAsteroidTagged({
+        asteroidId: data.asteroidId,
+        shooterId,
+        expiresAt: result.expiresAt,
+      });
+      return;
+    }
+
+    if (result.outcome === 'destroyed') {
+      const player = this.gameEngine.getPlayer(shooterId);
       if (player) {
-        this.broadcaster.broadcastScoreUpdate(data.playerId, player.score);
+        this.broadcaster.broadcastScoreUpdate(shooterId, player.score);
       }
 
-      // Broadcast asteroid destruction
-      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
+      this.broadcaster.broadcastAsteroidDestruction(data.asteroidId, {
+        collabSplit: result.split,
+        origin: result.destroyed?.position,
+      });
 
-      // Broadcast new asteroids created from splitting if any
+      // #443 hook: when split && destroyed, queue/broadcast shockwave from origin.
       if (result.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
       }
     }
+  }
+
+  /** Human hits bind to the socket. Bot ids may be reported by any connected client. */
+  private resolveAsteroidShooter(ws: WebSocket, claimedId: string): string | null {
+    const claimed = typeof claimedId === 'string' ? this.gameEngine.getPlayer(claimedId) : undefined;
+    if (claimed?.type === 'bot') {
+      return claimed.id;
+    }
+
+    const socketPlayer = this.gameEngine.getPlayerBySocket(ws);
+    if (socketPlayer) {
+      return socketPlayer.id;
+    }
+
+    return claimed?.type === 'human' ? claimed.id : null;
   }
 
   private handleInitAsteroids(ws: WebSocket, id: string, data: any): void {

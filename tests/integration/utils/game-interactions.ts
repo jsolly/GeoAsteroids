@@ -517,7 +517,9 @@ export class GameInteractions {
     });
   }
 
-  async getAsteroidPositions(): Promise<Array<{ x: number; y: number; radius: number; id: string }>> {
+  async getAsteroidPositions(): Promise<
+    Array<{ x: number; y: number; radius: number; id: string; isCollabTarget?: boolean }>
+  > {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;
       if (gameController?.getCurrRoidBelt) {
@@ -527,6 +529,7 @@ export class GameInteractions {
           y: roid.position.y,
           radius: roid.r,
           id: roid.id,
+          isCollabTarget: roid.isCollabTarget === true,
         })) : [];
       }
       return [];

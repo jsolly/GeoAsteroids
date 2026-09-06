@@ -121,6 +121,7 @@ describe('Local Player Roid Collision Damage', () => {
           asteroidId: roid.id,
           playerId: 'local-player-123',
           points: expect.any(Number),
+          cause: 'collision',
         },
       });
     });
@@ -153,6 +154,7 @@ describe('Local Player Roid Collision Damage', () => {
           asteroidId: roid.id,
           playerId: 'local-player-123',
           points: expect.any(Number),
+          cause: 'collision',
         },
       });
     });

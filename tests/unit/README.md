@@ -10,7 +10,8 @@ Tests for game entities and their core functionality:
 
 - **asteroidPoints.test.ts** - Tests asteroid point calculation logic
 - **asteroids.test.ts** - Tests asteroid creation and basic functionality
-- **asteroidSplitting.test.ts** - Tests asteroid splitting mechanics
+- **asteroidSplitting.test.ts** - Tests collaborative split for biggest asteroids
+- **roidScore.test.ts** - Size class and point helpers for collab split
 - **botAsteroidCollisions.test.ts** - Tests bot collision with asteroids
 - **localPlayerRoidCollision.test.ts** - Tests local player collision with asteroids
 - **shipDamage.test.ts** - Tests ship damage system
@@ -39,6 +40,7 @@ Tests for server-side functionality:
 - **remote-player-damage.test.ts** - Tests remote player damage system
 - **remote-player-respawn.test.ts** - Tests remote player respawn system
 - **server-scoring.test.ts** - Tests server-side scoring system
+- **collaborative-asteroid-split.test.ts** - Two players hit a big roid within 1s → split; forged shooter is ignored
 
 ### `/utils/`
 
