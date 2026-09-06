@@ -240,7 +240,7 @@ export function findHarpoonTarget(
 function latchStillValid(
   host: AbilityHost,
   target: AbilityBody,
-  range = SHIP_ABILITY.HARPOON_RANGE
+  range: number = SHIP_ABILITY.HARPOON_RANGE
 ): boolean {
   if (!isHarpoonableBody(host, target)) {
     return false;
