@@ -180,6 +180,11 @@ export class MessageHandler {
     const player = this.gameEngine.addPlayer(id, name, ws, joinPosition, undefined, kitId, factionId);
     logger.info('✅ Player added to game engine', { id, name, factionId: player.factionId });
 
+    const replacedId = this.gameEngine.consumeReplacedHumanId();
+    if (replacedId) {
+      this.broadcaster.broadcastPlayerLeft(replacedId);
+    }
+
     // Send confirmation to the joining player
     this.broadcaster.sendToWebSocket(ws, {
       type: 'joined',

@@ -394,8 +394,9 @@ export class Player {
       }
     }
 
-    // Resume local prediction only after adopting a live server transform
-    // (health can land in an earlier gameState tick than the respawn position).
+    // Resume local prediction after adopting a live server transform.
+    // Nearby respawns stay inside 75px of the death pose — spawn protection
+    // on this snapshot means we already wrote the new spawn, so release.
     if (
       isLocal &&
       this.adoptServerPosition &&
@@ -408,7 +409,8 @@ export class Player {
       const movedFromDeath = origin
         ? Math.hypot(data.position.x - origin.x, data.position.y - origin.y) > 75
         : true;
-      if (movedFromDeath) {
+      const adoptedRespawn = (data.spawnProtectionTimer ?? 0) > 0;
+      if (movedFromDeath || adoptedRespawn) {
         this.adoptServerPosition = false;
         this.respawnLatchOrigin = null;
       }
@@ -420,6 +422,22 @@ export class Player {
   /** Record authoritative health from a direct damage event (not gameState echo). */
   syncServerHealthEcho(health: number): void {
     this.lastServerHealthEcho = health;
+  }
+
+  /**
+   * Drop leftover death/invuln/latch flags before a new server session.
+   * Health/pose come from the next snapshot so a reconnect is not a corpse.
+   */
+  resetCombatLifecycle(): void {
+    this.adoptServerPosition = false;
+    this.respawnLatchOrigin = null;
+    this.serverSpawnProtectionTimer = 0;
+    this.ship.exploding = false;
+    this.ship.explodeTime = 0;
+    this.ship.blinkCount = 0;
+    this.ship.spawnProtectionTimer = 0;
+    this.ship.velocity.x = 0;
+    this.ship.velocity.y = 0;
   }
 
   // Respawn method implementation
@@ -437,8 +455,9 @@ export class Player {
     this.ship.exploding = false;
     this.ship.explodeTime = 0;
 
-    // Reset velocity
-    this.ship.velocity = { x: 0, y: 0 };
+    // Keep the existing velocity object so network aliases stay valid.
+    this.ship.velocity.x = 0;
+    this.ship.velocity.y = 0;
 
     this.deathCause = undefined;
     this.ship.lastExplodeCause = undefined;

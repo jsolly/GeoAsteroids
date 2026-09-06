@@ -89,7 +89,12 @@ export function applySharedShipExplodingFlag(
   }
 }
 
-/** Arm blink after death→alive or when the server still has spawn protection. */
+/** True when the hull should be drawn — not an explosion and not a dead corpse. */
+export function shouldDrawShipHull(ship: { exploding: boolean; health: number }): boolean {
+  return !ship.exploding && ship.health > 0;
+}
+
+/** Arm blink after death→alive. Leftover server timers sync remaining frames only. */
 export function applySharedShipRespawnCue(
   ship: SharedShipCombatVisuals,
   wasDeadOrExploding: boolean,
@@ -103,13 +108,15 @@ export function applySharedShipRespawnCue(
     applyShipSpawnProtection(ship);
     return;
   }
-  if (
-    ship.health > 0 &&
-    ship.blinkCount <= 0 &&
-    spawnProtectionTimer !== undefined &&
-    spawnProtectionTimer > 0
-  ) {
-    applyShipSpawnProtection(ship);
+  if (ship.health <= 0 || spawnProtectionTimer === undefined) {
+    return;
+  }
+  if (spawnProtectionTimer <= 0) {
+    clearShipSpawnProtection(ship);
+    return;
+  }
+  if (ship.blinkCount <= 0) {
+    applyShipSpawnProtectionForRemainingFrames(ship, spawnProtectionTimer);
   }
 }
 
@@ -154,10 +161,29 @@ export function isShipCollisionImmune(ship: ShipCollisionState): boolean {
 
 /** Arm the client blink window used by players and bots. */
 export function applyShipSpawnProtection(ship: ShipSpawnProtectionState): void {
-  ship.blinkCount = Math.ceil(
-    SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-  );
-  ship.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+  applyShipSpawnProtectionForRemainingFrames(ship, SHIP.INVINCIBILITY_DURATION_FRAMES);
+}
+
+/** Drop leftover blink so a finished server timer cannot restack invuln. */
+export function clearShipSpawnProtection(ship: ShipSpawnProtectionState): void {
+  ship.blinkCount = 0;
+  ship.spawnProtectionTimer = 0;
+}
+
+/** Match client blink to the remaining server protection window — never a full restack. */
+export function applyShipSpawnProtectionForRemainingFrames(
+  ship: ShipSpawnProtectionState,
+  remainingFrames: number
+): void {
+  const frames = Math.max(0, Math.floor(remainingFrames));
+  if (frames <= 0) {
+    clearShipSpawnProtection(ship);
+    return;
+  }
+  const blink = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
+  ship.blinkCount = Math.ceil(frames / blink);
+  const phase = frames % blink;
+  ship.spawnProtectionTimer = phase === 0 ? blink : phase;
   ship.setBlinkOn();
 }
 

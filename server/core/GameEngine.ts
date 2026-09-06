@@ -318,6 +318,11 @@ export class GameEngine {
     return entity;
   }
 
+  /** Old human id remapped by same-name takeover. */
+  public consumeReplacedHumanId(): string | undefined {
+    return this.entityManager.consumeReplacedHumanId();
+  }
+
   public removePlayer(id: string): GameEntity | undefined {
     const entity = this.entityManager.removeEntity(id);
     this.updatePauseState();

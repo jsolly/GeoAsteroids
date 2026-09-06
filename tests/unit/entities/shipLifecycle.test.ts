@@ -4,13 +4,17 @@ import { isStaleDeathPose } from '../../../server/core/EntityManager';
 import { SHIP } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import {
+  applySharedShipRespawnCue,
   applyShipBoundaryDeath,
   applyShipLethalCollision,
   applyShipSpawnProtection,
+  applyShipSpawnProtectionForRemainingFrames,
+  clearShipSpawnProtection,
   isServerRespawnActive,
   isShipCollisionImmune,
   isSilentHudReset,
   shouldApplyDamagedHealth,
+  shouldDrawShipHull,
 } from '../../../src/entities/ship/shipUtils';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { Ship } from '../../../src/entities/ship/Ship';
@@ -126,6 +130,39 @@ describe('shared ship collision immunity', () => {
     expect(shouldApplyDamagedHealth(100, 75, false)).toBe(true);
     expect(shouldApplyDamagedHealth(25, 0, true)).toBe(true);
   });
+
+  test('a leftover server timer syncs remaining blink instead of restacking a full window', () => {
+    const ship = new Ship();
+    ship.blinkCount = 0;
+    ship.spawnProtectionTimer = 0;
+    ship.health = 100;
+    applySharedShipRespawnCue(ship, false, 12);
+    expect(ship.blinkCount).toBe(
+      Math.ceil(12 / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES)
+    );
+    expect(ship.blinkCount).toBeLessThan(
+      Math.ceil(SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES)
+    );
+    applyShipSpawnProtectionForRemainingFrames(ship, 3);
+    expect(ship.blinkCount).toBe(1);
+    expect(ship.spawnProtectionTimer).toBe(3);
+  });
+
+  test('an explicit server timer of 0 clears leftover blink', () => {
+    const ship = new Ship();
+    applyShipSpawnProtection(ship);
+    applySharedShipRespawnCue(ship, false, 0);
+    expect(ship.blinkCount).toBe(0);
+    expect(ship.spawnProtectionTimer).toBe(0);
+    clearShipSpawnProtection(ship);
+    expect(ship.blinkCount).toBe(0);
+  });
+
+  test('dead non-exploding hulls are not drawn', () => {
+    expect(shouldDrawShipHull({ exploding: false, health: 100 })).toBe(true);
+    expect(shouldDrawShipHull({ exploding: true, health: 0 })).toBe(false);
+    expect(shouldDrawShipHull({ exploding: false, health: 0 })).toBe(false);
+  });
 });
 
 describe('client blink after a heal-leak', () => {
@@ -148,6 +185,66 @@ describe('client blink after a heal-leak', () => {
     });
 
     expect(player.ship.blinkCount).toBeGreaterThan(0);
+  });
+
+  test('nearby respawn releases the latch so a later zero-vel snapshot cannot freeze the ship', () => {
+    const player = new Player({
+      id: 'local',
+      name: 'Local',
+      type: 'local',
+      input: new MockPlayerInput(),
+    });
+    player.ship.health = 0;
+    player.ship.exploding = true;
+    player.ship.position = { x: 0, y: 0 };
+    player.ship.velocity = { x: 3, y: 0 };
+
+    player.updateFromServer({
+      health: 0,
+      exploding: true,
+      position: { x: 0, y: 0 },
+      velocity: { x: 0, y: 0 },
+    });
+    player.updateFromServer({
+      health: 100,
+      exploding: false,
+      position: { x: 10, y: 0 },
+      velocity: { x: 0, y: 0 },
+      spawnProtectionTimer: 180,
+    });
+
+    player.ship.velocity.x = 5;
+    player.updateFromServer({
+      health: 100,
+      exploding: false,
+      position: { x: 10, y: 0 },
+      velocity: { x: 0, y: 0 },
+    });
+
+    expect(player.ship.velocity.x).toBe(5);
+  });
+
+  test('resetCombatLifecycle drops leftover explode and blink flags', () => {
+    const player = new Player({
+      id: 'local',
+      name: 'Local',
+      type: 'local',
+      input: new MockPlayerInput(),
+    });
+    player.ship.health = 0;
+    player.ship.exploding = true;
+    player.ship.explodeTime = 4;
+    player.ship.blinkCount = 12;
+    player.ship.spawnProtectionTimer = 6;
+    player.ship.velocity = { x: 2, y: 1 };
+
+    player.resetCombatLifecycle();
+
+    expect(player.ship.exploding).toBe(false);
+    expect(player.ship.explodeTime).toBe(0);
+    expect(player.ship.blinkCount).toBe(0);
+    expect(player.ship.spawnProtectionTimer).toBe(0);
+    expect(player.ship.velocity).toEqual({ x: 0, y: 0 });
   });
 
   test('updateFromServer writes position into the existing ship vectors', () => {
