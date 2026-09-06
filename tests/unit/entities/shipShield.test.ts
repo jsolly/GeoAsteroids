@@ -7,13 +7,16 @@ import {
   clearShield,
   createShieldState,
   deactivateShield,
+  isReadableShieldUp,
   isShieldBlockingLasers,
   laserCollisionRadius,
   maybeActivateBotShield,
   noteShieldLaserHit,
+  raiseReadableShield,
   requestShield,
   resolveCombatDamageSource,
   shouldBlockDamage,
+  shouldNoteShieldBlock,
   shieldCooldownFrames,
   shieldDurationFrames,
   shieldSnapshot,
@@ -113,6 +116,26 @@ describe('shared ship shield state machine', () => {
     expect(resolveCombatDamageSource('boundary')).toBe('collision');
     expect(resolveCombatDamageSource('player-1')).toBe('laser');
     expect(resolveCombatDamageSource('asteroid', 'laser')).toBe('laser');
+  });
+
+  test('same-side lasers do not flash the ring', () => {
+    const state = createShieldState();
+    activateShield(state);
+    expect(shouldNoteShieldBlock(state, 'laser', true)).toBe(false);
+    expect(shouldNoteShieldBlock(state, 'laser', false)).toBe(true);
+    expect(shouldNoteShieldBlock(state, 'collision', false)).toBe(false);
+  });
+
+  test('kit raise shares the F-key bubble and stays readable after F expiry fields', () => {
+    const state = { ...createShieldState(), shieldTimer: 0 };
+    raiseReadableShield(state, 40);
+    expect(state.shieldActive).toBe(true);
+    expect(state.shieldTime).toBe(40);
+    expect(isReadableShieldUp(state)).toBe(true);
+    state.shieldTimer = 12;
+    state.shieldActive = false;
+    state.shieldTime = 0;
+    expect(isReadableShieldUp(state)).toBe(true);
   });
 });
 

@@ -27,7 +27,7 @@ test('locked palette hexes stay the #415/#435 playfield swatch', () => {
     DANGER: '#F43F5E',
     HEALTH: '#4ADE80',
     LOOT: '#FBBF24',
-    SHIELD: '#67E8F9',
+    SHIELD: '#4ADE80',
   });
   expect(TITLE.ACCENT).toBe('#A78BFA');
   expect(PALETTE).not.toHaveProperty('ACCENT_UI');

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from 'vitest';
 
-import { PALETTE } from '../../../src/constants';
+import { PALETTE, SHIELD } from '../../../src/constants';
 
 const canvasSrc = readFileSync(resolve(process.cwd(), 'src/rendering/canvas.ts'), 'utf8');
 const inputSrc = readFileSync(resolve(process.cwd(), 'src/core/services/InputManager.ts'), 'utf8');
@@ -31,7 +31,14 @@ test('shield ring is a shared phosphor stroke, not a filled disc', () => {
   expect(shipSrc).toMatch(/drawShipShield\(ctx, ship, screenX, screenY, shipR\)/);
   expect(shieldFn).toMatch(/ctx\.arc\(screenX, screenY, radius/);
   expect(shieldFn).toMatch(/PALETTE\.SHIELD/);
+  expect(shieldFn).toMatch(/SHIELD\.IDLE_ALPHA/);
+  expect(shieldFn).toMatch(/drawWardenShieldArcBlush/);
   expect(shieldFn).not.toMatch(/\.fill\(/);
+  expect(PALETTE.SHIELD).toBe(PALETTE.HEALTH);
+  expect(PALETTE.SHIELD).toBe('#4ADE80');
+  expect(SHIELD.IDLE_ALPHA).toBeLessThan(SHIELD.FLASH_ALPHA);
+  expect(SHIELD.IDLE_ALPHA).toBeGreaterThanOrEqual(0.7);
+  expect(SHIELD.IDLE_ALPHA).toBeLessThan(1);
 });
 
 test('live ship and laser strokes never use white', () => {
