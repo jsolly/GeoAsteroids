@@ -14,7 +14,7 @@ export function drawLivesIndicator(
 
   ctx.save();
   for (const center of lifeCenters) {
-    const hull = calculateShipTrianglePoints(center.x, center.y, radius, Math.PI / 2);
+    const hull = calculateShipTrianglePoints(center.x, center.y, radius, VISUAL.HUD_LIFE_HEADING);
     strokePhosphorHull(ctx, hull, color);
   }
   ctx.restore();

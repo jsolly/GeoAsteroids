@@ -2,16 +2,16 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from 'vitest';
 
-import { PALETTE, SHIP, VISUAL } from '../../../src/constants';
+import { PALETTE, SHIP, TITLE, VISUAL } from '../../../src/constants';
 import { layoutHudCluster } from '../../../src/rendering/hud/cluster';
 import { projectWorldToMiniMap } from '../../../src/rendering/hud/minimap';
 
 const livesSrc = readFileSync(resolve(process.cwd(), 'src/rendering/hud/lives.ts'), 'utf8');
 const scoreSrc = readFileSync(resolve(process.cwd(), 'src/rendering/hud/gameInfo.ts'), 'utf8');
 const radarSrc = readFileSync(resolve(process.cwd(), 'src/rendering/hud/minimap.ts'), 'utf8');
-const constantsSrc = readFileSync(resolve(process.cwd(), 'src/constants/index.ts'), 'utf8');
+const clusterSrc = readFileSync(resolve(process.cwd(), 'src/rendering/hud/cluster.ts'), 'utf8');
 
-test('locked palette hexes stay the #415/#435 swatch with no extras', () => {
+test('locked palette hexes stay the #415/#435 playfield swatch', () => {
   expect(PALETTE).toEqual({
     BG: '#000011',
     STARS: '#8BA3C7',
@@ -25,9 +25,9 @@ test('locked palette hexes stay the #415/#435 swatch with no extras', () => {
     HUD_MUTED: '#64748B',
     DANGER: '#F43F5E',
     HEALTH: '#4ADE80',
-    ACCENT_UI: '#A78BFA',
   });
-  expect(constantsSrc).toMatch(/accent_ui is title\/menu only/);
+  expect(TITLE.ACCENT).toBe('#A78BFA');
+  expect(PALETTE).not.toHaveProperty('ACCENT_UI');
 });
 
 test('lives glyphs stay tiny phosphor hulls, not full SHIP.SIZE', () => {
@@ -83,7 +83,10 @@ test('radar uses a whisper void, a brighter ring, and a local heading mark', () 
   expect(radarSrc).toMatch(/kind: 'local'/);
   expect(radarSrc).toMatch(/MINIMAP_VOID_ALPHA/);
   expect(radarSrc).not.toMatch(/Game Server/i);
-  expect(radarSrc).not.toMatch(/PALETTE\.ACCENT_UI/);
+  expect(radarSrc).not.toMatch(/drawServerInfo/);
+  for (const src of [livesSrc, scoreSrc, radarSrc, clusterSrc]) {
+    expect(src).not.toMatch(/ACCENT_UI|TITLE\.ACCENT/);
+  }
 });
 
 test('projectWorldToMiniMap maps the arena center to the radar center', () => {
