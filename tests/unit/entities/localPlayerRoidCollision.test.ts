@@ -179,6 +179,25 @@ describe('Local Player Roid Collision Damage', () => {
       expect(DAMAGE.ASTEROID_COLLISION).toBe(DAMAGE.BOUNDARY_COLLISION);
       expect(DAMAGE.ASTEROID_COLLISION).toBe(100);
     });
+
+    test('a raised shield still reports asteroid collision damage', async () => {
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      localShip.requestShieldToggle();
+      expect(localShip.shieldActive).toBe(true);
+
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+
+      expect(mockSendMessage).toHaveBeenCalledWith({
+        type: 'collisionDamage',
+        data: {
+          targetPlayerId: 'local-player-123',
+          attackerId: 'asteroid',
+          damage: DAMAGE.ASTEROID_COLLISION,
+        },
+      });
+    });
   });
 
   describe('Edge Cases', () => {

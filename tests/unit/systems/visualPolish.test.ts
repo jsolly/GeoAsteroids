@@ -23,6 +23,17 @@ test('player and bot ships share the phosphor hull draw path', () => {
   expect(canvasSrc).not.toMatch(/drawBotShip|drawLocalShip|drawRemoteShip/);
 });
 
+test('shield ring is a shared phosphor stroke, not a filled disc', () => {
+  const start = shipSrc.indexOf('export function drawShipShield');
+  const end = shipSrc.indexOf('function drawFloatingHealthCapsule');
+  const shieldFn = shipSrc.slice(start, end);
+  expect(start).toBeGreaterThan(-1);
+  expect(shieldFn).toMatch(/drawShipShield\(ctx, ship, screenX, screenY, shipR\)/);
+  expect(shieldFn).toMatch(/ctx\.arc\(screenX, screenY, radius/);
+  expect(shieldFn).toMatch(/PALETTE\.SHIELD/);
+  expect(shieldFn).not.toMatch(/\.fill\(/);
+});
+
 test('live ship and laser strokes never use white', () => {
   expect(PALETTE.LOCAL.toLowerCase()).not.toBe('#ffffff');
   expect(PALETTE.REMOTE.toLowerCase()).not.toBe('#ffffff');

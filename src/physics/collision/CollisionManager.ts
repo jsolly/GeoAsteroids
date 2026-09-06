@@ -8,6 +8,11 @@ import type { Roid } from '../../entities/roid/Roid';
 import { isBiggestAsteroid, pointsForRoidSize } from '../../entities/roid/roidScore';
 import type { Ship } from '../../entities/ship/Ship';
 import {
+  isShieldBlockingLasers,
+  laserCollisionRadius,
+  noteShieldLaserHit,
+} from '../../entities/ship/shipShield';
+import {
   applyShipBoundaryDeath,
   applyShipLethalCollision,
   isShipCollisionImmune,
@@ -225,15 +230,19 @@ export class CollisionManager {
             continue;
           }
 
+          const hitRadius = laserCollisionRadius(ship.r, ship);
           if (
             canDealCombatDamage(
               options.attackerFaction ?? this.factionForId(localPlayerId),
               player.faction ?? this.factionForId(player.id)
             ) &&
-            checkLaserShipCollision(laser.position, ship.position, ship.r)
+            checkLaserShipCollision(laser.position, ship.position, hitRadius)
           ) {
             this.handleLaserPlayerHit(laser, player, localPlayerId);
-            // Mark laser for explosion
+            if (isShieldBlockingLasers(ship)) {
+              noteShieldLaserHit(ship);
+            }
+            // Mark laser for explosion — blocked shots still read as a hit.
             laser.updateExplodeTime();
             laser.playHitSound();
             break; // Laser can only hit one target
@@ -333,6 +342,28 @@ export class CollisionManager {
       });
     }
     // Local players are handled by the ship's takeDamage method directly
+  }
+
+  /**
+   * Visual-only: incoming remote/bot lasers pop on the local shield so both
+   * clients see a blocked shot. Damage is still reported by the attacker.
+   */
+  explodeIncomingLasersOnShieldedShip(lasers: Laser[], ship: Ship): void {
+    if (!isShieldBlockingLasers(ship) || ship.exploding) {
+      return;
+    }
+
+    const hitRadius = laserCollisionRadius(ship.r, ship);
+    for (const laser of lasers) {
+      if (laser.hasExploded) {
+        continue;
+      }
+      if (checkLaserShipCollision(laser.position, ship.position, hitRadius)) {
+        laser.updateExplodeTime();
+        laser.playHitSound();
+        noteShieldLaserHit(ship);
+      }
+    }
   }
 
   /**

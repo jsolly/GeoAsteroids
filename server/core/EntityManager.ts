@@ -4,7 +4,16 @@ import { pickBalancedFactionFromShips } from '../../shared/factions';
 import { parseSoftFactionId } from '../../src/entities/player/softFactions';
 import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
 import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
-import { RNGService } from './RNGService';
+import {
+  clearShield,
+  createShieldState,
+  maybeActivateBotShield,
+  noteShieldLaserHit,
+  shouldBlockDamage,
+  updateShield,
+  type CombatDamageSource,
+  type ShieldState,
+} from '../../src/entities/ship/shipShield';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { applySharedShipSlope } from '../../src/physics/terrain/applyShipSlope';
@@ -16,6 +25,7 @@ import {
   thrustScaleFromMass,
 } from '../../shared/shipGrowth';
 import { logger } from '../../setup/serverLogger';
+import { RNGService } from './RNGService';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
 /** Keep lives/score after a dropped socket so the same id can rejoin. */
@@ -28,7 +38,7 @@ interface HumanRejoinStash {
   savedAt: number;
 }
 
-export interface GameEntity {
+export interface GameEntity extends ShieldState {
   id: string;
   name: string;
   type: 'human' | 'bot';
@@ -151,11 +161,16 @@ export class EntityManager {
       entity.health = Math.max(0, Math.min(entity.maxHealth, allowedUpdates.health));
     }
 
-    // Apply other allowed properties
+    // Apply other allowed properties. Shield timers are owned by requestShield /
+    // updateShields — a stale client echo must not toggle them off.
     const {
       maxHealth: ignoredMaxHealth,
       health: ignoredHealth,
       mass: ignoredMass,
+      shieldActive: _ignoredShieldActive,
+      shieldTime: _ignoredShieldTime,
+      shieldCooldown: _ignoredShieldCooldown,
+      shieldFlashTime: _ignoredShieldFlashTime,
       ...otherUpdates
     } = allowedUpdates;
     Object.assign(entity, otherUpdates);
@@ -231,6 +246,7 @@ export class EntityManager {
       mass: GROWTH.BASE_MASS,
       lastUpdate: Date.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
+      ...createShieldState(),
       ws,
       kitId: DEFAULT_SHIP_KIT_ID,
       factionId: parseSoftFactionId(factionId) ?? this.nextFaction(),
@@ -368,6 +384,7 @@ export class EntityManager {
         abilityActiveFrames: 0,
         shieldTimer: 0,
         harpoonTimer: 0,
+        ...createShieldState(),
       };
       applyShipKitStats(bot, SHIP_KIT_IDS[i % SHIP_KIT_IDS.length]);
 
@@ -381,8 +398,12 @@ export class EntityManager {
     return newBots;
   }
 
-  // Damage system
-  public damageEntity(entityId: string, damage: number): GameEntity | null {
+  // Damage system — laser hits honor the shared shield; collisions do not.
+  public damageEntity(
+    entityId: string,
+    damage: number,
+    source: CombatDamageSource = 'collision'
+  ): GameEntity | null {
     const entity = this.entities.get(entityId);
     if (!entity || entity.exploding || entity.health <= 0) {
       return null;
@@ -406,6 +427,12 @@ export class EntityManager {
       return entity;
     }
 
+    if (shouldBlockDamage(entity, source)) {
+      noteShieldLaserHit(entity);
+      entity.lastUpdate = Date.now();
+      return null;
+    }
+
     const wasAlive = entity.health > 0;
     entity.health = Math.max(0, entity.health - damage);
 
@@ -414,6 +441,7 @@ export class EntityManager {
       entity.exploding = true;
       // Set explosion timer for all entity types
       entity.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
+      clearShield(entity);
     }
 
     entity.lastUpdate = Date.now();
@@ -505,6 +533,15 @@ export class EntityManager {
     return finishedRespawning;
   }
 
+  public updateShields(): void {
+    for (const entity of this.entities.values()) {
+      updateShield(entity);
+      if (entity.type === 'bot') {
+        maybeActivateBotShield(entity, Math.random);
+      }
+    }
+  }
+
   private respawnShip(entity: GameEntity): void {
     entity.respawnTimer = undefined;
     resetShipMass(entity);
@@ -513,6 +550,7 @@ export class EntityManager {
     entity.exploding = false;
     entity.explodeTime = undefined;
     entity.deathCause = undefined;
+    clearShield(entity);
     this.placeEntityInArena(entity);
     entity.spawnProtectionTimer = SHIP.INVINCIBILITY_DURATION_FRAMES;
     entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };

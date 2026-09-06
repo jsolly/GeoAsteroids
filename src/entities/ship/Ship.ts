@@ -22,6 +22,15 @@ import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from './shipKits'
 import { drawThruster } from './shipRenderer';
 
 import {
+  activateShield,
+  applyShieldSnapshot,
+  clearShield,
+  deactivateShield,
+  isShieldBlockingLasers,
+  noteShieldLaserHit,
+  updateShield,
+} from './shipShield';
+import {
   applySharedShipExplodingFlag,
   applySharedShipRespawnCue,
   applyShipSpawnProtection,
@@ -52,6 +61,10 @@ class Ship {
   thrusting = false;
   empPulseActive = false;
   empPulseTime = 0;
+  shieldActive = false;
+  shieldTime = 0;
+  shieldCooldown = 0;
+  shieldFlashTime = 0;
   health: number = SHIP.MAX_HEALTH;
   maxHealth: number = SHIP.MAX_HEALTH;
   lastDamageTime: number = 0;
@@ -171,6 +184,7 @@ class Ship {
 
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
+    clearShield(this);
     playExplosionSound(this.position);
 
     // Dispatch event to notify that ship has exploded with cause information
@@ -403,6 +417,10 @@ class Ship {
     health?: number;
     maxHealth?: number;
     mass?: number;
+    shieldActive?: boolean;
+    shieldTime?: number;
+    shieldCooldown?: number;
+    shieldFlashTime?: number;
   }): void {
     // Local player uses immediate state; bots/remote ships use smoothing targets
     if (this.isBot) {
@@ -453,6 +471,10 @@ class Ship {
     maxHealth?: number;
     mass?: number;
     spawnProtectionTimer?: number;
+    shieldActive?: boolean;
+    shieldTime?: number;
+    shieldCooldown?: number;
+    shieldFlashTime?: number;
   }): void {
     if (data.mass !== undefined) {
       this.mass = data.mass;
@@ -466,7 +488,11 @@ class Ship {
     if (data.maxHealth !== undefined) {
       this.maxHealth = data.maxHealth;
     }
+    applyShieldSnapshot(this, data);
     applySharedShipRespawnCue(this, wasDeadOrExploding, data.spawnProtectionTimer);
+    if (wasDeadOrExploding && this.health > 0) {
+      clearShield(this);
+    }
   }
 
   getNetworkData(): {
@@ -516,11 +542,51 @@ class Ship {
     }
   }
 
+  requestShieldToggle(): boolean {
+    if (this.exploding) {
+      return false;
+    }
+    if (this.shieldActive) {
+      deactivateShield(this);
+      this.sendShieldEvent(false);
+      return true;
+    }
+    if (!activateShield(this, this.exploding)) {
+      return false;
+    }
+    this.sendShieldEvent(true);
+    return true;
+  }
+
+  private sendShieldEvent(active: boolean): void {
+    if (this.isBot) {
+      return;
+    }
+    const networkManager = NetworkManager.getInstance();
+    if (!networkManager.isConnected) {
+      return;
+    }
+    const id = networkManager.getLocalPlayerId();
+    if (!id) {
+      return;
+    }
+    networkManager.sendMessage({
+      type: 'shield',
+      id,
+      data: { active },
+    });
+  }
+
   takeDamage(amount: number, cause?: string, killerName?: string): void {
     if (this.exploding) {
       return;
     }
     if (this.shieldTimer > 0) {
+      return;
+    }
+
+    if (cause === 'laser' && isShieldBlockingLasers(this)) {
+      noteShieldLaserHit(this);
       return;
     }
 
@@ -725,6 +791,7 @@ class Ship {
 
     this.updateMovement();
     this.updateEmpPulse();
+    updateShield(this);
     this.updateShootCooldown();
     this.moveLasers();
   }

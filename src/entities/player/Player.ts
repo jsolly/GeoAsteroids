@@ -7,6 +7,7 @@ import { isStaleGameOverSnapshot, preferDeathCause } from '../../utils/deathCaus
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
 import { applyShipKitToShip } from '../ship/shipKits';
+import { applyShieldSnapshot, clearShield } from '../ship/shipShield';
 import {
   applySharedShipExplodingFlag,
   applySharedShipRespawnCue,
@@ -135,6 +136,10 @@ export class Player {
     shieldTimer?: number;
     harpoonTimer?: number;
     harpoonTargetId?: string;
+    shieldActive?: boolean;
+    shieldTime?: number;
+    shieldCooldown?: number;
+    shieldFlashTime?: number;
   }): void {
     if (data.kitId && data.kitId !== this.ship.kitId) {
       const color = this.ship.color;
@@ -361,6 +366,7 @@ export class Player {
     if (data.harpoonTargetId !== undefined) {
       this.ship.harpoonTargetId = data.harpoonTargetId || undefined;
     }
+    applyShieldSnapshot(this.ship, data);
     // Handle respawn timer from server
     if (data.respawnTimer !== undefined) {
       // When respawnTimer is 0, the server has finished the countdown. Remote
@@ -426,6 +432,7 @@ export class Player {
     this.deathCause = undefined;
     this.ship.lastExplodeCause = undefined;
     applyShipSpawnProtection(this.ship);
+    clearShield(this.ship);
 
     logger.debug('RESPAWN', 'Player respawn completed', {
       playerId: this.id,

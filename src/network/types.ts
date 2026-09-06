@@ -43,6 +43,7 @@ export interface ClientMessage {
     | 'laserDamage'
     | 'playerKilled'
     | 'initAsteroids'
+    | 'shield'
     | 'asteroidDestroyed'
     | 'asteroidCreate'
     | 'asteroidUpdate'

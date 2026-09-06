@@ -255,6 +255,10 @@ export class GameStateBroadcaster {
           health: bot.health,
           maxHealth: bot.maxHealth,
           mass: bot.mass,
+          shieldActive: bot.shieldActive,
+          shieldTime: bot.shieldTime,
+          shieldCooldown: bot.shieldCooldown,
+          shieldFlashTime: bot.shieldFlashTime,
         },
         timestamp: Date.now(),
       };

@@ -5,6 +5,12 @@ import { GROWTH, applyLootMass, applyShipMass } from '../../shared/shipGrowth';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import { activateAbilityOnHost, pullHarpoonTarget } from '../../src/entities/ship/shipAbilities';
+import {
+  requestShield,
+  resolveCombatDamageSource,
+  shieldSnapshot,
+  type CombatDamageSource,
+} from '../../src/entities/ship/shipShield';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { TERRAIN } from '../../src/physics/terrain/terrainConfig';
 import { ensureTerrain, getTerrainSeed } from '../../src/physics/terrain/terrainSession';
@@ -91,6 +97,7 @@ export class GameEngine {
     this.entityManager.updateExplosions();
     this.entityManager.updateRespawns();
     this.tickAbilities();
+    this.entityManager.updateShields();
     this.lootManager.expire(this.gameTime);
     this.collectLoot();
     this.asteroidManager.updateMotion();
@@ -109,6 +116,7 @@ export class GameEngine {
     this.entityManager.updateExplosions();
     this.entityManager.updateRespawns();
     this.tickAbilities();
+    this.entityManager.updateShields();
   }
 
   public stopGameLoop(): void {
@@ -305,8 +313,25 @@ export class GameEngine {
   }
 
   // Game logic operations — humans and bots share the same friendly-fire gate.
-  public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
-    logger.debug('handlePlayerDamage called', { targetPlayerId, attackerId, damage });
+  public requestShield(entityId: string, active: boolean): boolean {
+    const entity = this.entityManager.getEntity(entityId);
+    if (!entity || entity.exploding || entity.health <= 0 || entity.respawnTimer !== undefined) {
+      return false;
+    }
+    const changed = requestShield(entity, active, entity.exploding);
+    if (changed) {
+      entity.lastUpdate = Date.now();
+    }
+    return changed;
+  }
+
+  public handlePlayerDamage(
+    targetPlayerId: string,
+    attackerId: string,
+    damage: number,
+    source?: CombatDamageSource
+  ): boolean {
+    logger.debug('handlePlayerDamage called', { targetPlayerId, attackerId, damage, source });
     if (!this.combatSidesAllowDamage(attackerId, targetPlayerId)) {
       logger.debug('friendly fire ignored', { attackerId, targetPlayerId });
       return false;
@@ -322,7 +347,11 @@ export class GameEngine {
       return false;
     }
 
-    const damagedPlayer = this.entityManager.damageEntity(targetPlayerId, damage);
+    const damagedPlayer = this.entityManager.damageEntity(
+      targetPlayerId,
+      damage,
+      source ?? 'collision'
+    );
     if (!damagedPlayer) {
       logger.debug('damagedPlayer is null after damageEntity');
       return false;
@@ -343,7 +372,12 @@ export class GameEngine {
     return false;
   }
 
-  public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
+  public handleBotDamage(
+    botId: string,
+    attackerId: string,
+    damage: number,
+    source?: CombatDamageSource
+  ): boolean {
     if (!this.combatSidesAllowDamage(attackerId, botId)) {
       logger.debug('friendly fire ignored', { attackerId, botId });
       return false;
@@ -353,7 +387,11 @@ export class GameEngine {
       return false;
     }
 
-    const damagedBot = this.entityManager.damageEntity(botId, damage);
+    const damagedBot = this.entityManager.damageEntity(
+      botId,
+      damage,
+      resolveCombatDamageSource(attackerId, source)
+    );
     if (!damagedBot) {
       return false;
     }
@@ -454,6 +492,7 @@ export class GameEngine {
         harpoonTimer: entity.harpoonTimer,
         harpoonTargetId: entity.harpoonTargetId,
         ...(entity.deathCause ? { deathCause: entity.deathCause } : {}),
+        ...shieldSnapshot(entity),
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       loot: this.lootManager.getAll(),

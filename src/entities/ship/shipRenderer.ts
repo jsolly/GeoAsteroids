@@ -1,5 +1,5 @@
 import type { SoftFactionId } from '../../../shared-types';
-import { GAME, LASER, PALETTE, SHIP, TITLE, VISUAL } from '../../constants';
+import { GAME, LASER, PALETTE, SHIELD, SHIP, TITLE, VISUAL } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import {
   driftSegment,
@@ -22,6 +22,7 @@ import {
 } from './hullOutlines';
 import type { Ship } from './Ship';
 import { CLASSIC_HULL, HAULER_TETHER_COLOR, type HullProfile, type ShipKitId } from './shipKits';
+import { isShieldBlockingLasers, shieldCooldownFrames } from './shipShield';
 
 const shipTriangle = {
   nose: { x: 0, y: 0 },
@@ -622,6 +623,7 @@ export function drawShipAtPosition(
   });
   drawAbilityFx(ctx, ship, screenX, screenY, shipR, shipPosition);
 
+  drawShipShield(ctx, ship, screenX, screenY, shipR);
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
 
@@ -698,6 +700,47 @@ function drawAbilityFx(
     ctx.stroke();
   }
   drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, cameraShipPosition);
+}
+
+export function drawShipShield(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  shipR: number
+): void {
+  if (ship.exploding) {
+    return;
+  }
+
+  const radius = shipR * SHIELD.RADIUS_RATIO;
+
+  if (isShieldBlockingLasers(ship)) {
+    const flashing = ship.shieldFlashTime > 0;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = flashing ? VISUAL.SHIELD_STROKE_WIDTH + 0.5 : VISUAL.SHIELD_STROKE_WIDTH;
+    ctx.shadowColor = PALETTE.SHIELD;
+    ctx.shadowBlur = VISUAL.SHIELD_GLOW;
+    ctx.strokeStyle = hexToRgba(PALETTE.SHIELD, flashing ? 0.95 : 0.7);
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  if (ship.isLocalPlayer && ship.shieldCooldown > 0) {
+    const remaining = ship.shieldCooldown / shieldCooldownFrames();
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.35);
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, radius, -Math.PI / 2, -Math.PI / 2 + remaining * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawShipImpactFlash(

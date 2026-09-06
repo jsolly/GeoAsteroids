@@ -11,7 +11,7 @@ const dom = new JSDOM(
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
         <h1 class="text-center fs-1">GeoRoids</h1>
-        <p id="controls-hint" class="controls-hint">WASD + Space / arrows · E ability</p>
+        <p id="controls-hint" class="controls-hint">WASD + Space / arrows · E ability · F shield</p>
         <fieldset class="ship-kit-select">
           <legend>Ship kit</legend>
           <div id="ship-kit-grid" class="ship-kit-grid" role="group" aria-label="Ship kit"></div>
