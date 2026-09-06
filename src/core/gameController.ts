@@ -632,6 +632,22 @@ export class GameController {
       laserTargets,
       attackerId
     );
+
+    // Incoming bot lasers use the same hull check. Human shooters already
+    // report their own hits; only bots have no shooter client.
+    const localTarget = [
+      {
+        ship: currPlayer.ship,
+        id: attackerId,
+        type: 'local' as const,
+      },
+    ];
+    for (const player of allPlayers) {
+      if (player.type !== 'bot' || !player.ship?.lasers.length) {
+        continue;
+      }
+      this.collisionManager.checkLaserCollisions(player.ship.lasers, [], localTarget, player.id);
+    }
   }
 
   // Check boundary collisions for ships

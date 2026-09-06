@@ -19,6 +19,7 @@ export class GameStateBroadcaster {
     this.broadcastInterval = setInterval(() => {
       if (this.gameEngine.getPlayerCount() > 0) {
         this.broadcastGameState();
+        this.broadcastPendingBotShots();
       }
     }, 1000 / 30); // 30 FPS (33.33ms) for smooth bot movement
   }
@@ -27,6 +28,14 @@ export class GameStateBroadcaster {
     if (this.broadcastInterval) {
       clearInterval(this.broadcastInterval);
       this.broadcastInterval = null;
+    }
+  }
+
+  private broadcastPendingBotShots(): void {
+    for (const shot of this.gameEngine.consumeBotShots()) {
+      // Bot ids never match a human socket, so every client receives the shot
+      // on the same playerShoot path used by remote humans.
+      this.broadcastPlayerShoot(shot.botId, shot.laserStart, shot.laserDirection);
     }
   }
 

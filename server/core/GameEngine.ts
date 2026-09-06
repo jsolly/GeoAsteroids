@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import type { Position, AsteroidData } from '../../shared-types';
+import type { BotShot } from '../ai/botController';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
@@ -13,6 +14,7 @@ export class GameEngine {
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
+  private pendingBotShots: BotShot[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -42,7 +44,7 @@ export class GameEngine {
         // Update bot movement at reduced frequency for better performance
         // Update every 2 frames (30 FPS instead of 60 FPS)
         if (this.gameTime % 2 === 0) {
-          this.entityManager.updateBotMovement();
+          this.queueBotShots(this.entityManager.updateBotMovement());
         }
       }
     }, 1000 / 60); // 60 FPS
@@ -126,6 +128,7 @@ export class GameEngine {
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
+    this.pendingBotShots = [];
 
     // Keep gameTime monotonic for the process lifetime. Zeroing it when the
     // last player leaves makes /health.world.gameTime look frozen on prod
@@ -365,8 +368,22 @@ export class GameEngine {
   // Bot-specific update methods for testing
   // Health regeneration is now handled client-side
 
-  public updateBotMovement(): void {
-    this.entityManager.updateBotMovement();
+  public updateBotMovement(): BotShot[] {
+    const shots = this.entityManager.updateBotMovement();
+    this.queueBotShots(shots);
+    return shots;
+  }
+
+  public consumeBotShots(): BotShot[] {
+    const shots = this.pendingBotShots;
+    this.pendingBotShots = [];
+    return shots;
+  }
+
+  private queueBotShots(shots: BotShot[]): void {
+    if (shots.length > 0) {
+      this.pendingBotShots.push(...shots);
+    }
   }
 
 

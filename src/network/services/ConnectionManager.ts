@@ -7,8 +7,10 @@ import type {
   ServerGameState,
   Velocity,
 } from '../../../shared-types';
+import { playWorldSound } from '../../audio/spatialAudio';
 import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
+import { Laser } from '../../entities/laser/Laser';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
@@ -687,6 +689,7 @@ export class ConnectionManager {
 
     // Add the laser to the player's ship
     player.ship.lasers.push(laser);
+    playWorldSound(Laser.fxLaser, data.laserStart);
     logger.debug('NETWORK', 'Added laser to remote player', {
       playerId: data.id,
       laserCount: player.ship.lasers.length,
