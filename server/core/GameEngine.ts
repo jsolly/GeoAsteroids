@@ -3,6 +3,7 @@ import type { Position, AsteroidData } from '../../shared-types';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
+import { SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
 
 export class GameEngine {
@@ -125,9 +126,10 @@ export class GameEngine {
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
-    
-    // Reset game time
-    this.gameTime = 0;
+
+    // Keep gameTime monotonic for the process lifetime. Zeroing it when the
+    // last player leaves makes /health.world.gameTime look frozen on prod
+    // between sessions; localhost stays connected so the tick appears fine.
     
     logger.debug('🧹 Game state reset - all entities and asteroids cleared');
   }
@@ -259,8 +261,9 @@ export class GameEngine {
 
       // Schedule respawn only if player still has lives remaining
       if (destroyedEntity && destroyedEntity.lives > 0) {
-        const respawnDelay = 180; // 3 seconds at 60 FPS (explosion duration + message display)
-        this.entityManager.updateEntity(targetPlayerId, { respawnTimer: respawnDelay });
+        this.entityManager.updateEntity(targetPlayerId, {
+          respawnTimer: SHIP.RESPAWN_DELAY_FRAMES,
+        });
       }
 
       return true; // Player was destroyed
@@ -270,6 +273,11 @@ export class GameEngine {
   }
 
   public handleBotDamage(botId: string, attackerId: string, damage: number): boolean {
+    const existing = this.getBot(botId);
+    if (!existing || existing.respawnTimer !== undefined || existing.health <= 0 || existing.exploding) {
+      return false;
+    }
+
     const damagedBot = this.entityManager.damageEntity(botId, damage);
     if (!damagedBot) {
       return false;

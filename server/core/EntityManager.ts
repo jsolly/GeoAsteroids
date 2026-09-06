@@ -1,8 +1,10 @@
 import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
-import { DEBUG, PALETTE } from '../../src/constants';
+import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
+
+export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
 
 export interface GameEntity {
   id: string;
@@ -21,8 +23,21 @@ export interface GameEntity {
   lastUpdate: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
+  /** Server spawn point held until the client echoes a nearby transform. */
+  respawnAnchor?: Position;
   ws?: WebSocket; // Only for human players
   explodeTime?: number; // For bot explosion handling
+}
+
+/** True when a client update is still the death pose, not the new spawn. */
+export function isStaleDeathPose(
+  anchor: Position | undefined,
+  position: Position | undefined
+): boolean {
+  if (!anchor || !position) {
+    return false;
+  }
+  return Math.hypot(position.x - anchor.x, position.y - anchor.y) > RESPAWN_ANCHOR_ACK_DISTANCE;
 }
 
 
@@ -124,7 +139,7 @@ export class EntityManager {
       health: 100,
       maxHealth: 100,
       lastUpdate: Date.now(),
-      spawnProtectionTimer: 180, // 3 seconds of spawn protection at 60 FPS
+      spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       ws,
     };
 
@@ -185,7 +200,7 @@ export class EntityManager {
         health: 100,
         maxHealth: 100,
         lastUpdate: Date.now(),
-        spawnProtectionTimer: 180, // 3 seconds of spawn protection at 60 FPS
+        spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       };
 
       this.addEntity(bot);
@@ -201,7 +216,7 @@ export class EntityManager {
   // Damage system
   public damageEntity(entityId: string, damage: number): GameEntity | null {
     const entity = this.entities.get(entityId);
-    if (!entity || entity.exploding) {
+    if (!entity || entity.exploding || entity.health <= 0) {
       return null;
     }
 
@@ -225,117 +240,96 @@ export class EntityManager {
     if (entity.health <= 0 && wasAlive) {
       entity.exploding = true;
       // Set explosion timer for all entity types
-      entity.explodeTime = 18; // 0.3 seconds at 60 FPS
+      entity.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
     }
 
     entity.lastUpdate = Date.now();
     return entity;
   }
 
-  // Explosion updates (server-side respawn logic only)
+  // Shared ship explosion: tick the animation, then start a respawn countdown.
+  // Do not restore health/position here and do not reset an existing timer
+  // (GameEngine already schedules humans at death — resetting stacked a second 3s).
   public updateExplosions(): string[] {
     const finishedExploding: string[] = [];
 
     for (const [entityId, entity] of this.entities) {
-      if (entity.exploding) {
-        if (entity.type === 'bot') {
-          // Bot explosion handling (frame-based)
-          if (entity.explodeTime && entity.explodeTime > 0) {
-            entity.explodeTime--;
-            if (entity.explodeTime <= 0) {
-              entity.exploding = false;
-              // Set respawn timer and reset health
-              entity.respawnTimer = 180; // 3 seconds at 60 FPS
-              entity.health = entity.maxHealth;
-              // Generate new random position for respawn within circular boundary
-              const respawnRadius = 3100 * 0.8; // Stay within 80% of boundary
-              const angle = this.rng.random() * Math.PI * 2;
-              const radius = this.rng.random() * respawnRadius;
-              entity.position = {
-                x: Math.cos(angle) * radius,
-                y: Math.sin(angle) * radius
-              };
-              entity.angle = this.rng.random() * Math.PI * 2;
-              entity.velocity = { x: 0, y: 0 };
-              finishedExploding.push(entityId);
-            }
-          }
-        } else {
-          // Human explosion handling (same as bots)
-          if (entity.explodeTime && entity.explodeTime > 0) {
-            entity.explodeTime--;
-            if (entity.explodeTime <= 0) {
-              entity.exploding = false;
-              // Set respawn timer for human players
-              entity.respawnTimer = 180; // 3 seconds at 60 FPS
-              finishedExploding.push(entityId);
-            }
-          }
-        }
+      if (!entity.exploding || !entity.explodeTime || entity.explodeTime <= 0) {
+        continue;
       }
+
+      entity.explodeTime--;
+      if (entity.explodeTime > 0) {
+        continue;
+      }
+
+      entity.exploding = false;
+      if (entity.respawnTimer === undefined && entity.lives > 0) {
+        entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
+      }
+      finishedExploding.push(entityId);
     }
 
     return finishedExploding;
   }
 
-  // Respawn updates
+  // Shared ship respawn for humans and bots.
   public updateRespawns(): string[] {
     const finishedRespawning: string[] = [];
 
     for (const [entityId, entity] of this.entities) {
-      // Update respawn timers
       if (entity.respawnTimer !== undefined) {
         if (entity.respawnTimer > 0) {
           entity.respawnTimer--;
         }
 
         if (entity.respawnTimer === 0) {
-          // Clear respawn timer and respawn the entity
-          entity.respawnTimer = undefined;
-          
-          // Restore health and reset position for respawn
-          entity.health = entity.maxHealth;
-          entity.exploding = false;
-          entity.explodeTime = undefined;
-          
-          // Generate new random position for respawn within circular boundary
-          const respawnRadius = 3100 * 0.8; // Stay within 80% of boundary
-          const angle = this.rng.random() * Math.PI * 2;
-          const radius = this.rng.random() * respawnRadius;
-          entity.position = {
-            x: Math.cos(angle) * radius,
-            y: Math.sin(angle) * radius
-          };
-          entity.angle = this.rng.random() * Math.PI * 2;
-          entity.velocity = { x: 0, y: 0 };
-          
-          // Set spawn protection for respawned entities
-          entity.spawnProtectionTimer = 180; // 3 seconds of spawn protection at 60 FPS
-          
+          this.respawnShip(entity);
           finishedRespawning.push(entityId);
-          
           logger.debug('ENTITY', `Respawned ${entity.type} entity: ${entity.name} (${entityId})`, {
             health: entity.health,
             position: entity.position,
-            spawnProtection: entity.spawnProtectionTimer
+            spawnProtection: entity.spawnProtectionTimer,
           });
+          continue;
         }
       }
 
-      // Update spawn protection timers
       if (entity.spawnProtectionTimer !== undefined) {
         if (entity.spawnProtectionTimer > 0) {
           entity.spawnProtectionTimer--;
         }
 
         if (entity.spawnProtectionTimer === 0) {
-          // Clear spawn protection timer
           entity.spawnProtectionTimer = undefined;
+          entity.respawnAnchor = undefined;
         }
       }
     }
 
     return finishedRespawning;
+  }
+
+  private respawnShip(entity: GameEntity): void {
+    entity.respawnTimer = undefined;
+    entity.health = entity.maxHealth;
+    entity.exploding = false;
+    entity.explodeTime = undefined;
+    this.placeEntityInArena(entity);
+    entity.spawnProtectionTimer = SHIP.INVINCIBILITY_DURATION_FRAMES;
+    entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };
+  }
+
+  private placeEntityInArena(entity: GameEntity, boundsRadius = 3100): void {
+    const respawnRadius = boundsRadius * 0.8;
+    const angle = this.rng.random() * Math.PI * 2;
+    const radius = this.rng.random() * respawnRadius;
+    entity.position = {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+    };
+    entity.angle = this.rng.random() * Math.PI * 2;
+    entity.velocity = { x: 0, y: 0 };
   }
 
   // Movement updates (for bots)

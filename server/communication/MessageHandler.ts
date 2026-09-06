@@ -4,7 +4,7 @@ import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
 import { DEBUG } from '../../src/constants';
-import type { GameEntity } from '../core/EntityManager';
+import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
 
@@ -202,6 +202,16 @@ export class MessageHandler {
       return;
     }
 
+    // Hold the server spawn point until the client echoes a nearby transform.
+    // The instant respawn clears dead/exploding flags, a stale death-pose
+    // update would otherwise teleport the ship back onto the wall/roid.
+    if (existing && isStaleDeathPose(existing.respawnAnchor, data.position)) {
+      return;
+    }
+    if (existing?.respawnAnchor && data.position) {
+      existing.respawnAnchor = undefined;
+    }
+
     // Server-authoritative fields: the client only mirrors these back from our
     // own broadcasts, so accepting them lets a stale client value clobber the
     // authoritative state (e.g. a freshly-awarded score getting reset to 0).
@@ -313,19 +323,27 @@ export class MessageHandler {
       }
     } else {
       // Target is a player
+      const before = this.gameEngine.getPlayer(data.targetPlayerId);
+      const healthBefore = before?.health;
       isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
       const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
       if (targetPlayer) {
         remainingHealth = targetPlayer.health ?? 0;
         targetName = targetPlayer.name;
-        this.broadcaster.broadcastPlayerDamaged(
-          data.targetPlayerId,
-          data.attackerId,
-          data.damage,
-          remainingHealth,
-          isDestroyed,
-          targetPlayer.lives
-        );
+        const healthDropped =
+          healthBefore !== undefined && remainingHealth < healthBefore;
+        // Do not echo ignored hits (spawn protection / already dead). Those
+        // bounces arrive as remainingHealth=100 and heal the client hull.
+        if (isDestroyed || healthDropped) {
+          this.broadcaster.broadcastPlayerDamaged(
+            data.targetPlayerId,
+            data.attackerId,
+            data.damage,
+            remainingHealth,
+            isDestroyed,
+            targetPlayer.lives
+          );
+        }
       }
     }
 

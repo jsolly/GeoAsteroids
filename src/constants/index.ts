@@ -97,6 +97,7 @@ export const SHIP = {
   EXPLODE_DURATION_FRAMES: 18, // 0.3 seconds
   INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds
   INVINCIBILITY_BLINK_DURATION_FRAMES: 6, // 0.1 seconds
+  RESPAWN_DELAY_FRAMES: 180, // 3 seconds — shared by player and bot ships
 } as const;
 
 // ============================================================================
