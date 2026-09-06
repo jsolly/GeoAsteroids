@@ -74,8 +74,14 @@ const dom = new JSDOM(
       </div>
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-
+        <div id="touch-controls" class="touch-controls" hidden aria-hidden="true">
+          <div id="touch-stick" class="touch-stick">
+            <div id="touch-stick-knob" class="touch-stick-knob"></div>
+          </div>
+          <button id="touch-fire" type="button" class="touch-fire">FIRE</button>
+        </div>
       </div>
+      <div id="safe-area-probe"></div>
     </div>
   </body>
   <div id="attribution">

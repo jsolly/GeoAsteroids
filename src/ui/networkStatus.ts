@@ -27,7 +27,7 @@ function getOrCreateBanner(): HTMLElement | null {
       left: '0',
       right: '0',
       zIndex: '10000',
-      padding: '10px 16px',
+      padding: 'calc(10px + env(safe-area-inset-top, 0px)) 16px 10px',
       textAlign: 'center',
       background: 'rgba(180, 0, 0, 0.92)',
       color: '#ffffff',

@@ -11,6 +11,7 @@ import { getGameBoundary } from '../../physics/boundary';
 import { isAsteroidPending } from '../../physics/collision/asteroidHitFeel';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
+import { hudLayoutForCanvas } from './hudLayout';
 
 type RadarMark =
   | { kind: 'local'; x: number; y: number; heading: number; factionId?: SoftFactionId }
@@ -100,11 +101,9 @@ export function drawMiniMap(
   ship: Ship
 ): void {
   const boundary = getGameBoundary();
-  const miniMapSize = VISUAL.MINIMAP_SIZE;
-  const centerX = canvas.width - VISUAL.HUD_INSET - miniMapSize / 2;
-  const centerY = canvas.height - VISUAL.HUD_INSET - miniMapSize / 2;
-  const miniMapX = centerX - miniMapSize / 2;
-  const miniMapY = centerY - miniMapSize / 2;
+  const { x: miniMapX, y: miniMapY, size: miniMapSize } = hudLayoutForCanvas(canvas).miniMap;
+  const centerX = miniMapX + miniMapSize / 2;
+  const centerY = miniMapY + miniMapSize / 2;
 
   ctx.save();
   ctx.beginPath();

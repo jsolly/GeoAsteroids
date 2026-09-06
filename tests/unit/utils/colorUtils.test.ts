@@ -148,6 +148,9 @@ test('applyLockedPaletteCss writes title/menu custom properties', () => {
   expect(props.get('--palette-bg')).toBe(PALETTE.BG);
   expect(props.get('--palette-stars')).toBe(PALETTE.STARS);
   expect(props.get('--palette-accent')).toBe(TITLE.ACCENT);
+  expect(props.get('--palette-local')).toBe(PALETTE.LOCAL);
   expect(props.get('--palette-hud')).toBe(PALETTE.HUD);
   expect(props.get('--palette-hud-muted')).toBe(PALETTE.HUD_MUTED);
+  expect(props.get('--palette-danger')).toBe(PALETTE.DANGER);
+  expect(props.get('--palette-laser')).toBe(PALETTE.LASER_LOCAL);
 });

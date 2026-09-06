@@ -2,6 +2,7 @@ import { upsertThrustSource } from '../audio/gameSounds';
 import { GAME } from '../constants';
 import type { Player } from '../entities/player/Player';
 import { logger } from '../utils/Logger';
+import { controlSources } from './controlSources';
 
 interface KeyStates {
   ArrowLeft: boolean;
@@ -30,11 +31,15 @@ export function getPressedKeysForPlayer(player: Player): Set<string> {
   return set;
 }
 
-// Helper function to update thrust state based on aggregate key state.
-// Thrust keys are ArrowUp and KeyW (Space is the fire key — see keyDown).
+// Helper function to update thrust state based on aggregate input.
+// Thrust sources: ArrowUp / KeyW, right-mouse, and the left virtual stick.
 export function updateThrustFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
-  const shouldThrust = pressed.has('ArrowUp') || pressed.has('KeyW');
+  const shouldThrust =
+    pressed.has('ArrowUp') ||
+    pressed.has('KeyW') ||
+    controlSources.mouseThrust ||
+    controlSources.touchThrust;
   const currentlyThrusting = player.ship.thrusting;
 
   logger.debug('KEYBINDINGS', 'updateThrustFromKeys', {
@@ -43,6 +48,8 @@ export function updateThrustFromKeys(player: Player): void {
     currentlyThrusting,
     hasArrowUp: pressed.has('ArrowUp'),
     hasKeyW: pressed.has('KeyW'),
+    mouseThrust: controlSources.mouseThrust,
+    touchThrust: controlSources.touchThrust,
     playerId: player.id,
     playerName: player.name,
   });
@@ -88,6 +95,19 @@ export function updateTurnFromKeys(player: Player): void {
     // Neither held, or both held (opposing turns cancel).
     player.ship.angularVelocity = 0;
   }
+
+  // Stick aims like the mouse. A held turn key still wins so WASD on a
+  // touchscreen laptop is unchanged.
+  if (controlSources.touchHeading !== null && !turningLeft && !turningRight) {
+    player.ship.angle = controlSources.touchHeading;
+    player.ship.angularVelocity = 0;
+  }
+}
+
+/** Re-apply thrust, turn, and stick heading from every live input source. */
+export function reconcilePlayerInput(player: Player): void {
+  updateTurnFromKeys(player);
+  updateThrustFromKeys(player);
 }
 
 export function keyDown(ev: KeyboardEvent, player: Player): void {
@@ -117,12 +137,12 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
       case 'ArrowRight':
       case 'KeyD':
         logger.debug('KEYBINDINGS', 'Updating rotation', { key: ev.code });
-        updateTurnFromKeys(player);
+        reconcilePlayerInput(player);
         break;
       case 'ArrowUp':
       case 'KeyW':
         logger.debug('KEYBINDINGS', 'Setting thrust', { key: ev.code });
-        updateThrustFromKeys(player);
+        reconcilePlayerInput(player);
         break;
     }
   }
@@ -162,13 +182,11 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
   switch (ev.code) {
     case 'ArrowUp':
     case 'KeyW':
-      updateThrustFromKeys(player);
-      break;
     case 'ArrowLeft':
     case 'KeyA':
     case 'ArrowRight':
     case 'KeyD':
-      updateTurnFromKeys(player);
+      reconcilePlayerInput(player);
       break;
   }
 }

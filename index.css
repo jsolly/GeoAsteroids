@@ -10,13 +10,27 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
+  height: 100dvh;
   overflow: hidden; /* Prevent any scrollbars */
+  overscroll-behavior: none;
 }
 
 body {
   background-color: var(--palette-bg, #000011);
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#safe-area-probe {
+  position: fixed;
+  pointer-events: none;
+  visibility: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
 }
 
 #title-starfield {
@@ -35,13 +49,19 @@ body.in-play .controls-hint {
   display: none;
 }
 
+body.in-play {
+  touch-action: none;
+}
+
 /* Ensure the game wrapper doesn't create black areas */
 #gameWrapper {
   padding: 0;
   margin: 0;
   display: block;
   width: 100vw;
+  width: 100dvw;
   height: 100vh;
+  height: 100dvh;
   position: absolute;
   top: 0;
   left: 0;
@@ -54,7 +74,9 @@ body.in-play .controls-hint {
 #gameArea {
   display: none; /* Hidden by default */
   width: 100vw;
+  width: 100dvw;
   height: 100vh;
+  height: 100dvh;
   background: transparent;
   position: absolute;
   top: 0;
@@ -66,7 +88,10 @@ body.in-play .controls-hint {
   background: #000011;
   display: block;
   width: 100vw;
+  width: 100dvw;
   height: 100vh;
+  height: 100dvh;
+  touch-action: none;
 }
 
 /* Attribution positioning */
@@ -89,6 +114,7 @@ a {
 }
 
 .screen {
+  touch-action: manipulation;
   position: fixed;
   left: 50%;
   top: 50%;
@@ -586,7 +612,7 @@ a {
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: #ffffff;
-  font-size: 1em;
+  font-size: 16px;
   padding: 0.6em 0.8em;
   transition: all 0.3s ease;
   text-align: center;
@@ -747,6 +773,141 @@ a {
 
 .build-info:hover {
   opacity: 1;
+}
+
+/* On-screen stick + fire. Hidden unless body.touch-play (phone/tablet / coarse pointer). */
+.touch-controls {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.touch-controls[hidden] {
+  display: none !important;
+}
+
+body.touch-play .touch-controls:not([hidden]) {
+  display: block;
+}
+
+.touch-stick,
+.touch-fire {
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.touch-stick {
+  position: absolute;
+  left: max(16px, env(safe-area-inset-left, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--palette-hud-muted, #64748b) 70%, transparent);
+  background: color-mix(in srgb, var(--palette-bg, #000011) 55%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--palette-accent, #a78bfa) 22%, transparent);
+}
+
+.touch-stick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid var(--palette-local, #5eead4);
+  background: color-mix(in srgb, var(--palette-local, #5eead4) 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--palette-local, #5eead4) 40%, transparent);
+}
+
+.touch-fire {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  padding: 0;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--palette-laser, #fde68a);
+  background: color-mix(in srgb, var(--palette-bg, #000011) 55%, transparent);
+  border: 1.5px solid var(--palette-laser, #fde68a);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--palette-laser, #fde68a) 35%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--palette-laser, #fde68a) 45%, transparent);
+}
+
+.touch-fire.is-pressed {
+  background: color-mix(in srgb, var(--palette-laser, #fde68a) 18%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--palette-laser, #fde68a) 55%, transparent);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .touch-stick {
+    width: 96px;
+    height: 96px;
+    left: max(20px, env(safe-area-inset-left, 0px));
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .touch-stick-knob {
+    width: 36px;
+    height: 36px;
+  }
+
+  .touch-fire {
+    width: 64px;
+    height: 64px;
+    right: max(20px, env(safe-area-inset-right, 0px));
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    font-size: 0.64rem;
+  }
+
+  .screen {
+    max-height: 92vh;
+    padding: 16px 20px;
+  }
+
+  .screen h1 {
+    font-size: 1.6em;
+    margin-bottom: 0.4em;
+  }
+
+  .controls-hint {
+    font-size: 0.58rem;
+    margin-bottom: 0.55em;
+  }
+}
+
+@media (max-width: 430px) {
+  .screen {
+    width: min(96%, 420px);
+    max-width: 96%;
+    padding: 18px 14px;
+    border-radius: 16px;
+  }
+
+  .screen h1 {
+    font-size: 1.7em;
+    margin-bottom: 0.55em;
+  }
+
+  .controls-hint {
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+  }
+
+  .game-modes .nav-item,
+  .game-modes .btn {
+    max-width: 100%;
+  }
 }
 
 

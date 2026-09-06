@@ -4,6 +4,7 @@ import { LOCAL_STORAGE_KEYS } from '../../../../src/constants/user-preferences';
 import { Player } from '../../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { Ship } from '../../../../src/entities/ship/Ship';
+import { resetControlSources } from '../../../../src/input/controlSources';
 import { keyDown, keys, keyUp } from '../../../../src/input/keybindings';
 
 // Extend global interface for test-specific properties
@@ -29,6 +30,7 @@ const releaseKey = (code: string): void => {
 
 beforeEach(() => {
   localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
+  resetControlSources();
   // Reset global key states to ensure clean test state
   keys.ArrowLeft = false;
   keys.ArrowRight = false;
@@ -53,6 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetControlSources();
   // Reset global thrust sound state
   global.thrustSoundActive = false;
 

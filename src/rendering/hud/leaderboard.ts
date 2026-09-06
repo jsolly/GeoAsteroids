@@ -2,6 +2,7 @@ import { PALETTE } from '../../constants';
 import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import type { Player } from '../../entities/player/Player';
 import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
+import { hudLayoutForCanvas } from './hudLayout';
 
 interface LeaderboardEntry {
   name: string;
@@ -53,17 +54,16 @@ export function drawLeaderboard(
       color: player.color,
       isCurrentPlayer: player.id === currentPlayerId,
     }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
+    .sort((a, b) => b.score - a.score);
 
-  const boardWidth = 180;
-  const boardX = canvas.width - boardWidth - 16;
-  const boardY = 16;
+  const layout = hudLayoutForCanvas(canvas);
+  const { x: boardX, y: boardY, width: boardWidth, rowHeight, maxRows } = layout.leaderboard;
+  const visible = entries.slice(0, maxRows);
 
   ctx.save();
 
-  entries.forEach((entry, index) => {
-    const y = boardY + 6 + index * 16;
+  visible.forEach((entry, index) => {
+    const y = boardY + 6 + index * rowHeight;
     const nameColor = getShipDisplayColor(entry);
     const alpha = entry.isCurrentPlayer ? 0.92 : 0.78;
 
