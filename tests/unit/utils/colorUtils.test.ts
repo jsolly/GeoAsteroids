@@ -95,31 +95,34 @@ test('roid stroke weights follow three size tiers', () => {
 });
 
 test('shots are short cream segments, never pins or beams', () => {
-  expect(VISUAL.LASER_STROKE_WIDTH).toBeLessThanOrEqual(2);
-  expect(VISUAL.LASER_LENGTH).toBeGreaterThanOrEqual(10);
-  expect(VISUAL.LASER_LENGTH).toBeLessThanOrEqual(14);
+  expect(VISUAL.LASER_STROKE_WIDTH).toBeLessThanOrEqual(2.25);
+  expect(VISUAL.LASER_LENGTH).toBeGreaterThanOrEqual(12);
+  expect(VISUAL.LASER_LENGTH).toBeLessThanOrEqual(18);
+  expect(VISUAL.LASER_TRAIL_LENGTH).toBeLessThan(VISUAL.LASER_LENGTH);
   expect(VISUAL.LASER_EXPLODE_RADIUS).toBeLessThanOrEqual(VISUAL.LASER_LENGTH);
 });
 
-test('ships and roids are hairline polylines', () => {
+test('ships stay hairline; roids read as silhouettes', () => {
   expect(VISUAL.SHIP_STROKE_WIDTH).toBeLessThanOrEqual(1.5);
-  expect(VISUAL.ROID_STROKE_LARGE).toBeLessThanOrEqual(1.5);
+  expect(VISUAL.ROID_STROKE_LARGE).toBeLessThanOrEqual(2.25);
   expect(VISUAL.ROID_STROKE_MEDIUM).toBeLessThanOrEqual(VISUAL.ROID_STROKE_LARGE);
   expect(VISUAL.ROID_STROKE_SMALL).toBeLessThanOrEqual(VISUAL.ROID_STROKE_MEDIUM);
-  expect(VISUAL.THRUSTER_STROKE_WIDTH).toBeLessThanOrEqual(1);
-  expect(VISUAL.EXPLOSION_STROKE_WIDTH).toBeLessThanOrEqual(1);
+  expect(VISUAL.THRUSTER_STROKE_WIDTH).toBeLessThanOrEqual(1.5);
+  expect(VISUAL.EXPLOSION_STROKE_WIDTH).toBeLessThanOrEqual(1.5);
 });
 
-test('thruster trail is tiny and flickers shorter, never longer', () => {
-  expect(VISUAL.THRUSTER_LENGTH_RATIO).toBeLessThanOrEqual(0.5);
+test('thruster trail flickers shorter than the outer V', () => {
+  expect(VISUAL.THRUSTER_LENGTH_RATIO).toBeLessThanOrEqual(0.75);
   expect(VISUAL.THRUSTER_FLICKER_RATIO).toBeLessThan(VISUAL.THRUSTER_LENGTH_RATIO);
+  expect(VISUAL.THRUSTER_CORE_RATIO).toBeGreaterThan(0);
+  expect(VISUAL.THRUSTER_CORE_RATIO).toBeLessThan(1);
 });
 
-test('phosphor glow never exceeds its stroke', () => {
-  expect(VISUAL.LASER_GLOW).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH);
+test('juice bloom stays modest and ships stay crisp', () => {
   expect(VISUAL.SHIP_GLOW).toBeLessThanOrEqual(VISUAL.SHIP_STROKE_WIDTH);
-  expect(VISUAL.ROID_GLOW).toBeLessThanOrEqual(VISUAL.ROID_STROKE_SMALL);
-  expect(VISUAL.THRUSTER_GLOW).toBeLessThanOrEqual(VISUAL.THRUSTER_STROKE_WIDTH);
+  expect(VISUAL.LASER_GLOW).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH * 2);
+  expect(VISUAL.ROID_GLOW).toBeLessThanOrEqual(VISUAL.ROID_STROKE_LARGE * 1.25);
+  expect(VISUAL.THRUSTER_GLOW).toBeLessThanOrEqual(VISUAL.THRUSTER_STROKE_WIDTH * 2);
   expect(VISUAL.BOUNDARY_GLOW).toBeLessThanOrEqual(VISUAL.BOUNDARY_STROKE_WIDTH);
 });
 

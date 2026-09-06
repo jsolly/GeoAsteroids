@@ -2,6 +2,14 @@ import type { SoftFactionId } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, TITLE, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
+import {
+  driftSegment,
+  easeOutCubic,
+  laserBoltOffsets,
+  strokeBurstTicks,
+  strokePhosphorPolyline as strokeJuicePolyline,
+  thrusterFlameGeometry,
+} from '../../rendering/vectorJuice';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
@@ -132,7 +140,8 @@ export function strokePhosphorSegment(
   y2: number,
   color: string,
   width: number,
-  glow: number
+  glow: number,
+  alpha = 1
 ): void {
   const trace = (): void => {
     ctx.beginPath();
@@ -145,11 +154,11 @@ export function strokePhosphorSegment(
   ctx.lineWidth = width;
   ctx.shadowColor = color;
   ctx.shadowBlur = glow;
-  ctx.strokeStyle = hexToRgba(color, 0.5);
+  ctx.strokeStyle = hexToRgba(color, 0.5 * alpha);
   trace();
   ctx.stroke();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = color;
+  ctx.strokeStyle = hexToRgba(color, alpha);
   trace();
   ctx.stroke();
   ctx.restore();
@@ -206,36 +215,35 @@ export function drawGenericThruster(
 
   const aft = getKitHullOutline(kitId).thruster;
   const rearCenter = projectHullPoint(x, y, radius, angle, aft);
-
   const flicker = Math.floor(performance.now() / VISUAL.THRUSTER_FLICKER_MS) % 2 === 0;
   const lengthRatio = flicker ? VISUAL.THRUSTER_LENGTH_RATIO : VISUAL.THRUSTER_FLICKER_RATIO;
-  const flameLength = radius * lengthRatio;
-  const halfWidth = radius * 0.2;
-  const flameTip = {
-    x: rearCenter.x - Math.cos(angle) * flameLength,
-    y: rearCenter.y + Math.sin(angle) * flameLength,
-  };
-  const leftFlame = {
-    x: rearCenter.x + Math.sin(angle) * halfWidth,
-    y: rearCenter.y + Math.cos(angle) * halfWidth,
-  };
-  const rightFlame = {
-    x: rearCenter.x - Math.sin(angle) * halfWidth,
-    y: rearCenter.y - Math.cos(angle) * halfWidth,
-  };
+  const flame = thrusterFlameGeometry(
+    x,
+    y,
+    angle,
+    radius,
+    lengthRatio,
+    VISUAL.THRUSTER_CORE_RATIO,
+    rearCenter
+  );
 
-  ctx.save();
-  ctx.shadowColor = color;
-  ctx.shadowBlur = VISUAL.THRUSTER_GLOW;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = VISUAL.THRUSTER_STROKE_WIDTH;
-  ctx.lineCap = 'butt';
-  ctx.beginPath();
-  ctx.moveTo(leftFlame.x, leftFlame.y);
-  ctx.lineTo(flameTip.x, flameTip.y);
-  ctx.lineTo(rightFlame.x, rightFlame.y);
-  ctx.stroke();
-  ctx.restore();
+  strokeJuicePolyline(
+    ctx,
+    [flame.left, flame.tip, flame.right],
+    color,
+    VISUAL.THRUSTER_STROKE_WIDTH,
+    VISUAL.THRUSTER_GLOW,
+    false
+  );
+  strokeJuicePolyline(
+    ctx,
+    [flame.coreLeft, flame.coreTip, flame.coreRight],
+    color,
+    VISUAL.THRUSTER_STROKE_WIDTH * 0.75,
+    VISUAL.THRUSTER_GLOW * 0.55,
+    false,
+    0.7
+  );
 }
 
 export function drawThruster(ship: Ship, color: string = ship.color): void {
@@ -316,8 +324,7 @@ export function drawPlayerName(
   ctx.restore();
 }
 
-// Classic vector break-up: the three hull edges drift apart along their outward normals and fade,
-// with a few hairline sparks — no filled fireball.
+// Vector break-up: hull edges pop, then drift; ring + ticks — no filled fireball.
 function drawVectorExplosion(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -328,50 +335,71 @@ function drawVectorExplosion(
   color: string,
   kitId?: ShipKitId
 ): void {
-  const t = Math.min(Math.max(progress, 0), 1);
+  const t = clampExplosion(progress);
+  const pop = easeOutCubic(t);
   const alpha = 1 - t * 0.85;
-  const spread = radius * VISUAL.EXPLOSION_SPREAD_RATIO * t;
+  const spread = radius * VISUAL.EXPLOSION_SPREAD_RATIO;
+  const origin = { x, y };
   const edges = projectKitHullEdges(x, y, radius, angle, kitId);
+
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(color, alpha * 0.85);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = VISUAL.EXPLOSION_STROKE_WIDTH + 1;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * (0.55 + pop * VISUAL.EXPLOSION_RING_RATIO), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 
   ctx.save();
   ctx.strokeStyle = hexToRgba(color, alpha);
   ctx.shadowColor = color;
   ctx.shadowBlur = VISUAL.EXPLOSION_STROKE_WIDTH;
   ctx.lineWidth = VISUAL.EXPLOSION_STROKE_WIDTH;
-  ctx.lineCap = 'butt';
+  ctx.lineCap = 'round';
 
   for (const [a, b] of edges) {
-    const midX = (a.x + b.x) / 2;
-    const midY = (a.y + b.y) / 2;
-    const len = Math.hypot(midX - x, midY - y) || 1;
-    const dx = ((midX - x) / len) * spread;
-    const dy = ((midY - y) / len) * spread;
-    // Fragments tumble slightly as they fly.
-    const spin = t * 0.6;
-    const cos = Math.cos(spin);
-    const sin = Math.sin(spin);
-    const rot = (p: { x: number; y: number }) => ({
-      x: midX + dx + (p.x - midX) * cos - (p.y - midY) * sin,
-      y: midY + dy + (p.x - midX) * sin + (p.y - midY) * cos,
-    });
-    const a2 = rot(a);
-    const b2 = rot(b);
+    const edge = driftSegment(a, b, origin, t, spread, 0.7);
     ctx.beginPath();
-    ctx.moveTo(a2.x, a2.y);
-    ctx.lineTo(b2.x, b2.y);
-    ctx.stroke();
-  }
-
-  const sparkInner = radius * (0.4 + t * 1.2);
-  const sparkOuter = sparkInner + radius * 0.25 * (1 - t);
-  for (let i = 0; i < 6; i++) {
-    const a = angle + (i * Math.PI) / 3 + 0.35;
-    ctx.beginPath();
-    ctx.moveTo(x + Math.cos(a) * sparkInner, y - Math.sin(a) * sparkInner);
-    ctx.lineTo(x + Math.cos(a) * sparkOuter, y - Math.sin(a) * sparkOuter);
+    ctx.moveTo(edge.a.x, edge.a.y);
+    ctx.lineTo(edge.b.x, edge.b.y);
     ctx.stroke();
   }
   ctx.restore();
+
+  const sparkInner = radius * (0.35 + pop * 1.15);
+  const sparkOuter = sparkInner + radius * (0.35 + (1 - t) * 0.2);
+  strokeBurstTicks(
+    ctx,
+    x,
+    y,
+    VISUAL.EXPLOSION_SPARKS,
+    angle + 0.35,
+    sparkInner,
+    sparkOuter,
+    color,
+    alpha,
+    1,
+    VISUAL.EXPLOSION_STROKE_WIDTH
+  );
+  strokeBurstTicks(
+    ctx,
+    x,
+    y,
+    VISUAL.EXPLOSION_HIT_TICKS,
+    angle,
+    radius * (0.2 + pop * 0.4),
+    radius * (1.1 + pop * 1.1),
+    color,
+    alpha * 0.75,
+    1,
+    VISUAL.EXPLOSION_STROKE_WIDTH
+  );
+}
+
+function clampExplosion(progress: number): number {
+  return Math.min(Math.max(progress, 0), 1);
 }
 
 function explosionProgress(ship: Ship): number {
@@ -440,11 +468,25 @@ export function drawLasers(
     const screenPos = canvasManager.worldToScreen(laser.position, referencePos);
 
     if (laser.explodeTime === 0) {
-      // Short cream dash along heading — soft round caps + glow ≤ stroke (pins were invisible).
-      const speed = Math.hypot(laser.velocity.x, laser.velocity.y);
-      const bolt = (VISUAL.LASER_LENGTH / 2) * canvasManager.getPlayfieldScale();
-      const halfX = (speed > 0 ? laser.velocity.x / speed : 1) * bolt;
-      const halfY = (speed > 0 ? laser.velocity.y / speed : 0) * bolt;
+      const scale = canvasManager.getPlayfieldScale();
+      const bolt = (VISUAL.LASER_LENGTH / 2) * scale;
+      const { halfX, halfY, trailX, trailY } = laserBoltOffsets(
+        laser.velocity.x,
+        laser.velocity.y,
+        bolt,
+        VISUAL.LASER_TRAIL_LENGTH * scale
+      );
+      strokePhosphorSegment(
+        ctx,
+        screenPos.x - halfX - trailX,
+        screenPos.y - halfY - trailY,
+        screenPos.x - halfX,
+        screenPos.y - halfY,
+        boltColor,
+        VISUAL.LASER_STROKE_WIDTH * 0.7,
+        VISUAL.LASER_GLOW * 0.55,
+        0.38
+      );
       strokePhosphorSegment(
         ctx,
         screenPos.x - halfX,
@@ -456,18 +498,31 @@ export function drawLasers(
         VISUAL.LASER_GLOW
       );
     } else {
-      // Impact flash: a hairline ring that expands and fades over the short explode window.
       const t = 1 - laser.explodeTime / Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
-      const ringRadius = VISUAL.LASER_EXPLODE_RADIUS * (0.5 + t);
+      const ringRadius = VISUAL.LASER_EXPLODE_RADIUS * (0.55 + t * 1.15);
+      const alpha = 1 - t * 0.7;
       ctx.save();
       ctx.shadowColor = boltColor;
       ctx.shadowBlur = VISUAL.LASER_GLOW;
-      ctx.strokeStyle = hexToRgba(boltColor, 1 - t * 0.7);
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = hexToRgba(boltColor, alpha);
+      ctx.lineWidth = 1.25;
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, ringRadius, 0, Math.PI * 2, false);
       ctx.stroke();
       ctx.restore();
+      strokeBurstTicks(
+        ctx,
+        screenPos.x,
+        screenPos.y,
+        VISUAL.LASER_HIT_TICKS,
+        t * 0.5,
+        ringRadius * 0.35,
+        ringRadius * 1.35,
+        boltColor,
+        alpha,
+        1,
+        VISUAL.LASER_GLOW
+      );
     }
   }
 }
@@ -643,15 +698,30 @@ function drawShipImpactFlash(
   }
 
   const t = 1 - ship.impactFlashFrames / SHIP.IMPACT_FLASH_FRAMES;
+  const alpha = 1 - t * 0.7;
+  const ring = shipR * (1.15 + t * 0.55);
   ctx.save();
-  ctx.strokeStyle = hexToRgba(PALETTE.DANGER, 1 - t * 0.7);
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = hexToRgba(PALETTE.DANGER, alpha);
+  ctx.lineWidth = 1.15;
   ctx.shadowColor = PALETTE.DANGER;
-  ctx.shadowBlur = VISUAL.SHIP_GLOW;
+  ctx.shadowBlur = VISUAL.SHIP_GLOW + 1;
   ctx.beginPath();
-  ctx.arc(screenX, screenY, shipR * (1.15 + t * 0.35), 0, Math.PI * 2);
+  ctx.arc(screenX, screenY, ring, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
+  strokeBurstTicks(
+    ctx,
+    screenX,
+    screenY,
+    VISUAL.EXPLOSION_HIT_TICKS,
+    t,
+    shipR * 0.85,
+    ring * 1.25,
+    PALETTE.DANGER,
+    alpha,
+    1,
+    VISUAL.SHIP_GLOW
+  );
 }
 
 function drawFloatingHealthCapsule(
@@ -733,11 +803,11 @@ export function drawPlayerHealthBar(health: number, maxHealth: number): void {
   // Health bar color based on health level
   let healthColor: string;
   if (healthPercent > 0.6) {
-    healthColor = '#00ff00'; // Green for high health
+    healthColor = PALETTE.HEALTH;
   } else if (healthPercent > 0.3) {
-    healthColor = '#ffff00'; // Yellow for medium health
+    healthColor = PALETTE.LASER_LOCAL;
   } else {
-    healthColor = '#ff0000'; // Red for low health
+    healthColor = PALETTE.DANGER;
   }
 
   // Current health
@@ -745,12 +815,12 @@ export function drawPlayerHealthBar(health: number, maxHealth: number): void {
   ctx.fillRect(barX, barY, currentWidth, barHeight);
 
   // Border
-  ctx.strokeStyle = '#ffffff';
+  ctx.strokeStyle = PALETTE.HUD;
   ctx.lineWidth = 2;
   ctx.strokeRect(barX, barY, barWidth, barHeight);
 
   // Health text
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = PALETTE.HUD;
   ctx.font = '14px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(`${Math.ceil(health)}/${maxHealth}`, barX + barWidth / 2, barY - 8);
