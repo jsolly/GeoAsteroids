@@ -5,6 +5,7 @@ import { SHIP } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import {
   applyShipBoundaryDeath,
+  applyShipLethalCollision,
   applyShipSpawnProtection,
   isServerRespawnActive,
   isShipCollisionImmune,
@@ -14,6 +15,25 @@ import {
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { SHIP_KINDS } from '../scenarios/support/shipKinds';
+
+describe('client explode ticks follow the 60 Hz clock', () => {
+  test('a hitch drains the explode window in one update so the hull does not freeze', () => {
+    const ship = new Ship({ isLocalPlayer: true });
+    ship.takeDamage(100);
+    expect(ship.exploding).toBe(true);
+    expect(ship.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
+    ship.update(SHIP.EXPLODE_DURATION_FRAMES);
+    expect(ship.exploding).toBe(false);
+  });
+
+  test('a sub-frame update does not burn explode frames', () => {
+    const ship = new Ship({ isLocalPlayer: true });
+    ship.takeDamage(100);
+    ship.update(0);
+    expect(ship.exploding).toBe(true);
+    expect(ship.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
+  });
+});
 
 describe('shared ship HUD and respawn timers', () => {
   test('respawnTimer 0 is not an active countdown', () => {
@@ -35,6 +55,15 @@ describe('shared ship HUD and respawn timers', () => {
     const ship = new Ship(options);
     ship.health = 100;
     applyShipBoundaryDeath(ship);
+    expect(ship.health).toBe(0);
+    expect(ship.exploding).toBe(true);
+    expect(ship.impactFlashFrames).toBeGreaterThan(0);
+  });
+
+  test.each(SHIP_KINDS)('$kind explodes and flashes on an asteroid hit', ({ options }) => {
+    const ship = new Ship(options);
+    ship.health = 100;
+    applyShipLethalCollision(ship, 'asteroid');
     expect(ship.health).toBe(0);
     expect(ship.exploding).toBe(true);
     expect(ship.impactFlashFrames).toBeGreaterThan(0);
@@ -111,17 +140,33 @@ describe('server ship respawn lifecycle', () => {
     expect(afterDeath?.respawnTimer).toBe(SHIP.RESPAWN_DELAY_FRAMES);
     expect(afterDeath?.explodeTime).toBe(SHIP.EXPLODE_DURATION_FRAMES);
 
+    engine.entityManager.updateExplosions();
+    engine.entityManager.updateRespawns();
+    engine.entityManager.updateExplosions();
+    engine.entityManager.updateRespawns();
+
+    const midExplosion = engine.getPlayer('p1');
+    expect(midExplosion?.exploding).toBe(true);
+    expect(midExplosion?.health).toBe(0);
+    expect(midExplosion?.respawnTimer).toBe(SHIP.RESPAWN_DELAY_FRAMES - 2);
+    expect(midExplosion?.respawnTimer).not.toBe(SHIP.RESPAWN_DELAY_FRAMES);
+  });
+
+  test('wall kill respawns as soon as the explode window ends — no corpse freeze', () => {
+    const ws = {} as any;
+    const player = engine.addPlayer('p1', 'Pilot', ws, { x: 0, y: 0 });
+    engine.entityManager.updateEntity('p1', { spawnProtectionTimer: undefined });
+    engine.handlePlayerDamage('p1', 'boundary', player.health);
+
     for (let i = 0; i < SHIP.EXPLODE_DURATION_FRAMES; i++) {
-      engine.entityManager.updateExplosions();
-      engine.entityManager.updateRespawns();
+      engine.advanceCombatFrame();
     }
 
     const afterExplosion = engine.getPlayer('p1');
     expect(afterExplosion?.exploding).toBe(false);
-    expect(afterExplosion?.health).toBe(0);
-    expect(afterExplosion?.respawnTimer).toBe(
-      SHIP.RESPAWN_DELAY_FRAMES - SHIP.EXPLODE_DURATION_FRAMES
-    );
+    expect(afterExplosion?.health).toBe(afterExplosion?.maxHealth);
+    expect(afterExplosion?.respawnTimer).toBeUndefined();
+    expect(afterExplosion?.spawnProtectionTimer).toBe(SHIP.INVINCIBILITY_DURATION_FRAMES);
   });
 
   test('respawn grants a full protection window and holds an anchor', () => {

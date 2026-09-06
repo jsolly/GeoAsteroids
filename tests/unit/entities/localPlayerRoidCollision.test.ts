@@ -103,16 +103,15 @@ describe('Local Player Roid Collision Damage', () => {
       console.log('  Health:', localShip.health);
       console.log('  Network manager calls:', mockSendMessage.mock.calls.length);
       
-      // Server applies damage; client only sends network messages
-      expect(localShip.health).toBe(100);
+      expect(localShip.health).toBe(0);
+      expect(localShip.exploding).toBe(true);
       
-      // Verify both collision damage and asteroid destruction messages were sent
       expect(mockSendMessage).toHaveBeenCalledWith({
         type: 'collisionDamage',
         data: {
           targetPlayerId: 'local-player-123',
           attackerId: 'asteroid',
-          damage: 25, // LASER_HIT damage
+          damage: DAMAGE.ASTEROID_COLLISION,
         },
       });
 
@@ -128,20 +127,14 @@ describe('Local Player Roid Collision Damage', () => {
   });
 
   describe('Server-Authoritative Damage', () => {
-    test('asteroid collision sends damage to server without applying locally', async () => {
-      // Mock the collision detection to return true
+    test('asteroid collision explodes locally and tells the server', async () => {
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
 
-      const initialHealth = localShip.health;
-      
-      // Check collision
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
-      
-      // Server applies damage; client only sends network messages
-      expect(localShip.health).toBe(initialHealth);
-      
-      // Verify both messages were sent
+
+      expect(localShip.health).toBe(0);
+      expect(localShip.exploding).toBe(true);
       expect(mockSendMessage).toHaveBeenCalledTimes(2);
     });
 
@@ -180,11 +173,9 @@ describe('Local Player Roid Collision Damage', () => {
   });
 
   describe('Damage Constants', () => {
-    test('asteroid collision uses laser hit damage', () => {
-      expect(DAMAGE.LASER_HIT).toBe(25);
-      
-      // Asteroid collisions now use the same damage as laser hits
-      expect(DAMAGE.LASER_HIT).toBe(25);
+    test('asteroid collision is an instant kill like the wall', () => {
+      expect(DAMAGE.ASTEROID_COLLISION).toBe(DAMAGE.BOUNDARY_COLLISION);
+      expect(DAMAGE.ASTEROID_COLLISION).toBe(100);
     });
   });
 

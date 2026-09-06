@@ -124,13 +124,12 @@ export class GameServerWorld {
   }
 
   /**
-   * Same pair the live loop runs each frame for combat/respawn.
-   * Does not advance `gameTime` — use `startClock()` for the clock scenario.
+   * Same combat pair the live loop runs each frame, plus the monotonic clock.
+   * Does not move the asteroid belt — use `startClock()` / `advanceOneFrame` for that.
    */
   tick(frames = 1): void {
     for (let i = 0; i < frames; i++) {
-      this.engine.entityManager.updateExplosions();
-      this.engine.entityManager.updateRespawns();
+      this.engine.advanceCombatFrame();
     }
   }
 

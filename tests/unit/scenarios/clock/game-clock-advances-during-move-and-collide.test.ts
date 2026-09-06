@@ -26,7 +26,7 @@ describe('The game clock keeps ticking', () => {
 
   test('gameTime advances while a ship moves and collides — it is not a static tick', () => {
     const timeBefore = world.gameTime();
-    expect(timeBefore).toBe(0);
+    expect(timeBefore).toBeGreaterThan(0);
 
     world.startClock();
     world.move(ace, { x: 120, y: 40 });
@@ -36,8 +36,8 @@ describe('The game clock keeps ticking', () => {
 
     const timeAfter = world.gameTime();
     expect(timeAfter).toBeGreaterThan(timeBefore);
-    expect(timeAfter).toBeGreaterThanOrEqual(50);
-    expect(timeAfter).toBeLessThanOrEqual(80);
+    expect(timeAfter - timeBefore).toBeGreaterThanOrEqual(50);
+    expect(timeAfter - timeBefore).toBeLessThanOrEqual(80);
     expect(world.entity(ace).position).toEqual({ x: 120, y: 40 });
     expect(world.entity(ace).health).toBe(SHIP.MAX_HEALTH - DAMAGE.LASER_HIT);
   });
