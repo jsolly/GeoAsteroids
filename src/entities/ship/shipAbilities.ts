@@ -1,4 +1,3 @@
-import { areAllied } from '../../../shared/factions';
 import { trySpendTrackedEmpFuel } from '../../../shared/fuel';
 import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
 import {
@@ -141,9 +140,8 @@ export function isHarpoonableBody(
   if ((body.shieldTimer ?? 0) > 0 || body.shieldActive) {
     return false;
   }
-  if (areAllied(host.factionId, body.factionId)) {
-    return false;
-  }
+  // Soft factions block combat, not a utility haul. Live EMBER QA sat
+  // next to same-side bots with no cream tether (#485 still missed).
   return true;
 }
 
@@ -256,10 +254,9 @@ export function harpoonLatchRange(
   const scale = Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : 1;
   const view = canvas && canvas.width > 0 && canvas.height > 0 ? canvas : DEFAULT_LATCH_CANVAS;
   const onScreen = Math.hypot(view.width, view.height) / 2 / scale;
-  return Math.min(
-    Math.max(SHIP_ABILITY.HARPOON_RANGE, onScreen, SHIP_ABILITY.HARPOON_VISUAL_PX / scale),
-    SHIP_ABILITY.HARPOON_RANGE_MAX
-  );
+  // Any hull on this canvas is in reach. Do not clip to HARPOON_RANGE_MAX —
+  // that cap is pull slack, not latch.
+  return Math.max(SHIP_ABILITY.HARPOON_RANGE, onScreen, SHIP_ABILITY.HARPOON_VISUAL_PX / scale);
 }
 
 const NEAREST_GAP_TIE_WU = 24;
