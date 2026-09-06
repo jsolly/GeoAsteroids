@@ -54,10 +54,15 @@ test('layoutHudCluster keeps three lives and the score in one compact strip', ()
     y: VISUAL.HUD_INSET + VISUAL.HUD_LIFE_SIZE / 2,
   });
   const last = three.lifeCenters[2];
+  const first = three.lifeCenters[0];
+  expect(first).toBeDefined();
   expect(last).toBeDefined();
+  if (!first || !last) {
+    throw new Error('expected three life centers');
+  }
   expect(three.score.x).toBeGreaterThan(last.x + VISUAL.HUD_LIFE_SIZE / 2);
   expect(three.score.x).toBeLessThan(120);
-  expect(three.score.y).toBe(three.lifeCenters[0].y);
+  expect(three.score.y).toBe(first.y);
 
   const none = layoutHudCluster(0);
   expect(none.lifeCenters).toEqual([]);
