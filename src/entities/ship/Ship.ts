@@ -2,7 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Position, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { Sound } from '../../audio/Sound';
-import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
+import { DAMAGE, EMP, FUEL, GAME, PALETTE, SHIP } from '../../constants';
+import { applyFuelPickup, trySpendEmpFuel } from '../../../shared/fuel';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
@@ -39,6 +40,8 @@ class Ship {
   empPulseTime = 0;
   health: number = SHIP.MAX_HEALTH;
   maxHealth: number = SHIP.MAX_HEALTH;
+  fuel: number = FUEL.START;
+  maxFuel: number = FUEL.MAX;
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
@@ -311,6 +314,8 @@ class Ship {
     thrusting?: boolean;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
   }): void {
     // Local player uses immediate state; bots/remote ships use smoothing targets
     if (this.isBot) {
@@ -359,6 +364,8 @@ class Ship {
     exploding?: boolean;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
   }): void {
     const wasDead = this.health <= 0 || this.exploding;
     if (data.exploding !== undefined) {
@@ -369,6 +376,12 @@ class Ship {
     }
     if (data.maxHealth !== undefined) {
       this.maxHealth = data.maxHealth;
+    }
+    if (data.maxFuel !== undefined) {
+      this.maxFuel = data.maxFuel;
+    }
+    if (data.fuel !== undefined) {
+      this.fuel = data.fuel;
     }
     if (wasDead && this.health > 0) {
       applyShipSpawnProtection(this);
@@ -393,9 +406,12 @@ class Ship {
     };
   }
 
-  empPulse(): void {
-    if (this.exploding) {
-      return;
+  empPulse(): boolean {
+    if (this.exploding || this.empPulseActive) {
+      return false;
+    }
+    if (!trySpendEmpFuel(this)) {
+      return false;
     }
 
     this.empPulseActive = true;
@@ -410,6 +426,23 @@ class Ship {
     });
 
     window.dispatchEvent(empEvent);
+
+    const networkManager = NetworkManager.getInstance();
+    if (networkManager.isConnected) {
+      const playerId = networkManager.getLocalPlayerId();
+      if (playerId) {
+        networkManager.sendMessage({
+          type: 'empPulse',
+          data: { playerId },
+        });
+      }
+    }
+
+    return true;
+  }
+
+  addFuel(amount: number): number {
+    return applyFuelPickup(this, amount);
   }
 
   updateEmpPulse(): void {

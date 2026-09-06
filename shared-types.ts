@@ -25,6 +25,8 @@ export interface PlayerUpdate {
   exploding: boolean;
   health: number;
   maxHealth: number;
+  fuel?: number;
+  maxFuel?: number;
   lasers?: Array<{
     position: Position;
     velocity: Velocity;
@@ -78,6 +80,16 @@ export interface BotData {
   lives: number;
   health: number;
   maxHealth: number;
+  fuel?: number;
+  maxFuel?: number;
+}
+
+export interface FuelDropData {
+  id: string;
+  position: Position;
+  velocity: Velocity;
+  amount: number;
+  radius: number;
 }
 
 // Server game state structure (what the server actually sends)
@@ -95,12 +107,15 @@ export interface ServerPlayerData {
   color: string;
   health: number;
   maxHealth: number;
+  fuel?: number;
+  maxFuel?: number;
   respawnTimer?: number;
 }
 
 export interface ServerGameState {
   entities: ServerEntityData[];
   asteroids: AsteroidData[];
+  fuelDrops: FuelDropData[];
   gameTime: number;
   isPaused: boolean;
 }
@@ -119,6 +134,8 @@ export interface ServerEntityData {
   score: number;
   health: number;
   maxHealth: number;
+  fuel: number;
+  maxFuel: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
 }

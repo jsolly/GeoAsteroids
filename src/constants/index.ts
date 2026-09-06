@@ -66,6 +66,7 @@ export const PALETTE = {
   DANGER: '#F43F5E',
   HEALTH: '#4ADE80',
   ACCENT_UI: '#A78BFA',
+  FUEL: '#FBBF24',
 } as const;
 
 // Retro vector pass: hairline polylines, no entity fills, phosphor glow hard-capped ≤ stroke
@@ -103,6 +104,10 @@ export const VISUAL = {
   MINIMAP_SIZE: 96,
   MINIMAP_DOT: 3,
   SCORE_FONT: '12px Arial',
+  FUEL_STROKE_WIDTH: 1.25,
+  FUEL_GLOW: 1.25,
+  FUEL_BAR_WIDTH: 72,
+  FUEL_BAR_HEIGHT: 2,
 } as const;
 
 // ============================================================================
@@ -184,6 +189,19 @@ export const ROID = {
 export const EMP = {
   RADIUS: 250, // pixels
   DURATION: 0.5, // seconds
+} as const;
+
+// ============================================================================
+// FUEL CONFIGURATION
+// ============================================================================
+export const FUEL = {
+  MAX: 100,
+  START: 50,
+  EMP_COST: 25,
+  DROP_AMOUNT: 25,
+  DROP_RADIUS: 10,
+  // Medium+ asteroids (same cutoff as a normal split) drop fuel when destroyed.
+  MIN_ROID_SIZE_TO_DROP: 25,
 } as const;
 
 // ============================================================================

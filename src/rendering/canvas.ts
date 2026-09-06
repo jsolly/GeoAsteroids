@@ -1,5 +1,7 @@
 import type { Position } from '../../shared-types';
-import { PALETTE } from '../constants';
+import { EMP, GAME, PALETTE } from '../constants';
+import { drawFuelDropsRelative } from '../entities/fuel/fuelRenderer';
+import type { FuelDrop } from '../entities/fuel/FuelDrop';
 import {
   CANVAS_DEFAULT_CENTER_X,
   CANVAS_DEFAULT_CENTER_Y,
@@ -11,6 +13,7 @@ import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
+  drawEmpPulse,
   drawLasers,
   drawShipAtPosition,
   drawShipExplosion,
@@ -24,6 +27,7 @@ import { getFactionColor, getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { drawFuelGauge } from './hud/fuel';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
@@ -184,7 +188,8 @@ class CanvasManager {
     textAlpha: number,
     text: string,
     lives: number,
-    allPlayers: Player[]
+    allPlayers: Player[],
+    fuelDrops: FuelDrop[] = []
   ): void {
     const currShip = currPlayer.ship;
     const ctx = this.getContext();
@@ -202,6 +207,16 @@ class CanvasManager {
 
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
+
+    if (fuelDrops.length > 0) {
+      drawFuelDropsRelative(currShip, fuelDrops);
+    }
+
+    if (currShip.empPulseActive) {
+      const totalFrames = Math.ceil(EMP.DURATION * GAME.FPS);
+      const empAlpha = totalFrames > 0 ? currShip.empPulseTime / totalFrames : 0;
+      drawEmpPulse(currShip, EMP.RADIUS, empAlpha);
+    }
 
     // Draw roids
     const roids = currRoidBelt.getRoids();
@@ -293,6 +308,7 @@ class CanvasManager {
     drawScoreOverlay(ctx, canvas, currScore);
 
     drawLivesIndicator(ctx, lives, PALETTE.LOCAL);
+    drawFuelGauge(ctx, currShip.fuel, currShip.maxFuel);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(ctx, canvas, text, textAlpha);

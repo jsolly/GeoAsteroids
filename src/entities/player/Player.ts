@@ -76,6 +76,8 @@ export class Player {
     deathCause?: string;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
     respawnTimer?: number;
     spawnProtectionTimer?: number;
   }): void {
@@ -146,6 +148,12 @@ export class Player {
     }
     if (data.deathCause) {
       this.deathCause = data.deathCause;
+    }
+    if (data.maxFuel !== undefined) {
+      this.ship.maxFuel = data.maxFuel;
+    }
+    if (data.fuel !== undefined) {
+      this.ship.fuel = data.fuel;
     }
     if (data.health !== undefined) {
       const wasDead = this.ship.health <= 0;

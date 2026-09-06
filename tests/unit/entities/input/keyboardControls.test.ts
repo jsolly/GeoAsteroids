@@ -1,5 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
-import { GAME, SHIP } from '../../../../src/constants';
+import { FUEL, GAME, SHIP } from '../../../../src/constants';
 import { Player } from '../../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 import { keyDown, keyUp } from '../../../../src/input/keybindings';
@@ -62,6 +62,20 @@ test('opposing turn keys (arrow + WASD) cancel out', () => {
   press('ArrowLeft');
   press('KeyD');
   expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
+});
+
+test('KeyE activates EMP and spends fuel', () => {
+  const startFuel = player.ship.fuel;
+  press('KeyE');
+  expect(player.ship.empPulseActive).toBe(true);
+  expect(player.ship.fuel).toBe(startFuel - FUEL.EMP_COST);
+});
+
+test('KeyE does nothing when the tank is empty', () => {
+  player.ship.fuel = 0;
+  press('KeyE');
+  expect(player.ship.empPulseActive).toBe(false);
+  expect(player.ship.fuel).toBe(0);
 });
 
 test('WASD is ignored while dead', () => {

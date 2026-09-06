@@ -16,6 +16,8 @@ export interface ServerMessage {
     | 'asteroidCreateBatch'
     | 'asteroidUpdate'
     | 'asteroidDestroy'
+    | 'fuelDropCreate'
+    | 'fuelDropDestroy'
     | 'botCreated'
     | 'botUpdate'
     | 'botDestroyed';
@@ -42,6 +44,8 @@ export interface ClientMessage {
     | 'playerKilled'
     | 'initAsteroids'
     | 'asteroidDestroyed'
+    | 'fuelPickup'
+    | 'empPulse'
     | 'asteroidCreate'
     | 'asteroidUpdate'
     | 'asteroidDestroy'

@@ -1,4 +1,5 @@
 import { DAMAGE } from '../../constants';
+import type { FuelDrop } from '../../entities/fuel/FuelDrop';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
@@ -154,6 +155,57 @@ export class CollisionManager {
     if (!isColliding && localShip.isCollidingWithPlayer) {
       localShip.stopPlayerCollision();
     }
+  }
+
+  /**
+   * Fly-over pickup for local and bot ships. Remote ships sync via gameState.
+   */
+  checkShipFuelPickupCollisions(
+    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
+    fuelDrops: FuelDrop[]
+  ): void {
+    if (player.type === 'remote') {
+      return;
+    }
+
+    const ship = player.ship;
+    if (ship.exploding || ship.health <= 0 || ship.fuel >= ship.maxFuel) {
+      return;
+    }
+
+    for (let i = fuelDrops.length - 1; i >= 0; i--) {
+      const drop = fuelDrops[i];
+      if (drop === undefined) {
+        continue;
+      }
+      if (!checkShipCollision(ship.position, ship.r, drop.position, drop.r)) {
+        continue;
+      }
+      this.handleFuelPickup(player, drop);
+      fuelDrops.splice(i, 1);
+      break;
+    }
+  }
+
+  private handleFuelPickup(
+    player: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' },
+    drop: FuelDrop
+  ): void {
+    player.ship.addFuel(drop.amount);
+
+    const playerId =
+      player.type === 'local' ? this.networkManager.getLocalPlayerId() || player.id : player.id;
+    if (!playerId) {
+      return;
+    }
+
+    this.networkManager.sendMessage({
+      type: 'fuelPickup',
+      data: {
+        dropId: drop.id,
+        playerId,
+      },
+    });
   }
 
   /**

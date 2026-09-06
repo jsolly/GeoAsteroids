@@ -1,14 +1,17 @@
 import { WebSocket } from 'ws';
-import type { Position, AsteroidData } from '../../shared-types';
-import { EntityManager, GameEntity } from './EntityManager';
-import { AsteroidManager } from './AsteroidManager.ts';
-import { RNGService } from './RNGService';
+import type { AsteroidData, FuelDropData, Position } from '../../shared-types';
+import { applyFuelPickup, trySpendEmpFuel } from '../../shared/fuel';
 import { SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
+import { AsteroidManager } from './AsteroidManager.ts';
+import { EntityManager, GameEntity } from './EntityManager';
+import { FuelDropManager } from './FuelDropManager';
+import { RNGService } from './RNGService';
 
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
+  private fuelDropManager: FuelDropManager;
   private rngService: RNGService;
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
@@ -18,6 +21,7 @@ export class GameEngine {
     this.rngService = new RNGService(rngSeed);
     this.entityManager = new EntityManager(this.rngService);
     this.asteroidManager = new AsteroidManager(this.rngService);
+    this.fuelDropManager = new FuelDropManager();
 
     // Don't initialize pause state yet - will be called after initialization
   }
@@ -123,6 +127,7 @@ export class GameEngine {
   private resetGameState(): void {
     // Clear all asteroids
     this.asteroidManager.clearAsteroids();
+    this.fuelDropManager.clearDrops();
     
     // Clear all entities (bots, players, etc.)
     this.entityManager.clearAll();
@@ -292,7 +297,11 @@ export class GameEngine {
     return false; // Bot was damaged but not destroyed
   }
 
-  public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {
+  public handleAsteroidDestruction(
+    asteroidId: string,
+    playerId: string,
+    points: number
+  ): { success: boolean; newAsteroids: AsteroidData[]; fuelDrop?: FuelDropData } {
     // Use the new destroyAsteroid method that handles splitting
     const result = this.asteroidManager.destroyAsteroid(asteroidId);
     if (!result.destroyed) {
@@ -302,11 +311,45 @@ export class GameEngine {
     // Award points to the player
     this.awardPoints(playerId, points);
 
+    const fuelDrop = this.fuelDropManager.spawnFromAsteroid(result.destroyed);
+
     // Return success status and any new asteroids created from splitting
-    return { 
-      success: true, 
-      newAsteroids: result.newAsteroids 
+    return {
+      success: true,
+      newAsteroids: result.newAsteroids,
+      fuelDrop,
     };
+  }
+
+  public handleFuelPickup(entityId: string, dropId: string): boolean {
+    const entity = this.entityManager.getEntity(entityId);
+    const drop = this.fuelDropManager.removeDrop(dropId);
+    if (!entity || !drop || entity.exploding || entity.health <= 0 || entity.fuel >= entity.maxFuel) {
+      if (drop) {
+        this.fuelDropManager.addDrop(drop);
+      }
+      return false;
+    }
+
+    applyFuelPickup(entity, drop.amount);
+    entity.lastUpdate = Date.now();
+    return true;
+  }
+
+  public handleEmpPulse(entityId: string): boolean {
+    const entity = this.entityManager.getEntity(entityId);
+    if (!entity || entity.exploding || entity.health <= 0) {
+      return false;
+    }
+    if (!trySpendEmpFuel(entity)) {
+      return false;
+    }
+    entity.lastUpdate = Date.now();
+    return true;
+  }
+
+  public getAllFuelDrops(): FuelDropData[] {
+    return this.fuelDropManager.getAllDrops();
   }
 
   // Game state
@@ -327,10 +370,13 @@ export class GameEngine {
         score: entity.score,
         health: entity.health,
         maxHealth: entity.maxHealth,
+        fuel: entity.fuel,
+        maxFuel: entity.maxFuel,
         respawnTimer: entity.respawnTimer,
         spawnProtectionTimer: entity.spawnProtectionTimer,
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
+      fuelDrops: this.fuelDropManager.getAllDrops(),
       gameTime: this.gameTime,
       isPaused: this.isPaused,
     };

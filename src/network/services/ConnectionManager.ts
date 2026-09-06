@@ -1,5 +1,6 @@
 import type {
   AsteroidData,
+  FuelDropData,
   PlayerJoin,
   PlayerLeave,
   PlayerUpdate,
@@ -35,6 +36,7 @@ export class ConnectionManager {
   private localPlayerId: string = '';
   private allPlayers: Map<string, Player> = new Map();
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
+  private seenFuelDropIds: Set<string> = new Set();
   private hasInitializedAsteroidsForConnection = false;
 
   // Heartbeat / half-open-socket detection (see connectionHealth.ts).
@@ -147,6 +149,7 @@ export class ConnectionManager {
       this.state.socket = null;
     }
     this.seenAsteroidIds.clear();
+    this.seenFuelDropIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
     this.localPlayerId = '';
   }
@@ -383,6 +386,12 @@ export class ConnectionManager {
       case 'asteroidDestroy':
         this.handleAsteroidDestroyed(data as { asteroidId: string });
         break;
+      case 'fuelDropCreate':
+        this.handleFuelDropCreated(data as { drop: FuelDropData });
+        break;
+      case 'fuelDropDestroy':
+        this.handleFuelDropDestroyed(data as { dropId: string });
+        break;
       case 'botCreated':
         this.handleBotCreated(data as { botId: string; botName: string; position: Position });
         break;
@@ -510,6 +519,8 @@ export class ConnectionManager {
           color: entityData.color,
           health: entityData.health,
           maxHealth: entityData.maxHealth,
+          fuel: entityData.fuel,
+          maxFuel: entityData.maxFuel,
           respawnTimer: entityData.respawnTimer,
           spawnProtectionTimer: entityData.spawnProtectionTimer,
         };
@@ -546,6 +557,12 @@ export class ConnectionManager {
         }
       }
     }
+
+    if (data.fuelDrops) {
+      for (const drop of data.fuelDrops) {
+        this.dispatchFuelDropCreated(drop);
+      }
+    }
   }
 
   private handleJoined(data: PlayerJoin): void {
@@ -556,6 +573,7 @@ export class ConnectionManager {
     );
 
     this.seenAsteroidIds.clear();
+    this.seenFuelDropIds.clear();
     this.hasInitializedAsteroidsForConnection = false;
 
     // Store the local player ID from server response
@@ -611,6 +629,33 @@ export class ConnectionManager {
           asteroidId: data.asteroidId,
           updates: data.updates,
         },
+      })
+    );
+  }
+
+  private dispatchFuelDropCreated(drop: FuelDropData): void {
+    if (this.seenFuelDropIds.has(drop.id)) {
+      return;
+    }
+    this.seenFuelDropIds.add(drop.id);
+    window.dispatchEvent(
+      new CustomEvent('serverFuelDropCreated', {
+        detail: { drop },
+      })
+    );
+  }
+
+  private handleFuelDropCreated(data: { drop: FuelDropData }): void {
+    if (data.drop) {
+      this.dispatchFuelDropCreated(data.drop);
+    }
+  }
+
+  private handleFuelDropDestroyed(data: { dropId: string }): void {
+    this.seenFuelDropIds.delete(data.dropId);
+    window.dispatchEvent(
+      new CustomEvent('serverFuelDropDestroyed', {
+        detail: { dropId: data.dropId },
       })
     );
   }

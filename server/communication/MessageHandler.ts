@@ -93,6 +93,14 @@ export class MessageHandler {
           this.handleAsteroidDestroyed(ws, restData);
           break;
 
+        case 'fuelPickup':
+          this.handleFuelPickup(ws, restData);
+          break;
+
+        case 'empPulse':
+          this.handleEmpPulse(ws, restData);
+          break;
+
         case 'initAsteroids':
           this.handleInitAsteroids(ws, id, restData);
           break;
@@ -222,6 +230,8 @@ export class MessageHandler {
     delete (sanitizedData as any).lives;
     delete (sanitizedData as any).respawnTimer;
     delete (sanitizedData as any).spawnProtectionTimer;
+    delete (sanitizedData as any).fuel;
+    delete (sanitizedData as any).maxFuel;
 
     // Normalize client fields to server schema
     if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {
@@ -408,7 +418,31 @@ export class MessageHandler {
       if (result.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
       }
+
+      if (result.fuelDrop) {
+        this.broadcaster.broadcastFuelDropCreated(result.fuelDrop);
+      }
     }
+  }
+
+  private handleFuelPickup(ws: WebSocket, data: any): void {
+    if (!data.dropId || !data.playerId) {
+      this.broadcaster.sendError(ws, 'Missing required fields for fuelPickup');
+      return;
+    }
+
+    if (this.gameEngine.handleFuelPickup(data.playerId, data.dropId)) {
+      this.broadcaster.broadcastFuelDropDestroyed(data.dropId);
+    }
+  }
+
+  private handleEmpPulse(ws: WebSocket, data: any): void {
+    if (!data.playerId) {
+      this.broadcaster.sendError(ws, 'Missing player ID for empPulse');
+      return;
+    }
+
+    this.gameEngine.handleEmpPulse(data.playerId);
   }
 
   private handleInitAsteroids(ws: WebSocket, id: string, data: any): void {

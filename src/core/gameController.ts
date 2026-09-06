@@ -1,4 +1,5 @@
-import type { AsteroidData } from '../../shared-types';
+import type { AsteroidData, FuelDropData } from '../../shared-types';
+import { FuelDrop } from '../entities/fuel/FuelDrop';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
@@ -23,6 +24,7 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private fuelDrops: FuelDrop[] = [];
 
   private constructor() {
     this.gameStateManager = GameStateManager.getInstance();
@@ -110,6 +112,7 @@ export class GameController {
 
     // Create an empty asteroid belt - server will populate with authoritative asteroids
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    this.fuelDrops = [];
 
     // Initialize listeners
     if (this.playerManager.getLocalPlayer()) {
@@ -121,6 +124,7 @@ export class GameController {
 
     // Set up server asteroid event listeners
     this.setupServerAsteroidListeners();
+    this.setupServerFuelDropListeners();
 
     // Begin sending continuous local player updates to server
     PlayerNetwork.getInstance().startNetworkUpdates();
@@ -261,12 +265,41 @@ export class GameController {
     window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
   }
 
+  private handleServerFuelDropCreated = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ drop: FuelDropData }>;
+    const { drop } = customEvent.detail;
+    if (!drop || this.fuelDrops.some((existing) => existing.id === drop.id)) {
+      return;
+    }
+    this.fuelDrops.push(FuelDrop.fromData(drop));
+  };
+
+  private handleServerFuelDropDestroyed = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ dropId: string }>;
+    const index = this.fuelDrops.findIndex((drop) => drop.id === customEvent.detail.dropId);
+    if (index !== -1) {
+      this.fuelDrops.splice(index, 1);
+    }
+  };
+
+  private setupServerFuelDropListeners(): void {
+    window.addEventListener('serverFuelDropCreated', this.handleServerFuelDropCreated);
+    window.addEventListener('serverFuelDropDestroyed', this.handleServerFuelDropDestroyed);
+  }
+
+  private cleanupServerFuelDropListeners(): void {
+    window.removeEventListener('serverFuelDropCreated', this.handleServerFuelDropCreated);
+    window.removeEventListener('serverFuelDropDestroyed', this.handleServerFuelDropDestroyed);
+  }
+
   gameOver(deathCause?: string): void {
     const gameOverText = deathCause ? `Game Over: You were killed by ${deathCause}` : 'Game Over';
     this.gameStateManager.updateTextProperties(gameOverText, 1.0);
 
     // Clean up server asteroid listeners to prevent memory leaks
     this.cleanupServerAsteroidListeners();
+    this.cleanupServerFuelDropListeners();
+    this.fuelDrops = [];
 
     // Don't stop the game loop yet - let the text render for a few seconds
     setTimeout(() => {
@@ -378,6 +411,10 @@ export class GameController {
 
   getCurrRoidCount(): number {
     return this.currRoidBelt.roids.length;
+  }
+
+  getFuelDrops(): FuelDrop[] {
+    return this.fuelDrops;
   }
 
   // Score management — the server is authoritative; the local player's entity
@@ -597,6 +634,8 @@ export class GameController {
     // Check bot collisions with asteroids
     this.checkBotAsteroidCollisions();
 
+    this.checkShipFuelPickupCollisions();
+
     // Check boundary collisions for ships
     this.checkBoundaryCollisions();
 
@@ -706,6 +745,24 @@ export class GameController {
     }
   }
 
+  private checkShipFuelPickupCollisions(): void {
+    if (this.fuelDrops.length === 0) {
+      return;
+    }
+
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (currPlayer) {
+      this.collisionManager.checkShipFuelPickupCollisions(currPlayer, this.fuelDrops);
+    }
+
+    const botPlayers = this.networkManager.getAllPlayers().filter((player) => player.type === 'bot');
+    for (const botPlayer of botPlayers) {
+      if (botPlayer.ship && !botPlayer.ship.exploding && botPlayer.ship.health > 0) {
+        this.collisionManager.checkShipFuelPickupCollisions(botPlayer, this.fuelDrops);
+      }
+    }
+  }
+
   // Simple render method - no game logic, just rendering
   renderGame(): void {
     const currPlayer = this.playerManager.getLocalPlayer();
@@ -731,7 +788,8 @@ export class GameController {
       textAlpha,
       text,
       currPlayer.lives,
-      playersToRender
+      playersToRender,
+      this.fuelDrops
     );
   }
 }

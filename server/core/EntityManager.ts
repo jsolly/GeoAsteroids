@@ -1,7 +1,8 @@
 import { WebSocket } from 'ws';
 import type { Position, Velocity } from '../../shared-types';
 import { RNGService } from './RNGService';
-import { DEBUG, PALETTE, SHIP } from '../../src/constants';
+import { DEBUG, FUEL, PALETTE, SHIP } from '../../src/constants';
+import { createFuelTank } from '../../shared/fuel';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
@@ -20,6 +21,8 @@ export interface GameEntity {
   score: number;
   health: number;
   maxHealth: number;
+  fuel: number;
+  maxFuel: number;
   lastUpdate: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
@@ -103,8 +106,21 @@ export class EntityManager {
       entity.health = Math.max(0, Math.min(entity.maxHealth, allowedUpdates.health));
     }
 
+    if (typeof allowedUpdates.maxFuel === 'number' && Number.isFinite(allowedUpdates.maxFuel)) {
+      entity.maxFuel = Math.max(1, allowedUpdates.maxFuel);
+    }
+    if (typeof allowedUpdates.fuel === 'number' && Number.isFinite(allowedUpdates.fuel)) {
+      entity.fuel = Math.max(0, Math.min(entity.maxFuel, allowedUpdates.fuel));
+    }
+
     // Apply other allowed properties
-    const { maxHealth: ignoredMaxHealth, health: ignoredHealth, ...otherUpdates } = allowedUpdates;
+    const {
+      maxHealth: ignoredMaxHealth,
+      health: ignoredHealth,
+      maxFuel: ignoredMaxFuel,
+      fuel: ignoredFuel,
+      ...otherUpdates
+    } = allowedUpdates;
     Object.assign(entity, otherUpdates);
 
     // Update lastUpdate timestamp
@@ -138,6 +154,7 @@ export class EntityManager {
       score: 0,
       health: 100,
       maxHealth: 100,
+      ...createFuelTank(FUEL.START, FUEL.MAX),
       lastUpdate: Date.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       ws,
@@ -199,6 +216,7 @@ export class EntityManager {
         score: 0,
         health: 100,
         maxHealth: 100,
+        ...createFuelTank(FUEL.START, FUEL.MAX),
         lastUpdate: Date.now(),
         spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       };
@@ -313,6 +331,8 @@ export class EntityManager {
   private respawnShip(entity: GameEntity): void {
     entity.respawnTimer = undefined;
     entity.health = entity.maxHealth;
+    entity.fuel = FUEL.START;
+    entity.maxFuel = FUEL.MAX;
     entity.exploding = false;
     entity.explodeTime = undefined;
     this.placeEntityInArena(entity);

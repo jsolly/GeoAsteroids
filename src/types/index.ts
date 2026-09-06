@@ -3,6 +3,8 @@
  * Central location for all application types
  */
 
+import type { FuelDropData } from '../../shared-types';
+
 // ============================================================================
 // CORE GEOMETRY TYPES
 // ============================================================================
@@ -94,6 +96,8 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   readonly explodeTime: number;
   readonly empPulseActive: boolean;
   readonly empPulseTime: number;
+  readonly fuel: number;
+  readonly maxFuel: number;
   readonly lastPosition?: Position;
   readonly lastRotation?: number;
   readonly isBot: boolean;
@@ -101,7 +105,8 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   setBlinkOn(): void;
   explode(): void;
   setExploding(): void;
-  empPulse(): void;
+  empPulse(): boolean;
+  addFuel(amount: number): number;
   updateEmpPulse(): void;
   updateExplosion(): void;
   updateInvincibility(): void;
@@ -239,6 +244,8 @@ export interface CustomEventMap {
     shipPosition: Position;
     shipRadius: number;
   }>;
+  serverFuelDropCreated: CustomEvent<{ drop: FuelDropData }>;
+  serverFuelDropDestroyed: CustomEvent<{ dropId: string }>;
   botShoot: CustomEvent<{
     laserStart: Position;
     laserDirection: Velocity;
@@ -309,6 +316,15 @@ export interface GameConstants {
   readonly EMP: {
     readonly RADIUS: number;
     readonly DURATION: number;
+  };
+
+  readonly FUEL: {
+    readonly MAX: number;
+    readonly START: number;
+    readonly EMP_COST: number;
+    readonly DROP_AMOUNT: number;
+    readonly DROP_RADIUS: number;
+    readonly MIN_ROID_SIZE_TO_DROP: number;
   };
 }
 

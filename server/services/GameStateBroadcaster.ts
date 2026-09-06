@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
-import { GameEngine } from '../core/GameEngine';
+import type { FuelDropData } from '../../shared-types';
 import { logger } from '../../setup/serverLogger';
+import { GameEngine } from '../core/GameEngine';
 
 export class GameStateBroadcaster {
   private gameEngine: GameEngine;
@@ -144,6 +145,26 @@ export class GameStateBroadcaster {
       asteroidCount: asteroids.length,
       asteroidIds: asteroids.map(a => a.id)
     });
+    this.broadcastToAll(message);
+  }
+
+  public broadcastFuelDropCreated(drop: FuelDropData): void {
+    const message = {
+      type: 'fuelDropCreate',
+      data: { drop },
+      timestamp: Date.now(),
+    };
+
+    this.broadcastToAll(message);
+  }
+
+  public broadcastFuelDropDestroyed(dropId: string): void {
+    const message = {
+      type: 'fuelDropDestroy',
+      data: { dropId },
+      timestamp: Date.now(),
+    };
+
     this.broadcastToAll(message);
   }
 

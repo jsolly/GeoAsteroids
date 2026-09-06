@@ -474,9 +474,51 @@ export class GameInteractions {
     console.log('✅ Waited for asteroid destruction');
   }
 
-  /**
-   * Get ship health
-   */
+  async getShipFuel(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as { gameController?: { getCurrPlayer?: () => { ship?: { fuel?: number } } } }).gameController;
+      return gameController?.getCurrPlayer?.()?.ship?.fuel ?? -1;
+    });
+  }
+
+  async getFuelDropCount(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as { gameController?: { getFuelDrops?: () => unknown[] } }).gameController;
+      return gameController?.getFuelDrops?.()?.length ?? 0;
+    });
+  }
+
+  async placeFuelDropOnLocalShip(amount = 25): Promise<string> {
+    return await this.page.evaluate((dropAmount) => {
+      const gameController = (
+        window as {
+          gameController?: {
+            getCurrPlayer?: () => { ship?: { position?: { x: number; y: number } } };
+          };
+        }
+      ).gameController;
+      const position = gameController?.getCurrPlayer?.()?.ship?.position;
+      if (!position) {
+        throw new Error('No local ship position for fuel drop');
+      }
+      const dropId = `test-fuel-${Date.now()}`;
+      window.dispatchEvent(
+        new CustomEvent('serverFuelDropCreated', {
+          detail: {
+            drop: {
+              id: dropId,
+              position: { x: position.x, y: position.y },
+              velocity: { x: 0, y: 0 },
+              amount: dropAmount,
+              radius: 40,
+            },
+          },
+        })
+      );
+      return dropId;
+    }, amount);
+  }
+
   async getShipHealth(): Promise<number> {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;
