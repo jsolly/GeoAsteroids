@@ -25,7 +25,7 @@ test('player and bot ships share the phosphor hull draw path', () => {
 
 test('shield ring is a shared phosphor stroke, not a filled disc', () => {
   const start = shipSrc.indexOf('export function drawShipShield');
-  const end = shipSrc.indexOf('function drawFloatingHealthCapsule');
+  const end = shipSrc.indexOf('function drawShipImpactFlash');
   const shieldFn = shipSrc.slice(start, end);
   expect(start).toBeGreaterThan(-1);
   expect(shipSrc).toMatch(/drawShipShield\(ctx, ship, screenX, screenY, shipR\)/);

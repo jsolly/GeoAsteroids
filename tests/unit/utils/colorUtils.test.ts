@@ -29,6 +29,7 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.HUD_MUTED).toBe('#64748B');
   expect(PALETTE.DANGER).toBe('#F43F5E');
   expect(PALETTE.HEALTH).toBe('#4ADE80');
+  expect(PALETTE.LOOT).toBe('#FBBF24');
   expect(TITLE.ACCENT).toBe('#A78BFA');
   expect(PALETTE).not.toHaveProperty('ACCENT_UI');
   expect(PALETTE.SHIELD).toBe('#67E8F9');
