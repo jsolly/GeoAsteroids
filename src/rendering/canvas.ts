@@ -28,6 +28,7 @@ import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
+import { drawStarfield } from './starfield';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
 class CanvasManager {
@@ -196,6 +197,8 @@ class CanvasManager {
     // Clear the canvas
     ctx.fillStyle = PALETTE.BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawStarfield(currShip.position);
 
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
