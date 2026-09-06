@@ -14,7 +14,14 @@ import { logger } from '../../utils/Logger';
 
 type RadarMark =
   | { kind: 'local'; x: number; y: number; heading: number; factionId?: SoftFactionId }
-  | { kind: 'other'; x: number; y: number; heading: number; color: string; factionId?: SoftFactionId }
+  | {
+      kind: 'other';
+      x: number;
+      y: number;
+      heading: number;
+      color: string;
+      factionId?: SoftFactionId;
+    }
   | { kind: 'roid'; x: number; y: number };
 
 export function projectWorldToMiniMap(
