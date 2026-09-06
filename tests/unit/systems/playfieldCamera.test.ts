@@ -157,6 +157,21 @@ describe('playfield zoom paints the radar belt when 1:1 would be empty', () => {
     expect(countRocksOnCanvas(belt, ship, SMALL, scale)).toBeGreaterThan(1);
   });
 
+  test('PO bar: after 60s and 70s, minimap dots still mean on-canvas rocks', () => {
+    const ships = [TAB_A_IN_BELT, TAB_B_OUTSIDE, RIM_1080P_MISS, { x: 2000, y: 1500 }];
+    for (const seconds of [60, 70]) {
+      const field = beltAfterTicks(11, 20, seconds * 60);
+      expect(field.length, `T+${seconds}s belt (radar dots)`).toBeGreaterThan(0);
+      for (const ship of ships) {
+        const scale = playfieldZoom(field, ship, SMALL);
+        expect(
+          countRocksOnCanvas(field, ship, SMALL, scale),
+          `T+${seconds}s 800×600 ship ${ship.x},${ship.y}`
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
   test('a pending nearby rock does not hide the radar belt', () => {
     const ship = { x: 0, y: 0 };
     const field = [
