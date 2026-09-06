@@ -1,7 +1,17 @@
 import type { Position } from '../../shared-types';
 
 export type PlayfieldSize = { width: number; height: number };
-export type PlayfieldRock = { position: Position; r?: number };
+export type PlayfieldRock = {
+  position: Position;
+  r?: number;
+  angle?: number;
+  pendingDestruction?: boolean;
+};
+
+/** Stay 1:1 only when this many drawable rocks sit inside the comfort inset. */
+export const PLAYFIELD_MIN_VISIBLE = 2;
+/** Pixels inside the canvas edge a rock center must be to count as "on the playfield". */
+export const PLAYFIELD_COMFORT_INSET = 48;
 
 /** Ship-centered projection. Scale 1 matches today's 1:1 camera. */
 export function projectWorldToScreen(
@@ -32,43 +42,70 @@ export function isRockOnCanvas(
   );
 }
 
+export function isDrawablePlayfieldRock(roid: PlayfieldRock): boolean {
+  if (roid.pendingDestruction) {
+    return false;
+  }
+  if (!Number.isFinite(roid.position.x) || !Number.isFinite(roid.position.y)) {
+    return false;
+  }
+  if (roid.r !== undefined && !Number.isFinite(roid.r)) {
+    return false;
+  }
+  if (roid.angle !== undefined && !Number.isFinite(roid.angle)) {
+    return false;
+  }
+  return true;
+}
+
 export function countRocksOnCanvas(
   roids: readonly PlayfieldRock[],
   ship: Position,
   canvas: PlayfieldSize,
-  scale = 1
+  scale = 1,
+  margin = 0
 ): number {
-  return roids.filter((roid) => isRockOnCanvas(roid.position, ship, canvas, scale)).length;
+  return roids.filter((roid) => isRockOnCanvas(roid.position, ship, canvas, scale, margin)).length;
+}
+
+function farthestReach(roids: readonly PlayfieldRock[], ship: Position): number {
+  let maxDist = 1;
+  for (const roid of roids) {
+    const reach = Math.hypot(roid.position.x - ship.x, roid.position.y - ship.y) + (roid.r ?? 0);
+    if (Number.isFinite(reach) && reach > maxDist) {
+      maxDist = reach;
+    }
+  }
+  return maxDist;
+}
+
+function fitFarthestRock(roids: readonly PlayfieldRock[], ship: Position, canvas: PlayfieldSize): number {
+  const inset = Math.min(canvas.width, canvas.height) / 2 - 24;
+  if (inset <= 0) {
+    return 1;
+  }
+  return Math.min(1, inset / farthestReach(roids, ship));
 }
 
 /**
- * Keep 1:1 while any belt rock is already on the playfield. If the ship-centered
- * window is empty (minimap still has dots), zoom just enough that the farthest
- * rock fits. That is the canvas/minimap mismatch: two cameras, one belt.
+ * Keep 1:1 while a real cluster is already on the playfield. Edge-clip or
+ * hidden (pending / undrawable) rocks do not pin the camera — those are the
+ * flaky empty-canvas + minimap-dots misses after #445.
  */
 export function playfieldZoom(
   roids: readonly PlayfieldRock[],
   ship: Position,
   canvas: PlayfieldSize
 ): number {
-  if (roids.length === 0) {
+  const belt = roids.filter(isDrawablePlayfieldRock);
+  if (belt.length === 0) {
     return 1;
   }
-  if (countRocksOnCanvas(roids, ship, canvas, 1) > 0) {
+  const comfortable = countRocksOnCanvas(belt, ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
+  if (comfortable >= PLAYFIELD_MIN_VISIBLE) {
     return 1;
   }
-  let maxDist = 1;
-  for (const roid of roids) {
-    const reach = Math.hypot(roid.position.x - ship.x, roid.position.y - ship.y) + (roid.r ?? 0);
-    if (reach > maxDist) {
-      maxDist = reach;
-    }
-  }
-  const inset = Math.min(canvas.width, canvas.height) / 2 - 24;
-  if (inset <= 0) {
-    return 1;
-  }
-  return Math.min(1, inset / maxDist);
+  return fitFarthestRock(belt, ship, canvas);
 }
 
 /** Stroke path for a roid. Empty offsets still paint a circle so radar dots are not holes. */

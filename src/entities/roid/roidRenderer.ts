@@ -2,9 +2,14 @@ import { PALETTE, ROID, VISUAL } from '../../constants';
 import type { Ship } from '../../entities/ship/Ship';
 import { isAsteroidPending } from '../../physics/collision/asteroidHitFeel';
 import { canvasManager } from '../../rendering/canvas';
-import { drawingOffsets } from '../../rendering/playfieldCamera';
+import { drawingOffsets, type PlayfieldRock } from '../../rendering/playfieldCamera';
 
 import type { Roid } from './Roid';
+
+/** Zoom from rocks the playfield will actually stroke — not pending or NaN poses. */
+export function rocksForPlayfieldZoom(roids: readonly Roid[]): PlayfieldRock[] {
+  return roids.filter((roid) => !isAsteroidPending(roid) && canDrawAsteroid(roid));
+}
 
 export function getRoidStrokeWidth(radius: number): number {
   if (radius >= ROID.SIZE * 0.8) {

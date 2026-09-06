@@ -4,6 +4,7 @@ import { RNGService } from '../../../server/core/RNGService';
 import { partitionAsteroidSnapshot } from '../../../src/network/services/asteroidFieldSync';
 import { getAsteroidFieldRadius, stepAsteroidMotion } from '../../../src/physics/asteroidMotion';
 import {
+  PLAYFIELD_COMFORT_INSET,
   countRocksOnCanvas,
   drawingOffsets,
   playfieldZoom,
@@ -135,5 +136,38 @@ describe('playfield zoom paints the radar belt when 1:1 would be empty', () => {
     const zoomed = countRocksOnCanvas(field, rim, SMALL, playfieldZoom(field, rim, SMALL));
     expect(zoomed).toBeGreaterThan(0);
     expect(zoomed).toBeGreaterThanOrEqual(oneToOne);
+  });
+
+  test('one edge-clip rock does not pin 1:1 while the belt is off-screen', () => {
+    const ship = { x: 0, y: 0 };
+    const edge = {
+      position: { x: SMALL.width / 2 - 4, y: 0 },
+      r: 20,
+    };
+    const belt = [
+      edge,
+      { position: { x: 900, y: 0 }, r: 20 },
+      { position: { x: 950, y: 80 }, r: 20 },
+      { position: { x: 880, y: -60 }, r: 20 },
+    ];
+    expect(countRocksOnCanvas([edge], ship, SMALL, 1)).toBe(1);
+    expect(countRocksOnCanvas([edge], ship, SMALL, 1, -PLAYFIELD_COMFORT_INSET)).toBe(0);
+    const scale = playfieldZoom(belt, ship, SMALL);
+    expect(scale).toBeLessThan(1);
+    expect(countRocksOnCanvas(belt, ship, SMALL, scale)).toBeGreaterThan(1);
+  });
+
+  test('a pending nearby rock does not hide the radar belt', () => {
+    const ship = { x: 0, y: 0 };
+    const field = [
+      { position: { x: 10, y: 0 }, r: 20, pendingDestruction: true },
+      { position: { x: 900, y: 0 }, r: 20 },
+      { position: { x: 940, y: 40 }, r: 20 },
+    ];
+    expect(countRocksOnCanvas(field, ship, SMALL, 1)).toBe(1);
+    const scale = playfieldZoom(field, ship, SMALL);
+    expect(scale).toBeLessThan(1);
+    const drawable = field.filter((rock) => !rock.pendingDestruction);
+    expect(countRocksOnCanvas(drawable, ship, SMALL, scale)).toBeGreaterThan(0);
   });
 });
