@@ -16,6 +16,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import {
   bindHarpoonFieldSource,
   collectPlayHarpoonField,
@@ -48,6 +49,7 @@ import {
   getTerrainSeed,
 } from '../physics/terrain/terrainSession';
 import { canvasManager } from '../rendering/canvas';
+import { playfieldZoom } from '../rendering/playfieldCamera';
 import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { setPlayView } from '../ui/uiUtils';
 import { formatGameOverText, preferDeathCause } from '../utils/deathCause';
@@ -808,10 +810,17 @@ export class GameController {
       .map((player) =>
         harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
       );
+    const rocks = this.currRoidBelt?.roids ?? [];
     const canvas = canvasManager.getCanvas();
+    const shipPos = local?.ship.position ?? { x: 0, y: 0 };
+    // KeyE runs outside the render loop. Recompute zoom here so latch range
+    // matches the playfield the pilot sees, not last frame's stored scale=1.
+    const playfieldScale = canvas
+      ? playfieldZoom(rocksForPlayfieldZoom(rocks), shipPos, canvas)
+      : canvasManager.getPlayfieldScale();
     return {
-      bodies: collectPlayHarpoonField(this.currRoidBelt?.roids ?? [], ships),
-      playfieldScale: canvasManager.getPlayfieldScale(),
+      bodies: collectPlayHarpoonField(rocks, ships),
+      playfieldScale,
       canvas: canvas ? { width: canvas.width, height: canvas.height } : undefined,
     };
   }

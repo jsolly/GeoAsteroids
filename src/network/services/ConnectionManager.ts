@@ -792,15 +792,22 @@ export class ConnectionManager {
     applyTerrainSeed(data.terrainSeed);
 
     // Store the local player ID from server response
+    const localPlayer = PlayerManager.getInstance().getLocalPlayer();
     if (data.id) {
       this.localPlayerId = data.id;
-    }
-    if (data.factionId) {
-      const localPlayer = PlayerManager.getInstance().getLocalPlayer();
       if (localPlayer) {
-        localPlayer.factionId = data.factionId;
-        localPlayer.ship.factionId = data.factionId;
+        localPlayer.id = data.id;
       }
+    }
+    if (localPlayer) {
+      const selectedKit = getSelectedShipKitId();
+      if (localPlayer.ship.kitId !== selectedKit) {
+        applyShipKitToShip(localPlayer.ship, selectedKit);
+      }
+    }
+    if (data.factionId && localPlayer) {
+      localPlayer.factionId = data.factionId;
+      localPlayer.ship.factionId = data.factionId;
     }
     if (!keepField) {
       this.initializeAsteroids();
