@@ -34,6 +34,8 @@ describe('Satellite pickups', () => {
     expect(state.satellitePickups?.[0]?.id).toMatch(/^server-sat-pickup-/);
     expect(state.satellitePickups?.[0]?.state).toBe('loose');
     expect(state.satellitePickups?.[0]?.color.toLowerCase()).toBe('#fbbf24');
+    expect(state.loot).toEqual([]);
+    expect(gameEngine.getDiagnostics().loot).toBe(0);
     expect(gameEngine.getDiagnostics().satellitePickups).toBe(2);
   });
 
@@ -46,6 +48,9 @@ describe('Satellite pickups', () => {
     expect(result.success).toBe(true);
     expect(gameEngine.getPlayer('pilot')?.score).toBe(SATELLITE_PICKUP.SCORE_BONUS);
     expect(gameEngine.getPlayer('pilot')?.spawnProtectionTimer).toBe(SATELLITE_PICKUP.SHIELD_FRAMES);
+    // Pickup invuln is spawn-protection, not the #454 F-key laser bubble.
+    expect(gameEngine.getPlayer('pilot')?.shieldActive).toBe(false);
+    expect(gameEngine.getPlayer('pilot')?.shieldCooldown).toBe(0);
 
     const attached = gameEngine.getSatellitePickup(pickup.id);
     expect(attached?.state).toBe('orbiting');
@@ -100,6 +105,20 @@ describe('Satellite pickups', () => {
     const released = gameEngine.getSatellitePickup(pickup.id);
     expect(released?.state).toBe('loose');
     expect(released?.ownerId).toBeNull();
+    expect(gameEngine.getLoot().length).toBeGreaterThan(0);
+    expect(gameEngine.getGameState().loot.length).toBe(gameEngine.getLoot().length);
+  });
+
+  test('F-key shield still raises after a satellite collect', () => {
+    gameEngine.addPlayer('pilot', 'Pilot', mockWs as never, { x: 0, y: 0 });
+    const pickup = gameEngine.getAllSatellitePickups()[0]!;
+    gameEngine.updatePlayer('pilot', { position: { ...pickup.position } });
+    expect(gameEngine.handleSatellitePickupCollected(pickup.id, 'pilot').success).toBe(true);
+    expect(gameEngine.requestShield('pilot', true)).toBe(true);
+    const pilot = gameEngine.getPlayer('pilot');
+    expect(pilot?.shieldActive).toBe(true);
+    expect(pilot?.shieldTime).toBeGreaterThan(0);
+    expect(pilot?.spawnProtectionTimer).toBe(SATELLITE_PICKUP.SHIELD_FRAMES);
   });
 
   test('resetting the world clears pickups', () => {
