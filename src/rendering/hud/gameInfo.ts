@@ -1,35 +1,42 @@
 import { FACTION_LABELS, getSideColor } from '../../../shared/factions';
 import type { FactionId } from '../../../shared-types';
-import { PALETTE, SHIP, VISUAL } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { getShipKit } from '../../entities/ship/shipKits';
 import { hexToRgba } from '../../utils/colorUtils';
 
+import { layoutHudCluster } from './cluster';
+
 export function drawScoreOverlay(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   score: number,
+  lives: number,
   faction?: FactionId
 ): void {
   ctx.save();
-  ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
+  ctx.fillStyle = PALETTE.HUD;
   ctx.font = VISUAL.SCORE_FONT;
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'middle';
 
-  const scoreY = 20 + SHIP.SIZE + 8;
-  ctx.fillText(score.toString(), 20, scoreY);
+  const { score: origin } = layoutHudCluster(lives);
+  ctx.fillText(score.toString(), origin.x, origin.y);
+
+  const metaY = origin.y + VISUAL.HUD_LIFE_SIZE / 2 + 8;
+  ctx.font = VISUAL.NAME_LABEL_FONT;
+  ctx.textBaseline = 'top';
   if (faction) {
     ctx.fillStyle = hexToRgba(getSideColor(faction), 0.85);
-    ctx.fillText(FACTION_LABELS[faction], 20, scoreY + 14);
+    ctx.fillText(FACTION_LABELS[faction], VISUAL.HUD_INSET, metaY);
   }
 
   const localShip = PlayerManager.getInstance().getLocalShip();
   if (localShip) {
     const kit = getShipKit(localShip.kitId);
-    ctx.font = VISUAL.NAME_LABEL_FONT;
-    ctx.fillText(kit.name, 20, scoreY + 28);
+    ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
+    ctx.fillText(kit.name, VISUAL.HUD_INSET, metaY + 14);
   }
 
   const gameStateManager = GameStateManager.getInstance();
@@ -37,6 +44,7 @@ export function drawScoreOverlay(
     ctx.fillStyle = PALETTE.DANGER;
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
     ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, 12);
   }
 

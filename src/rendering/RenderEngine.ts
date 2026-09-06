@@ -22,7 +22,7 @@ import { canvasManager } from './canvas';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
-import { drawMiniMap, drawServerInfo } from './hud/minimap';
+import { drawMiniMap } from './hud/minimap';
 
 export interface RenderFrame {
   readonly player: Player;
@@ -266,7 +266,7 @@ export class RenderEngine {
     } = frame;
 
     // Render HUD elements
-    drawScoreOverlay(this.ctx, this.canvas, score, player.factionId);
+    drawScoreOverlay(this.ctx, this.canvas, score, lives, player.factionId);
     drawLivesIndicator(this.ctx, lives, player.ship.color, player.ship.kitId);
 
     if (text && textAlpha > 0) {
@@ -279,7 +279,6 @@ export class RenderEngine {
 
     if (showMinimap) {
       drawMiniMap(this.ctx, this.canvas, player.ship);
-      drawServerInfo(this.ctx, this.canvas);
     }
 
     // Render debug information

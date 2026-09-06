@@ -1,5 +1,5 @@
 import type { SoftFactionId } from '../../../shared-types';
-import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
+import { GAME, LASER, PALETTE, SHIP, TITLE, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
@@ -624,7 +624,7 @@ function drawAbilityFx(
   if (ship.abilityActiveFrames > 0 && ship.harpoonTimer <= 0 && ship.shieldTimer <= 0) {
     ctx.beginPath();
     ctx.arc(screenX, screenY, shipR + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = hexToRgba(PALETTE.ACCENT_UI, 0.45);
+    ctx.strokeStyle = hexToRgba(TITLE.ACCENT, 0.45);
     ctx.lineWidth = 3;
     ctx.stroke();
   }

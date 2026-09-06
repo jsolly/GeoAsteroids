@@ -51,7 +51,6 @@ export const CANVAS = {
 // ============================================================================
 // LOCKED PLAYFIELD PALETTE
 // ============================================================================
-// Exact hexes for the visual pass. accent_ui is title/menu only — never the playfield.
 export const PALETTE = {
   BG: '#000011',
   STARS: '#8BA3C7',
@@ -65,7 +64,10 @@ export const PALETTE = {
   HUD_MUTED: '#64748B',
   DANGER: '#F43F5E',
   HEALTH: '#4ADE80',
-  ACCENT_UI: '#A78BFA',
+} as const;
+
+export const TITLE = {
+  ACCENT: '#A78BFA',
 } as const;
 
 // Retro vector pass: hairline polylines, no entity fills, phosphor glow hard-capped ≤ stroke
@@ -103,8 +105,17 @@ export const VISUAL = {
   // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
   TITLE_STARS_PER_1080P: 48,
   MINIMAP_SIZE: 96,
-  MINIMAP_DOT: 3,
-  SCORE_FONT: '10px Arial',
+  MINIMAP_DOT: 5,
+  MINIMAP_LOCAL_SIZE: 6,
+  MINIMAP_ROID: 1.5,
+  MINIMAP_VOID_ALPHA: 0.5,
+  MINIMAP_RING_ALPHA: 0.85,
+  HUD_INSET: 16,
+  HUD_LIFE_SIZE: 14,
+  HUD_LIFE_HEADING: Math.PI / 2,
+  HUD_LIFE_GAP: 6,
+  HUD_SCORE_GAP: 10,
+  SCORE_FONT: '14px Arial',
   NAME_LABEL_FONT: '11px Arial',
   NAME_LABEL_ALPHA: 0.4,
 } as const;

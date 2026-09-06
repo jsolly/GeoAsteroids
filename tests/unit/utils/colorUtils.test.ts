@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { DEBUG, PALETTE, ROID, VISUAL } from '../../../src/constants';
+import { DEBUG, PALETTE, ROID, SHIP, TITLE, VISUAL } from '../../../src/constants';
 import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Player } from '../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
@@ -29,7 +29,8 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.HUD_MUTED).toBe('#64748B');
   expect(PALETTE.DANGER).toBe('#F43F5E');
   expect(PALETTE.HEALTH).toBe('#4ADE80');
-  expect(PALETTE.ACCENT_UI).toBe('#A78BFA');
+  expect(TITLE.ACCENT).toBe('#A78BFA');
+  expect(PALETTE).not.toHaveProperty('ACCENT_UI');
 });
 
 test('faction colors map local mint, remote sky, bot amber', () => {
@@ -127,8 +128,9 @@ test('default play path keeps debug chrome gated off', () => {
   expect(isDebugMode()).toBe(false);
 });
 
-test('HUD score stays whispered and name labels stay faded', () => {
-  expect(VISUAL.SCORE_FONT).toBe('10px Arial');
+test('HUD score stays readable in the compact cluster and name labels stay faded', () => {
+  expect(VISUAL.SCORE_FONT).toBe('14px Arial');
+  expect(VISUAL.HUD_LIFE_SIZE).toBeLessThan(SHIP.SIZE / 2);
   expect(VISUAL.NAME_LABEL_ALPHA).toBeLessThanOrEqual(0.45);
   expect(VISUAL.NAME_LABEL_ALPHA).toBeGreaterThan(0);
 });
@@ -142,5 +144,7 @@ test('applyLockedPaletteCss writes title/menu custom properties', () => {
   } as CSSStyleDeclaration);
   expect(props.get('--palette-bg')).toBe(PALETTE.BG);
   expect(props.get('--palette-stars')).toBe(PALETTE.STARS);
-  expect(props.get('--palette-accent')).toBe(PALETTE.ACCENT_UI);
+  expect(props.get('--palette-accent')).toBe(TITLE.ACCENT);
+  expect(props.get('--palette-hud')).toBe(PALETTE.HUD);
+  expect(props.get('--palette-hud-muted')).toBe(PALETTE.HUD_MUTED);
 });
