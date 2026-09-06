@@ -123,6 +123,13 @@ export class GameServerWorld {
     });
   }
 
+  shootSatellite(attacker: Pilot, satelliteId: string, damage: number = DAMAGE.LASER_HIT): void {
+    this.send(attacker, {
+      type: 'satelliteDamage',
+      data: { satelliteId, attackerId: attacker.id, damage },
+    });
+  }
+
   shootBot(attacker: Pilot, botId: string, damage: number = DAMAGE.LASER_HIT): void {
     this.send(attacker, {
       type: 'botDamage',

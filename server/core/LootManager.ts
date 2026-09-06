@@ -32,11 +32,15 @@ export class LootManager {
   }
 
   public spawnFromKill(entity: GameEntity, gameTime: number): LootData[] {
-    const { pelletMasses } = planKillLoot(entity.mass ?? GROWTH.BASE_MASS);
+    return this.spawnFromPosition(entity.position, entity.mass ?? GROWTH.BASE_MASS, gameTime);
+  }
+
+  public spawnFromPosition(position: Position, mass: number, gameTime: number): LootData[] {
+    const { pelletMasses } = planKillLoot(mass);
     const spawned: LootData[] = [];
 
     for (const pelletMass of pelletMasses) {
-      const drop = this.createPellet(entity.position, pelletMass, gameTime);
+      const drop = this.createPellet(position, pelletMass, gameTime);
       this.loot.set(drop.id, drop);
       spawned.push(this.toPublic(drop));
     }

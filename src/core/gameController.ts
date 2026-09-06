@@ -16,6 +16,7 @@ import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { SatelliteManager } from '../entities/satellite/SatelliteManager';
 import {
   bindHarpoonFieldSource,
   collectPlayHarpoonField,
@@ -555,6 +556,10 @@ export class GameController {
     return LootField.getInstance().getAll();
   }
 
+  getSatellites() {
+    return SatelliteManager.getInstance().getAll();
+  }
+
   // Score management — the server is authoritative; the local player's entity
   // score is synced from the server's gameState broadcast.
   getCurrScore(): number {
@@ -786,8 +791,12 @@ export class GameController {
       this.publishLiveHarpoonField(currPlayer);
     }
 
+    SatelliteManager.getInstance().update();
+
     // Check laser collisions with asteroids and bots
     this.checkLaserCollisions(allPlayers);
+    this.checkLaserSatelliteCollisions();
+    this.checkSatelliteLaserCollisions();
 
     // Ship↔asteroid damage is server-owned. Keep local ship-ship overlap
     // for offline DOT / visual contact only. Factions still skip allies.
@@ -923,6 +932,32 @@ export class GameController {
       }
       this.collisionManager.explodeIncomingLasersOnShieldedShip(other.ship.lasers, currPlayer.ship);
     }
+  }
+
+  private checkLaserSatelliteCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+    const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
+    this.collisionManager.checkLaserSatelliteCollisions(
+      currPlayer.ship.lasers,
+      SatelliteManager.getInstance().getAll(),
+      attackerId
+    );
+  }
+
+  private checkSatelliteLaserCollisions(): void {
+    const currPlayer = this.playerManager.getLocalPlayer();
+    if (!currPlayer) {
+      return;
+    }
+    const localPlayerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
+    this.collisionManager.checkSatelliteLaserCollisions(
+      SatelliteManager.getInstance().getAll(),
+      currPlayer.ship,
+      localPlayerId
+    );
   }
 
   // Check boundary collisions for ships

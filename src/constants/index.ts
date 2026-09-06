@@ -255,6 +255,29 @@ export const ROID = {
 } as const;
 
 // ============================================================================
+// HOSTILE NPC SAUCER / SATELLITE
+// ============================================================================
+// Ambient, server-owned. Not a ship kit and not ION/EMBER-aligned.
+export const SATELLITE = {
+  SIZE: 28,
+  ORBIT_RADIUS: 160,
+  ORBIT_SPEED: 0.018,
+  DRIFT_SPEED: 0.35,
+  SHOOT_INTERVAL_FRAMES: 90,
+  AIM_JITTER: 0.22,
+  AMBIENT_COUNT: 2,
+  MAX_COUNT: 4,
+  HEALTH: 50,
+  POINTS: 75,
+  COLLISION_DAMAGE: 50,
+  DESPAWN_DISTANCE: 2600,
+  BOUNDARY_RADIUS: 2800,
+  EXPLODE_DURATION_FRAMES: 18,
+  RESPAWN_FRAMES: 180,
+  MASS: 1,
+} as const;
+
+// ============================================================================
 // EMP PULSE CONFIGURATION
 // ============================================================================
 export const EMP = {
@@ -366,6 +389,12 @@ export const DEBUG = {
     MOVEMENT: true,
     LASERS: true,
     SPAWN_PROTECTION: false,
+  },
+
+  SATELLITE: {
+    COUNT: 2,
+    MOVEMENT: true,
+    LASERS: true,
   },
 
   // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)

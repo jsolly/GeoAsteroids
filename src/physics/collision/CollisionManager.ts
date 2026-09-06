@@ -7,6 +7,7 @@ import { PlayerManager } from '../../entities/player/PlayerManager';
 import { canDealCombatDamage } from '../../entities/player/softFactions';
 import type { Roid } from '../../entities/roid/Roid';
 import { isBiggestAsteroid, pointsForRoidSize } from '../../entities/roid/roidScore';
+import type { Satellite } from '../../entities/satellite/Satellite';
 import type { Ship } from '../../entities/ship/Ship';
 import {
   isShieldBlockingLasers,
@@ -435,6 +436,81 @@ export class CollisionManager {
   private factionForShip(ship: Ship): Player['factionId'] {
     const match = this.networkManager.getAllPlayers().find((player) => player.ship === ship);
     return match?.factionId;
+  }
+
+  checkLaserSatelliteCollisions(
+    lasers: Laser[],
+    satellites: Satellite[],
+    attackerId: string
+  ): void {
+    for (let i = lasers.length - 1; i >= 0; i--) {
+      const laser = lasers[i];
+      if (laser === undefined || laser.hasExploded) {
+        continue;
+      }
+
+      for (const satellite of satellites) {
+        if (satellite.exploding || satellite.health <= 0) {
+          continue;
+        }
+        if (checkLaserShipCollision(laser.position, satellite.position, satellite.radius)) {
+          this.networkManager.sendMessage({
+            type: 'satelliteDamage',
+            data: {
+              satelliteId: satellite.id,
+              attackerId,
+              damage: DAMAGE.LASER_HIT,
+            },
+          });
+          laser.updateExplodeTime();
+          laser.playHitSound();
+          break;
+        }
+      }
+    }
+  }
+
+  checkSatelliteLaserCollisions(
+    satellites: Satellite[],
+    localShip: Ship,
+    localPlayerId: string
+  ): void {
+    if (!localShip || isShipCollisionImmune(localShip)) {
+      return;
+    }
+
+    for (const satellite of satellites) {
+      for (const laser of satellite.lasers) {
+        if (laser.hasExploded) {
+          continue;
+        }
+        if (
+          checkLaserShipCollision(
+            laser.position,
+            localShip.position,
+            laserCollisionRadius(localShip.r, localShip)
+          )
+        ) {
+          if (isShieldBlockingLasers(localShip)) {
+            noteShieldLaserHit(localShip);
+            laser.updateExplodeTime();
+            laser.playHitSound();
+            return;
+          }
+          this.networkManager.sendMessage({
+            type: 'laserDamage',
+            data: {
+              targetPlayerId: localPlayerId,
+              attackerId: satellite.id,
+              damage: DAMAGE.LASER_HIT,
+            },
+          });
+          laser.updateExplodeTime();
+          laser.playHitSound();
+          return;
+        }
+      }
+    }
   }
 
   /**
