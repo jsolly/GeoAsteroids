@@ -542,7 +542,10 @@ export class ConnectionManager {
   }
 
   private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
-    const { created, updated, removed } = partitionAsteroidSnapshot(asteroids, this.seenAsteroidIds);
+    const { created, updated, removed } = partitionAsteroidSnapshot(
+      asteroids,
+      this.seenAsteroidIds
+    );
     for (const asteroid of created) {
       window.dispatchEvent(
         new CustomEvent('serverAsteroidCreated', {
