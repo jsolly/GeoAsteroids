@@ -68,6 +68,7 @@ export class GameController {
   private recentShockwaveKeys = new Set<string>();
   private readonly otherShips: { ship: Ship; id: string }[] = [];
   private readonly laserTargets: LaserTarget[] = [];
+  private readonly incomingLocalTarget: LaserTarget[] = [];
   private readonly localFirstPlayers: Player[] = [];
   private readonly laserOwnerSeen = new Set<string>();
   private readonly laserHitOptions: LaserCollisionOptions = { reportAsteroidHits: true };
@@ -866,6 +867,21 @@ export class GameController {
     // reconciles the local player — asteroids can arrive before that.
     const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
 
+    const incoming = this.incomingLocalTarget[0];
+    if (incoming) {
+      incoming.ship = currPlayer.ship;
+      incoming.id = attackerId;
+      incoming.type = 'local';
+      incoming.faction = currPlayer.factionId;
+    } else {
+      this.incomingLocalTarget[0] = {
+        ship: currPlayer.ship,
+        id: attackerId,
+        type: 'local',
+        faction: currPlayer.factionId,
+      };
+    }
+
     this.laserOwnerSeen.clear();
     const ships = allPlayers.includes(currPlayer)
       ? allPlayers
@@ -882,10 +898,18 @@ export class GameController {
       this.laserHitOptions.reportAsteroidHits = shouldReportLaserAsteroidHit(ownerType);
       this.laserHitOptions.attackerFaction = player.factionId;
       const ownerAttackerId = ownerType === 'local' ? attackerId : player.id;
+      // Human shooters report their own hits. Bots have no shooter client, so
+      // incoming bot lasers use the same hull check against the local ship.
+      const targets =
+        ownerType === 'local'
+          ? this.laserTargets
+          : ownerType === 'bot'
+            ? this.incomingLocalTarget
+            : [];
       this.collisionManager.checkLaserCollisions(
         player.ship.lasers,
         this.currRoidBelt.roids,
-        ownerType === 'local' ? this.laserTargets : [],
+        targets,
         ownerAttackerId,
         this.laserHitOptions
       );
