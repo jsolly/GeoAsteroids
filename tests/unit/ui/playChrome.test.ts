@@ -23,8 +23,23 @@ test('Enter Game is an outline phosphor control, not a solid green fill', () => 
   expect(css).toMatch(/--palette-accent/);
 });
 
+test('title menu shows a phosphor WASD + Space / arrows hint', () => {
+  const startScreen = html.slice(html.indexOf('id="start-screen"'), html.indexOf('id="gameArea"'));
+  expect(startScreen).toMatch(/id="controls-hint"/);
+  expect(startScreen).toMatch(/WASD \+ Space \/ arrows/);
+  expect(css).toMatch(/\.controls-hint/);
+  expect(css).toMatch(/--palette-accent/);
+});
+
+test('controls hint stays off the live playfield', () => {
+  const gameArea = html.slice(html.indexOf('id="gameArea"'));
+  expect(gameArea).not.toMatch(/controls-hint/);
+  expect(css).toMatch(/body\.in-play \.controls-hint/);
+});
+
 test('play view hides stock credit/version without touching the network banner', () => {
   expect(css).toMatch(/body\.in-play #attribution/);
+  expect(document.getElementById('controls-hint')?.closest('#start-screen')).toBeTruthy();
   setPlayView(true);
   expect(document.body.classList.contains('in-play')).toBe(true);
   expect(document.getElementById('start-screen')?.style.display).toBe('none');
