@@ -12,11 +12,7 @@ import {
   laserCollisionRadius,
   noteShieldLaserHit,
 } from '../../entities/ship/shipShield';
-import {
-  applyShipBoundaryDeath,
-  applyShipLethalCollision,
-  isShipCollisionImmune,
-} from '../../entities/ship/shipUtils';
+import { applyShipBoundaryDeath, isShipCollisionImmune } from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { isAsteroidPending, lockAsteroidPending } from './asteroidHitFeel';
@@ -386,47 +382,8 @@ export class CollisionManager {
       playerType: player.type,
     });
 
-    lockAsteroidPending(asteroid);
-    ship.lastCollisionTime = Date.now();
-    asteroid.playHitSound();
-
-    const damage = DAMAGE.ASTEROID_COLLISION;
-    logger.debug('COLLISION', 'Sending asteroid collision damage to server', {
-      damage,
-      playerId: player.id,
-    });
-
-    // Same instant flash/explode as the wall — waiting for a 25-hp packet
-    // plus a 3s corpse timer is what felt like freeze-stick.
-    if (player.type === 'local') {
-      const serverPlayerId = this.networkManager.getLocalPlayerId();
-      if (serverPlayerId) {
-        applyShipLethalCollision(ship, 'asteroid');
-        this.networkManager.sendMessage({
-          type: 'collisionDamage',
-          data: {
-            targetPlayerId: serverPlayerId,
-            attackerId: 'asteroid',
-            damage,
-          },
-        });
-
-        this.reportAsteroidHit(asteroid.id, serverPlayerId, asteroid.r, 'collision');
-      }
-    } else if (player.type === 'bot') {
-      applyShipLethalCollision(ship, 'asteroid');
-      this.networkManager.sendMessage({
-        type: 'botDamage',
-        data: {
-          botId: player.id,
-          attackerId: 'asteroid',
-          damage,
-        },
-      });
-
-      this.reportAsteroidHit(asteroid.id, player.id, asteroid.r, 'collision');
-    }
-    // Remote players are handled by server, no client-side network message needed
+    // Ship↔asteroid health and splitting are server-owned. The client only
+    // predicts motion; leftover every-tab reports would desync health.
   }
 
   private reportAsteroidDamage(asteroid: Roid, playerId: string): void {
@@ -479,6 +436,8 @@ export class CollisionManager {
       localPlayerId,
     });
 
+    // Visual / offline overlap only. Ship↔ship DOT is applied on the server
+    // from last-known positions so both tabs share one health timeline.
     localShip.startPlayerCollision(otherPlayerId);
   }
 }

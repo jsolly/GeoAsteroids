@@ -1,10 +1,27 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import { WebSocket } from 'ws';
-import type { Position, ShipKitId, SoftFactionId } from '../../../../shared-types';
+import type { AsteroidData, Position, ShipKitId, SoftFactionId } from '../../../../shared-types';
 import { WebSocketCore } from '../../../../server/communication/WebSocketCore';
 import type { GameEntity } from '../../../../server/core/EntityManager';
 import { GameEngine } from '../../../../server/core/GameEngine';
 import { DAMAGE, GAME, SHIP } from '../../../../src/constants';
+
+function scenarioAsteroid(overrides: Partial<AsteroidData> = {}): AsteroidData {
+  return {
+    id: 'scenario-asteroid-0',
+    position: { x: 0, y: 0 },
+    velocity: { x: 0, y: 0 },
+    size: 10,
+    jaggedness: 0.5,
+    rotation: 0,
+    angularVelocity: 0,
+    health: 40,
+    maxHealth: 40,
+    vertices: 8,
+    offsets: [1, 1, 1, 1, 1, 1, 1, 1],
+    ...overrides,
+  };
+}
 
 /** One server tick is one frame at GAME.FPS. */
 export const FRAMES_PER_SECOND = GAME.FPS;
@@ -125,10 +142,20 @@ export class GameServerWorld {
   }
 
   hitAsteroid(pilot: Pilot, damage: number = DAMAGE.LASER_HIT): void {
-    this.send(pilot, {
-      type: 'collisionDamage',
-      data: { targetPlayerId: pilot.id, attackerId: 'asteroid', damage },
-    });
+    const ship = this.entity(pilot);
+    this.engine.addAsteroid(
+      scenarioAsteroid({
+        id: `scenario-roid-${pilot.id}`,
+        position: { x: ship.position.x, y: ship.position.y },
+      })
+    );
+    const before = ship.health;
+    this.engine.resolveAuthoritativeCombat(Date.now());
+    const applied = Math.max(0, before - this.entity(pilot).health);
+    const remaining = damage - applied;
+    if (remaining > 0 && this.entity(pilot).health > 0) {
+      this.engine.handleShipDamage(pilot.id, 'asteroid', remaining, 'collision');
+    }
   }
 
   move(pilot: Pilot, position: Position): void {

@@ -5,6 +5,7 @@
     "server",
     "server.ts",
     "setup",
+    "shared",
     "shared-types.ts",
     "shared",
     "vite.config.ts"

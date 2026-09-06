@@ -3,7 +3,14 @@ import { GameEngine, type AppliedAsteroidHit } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
-import { DEBUG } from '../../src/constants';
+import { DAMAGE, DEBUG } from '../../src/constants';
+import {
+  clampLaserDamage,
+  isAllowedLaserReporter,
+  isClientOwnedCollisionAttacker,
+  isServerOwnedRamAttacker,
+} from '../../shared/combat';
+import type { CombatDamageSource } from '../../src/entities/ship/shipShield';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
@@ -300,49 +307,65 @@ export class MessageHandler {
     }
   }
 
+  private getReporterId(ws: WebSocket): string | undefined {
+    return this.gameEngine.entityManager.getHumanBySocket(ws)?.id;
+  }
+
+  private emitShipDamage(
+    targetId: string,
+    attackerId: string,
+    damage: number,
+    healthBefore: number | undefined,
+    source?: CombatDamageSource
+  ): void {
+    const outcome = this.gameEngine.handleShipDamage(targetId, attackerId, damage, source);
+    if (!outcome.applied || !outcome.entity) {
+      return;
+    }
+    const healthDropped =
+      healthBefore !== undefined && outcome.entity.health < healthBefore;
+    if (!outcome.isDestroyed && !healthDropped) {
+      if (outcome.entity.shieldActive || outcome.entity.shieldTimer > 0) {
+        this.broadcaster.broadcastGameState();
+      }
+      return;
+    }
+    this.broadcaster.broadcastCombatResult({
+      targetId,
+      attackerId,
+      damage,
+      remainingHealth: outcome.entity.health,
+      remainingLives: outcome.entity.lives,
+      isDestroyed: outcome.isDestroyed,
+      targetType: outcome.entity.type,
+      targetName: outcome.entity.name,
+      awardedScore: outcome.isDestroyed
+        ? (() => {
+            const attacker = this.gameEngine.entityManager.getEntity(attackerId);
+            return attacker ? { playerId: attackerId, score: attacker.score } : undefined;
+          })()
+        : undefined,
+    });
+  }
+
   private handleLaserDamage(ws: WebSocket, data: any): void {
     if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
       this.broadcaster.sendError(ws, 'Missing required fields for laserDamage');
       return;
     }
 
-    const before = this.gameEngine.getPlayer(data.targetPlayerId);
-    const healthBefore = before?.health;
-    const isDestroyed = this.gameEngine.handlePlayerDamage(
-      data.targetPlayerId,
-      data.attackerId,
-      data.damage,
-      'laser'
-    );
-
-    const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
-    if (targetPlayer) {
-      const remainingHealth = targetPlayer.health ?? 0;
-      const healthDropped = healthBefore !== undefined && remainingHealth < healthBefore;
-      if (isDestroyed || healthDropped) {
-        this.broadcaster.broadcastPlayerDamaged(
-          data.targetPlayerId,
-          data.attackerId,
-          data.damage,
-          remainingHealth,
-          isDestroyed,
-          targetPlayer.lives
-        );
-      } else if (targetPlayer.shieldActive || targetPlayer.shieldTimer > 0) {
-        this.broadcaster.broadcastGameState();
-      }
-
-      // Broadcast score update if points were awarded
-      if (isDestroyed) {
-        const attacker = this.gameEngine.getPlayer(data.attackerId);
-        if (attacker) {
-          this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
-        }
-
-        // Broadcast player killed event to notify the killer
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetPlayer.name, data.attackerId);
-      }
+    const reporterId = this.getReporterId(ws);
+    if (!reporterId || !isAllowedLaserReporter(reporterId, data.attackerId, data.targetPlayerId)) {
+      return;
     }
+
+    const damage = clampLaserDamage(data.damage);
+    if (damage <= 0) {
+      return;
+    }
+
+    const before = this.gameEngine.entityManager.getEntity(data.targetPlayerId);
+    this.emitShipDamage(data.targetPlayerId, data.attackerId, damage, before?.health, 'laser');
   }
 
   private handleCollisionDamage(ws: WebSocket, data: any): void {
@@ -352,61 +375,23 @@ export class MessageHandler {
       return;
     }
 
-    let isDestroyed = false;
-    let remainingHealth = 0;
-    let targetName = '';
-
-    // Check if target is a bot or player
-    if (data.targetPlayerId.startsWith('server-bot-')) {
-      // Target is a bot
-      isDestroyed = this.gameEngine.handleBotDamage(data.targetPlayerId, data.attackerId, data.damage);
-      const targetBot = this.gameEngine.getBot(data.targetPlayerId);
-      if (targetBot) {
-        remainingHealth = targetBot.health;
-        targetName = targetBot.name;
-        // Always broadcast bot update after damage
-        this.broadcaster.broadcastBotUpdate(data.targetPlayerId);
-      }
-    } else {
-      // Target is a player
-      const before = this.gameEngine.getPlayer(data.targetPlayerId);
-      const healthBefore = before?.health;
-      isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
-      const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
-      if (targetPlayer) {
-        remainingHealth = targetPlayer.health ?? 0;
-        targetName = targetPlayer.name;
-        const healthDropped =
-          healthBefore !== undefined && remainingHealth < healthBefore;
-        // Do not echo ignored hits (spawn protection / already dead). Those
-        // bounces arrive as remainingHealth=100 and heal the client hull.
-        if (isDestroyed || healthDropped) {
-          this.broadcaster.broadcastPlayerDamaged(
-            data.targetPlayerId,
-            data.attackerId,
-            data.damage,
-            remainingHealth,
-            isDestroyed,
-            targetPlayer.lives
-          );
-        }
-      }
+    // Ship↔asteroid and ship↔ship are resolved in the server game loop.
+    if (!isClientOwnedCollisionAttacker(data.attackerId)) {
+      return;
     }
 
-    // Handle destruction for both players and bots
-    if (isDestroyed) {
-      const attacker = this.gameEngine.getPlayer(data.attackerId);
-      if (attacker) {
-        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
-      }
-
-      if (data.targetPlayerId.startsWith('server-bot-')) {
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
-      } else {
-        // Player was destroyed
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
-      }
+    const reporterId = this.getReporterId(ws);
+    if (!reporterId || reporterId !== data.targetPlayerId) {
+      return;
     }
+
+    const before = this.gameEngine.getPlayer(data.targetPlayerId);
+    this.emitShipDamage(
+      data.targetPlayerId,
+      'boundary',
+      DAMAGE.BOUNDARY_COLLISION,
+      before?.health
+    );
   }
 
   private handleBotDamage(ws: WebSocket, data: any): void {
@@ -415,29 +400,17 @@ export class MessageHandler {
       return;
     }
 
-    const before = this.gameEngine.getBot(data.botId);
-    const healthBefore = before?.health;
-    const isDestroyed = this.gameEngine.handleBotDamage(data.botId, data.attackerId, data.damage);
-    const targetBot = this.gameEngine.getBot(data.botId);
-    const remainingHealth = targetBot?.health;
-    const healthDropped =
-      healthBefore !== undefined && remainingHealth !== undefined && remainingHealth < healthBefore;
-    if (!isDestroyed && !healthDropped) {
+    if (isServerOwnedRamAttacker(data.attackerId)) {
       return;
     }
 
-    // Always broadcast bot update after damage to ensure health synchronization
-    this.broadcaster.broadcastBotUpdate(data.botId);
-
-    if (isDestroyed) {
-      const attacker = this.gameEngine.getPlayer(data.attackerId);
-      if (attacker) {
-        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
-      }
-      if (targetBot) {
-        this.broadcaster.broadcastPlayerKilled(data.botId, targetBot.name, data.attackerId);
-      }
+    const reporterId = this.getReporterId(ws);
+    if (!reporterId || (reporterId !== data.attackerId && reporterId !== data.botId)) {
+      return;
     }
+
+    const before = this.gameEngine.getBot(data.botId);
+    this.emitShipDamage(data.botId, data.attackerId, data.damage, before?.health, 'laser');
   }
 
   private handleUseAbility(ws: WebSocket, id: string, data: any): void {
