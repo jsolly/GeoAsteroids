@@ -3,7 +3,7 @@ import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-
 import { pickBalancedFactionFromShips } from '../../shared/factions';
 import { parseSoftFactionId } from '../../src/entities/player/softFactions';
 import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
-import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
+import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, isShipKitId, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
 import {
   clearShield,
   createShieldState,
@@ -214,6 +214,7 @@ export class EntityManager {
         if (!existing.factionId) {
           existing.factionId = this.nextFaction();
         }
+        this.applyRequestedKit(existing, kitId);
         return existing;
       }
       // Leftover 0-life ship after game-over — Start must not rejoin it.
@@ -222,7 +223,7 @@ export class EntityManager {
 
     const sameName = this.getHumanPlayers().find((human) => human.name === name);
     if (sameName && sameName.lives > 0) {
-      return this.takeOverHuman(sameName, id, name, ws);
+      return this.takeOverHuman(sameName, id, name, ws, kitId);
     }
     if (sameName && sameName.lives <= 0) {
       this.entities.delete(sameName.id);
@@ -261,11 +262,19 @@ export class EntityManager {
     return entity;
   }
 
+  private applyRequestedKit(entity: GameEntity, kitId?: unknown): void {
+    if (!isShipKitId(kitId)) {
+      return;
+    }
+    applyShipKitStats(entity, kitId);
+  }
+
   private takeOverHuman(
     existing: GameEntity,
     id: string,
     name: string,
-    ws: WebSocket
+    ws: WebSocket,
+    kitId?: unknown
   ): GameEntity {
     const oldWs = existing.ws;
     if (existing.id !== id) {
@@ -279,6 +288,7 @@ export class EntityManager {
     if (!existing.factionId) {
       existing.factionId = this.nextFaction();
     }
+    this.applyRequestedKit(existing, kitId);
     if (oldWs && oldWs !== ws) {
       try {
         oldWs.close();

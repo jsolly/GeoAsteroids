@@ -142,7 +142,9 @@ export class Player {
     shieldCooldown?: number;
     shieldFlashTime?: number;
   }): void {
-    if (data.kitId && data.kitId !== this.ship.kitId) {
+    // Local kit is client-owned. A stale Railway dart echo must not strip
+    // a selected Hauler (and clear the latch on the next snapshot).
+    if (data.kitId && data.kitId !== this.ship.kitId && this.type !== 'local') {
       const color = this.ship.color;
       applyShipKitToShip(this.ship, data.kitId);
       this.ship.color = color;

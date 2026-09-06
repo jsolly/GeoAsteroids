@@ -719,7 +719,10 @@ export class GameController {
         .map((player) =>
           harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
         );
-      publishHarpoonField(collectPlayHarpoonField(this.currRoidBelt.roids, shipBodies));
+      publishHarpoonField(
+        collectPlayHarpoonField(this.currRoidBelt.roids, shipBodies),
+        canvasManager.getPlayfieldScale()
+      );
     }
 
     // Check laser collisions with asteroids and bots

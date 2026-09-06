@@ -7,6 +7,8 @@ import {
   applyShipKitToShip,
   DEFAULT_SHIP_KIT_ID,
   getShipKit,
+  HAULER_TETHER_COLOR,
+  HAULER_TETHER_TIP_COLOR,
   KIT_HULLS_ARE_PLACEHOLDERS,
   listShipKits,
   SHIP_KIT_IDS,
@@ -33,6 +35,8 @@ test('harpoon is Hauler-only and is not a sixth kit', () => {
   expect(harpoonKits.map((kit) => kit.id)).toEqual(['hauler']);
   expect(getShipKit('hauler').abilityName).toBe('Harpoon');
   expect(listShipKits().some((kit) => String(kit.abilityId) === 'lootMagnet')).toBe(false);
+  expect(HAULER_TETHER_COLOR).toBe('#E8D5A3');
+  expect(HAULER_TETHER_TIP_COLOR).toBe('#FDE68A');
 });
 
 test('Dart keeps classic ship numbers so existing play stays familiar', () => {

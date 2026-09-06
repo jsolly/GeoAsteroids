@@ -3,6 +3,41 @@ import { EntityManager } from '../../../server/core/EntityManager';
 import { RNGService } from '../../../server/core/RNGService';
 import { PALETTE } from '../../../src/constants';
 
+test('rejoin and same-name takeover apply the requested Hauler kit', () => {
+  const manager = new EntityManager(new RNGService(1));
+  const first = manager.addHumanPlayer(
+    'pilot-1',
+    'Pilot',
+    { sent: 1 } as never,
+    { x: 8, y: 9 },
+    '#abc',
+    'dart'
+  );
+  expect(first.kitId).toBe('dart');
+
+  const rejoined = manager.addHumanPlayer(
+    'pilot-1',
+    'Pilot',
+    { sent: 2 } as never,
+    { x: 0, y: 0 },
+    '#def',
+    'hauler'
+  );
+  expect(rejoined).toBe(first);
+  expect(rejoined.kitId).toBe('hauler');
+
+  const taken = manager.addHumanPlayer(
+    'pilot-new',
+    'Pilot',
+    { sent: 3 } as never,
+    { x: 0, y: 0 },
+    '#fff',
+    'hauler'
+  );
+  expect(taken).toBe(first);
+  expect(taken.kitId).toBe('hauler');
+});
+
 test('rejoining the same human id keeps lives, side, and swaps the socket', () => {
   const manager = new EntityManager(new RNGService(1));
   const firstSocket = { sent: 1 } as never;

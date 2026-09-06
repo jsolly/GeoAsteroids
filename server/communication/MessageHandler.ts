@@ -444,7 +444,7 @@ export class MessageHandler {
       this.broadcaster.sendError(ws, 'Missing player ID for useAbility');
       return;
     }
-    const activated = this.gameEngine.useAbility(playerId);
+    const activated = this.gameEngine.useAbility(playerId, data.kitId);
     if (!activated) {
       return;
     }

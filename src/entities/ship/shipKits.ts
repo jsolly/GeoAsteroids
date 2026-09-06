@@ -76,8 +76,10 @@ export const AD_V2_HULL_SHEET = {
   },
 } as const;
 
-/** Hauler cable. Not a faction mark and not a player-kit hull stroke. */
-export const HAULER_TETHER_COLOR = '#E8C38A';
+/** Hauler cable. Game Director PASS: cream line, not a faction/hull stroke. */
+export const HAULER_TETHER_COLOR = '#E8D5A3';
+/** Latch tip / hook head. Game Director PASS: amber tip on the cream cable. */
+export const HAULER_TETHER_TIP_COLOR = '#FDE68A';
 
 export const SHIP_ABILITY = {
   DASH_BOOST: 6,

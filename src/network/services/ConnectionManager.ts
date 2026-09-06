@@ -19,6 +19,7 @@ import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyRemoteShoot } from '../../entities/player/remoteLasers';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { applyTerrainSeed } from '../../physics/terrain/terrainSession';
+import { getSelectedShipKitId } from '../../ui/shipKitSelect';
 import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
@@ -458,7 +459,7 @@ export class ConnectionManager {
         name: this.localPlayerName,
         color: this.getLocalPlayerColor(),
         position: playerPosition,
-        kitId: localPlayer?.ship.kitId,
+        kitId: localPlayer?.ship.kitId ?? getSelectedShipKitId(),
       },
       timestamp: Date.now(),
     };

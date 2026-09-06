@@ -21,7 +21,13 @@ import {
   projectKitHullEdges,
 } from './hullOutlines';
 import type { Ship } from './Ship';
-import { CLASSIC_HULL, HAULER_TETHER_COLOR, type HullProfile, type ShipKitId } from './shipKits';
+import {
+  CLASSIC_HULL,
+  HAULER_TETHER_COLOR,
+  HAULER_TETHER_TIP_COLOR,
+  type HullProfile,
+  type ShipKitId,
+} from './shipKits';
 import { isShieldBlockingLasers, shieldCooldownFrames } from './shipShield';
 
 const shipTriangle = {
@@ -592,11 +598,6 @@ export function drawShipAtPosition(
     return;
   }
 
-  // Apply blinking effect for invincibility
-  if (ship.blinkCount > 0 && !ship.blinkOn) {
-    return; // Skip rendering this frame
-  }
-
   const screen = canvasManager.worldToScreenInto(shipScreen, ship.position, shipPosition);
   const scale = canvasManager.getPlayfieldScale();
   const screenX = screen.x;
@@ -609,6 +610,13 @@ export function drawShipAtPosition(
     screenX > cvs.width + cull ||
     screenY > cvs.height + cull
   ) {
+    return;
+  }
+
+  // Spawn blink must not hide the Hauler cable — QA samples the cream+tip pixels.
+  drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, shipPosition);
+
+  if (ship.blinkCount > 0 && !ship.blinkOn) {
     return;
   }
 
@@ -642,14 +650,20 @@ export function canDrawHaulerHarpoon(ship: {
 }
 
 /** Zoomed playfields shrink nearby latches; dashes must not eat the cable. */
-export function harpoonTetherStyle(screenDist: number): { dash: number[]; ring: number } {
+export function harpoonTetherStyle(
+  screenDist: number,
+  playfieldScale = 1
+): { dash: number[]; ring: number; lineWidth: number; tipRadius: number } {
+  const scale = Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : 1;
   return {
     dash: screenDist > 20 ? [8, 5] : [],
     ring: Math.max(14, Math.min(22, 10 + screenDist * 0.12)),
+    lineWidth: Math.max(4, 3.25 / scale),
+    tipRadius: Math.max(7, 6 / scale),
   };
 }
 
-/** Tether + latch ring. Hauler only — other kits never draw this. */
+/** Tether + amber tip. Hauler only — other kits never draw this. */
 export function drawHaulerHarpoonVfx(
   ctx: CanvasRenderingContext2D,
   ship: Ship,
@@ -667,25 +681,27 @@ export function drawHaulerHarpoonVfx(
 
   const latch = canvasManager.worldToScreen(target.position, cameraShipPosition);
   const screenDist = Math.hypot(latch.x - screenX, latch.y - screenY);
-  const style = harpoonTetherStyle(screenDist);
-  const pulse = 0.7 + 0.25 * Math.sin(Date.now() / 80);
+  const style = harpoonTetherStyle(screenDist, canvasManager.getPlayfieldScale());
   ctx.save();
-  ctx.strokeStyle = hexToRgba(HAULER_TETHER_COLOR, pulse);
+  ctx.strokeStyle = HAULER_TETHER_COLOR;
   ctx.shadowColor = HAULER_TETHER_COLOR;
-  ctx.shadowBlur = 8;
-  ctx.lineWidth = 2.75;
+  ctx.shadowBlur = 6;
+  ctx.lineWidth = style.lineWidth;
   ctx.setLineDash(style.dash);
   ctx.beginPath();
   ctx.moveTo(screenX, screenY);
   ctx.lineTo(latch.x, latch.y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.lineWidth = 2.25;
+  ctx.shadowBlur = 0;
   ctx.beginPath();
   ctx.arc(screenX, screenY, Math.max(10, style.ring * 0.7), 0, Math.PI * 2);
   ctx.stroke();
+  ctx.fillStyle = HAULER_TETHER_TIP_COLOR;
+  ctx.strokeStyle = HAULER_TETHER_TIP_COLOR;
   ctx.beginPath();
-  ctx.arc(latch.x, latch.y, style.ring, 0, Math.PI * 2);
+  ctx.arc(latch.x, latch.y, style.tipRadius, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
   ctx.restore();
 }
@@ -697,7 +713,7 @@ function drawAbilityFx(
   screenX: number,
   screenY: number,
   shipR: number,
-  cameraShipPosition: { x: number; y: number }
+  _cameraShipPosition: { x: number; y: number }
 ): void {
   if (ship.shieldTimer > 0) {
     const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 90);
@@ -714,7 +730,6 @@ function drawAbilityFx(
     ctx.lineWidth = 3;
     ctx.stroke();
   }
-  drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, cameraShipPosition);
 }
 
 export function drawShipShield(
