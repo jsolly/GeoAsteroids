@@ -99,6 +99,8 @@ test('1:1 large canvas latches a rock past the old 320wu / 1600wu #480 cap', () 
   const hd = { width: 1920, height: 1080 };
   expect(harpoonLatchRange(1, hd)).toBeGreaterThan(500);
   expect(harpoonLatchRange(0.1, hd)).toBeGreaterThan(2000);
+  // #485 kept the 8000wu cap. 1080p at scale 0.1 puts a 900px-near rock at 9000wu.
+  expect(harpoonLatchRange(0.1, hd)).toBeGreaterThan(9000);
   const hauler = host('hauler');
   const liveNear = {
     id: 'live-near',
@@ -143,7 +145,7 @@ test('same-side faction does not block a rock with no faction', () => {
   const rock = { id: 'neutral-rock', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } };
   const mate = {
     id: 'mate-bot',
-    position: { x: 60, y: 0 },
+    position: { x: 240, y: 0 },
     velocity: { x: 0, y: 0 },
     factionId: 'ember' as const,
     health: 100,
@@ -263,7 +265,7 @@ test('diagnoseHarpoonLatch reports kit, nearest gap, and chosen target', () => {
   expect(probe.nearest?.reason).toBe('ok');
 });
 
-test('harpoon skips self, same-side mates, and a Warden shield', () => {
+test('harpoon skips self and a Warden shield but hauls a same-side mate', () => {
   const hauler = host('hauler');
   hauler.id = 'hauler-1';
   hauler.factionId = 'ion';
@@ -290,7 +292,8 @@ test('harpoon skips self, same-side mates, and a Warden shield', () => {
     factionId: 'ember' as const,
     health: 100,
   };
-  expect(findHarpoonTarget(hauler, [self, mate, shielded, foe])?.id).toBe('foe');
+  expect(findHarpoonTarget(hauler, [self, mate, shielded, foe])?.id).toBe('mate');
+  expect(findHarpoonTarget(hauler, [self, shielded, foe])?.id).toBe('foe');
 });
 
 test('harpoon skips a timed ship shield', () => {
@@ -377,4 +380,26 @@ test('ability cooldown ticks down', () => {
   const start = dart.abilityCooldownFrames;
   tickAbilityHost(dart);
   expect(dart.abilityCooldownFrames).toBe(start - 1);
+});
+
+test('deep-zoom on-screen rock past the old 8000wu cap still latches', () => {
+  const hd = { width: 1920, height: 1080 };
+  const hauler = host('hauler');
+  const liveNear = {
+    id: 'zoom-edge',
+    position: { x: 9000, y: 0 },
+    velocity: { x: 0, y: 0 },
+    r: 40,
+  };
+  const range = harpoonLatchRange(0.1, hd);
+  expect(range).toBeGreaterThan(9000);
+  expect(findHarpoonTarget(hauler, [liveNear], range)?.id).toBe('zoom-edge');
+  const result = activateAbilityOnHost(hauler, {
+    asteroids: [liveNear],
+    entities: [],
+    playfieldScale: 0.1,
+    canvas: hd,
+  });
+  expect(result.activated).toBe(true);
+  expect(hauler.harpoonLatchPos?.x).toBe(9000);
 });

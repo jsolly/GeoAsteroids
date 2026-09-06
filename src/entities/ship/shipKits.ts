@@ -87,10 +87,11 @@ export const SHIP_ABILITY = {
   /** Fallback "nearby" disk when the canvas size is unknown. */
   HARPOON_VISUAL_PX: 720,
   /**
-   * Sanity only. Live latch is screen-space (half-diagonal / scale).
-   * #480's 1600wu cap dropped zoomed rocks that looked adjacent.
+   * Pull slack only. Latch reach is on-screen (half-diagonal / scale).
+   * #480/#481 caps (1600 then 8000) still dropped a 1080p rock that sat
+   * on-canvas under deep zoom (scale < 0.14).
    */
-  HARPOON_RANGE_MAX: 8000,
+  HARPOON_RANGE_MAX: 1_000_000,
   HARPOON_FRAMES: 90,
   HARPOON_PULL: 0.42,
   HARPOON_SLACK: 1.25,

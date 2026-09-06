@@ -18,6 +18,7 @@ import { LootField } from '../../entities/loot/LootField';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyRemoteShoot } from '../../entities/player/remoteLasers';
+import { setHoldEmptyHarpoonField } from '../../entities/ship/harpoonField';
 import { applyShipKitToShip } from '../../entities/ship/shipKits';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { applyTerrainSeed } from '../../physics/terrain/terrainSession';
@@ -175,7 +176,9 @@ export class ConnectionManager {
           this.state.isConnected = false;
           this.state.socket = null;
           this.stopHeartbeat();
-          this.hasInitializedAsteroidsForConnection = false;
+          // Keep the last belt + latch list. Wiping here is why KeyE during
+          // a Reconnecting banner found zero rocks after #485.
+          setHoldEmptyHarpoonField(true);
           logger.warn('NETWORK', 'WebSocket connection closed');
           if (this.userRequestedDisconnect) {
             window.dispatchEvent(

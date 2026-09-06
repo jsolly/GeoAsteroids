@@ -74,6 +74,25 @@ describe('server fuel pickup and EMP spend', () => {
     expect(engine.getLoot().some(isFuelLoot)).toBe(false);
   });
 
+  test('game state snapshots stay JSON-safe when the player socket holds a Timeout', () => {
+    const idle: { _idleNext: unknown; _idlePrev: unknown } = { _idleNext: null, _idlePrev: null };
+    idle._idleNext = idle;
+    idle._idlePrev = idle;
+    const timeout = { constructor: { name: 'Timeout' }, _idlePrev: idle, _idleNext: idle };
+    const ws = { _closeTimeout: timeout } as any;
+    engine.addPlayer('human-ws', 'Pilot', ws, { x: 0, y: 0 }, undefined, 'hauler');
+    const live = engine.getPlayer('human-ws');
+    expect(() => JSON.stringify({ ...live })).toThrow(/circular/i);
+
+    const state = engine.getGameState();
+    expect(() => JSON.stringify(state)).not.toThrow();
+    const snapshot = state.entities.find((entity) => entity.id === 'human-ws') as
+      | { ws?: unknown; fuel?: number }
+      | undefined;
+    expect(snapshot?.ws).toBeUndefined();
+    expect(snapshot?.fuel).toBe(FUEL.START);
+  });
+
   test('client updates cannot set fuel on the server tank', () => {
     const ws = {} as any;
     const human = engine.addPlayer('human-auth', 'Pilot', ws, { x: 0, y: 0 });

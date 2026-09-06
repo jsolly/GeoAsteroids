@@ -26,6 +26,7 @@ import {
   publishHarpoonField,
 } from '../entities/ship/harpoonField';
 import type { Ship } from '../entities/ship/Ship';
+import { diagnoseHarpoonLatch } from '../entities/ship/shipAbilities';
 import { shockwaveManager } from '../fx/ShockwaveManager';
 import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
@@ -553,6 +554,32 @@ export class GameController {
 
   getCurrRoidCount(): number {
     return this.currRoidBelt.roids.length;
+  }
+
+  /** QA probe: kit, field, nearest gap, latch, WS. Used by the headed smoke. */
+  diagnoseHarpoon():
+    | (ReturnType<typeof diagnoseHarpoonLatch> & {
+        connected: boolean;
+        harpoonTimer: number;
+        abilityActiveFrames: number;
+        latchPos?: { x: number; y: number };
+        liveTargetId?: string;
+      })
+    | null {
+    const local = this.playerManager.getLocalPlayer();
+    if (!local) {
+      return null;
+    }
+    this.publishLiveHarpoonField(local);
+    const probe = diagnoseHarpoonLatch(local.ship);
+    return {
+      ...probe,
+      connected: this.networkManager.isConnected,
+      harpoonTimer: local.ship.harpoonTimer,
+      abilityActiveFrames: local.ship.abilityActiveFrames,
+      latchPos: local.ship.harpoonLatchPos,
+      liveTargetId: local.ship.harpoonTargetId,
+    };
   }
 
   getLoot(): LootData[] {
