@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest';
 import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
-import { canDrawHaulerHarpoon, drawHaulerHarpoonVfx } from '../../../src/entities/ship/shipRenderer';
+import {
+  canDrawHaulerHarpoon,
+  drawHaulerHarpoonVfx,
+  harpoonTetherStyle,
+} from '../../../src/entities/ship/shipRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
 
 test('tether VFX is Hauler-only while latched', () => {
@@ -14,6 +18,12 @@ test('tether VFX is Hauler-only while latched', () => {
     false
   );
   expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTimer: 40 })).toBe(false);
+});
+
+test('short zoomed tethers stay solid so the cable does not vanish', () => {
+  expect(harpoonTetherStyle(8).dash).toEqual([]);
+  expect(harpoonTetherStyle(8).ring).toBeGreaterThanOrEqual(8);
+  expect(harpoonTetherStyle(80).dash).toEqual([8, 5]);
 });
 
 test('tether VFX can resolve a latched ship from the shared field', () => {
