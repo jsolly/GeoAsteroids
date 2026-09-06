@@ -11,6 +11,9 @@ vi.mock('../../../src/network/networkManager', () => ({
     getInstance: vi.fn(() => ({
       sendMessage: mockSendMessage,
       updatePlayerState: mockUpdatePlayerState,
+      getPlayer: vi.fn(),
+      getAllPlayers: vi.fn(() => []),
+      getLocalPlayerId: vi.fn(),
     })),
   },
 }));
@@ -57,8 +60,9 @@ describe('incoming lasers use the shared hull path', () => {
     collisionManager.checkLaserCollisions(
       [laser],
       [],
-      [{ ship: localShip, id: 'human-pilot', type: 'local' }],
-      'server-bot-0'
+      [{ ship: localShip, id: 'human-pilot', type: 'local', faction: 'ion' }],
+      'server-bot-0',
+      { attackerFaction: 'ember' }
     );
 
     expect(mockSendMessage).toHaveBeenCalledWith({

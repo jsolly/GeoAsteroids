@@ -151,10 +151,12 @@ describe('ships feel the slope', () => {
       resolve(process.cwd(), 'src/entities/ship/ShipMovementManager.ts'),
       'utf8'
     );
-    const botSrc = readFileSync(resolve(process.cwd(), 'server/core/EntityManager.ts'), 'utf8');
+    const botSrc = readFileSync(resolve(process.cwd(), 'server/ai/shipMotion.ts'), 'utf8');
+    const entitySrc = readFileSync(resolve(process.cwd(), 'server/core/EntityManager.ts'), 'utf8');
     expect(shipSrc).toMatch(/applySharedShipSlope\(this\.velocity, this\.position\)/);
     expect(moveSrc).toMatch(/applySharedShipSlope\(state\.velocity, state\.position\)/);
-    expect(botSrc).toMatch(/applySharedShipSlope\(bot\.velocity, bot\.position\)/);
+    expect(botSrc).toMatch(/applySharedShipSlope\(ship\.velocity, ship\.position\)/);
+    expect(entitySrc).toMatch(/applyShipMotionSteps\(bot,/);
   });
 });
 
