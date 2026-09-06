@@ -2,15 +2,21 @@ import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
-import { isShipCollisionImmune } from '../../entities/ship/shipUtils';
+import { applyShipImpactFlash, isShipCollisionImmune } from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
+import { isAsteroidPending, lockAsteroidPending } from './asteroidHitFeel';
 import {
   checkBoundaryCollision,
-  checkLaserAsteroidCollision,
+  checkLaserAsteroidCollisionSwept,
   checkLaserShipCollision,
   checkShipCollision,
 } from './collisionDetection';
+
+export interface LaserCollisionOptions {
+  /** Spectator clients play VFX only for remote-human shots. */
+  reportAsteroidHits?: boolean;
+}
 
 export class CollisionManager {
   private static instance: CollisionManager;
@@ -106,8 +112,15 @@ export class CollisionManager {
       return;
     }
 
+    if (!ship.canTakeCollisionDamage()) {
+      return;
+    }
+
     // Check collisions with asteroids
     for (const asteroid of asteroids) {
+      if (isAsteroidPending(asteroid)) {
+        continue;
+      }
       if (checkShipCollision(ship.position, ship.r, asteroid.position, asteroid.r)) {
         logger.debug('COLLISION', 'Player-asteroid collision detected', {
           shipPos: ship.position,
@@ -163,8 +176,11 @@ export class CollisionManager {
     lasers: Laser[],
     asteroids: Roid[],
     players: { ship: Ship; id: string; type: 'local' | 'remote' | 'bot' }[],
-    localPlayerId: string
+    localPlayerId: string,
+    options: LaserCollisionOptions = {}
   ): void {
+    const reportAsteroidHits = options.reportAsteroidHits !== false;
+
     for (let i = lasers.length - 1; i >= 0; i--) {
       const laser = lasers[i];
       if (laser === undefined) {
@@ -178,8 +194,12 @@ export class CollisionManager {
 
       // Check collisions with asteroids
       for (const asteroid of asteroids) {
-        if (checkLaserAsteroidCollision(laser.position, asteroid.position, asteroid.r)) {
-          this.handleLaserAsteroidHit(laser, asteroid, localPlayerId);
+        if (isAsteroidPending(asteroid)) {
+          continue;
+        }
+        const from = laser.prevPosition ?? laser.position;
+        if (checkLaserAsteroidCollisionSwept(from, laser.position, asteroid.position, asteroid.r)) {
+          this.handleLaserAsteroidHit(laser, asteroid, localPlayerId, reportAsteroidHits);
           // Mark laser for explosion
           laser.updateExplodeTime();
           laser.playHitSound();
@@ -211,34 +231,27 @@ export class CollisionManager {
   /**
    * Handle laser hitting an asteroid
    */
-  private handleLaserAsteroidHit(laser: Laser, asteroid: Roid, attackerId: string): void {
+  private handleLaserAsteroidHit(
+    laser: Laser,
+    asteroid: Roid,
+    attackerId: string,
+    reportAsteroidHits: boolean
+  ): void {
     logger.debug('COLLISION', 'Laser hit asteroid', {
       laserPos: laser.position,
       asteroidPos: asteroid.position,
       asteroidId: asteroid.id,
       attackerId,
+      reportAsteroidHits,
     });
 
-    // Send asteroid destruction message to server
-    this.networkManager.updatePlayerState({
-      position: { x: 0, y: 0 }, // Dummy position
-      velocity: { x: 0, y: 0 }, // Dummy velocity
-      r: 0, // Dummy radius
-      angle: 0, // Dummy angle
-      lives: 0, // This will be updated by server
-      score: 0, // This will be updated by server
-      exploding: false,
-    });
+    lockAsteroidPending(asteroid);
 
-    // Send asteroid destroyed message
-    this.networkManager.sendMessage({
-      type: 'asteroidDestroyed',
-      data: {
-        asteroidId: asteroid.id,
-        playerId: attackerId,
-        points: this.getAsteroidPoints(asteroid.r),
-      },
-    });
+    if (!reportAsteroidHits) {
+      return;
+    }
+
+    this.reportAsteroidDestroyed(asteroid, attackerId);
   }
 
   /**
@@ -300,6 +313,11 @@ export class CollisionManager {
       playerType: player.type,
     });
 
+    lockAsteroidPending(asteroid);
+    ship.lastCollisionTime = Date.now();
+    applyShipImpactFlash(ship);
+    asteroid.playHitSound();
+
     // Don't apply damage directly - let server handle it
     const damage = DAMAGE.LASER_HIT;
     logger.debug('COLLISION', 'Sending asteroid collision damage to server', {
@@ -321,15 +339,7 @@ export class CollisionManager {
           },
         });
 
-        // Send asteroid destruction message to server to trigger splitting
-        this.networkManager.sendMessage({
-          type: 'asteroidDestroyed',
-          data: {
-            asteroidId: asteroid.id,
-            playerId: serverPlayerId,
-            points: this.getAsteroidPoints(asteroid.r),
-          },
-        });
+        this.reportAsteroidDestroyed(asteroid, serverPlayerId);
       }
     } else if (player.type === 'bot') {
       // For bots, send bot damage message
@@ -342,17 +352,20 @@ export class CollisionManager {
         },
       });
 
-      // Send asteroid destruction message to server to trigger splitting
-      this.networkManager.sendMessage({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: asteroid.id,
-          playerId: player.id,
-          points: this.getAsteroidPoints(asteroid.r),
-        },
-      });
+      this.reportAsteroidDestroyed(asteroid, player.id);
     }
     // Remote players are handled by server, no client-side network message needed
+  }
+
+  private reportAsteroidDestroyed(asteroid: Roid, playerId: string): void {
+    this.networkManager.sendMessage({
+      type: 'asteroidDestroyed',
+      data: {
+        asteroidId: asteroid.id,
+        playerId,
+        points: this.getAsteroidPoints(asteroid.r),
+      },
+    });
   }
 
   /**

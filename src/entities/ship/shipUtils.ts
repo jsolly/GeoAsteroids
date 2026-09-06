@@ -53,6 +53,21 @@ export function canTakeCollisionDamage(
   return true;
 }
 
+export interface ShipImpactFlashState {
+  impactFlashFrames: number;
+}
+
+/** Short phosphor ring so a roid graze is visible before the server health packet. */
+export function applyShipImpactFlash(ship: ShipImpactFlashState): void {
+  ship.impactFlashFrames = SHIP.IMPACT_FLASH_FRAMES;
+}
+
+export function tickShipImpactFlash(ship: ShipImpactFlashState): void {
+  if (ship.impactFlashFrames > 0) {
+    ship.impactFlashFrames -= 1;
+  }
+}
+
 export function calculateHealthAfterDamage(
   currentHealth: number,
   damage: number,

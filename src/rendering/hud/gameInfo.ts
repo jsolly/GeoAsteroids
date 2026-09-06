@@ -13,15 +13,15 @@ export function drawScoreOverlay(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
+  const scoreY = 20 + SHIP.SIZE + 8;
+  ctx.fillText(score.toString(), 20, scoreY);
+
   const gameStateManager = GameStateManager.getInstance();
   if (gameStateManager.hasKillMessage()) {
     ctx.fillStyle = PALETTE.DANGER;
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(gameStateManager.getKillMessage(), canvas.width / 2, 12);
-  } else {
-    const scoreY = 20 + SHIP.SIZE + 8;
-    ctx.fillText(score.toString(), 20, scoreY);
   }
 
   ctx.restore();

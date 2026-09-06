@@ -1,4 +1,5 @@
 import type { Position, Velocity } from '../../../shared-types';
+import { playHitSound as playHitSoundAt } from '../../audio/gameSounds';
 import { DEBUG, GAME, ROID } from '../../constants';
 import { stepAsteroidMotion } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
@@ -14,7 +15,12 @@ class Roid {
   health: number;
   maxHealth: number;
   pendingDestruction: boolean = false; // Track asteroids waiting for server confirmation
+  pendingUntilMs: number = 0;
   private _jaggedness: number = ROID.JAGGEDNESS; // Store jaggedness value
+
+  playHitSound(): void {
+    playHitSoundAt(this.position);
+  }
 
   constructor(
     public position: Position,

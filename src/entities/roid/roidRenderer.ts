@@ -1,5 +1,6 @@
 import { PALETTE, ROID, VISUAL } from '../../constants';
 import type { Ship } from '../../entities/ship/Ship';
+import { isAsteroidPending } from '../../physics/collision/asteroidHitFeel';
 import { canvasManager } from '../../rendering/canvas';
 import { drawingOffsets } from '../../rendering/playfieldCamera';
 
@@ -39,7 +40,7 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   }
 
   for (const roid of roids) {
-    if (!canDrawAsteroid(roid)) {
+    if (isAsteroidPending(roid) || !canDrawAsteroid(roid)) {
       continue;
     }
     ctx.strokeStyle = PALETTE.ROID;

@@ -14,6 +14,7 @@ import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
 import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
 import { asteroidTickScale } from '../physics/asteroidMotion';
+import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { setPlayView } from '../ui/uiUtils';
@@ -156,7 +157,7 @@ export class GameController {
     if (this.currRoidBelt) {
       const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
       if (existingRoid) {
-        applyAsteroidKinematics(existingRoid, asteroid);
+        applyAsteroidKinematics(existingRoid, asteroid, { snapPosition: true });
         return;
       }
     }
@@ -168,7 +169,7 @@ export class GameController {
       id: asteroid.id,
     });
 
-    applyAsteroidKinematics(roid, asteroid);
+    applyAsteroidKinematics(roid, asteroid, { snapPosition: true });
 
     // Override shape properties to match server exactly. Keep the factory
     // silhouette when the snapshot omits offsets — wiping to [] made the
@@ -222,6 +223,7 @@ export class GameController {
         if (roid !== undefined) {
           // Clear pending destruction flag before removing
           roid.pendingDestruction = false;
+          roid.pendingUntilMs = 0;
           this.currRoidBelt.roids.splice(index, 1);
         }
       }
@@ -616,12 +618,27 @@ export class GameController {
     // reconciles the local player — asteroids can arrive before that.
     const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
 
-    this.collisionManager.checkLaserCollisions(
-      currPlayer.ship.lasers,
-      this.currRoidBelt.roids,
-      laserTargets,
-      attackerId
-    );
+    const seenIds = new Set<string>();
+    const ships = [currPlayer, ...allPlayers];
+    for (const player of ships) {
+      if (seenIds.has(player.id)) {
+        continue;
+      }
+      seenIds.add(player.id);
+      if (!player.ship?.lasers.length) {
+        continue;
+      }
+      const ownerType = player.type;
+      const reportAsteroidHits = shouldReportLaserAsteroidHit(ownerType);
+      const ownerAttackerId = ownerType === 'local' ? attackerId : player.id;
+      this.collisionManager.checkLaserCollisions(
+        player.ship.lasers,
+        this.currRoidBelt.roids,
+        ownerType === 'local' ? laserTargets : [],
+        ownerAttackerId,
+        { reportAsteroidHits }
+      );
+    }
   }
 
   // Check boundary collisions for ships

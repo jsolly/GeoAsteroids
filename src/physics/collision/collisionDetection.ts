@@ -30,6 +30,8 @@ export function checkBoundaryCollision(shipPos: Position, shipRadius: number): b
   return distance + shipRadius > boundary.radius;
 }
 
+const LASER_RADIUS = 2;
+
 /**
  * Check if a laser hits an asteroid
  */
@@ -38,9 +40,35 @@ export function checkLaserAsteroidCollision(
   asteroidPos: Position,
   asteroidRadius: number
 ): boolean {
-  // Lasers are small, so we use a small collision radius
-  const laserRadius = 2;
-  return checkCircularCollision(laserPos, laserRadius, asteroidPos, asteroidRadius);
+  return checkCircularCollision(laserPos, LASER_RADIUS, asteroidPos, asteroidRadius);
+}
+
+/**
+ * Segment-vs-circle test so a 5px laser step cannot tunnel through a
+ * moving roid that a point sample would miss on a glancing frame.
+ */
+export function checkLaserAsteroidCollisionSwept(
+  from: Position,
+  to: Position,
+  asteroidPos: Position,
+  asteroidRadius: number
+): boolean {
+  const hitRadius = asteroidRadius + LASER_RADIUS;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) {
+    return checkLaserAsteroidCollision(to, asteroidPos, asteroidRadius);
+  }
+
+  const t = Math.max(
+    0,
+    Math.min(1, ((asteroidPos.x - from.x) * dx + (asteroidPos.y - from.y) * dy) / lengthSq)
+  );
+  const closestX = from.x + dx * t;
+  const closestY = from.y + dy * t;
+  const distSq = (closestX - asteroidPos.x) ** 2 + (closestY - asteroidPos.y) ** 2;
+  return distSq < hitRadius * hitRadius;
 }
 
 /**
