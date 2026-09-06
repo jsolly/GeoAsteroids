@@ -1,6 +1,8 @@
-import { PALETTE, SHIP } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { DEFAULT_SHIP_KIT_ID, type ShipKitId } from '../../entities/ship/shipKits';
 import { strokeKitHullOutline } from '../../entities/ship/shipRenderer';
+
+import { layoutHudCluster } from './cluster';
 
 export function drawLivesIndicator(
   ctx: CanvasRenderingContext2D,
@@ -8,22 +10,13 @@ export function drawLivesIndicator(
   shipColor: string,
   kitId: ShipKitId = DEFAULT_SHIP_KIT_ID
 ): void {
+  const { lifeCenters } = layoutHudCluster(lives);
+  const radius = VISUAL.HUD_LIFE_SIZE / 2;
+  const color = shipColor || PALETTE.LOCAL;
+
   ctx.save();
-
-  const spacing = SHIP.SIZE + 10;
-  const startX = 20;
-  const startY = 20;
-
-  for (let i = 0; i < lives; i++) {
-    const x = startX + i * spacing;
-    const y = startY;
-    const centerX = x + SHIP.SIZE / 2;
-    const centerY = y + SHIP.SIZE / 2;
-    const radius = SHIP.SIZE / 2;
-    const angle = Math.PI / 2;
-
-    strokeKitHullOutline(ctx, centerX, centerY, radius, angle, shipColor || PALETTE.LOCAL, kitId);
+  for (const center of lifeCenters) {
+    strokeKitHullOutline(ctx, center.x, center.y, radius, Math.PI / 2, color, kitId);
   }
-
   ctx.restore();
 }
