@@ -20,6 +20,7 @@ import {
   drawThruster,
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
+import { shouldDrawShipHull } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
 import { Point } from '../physics/Point';
 import { getFactionColor, getLaserColor } from '../utils/colorUtils';
@@ -281,7 +282,7 @@ class CanvasManager {
           } else {
             drawShipExplosionAtPosition(ship, currShip.position, factionColor);
           }
-        } else if (ship.health > 0) {
+        } else if (shouldDrawShipHull(ship)) {
           drawShipAtPosition(
             ship,
             currShip.position,
@@ -295,7 +296,7 @@ class CanvasManager {
       for (const player of allPlayers) {
         const isLocal = player.id === localId;
         const ship = isLocal ? currShip : player.ship;
-        if (ship.exploding || ship.health <= 0 || !ship.thrusting) {
+        if (!shouldDrawShipHull(ship) || !ship.thrusting) {
           continue;
         }
         const factionColor = getFactionColor(player.type);
@@ -318,7 +319,7 @@ class CanvasManager {
     drawLasers(currShip, localLaserColor);
 
     for (const player of allPlayers) {
-      if (player.id === localId || player.ship.exploding || player.ship.health <= 0) {
+      if (player.id === localId || !shouldDrawShipHull(player.ship)) {
         continue;
       }
       drawLasers(player.ship, enemyLaserColor, currShip.position);

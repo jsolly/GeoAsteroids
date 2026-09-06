@@ -90,6 +90,8 @@ export class EntityManager {
   private humanRejoinStash = new Map<string, HumanRejoinStash>();
   private humanRejoinByName = new Map<string, HumanRejoinStash>();
   private readonly botBrain = new BotBrain();
+  /** Old human id remapped by same-name takeover — consume after addHumanPlayer. */
+  private replacedHumanId: string | undefined;
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
@@ -233,17 +235,12 @@ export class EntityManager {
     kitId?: ShipKitId,
     factionId?: SoftFactionId
   ): GameEntity {
+    this.replacedHumanId = undefined;
+
     const existing = this.entities.get(id);
     if (existing && existing.type === 'human') {
       if (existing.lives > 0) {
-        existing.ws = ws;
-        existing.name = name;
-        existing.lastUpdate = Date.now();
-        if (!existing.factionId) {
-          existing.factionId = this.nextFaction();
-        }
-        this.applyRequestedKit(existing, kitId);
-        return existing;
+        return this.attachLiveHuman(existing, id, name, ws, kitId);
       }
       // Leftover 0-life ship after game-over — Start must not rejoin it.
       this.entities.delete(id);
@@ -251,7 +248,7 @@ export class EntityManager {
 
     const sameName = this.getHumanPlayers().find((human) => human.name === name);
     if (sameName && sameName.lives > 0) {
-      return this.takeOverHuman(sameName, id, name, ws, kitId);
+      return this.attachLiveHuman(sameName, id, name, ws, kitId);
     }
     if (sameName && sameName.lives <= 0) {
       this.entities.delete(sameName.id);
@@ -298,7 +295,23 @@ export class EntityManager {
     applyShipKitStats(entity, kitId);
   }
 
-  private takeOverHuman(
+  /** Id displaced by a same-name takeover. Call after addHumanPlayer. */
+  public consumeReplacedHumanId(): string | undefined {
+    const id = this.replacedHumanId;
+    this.replacedHumanId = undefined;
+    return id;
+  }
+
+  private isPendingShipRespawn(entity: GameEntity): boolean {
+    return entity.exploding || entity.health <= 0 || entity.respawnTimer !== undefined;
+  }
+
+  /**
+   * Attach a new socket to a living human. Mid-death reuse must finish
+   * respawn so two-tab reconnect never inherits a corpse, zero-vel, or
+   * leftover explode timer. Live flyers keep pose and velocity.
+   */
+  private attachLiveHuman(
     existing: GameEntity,
     id: string,
     name: string,
@@ -306,10 +319,12 @@ export class EntityManager {
     kitId?: unknown
   ): GameEntity {
     const oldWs = existing.ws;
-    if (existing.id !== id) {
-      this.entities.delete(existing.id);
+    const oldId = existing.id;
+    if (oldId !== id) {
+      this.entities.delete(oldId);
       existing.id = id;
       this.entities.set(id, existing);
+      this.replacedHumanId = oldId;
     }
     existing.ws = ws;
     existing.name = name;
@@ -318,6 +333,9 @@ export class EntityManager {
       existing.factionId = this.nextFaction();
     }
     this.applyRequestedKit(existing, kitId);
+    if (this.isPendingShipRespawn(existing) && this.shouldScheduleRespawn(existing)) {
+      this.respawnShip(existing);
+    }
     if (oldWs && oldWs !== ws) {
       try {
         oldWs.close();

@@ -685,11 +685,15 @@ export class ConnectionManager {
             // collides, and attributes damage with. Align its id to the
             // server-assigned id.
             if (localPlayer) {
+              const previousId = localPlayer.id;
               localPlayer.id = entityData.id;
               if (this.localPlayerName) {
                 localPlayer.name = this.localPlayerName;
               }
               entity = localPlayer;
+              if (previousId && previousId !== entityData.id) {
+                this.forgetPlayer(previousId);
+              }
             }
           }
 
@@ -711,12 +715,16 @@ export class ConnectionManager {
           this.rememberPlayer(entityData.id, entity);
         } else if (isLocalPlayer && localPlayer && entity !== localPlayer) {
           this.allPlayers.delete(entityData.id);
+          const previousId = localPlayer.id;
           localPlayer.id = entityData.id;
           if (this.localPlayerName) {
             localPlayer.name = this.localPlayerName;
           }
           entity = localPlayer;
           this.rememberPlayer(entityData.id, entity);
+          if (previousId && previousId !== entityData.id) {
+            this.forgetPlayer(previousId);
+          }
         }
 
         // Apply the parsed entity directly — no per-tick snapshot wrapper.
@@ -793,7 +801,13 @@ export class ConnectionManager {
 
     // Store the local player ID from server response
     const localPlayer = PlayerManager.getInstance().getLocalPlayer();
+    if (localPlayer) {
+      localPlayer.resetCombatLifecycle();
+    }
     if (data.id) {
+      if (localPlayer?.id && localPlayer.id !== data.id) {
+        this.forgetPlayer(localPlayer.id);
+      }
       this.localPlayerId = data.id;
       if (localPlayer) {
         localPlayer.id = data.id;

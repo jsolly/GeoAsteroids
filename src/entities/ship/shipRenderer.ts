@@ -595,7 +595,7 @@ export function drawShipAtPosition(
   const ctx = canvasManager.getContext();
   const cvs = canvasManager.getCanvas();
 
-  if (!ctx || !cvs || ship.exploding) {
+  if (!ctx || !cvs || ship.exploding || ship.health <= 0) {
     return;
   }
 
