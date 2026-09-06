@@ -1,5 +1,9 @@
 import type { AsteroidData } from '../../shared-types';
-import { replaceThrustSources, resetThrustSources, thrustSourcesFromPlayers } from '../audio/gameSounds';
+import {
+  replaceThrustSources,
+  resetThrustSources,
+  thrustSourcesFromPlayers,
+} from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
