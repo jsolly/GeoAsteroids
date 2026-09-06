@@ -122,6 +122,17 @@ test('a large pose error snaps so a late joiner shares the live field', () => {
   expect(local.position).toEqual({ x: 80, y: -12 });
 });
 
+test('an escaped local pose contains even when the server echo is also far', () => {
+  const local = localRoid(10000, 40);
+  applyAsteroidKinematics(local, {
+    position: { x: 10005, y: 40 },
+    velocity: { x: 1, y: 0 },
+  });
+  expect(shouldSnapAsteroidPose({ x: 10000, y: 40 }, { x: 10005, y: 40 })).toBe(false);
+  expect(Math.hypot(local.position.x, local.position.y)).toBeLessThan(1300);
+  expect(local.position.x).toBeGreaterThan(0);
+});
+
 test('a lean first-seen row does not mark seen so a later full row can still create', () => {
   const seen = new Set<string>();
   const lean = { id: 'server-asteroid-0', position: { x: 80, y: -12 }, rotation: 1.2 } as AsteroidData;

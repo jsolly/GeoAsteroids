@@ -3,10 +3,12 @@ import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { RNGService } from '../../../server/core/RNGService';
 import { partitionAsteroidSnapshot } from '../../../src/network/services/asteroidFieldSync';
 import { getAsteroidFieldRadius, stepAsteroidMotion } from '../../../src/physics/asteroidMotion';
+import { containAsteroidPosition } from '../../../src/physics/asteroidMotion';
 import {
   PLAYFIELD_COMFORT_INSET,
   countRocksOnCanvas,
   drawingOffsets,
+  playfieldMinVisible,
   playfieldZoom,
   radarBeltVisibleOnPlayfield,
 } from '../../../src/rendering/playfieldCamera';
@@ -227,6 +229,50 @@ describe('playfield zoom paints the radar belt when 1:1 would be empty', () => {
     const emptyThenRecover = beltAfterTicks(11, 20, 60 * 60);
     expect(countRocksOnCanvas(emptyThenRecover, TAB_B_OUTSIDE, SMALL, 1)).toBe(0);
     expect(radarBeltVisibleOnPlayfield(emptyThenRecover, TAB_B_OUTSIDE, SMALL)).toBe(true);
+  });
+
+  test('T+30 origin with two comfortable rocks zooms the rest of the belt in', () => {
+    const field = beltAfterTicks(7, 20, 30 * 60);
+    const comfort = countRocksOnCanvas(field, TAB_A_IN_BELT, SMALL, 1, -PLAYFIELD_COMFORT_INSET);
+    expect(comfort).toBeLessThan(playfieldMinVisible(field.length));
+    expect(playfieldZoom(field, TAB_A_IN_BELT, SMALL)).toBeLessThan(1);
+    expect(
+      countRocksOnCanvas(field, TAB_A_IN_BELT, SMALL, playfieldZoom(field, TAB_A_IN_BELT, SMALL))
+    ).toBe(field.length);
+  });
+
+  test('a ring around the ship plus two inner rocks does not pin 1:1', () => {
+    const ship = { x: 0, y: 0 };
+    const radius = getAsteroidFieldRadius() * 0.96;
+    const ring = Array.from({ length: 20 }, (_, i) => {
+      const angle = (i / 20) * Math.PI * 2;
+      return { position: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }, r: 20 };
+    });
+    const field = [...ring, { position: { x: 40, y: 20 }, r: 20 }, { position: { x: -30, y: 50 }, r: 20 }];
+    expect(countRocksOnCanvas(field, ship, SMALL, 1, -PLAYFIELD_COMFORT_INSET)).toBe(2);
+    expect(countRocksOnCanvas(field, ship, SMALL, 1)).toBe(2);
+    expect(playfieldMinVisible(field.length)).toBeGreaterThan(2);
+    expect(playfieldZoom(field, ship, SMALL)).toBeLessThan(1);
+    expect(radarBeltVisibleOnPlayfield(field, ship, SMALL)).toBe(true);
+    expect(countRocksOnCanvas(field, ship, SMALL, playfieldZoom(field, ship, SMALL))).toBe(
+      field.length
+    );
+  });
+
+  test('one escaped wrap pose does not crush the on-canvas pack to hairlines', () => {
+    const ship = { x: 0, y: 0 };
+    const pack = Array.from({ length: 18 }, (_, i) => ({
+      position: { x: 80 + i * 6, y: i * 4 },
+      r: 20,
+    }));
+    const escaped = { position: { x: 20000, y: 0 }, r: 20 };
+    const field = [...pack, escaped, { position: { x: 40, y: 20 }, r: 20 }];
+    const scale = playfieldZoom(field, ship, SMALL);
+    expect(scale).toBeGreaterThan(0.05);
+    const containedEscaped = containAsteroidPosition(escaped.position.x, escaped.position.y);
+    const framed = [...pack, { ...escaped, position: containedEscaped }, { position: { x: 40, y: 20 }, r: 20 }];
+    expect(countRocksOnCanvas(framed, ship, SMALL, scale)).toBeGreaterThan(10);
+    expect(radarBeltVisibleOnPlayfield(field, ship, SMALL)).toBe(true);
   });
 
   test('a pending nearby rock does not hide the radar belt', () => {

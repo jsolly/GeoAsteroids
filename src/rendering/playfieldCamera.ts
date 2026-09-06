@@ -1,4 +1,5 @@
 import type { Position } from '../../shared-types';
+import { containAsteroidPosition } from '../physics/asteroidMotion';
 
 export type PlayfieldSize = { width: number; height: number };
 export type PlayfieldRock = {
@@ -8,10 +9,17 @@ export type PlayfieldRock = {
   pendingDestruction?: boolean;
 };
 
-/** Stay 1:1 only when this many drawable rocks sit inside the comfort inset. */
+/** Floor: stay 1:1 only when at least this many drawable rocks sit inside the inset. */
 export const PLAYFIELD_MIN_VISIBLE = 2;
+/** Stay 1:1 only when at least this share of the belt is on the playfield. */
+export const PLAYFIELD_MIN_FRACTION = 0.25;
 /** Pixels inside the canvas edge a rock center must be to count as "on the playfield". */
 export const PLAYFIELD_COMFORT_INSET = 48;
+
+/** How many comfortable rocks are required before 1:1 is allowed. */
+export function playfieldMinVisible(beltCount: number): number {
+  return Math.max(PLAYFIELD_MIN_VISIBLE, Math.ceil(beltCount * PLAYFIELD_MIN_FRACTION));
+}
 
 /** Ship-centered projection. Scale 1 matches today's 1:1 camera. */
 export function projectWorldToScreen(
@@ -102,24 +110,36 @@ function fitFarthestRock(
   return Math.min(1, inset / farthestReach(roids, ship));
 }
 
+function frameRock(roid: PlayfieldRock): PlayfieldRock {
+  return {
+    ...roid,
+    position: containAsteroidPosition(roid.position.x, roid.position.y),
+  };
+}
+
 /**
- * Keep 1:1 only while the ship is looking at the belt: ≥2 drawable rocks
- * inside the comfort inset *and* the pack centroid still on the playfield.
- * A clip-edge speck, a pending hide, or two rim stragglers must not pin
- * 1:1 while the dense field stays on the minimap (Pilot B pass 4).
+ * Keep 1:1 only while a real share of the belt is on the playfield:
+ * ≥ max(2, 25% of drawable rocks) inside the comfort inset *and* the
+ * contained pack centroid still on the canvas.
+ *
+ * #469's "2 rocks + centroid" pin failed when the belt was a ring around
+ * the ship (centroid at the camera, 2 inner stragglers, 18 dots on radar
+ * only) — Pilot B ~60s nearly-empty. One escaped wrap pose also must not
+ * set the fit distance; frame the contained belt so late-join 10k rocks
+ * cannot crush the pack to hairlines.
  */
 export function playfieldZoom(
   roids: readonly PlayfieldRock[],
   ship: Position,
   canvas: PlayfieldSize
 ): number {
-  const belt = roids.filter(isDrawablePlayfieldRock);
+  const belt = roids.filter(isDrawablePlayfieldRock).map(frameRock);
   if (belt.length === 0) {
     return 1;
   }
   const comfortable = countRocksOnCanvas(belt, ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
   const lookingAtPack =
-    comfortable >= PLAYFIELD_MIN_VISIBLE &&
+    comfortable >= playfieldMinVisible(belt.length) &&
     isRockOnCanvas(beltCentroid(belt), ship, canvas, 1, -PLAYFIELD_COMFORT_INSET);
   if (lookingAtPack) {
     return 1;
