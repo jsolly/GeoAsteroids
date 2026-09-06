@@ -8,6 +8,8 @@ export type GameEngineDiagnostics = {
   humanPlayers: number;
   bots: number;
   asteroids: number;
+  loot: number;
+  satellitePickups: number;
 };
 
 /** Test-only HTTP routes — enabled only in local dev and Vitest, never in production. */

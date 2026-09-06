@@ -188,6 +188,21 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message);
   }
 
+  public broadcastSatellitePickupCollected(data: {
+    pickupId: string;
+    playerId: string;
+    playerName: string;
+    pickupName: string;
+    scoreBonus: number;
+    shieldFrames: number;
+  }): void {
+    this.broadcastToAll({
+      type: 'satellitePickupCollected',
+      data,
+      timestamp: Date.now(),
+    });
+  }
+
   public broadcastAsteroidCreation(asteroids: any[]): void {
     const message = {
       type: 'asteroidCreateBatch',

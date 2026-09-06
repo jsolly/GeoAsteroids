@@ -1748,6 +1748,63 @@ export class GameInteractions {
     }, playerId);
   }
 
+  async getSatellitePickups(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      x: number;
+      y: number;
+      state: string;
+      ownerId: string | null;
+      r: number;
+    }>
+  > {
+    return await this.page.evaluate(() => {
+      const gc = (window as any).gameController;
+      const pickups = gc?.getSatellitePickups?.() ?? [];
+      return pickups.map((pickup: any) => ({
+        id: pickup.id,
+        name: pickup.name,
+        x: pickup.position.x,
+        y: pickup.position.y,
+        state: pickup.state,
+        ownerId: pickup.ownerId,
+        r: pickup.radius,
+      }));
+    });
+  }
+
+  async waitForSatellitePickups(count: number, timeoutMs = 25000): Promise<void> {
+    await this.page.waitForFunction(
+      (expected) => {
+        const gc = (window as any).gameController;
+        return (gc?.getSatellitePickups?.() ?? []).length >= expected;
+      },
+      count,
+      { timeout: timeoutMs }
+    );
+  }
+
+  async pinShipOnSatellitePickup(pickupId: string, durationMs = 2000): Promise<void> {
+    const deadline = Date.now() + durationMs;
+    while (Date.now() < deadline) {
+      await this.page.evaluate(
+        ({ id }) => {
+          const gc = (window as any).gameController;
+          const pickup = (gc?.getSatellitePickups?.() ?? []).find((item: any) => item.id === id);
+          const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+          if (pickup && ship) {
+            ship.position = { x: pickup.position.x, y: pickup.position.y };
+            ship.velocity = { x: 0, y: 0 };
+            ship.thrusting = false;
+          }
+        },
+        { id: pickupId }
+      );
+      await this.page.waitForTimeout(100);
+    }
+  }
+
   /** Standard one-client boot against the multiplayer server. */
   async bootGame(options?: {
     waitForCombatReady?: boolean;
@@ -1766,5 +1823,13 @@ export class GameInteractions {
     if (options?.waitForCombatReady !== false) {
       await this.waitForCombatReady();
     }
+  }
+
+  /** Alias used by satellite-pickup scenario tests. */
+  async bootSinglePlayerGame(options?: {
+    waitForCombatReady?: boolean;
+    kitId?: 'dart' | 'hauler' | 'warden' | 'skirmisher' | 'quake';
+  }): Promise<void> {
+    await this.bootGame(options);
   }
 }
