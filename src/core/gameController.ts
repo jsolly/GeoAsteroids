@@ -17,6 +17,7 @@ import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import {
+  bindHarpoonFieldSource,
   collectPlayHarpoonField,
   harpoonBodyFromShip,
   publishHarpoonField,
@@ -92,6 +93,7 @@ export class GameController {
 
     // Initialize with empty asteroid belt - will be populated by server
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    bindHarpoonFieldSource(() => this.snapshotHarpoonField());
 
     // Set up network disconnection handler
     this.setupNetworkDisconnectionHandler();
@@ -692,6 +694,7 @@ export class GameController {
     this.lifecycleAccumulatorMs = remainingMs;
 
     tickTouchControls(currPlayer);
+    this.publishLiveHarpoonField(currPlayer);
     currPlayer.ship.update(lifecycleFrames);
 
     // Bots predict locally; remotes share the same 60 Hz explode/blink clock
@@ -714,15 +717,7 @@ export class GameController {
     // Update asteroids
     if (this.currRoidBelt) {
       this.currRoidBelt.moveRoids(asteroidTickScale(dtMs));
-      const shipBodies = allPlayers
-        .filter((player) => player.id && player.id !== currPlayer.id && player.ship)
-        .map((player) =>
-          harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
-        );
-      publishHarpoonField(
-        collectPlayHarpoonField(this.currRoidBelt.roids, shipBodies),
-        canvasManager.getPlayfieldScale()
-      );
+      this.publishLiveHarpoonField(currPlayer);
     }
 
     // Check laser collisions with asteroids and bots
@@ -742,6 +737,25 @@ export class GameController {
 
     // Update game state manager
     this.gameStateManager.updateKillMessageTimer();
+  }
+
+  private snapshotHarpoonField(localPlayer?: Player | null) {
+    const local = localPlayer ?? this.playerManager.getLocalPlayer();
+    const allPlayers = this.networkManager.getAllPlayers();
+    const ships = allPlayers
+      .filter((player) => player.id && player.id !== local?.id && player.ship)
+      .map((player) =>
+        harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
+      );
+    return {
+      bodies: collectPlayHarpoonField(this.currRoidBelt?.roids ?? [], ships),
+      playfieldScale: canvasManager.getPlayfieldScale(),
+    };
+  }
+
+  private publishLiveHarpoonField(localPlayer?: Player | null): void {
+    const snapshot = this.snapshotHarpoonField(localPlayer);
+    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale);
   }
 
   private playersWithLocal(local: Player, allPlayers: Player[]): Player[] {

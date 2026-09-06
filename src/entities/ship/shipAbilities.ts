@@ -1,6 +1,6 @@
 import { areAllied } from '../../../shared/factions';
 import type { Position, SoftFactionId, Velocity } from '../../../shared-types';
-import { getHarpoonField, getHarpoonFieldScale } from './harpoonField';
+import { getHarpoonField, getHarpoonFieldScale, syncHarpoonFieldFromPlay } from './harpoonField';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId, type ShipKitId } from './shipKits';
 
 export interface AbilityHost {
@@ -17,6 +17,8 @@ export interface AbilityHost {
   shieldTimer: number;
   harpoonTimer: number;
   harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
+  r?: number;
 }
 
 export interface AbilityBody {
@@ -26,6 +28,8 @@ export interface AbilityBody {
   factionId?: SoftFactionId;
   exploding?: boolean;
   health?: number;
+  r?: number;
+  size?: number;
   shieldTimer?: number;
   /** Timed ship shield (#454). Separate from Warden kit `shieldTimer`. */
   shieldActive?: boolean;
@@ -62,10 +66,11 @@ export function absorbDamageWithShield(host: { shieldTimer: number }): boolean {
 }
 
 export function clearHarpoonLatch(
-  host: Pick<AbilityHost, 'harpoonTimer' | 'harpoonTargetId'>
+  host: Pick<AbilityHost, 'harpoonTimer' | 'harpoonTargetId' | 'harpoonLatchPos'>
 ): void {
   host.harpoonTimer = 0;
   host.harpoonTargetId = undefined;
+  host.harpoonLatchPos = undefined;
 }
 
 /** Rocks + ships share one latch list. Server and client use the same helper. */
@@ -120,7 +125,7 @@ export function tickAbilityHost(host: AbilityHost): void {
  * (timer > 0) wins so both clients draw the same tether.
  */
 export function applySharedHarpoonLatch(
-  host: Pick<AbilityHost, 'kitId' | 'harpoonTimer' | 'harpoonTargetId'>,
+  host: Pick<AbilityHost, 'kitId' | 'harpoonTimer' | 'harpoonTargetId' | 'harpoonLatchPos'>,
   snapshot: HarpoonLatchSnapshot,
   role: 'predicting' | 'authoritative' = 'authoritative'
 ): void {
@@ -174,19 +179,33 @@ function pullBody(body: AbilityBody, toward: Position, force: number): void {
   body.velocity.y += (dy / dist) * force;
 }
 
-/** World-unit latch reach. Zoomed playfields make a 280wu rock look adjacent. */
+export function bodyRadius(body: Pick<AbilityBody, 'r' | 'size'>): number {
+  const value = body.r ?? body.size;
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+/** Gap from hull to hull. Negative means the ship is inside the target. */
+export function harpoonSurfaceGap(
+  host: Pick<AbilityHost, 'position' | 'r'>,
+  body: AbilityBody
+): number {
+  const dist = Math.hypot(body.position.x - host.position.x, body.position.y - host.position.y);
+  return dist - bodyRadius(host) - bodyRadius(body);
+}
+
+/**
+ * World-unit latch reach. A rock that looks next to the ship (zoomed or 1:1
+ * on a large canvas) must still hook — #477's 2.5x cap left 700–1200wu
+ * "adjacent" rocks outside range, and scale>=1 never widened at all.
+ */
 export function harpoonLatchRange(playfieldScale = 1): number {
-  if (!Number.isFinite(playfieldScale) || playfieldScale >= 1 || playfieldScale <= 0) {
-    return SHIP_ABILITY.HARPOON_RANGE;
-  }
-  return Math.min(
-    SHIP_ABILITY.HARPOON_RANGE / Math.max(playfieldScale, 0.28),
-    SHIP_ABILITY.HARPOON_RANGE * 2.5
-  );
+  const scale = Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : 1;
+  const visual = SHIP_ABILITY.HARPOON_VISUAL_PX / scale;
+  return Math.min(Math.max(SHIP_ABILITY.HARPOON_RANGE, visual), SHIP_ABILITY.HARPOON_RANGE_MAX);
 }
 
 export function findHarpoonTarget(
-  host: Pick<AbilityHost, 'id' | 'factionId' | 'position' | 'angle'>,
+  host: Pick<AbilityHost, 'id' | 'factionId' | 'position' | 'angle' | 'r'>,
   bodies: AbilityBody[],
   range: number = SHIP_ABILITY.HARPOON_RANGE
 ): AbilityBody | undefined {
@@ -201,10 +220,11 @@ export function findHarpoonTarget(
     const dx = body.position.x - host.position.x;
     const dy = body.position.y - host.position.y;
     const dist = Math.hypot(dx, dy);
-    if (dist > range || dist < 1) {
+    const gap = dist - bodyRadius(host) - bodyRadius(body);
+    if (gap > range) {
       continue;
     }
-    const facing = (dx * hx + dy * hy) / dist;
+    const facing = dist < 1 ? 1 : (dx * hx + dy * hy) / dist;
     if (
       !best ||
       (facing > 0 && best.facing <= 0) ||
@@ -217,12 +237,11 @@ export function findHarpoonTarget(
   return best?.body;
 }
 
-function latchStillValid(host: AbilityHost, target: AbilityBody): boolean {
+function latchStillValid(host: AbilityHost, target: AbilityBody, range = SHIP_ABILITY.HARPOON_RANGE): boolean {
   if (!isHarpoonableBody(host, target)) {
     return false;
   }
-  const dist = Math.hypot(target.position.x - host.position.x, target.position.y - host.position.y);
-  return dist <= SHIP_ABILITY.HARPOON_RANGE * SHIP_ABILITY.HARPOON_SLACK;
+  return harpoonSurfaceGap(host, target) <= range * SHIP_ABILITY.HARPOON_SLACK;
 }
 
 /** Hauler-only: haul the latched rock or ship. Other kits never pull. */
@@ -235,7 +254,7 @@ export function pullHarpoonTarget(host: AbilityHost, bodies: AbilityBody[]): voi
   }
 
   const target = bodies.find((body) => body.id === host.harpoonTargetId);
-  if (!target || !latchStillValid(host, target)) {
+  if (!target || !latchStillValid(host, target, SHIP_ABILITY.HARPOON_RANGE_MAX)) {
     clearHarpoonLatch(host);
     return;
   }
@@ -300,6 +319,9 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
   }
 
   const kit = getShipKit(host.kitId);
+  if (!world) {
+    syncHarpoonFieldFromPlay();
+  }
   const resolved = resolveAbilityWorld(world);
 
   if (kit.abilityId === 'harpoon') {
@@ -317,6 +339,7 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
     host.harpoonTargetId = target.id;
     host.harpoonTimer = SHIP_ABILITY.HARPOON_FRAMES;
     host.abilityActiveFrames = SHIP_ABILITY.HARPOON_FRAMES;
+    host.harpoonLatchPos = { x: target.position.x, y: target.position.y };
     return { activated: true, abilityId: 'harpoon' };
   }
 

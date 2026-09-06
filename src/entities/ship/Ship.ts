@@ -97,6 +97,7 @@ class Ship {
   shieldTimer: number = 0;
   harpoonTimer: number = 0;
   harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
 
   // Server-authoritative smoothing targets (for remote/bot ships)
   targetPosition?: Position;
@@ -334,14 +335,11 @@ class Ship {
     if (result.abilityId === 'burstFire') {
       this.fireBurst(kit.burstCount, 0.12);
     }
-    // Always tell the server on a legal E. Local predict can miss a rock the
-    // server sees; Hauler still sends so both clients agree on the tether.
+    // Always tell the server on a legal E. Do not start the Hauler cooldown
+    // on a miss — that 3s lock was why a later in-range tap stayed dead.
     if (this.isLocalPlayer && !this.isBot && canTry) {
       const networkManager = NetworkManager.getInstance();
       if (networkManager.isConnected) {
-        if (kit.abilityId === 'harpoon' && !result.activated) {
-          this.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.hauler;
-        }
         networkManager.sendMessage({
           type: 'useAbility',
           id: networkManager.getLocalPlayerId(),

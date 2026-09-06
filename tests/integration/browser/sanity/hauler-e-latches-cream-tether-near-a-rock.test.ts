@@ -31,12 +31,12 @@ test('Hauler E near a rock latches and paints cream tether plus amber tip', asyn
     if (!ship || !rock) {
       return { ok: false, reason: 'missing ship or rock' };
     }
-    ship.position.x = rock.position.x - 80;
+    // Live QA: ~280wu, KeyE — not an 80wu teleport + activateAbility() cheat.
+    ship.position.x = rock.position.x - 220;
     ship.position.y = rock.position.y;
     ship.angle = 0;
     ship.abilityCooldownFrames = 0;
-    gc.updateGame(16);
-    ship.activateAbility();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', key: 'e', bubbles: true }));
     gc.updateGame(16);
     gc.renderGame();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));

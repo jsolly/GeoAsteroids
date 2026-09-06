@@ -9,6 +9,8 @@ export interface HarpoonFieldBody {
   factionId?: SoftFactionId;
   exploding?: boolean;
   health?: number;
+  r?: number;
+  size?: number;
   shieldTimer?: number;
   shieldActive?: boolean;
 }
@@ -16,6 +18,29 @@ export interface HarpoonFieldBody {
 let field: readonly HarpoonFieldBody[] = [];
 let fieldScale = 1;
 const lastKnown = new Map<string, HarpoonFieldBody>();
+
+export type HarpoonFieldSnapshot = {
+  bodies: readonly HarpoonFieldBody[];
+  playfieldScale?: number;
+};
+
+type HarpoonFieldSource = () => HarpoonFieldSnapshot | null | undefined;
+
+let fieldSource: HarpoonFieldSource | null = null;
+
+/** Game loop registers the live belt + ships so KeyE is not stuck on a stale publish. */
+export function bindHarpoonFieldSource(source: HarpoonFieldSource | null): void {
+  fieldSource = source;
+}
+
+/** Refresh the latch list from the playfield. Safe to call from KeyE outside the loop. */
+export function syncHarpoonFieldFromPlay(): readonly HarpoonFieldBody[] {
+  const snapshot = fieldSource?.();
+  if (snapshot) {
+    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale ?? fieldScale);
+  }
+  return field;
+}
 
 /** Playfield snapshot for local latch + tether VFX. Server uses its own lists. */
 export function publishHarpoonField(bodies: readonly HarpoonFieldBody[], playfieldScale = 1): void {
@@ -68,6 +93,7 @@ export function harpoonBodyFromShip(
     factionId?: SoftFactionId;
     exploding?: boolean;
     health?: number;
+    r?: number;
     shieldTimer?: number;
     shieldActive?: boolean;
   },
@@ -81,6 +107,7 @@ export function harpoonBodyFromShip(
     factionId: factionId ?? ship.factionId,
     exploding: ship.exploding,
     health: ship.health,
+    r: ship.r,
     shieldTimer: ship.shieldTimer,
     shieldActive: ship.shieldActive,
   };
