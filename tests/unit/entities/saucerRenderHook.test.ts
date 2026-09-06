@@ -6,6 +6,8 @@ import {
   SAUCER_CABIN_FILL_ALPHA,
   SAUCER_FIRING_SEGMENTS,
   SAUCER_HULL_COLOR,
+  SAUCER_NPC_ART_ID,
+  SAUCER_NPC_ART_IS_TEMPORARY,
   SAUCER_NPC_RENDER_LANGUAGE,
   SAUCER_RING_TICKS,
   SAUCER_SHOT_COLOR,
@@ -24,6 +26,8 @@ test('saucer NPC is allowed SVG-like fidelity and is not a kit outline', () => {
   expect(SAUCER_CABIN_FILL_ALPHA).toBe(0.18);
   expect(SAUCER_RING_TICKS).toBe(8);
   expect(SAUCER_FIRING_SEGMENTS).toBe(2);
+  expect(SAUCER_NPC_ART_IS_TEMPORARY).toBe(true);
+  expect(SAUCER_NPC_ART_ID).toBe('disc-temp');
 });
 
 test('AD art-pack SVGs match the confirmed box spec', () => {
@@ -38,10 +42,10 @@ test('AD art-pack SVGs match the confirmed box spec', () => {
     expect((svg.match(/<line\b/g) ?? []).length).toBeGreaterThanOrEqual(SAUCER_RING_TICKS);
   }
 
-  expect(idle).not.toContain(SAUCER_SHOT_COLOR);
+  expect(idle.includes(SAUCER_SHOT_COLOR)).toBe(false);
   expect(firing).toContain(`stroke="${SAUCER_SHOT_COLOR}"`);
-  const shotBlocks = firing.split(SAUCER_SHOT_COLOR)[1] ?? '';
-  expect((shotBlocks.match(/<line\b/g) ?? []).length).toBe(SAUCER_FIRING_SEGMENTS);
+  const shotGroup = firing.match(/stroke="#E9D5FF"[\s\S]*?<\/g>/)?.[0] ?? '';
+  expect((shotGroup.match(/<line\b/g) ?? []).length).toBe(SAUCER_FIRING_SEGMENTS);
 });
 
 function mockCtx(): { calls: string[]; ctx: CanvasRenderingContext2D } {

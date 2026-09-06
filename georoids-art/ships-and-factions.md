@@ -50,3 +50,5 @@ AD confirmed these box paths — canvas drawer replicates them.
 - Firing: short `#E9D5FF` segments off both rims
 
 See `src/entities/npc/saucerRenderHook.ts`. Independent of kit hull lock.
+The UFO-disc is a **temporary** stand-in (`SAUCER_NPC_ART_ID = disc-temp`) so a
+later Landsat-style satellite can swap without rewriting callers.

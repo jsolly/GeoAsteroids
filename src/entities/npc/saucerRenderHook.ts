@@ -13,6 +13,10 @@
 
 export const SAUCER_NPC_RENDER_LANGUAGE = 'svg-fidelity' as const;
 
+/** Disc silhouette is a temporary stand-in. Swap via `SAUCER_NPC_ART_ID`. */
+export const SAUCER_NPC_ART_ID = 'disc-temp' as const;
+export const SAUCER_NPC_ART_IS_TEMPORARY = true;
+
 export const SAUCER_USES_OUTLINE_ASTEROIDS_KIT_LANGUAGE = false;
 
 /** Ambient saucer hull. Not ION/EMBER and not a player-kit stroke. */
