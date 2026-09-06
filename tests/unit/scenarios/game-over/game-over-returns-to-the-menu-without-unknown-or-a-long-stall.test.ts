@@ -84,6 +84,45 @@ describe('Game-over returns to the menu', () => {
     expect(text).toBe('Game Over: You were killed by the arena wall');
     expect(text.toLowerCase()).not.toContain('unknown');
   });
+
+  test('an unknown event still names the wall from the local ship explode cause', () => {
+    const controller = GameController.getInstance();
+    controller.newGame('Ace');
+    const local = PlayerManager.getInstance().getLocalPlayer();
+    expect(local).toBeTruthy();
+    local!.deathCause = 'boundary';
+    local!.ship.lastExplodeCause = 'boundary';
+
+    window.dispatchEvent(
+      new CustomEvent('playerDied', {
+        detail: { playerId: local!.id, deathCause: 'unknown', isGameOver: true },
+      })
+    );
+
+    const text = GameStateManager.getInstance().getText();
+    expect(text).toBe('Game Over: You were killed by the arena wall');
+    expect(text.toLowerCase()).not.toContain('unknown');
+  });
+
+  test('every killer token prints a phrase — never unknown or a raw id', () => {
+    const cases: Array<[string, string]> = [
+      ['boundary', 'the arena wall'],
+      ['asteroid', 'an asteroid'],
+      ['server-bot-0', 'a bot'],
+      ['client-friend', 'another ship'],
+      ['laser', 'a laser'],
+    ];
+    for (const [token, phrase] of cases) {
+      GameController.getInstance().cancelPendingGameOver();
+      GameController.getInstance().gameOver(token);
+      const text = GameStateManager.getInstance().getText();
+      expect(text).toBe(`Game Over: You were killed by ${phrase}`);
+      expect(text.toLowerCase()).not.toContain('unknown');
+      if (token.startsWith('server-') || token.startsWith('client-')) {
+        expect(text).not.toContain(token);
+      }
+    }
+  });
 });
 
 describe('Last life on the server', () => {
@@ -118,7 +157,37 @@ describe('Last life on the server', () => {
       attackerId: 'boundary',
       remainingLives: 0,
     });
+    expect(world.entity(ace).deathCause).toBe('boundary');
+    expect(world.engine.getGameState().entities.find((entity) => entity.id === ace.id)).toMatchObject(
+      { deathCause: 'boundary', lives: 0 }
+    );
     expect(world.entity(ace).respawnTimer).toBeUndefined();
     expect(GAME.START_LIVES).toBe(3);
+  });
+
+  test('asteroid, ship, and bot killers stay on the snapshot until respawn', () => {
+    world.entity(ace).lives = 2;
+    world.hitAsteroid(ace, world.entity(ace).health);
+    expect(world.entity(ace).deathCause).toBe('asteroid');
+    expect(world.engine.getGameState().entities.find((entity) => entity.id === ace.id)?.deathCause).toBe(
+      'asteroid'
+    );
+
+    world.tick(20);
+    expect(world.entity(ace).health).toBeGreaterThan(0);
+    expect(world.entity(ace).deathCause).toBeUndefined();
+  });
+
+  test('a bot kill stores the bot id on the snapshot', () => {
+    let bot = world.engine.getAllBots()[0];
+    if (!bot) {
+      bot = world.engine.entityManager.createBots(1)[0];
+    }
+    expect(bot).toBeDefined();
+    world.engine.handlePlayerDamage(ace.id, bot!.id, world.entity(ace).health);
+    expect(world.entity(ace).deathCause).toBe(bot!.id);
+    expect(world.engine.getGameState().entities.find((entity) => entity.id === ace.id)?.deathCause).toBe(
+      bot!.id
+    );
   });
 });

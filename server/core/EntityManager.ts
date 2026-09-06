@@ -48,6 +48,8 @@ export interface GameEntity {
   shieldTimer: number;
   harpoonTimer: number;
   harpoonTargetId?: string;
+  /** Killer of the current death (cleared on respawn). */
+  deathCause?: string;
 }
 
 /** True when a client update is still the death pose, not the new spawn. */
@@ -478,6 +480,7 @@ export class EntityManager {
     entity.health = entity.maxHealth;
     entity.exploding = false;
     entity.explodeTime = undefined;
+    entity.deathCause = undefined;
     this.placeEntityInArena(entity);
     entity.spawnProtectionTimer = SHIP.INVINCIBILITY_DURATION_FRAMES;
     entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };

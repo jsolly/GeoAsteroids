@@ -2,7 +2,7 @@ import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
-import { isStaleGameOverSnapshot } from '../../utils/deathCause';
+import { isStaleGameOverSnapshot, preferDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
 import { applyShipKitToShip } from '../ship/shipKits';
@@ -138,6 +138,13 @@ export class Player {
     }
     const acceptServerTransform = !isLocal || this.adoptServerPosition;
 
+    // Infer wall from the pre-echo pose. Adopting a lagged inside position
+    // first is what turned last-life wall GO into a generic overlay.
+    const inferenceShip = {
+      position: { x: this.ship.position.x, y: this.ship.position.y },
+      r: this.ship.r,
+    };
+
     if (data.position && acceptServerTransform) {
       this.ship.position = data.position;
     }
@@ -149,12 +156,17 @@ export class Player {
     }
 
     if (data.deathCause) {
-      this.deathCause = data.deathCause;
+      this.deathCause = preferDeathCause(data.deathCause, this.deathCause) ?? data.deathCause;
     }
-    const explodeCause = resolveCombatDeathCause(this.deathCause ?? data.deathCause, this.ship);
+    const knownCause = preferDeathCause(
+      this.deathCause,
+      data.deathCause,
+      this.ship.lastExplodeCause
+    );
+    const explodeCause = resolveCombatDeathCause(knownCause, inferenceShip);
     applySharedShipExplodingFlag(this.ship, data.exploding, explodeCause);
     if (data.exploding === true || data.health === 0) {
-      this.deathCause = explodeCause;
+      this.deathCause = preferDeathCause(explodeCause, this.deathCause) ?? explodeCause;
     }
 
     const skipHudReset = isSilentHudReset(this.lives, this.score, data.lives, data.score);
@@ -176,7 +188,10 @@ export class Player {
           new CustomEvent('playerDied', {
             detail: {
               playerId: this.id,
-              deathCause: resolveCombatDeathCause(this.deathCause ?? data.deathCause, this.ship),
+              deathCause: resolveCombatDeathCause(
+                preferDeathCause(this.deathCause, data.deathCause, this.ship.lastExplodeCause),
+                inferenceShip
+              ),
               isGameOver: this.lives <= 0,
             },
           })
@@ -224,6 +239,9 @@ export class Player {
           this.lastServerHealthEcho = serverHealth;
         } else if (!isLocal) {
           this.ship.health = serverHealth;
+        } else if (isLocal && serverHealth <= 0) {
+          this.ship.health = 0;
+          this.lastServerHealthEcho = 0;
         } else if (isLocal && serverHealth > this.ship.health) {
           this.ship.health = serverHealth;
           this.lastServerHealthEcho = serverHealth;
@@ -250,10 +268,18 @@ export class Player {
             newHealth: this.ship.health,
             type: this.type,
           });
-          this.ship.explode('server-damage');
+          this.ship.explode(explodeCause);
         }
 
         applySharedShipRespawnCue(this.ship, wasDead || wasExploding, data.spawnProtectionTimer);
+        if (
+          (wasDead || wasExploding) &&
+          this.ship.health > 0 &&
+          (data.health === undefined || data.health > 0)
+        ) {
+          this.ship.lastExplodeCause = undefined;
+          this.deathCause = undefined;
+        }
         if (
           this.ship.health > 0 &&
           this.ship.blinkCount <= 0 &&
@@ -358,6 +384,8 @@ export class Player {
     // Reset velocity
     this.ship.velocity = { x: 0, y: 0 };
 
+    this.deathCause = undefined;
+    this.ship.lastExplodeCause = undefined;
     applyShipSpawnProtection(this.ship);
 
     logger.debug('RESPAWN', 'Player respawn completed', {
@@ -385,9 +413,8 @@ export class Player {
       health: this.ship.health,
     });
 
-    // Store death cause
     if (detail?.cause) {
-      this.deathCause = detail.cause;
+      this.deathCause = preferDeathCause(detail.cause, this.deathCause) ?? detail.cause;
     }
 
     // The respawn will be handled by the server

@@ -5,6 +5,7 @@ import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
+import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
@@ -86,6 +87,8 @@ class Ship {
   playerCollisionStartTime: number = 0;
   lastPlayerCollisionDamageTime: number = 0;
   collidingPlayerId?: string;
+  /** Last non-generic explode token (boundary, asteroid, attacker id). */
+  lastExplodeCause?: string;
 
   static get fxThrust(): Sound {
     return getThrustSound();
@@ -150,6 +153,12 @@ class Ship {
   explode(cause?: string, killerName?: string): void {
     if (this.exploding) {
       return;
+    }
+
+    if (cause && !isGenericDeathCause(cause)) {
+      this.lastExplodeCause = cause;
+    } else if (cause && !this.lastExplodeCause) {
+      this.lastExplodeCause = cause;
     }
 
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;

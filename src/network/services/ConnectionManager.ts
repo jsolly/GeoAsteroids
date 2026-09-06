@@ -654,6 +654,7 @@ export class ConnectionManager {
           ...(entityData.harpoonTargetId !== undefined
             ? { harpoonTargetId: entityData.harpoonTargetId }
             : {}),
+          ...(entityData.deathCause ? { deathCause: entityData.deathCause } : {}),
         };
         entity.updateFromServer(serverSnapshot);
 

@@ -343,6 +343,9 @@ export class GameEngine {
 
   /** One death path for humans and bots: lives (humans), points, shared respawn schedule. */
   private applyShipDeath(entity: GameEntity, attackerId: string, killPoints: number): void {
+    if (attackerId) {
+      entity.deathCause = attackerId;
+    }
     if (entity.type === 'human') {
       const prevLives = entity.lives;
       entity.lives = Math.max(0, entity.lives - 1);
@@ -407,6 +410,7 @@ export class GameEngine {
         shieldTimer: entity.shieldTimer,
         harpoonTimer: entity.harpoonTimer,
         harpoonTargetId: entity.harpoonTargetId,
+        ...(entity.deathCause ? { deathCause: entity.deathCause } : {}),
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
