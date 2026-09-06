@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { DAMAGE } from '../../../src/constants';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { Roid } from '../../../src/entities/roid/Roid';
 import { Ship } from '../../../src/entities/ship/Ship';
@@ -120,8 +121,17 @@ describe('moving-roid hit feel', () => {
       [roid]
     );
     expect(localShip.impactFlashFrames).toBeGreaterThan(0);
+    expect(localShip.exploding).toBe(true);
     expect(roid.pendingDestruction).toBe(true);
     expect(mockSendMessage).toHaveBeenCalledTimes(2);
+    expect(mockSendMessage).toHaveBeenCalledWith({
+      type: 'collisionDamage',
+      data: {
+        targetPlayerId: 'local-player-123',
+        attackerId: 'asteroid',
+        damage: DAMAGE.ASTEROID_COLLISION,
+      },
+    });
 
     collisionManager.checkPlayerAsteroidCollisions(
       { ship: localShip, id: 'local-player-123', type: 'local' },
@@ -136,12 +146,13 @@ describe('moving-roid hit feel', () => {
       [other]
     );
     expect(botShip.impactFlashFrames).toBeGreaterThan(0);
+    expect(botShip.exploding).toBe(true);
     expect(mockSendMessage).toHaveBeenCalledWith({
       type: 'botDamage',
       data: {
         botId: 'server-bot-1',
         attackerId: 'asteroid',
-        damage: 25,
+        damage: DAMAGE.ASTEROID_COLLISION,
       },
     });
   });

@@ -1,9 +1,9 @@
 import { WebSocket } from 'ws';
 import type { Position, AsteroidData } from '../../shared-types';
+import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
-import { SHIP } from '../../src/constants';
 import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { logger } from '../../setup/serverLogger';
 
@@ -14,6 +14,9 @@ export class GameEngine {
   private gameTime = 0;
   private gameLoopInterval: NodeJS.Timeout | null = null;
   private isPaused = false; // Track if game is paused due to no players
+  private lastTickAtMs = 0;
+  private tickAccumulatorMs = 0;
+  private clockPrimed = false;
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -29,26 +32,62 @@ export class GameEngine {
       return; // Already running
     }
 
-    // Start game loop for cleanup and updates (60 FPS for health regeneration)
+    this.lastTickAtMs = Date.now();
+    this.tickAccumulatorMs = 0;
+    this.clockPrimed = true;
     this.gameLoopInterval = setInterval(() => {
-      // Always increment game time, even when paused, to maintain consistency
-      this.gameTime++;
-      
-      // Only update game state if not paused
-      if (!this.isPaused) {
-        this.entityManager.cleanupStaleEntities();
-        this.entityManager.updateExplosions();
-        this.entityManager.updateRespawns();
-        // Authoritative asteroid field — clients render these positions from gameState.
-        this.asteroidManager.updateMotion();
-        
-        // Update bot movement at reduced frequency for better performance
-        // Update every 2 frames (30 FPS instead of 60 FPS)
-        if (this.gameTime % 2 === 0) {
-          this.entityManager.updateBotMovement();
-        }
-      }
-    }, 1000 / 60); // 60 FPS
+      this.stepClock(Date.now());
+    }, GAME_TICK_MS);
+  }
+
+  /**
+   * Advance the monotonic clock and catch up missed simulation frames.
+   * A blocked event loop used to increment gameTime once per late interval
+   * fire, which froze explode/respawn and made /health.world.gameTime look stuck.
+   */
+  public stepClock(nowMs: number): number {
+    if (!this.clockPrimed) {
+      this.lastTickAtMs = nowMs;
+      this.clockPrimed = true;
+      return 0;
+    }
+    const elapsed = nowMs - this.lastTickAtMs;
+    this.lastTickAtMs = nowMs;
+    if (!Number.isFinite(elapsed) || elapsed <= 0) {
+      return 0;
+    }
+    this.tickAccumulatorMs += elapsed;
+    const { frames, remainingMs } = consumeTickAccumulator(this.tickAccumulatorMs);
+    this.tickAccumulatorMs = remainingMs;
+    for (let i = 0; i < frames; i++) {
+      this.advanceOneFrame();
+    }
+    return frames;
+  }
+
+  /** One 60 Hz frame: clock always ticks; combat/field only while a human is in. */
+  public advanceOneFrame(): void {
+    this.gameTime++;
+    if (this.isPaused) {
+      return;
+    }
+    this.entityManager.cleanupStaleEntities();
+    this.entityManager.updateExplosions();
+    this.entityManager.updateRespawns();
+    this.asteroidManager.updateMotion();
+    if (this.gameTime % 2 === 0) {
+      this.entityManager.updateBotMovement();
+    }
+  }
+
+  /** Combat pair + clock — scenario tests drive death→respawn without moving the belt. */
+  public advanceCombatFrame(): void {
+    this.gameTime++;
+    if (this.isPaused) {
+      return;
+    }
+    this.entityManager.updateExplosions();
+    this.entityManager.updateRespawns();
   }
 
   public stopGameLoop(): void {
@@ -56,6 +95,9 @@ export class GameEngine {
       clearInterval(this.gameLoopInterval);
       this.gameLoopInterval = null;
     }
+    this.lastTickAtMs = 0;
+    this.tickAccumulatorMs = 0;
+    this.clockPrimed = false;
   }
 
   // Pause/resume functionality
@@ -249,35 +291,12 @@ export class GameEngine {
       exploding: damagedPlayer.exploding,
     });
 
-    // Handle destruction: decrement lives, award points, and schedule respawn if any lives remain
     if (damagedPlayer.health <= 0) {
-      // Decrement lives for the destroyed player (min 0)
       const destroyedEntity = this.entityManager.getEntity(targetPlayerId);
       if (destroyedEntity) {
-        const prevLives = destroyedEntity.lives;
-        destroyedEntity.lives = Math.max(0, destroyedEntity.lives - 1);
-        logger.info('PLAYER', `Life lost`, {
-          playerId: targetPlayerId,
-          name: destroyedEntity.name,
-          livesBefore: prevLives,
-          livesAfter: destroyedEntity.lives,
-        });
+        this.applyShipDeath(destroyedEntity, attackerId, 200);
       }
-
-      // Only award points if attacker is a valid, different player
-      const attackerIsValidPlayer = !!attackerId && attackerId !== targetPlayerId && !!this.entityManager.getEntity(attackerId);
-      if (attackerIsValidPlayer) {
-        this.awardPoints(attackerId, 200);
-      }
-
-      // Schedule respawn only if player still has lives remaining
-      if (destroyedEntity && destroyedEntity.lives > 0) {
-        this.entityManager.updateEntity(targetPlayerId, {
-          respawnTimer: SHIP.RESPAWN_DELAY_FRAMES,
-        });
-      }
-
-      return true; // Player was destroyed
+      return true;
     }
 
     return false;
@@ -294,13 +313,34 @@ export class GameEngine {
       return false;
     }
 
-    // Award points to attacker for destroying a bot
     if (damagedBot.health <= 0) {
-      this.awardPoints(attackerId, 50);
-      return true; // Bot was destroyed
+      this.applyShipDeath(damagedBot, attackerId, 50);
+      return true;
     }
 
-    return false; // Bot was damaged but not destroyed
+    return false;
+  }
+
+  /** One death path for humans and bots: lives (humans), points, shared respawn schedule. */
+  private applyShipDeath(entity: GameEntity, attackerId: string, killPoints: number): void {
+    if (entity.type === 'human') {
+      const prevLives = entity.lives;
+      entity.lives = Math.max(0, entity.lives - 1);
+      logger.info('PLAYER', `Life lost`, {
+        playerId: entity.id,
+        name: entity.name,
+        livesBefore: prevLives,
+        livesAfter: entity.lives,
+      });
+      const attackerIsValidPlayer =
+        !!attackerId && attackerId !== entity.id && !!this.entityManager.getEntity(attackerId);
+      if (attackerIsValidPlayer) {
+        this.awardPoints(attackerId, killPoints);
+      }
+    } else if (attackerId) {
+      this.awardPoints(attackerId, killPoints);
+    }
+    this.entityManager.scheduleShipRespawn(entity);
   }
 
   public handleAsteroidDestruction(asteroidId: string, playerId: string, points: number): { success: boolean; newAsteroids: any[] } {

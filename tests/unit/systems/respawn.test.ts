@@ -32,9 +32,9 @@ describe('Respawn System Integration', () => {
   it('should validate respawn timer behavior', () => {
     // Test the respawn timer logic with actual calculation
     const FPS = 60;
-    const respawnDelaySeconds = 3;
-    const respawnDelay = respawnDelaySeconds * FPS; // 3 seconds at 60 FPS
-    expect(respawnDelay).toBe(180);
+    const explodeSeconds = 0.3;
+    const respawnDelay = explodeSeconds * FPS;
+    expect(respawnDelay).toBe(18);
     expect(respawnDelay).toBeGreaterThan(0);
 
     // Test edge cases
@@ -45,12 +45,12 @@ describe('Respawn System Integration', () => {
   it('should validate respawn state transitions', () => {
     // Test the expected state transitions
     const initialState = { health: 100, exploding: false, respawnTimer: undefined };
-    const deathState = { health: 0, exploding: true, respawnTimer: 180 };
+    const deathState = { health: 0, exploding: true, respawnTimer: 18 };
     const respawnState = { health: 100, exploding: false, respawnTimer: undefined };
 
     expect(initialState.health).toBe(100);
     expect(deathState.health).toBe(0);
-    expect(deathState.respawnTimer).toBe(180);
+    expect(deathState.respawnTimer).toBe(18);
     expect(respawnState.health).toBe(100);
     expect(respawnState.respawnTimer).toBeUndefined();
   });

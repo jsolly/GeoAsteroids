@@ -1,3 +1,4 @@
+import { consumeTickAccumulator } from '../../shared/gameClock';
 import type { AsteroidData } from '../../shared-types';
 import {
   replaceThrustSources,
@@ -36,6 +37,7 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private lifecycleAccumulatorMs = 0;
 
   private constructor() {
     this.gameStateManager = GameStateManager.getInstance();
@@ -80,6 +82,7 @@ export class GameController {
 
   // Game lifecycle methods
   newGame(playerName?: string): void {
+    this.lifecycleAccumulatorMs = 0;
     // Create new player
     this.playerManager.createLocalPlayer();
 
@@ -591,19 +594,26 @@ export class GameController {
       return;
     }
 
+    const elapsed = Number.isFinite(dtMs) ? Math.max(0, dtMs) : 1000 / GAME.FPS;
+    this.lifecycleAccumulatorMs += elapsed;
+    const { frames: lifecycleFrames, remainingMs } = consumeTickAccumulator(
+      this.lifecycleAccumulatorMs
+    );
+    this.lifecycleAccumulatorMs = remainingMs;
+
     // Update local player ship
     logger.debug('GAME_LOOP', 'Updating ship', {
       shipPosition: currPlayer.ship.position,
       shipAngle: currPlayer.ship.angle,
     });
-    currPlayer.ship.update();
+    currPlayer.ship.update(lifecycleFrames);
 
     // Update all bot ships
     const allPlayers = this.networkManager.getAllPlayers();
     const botPlayers = allPlayers.filter((player) => player.type === 'bot');
     for (const botPlayer of botPlayers) {
       if (botPlayer.ship) {
-        botPlayer.ship.update();
+        botPlayer.ship.update(lifecycleFrames);
       }
     }
 

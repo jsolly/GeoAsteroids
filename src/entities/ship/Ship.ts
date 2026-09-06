@@ -595,27 +595,27 @@ class Ship {
     }
   }
 
-  // Main update method called each frame
-  update(): void {
+  /**
+   * @param lifecycleFrames whole 60 Hz steps for explode / blink / regen.
+   * Movement still runs once per display frame so high-refresh stays smooth.
+   */
+  update(lifecycleFrames = 1): void {
+    const steps = Math.max(0, Math.floor(lifecycleFrames));
     if (this.exploding) {
-      this.updateExplosion();
+      for (let i = 0; i < steps; i++) {
+        this.updateExplosion();
+      }
       return;
     }
 
-    // Update invincibility and blinking
-    this.updateInvincibility();
-    tickShipImpactFlash(this);
+    for (let i = 0; i < steps; i++) {
+      this.updateInvincibility();
+      tickShipImpactFlash(this);
+      this.updateHealth();
+    }
 
-    // Update health
-    this.updateHealth();
-
-    // Apply movement
     this.updateMovement();
-
-    // Update EMP pulse
     this.updateEmpPulse();
-
-    // Update lasers
     this.updateShootCooldown();
     this.moveLasers();
   }
