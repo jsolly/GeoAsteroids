@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
 import {
+  canDrawGenericAbilityRing,
   canDrawHaulerHarpoon,
   drawHaulerHarpoonVfx,
   harpoonTetherStyle,
@@ -24,6 +25,25 @@ test('tether VFX is Hauler-only while latched', () => {
       kitId: 'hauler',
       harpoonTimer: 40,
       harpoonLatchPos: { x: 40, y: 0 },
+    })
+  ).toBe(true);
+});
+
+test('Hauler never paints the generic activation ring', () => {
+  expect(
+    canDrawGenericAbilityRing({
+      kitId: 'hauler',
+      abilityActiveFrames: 40,
+      harpoonTimer: 0,
+      shieldTimer: 0,
+    })
+  ).toBe(false);
+  expect(
+    canDrawGenericAbilityRing({
+      kitId: 'dart',
+      abilityActiveFrames: 12,
+      harpoonTimer: 0,
+      shieldTimer: 0,
     })
   ).toBe(true);
 });
@@ -125,6 +145,19 @@ test('tether VFX still resolves a server asteroid id suffix', () => {
   drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
   expect(strokes).toContain('#E8D5A3');
   expect(fills).toContain('#FDE68A');
+});
+
+test('timer-only Hauler still paints cream from the nearest field rock', () => {
+  publishHarpoonField([
+    { id: 'near', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 }, kind: 'asteroid' },
+  ]);
+  const hauler = new Ship({ kitId: 'hauler' });
+  hauler.harpoonTimer = 40;
+  const { ctx, strokes, fills } = paintRecorder();
+  drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
+  expect(strokes).toContain('#E8D5A3');
+  expect(fills).toContain('#FDE68A');
+  expect(hauler.harpoonLatchPos?.x).toBe(40);
 });
 
 test('tether VFX still paints from a stored latch pose when the field id is stale', () => {

@@ -126,11 +126,14 @@ export function isHarpoonableBody(
   host: Pick<AbilityHost, 'id' | 'factionId'>,
   body: AbilityBody
 ): boolean {
-  if (!body.id || body.id === host.id) {
+  if (body.id && body.id === host.id) {
     return false;
   }
   if (isEnvironmentLatchBody(body)) {
     return !body.exploding;
+  }
+  if (!body.id) {
+    return false;
   }
   if (body.exploding || (body.health !== undefined && body.health <= 0)) {
     return false;
@@ -458,7 +461,7 @@ export function activateAbilityOnHost(host: AbilityHost, world?: AbilityWorld): 
       world?.canvas ?? getHarpoonFieldCanvas()
     );
     const target = findHarpoonTarget(host, listHarpoonCandidates(resolved), latchRange);
-    if (!target?.id) {
+    if (!target) {
       return { activated: false };
     }
     host.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES[kit.id];

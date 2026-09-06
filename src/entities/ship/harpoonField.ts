@@ -98,6 +98,33 @@ export function findHarpoonFieldBody(id: string | undefined): HarpoonFieldBody |
   return undefined;
 }
 
+/** Belt row → latch body. Forces `kind: 'asteroid'` so ship filters cannot reject it. */
+export function harpoonBodyFromRock(roid: {
+  id?: string;
+  position: Position;
+  velocity: Velocity;
+  r?: number;
+  health?: number;
+  exploding?: boolean;
+}): HarpoonFieldBody | undefined {
+  if (!Number.isFinite(roid.position.x) || !Number.isFinite(roid.position.y)) {
+    return undefined;
+  }
+  const id =
+    typeof roid.id === 'string' && roid.id.length > 0
+      ? roid.id
+      : `rock:${roid.position.x.toFixed(1)},${roid.position.y.toFixed(1)}`;
+  return {
+    id,
+    position: roid.position,
+    velocity: roid.velocity,
+    kind: 'asteroid',
+    exploding: roid.exploding,
+    health: roid.health,
+    r: roid.r,
+  };
+}
+
 export function harpoonBodyFromShip(
   id: string,
   ship: {
@@ -124,6 +151,26 @@ export function harpoonBodyFromShip(
     shieldTimer: ship.shieldTimer,
     shieldActive: ship.shieldActive,
   };
+}
+
+export function harpoonBodiesFromRocks(
+  roids: readonly {
+    id?: string;
+    position: Position;
+    velocity: Velocity;
+    r?: number;
+    health?: number;
+    exploding?: boolean;
+  }[]
+): HarpoonFieldBody[] {
+  const bodies: HarpoonFieldBody[] = [];
+  for (const roid of roids) {
+    const body = harpoonBodyFromRock(roid);
+    if (body) {
+      bodies.push(body);
+    }
+  }
+  return bodies;
 }
 
 export function collectPlayHarpoonField(

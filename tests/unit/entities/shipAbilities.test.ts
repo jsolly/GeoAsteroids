@@ -16,7 +16,11 @@ import {
 } from '../../../src/entities/ship/shipAbilities';
 import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { bindHarpoonFieldSource, publishHarpoonField } from '../../../src/entities/ship/harpoonField';
+import {
+  bindHarpoonFieldSource,
+  harpoonBodyFromRock,
+  publishHarpoonField,
+} from '../../../src/entities/ship/harpoonField';
 
 function host(kitId: AbilityHost['kitId']): AbilityHost {
   return {
@@ -195,6 +199,30 @@ test('harpoon latches a touching rock instead of a distant forward ship', () => 
     kind: 'ship' as const,
   };
   expect(findHarpoonTarget(hauler, [rockBehind, shipAhead])?.id).toBe('rock');
+});
+
+test('harpoonBodyFromRock tags belt rows as asteroid so ship filters cannot reject them', () => {
+  const body = harpoonBodyFromRock({
+    position: { x: 10, y: 4 },
+    velocity: { x: 0, y: 0 },
+    r: 50,
+    health: 0,
+  });
+  expect(body).toBeTruthy();
+  expect(body?.kind).toBe('asteroid');
+  expect(body?.id).toMatch(/^rock:/);
+  expect(isEnvironmentLatchBody(body!)).toBe(true);
+});
+
+test('an environment rock without an id still latches via pose', () => {
+  const hauler = host('hauler');
+  const rock = { position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 }, r: 40 };
+  expect(isEnvironmentLatchBody(rock)).toBe(true);
+  expect(findHarpoonTarget(hauler, [rock])).toBe(rock);
+  const result = activateAbilityOnHost(hauler, { asteroids: [rock], entities: [] });
+  expect(result.activated).toBe(true);
+  expect(hauler.harpoonTimer).toBeGreaterThan(0);
+  expect(hauler.harpoonLatchPos?.x).toBe(80);
 });
 
 test('a visible rock with health 0 still latches', () => {

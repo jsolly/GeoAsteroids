@@ -13,7 +13,8 @@ import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
 import { drawSoftFactionMark } from '../player/factionMarkPainters';
-import { findHarpoonFieldBody } from './harpoonField';
+import { findHarpoonFieldBody, getHarpoonField } from './harpoonField';
+import { findHarpoonTarget } from './shipAbilities';
 import {
   getKitHullOutline,
   projectHullPoint,
@@ -653,6 +654,21 @@ export function canDrawHaulerHarpoon(ship: {
   );
 }
 
+/** Generic E ring. Hauler must never show this — that is the live "activation-only" miss. */
+export function canDrawGenericAbilityRing(ship: {
+  kitId: string;
+  abilityActiveFrames: number;
+  harpoonTimer: number;
+  shieldTimer: number;
+}): boolean {
+  return (
+    ship.kitId !== 'hauler' &&
+    ship.abilityActiveFrames > 0 &&
+    ship.harpoonTimer <= 0 &&
+    ship.shieldTimer <= 0
+  );
+}
+
 /** Zoomed playfields shrink nearby latches; dashes must not eat the cable. */
 export function harpoonTetherStyle(
   screenDist: number,
@@ -676,16 +692,21 @@ export function drawHaulerHarpoonVfx(
   screenY: number,
   cameraShipPosition: { x: number; y: number }
 ): void {
-  if (!canDrawHaulerHarpoon(ship)) {
+  if (ship.kitId !== 'hauler' || ship.harpoonTimer <= 0) {
     return;
   }
   const target = findHarpoonFieldBody(ship.harpoonTargetId);
-  const latchWorld = target?.position ?? ship.harpoonLatchPos;
+  let latchWorld = target?.position ?? ship.harpoonLatchPos;
+  if (!latchWorld) {
+    latchWorld = findHarpoonTarget(ship, [...getHarpoonField()], Number.POSITIVE_INFINITY)?.position;
+  }
   if (!latchWorld) {
     return;
   }
   if (target) {
     ship.harpoonLatchPos = { x: target.position.x, y: target.position.y };
+  } else if (!ship.harpoonLatchPos) {
+    ship.harpoonLatchPos = { x: latchWorld.x, y: latchWorld.y };
   }
 
   const latch = canvasManager.worldToScreen(latchWorld, cameraShipPosition);
@@ -732,7 +753,7 @@ function drawAbilityFx(
     ctx.lineWidth = 2;
     ctx.stroke();
   }
-  if (ship.abilityActiveFrames > 0 && ship.harpoonTimer <= 0 && ship.shieldTimer <= 0) {
+  if (canDrawGenericAbilityRing(ship)) {
     ctx.beginPath();
     ctx.arc(screenX, screenY, shipR + 6, 0, Math.PI * 2);
     ctx.strokeStyle = hexToRgba(TITLE.ACCENT, 0.45);

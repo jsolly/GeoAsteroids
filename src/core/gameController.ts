@@ -20,6 +20,7 @@ import { rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import {
   bindHarpoonFieldSource,
   collectPlayHarpoonField,
+  harpoonBodiesFromRocks,
   harpoonBodyFromShip,
   publishHarpoonField,
 } from '../entities/ship/harpoonField';
@@ -810,13 +811,13 @@ export class GameController {
       .map((player) =>
         harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
       );
-    const rocks = this.currRoidBelt?.roids ?? [];
+    const rocks = harpoonBodiesFromRocks(this.currRoidBelt?.roids ?? []);
     const canvas = canvasManager.getCanvas();
     const shipPos = local?.ship.position ?? { x: 0, y: 0 };
     // KeyE runs outside the render loop. Recompute zoom here so latch range
     // matches the playfield the pilot sees, not last frame's stored scale=1.
     const playfieldScale = canvas
-      ? playfieldZoom(rocksForPlayfieldZoom(rocks), shipPos, canvas)
+      ? playfieldZoom(rocksForPlayfieldZoom(this.currRoidBelt?.roids ?? []), shipPos, canvas)
       : canvasManager.getPlayfieldScale();
     return {
       bodies: collectPlayHarpoonField(rocks, ships),
