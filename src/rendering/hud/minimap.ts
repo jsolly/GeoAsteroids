@@ -47,16 +47,15 @@ export function drawMiniMap(
   const miniMapX = centerX - miniMapSize / 2;
   const miniMapY = centerY - miniMapSize / 2;
 
+  // Hairline radar ring only — no filled panel behind it; the void shows through.
   ctx.save();
   ctx.beginPath();
   ctx.arc(centerX, centerY, miniMapSize / 2, 0, Math.PI * 2);
   ctx.closePath();
-  ctx.fillStyle = hexToRgba(PALETTE.BG, 0.72);
-  ctx.fill();
-  ctx.clip();
   ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.4);
   ctx.lineWidth = 1;
   ctx.stroke();
+  ctx.clip();
 
   const boundaryScale = miniMapSize / 2 / boundary.radius;
   const boundaryOffsetX = miniMapX + miniMapSize / 2;
