@@ -30,7 +30,8 @@ body {
 }
 
 body.in-play #title-starfield,
-body.in-play #attribution {
+body.in-play #attribution,
+body.in-play .controls-hint {
   display: none;
 }
 
@@ -162,6 +163,19 @@ a {
     transparent
   );
   border-radius: 2px;
+}
+
+/* Title/menu only — phosphor control legend. Hidden in live play via body.in-play. */
+.controls-hint {
+  margin: 0.35em 0 1.15em;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--palette-accent, #a78bfa);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--palette-accent, #a78bfa) 45%, transparent);
+  opacity: 0.82;
 }
 
 /* Game modes section */
@@ -423,6 +437,11 @@ a {
   .screen h1 {
     font-size: 2.8em;
     margin-bottom: 1em;
+  }
+
+  .controls-hint {
+    font-size: 0.64rem;
+    margin-bottom: 0.9em;
   }
 
   .game-modes {
