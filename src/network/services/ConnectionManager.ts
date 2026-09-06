@@ -14,6 +14,11 @@ import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
+import {
+  type CanonicalGameState,
+  entityHasCreateIdentity,
+  mergeWireGameState,
+} from '../gameStateSnapshot';
 import type { ClientMessage, ServerMessage } from '../types';
 import { asteroidKinematicUpdates, partitionAsteroidSnapshot } from './asteroidFieldSync';
 import {
@@ -327,10 +332,12 @@ export class ConnectionManager {
   }
 
   // Send player state to server
-  sendPlayerState(playerState: Omit<PlayerUpdate, 'lives' | 'score'> & {
-    lives?: number;
-    score?: number;
-  }): void {
+  sendPlayerState(
+    playerState: Omit<PlayerUpdate, 'lives' | 'score'> & {
+      lives?: number;
+      score?: number;
+    }
+  ): void {
     if (!this.state.isConnected || !this.state.socket) {
       return;
     }

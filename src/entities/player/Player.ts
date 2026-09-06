@@ -100,9 +100,7 @@ export class Player {
     const isLocal = this.type === 'local';
     if (isLocal) {
       const deadOrExploding =
-        this.ship.health <= 0 ||
-        this.ship.exploding ||
-        isServerRespawnActive(data.respawnTimer);
+        this.ship.health <= 0 || this.ship.exploding || isServerRespawnActive(data.respawnTimer);
       if (deadOrExploding) {
         if (!this.adoptServerPosition) {
           this.respawnLatchOrigin = data.position
