@@ -1,6 +1,8 @@
 import { expect, test } from 'vitest';
 import { SHIP } from '../../../src/constants';
 import {
+  AD_V2_HULL_BAKE_LOCKED,
+  AD_V2_HULL_SHEET,
   AD_V2_HULL_TOPOLOGY,
   applyShipKitToShip,
   DEFAULT_SHIP_KIT_ID,
@@ -47,6 +49,7 @@ test('kit abilities are mixed flavors and geo is optional', () => {
 
 test('kit hulls stay on the shared placeholder until the AD pack', () => {
   expect(KIT_HULLS_ARE_PLACEHOLDERS).toBe(true);
+  expect(AD_V2_HULL_BAKE_LOCKED).toBe(false);
   const hulls = listShipKits().map((kit) => kit.hull);
   expect(hulls.every((hull) => hull === hulls[0])).toBe(true);
   expect(AD_V2_HULL_TOPOLOGY).toEqual({
@@ -56,6 +59,8 @@ test('kit hulls stay on the shared placeholder until the AD pack', () => {
     skirmisher: 'y-fork',
     quake: 'terraced-mountain',
   });
+  expect(AD_V2_HULL_SHEET.playScalePx).toBe(32);
+  expect(AD_V2_HULL_SHEET.stroke).toBe('#5EEAD4');
 });
 
 test('applyShipKitToShip is shared for human and bot hulls', () => {

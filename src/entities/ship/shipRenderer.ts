@@ -492,7 +492,7 @@ export function drawShipAtPosition(
   // Use ship's own color or provided color
   const shipColor = color || ship.color;
 
-  // Use the shared ship triangle calculation function for consistency
+  // Shared placeholder triangle until AD_V2_HULL_BAKE_LOCKED (do not branch on v2 topology).
   const hull = getShipKit(ship.kitId).hull;
   const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
     screenX,

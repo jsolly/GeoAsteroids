@@ -30,3 +30,8 @@ dist/*
 
 
 # Materialized agent config (fetched by .dotagents/bootstrap.sh; not committed)
+
+# AD sheets may land here; keep topology md, skip binary dumps
+/georoids-art/**/*.png
+/georoids-art/**/*.svg
+

@@ -47,16 +47,32 @@ export const KIT_HULL_PLACEHOLDER = CLASSIC_HULL;
 export const KIT_HULLS_ARE_PLACEHOLDERS = true;
 
 /**
- * AD v2 topology — HOLD. Do not bake into `hull` until John / Product Owner lock it.
- * Dart = needle; Hauler = barge hex; Warden = Δ + forward shield arc;
- * Skirmisher = Y-fork; Quake = terraced mountain.
+ * AD v2 topology — HOLD. Do not bake into `hull` until John / Product Owner
+ * set `AD_V2_HULL_BAKE_LOCKED`. Sheets: silhouettes-v2 + play-scale-v2.
  */
+export const AD_V2_HULL_BAKE_LOCKED = false;
+
 export const AD_V2_HULL_TOPOLOGY = {
   dart: 'needle',
   hauler: 'barge-hex',
   warden: 'delta-shield-arc',
   skirmisher: 'y-fork',
   quake: 'terraced-mountain',
+} as const;
+
+/** Sheet notes for the bake after lock. Not consumed by the renderer. */
+export const AD_V2_HULL_SHEET = {
+  stroke: '#5EEAD4',
+  background: '#000011',
+  playScalePx: 32,
+  topology: AD_V2_HULL_TOPOLOGY,
+  notes: {
+    dart: 'needle — tall thin isosceles, inverted-V notch at aft',
+    hauler: 'barge hex — wide low polygon, flat keel, faceted bow',
+    warden: 'delta + detached forward shield arc above the apex',
+    skirmisher: 'Y-fork — two forward prongs, pointed aft',
+    quake: 'terraced mountain — stepped tiers, triangular peak',
+  },
 } as const;
 
 export const SHIP_ABILITY = {
