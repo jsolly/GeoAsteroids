@@ -152,9 +152,8 @@ export class GameStateBroadcaster {
       timestamp: Date.now(),
     };
 
-    console.log('🪨 SERVER: Broadcasting asteroid creation batch', { 
+    logger.debug('Broadcasting asteroid creation batch', {
       asteroidCount: asteroids.length,
-      asteroidIds: asteroids.map(a => a.id)
     });
     this.broadcastToAll(message);
   }

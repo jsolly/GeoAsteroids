@@ -227,24 +227,27 @@ export class GameEngine {
 
   // Game logic operations
   public handlePlayerDamage(targetPlayerId: string, attackerId: string, damage: number): boolean {
-    console.log('DEBUG: handlePlayerDamage called', { targetPlayerId, attackerId, damage });
+    logger.debug('handlePlayerDamage called', { targetPlayerId, attackerId, damage });
     // Ignore damage if player is already in respawn countdown or already at 0 health
     const existing = this.getPlayer(targetPlayerId);
     if (!existing) {
-      console.log('DEBUG: damagedPlayer is null');
+      logger.debug('damagedPlayer is null');
       return false;
     }
     if (existing.respawnTimer !== undefined || existing.health <= 0) {
-      console.log('DEBUG: ignoring damage during respawn or while dead');
+      logger.debug('ignoring damage during respawn or while dead');
       return false;
     }
 
     const damagedPlayer = this.entityManager.damageEntity(targetPlayerId, damage);
     if (!damagedPlayer) {
-      console.log('DEBUG: damagedPlayer is null');
+      logger.debug('damagedPlayer is null after damageEntity');
       return false;
     }
-    console.log('DEBUG: damagedPlayer after damage', { health: damagedPlayer.health, exploding: damagedPlayer.exploding });
+    logger.debug('damagedPlayer after damage', {
+      health: damagedPlayer.health,
+      exploding: damagedPlayer.exploding,
+    });
 
     // Handle destruction: decrement lives, award points, and schedule respawn if any lives remain
     if (damagedPlayer.health <= 0) {

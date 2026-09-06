@@ -274,11 +274,12 @@ export const PREFERENCES = {
 // LOGGING CONFIGURATION
 // ============================================================================
 export const LOGGING = {
-  // Global log level that affects both client and server logging
-  // This controls what gets written to both server.log and client.log
-  GLOBAL_LOG_LEVEL: 'debug' as 'error' | 'warn' | 'info' | 'debug',
+  // Opt in to `debug` locally when chasing a bug. Production must stay
+  // `info` or quieter — per-frame `logger.debug` at 60 FPS stalls the
+  // main thread, misses heartbeats, and disconnects both tabs.
+  GLOBAL_LOG_LEVEL: 'info' as 'error' | 'warn' | 'info' | 'debug',
 
-  // Whether to forward client logs to the server
+  // Whether to forward client logs to the server (warn+ only; see Logger)
   FORWARD_TO_SERVER: true,
 
   // Whether to write logs to browser console

@@ -128,15 +128,15 @@ export class AsteroidManager {
             y: playerPos.y,
           };
         }
-        console.log(`🪨 SERVER: Placing asteroid ${i} exactly on player at position:`, position);
+        logger.debug('Placing asteroid on player', { index: i, position });
       } else if (DEBUG.ROIDS.PLACE_ON_BOT && botPositions.length > 0) {
         // Place all asteroids on bots when PLACE_ON_BOT is true
         const botPos = botPositions[i % botPositions.length];
         position = botPos ?? this.rng.randomPosition(bounds);
-        console.log(`🪨 SERVER: Placing asteroid ${i} on bot at position:`, position);
+        logger.debug('Placing asteroid on bot', { index: i, position });
       } else {
         position = this.rng.randomPosition(bounds);
-        console.log(`🪨 SERVER: Placing asteroid ${i} randomly at position:`, position);
+        logger.debug('Placing asteroid randomly', { index: i, position });
       }
       
       const velocity = this.rng.randomVelocity(4);
