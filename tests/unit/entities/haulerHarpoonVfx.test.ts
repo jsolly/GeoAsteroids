@@ -22,7 +22,7 @@ test('tether VFX is Hauler-only while latched', () => {
 
 test('short zoomed tethers stay solid so the cable does not vanish', () => {
   expect(harpoonTetherStyle(8).dash).toEqual([]);
-  expect(harpoonTetherStyle(8).ring).toBeGreaterThanOrEqual(8);
+  expect(harpoonTetherStyle(8).ring).toBeGreaterThanOrEqual(14);
   expect(harpoonTetherStyle(80).dash).toEqual([8, 5]);
 });
 

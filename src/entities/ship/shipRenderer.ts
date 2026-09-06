@@ -645,7 +645,7 @@ export function canDrawHaulerHarpoon(ship: {
 export function harpoonTetherStyle(screenDist: number): { dash: number[]; ring: number } {
   return {
     dash: screenDist > 20 ? [8, 5] : [],
-    ring: Math.max(8, Math.min(16, 6 + screenDist * 0.12)),
+    ring: Math.max(14, Math.min(22, 10 + screenDist * 0.12)),
   };
 }
 
@@ -680,9 +680,12 @@ export function drawHaulerHarpoonVfx(
   ctx.lineTo(latch.x, latch.y);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.lineWidth = 2.25;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, Math.max(10, style.ring * 0.7), 0, Math.PI * 2);
+  ctx.stroke();
   ctx.beginPath();
   ctx.arc(latch.x, latch.y, style.ring, 0, Math.PI * 2);
-  ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
 }
