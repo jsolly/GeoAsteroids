@@ -189,6 +189,17 @@ describe('Local Player Roid Collision Damage', () => {
   });
 
   describe('Edge Cases', () => {
+    test('local player does not report asteroid damage while blinking', async () => {
+      localShip.blinkCount = 8;
+
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+
+      expect(networkManager.sendMessage).not.toHaveBeenCalled();
+    });
+
     test('local player does not take damage while exploding', async () => {
       localShip.exploding = true;
       

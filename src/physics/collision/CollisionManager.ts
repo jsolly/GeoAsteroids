@@ -2,6 +2,7 @@ import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
+import { isShipCollisionImmune } from '../../entities/ship/shipUtils';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import {
@@ -36,9 +37,11 @@ export class CollisionManager {
     });
 
     for (const ship of ships) {
-      // Skip ships that are already exploding
-      if (ship.exploding) {
-        logger.debug('COLLISION', 'Skipping exploding ship', { shipId: ship.id });
+      // Same immunity as asteroid / ship-ship: exploding, dead, or blinking.
+      // Boundary previously skipped only exploding, so a dead or freshly
+      // respawned hull kept sending 100-damage collisionDamage at 60 Hz.
+      if (isShipCollisionImmune(ship)) {
+        logger.debug('COLLISION', 'Skipping immune ship for boundary', { shipId: ship.id });
         continue;
       }
 
@@ -91,7 +94,7 @@ export class CollisionManager {
     const ship = player.ship;
 
     // Skip if ship is exploding, has no health, or is under spawn protection (blinking)
-    if (ship.exploding || ship.health <= 0 || ship.blinkCount > 0) {
+    if (isShipCollisionImmune(ship)) {
       if (ship.blinkCount > 0) {
         logger.debug('COLLISION', 'Skipping collision check - ship under spawn protection', {
           shipId: ship.id,
@@ -127,7 +130,7 @@ export class CollisionManager {
    */
   checkShipShipCollisions(localShip: Ship, otherShips: Ship[], localPlayerId: string): void {
     // Skip if local ship cannot collide: exploding, dead, or under spawn protection
-    if (!localShip || localShip.exploding || localShip.health <= 0 || localShip.blinkCount > 0) {
+    if (!localShip || isShipCollisionImmune(localShip)) {
       return;
     }
 
@@ -136,7 +139,7 @@ export class CollisionManager {
     // Check local ship against all other ships
     for (const otherShip of otherShips) {
       // Skip other ships that are exploding, dead, or under spawn protection
-      if (otherShip.exploding || otherShip.health <= 0 || otherShip.blinkCount > 0) {
+      if (isShipCollisionImmune(otherShip)) {
         continue;
       }
 
@@ -189,7 +192,7 @@ export class CollisionManager {
         for (const player of players) {
           const ship = player.ship;
           // Skip players that are exploding or have no health
-          if (ship.exploding || ship.health <= 0) {
+          if (isShipCollisionImmune(ship)) {
             continue;
           }
 

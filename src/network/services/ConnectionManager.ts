@@ -11,6 +11,7 @@ import { PALETTE } from '../../constants';
 import { entityFactory } from '../../entities/EntityFactory';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
+import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 import {
@@ -739,10 +740,7 @@ export class ConnectionManager {
 
     this.applyDamageToLocalPlayerIfTarget(data);
 
-    targetPlayer.ship.health = data.remainingHealth;
-    if (targetPlayer.type === 'local') {
-      targetPlayer.syncServerHealthEcho(data.remainingHealth);
-    }
+    this.applyAuthoritativeDamageHealth(targetPlayer, data.remainingHealth, data.isDestroyed);
 
     if (data.remainingHealth > 0 && data.damage > 0) {
       targetPlayer.ship.takeDamage(0, data.attackerId);
@@ -797,13 +795,27 @@ export class ConnectionManager {
       return;
     }
 
-    localPlayer.ship.health = data.remainingHealth;
-    localPlayer.syncServerHealthEcho(data.remainingHealth);
+    this.applyAuthoritativeDamageHealth(localPlayer, data.remainingHealth, data.isDestroyed);
     if (data.remainingLives !== undefined) {
       localPlayer.lives = data.remainingLives;
     }
     if (data.isDestroyed && !localPlayer.ship.exploding) {
       localPlayer.ship.explode(data.attackerId);
+    }
+  }
+
+  /** Never raise health from playerDamaged — ignored hits echo remainingHealth=100. */
+  private applyAuthoritativeDamageHealth(
+    player: Player,
+    remainingHealth: number,
+    isDestroyed: boolean
+  ): void {
+    if (!shouldApplyDamagedHealth(player.ship.health, remainingHealth, isDestroyed)) {
+      return;
+    }
+    player.ship.health = remainingHealth;
+    if (player.type === 'local') {
+      player.syncServerHealthEcho(remainingHealth);
     }
   }
 

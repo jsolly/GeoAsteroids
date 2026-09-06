@@ -11,6 +11,7 @@ import { createLaser } from '../laser/laserUtils';
 import { drawThruster } from './shipRenderer';
 
 import {
+  applyShipSpawnProtection,
   calculateHealthAfterDamage,
   calculateHealthAfterHeal,
   calculateHealthRegenDelayFrames,
@@ -81,11 +82,7 @@ class Ship {
   }) {
     // Set initial spawn protection for local players to prevent immediate collisions
     if (options?.isLocalPlayer) {
-      this.blinkCount = Math.ceil(
-        SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-      );
-      this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
-      this.setBlinkOn();
+      applyShipSpawnProtection(this);
 
       logger.debug('SPAWN_PROTECTION', 'Initial spawn protection set for local player', {
         shipId: this.id,
@@ -327,29 +324,13 @@ class Ship {
       if (data.angle !== undefined) {
         this.targetAngle = data.angle;
       }
-      if (data.exploding !== undefined) {
-        this.exploding = data.exploding;
-      }
       if (data.r !== undefined) {
         this.r = data.r;
       }
       if (data.thrusting !== undefined) {
         this.thrusting = data.thrusting;
       }
-      if (data.health !== undefined) {
-        this.health = data.health;
-      }
-      if (data.maxHealth !== undefined) {
-        this.maxHealth = data.maxHealth;
-      }
-      // Bots get spawn protection from server data
-      if (data.health !== undefined && data.health > 0) {
-        this.blinkCount = Math.ceil(
-          SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-        );
-        this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
-        this.setBlinkOn();
-      }
+      this.applyNetworkCombatFields(data);
       this.lastServerUpdateMs = performance.now ? performance.now() : Date.now();
       return;
     }
@@ -367,11 +348,21 @@ class Ship {
     if (data.angle !== undefined) {
       this.angle = data.angle;
     }
-    if (data.exploding !== undefined) {
-      this.exploding = data.exploding;
-    }
     if (data.thrusting !== undefined) {
       this.thrusting = data.thrusting;
+    }
+    this.applyNetworkCombatFields(data);
+  }
+
+  /** Apply health/explode fields; blink only on death → alive (player and bot). */
+  private applyNetworkCombatFields(data: {
+    exploding?: boolean;
+    health?: number;
+    maxHealth?: number;
+  }): void {
+    const wasDead = this.health <= 0 || this.exploding;
+    if (data.exploding !== undefined) {
+      this.exploding = data.exploding;
     }
     if (data.health !== undefined) {
       this.health = data.health;
@@ -379,13 +370,8 @@ class Ship {
     if (data.maxHealth !== undefined) {
       this.maxHealth = data.maxHealth;
     }
-    // If we receive health data from server and we're not a bot, set spawn protection
-    if (!this.isBot && data.health !== undefined && data.health > 0) {
-      this.blinkCount = Math.ceil(
-        SHIP.INVINCIBILITY_DURATION_FRAMES / SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES
-      );
-      this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
-      this.setBlinkOn();
+    if (wasDead && this.health > 0) {
+      applyShipSpawnProtection(this);
     }
   }
 

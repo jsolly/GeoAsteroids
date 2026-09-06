@@ -223,6 +223,7 @@ class CanvasManager {
           } else {
             drawShipExplosionAtPosition(player.ship, currShip.position, factionColor);
           }
+        } else if (player.ship.health <= 0) {
         } else if (player.id === localId) {
           drawShipAtPosition(currShip, currShip.position, factionColor, currPlayer.name);
         } else {
@@ -241,7 +242,7 @@ class CanvasManager {
     try {
       const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
-        if (player.ship.exploding) {
+        if (player.ship.exploding || player.ship.health <= 0) {
           continue;
         }
 
@@ -280,7 +281,7 @@ class CanvasManager {
       if (player.id === localId) {
         continue;
       }
-      if (player.ship.exploding) {
+      if (player.ship.exploding || player.ship.health <= 0) {
         continue;
       }
 
