@@ -120,6 +120,18 @@ test('tether VFX still resolves a server asteroid id suffix', () => {
   expect(fills).toContain('#FDE68A');
 });
 
+test('tether VFX still paints from a stored latch pose when the field id is stale', () => {
+  publishHarpoonField([]);
+  const hauler = new Ship({ kitId: 'hauler' });
+  hauler.harpoonTimer = 40;
+  hauler.harpoonTargetId = 'server-asteroid-0';
+  hauler.harpoonLatchPos = { x: 40, y: 0 };
+  const { ctx, strokes, fills } = paintRecorder();
+  drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
+  expect(strokes).toContain('#E8D5A3');
+  expect(fills).toContain('#FDE68A');
+});
+
 test('Hauler latch paints opaque cream line and amber tip', () => {
   publishHarpoonField([{ id: 'rock-1', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 } }]);
   const hauler = new Ship({ kitId: 'hauler' });

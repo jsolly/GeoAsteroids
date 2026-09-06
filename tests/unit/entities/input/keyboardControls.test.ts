@@ -70,6 +70,12 @@ test('KeyE activates the ship kit ability', () => {
   expect(activateSpy).toHaveBeenCalledTimes(1);
 });
 
+test('held KeyE repeat does not re-fire the ability', () => {
+  const activateSpy = vi.spyOn(player.ship, 'activateAbility');
+  keyDown(new KeyboardEvent('keydown', { code: 'KeyE', repeat: true }), player);
+  expect(activateSpy).not.toHaveBeenCalled();
+});
+
 test('KeyF toggles the local ship shield and KeyF again drops it into cooldown', () => {
   expect(player.ship.shieldActive).toBe(false);
   press('KeyF');

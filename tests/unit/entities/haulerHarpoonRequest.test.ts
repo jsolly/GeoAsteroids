@@ -30,7 +30,17 @@ test('local Hauler still asks the server when the local field has no target', ()
       data: { kitId: 'hauler', abilityId: 'harpoon' },
     })
   );
-  expect(ship.abilityCooldownFrames).toBeGreaterThan(0);
+  expect(ship.abilityCooldownFrames).toBe(0);
+});
+
+test('a missed Hauler E does not lock the next tap behind cooldown', () => {
+  publishHarpoonField([]);
+  const ship = new Ship({ kitId: 'hauler', isLocalPlayer: true });
+  expect(ship.activateAbility()).toBe(false);
+  publishHarpoonField([{ id: 'rock-1', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } }]);
+  expect(ship.activateAbility()).toBe(true);
+  expect(ship.harpoonTargetId).toBe('rock-1');
+  expect(ship.harpoonTimer).toBeGreaterThan(0);
 });
 
 test('local Hauler still sends useAbility after a local latch', () => {

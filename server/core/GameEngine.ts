@@ -538,7 +538,10 @@ export class GameEngine {
       applyShipKitStats(entity, requestedKitId);
     }
     const world = {
-      asteroids: this.asteroidManager.getAllAsteroids(),
+      asteroids: this.asteroidManager.getAllAsteroids().map((asteroid) => ({
+        ...asteroid,
+        r: asteroid.size,
+      })),
       entities: this.entityManager.getAllEntities().filter((other) => other.id !== entityId),
     };
     return activateAbilityOnHost(entity, world).activated;

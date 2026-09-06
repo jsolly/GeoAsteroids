@@ -675,11 +675,15 @@ export function drawHaulerHarpoonVfx(
     return;
   }
   const target = findHarpoonFieldBody(ship.harpoonTargetId);
-  if (!target) {
+  const latchWorld = target?.position ?? ship.harpoonLatchPos;
+  if (!latchWorld) {
     return;
   }
+  if (target) {
+    ship.harpoonLatchPos = { x: target.position.x, y: target.position.y };
+  }
 
-  const latch = canvasManager.worldToScreen(target.position, cameraShipPosition);
+  const latch = canvasManager.worldToScreen(latchWorld, cameraShipPosition);
   const screenDist = Math.hypot(latch.x - screenX, latch.y - screenY);
   const style = harpoonTetherStyle(screenDist, canvasManager.getPlayfieldScale());
   ctx.save();

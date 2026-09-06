@@ -130,7 +130,9 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         player.ship.shoot();
         break;
       case 'KeyE':
-        player.ship.activateAbility();
+        if (!ev.repeat) {
+          player.ship.activateAbility();
+        }
         break;
       case 'KeyF':
         if (!ev.repeat) {

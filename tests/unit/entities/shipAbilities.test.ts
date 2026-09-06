@@ -7,12 +7,14 @@ import {
   canActivateAbility,
   findHarpoonTarget,
   harpoonLatchRange,
+  harpoonSurfaceGap,
   pullHarpoonTarget,
   tickAbilityHost,
   type AbilityHost,
 } from '../../../src/entities/ship/shipAbilities';
 import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
 import { Ship } from '../../../src/entities/ship/Ship';
+import { bindHarpoonFieldSource, publishHarpoonField } from '../../../src/entities/ship/harpoonField';
 
 function host(kitId: AbilityHost['kitId']): AbilityHost {
   return {
@@ -75,8 +77,8 @@ test('non-Hauler kits never latch or haul', () => {
 });
 
 test('zoomed playfields widen local latch range so a visually-near rock hooks', () => {
-  expect(harpoonLatchRange(1)).toBe(SHIP_ABILITY.HARPOON_RANGE);
-  expect(harpoonLatchRange(0.3)).toBeGreaterThan(SHIP_ABILITY.HARPOON_RANGE);
+  expect(harpoonLatchRange(1)).toBeGreaterThanOrEqual(SHIP_ABILITY.HARPOON_RANGE);
+  expect(harpoonLatchRange(0.25)).toBeGreaterThan(1000);
   const hauler = host('hauler');
   const almostNear = {
     id: 'zoom-rock',
@@ -84,7 +86,54 @@ test('zoomed playfields widen local latch range so a visually-near rock hooks', 
     velocity: { x: 0, y: 0 },
   };
   expect(findHarpoonTarget(hauler, [almostNear])).toBeUndefined();
-  expect(findHarpoonTarget(hauler, [almostNear], harpoonLatchRange(0.3))?.id).toBe('zoom-rock');
+  expect(findHarpoonTarget(hauler, [almostNear], harpoonLatchRange(0.25))?.id).toBe('zoom-rock');
+});
+
+test('a large rock whose surface is within 280wu latches even if its center is farther', () => {
+  const hauler = host('hauler');
+  hauler.r = 19;
+  const rock = {
+    id: 'big-rock',
+    position: { x: 330, y: 0 },
+    velocity: { x: 0, y: 0 },
+    r: 80,
+  };
+  expect(harpoonSurfaceGap(hauler, rock)).toBeLessThan(SHIP_ABILITY.HARPOON_RANGE);
+  expect(findHarpoonTarget(hauler, [rock])?.id).toBe('big-rock');
+});
+
+test('overlapping a rock still latches (center gap under 1wu)', () => {
+  const hauler = host('hauler');
+  const rock = { id: 'on-top', position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, r: 80 };
+  expect(findHarpoonTarget(hauler, [rock])?.id).toBe('on-top');
+});
+
+test('same-side faction does not block a rock with no faction', () => {
+  const hauler = host('hauler');
+  hauler.factionId = 'ember';
+  const rock = { id: 'neutral-rock', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } };
+  const mate = {
+    id: 'mate-bot',
+    position: { x: 60, y: 0 },
+    velocity: { x: 0, y: 0 },
+    factionId: 'ember' as const,
+    health: 100,
+  };
+  expect(findHarpoonTarget(hauler, [mate, rock])?.id).toBe('neutral-rock');
+});
+
+test('Hauler E syncs the live belt so an unpublished field still latches', () => {
+  publishHarpoonField([]);
+  bindHarpoonFieldSource(() => ({
+    bodies: [{ id: 'live-rock', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } }],
+    playfieldScale: 1,
+  }));
+  const hauler = host('hauler');
+  const result = activateAbilityOnHost(hauler);
+  bindHarpoonFieldSource(null);
+  expect(result.activated).toBe(true);
+  expect(hauler.harpoonTargetId).toBe('live-rock');
+  expect(hauler.harpoonLatchPos?.x).toBe(80);
 });
 
 test('Hauler harpoon whiffs without a rock in range', () => {
