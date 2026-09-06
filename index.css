@@ -25,11 +25,6 @@ body {
 }
 
 body {
-  background-image: url('/spaceBackground.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   min-height: 100vh;
 }
 
@@ -73,6 +68,7 @@ body {
   font-size: 11px;
   letter-spacing: 0.04em;
 }
+
 
 #attribution,
 #attribution a,
