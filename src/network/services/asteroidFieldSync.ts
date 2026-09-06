@@ -72,6 +72,9 @@ export function asteroidKinematicUpdates(asteroid: WireAsteroidSnapshot): Partia
   return updates;
 }
 
+/** Snap only when dead-reckoning has drifted; avoids 30 Hz teleport jitter. */
+export const ASTEROID_POSE_SNAP_PX = 12;
+
 /** Local belt object that can receive an authoritative kinematic snapshot. */
 export interface AsteroidKinematicTarget {
   position: { x: number; y: number };
@@ -83,17 +86,29 @@ export interface AsteroidKinematicTarget {
   r: number;
 }
 
+export function shouldSnapAsteroidPose(
+  local: { x: number; y: number },
+  server: { x: number; y: number },
+  snapPx: number = ASTEROID_POSE_SNAP_PX
+): boolean {
+  return Math.hypot(server.x - local.x, server.y - local.y) > snapPx;
+}
+
 /**
- * Write server pose onto a local roid. Used for first create, duplicate
- * create-batch (late join / rejoined seen-id clear), and gameState updates
- * so we never keep a static private copy.
+ * Write server kinematics onto a local roid.
+ * Velocity / spin always follow the server; position snaps only when the
+ * interpolated pose has drifted past ASTEROID_POSE_SNAP_PX, then is
+ * contained to the shared belt (#444).
  */
 export function applyAsteroidKinematics(
   roid: AsteroidKinematicTarget,
-  updates: Partial<AsteroidData>
+  updates: Partial<AsteroidData>,
+  options: { snapPosition?: boolean } = {}
 ): void {
   if (updates.position) {
-    roid.position = containAsteroidPosition(updates.position.x, updates.position.y);
+    if (options.snapPosition || shouldSnapAsteroidPose(roid.position, updates.position)) {
+      roid.position = containAsteroidPosition(updates.position.x, updates.position.y);
+    }
   }
   if (updates.velocity) {
     roid.velocity = { x: updates.velocity.x, y: updates.velocity.y };

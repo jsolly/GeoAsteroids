@@ -4,6 +4,7 @@ import {
   applyAsteroidKinematics,
   asteroidKinematicUpdates,
   partitionAsteroidSnapshot,
+  shouldSnapAsteroidPose,
 } from '../../../src/network/services/asteroidFieldSync';
 
 function roid(id: string, x: number, y: number): AsteroidData {
@@ -19,6 +20,18 @@ function roid(id: string, x: number, y: number): AsteroidData {
     maxHealth: 10,
     vertices: 8,
     offsets: [1, 1, 1, 1, 1, 1, 1, 1],
+  };
+}
+
+function localRoid(x: number, y: number) {
+  return {
+    position: { x, y },
+    velocity: { x: 0, y: 0 },
+    angle: 0,
+    angularVelocity: 0,
+    health: 10,
+    maxHealth: 10,
+    r: 20,
   };
 }
 
@@ -79,16 +92,8 @@ test('a lean delta updates pose for a known asteroid without touching shape', ()
 });
 
 test('a duplicate create still writes the live pose onto the existing roid', () => {
-  const local = {
-    position: { x: 1, y: 2 },
-    velocity: { x: 0, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    health: 10,
-    maxHealth: 10,
-    r: 20,
-  };
-  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
+  const local = localRoid(1, 2);
+  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12), { snapPosition: true });
   expect(local.position).toEqual({ x: 80, y: -12 });
   expect(local.velocity).toEqual({ x: 1, y: 0 });
 });
@@ -111,16 +116,33 @@ test('a later non-empty snapshot prunes ids the server no longer has', () => {
 });
 
 test('applying a 10k live pose contains it inside the shared belt', () => {
+  const local = localRoid(1, 2);
+  applyAsteroidKinematics(local, roid('server-asteroid-0', 10000, 0));
+  expect(local.position.x).toBeGreaterThan(0);
+  expect(Math.hypot(local.position.x, local.position.y)).toBeLessThan(1300);
+});
+
+test('small pose error keeps the interpolated position so the field does not hitch', () => {
   const local = {
-    position: { x: 1, y: 2 },
-    velocity: { x: 0, y: 0 },
+    position: { x: 10, y: 10 },
+    velocity: { x: 1, y: 0 },
     angle: 0,
     angularVelocity: 0,
     health: 10,
     maxHealth: 10,
     r: 20,
   };
-  applyAsteroidKinematics(local, roid('server-asteroid-0', 10000, 0));
-  expect(local.position.x).toBeGreaterThan(0);
-  expect(Math.hypot(local.position.x, local.position.y)).toBeLessThan(1300);
+  applyAsteroidKinematics(local, {
+    position: { x: 14, y: 10 },
+    velocity: { x: 2, y: 0 },
+  });
+  expect(shouldSnapAsteroidPose({ x: 10, y: 10 }, { x: 14, y: 10 })).toBe(false);
+  expect(local.position).toEqual({ x: 10, y: 10 });
+  expect(local.velocity).toEqual({ x: 2, y: 0 });
+});
+
+test('a large pose error snaps so a late joiner shares the live field', () => {
+  const local = localRoid(1, 2);
+  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
+  expect(local.position).toEqual({ x: 80, y: -12 });
 });
