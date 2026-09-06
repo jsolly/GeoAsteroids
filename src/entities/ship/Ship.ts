@@ -67,7 +67,8 @@ class Ship {
   abilityCooldownFrames: number = 0;
   abilityActiveFrames: number = 0;
   shieldTimer: number = 0;
-  magnetTimer: number = 0;
+  harpoonTimer: number = 0;
+  harpoonTargetId?: string;
 
   // Server-authoritative smoothing targets (for remote/bot ships)
   targetPosition?: Position;

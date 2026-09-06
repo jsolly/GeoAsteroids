@@ -22,6 +22,7 @@ import { asteroidTickScale } from '../physics/asteroidMotion';
 import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
+import { publishHarpoonField } from '../entities/ship/harpoonField';
 import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { setPlayView } from '../ui/uiUtils';
 import { describeDeathCause } from '../utils/deathCause';
@@ -661,6 +662,7 @@ export class GameController {
     // Update asteroids
     if (this.currRoidBelt) {
       this.currRoidBelt.moveRoids(asteroidTickScale(dtMs));
+      publishHarpoonField(this.currRoidBelt.roids);
     }
 
     // Check laser collisions with asteroids and bots

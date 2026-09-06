@@ -10,7 +10,7 @@ export const DEFAULT_SHIP_KIT_ID: ShipKitId = 'dart';
 /** Ability flavor — geo is optional spice, not a kit requirement. */
 export type ShipAbilityFlavor = 'combat' | 'utility' | 'geo';
 
-export type ShipAbilityId = 'boostDash' | 'lootMagnet' | 'shieldFocus' | 'burstFire' | 'shockPulse';
+export type ShipAbilityId = 'boostDash' | 'harpoon' | 'shieldFocus' | 'burstFire' | 'shockPulse';
 
 export interface HullProfile {
   nose: number;
@@ -75,11 +75,15 @@ export const AD_V2_HULL_SHEET = {
   },
 } as const;
 
+/** Hauler cable. Not a faction mark and not a player-kit hull stroke. */
+export const HAULER_TETHER_COLOR = '#E8C38A';
+
 export const SHIP_ABILITY = {
   DASH_BOOST: 6,
-  MAGNET_RADIUS: 280,
-  MAGNET_FRAMES: 90,
-  MAGNET_PULL: 0.28,
+  HARPOON_RANGE: 280,
+  HARPOON_FRAMES: 90,
+  HARPOON_PULL: 0.42,
+  HARPOON_SLACK: 1.25,
   SHIELD_FRAMES: 180,
   BURST_SPREAD: 0.12,
   SHOCK_RADIUS: 200,
@@ -113,9 +117,9 @@ const KITS: Record<ShipKitId, ShipKit> = {
   hauler: {
     id: 'hauler',
     name: 'Hauler',
-    abilityId: 'lootMagnet',
-    abilityName: 'Loot magnet',
-    abilityHint: 'Pull nearby debris',
+    abilityId: 'harpoon',
+    abilityName: 'Harpoon',
+    abilityHint: 'Latch and haul a nearby rock',
     flavor: 'utility',
     maxHealth: 140,
     size: 38,

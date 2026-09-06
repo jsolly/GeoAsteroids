@@ -98,7 +98,8 @@ export class Player {
     abilityCooldownFrames?: number;
     abilityActiveFrames?: number;
     shieldTimer?: number;
-    magnetTimer?: number;
+    harpoonTimer?: number;
+    harpoonTargetId?: string;
   }): void {
     if (data.kitId && data.kitId !== this.ship.kitId) {
       const color = this.ship.color;
@@ -286,9 +287,12 @@ export class Player {
       if (data.shieldTimer !== undefined) {
         this.ship.shieldTimer = data.shieldTimer;
       }
-      if (data.magnetTimer !== undefined) {
-        this.ship.magnetTimer = data.magnetTimer;
+      if (data.harpoonTimer !== undefined) {
+        this.ship.harpoonTimer = data.harpoonTimer;
       }
+    }
+    if (data.harpoonTargetId !== undefined) {
+      this.ship.harpoonTargetId = data.harpoonTargetId || undefined;
     }
     // Handle respawn timer from server
     if (data.respawnTimer !== undefined) {

@@ -4,7 +4,8 @@ import {
   activateAbilityOnHost,
   applyShockPulse,
   canActivateAbility,
-  pullMagnetTargets,
+  findHarpoonTarget,
+  pullHarpoonTarget,
   tickAbilityHost,
   type AbilityHost,
 } from '../../../src/entities/ship/shipAbilities';
@@ -22,7 +23,7 @@ function host(kitId: AbilityHost['kitId']): AbilityHost {
     abilityCooldownFrames: 0,
     abilityActiveFrames: 0,
     shieldTimer: 0,
-    magnetTimer: 0,
+    harpoonTimer: 0,
   };
 }
 
@@ -33,15 +34,50 @@ test('Dart boost dash adds forward velocity', () => {
   expect(result.abilityId).toBe('boostDash');
   expect(dart.velocity.x).toBeCloseTo(SHIP_ABILITY.DASH_BOOST);
   expect(canActivateAbility(dart)).toBe(false);
+  expect(dart.harpoonTimer).toBe(0);
 });
 
-test('Hauler loot magnet pulls nearby rocks', () => {
+test('Hauler harpoon latches one rock and hauls only that rock', () => {
   const hauler = host('hauler');
-  activateAbilityOnHost(hauler);
-  expect(hauler.magnetTimer).toBe(SHIP_ABILITY.MAGNET_FRAMES);
-  const rock = { position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } };
-  pullMagnetTargets(hauler, [rock]);
-  expect(rock.velocity.x).toBeLessThan(0);
+  const near = { id: 'near-rock', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } };
+  const far = { id: 'far-rock', position: { x: 200, y: 0 }, velocity: { x: 0, y: 0 } };
+  const result = activateAbilityOnHost(hauler, { asteroids: [near, far], entities: [] });
+  expect(result.activated).toBe(true);
+  expect(result.abilityId).toBe('harpoon');
+  expect(hauler.harpoonTargetId).toBe('near-rock');
+  expect(hauler.harpoonTimer).toBe(SHIP_ABILITY.HARPOON_FRAMES);
+  pullHarpoonTarget(hauler, [near, far]);
+  expect(near.velocity.x).toBeLessThan(0);
+  expect(far.velocity.x).toBe(0);
+});
+
+test('harpoon prefers a forward rock over a nearer rock behind the Hauler', () => {
+  const hauler = host('hauler');
+  hauler.angle = 0;
+  const behind = { id: 'behind', position: { x: -40, y: 0 }, velocity: { x: 0, y: 0 } };
+  const ahead = { id: 'ahead', position: { x: 90, y: 0 }, velocity: { x: 0, y: 0 } };
+  expect(findHarpoonTarget(hauler, [behind, ahead])?.id).toBe('ahead');
+});
+
+test('non-Hauler kits never latch or haul', () => {
+  const dart = host('dart');
+  const rock = { id: 'rock', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 } };
+  activateAbilityOnHost(dart, { asteroids: [rock], entities: [] });
+  expect(dart.harpoonTargetId).toBeUndefined();
+  dart.harpoonTimer = 90;
+  dart.harpoonTargetId = 'rock';
+  dart.kitId = 'dart';
+  pullHarpoonTarget(dart, [rock]);
+  expect(rock.velocity.x).toBe(0);
+  expect(dart.harpoonTimer).toBe(0);
+});
+
+test('Hauler harpoon whiffs without a rock in range', () => {
+  const hauler = host('hauler');
+  const result = activateAbilityOnHost(hauler, { asteroids: [], entities: [] });
+  expect(result.activated).toBe(false);
+  expect(hauler.abilityCooldownFrames).toBe(0);
+  expect(hauler.harpoonTimer).toBe(0);
 });
 
 test('Warden shield absorbs a hit', () => {

@@ -140,5 +140,6 @@ export interface ServerEntityData {
   abilityCooldownFrames?: number;
   abilityActiveFrames?: number;
   shieldTimer?: number;
-  magnetTimer?: number;
+  harpoonTimer?: number;
+  harpoonTargetId?: string;
 }

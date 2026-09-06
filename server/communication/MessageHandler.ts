@@ -223,7 +223,8 @@ export class MessageHandler {
     delete (sanitizedData as any).abilityCooldownFrames;
     delete (sanitizedData as any).abilityActiveFrames;
     delete (sanitizedData as any).shieldTimer;
-    delete (sanitizedData as any).magnetTimer;
+    delete (sanitizedData as any).harpoonTimer;
+    delete (sanitizedData as any).harpoonTargetId;
 
     // Normalize client fields to server schema
     if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {

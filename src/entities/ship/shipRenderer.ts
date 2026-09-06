@@ -4,8 +4,9 @@ import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
+import { findHarpoonFieldBody } from './harpoonField';
 import type { Ship } from './Ship';
-import { CLASSIC_HULL, getShipKit, type HullProfile } from './shipKits';
+import { CLASSIC_HULL, getShipKit, HAULER_TETHER_COLOR, type HullProfile } from './shipKits';
 
 // Helper function to calculate ship triangle points for consistent ship rendering
 export function calculateShipTrianglePoints(
@@ -503,7 +504,7 @@ export function drawShipAtPosition(
   );
 
   strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
-  drawAbilityFx(ctx, ship, screenX, screenY, shipR);
+  drawAbilityFx(ctx, ship, screenX, screenY, shipR, shipPosition);
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
@@ -514,13 +515,56 @@ export function drawShipAtPosition(
   }
 }
 
+export function canDrawHaulerHarpoon(ship: {
+  kitId: string;
+  harpoonTimer: number;
+  harpoonTargetId?: string;
+}): boolean {
+  return ship.kitId === 'hauler' && ship.harpoonTimer > 0 && Boolean(ship.harpoonTargetId);
+}
+
+/** Tether + latch ring. Hauler only — other kits never draw this. */
+export function drawHaulerHarpoonVfx(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  cameraShipPosition: { x: number; y: number }
+): void {
+  if (!canDrawHaulerHarpoon(ship)) {
+    return;
+  }
+  const target = findHarpoonFieldBody(ship.harpoonTargetId);
+  if (!target) {
+    return;
+  }
+
+  const latch = canvasManager.worldToScreen(target.position, cameraShipPosition);
+  const pulse = 0.55 + 0.25 * Math.sin(Date.now() / 80);
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(HAULER_TETHER_COLOR, pulse);
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(screenX, screenY);
+  ctx.lineTo(latch.x, latch.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(latch.x, latch.y, 7, 0, Math.PI * 2);
+  ctx.lineWidth = 1.25;
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Ability rings only — kit hulls stay the shared placeholder triangle until the AD pack. */
 function drawAbilityFx(
   ctx: CanvasRenderingContext2D,
   ship: Ship,
   screenX: number,
   screenY: number,
-  shipR: number
+  shipR: number,
+  cameraShipPosition: { x: number; y: number }
 ): void {
   if (ship.shieldTimer > 0) {
     const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 90);
@@ -530,20 +574,14 @@ function drawAbilityFx(
     ctx.lineWidth = 2;
     ctx.stroke();
   }
-  if (ship.abilityActiveFrames > 0 && ship.magnetTimer <= 0 && ship.shieldTimer <= 0) {
+  if (ship.abilityActiveFrames > 0 && ship.harpoonTimer <= 0 && ship.shieldTimer <= 0) {
     ctx.beginPath();
     ctx.arc(screenX, screenY, shipR + 6, 0, Math.PI * 2);
     ctx.strokeStyle = hexToRgba(PALETTE.ACCENT_UI, 0.45);
     ctx.lineWidth = 3;
     ctx.stroke();
   }
-  if (ship.magnetTimer > 0) {
-    ctx.beginPath();
-    ctx.arc(screenX, screenY, shipR + 14, 0, Math.PI * 2);
-    ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.35);
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
+  drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, cameraShipPosition);
 }
 
 function drawShipImpactFlash(

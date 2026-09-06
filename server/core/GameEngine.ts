@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 import type { AsteroidData, Position, ShipKitId, SoftFactionId } from '../../shared-types';
 import { consumeTickAccumulator, GAME_TICK_MS } from '../../shared/gameClock';
 import { canDealCombatDamage } from '../../src/entities/player/softFactions';
-import { activateAbilityOnHost, pullMagnetTargets } from '../../src/entities/ship/shipAbilities';
+import { activateAbilityOnHost, pullHarpoonTarget } from '../../src/entities/ship/shipAbilities';
 import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
@@ -403,7 +403,8 @@ export class GameEngine {
         abilityCooldownFrames: entity.abilityCooldownFrames,
         abilityActiveFrames: entity.abilityActiveFrames,
         shieldTimer: entity.shieldTimer,
-        magnetTimer: entity.magnetTimer,
+        harpoonTimer: entity.harpoonTimer,
+        harpoonTargetId: entity.harpoonTargetId,
       })),
       asteroids: this.asteroidManager.getAllAsteroids(),
       gameTime: this.gameTime,
@@ -452,7 +453,7 @@ export class GameEngine {
   public tickAbilities(): void {
     this.entityManager.tickAbilityState();
     for (const entity of this.entityManager.getAllEntities()) {
-      pullMagnetTargets(entity, this.asteroidManager.getAllAsteroids());
+      pullHarpoonTarget(entity, this.asteroidManager.getAllAsteroids());
     }
   }
 

@@ -44,7 +44,8 @@ export interface GameEntity {
   abilityCooldownFrames: number;
   abilityActiveFrames: number;
   shieldTimer: number;
-  magnetTimer: number;
+  harpoonTimer: number;
+  harpoonTargetId?: string;
 }
 
 /** True when a client update is still the death pose, not the new spawn. */
@@ -202,7 +203,7 @@ export class EntityManager {
       abilityCooldownFrames: 0,
       abilityActiveFrames: 0,
       shieldTimer: 0,
-      magnetTimer: 0,
+      harpoonTimer: 0,
     };
     applyShipKitStats(entity, kitId ?? DEFAULT_SHIP_KIT_ID);
 
@@ -331,7 +332,7 @@ export class EntityManager {
         abilityCooldownFrames: 0,
         abilityActiveFrames: 0,
         shieldTimer: 0,
-        magnetTimer: 0,
+        harpoonTimer: 0,
       };
       applyShipKitStats(bot, SHIP_KIT_IDS[i % SHIP_KIT_IDS.length]);
 

@@ -15,6 +15,7 @@ import { Ship } from '../../../src/entities/ship/Ship';
 
 test('kit roster is Dart / Hauler / Warden / Skirmisher / Quake', () => {
   expect(SHIP_KIT_IDS).toEqual(['dart', 'hauler', 'warden', 'skirmisher', 'quake']);
+  expect(SHIP_KIT_IDS).toHaveLength(5);
   expect(listShipKits().map((kit) => kit.name)).toEqual([
     'Dart',
     'Hauler',
@@ -23,6 +24,15 @@ test('kit roster is Dart / Hauler / Warden / Skirmisher / Quake', () => {
     'Quake',
   ]);
   expect(listShipKits().some((kit) => kit.name === 'Surveyor')).toBe(false);
+  expect(listShipKits().some((kit) => kit.name === 'Hook')).toBe(false);
+  expect((SHIP_KIT_IDS as readonly string[]).includes('hook')).toBe(false);
+});
+
+test('harpoon is Hauler-only and is not a sixth kit', () => {
+  const harpoonKits = listShipKits().filter((kit) => kit.abilityId === 'harpoon');
+  expect(harpoonKits.map((kit) => kit.id)).toEqual(['hauler']);
+  expect(getShipKit('hauler').abilityName).toBe('Harpoon');
+  expect(listShipKits().some((kit) => String(kit.abilityId) === 'lootMagnet')).toBe(false);
 });
 
 test('Dart keeps classic ship numbers so existing play stays familiar', () => {
