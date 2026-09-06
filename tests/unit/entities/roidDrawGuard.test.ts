@@ -12,7 +12,7 @@ test('a finite pose with offsets is drawable', () => {
   ).toBe(true);
 });
 
-test('NaN or empty-offset poses are skipped so one bad roid cannot crash the frame', () => {
+test('NaN poses are skipped so one bad roid cannot crash the frame', () => {
   expect(
     canDrawAsteroid({
       position: { x: Number.NaN, y: 0 },
@@ -21,6 +21,9 @@ test('NaN or empty-offset poses are skipped so one bad roid cannot crash the fra
       offsets: [1],
     })
   ).toBe(false);
+});
+
+test('empty offsets still draw — same pose the minimap already dots', () => {
   expect(
     canDrawAsteroid({
       position: { x: 0, y: 0 },
@@ -28,5 +31,5 @@ test('NaN or empty-offset poses are skipped so one bad roid cannot crash the fra
       angle: 0,
       offsets: [],
     })
-  ).toBe(false);
+  ).toBe(true);
 });

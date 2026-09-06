@@ -18,6 +18,7 @@ import { GameError } from '../types';
 import { errorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { canvasManager } from './canvas';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
@@ -112,6 +113,7 @@ export class RenderEngine {
 
       // Clear canvas with optimized method
       this.clearCanvas();
+      canvasManager.beginPlayfieldFrame(frame.player.ship.position, frame.roidBelt.getRoids());
 
       // Render game world in order of depth (back to front)
       this.renderBackground(frame);

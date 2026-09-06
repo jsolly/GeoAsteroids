@@ -127,13 +127,12 @@ export function drawStarfield(shipPosition: Position): void {
   }
 
   const size = VISUAL.STAR_SIZE;
-  const offsetX = cvs.width / 2 - shipPosition.x;
-  const offsetY = cvs.height / 2 - shipPosition.y;
 
   ctx.save();
   for (const star of getStars()) {
-    const sx = star.x + offsetX;
-    const sy = star.y + offsetY;
+    const screen = canvasManager.worldToScreen({ x: star.x, y: star.y }, shipPosition);
+    const sx = screen.x;
+    const sy = screen.y;
     if (sx < -size || sy < -size || sx > cvs.width + size || sy > cvs.height + size) {
       continue;
     }

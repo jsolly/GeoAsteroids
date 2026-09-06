@@ -2,20 +2,17 @@ import { test, expect } from 'vitest';
 import { createBrowserScenarioHooks } from '../../utils/browser-scenario-setup';
 import { GameInteractions } from '../../utils/game-interactions';
 import { TestConfig } from '../../utils/test-config';
+import { countRocksOnCanvas, playfieldZoom } from '../../../../src/rendering/playfieldCamera';
 
 const { browserManager } = createBrowserScenarioHooks(__dirname);
 
-async function onCanvasAsteroidCount(
-  game: GameInteractions,
-  canvas = { width: 1920, height: 1080 }
-): Promise<number> {
+async function onCanvasAsteroidCount(game: GameInteractions): Promise<number> {
   const ship = await game.getShipPosition();
   const field = await game.getAsteroidPositions();
-  return field.filter((roid) => {
-    const screenX = canvas.width / 2 - ship.x + roid.x;
-    const screenY = canvas.height / 2 - ship.y + roid.y;
-    return screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height;
-  }).length;
+  const canvas = await game.getCanvasSize();
+  const roids = field.map((roid) => ({ position: { x: roid.x, y: roid.y }, r: roid.radius }));
+  const scale = playfieldZoom(roids, ship, canvas);
+  return countRocksOnCanvas(roids, ship, canvas, scale);
 }
 
 test('second player sees shared asteroid field', async () => {
@@ -69,6 +66,16 @@ test('second player sees shared asteroid field', async () => {
   expect(
     await onCanvasAsteroidCount(game2),
     'tab 2 canvas should show the same in-belt field'
+  ).toBeGreaterThan(0);
+
+  await page1.waitForTimeout(8000);
+  expect(
+    await onCanvasAsteroidCount(game1),
+    'tab 1 should still have canvas rocks after ~10s'
+  ).toBeGreaterThan(0);
+  expect(
+    await onCanvasAsteroidCount(game2),
+    'tab 2 should still have canvas rocks after ~10s'
   ).toBeGreaterThan(0);
 
   await expect

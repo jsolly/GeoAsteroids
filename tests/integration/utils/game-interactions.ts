@@ -507,6 +507,16 @@ export class GameInteractions {
   /**
    * Get asteroid positions. (Roid exposes its radius as `r`, not `radius`.)
    */
+  async getCanvasSize(): Promise<{ width: number; height: number }> {
+    return await this.page.evaluate(() => {
+      const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
+      return {
+        width: canvas?.width || 800,
+        height: canvas?.height || 600,
+      };
+    });
+  }
+
   async getAsteroidPositions(): Promise<Array<{ x: number; y: number; radius: number; id: string }>> {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;

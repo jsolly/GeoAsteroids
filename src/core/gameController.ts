@@ -170,11 +170,15 @@ export class GameController {
 
     applyAsteroidKinematics(roid, asteroid);
 
-    // Override shape properties to match server exactly
+    // Override shape properties to match server exactly. Keep the factory
+    // silhouette when the snapshot omits offsets — wiping to [] made the
+    // playfield skip every rock while the minimap still dotted positions.
     roid.jaggedness = asteroid.jaggedness;
     roid.vertices = asteroid.vertices;
-    roid.offsets.length = 0; // Clear existing offsets
-    roid.offsets.push(...asteroid.offsets); // Copy server offsets
+    if (asteroid.offsets && asteroid.offsets.length > 0) {
+      roid.offsets.length = 0;
+      roid.offsets.push(...asteroid.offsets);
+    }
 
     // Add to current asteroid belt if it exists
     if (this.currRoidBelt) {
