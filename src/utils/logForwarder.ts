@@ -2,6 +2,7 @@
 // Used by Logger.ts for structured logging
 
 import { logger } from './Logger';
+import { logsWebSocketUrlFromGameplay } from './logsWebSocketUrl';
 import { getStoredItem, setStoredItem } from './safeStorage';
 
 type ClientLogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
@@ -31,14 +32,16 @@ function getSessionId(): string {
   return sessionId;
 }
 
-function getLogsWebSocketUrl(): string {
+export function getLogsWebSocketUrl(): string {
   try {
+    const gameplay =
+      typeof import.meta !== 'undefined'
+        ? (import.meta.env?.VITE_WEBSOCKET_URL as string | undefined)
+        : undefined;
     const isSecure = typeof location !== 'undefined' && location.protocol === 'https:';
-    const protocol = isSecure ? 'wss' : 'ws';
-    const host = typeof location !== 'undefined' ? location.hostname : 'localhost';
-    // The game server listens on 3001 in local/dev; use that port consistently
-    const port = 3001;
-    return `${protocol}://${host}:${port}/logs`;
+    const host =
+      typeof location !== 'undefined' ? location.host || location.hostname : 'localhost:3001';
+    return logsWebSocketUrlFromGameplay(gameplay, host, isSecure);
   } catch {
     return 'ws://localhost:3001/logs';
   }

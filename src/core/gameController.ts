@@ -513,8 +513,8 @@ export class GameController {
 
     // Listen for successful reconnection
     window.addEventListener('networkReconnected', () => {
-      logger.info('NETWORK', 'Successfully reconnected to server - game continues');
-      // Game continues running normally - no action needed
+      logger.info('NETWORK', 'Successfully reconnected to server - re-joining the live field');
+      this.networkManager.initializeAsteroidSync();
     });
 
     // Listen for permanent disconnection (after all reconnection attempts fail)

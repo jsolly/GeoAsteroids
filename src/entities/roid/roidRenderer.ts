@@ -14,6 +14,23 @@ export function getRoidStrokeWidth(radius: number): number {
   return VISUAL.ROID_STROKE_SMALL;
 }
 
+/** Skip a pose that would throw during path construction and crash the frame. */
+export function canDrawAsteroid(roid: {
+  position: { x: number; y: number };
+  r: number;
+  angle: number;
+  offsets: number[];
+}): boolean {
+  return (
+    Number.isFinite(roid.position.x) &&
+    Number.isFinite(roid.position.y) &&
+    Number.isFinite(roid.r) &&
+    Number.isFinite(roid.angle) &&
+    roid.offsets.length > 0 &&
+    Number.isFinite(roid.offsets[0])
+  );
+}
+
 export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
@@ -21,6 +38,9 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   }
 
   for (const roid of roids) {
+    if (!canDrawAsteroid(roid)) {
+      continue;
+    }
     ctx.strokeStyle = PALETTE.ROID;
     ctx.lineWidth = getRoidStrokeWidth(roid.r);
     ctx.shadowColor = PALETTE.ROID;

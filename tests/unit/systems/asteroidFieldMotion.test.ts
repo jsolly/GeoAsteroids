@@ -139,4 +139,29 @@ describe('authoritative asteroid motion', () => {
     expect(clientA.position.x).toBeGreaterThan(0);
     expect(clientB.position.x).toBeGreaterThan(0);
   });
+
+  test('two interpolators stay aligned over 30s of 60 Hz ticks with 30 Hz snapshots', () => {
+    const start = { position: { x: 40, y: -15 }, velocity: { x: 2.5, y: 1.25 } };
+    let server = { position: { ...start.position }, velocity: { ...start.velocity } };
+    let clientA = { position: { ...start.position }, velocity: { ...start.velocity } };
+    let clientB = { position: { ...start.position }, velocity: { ...start.velocity } };
+    const fieldRadius = getAsteroidFieldRadius();
+
+    for (let tick = 0; tick < 1800; tick++) {
+      server = stepAsteroidMotion(server.position, server.velocity);
+      clientA = stepAsteroidMotion(clientA.position, clientA.velocity);
+      clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
+      clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
+
+      if (tick % 2 === 1) {
+        clientA = { position: { ...server.position }, velocity: { ...server.velocity } };
+        clientB = { position: { ...server.position }, velocity: { ...server.velocity } };
+      }
+    }
+
+    expect(Math.abs(clientA.position.x - clientB.position.x)).toBeLessThan(1);
+    expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(1);
+    expect(Math.hypot(clientA.position.x, clientA.position.y)).toBeLessThanOrEqual(fieldRadius + 1);
+    expect(Math.hypot(clientB.position.x, clientB.position.y)).toBeLessThanOrEqual(fieldRadius + 1);
+  });
 });

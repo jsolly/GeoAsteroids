@@ -41,12 +41,16 @@ function getOrCreateBanner(): HTMLElement | null {
   return el;
 }
 
-export function showNetworkBanner(message: string): void {
+export const DISCONNECT_BANNER_TEXT = 'Disconnected from game server. Refresh the page to rejoin.';
+export const RECONNECTING_BANNER_TEXT = 'Reconnecting to game server…';
+
+export function showNetworkBanner(message: string, tone: 'error' | 'reconnect' = 'error'): void {
   const el = getOrCreateBanner();
   if (!el) {
     return;
   }
   el.textContent = message;
+  el.style.background = tone === 'reconnect' ? 'rgba(180, 110, 0, 0.92)' : 'rgba(180, 0, 0, 0.92)';
   el.style.display = 'block';
 }
 
@@ -80,9 +84,17 @@ export function initNetworkStatusUI(): void {
 
   window.addEventListener('networkConnected', () => hideNetworkBanner());
   window.addEventListener('networkReconnected', () => hideNetworkBanner());
+  window.addEventListener('networkReconnecting', () => {
+    showNetworkBanner(RECONNECTING_BANNER_TEXT, 'reconnect');
+  });
   window.addEventListener('networkDisconnected', (event) => {
     const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason;
-    showNetworkBanner('Disconnected from game server. Refresh the page to rejoin.');
+    showNetworkBanner(DISCONNECT_BANNER_TEXT);
     logger.warn('NETWORK', 'Displayed disconnect banner', { reason });
+  });
+  window.addEventListener('networkPermanentlyDisconnected', (event) => {
+    const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason;
+    showNetworkBanner(DISCONNECT_BANNER_TEXT);
+    logger.warn('NETWORK', 'Displayed permanent disconnect banner', { reason });
   });
 }
