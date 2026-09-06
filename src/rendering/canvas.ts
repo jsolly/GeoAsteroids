@@ -1,13 +1,13 @@
 import type { Position } from '../../shared-types';
 import { EMP, GAME, PALETTE } from '../constants';
-import { drawFuelDropsRelative } from '../entities/fuel/fuelRenderer';
-import type { FuelDrop } from '../entities/fuel/FuelDrop';
 import {
   CANVAS_DEFAULT_CENTER_X,
   CANVAS_DEFAULT_CENTER_Y,
   CANVAS_INTERNAL_HEIGHT,
   CANVAS_INTERNAL_WIDTH,
 } from '../constants/canvas';
+import type { FuelDrop } from '../entities/fuel/FuelDrop';
+import { drawFuelDropsRelative } from '../entities/fuel/fuelRenderer';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { drawRoidsRelative } from '../entities/roid/roidRenderer';

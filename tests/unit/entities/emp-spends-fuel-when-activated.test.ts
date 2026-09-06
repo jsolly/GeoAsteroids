@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { FUEL } from '../../../src/constants';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { canAffordFuelCost, trySpendEmpFuel } from '../../../shared/fuel';
+import { canAffordFuelCost, trySpendEmpFuel, type FuelTank } from '../../../shared/fuel';
 
 describe('EMP spends fuel when activated', () => {
   let ship: Ship;
@@ -47,7 +47,7 @@ describe('EMP spends fuel when activated', () => {
   });
 
   test('shared spend helper is what player and bot tanks use', () => {
-    const tank = { fuel: FUEL.START, maxFuel: FUEL.MAX };
+    const tank: FuelTank = { fuel: FUEL.START, maxFuel: FUEL.MAX };
     expect(canAffordFuelCost(tank.fuel, FUEL.EMP_COST)).toBe(true);
     expect(trySpendEmpFuel(tank)).toBe(true);
     expect(tank.fuel).toBe(FUEL.START - FUEL.EMP_COST);

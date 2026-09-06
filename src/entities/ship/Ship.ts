@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
+import { applyFuelPickup, trySpendEmpFuel } from '../../../shared/fuel';
 import type { Position, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { Sound } from '../../audio/Sound';
 import { DAMAGE, EMP, FUEL, GAME, PALETTE, SHIP } from '../../constants';
-import { applyFuelPickup, trySpendEmpFuel } from '../../../shared/fuel';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';

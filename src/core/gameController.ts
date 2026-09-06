@@ -1,7 +1,7 @@
 import type { AsteroidData, FuelDropData } from '../../shared-types';
-import { FuelDrop } from '../entities/fuel/FuelDrop';
 import { bindGameAudio } from '../audio/spatialAudio';
 import { entityFactory } from '../entities/EntityFactory';
+import { FuelDrop } from '../entities/fuel/FuelDrop';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
 import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
@@ -755,7 +755,9 @@ export class GameController {
       this.collisionManager.checkShipFuelPickupCollisions(currPlayer, this.fuelDrops);
     }
 
-    const botPlayers = this.networkManager.getAllPlayers().filter((player) => player.type === 'bot');
+    const botPlayers = this.networkManager
+      .getAllPlayers()
+      .filter((player) => player.type === 'bot');
     for (const botPlayer of botPlayers) {
       if (botPlayer.ship && !botPlayer.ship.exploding && botPlayer.ship.health > 0) {
         this.collisionManager.checkShipFuelPickupCollisions(botPlayer, this.fuelDrops);

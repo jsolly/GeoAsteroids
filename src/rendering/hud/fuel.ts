@@ -1,10 +1,6 @@
 import { PALETTE, SHIP, VISUAL } from '../../constants';
 
-export function drawFuelGauge(
-  ctx: CanvasRenderingContext2D,
-  fuel: number,
-  maxFuel: number
-): void {
+export function drawFuelGauge(ctx: CanvasRenderingContext2D, fuel: number, maxFuel: number): void {
   if (maxFuel <= 0) {
     return;
   }
