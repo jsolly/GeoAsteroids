@@ -317,8 +317,8 @@ export const SHIELD = {
   FLASH_SECONDS: 0.12,
   BOT_HEALTH_THRESHOLD: 0.7,
   BOT_ACTIVATE_CHANCE: 0.02,
-  /** Idle ring stays a blush, not an arcade neon tube. */
-  IDLE_ALPHA: 0.55,
+  /** Idle ring stays a blush, but must still read on the playfield. */
+  IDLE_ALPHA: 0.78,
   FLASH_ALPHA: 0.95,
 } as const;
 

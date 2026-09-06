@@ -37,7 +37,8 @@ test('shield ring is a shared phosphor stroke, not a filled disc', () => {
   expect(PALETTE.SHIELD).toBe(PALETTE.HEALTH);
   expect(PALETTE.SHIELD).toBe('#4ADE80');
   expect(SHIELD.IDLE_ALPHA).toBeLessThan(SHIELD.FLASH_ALPHA);
-  expect(SHIELD.IDLE_ALPHA).toBeLessThanOrEqual(0.6);
+  expect(SHIELD.IDLE_ALPHA).toBeGreaterThanOrEqual(0.7);
+  expect(SHIELD.IDLE_ALPHA).toBeLessThan(1);
 });
 
 test('live ship and laser strokes never use white', () => {
