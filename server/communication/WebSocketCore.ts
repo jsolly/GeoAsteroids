@@ -47,6 +47,7 @@ export class WebSocketCore {
   }
 
   public removePlayer(id: string) {
+    this.broadcaster.broadcastPlayerLeft(id);
     return this.gameEngine.removePlayer(id);
   }
 

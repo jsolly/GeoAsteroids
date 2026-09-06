@@ -55,6 +55,18 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message, playerId);
   }
 
+  public broadcastPlayerLeft(playerId: string): void {
+    const message = {
+      type: 'playerLeft',
+      data: {
+        id: playerId,
+      },
+      timestamp: Date.now(),
+    } as const;
+
+    this.broadcastToAll(message, playerId);
+  }
+
   public broadcastPlayerUpdate(playerId: string, updateData: any): void {
     const message = {
       type: 'playerUpdate',
