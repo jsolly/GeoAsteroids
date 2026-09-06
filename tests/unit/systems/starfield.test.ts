@@ -2,7 +2,11 @@ import { expect, test } from 'vitest';
 
 import { VISUAL } from '../../../src/constants';
 import { getGameBoundary } from '../../../src/physics/boundary';
-import { generateStarfield } from '../../../src/rendering/starfield';
+import {
+  generateStarfield,
+  generateViewportStars,
+  titleStarCountForViewport,
+} from '../../../src/rendering/starfield';
 
 test('sky is identical every time it is generated so stars never twinkle or drift', () => {
   const a = generateStarfield(200, 1000, VISUAL.STAR_SEED);
@@ -28,4 +32,22 @@ test('star field stays sparse on a 1080p viewport', () => {
   expect(starsPerViewport).toBeLessThan(80);
   expect(starsPerViewport).toBeGreaterThan(15);
   expect(VISUAL.STAR_SIZE).toBeLessThanOrEqual(1);
+});
+
+test('title void stars are deterministic, in-viewport, and similarly sparse', () => {
+  const count = titleStarCountForViewport(1920, 1080);
+  const a = generateViewportStars(1920, 1080, count, VISUAL.STAR_SEED);
+  const b = generateViewportStars(1920, 1080, count, VISUAL.STAR_SEED);
+  expect(a).toEqual(b);
+  expect(count).toBe(VISUAL.TITLE_STARS_PER_1080P);
+  expect(count).toBeLessThan(80);
+  expect(count).toBeGreaterThan(15);
+  for (const star of a) {
+    expect(star.x).toBeGreaterThanOrEqual(0);
+    expect(star.x).toBeLessThanOrEqual(1920);
+    expect(star.y).toBeGreaterThanOrEqual(0);
+    expect(star.y).toBeLessThanOrEqual(1080);
+    expect(star.alpha).toBeGreaterThanOrEqual(VISUAL.STAR_ALPHA_MIN);
+    expect(star.alpha).toBeLessThanOrEqual(VISUAL.STAR_ALPHA_MAX);
+  }
 });

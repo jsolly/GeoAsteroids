@@ -73,10 +73,10 @@ export const PALETTE = {
 export const VISUAL = {
   SHIP_STROKE_WIDTH: 1.25,
   SHIP_GLOW: 1.25,
-  // Classic Atari shot: a short hard-edged segment along the heading, not a beam or disc.
+  // Short cream dash (not a 4px pin, not a beam). Soft round caps + glow ≤ stroke.
   LASER_STROKE_WIDTH: 2,
-  LASER_LENGTH: 4,
-  LASER_EXPLODE_RADIUS: 4,
+  LASER_LENGTH: 12,
+  LASER_EXPLODE_RADIUS: 5,
   LASER_GLOW: 2,
   HEALTH_CAPSULE_HEIGHT: 1.5,
   BOUNDARY_STROKE_WIDTH: 1.25,
@@ -100,9 +100,13 @@ export const VISUAL = {
   STAR_SEED: 0x9e3779b9,
   STAR_ALPHA_MIN: 0.3,
   STAR_ALPHA_MAX: 0.8,
+  // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
+  TITLE_STARS_PER_1080P: 48,
   MINIMAP_SIZE: 96,
   MINIMAP_DOT: 3,
-  SCORE_FONT: '12px Arial',
+  SCORE_FONT: '10px Arial',
+  NAME_LABEL_FONT: '11px Arial',
+  NAME_LABEL_ALPHA: 0.4,
 } as const;
 
 // ============================================================================

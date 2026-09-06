@@ -36,3 +36,12 @@ export function hexToRgba(hex: string, alpha: number): string {
 export function generateRandomPlayerColor(): string {
   return PALETTE.REMOTE;
 }
+
+/** Mirror locked hexes into CSS custom properties for the title/menu shell. */
+export function applyLockedPaletteCss(
+  root: CSSStyleDeclaration = document.documentElement.style
+): void {
+  root.setProperty('--palette-bg', PALETTE.BG);
+  root.setProperty('--palette-stars', PALETTE.STARS);
+  root.setProperty('--palette-accent', PALETTE.ACCENT_UI);
+}

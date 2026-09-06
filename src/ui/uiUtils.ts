@@ -6,3 +6,12 @@ export function toggleScreen(id: string, toggle: boolean): void {
     element.style.display = toggle ? 'block' : 'none';
   }
 }
+
+/** Show the play canvas and hide title chrome (Freepik/version stock credit). */
+export function setPlayView(inPlay: boolean): void {
+  toggleScreen('gameArea', inPlay);
+  toggleScreen('start-screen', !inPlay);
+  if (typeof document !== 'undefined') {
+    document.body.classList.toggle('in-play', inPlay);
+  }
+}

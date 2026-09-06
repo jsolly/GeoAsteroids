@@ -8,7 +8,7 @@ import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
-import { toggleScreen } from '../ui/uiUtils';
+import { setPlayView } from '../ui/uiUtils';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
@@ -80,8 +80,7 @@ export class GameController {
   async startGame(playerName?: string): Promise<void> {
     logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
     this.newGame(playerName);
-    toggleScreen('start-screen', false);
-    toggleScreen('gameArea', true);
+    setPlayView(true);
     this.gameStateManager.toggleIsGameRunning();
 
     // Reset button text to default state
@@ -544,8 +543,7 @@ export class GameController {
 
       // Only stop the game when reconnection has permanently failed
       this.gameStateManager.toggleIsGameRunning();
-      toggleScreen('gameArea', false);
-      toggleScreen('start-screen', true);
+      setPlayView(false);
 
       // Show permanent disconnection message
       this.showConnectionFailureMessage('network', 'Connection permanently lost');
