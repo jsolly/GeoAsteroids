@@ -502,7 +502,8 @@ export function drawShipAtPosition(
 
   strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
 
-  drawFloatingHealthCapsule(ctx, ship, screenX, screenY);
+  drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
+  drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
 
   // Draw player name under ship if provided
   if (playerName) {
@@ -510,19 +511,43 @@ export function drawShipAtPosition(
   }
 }
 
+function drawShipImpactFlash(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  shipR: number
+): void {
+  if (ship.impactFlashFrames <= 0) {
+    return;
+  }
+
+  const t = 1 - ship.impactFlashFrames / SHIP.IMPACT_FLASH_FRAMES;
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(PALETTE.DANGER, 1 - t * 0.7);
+  ctx.lineWidth = 1;
+  ctx.shadowColor = PALETTE.DANGER;
+  ctx.shadowBlur = VISUAL.SHIP_GLOW;
+  ctx.beginPath();
+  ctx.arc(screenX, screenY, shipR * (1.15 + t * 0.35), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawFloatingHealthCapsule(
   ctx: CanvasRenderingContext2D,
   ship: Ship,
   screenX: number,
-  screenY: number
+  screenY: number,
+  shipR: number
 ): void {
   const damaged = ship.health < ship.maxHealth;
-  if (!damaged && !isDebugMode()) {
+  if (!damaged && ship.impactFlashFrames <= 0 && !isDebugMode()) {
     return;
   }
 
-  const barWidth = ship.r * 2.4;
-  const barY = screenY - ship.r - 10;
+  const barWidth = shipR * 2.4;
+  const barY = screenY - shipR - 10;
   const barX = screenX - barWidth / 2;
   const healthPercent = Math.max(0, ship.health / ship.maxHealth);
   const currentWidth = barWidth * healthPercent;

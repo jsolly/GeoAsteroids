@@ -12,6 +12,7 @@ import { getVelocityMagnitude } from '../../utils/mathUtils';
 
 export interface LaserData {
   position: Position;
+  prevPosition: Position;
   velocity: Velocity;
   distTraveled: number;
   explodeTime: number;
@@ -25,6 +26,7 @@ export class Laser implements LaserData {
   static get fxHit(): Sound {
     return getHitSound();
   }
+  prevPosition: Position;
 
   constructor(
     public position: Position,
@@ -32,12 +34,15 @@ export class Laser implements LaserData {
     public distTraveled: number,
     public explodeTime: number,
     public hasExploded: boolean = false
-  ) {}
+  ) {
+    this.prevPosition = { x: position.x, y: position.y };
+  }
 
   move(): void {
     if (this.explodeTime > 0) {
       this.explodeTime--;
     } else {
+      this.prevPosition = { x: this.position.x, y: this.position.y };
       this.position = {
         x: this.position.x + this.velocity.x,
         y: this.position.y + this.velocity.y,

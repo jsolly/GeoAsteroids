@@ -86,8 +86,9 @@ describe('Laser Collision Manager Integration', () => {
       expect(mockLaser.updateExplodeTime).toHaveBeenCalled();
       expect(mockLaser.playHitSound).toHaveBeenCalled();
 
-      // Verify network messages were sent
-      expect(mockUpdatePlayerState).toHaveBeenCalled();
+      // Dummy origin update used to yank the shooter; hits only report the rock.
+      expect(mockUpdatePlayerState).not.toHaveBeenCalled();
+      expect(mockAsteroid.pendingDestruction).toBe(true);
       expect(mockSendMessage).toHaveBeenCalledWith({
         type: 'asteroidDestroyed',
         data: {

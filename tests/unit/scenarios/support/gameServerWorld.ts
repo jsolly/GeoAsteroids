@@ -1,0 +1,201 @@
+import { afterEach, beforeEach, vi } from 'vitest';
+import { WebSocket } from 'ws';
+import type { Position } from '../../../../shared-types';
+import { WebSocketCore } from '../../../../server/communication/WebSocketCore';
+import type { GameEntity } from '../../../../server/core/EntityManager';
+import { GameEngine } from '../../../../server/core/GameEngine';
+import { DAMAGE, GAME, SHIP } from '../../../../src/constants';
+
+/** One server tick is one frame at GAME.FPS. */
+export const FRAMES_PER_SECOND = GAME.FPS;
+export const EXPLOSION_FRAMES = SHIP.EXPLODE_DURATION_FRAMES;
+/** GameEngine schedules this at death; the explosion runs in parallel. */
+export const RESPAWN_COUNTDOWN_FRAMES = SHIP.RESPAWN_DELAY_FRAMES;
+export const SPAWN_PROTECTION_FRAMES = SHIP.INVINCIBILITY_DURATION_FRAMES;
+/** Circular arena used by the server (`getGameBoundary()` / EntityManager). */
+export const ARENA_RADIUS = 3100;
+
+export interface ServerMessage {
+  type: string;
+  data?: Record<string, unknown> & { id?: string };
+  timestamp?: number;
+}
+
+/**
+ * In-process stand-in for a browser WebSocket.
+ * `GameStateBroadcaster` only needs `readyState` and `send`.
+ */
+export class FakeSocket {
+  readyState: number = WebSocket.OPEN;
+  readonly inbox: ServerMessage[] = [];
+
+  send(raw: string): void {
+    this.inbox.push(JSON.parse(raw) as ServerMessage);
+  }
+
+  close(): void {
+    this.readyState = WebSocket.CLOSED;
+  }
+
+  received(type: string): ServerMessage[] {
+    return this.inbox.filter((message) => message.type === type);
+  }
+
+  lastReceived(type: string): ServerMessage | undefined {
+    return this.received(type).at(-1);
+  }
+
+  clear(): void {
+    this.inbox.length = 0;
+  }
+}
+
+export interface Pilot {
+  id: string;
+  name: string;
+  socket: FakeSocket;
+}
+
+/**
+ * Real `GameEngine` + `WebSocketCore` with no TCP and no wall-clock timers.
+ * Scenario tests drive the world with `tick()` / `startClock()`.
+ */
+export class GameServerWorld {
+  readonly engine: GameEngine;
+  readonly core: WebSocketCore;
+  private joinCount = 0;
+
+  constructor(seed = 42) {
+    this.engine = new GameEngine(seed);
+    this.core = new WebSocketCore(this.engine);
+  }
+
+  join(name: string, position: Position = { x: 0, y: 0 }): Pilot {
+    this.joinCount += 1;
+    const id = `${name.toLowerCase()}-${this.joinCount}`;
+    const socket = new FakeSocket();
+    this.send({ id, name, socket }, { type: 'join', id, name, data: { name, position } });
+    return { id, name, socket };
+  }
+
+  disconnect(pilot: Pilot): void {
+    pilot.socket.close();
+    this.core.removePlayer(pilot.id);
+  }
+
+  send(pilot: Pilot, message: Record<string, unknown>): void {
+    this.core.handleClientMessage(message, pilot.socket as unknown as WebSocket);
+  }
+
+  shoot(attacker: Pilot, target: Pilot, damage: number = DAMAGE.LASER_HIT): void {
+    this.send(attacker, {
+      type: 'laserDamage',
+      data: { targetPlayerId: target.id, attackerId: attacker.id, damage },
+    });
+  }
+
+  shootBot(attacker: Pilot, botId: string, damage: number = DAMAGE.LASER_HIT): void {
+    this.send(attacker, {
+      type: 'botDamage',
+      data: { botId, attackerId: attacker.id, damage },
+    });
+  }
+
+  hitBoundary(pilot: Pilot): void {
+    this.send(pilot, {
+      type: 'collisionDamage',
+      data: {
+        targetPlayerId: pilot.id,
+        attackerId: 'boundary',
+        damage: DAMAGE.BOUNDARY_COLLISION,
+      },
+    });
+  }
+
+  hitAsteroid(pilot: Pilot, damage: number = DAMAGE.LASER_HIT): void {
+    this.send(pilot, {
+      type: 'collisionDamage',
+      data: { targetPlayerId: pilot.id, attackerId: 'asteroid', damage },
+    });
+  }
+
+  move(pilot: Pilot, position: Position): void {
+    this.send(pilot, { type: 'update', id: pilot.id, position });
+  }
+
+  /**
+   * Same pair the live loop runs each frame for combat/respawn.
+   * Does not advance `gameTime` — use `startClock()` for the clock scenario.
+   */
+  tick(frames = 1): void {
+    for (let i = 0; i < frames; i++) {
+      this.engine.entityManager.updateExplosions();
+      this.engine.entityManager.updateRespawns();
+    }
+  }
+
+  wearOffJoinInvulnerability(): void {
+    this.tick(SPAWN_PROTECTION_FRAMES);
+  }
+
+  tickThroughRespawn(): void {
+    this.tick(RESPAWN_COUNTDOWN_FRAMES);
+  }
+
+  startClock(): void {
+    this.engine.startGameLoop();
+  }
+
+  entity(pilot: Pilot): GameEntity {
+    const entity = this.engine.getPlayer(pilot.id);
+    if (!entity) {
+      throw new Error(`${pilot.name} is not on the server`);
+    }
+    return entity;
+  }
+
+  ship(id: string): GameEntity {
+    const entity = this.engine.entityManager.getEntity(id);
+    if (!entity) {
+      throw new Error(`No ship with id ${id}`);
+    }
+    return entity;
+  }
+
+  isOnServer(pilot: Pilot): boolean {
+    return this.engine.getPlayer(pilot.id) !== undefined;
+  }
+
+  leaderboardNames(): string[] {
+    return this.engine.getGameState().entities.map((entity) => entity.name);
+  }
+
+  gameTime(): number {
+    return this.engine.getGameState().gameTime;
+  }
+
+  broadcastGameState(): void {
+    this.core.getBroadcaster().broadcastGameState();
+  }
+
+  dispose(): void {
+    this.engine.stopGameLoop();
+    this.core.stopPeriodicGameStateBroadcast();
+  }
+}
+
+export function distanceFromCenter(position: Position): number {
+  return Math.hypot(position.x, position.y);
+}
+
+export function useQuietServerConsole(): void {
+  beforeEach(() => {
+    for (const level of ['log', 'debug', 'info'] as const) {
+      vi.spyOn(console, level).mockImplementation(() => {});
+    }
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+}
