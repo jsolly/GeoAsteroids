@@ -1731,8 +1731,8 @@ export class GameInteractions {
     }, playerId);
   }
 
-  /** Standard single-player boot sequence for scenario tests. */
-  async bootSinglePlayerGame(options?: {
+  /** Standard one-client boot against the multiplayer server. */
+  async bootGame(options?: {
     waitForCombatReady?: boolean;
     kitId?: 'dart' | 'hauler' | 'warden' | 'skirmisher' | 'quake';
   }): Promise<void> {

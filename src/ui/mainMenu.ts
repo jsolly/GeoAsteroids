@@ -9,7 +9,6 @@ import { applyLockedPaletteCss } from '../utils/colorUtils';
 import { attachEventListener, getElementById } from '../utils/dom';
 import { logger } from '../utils/Logger';
 import { mountShipKitSelect } from './shipKitSelect';
-import { setPlayView } from './uiUtils';
 import { controlsHintFor } from './viewportChrome';
 
 // UI element references
@@ -186,15 +185,6 @@ attachEventListener(soundCheckBox, 'change', (ev) => {
   const target = ev.target as HTMLInputElement;
   setSound(target.checked);
 });
-
-export function showGameOverMenu(): void {
-  setPlayView(false);
-}
-
-// Export function to set up periodic updates
-export function setupMainMenuUpdates(): void {
-  // Player count updates removed - no longer needed
-}
 
 // Display build info
 function displayBuildInfo(): void {

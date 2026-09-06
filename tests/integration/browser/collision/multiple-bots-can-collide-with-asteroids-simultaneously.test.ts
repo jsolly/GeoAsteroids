@@ -10,7 +10,7 @@ test('multiple bots can collide with asteroids simultaneously', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForBots(2, 30000);
   await game.waitForAsteroids(1);
 

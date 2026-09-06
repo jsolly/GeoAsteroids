@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { GameController } from '../../../../src/core/gameController';
 import { GameStateManager } from '../../../../src/core/services/GameStateManager';
 import { PlayerManager } from '../../../../src/entities/player/PlayerManager';
-import { toggleScreen } from '../../../../src/ui/uiUtils';
+import { setPlayView, toggleScreen } from '../../../../src/ui/uiUtils';
 import { GAME } from '../../../../src/constants';
 import {
   GameServerWorld,
@@ -60,9 +60,8 @@ describe('Game-over returns to the menu', () => {
     expect(GameStateManager.getInstance().getIsGameRunning()).toBe(false);
   });
 
-  test('the game-over menu returns to the start screen', async () => {
-    const { showGameOverMenu } = await import('../../../../src/ui/mainMenu');
-    showGameOverMenu();
+  test('the game-over menu returns to the start screen', () => {
+    setPlayView(false);
 
     expect(document.getElementById('start-screen')?.style.display).toBe('block');
     expect(document.getElementById('gameArea')?.style.display).toBe('none');

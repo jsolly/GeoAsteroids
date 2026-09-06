@@ -10,7 +10,7 @@ test('player can restart after game over without a stale overlay', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
 
   await game.dieUntilGameOver();
