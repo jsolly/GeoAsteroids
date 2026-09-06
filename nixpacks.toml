@@ -1,0 +1,21 @@
+# Railway Nixpacks sets NODE_ENV=production. Modern npm then omits
+# devDependencies (`typescript`, `vite`, `@types/*`) even when
+# NPM_CONFIG_PRODUCTION=false, so `npm run build` (`tsc && vite build`)
+# fails with `tsc: not found`.
+#
+# Do not `npm ci --include=dev`: devDependencies include native/test
+# tooling (canvas, chromedriver, Playwright) that is unused on Railway
+# and can fail the image build.
+#
+# Instead, install only the client/server build toolchain, then typecheck
+# app sources (not tests) and run Vite.
+
+[variables]
+NPM_CONFIG_PRODUCTION = "false"
+
+[phases.build]
+cmds = [
+  "npm install --no-save --no-audit --fund=none typescript vite @types/node @types/ws",
+  "node_modules/.bin/tsc -p tsconfig.build.json",
+  "node_modules/.bin/vite build",
+]
