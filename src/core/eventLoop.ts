@@ -1,5 +1,6 @@
 import { canvasManager } from '../rendering/canvas';
 import { initNetworkStatusUI } from '../ui/networkStatus';
+import '../ui/mainMenu'; // wires nickname + Enter Game listeners
 import { logger } from '../utils/Logger';
 import { GameController } from './gameController';
 
@@ -14,12 +15,6 @@ if (document.readyState === 'loading') {
 } else {
   canvasManager.initialize();
 }
-
-// Set up main menu updates
-(async () => {
-  const { setupMainMenuUpdates } = await import('../ui/mainMenu');
-  setupMainMenuUpdates();
-})();
 
 // Game loop with updates and rendering
 window.addEventListener('gameStart', () => {

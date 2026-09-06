@@ -193,11 +193,6 @@ export function showGameOverMenu(): void {
   // Do not reset game state here; let the next start initialize cleanly
 }
 
-// Export function to set up periodic updates
-export function setupMainMenuUpdates(): void {
-  // Player count updates removed - no longer needed
-}
-
 // Display build info
 function displayBuildInfo(): void {
   const buildInfoElement = getElementById<HTMLElement>('buildInfo');

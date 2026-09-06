@@ -12,9 +12,6 @@ import { Laser } from './laser/Laser';
 import { Player } from './player/Player';
 import { Roid, RoidBelt } from './roid/Roid';
 
-// Constants for entity creation limits
-const MAX_BOTS = 20; // Maximum number of bots allowed
-
 // Entity creation configuration interfaces
 export interface PlayerConfig {
   id?: string;
@@ -25,12 +22,6 @@ export interface PlayerConfig {
   shotCooldown?: number;
 }
 
-export interface BotConfig {
-  count: number;
-  localPlayerPosition?: Position;
-  debugPlaceNearLocal?: boolean;
-}
-
 export interface RoidConfig {
   position?: Position;
   size?: number;
@@ -38,8 +29,8 @@ export interface RoidConfig {
 }
 
 /**
- * Unified EntityFactory for creating all game entities
- * Consolidates PlayerFactory, BotFactory, and Roid creation patterns
+ * Unified factory for players (local, remote, bot) and world entities.
+ * Bots are the same Player type as humans; the server owns spawn/AI.
  */
 export class EntityFactory {
   private static instance: EntityFactory;
@@ -85,47 +76,6 @@ export class EntityFactory {
       type: 'bot',
       position,
     });
-  }
-
-  // Bot creation methods
-  createBots(config: BotConfig): Map<string, Player> {
-    // Validate the incoming config.count
-    if (!Number.isFinite(config.count) || !Number.isInteger(config.count)) {
-      throw new Error(`Bot count must be a finite integer, got: ${config.count}`);
-    }
-
-    if (config.count < 0) {
-      throw new Error(`Bot count cannot be negative, got: ${config.count}`);
-    }
-
-    if (config.count > MAX_BOTS) {
-      throw new Error(`Bot count cannot exceed maximum of ${MAX_BOTS}, got: ${config.count}`);
-    }
-
-    // Handle zero as a no-op
-    if (config.count === 0) {
-      return new Map<string, Player>();
-    }
-
-    const bots = new Map<string, Player>();
-    const positions = this.generateBotPositions(config);
-
-    // Validate that positions array length matches the count
-    if (positions.length !== config.count) {
-      throw new Error(
-        `Position generation failed: expected ${config.count} positions, got ${positions.length}`
-      );
-    }
-
-    for (let i = 0; i < config.count; i++) {
-      const position = positions[i];
-      const bot = this.createBotPlayer(this.generateBotName(), position);
-      // Set last position for movement tracking
-      bot.ship.lastPosition = { ...bot.ship.position };
-      bots.set(bot.id, bot);
-    }
-
-    return bots;
   }
 
   // Roid creation methods
@@ -241,60 +191,6 @@ export class EntityFactory {
       player.color = getFactionColor('remote');
       player.ship.color = player.color;
     }
-  }
-
-  private generateBotPositions(config: BotConfig): Position[] {
-    const positions: Position[] = [];
-
-    for (let i = 0; i < config.count; i++) {
-      if (config.debugPlaceNearLocal && config.localPlayerPosition) {
-        // Place bots near the local player in debug mode
-        positions.push(getRandomPositionNearPoint(config.localPlayerPosition, 200));
-      } else if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
-        // Place bots near boundary when debug flag is enabled
-        positions.push(getRandomPositionNearBoundary());
-      } else if (DEBUG.PLACE_PLAYERS_NEAR_CENTER) {
-        // Place bots near center when debug flag is enabled
-        const centerPosition = { x: CANVAS.DEFAULT_CENTER_X, y: CANVAS.DEFAULT_CENTER_Y };
-        positions.push(getRandomPositionNearPoint(centerPosition, 200));
-      } else {
-        // Place bots randomly within the boundary (default behavior)
-        positions.push(getRandomPositionWithinBoundary());
-      }
-    }
-
-    return positions;
-  }
-
-  private generateBotName(): string {
-    const adjectives = [
-      'Crimson',
-      'Nebula',
-      'Quantum',
-      'Cosmic',
-      'Lunar',
-      'Solar',
-      'Galactic',
-      'Star',
-      'Nova',
-      'Meteor',
-    ];
-    const nouns = [
-      'Falcon',
-      'Viper',
-      'Ranger',
-      'Specter',
-      'Comet',
-      'Warden',
-      'Drifter',
-      'Marauder',
-      'Pioneer',
-      'Corsair',
-    ];
-
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective} ${noun}`;
   }
 
   private generateRandomRoidPosition(): Position {

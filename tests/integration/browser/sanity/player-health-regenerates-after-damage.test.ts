@@ -10,7 +10,7 @@ test('player health regenerates after damage', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
 
   await game.applyServerChipDamage(25);

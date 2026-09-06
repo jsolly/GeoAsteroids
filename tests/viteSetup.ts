@@ -9,74 +9,52 @@ const dom = new JSDOM(
   <body>
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
-        <h1 class="text-center fs-1">GeoRoids</h1>
-        <ul class="nav flex-column">
-          <li class="nav-item">
-            
-          </li>
-          <li class="nav-item">
-                    <button id="start-game" class="btn btn-lg btn-info">
-          Game 🌐
-        </button>
-          </li>
-          <li class="nav-item">
+        <h1 class="text-center">GeoRoids</h1>
+        <div class="game-modes">
+          <div class="mb-3">
+            <label for="playerNameInput" class="form-label">Your Nickname</label>
             <input
-              class="form-check-input"
-              type="checkbox"
-              value=""
-              id="soundPref"
+              type="text"
+              id="playerNameInput"
+              maxlength="20"
+              placeholder="Crimson Falcon"
+              class="form-control"
             />
-            <label class="form-check-label" for="soundPref"> Sound </label>
-          </li>
-
-        </ul>
-        <h2>Difficulty</h2>
-        <div
-          class="btn-group"
-          role="group"
-          aria-label="Basic radio toggle button group"
-        >
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="easy"
-            autocomplete="off"
-            checked
-          />
-          <label class="btn btn-outline-success" for="easy">Easy</label>
-
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="medium"
-            autocomplete="off"
-          />
-          <label class="btn btn-outline-warning" for="medium">Medium</label>
-
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="hard"
-            autocomplete="off"
-          />
-          <label class="btn btn-outline-danger" for="hard">Hard</label>
+          </div>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <button id="start-game" class="btn btn-lg btn-success">
+                Enter Game
+              </button>
+            </li>
+          </ul>
+        </div>
+        <div class="settings">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                value=""
+                id="soundPref"
+                checked
+              />
+              <label class="form-check-label" for="soundPref">Sound</label>
+            </li>
+          </ul>
         </div>
       </div>
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-
       </div>
     </div>
+    <div id="attribution">
+      <a
+        href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search"
+        >Image by kjpargeter on Freepik</a
+      >
+    </div>
   </body>
-  <div id="attribution">
-    <a
-      href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search"
-      >Image by kjpargeter on Freepik</a
-    >
-  </div>
 </html>`
 );
 global.document = dom.window.document;

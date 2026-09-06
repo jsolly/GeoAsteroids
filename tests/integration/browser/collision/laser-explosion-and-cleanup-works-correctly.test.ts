@@ -10,7 +10,7 @@ test('laser explosion and cleanup works correctly', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
 
   expect(await game.getLocalLaserCount()).toBe(0);

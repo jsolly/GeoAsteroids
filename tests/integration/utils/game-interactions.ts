@@ -1677,8 +1677,8 @@ export class GameInteractions {
     }, playerId);
   }
 
-  /** Standard single-player boot sequence for scenario tests. */
-  async bootSinglePlayerGame(options?: { waitForCombatReady?: boolean }): Promise<void> {
+  /** Standard one-client boot against the multiplayer server. */
+  async bootGame(options?: { waitForCombatReady?: boolean }): Promise<void> {
     await this.navigateToGame();
     await this.startGame();
     await this.waitForGameReady();

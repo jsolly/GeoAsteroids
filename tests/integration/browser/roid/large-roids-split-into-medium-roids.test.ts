@@ -12,7 +12,7 @@ test('large roids split into medium roids', async () => {
 
   const game = new GameInteractions(page);
 
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForAsteroids(1, 30000);
 
   const asteroids = await game.getAsteroidPositions();
