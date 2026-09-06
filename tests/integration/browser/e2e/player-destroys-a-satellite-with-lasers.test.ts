@@ -13,7 +13,7 @@ test('a player destroys a satellite with lasers and is awarded the kill', async 
   }
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForSatellites(1);
 
   const satellites = await game.getSatellites();

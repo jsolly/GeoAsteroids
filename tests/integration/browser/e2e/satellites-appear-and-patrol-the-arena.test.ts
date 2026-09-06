@@ -14,7 +14,7 @@ test('satellites appear, patrol the arena, and stay inside the boundary', async 
   }
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForSatellites(2);
 
   const initial = await game.getSatellites();

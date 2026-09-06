@@ -12,7 +12,7 @@ test('ramming a satellite damages the player ship', async () => {
   }
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
   await game.waitForSatellites(1);
 
