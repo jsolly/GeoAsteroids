@@ -38,6 +38,8 @@ export class GameEngine {
         this.entityManager.cleanupStaleEntities();
         this.entityManager.updateExplosions();
         this.entityManager.updateRespawns();
+        // Authoritative asteroid field — clients render these positions from gameState.
+        this.asteroidManager.updateMotion();
         
         // Update bot movement at reduced frequency for better performance
         // Update every 2 frames (30 FPS instead of 60 FPS)

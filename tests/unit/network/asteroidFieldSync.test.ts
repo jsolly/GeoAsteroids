@@ -1,0 +1,49 @@
+import { expect, test } from 'vitest';
+import type { AsteroidData } from '../../../shared-types';
+import {
+  asteroidKinematicUpdates,
+  partitionAsteroidSnapshot,
+} from '../../../src/network/services/asteroidFieldSync';
+
+function roid(id: string, x: number, y: number): AsteroidData {
+  return {
+    id,
+    position: { x, y },
+    velocity: { x: 1, y: 0 },
+    size: 20,
+    jaggedness: 0.5,
+    rotation: 0,
+    angularVelocity: 0,
+    health: 10,
+    maxHealth: 10,
+    vertices: 8,
+    offsets: [1, 1, 1, 1, 1, 1, 1, 1],
+  };
+}
+
+test('first snapshot creates every asteroid and records the ids', () => {
+  const seen = new Set<string>();
+  const { created, updated } = partitionAsteroidSnapshot(
+    [roid('server-asteroid-0', 1, 2), roid('server-asteroid-1', 3, 4)],
+    seen
+  );
+
+  expect(created.map((asteroid) => asteroid.id)).toEqual([
+    'server-asteroid-0',
+    'server-asteroid-1',
+  ]);
+  expect(updated).toEqual([]);
+  expect(seen.size).toBe(2);
+});
+
+test('a later snapshot updates known asteroids so a late joiner can share the live field', () => {
+  const seen = new Set(['server-asteroid-0']);
+  const live = roid('server-asteroid-0', 80, -12);
+  const fresh = roid('server-asteroid-2', 0, 0);
+  const { created, updated } = partitionAsteroidSnapshot([live, fresh], seen);
+
+  expect(created.map((asteroid) => asteroid.id)).toEqual(['server-asteroid-2']);
+  expect(updated).toEqual([live]);
+  expect(asteroidKinematicUpdates(live).position).toEqual({ x: 80, y: -12 });
+  expect(seen.has('server-asteroid-2')).toBe(true);
+});
