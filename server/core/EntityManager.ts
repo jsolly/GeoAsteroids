@@ -6,6 +6,7 @@ import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship
 import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
 import { RNGService } from './RNGService';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
+import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { logger } from '../../setup/serverLogger';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
@@ -276,7 +277,7 @@ export class EntityManager {
   }
 
   // Bot management
-  public createBots(count: number, bounds = { radius: 3100 }): GameEntity[] {
+  public createBots(count: number, bounds = { radius: getAsteroidFieldRadius() }): GameEntity[] {
     // Clear existing bots
     const existingBots = this.getBots();
     for (const bot of existingBots) {
@@ -482,7 +483,7 @@ export class EntityManager {
     entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };
   }
 
-  private placeEntityInArena(entity: GameEntity, boundsRadius = 3100): void {
+  private placeEntityInArena(entity: GameEntity, boundsRadius = getAsteroidFieldRadius()): void {
     const respawnRadius = boundsRadius * 0.8;
     const angle = this.rng.random() * Math.PI * 2;
     const radius = this.rng.random() * respawnRadius;
@@ -555,17 +556,16 @@ export class EntityManager {
       // Keep bots inside the circular play boundary. Without this they thrust
       // in a straight line forever and escape the arena, so the player never
       // encounters them. Bounce off the boundary and steer back toward center.
-      const BOUNDARY_RADIUS = 3100;
-      const CONTAIN_RADIUS = BOUNDARY_RADIUS - 200; // stay safely inside the wall
+      const CONTAIN_RADIUS = getAsteroidFieldRadius();
       const distFromCenter = Math.sqrt(
         bot.position.x * bot.position.x + bot.position.y * bot.position.y
       );
-      if (distFromCenter > CONTAIN_RADIUS) {
+      if (distFromCenter > CONTAIN_RADIUS && distFromCenter > 0) {
         const nx = bot.position.x / distFromCenter;
         const ny = bot.position.y / distFromCenter;
-        // Clamp back onto the containment circle
-        bot.position.x = nx * CONTAIN_RADIUS;
-        bot.position.y = ny * CONTAIN_RADIUS;
+        const contained = containAsteroidPosition(bot.position.x, bot.position.y);
+        bot.position.x = contained.x;
+        bot.position.y = contained.y;
         // Reflect outward velocity component back inward
         const vDotN = bot.velocity.x * nx + bot.velocity.y * ny;
         if (vDotN > 0) {
@@ -605,7 +605,10 @@ export class EntityManager {
   }
 
   // Atomic bot creation to prevent race conditions
-  public createBotsSafely(count: number, bounds = { radius: 3100 }): GameEntity[] | null {
+  public createBotsSafely(
+    count: number,
+    bounds = { radius: getAsteroidFieldRadius() }
+  ): GameEntity[] | null {
     if (this.isCreatingBots) {
       return null; // Already creating bots
     }

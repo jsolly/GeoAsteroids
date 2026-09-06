@@ -1,5 +1,5 @@
 import type { AsteroidData } from '../../../shared-types';
-import { containAsteroidPosition } from '../../physics/asteroidMotion';
+import { containAsteroidPosition, isPoseInAsteroidField } from '../../physics/asteroidMotion';
 
 export interface AsteroidFieldSyncResult {
   created: AsteroidData[];
@@ -139,9 +139,10 @@ export function shouldSnapAsteroidPose(
 
 /**
  * Write server kinematics onto a local roid.
- * Velocity / spin always follow the server; position snaps only when the
- * interpolated pose has drifted past ASTEROID_POSE_SNAP_PX, then is
- * contained to the shared belt (#444).
+ * Velocity / spin always follow the server; position snaps when the
+ * interpolated pose has drifted past ASTEROID_POSE_SNAP_PX *or* either
+ * pose has escaped the belt (late-join / wrap leftover at 10k), then is
+ * contained to the shared field.
  */
 export function applyAsteroidKinematics(
   roid: AsteroidKinematicTarget,
@@ -149,7 +150,12 @@ export function applyAsteroidKinematics(
   options: { snapPosition?: boolean } = {}
 ): void {
   if (updates.position) {
-    if (options.snapPosition || shouldSnapAsteroidPose(roid.position, updates.position)) {
+    const localEscaped = !isPoseInAsteroidField(roid.position.x, roid.position.y);
+    if (
+      options.snapPosition ||
+      localEscaped ||
+      shouldSnapAsteroidPose(roid.position, updates.position)
+    ) {
       roid.position = containAsteroidPosition(updates.position.x, updates.position.y);
     }
   }

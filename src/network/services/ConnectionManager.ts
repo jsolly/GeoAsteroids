@@ -16,7 +16,7 @@ import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { describeDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
-import { partitionAsteroidSnapshot } from './asteroidFieldSync';
+import { asteroidHasSpawnPose, partitionAsteroidSnapshot } from './asteroidFieldSync';
 import { readOrCreateClientId, replaceStoredClientId } from './clientIdentity';
 import {
   CONNECTION_STALE_TIMEOUT_MS,
@@ -604,6 +604,7 @@ export class ConnectionManager {
               color: entityData.color,
               kitId: entityData.kitId,
               factionId: entityData.factionId,
+              position: entityData.position,
             });
           }
 
@@ -755,7 +756,7 @@ export class ConnectionManager {
   }
 
   private handleAsteroidCreated(data: { asteroid: AsteroidData }): void {
-    if (data.asteroid?.id) {
+    if (data.asteroid?.id && asteroidHasSpawnPose(data.asteroid)) {
       this.seenAsteroidIds.add(data.asteroid.id);
     }
     window.dispatchEvent(

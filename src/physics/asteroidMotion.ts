@@ -76,7 +76,11 @@ export function asteroidTickScale(dtMs: number): number {
   return Math.min(Math.max(dtMs, 0), 50) / frameMs;
 }
 
-/** True when a world pose would paint on a ship-centered canvas. */
+/**
+ * 1:1 visibility only. Do not use this to cull draws — a 1:1 miss is why
+ * the minimap can be dense while the playfield looks empty. Pass
+ * `playfieldZoom` of the full belt into `isRockOnCanvas` instead.
+ */
 export function isOnPlayfieldCanvas(
   world: { x: number; y: number },
   ship: { x: number; y: number },
@@ -85,4 +89,9 @@ export function isOnPlayfieldCanvas(
   const screenX = canvas.width / 2 - ship.x + world.x;
   const screenY = canvas.height / 2 - ship.y + world.y;
   return screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height;
+}
+
+export function isPoseInAsteroidField(x: number, y: number, slop = 1): boolean {
+  const { cx, cy } = getGameBoundary();
+  return Math.hypot(x - cx, y - cy) <= getAsteroidFieldRadius() + slop;
 }
