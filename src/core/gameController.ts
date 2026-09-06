@@ -5,6 +5,7 @@ import {
   thrustSourcesFromPlayers,
 } from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
+import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
@@ -12,6 +13,7 @@ import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
 import { NetworkManager } from '../network/networkManager';
 import { applyAsteroidKinematics } from '../network/services/asteroidFieldSync';
+import { asteroidTickScale } from '../physics/asteroidMotion';
 import { CollisionManager } from '../physics/collision/CollisionManager';
 import { canvasManager } from '../rendering/canvas';
 import { setPlayView } from '../ui/uiUtils';
@@ -534,7 +536,7 @@ export class GameController {
   }
 
   // Update game state (movement, physics, etc.)
-  updateGame(): void {
+  updateGame(dtMs: number = 1000 / GAME.FPS): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer) {
       return;
@@ -566,7 +568,7 @@ export class GameController {
 
     // Update asteroids
     if (this.currRoidBelt) {
-      this.currRoidBelt.moveRoids();
+      this.currRoidBelt.moveRoids(asteroidTickScale(dtMs));
     }
 
     // Check laser collisions with asteroids and bots

@@ -180,6 +180,13 @@ export const ROID = {
   MIN_COUNT: 5,
   MAX_COUNT: 20,
   SPAWN_TIME_FRAMES: 180, // 3 seconds at 60 FPS
+
+  // Shared moving belt. The ship-kill wall is ~3100px; a 1080p camera around a
+  // center-spawned ship only sees ~960×540. Opposite-side wrap at the wall
+  // parked every roid at ~3000px (minimap dots, empty canvas). Keep the belt
+  // inside the same "nearby" radius the audio/network layer already uses.
+  FIELD_RADIUS: 1200,
+  FIELD_INNER_SCALE: 0.96,
 } as const;
 
 // ============================================================================

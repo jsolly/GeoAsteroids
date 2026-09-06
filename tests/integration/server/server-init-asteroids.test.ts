@@ -172,7 +172,59 @@ describe('Server initAsteroids sync', () => {
       expect(
         lateTracked!.position.x !== tracked.position.x || lateTracked!.position.y !== tracked.position.y
       ).toBe(true);
-      expect(Math.hypot(lateTracked!.position.x, lateTracked!.position.y)).toBeLessThan(3200);
+      expect(Math.hypot(lateTracked!.position.x, lateTracked!.position.y)).toBeLessThan(1300);
+    } finally {
+      playerOne.close();
+      playerTwo.close();
+    }
+  });
+
+  it('keeps the live field and tells the remaining player when a peer disconnects', async () => {
+    const playerOne = await openGameSocket(wsUrl);
+    const playerTwo = await openGameSocket(wsUrl);
+
+    try {
+      playerOne.send(
+        JSON.stringify({
+          type: 'join',
+          id: 'stay-one',
+          data: { name: 'StayOne', position: { x: 0, y: 0 } },
+          timestamp: Date.now(),
+        })
+      );
+      const joinedOne = await waitForMessage(playerOne, 'joined');
+
+      playerOne.send(
+        JSON.stringify({
+          type: 'initAsteroids',
+          id: joinedOne.data?.id ?? 'stay-one',
+          data: { asteroidCount: 10 },
+          timestamp: Date.now(),
+        })
+      );
+      const batch = await waitForMessage(playerOne, 'asteroidCreateBatch');
+      const fieldIds = (batch.data?.asteroids ?? []).map((asteroid: { id: string }) => asteroid.id);
+      expect(fieldIds.length).toBeGreaterThan(0);
+
+      playerTwo.send(
+        JSON.stringify({
+          type: 'join',
+          id: 'leave-two',
+          data: { name: 'LeaveTwo', position: { x: 20, y: 20 } },
+          timestamp: Date.now(),
+        })
+      );
+      await waitForMessage(playerTwo, 'joined');
+
+      const left = waitForMessage(playerOne, 'playerLeft', 4000);
+      playerTwo.close();
+      const leftMessage = await left;
+      expect(leftMessage.data?.id).toBe('leave-two');
+
+      expect(server.gameEngine.getPlayerCount()).toBe(1);
+      expect(server.gameEngine.isGamePaused()).toBe(false);
+      const remaining = server.gameEngine.getAllAsteroids();
+      expect(remaining.map((asteroid) => asteroid.id).sort()).toEqual([...fieldIds].sort());
     } finally {
       playerOne.close();
       playerTwo.close();

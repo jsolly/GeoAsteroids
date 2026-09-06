@@ -47,7 +47,11 @@ export class WebSocketCore {
   }
 
   public removePlayer(id: string) {
-    return this.gameEngine.removePlayer(id);
+    const removed = this.gameEngine.removePlayer(id);
+    if (removed?.type === 'human') {
+      this.broadcaster.broadcastPlayerLeft(id);
+    }
+    return removed;
   }
 
   // Convenience methods for external access

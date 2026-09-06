@@ -2,8 +2,13 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { RNGService } from '../../../server/core/RNGService';
-import { getGameBoundary } from '../../../src/physics/boundary';
-import { wrapAsteroidPosition } from '../../../src/physics/asteroidMotion';
+import {
+  containAsteroidPosition,
+  getAsteroidFieldRadius,
+  isOnPlayfieldCanvas,
+  stepAsteroidMotion,
+  wrapAsteroidPosition,
+} from '../../../src/physics/asteroidMotion';
 
 describe('authoritative asteroid motion', () => {
   let engine: GameEngine | undefined;
@@ -53,15 +58,16 @@ describe('authoritative asteroid motion', () => {
     expect(after!.position.x).toBeGreaterThan(2);
   });
 
-  test('an escaped asteroid wraps back inside the playable arena', () => {
-    const { radius } = getGameBoundary();
-    const wrapped = wrapAsteroidPosition(10000, 8000);
-    expect(Math.hypot(wrapped.x, wrapped.y)).toBeLessThanOrEqual(radius);
-    expect(wrapped.x).toBeLessThan(0);
-    expect(wrapped.y).toBeLessThan(0);
+  test('an escaped asteroid is pulled back along the same ray, not the opposite rim', () => {
+    const fieldRadius = getAsteroidFieldRadius();
+    const contained = containAsteroidPosition(10000, 8000);
+    expect(Math.hypot(contained.x, contained.y)).toBeLessThanOrEqual(fieldRadius);
+    expect(contained.x).toBeGreaterThan(0);
+    expect(contained.y).toBeGreaterThan(0);
+    expect(wrapAsteroidPosition(10000, 8000)).toEqual(contained);
   });
 
-  test('a server tick wraps an escaped asteroid instead of leaving the camera', () => {
+  test('a server tick contains an escaped asteroid instead of leaving the camera', () => {
     const manager = new AsteroidManager(new RNGService(1));
     manager.createAsteroids(1);
     const asteroid = manager.getAllAsteroids()[0];
@@ -72,7 +78,65 @@ describe('authoritative asteroid motion', () => {
     });
     manager.updateMotion();
     const after = manager.getAsteroid(asteroid!.id);
-    const { radius } = getGameBoundary();
-    expect(Math.hypot(after!.position.x, after!.position.y)).toBeLessThanOrEqual(radius);
+    const fieldRadius = getAsteroidFieldRadius();
+    expect(Math.hypot(after!.position.x, after!.position.y)).toBeLessThanOrEqual(fieldRadius);
+    expect(after!.position.x).toBeGreaterThan(0);
+    expect(after!.velocity.x).toBeLessThan(0);
+  });
+
+  test('bouncing at the field edge does not teleport to the opposite side', () => {
+    const fieldRadius = getAsteroidFieldRadius();
+    const stepped = stepAsteroidMotion({ x: fieldRadius + 40, y: 0 }, { x: 8, y: 0 });
+    expect(stepped.position.x).toBeGreaterThan(0);
+    expect(stepped.position.x).toBeLessThanOrEqual(fieldRadius);
+    expect(stepped.velocity.x).toBeLessThan(0);
+    expect(Math.abs(stepped.position.x - -(fieldRadius * 0.96))).toBeGreaterThan(500);
+  });
+
+  test('after 60s of ticks the belt stays in-field and on a 1080p canvas from origin', () => {
+    const manager = new AsteroidManager(new RNGService(7));
+    manager.createAsteroids(20);
+    const fieldRadius = getAsteroidFieldRadius();
+    const origin = { x: 0, y: 0 };
+
+    for (let i = 0; i < 3600; i++) {
+      manager.updateMotion();
+    }
+
+    const after = manager.getAllAsteroids();
+    expect(after.length).toBeGreaterThan(0);
+    for (const asteroid of after) {
+      expect(Math.hypot(asteroid.position.x, asteroid.position.y)).toBeLessThanOrEqual(
+        fieldRadius + 1
+      );
+    }
+
+    const onCanvas = after.filter((asteroid) => isOnPlayfieldCanvas(asteroid.position, origin));
+    expect(onCanvas.length).toBeGreaterThan(0);
+  });
+
+  test('two interpolators stay aligned across a bounce when they share snapshots', () => {
+    const start = { position: { x: getAsteroidFieldRadius() - 6, y: 0 }, velocity: { x: 4, y: 0 } };
+    let server = { ...start, position: { ...start.position }, velocity: { ...start.velocity } };
+    let clientA = { ...start, position: { ...start.position }, velocity: { ...start.velocity } };
+    let clientB = { ...start, position: { ...start.position }, velocity: { ...start.velocity } };
+
+    for (let tick = 0; tick < 30; tick++) {
+      server = stepAsteroidMotion(server.position, server.velocity);
+      clientA = stepAsteroidMotion(clientA.position, clientA.velocity);
+      // 120 Hz tab: two half-ticks per server tick
+      clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
+      clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
+
+      if (tick % 2 === 1) {
+        clientA = { position: { ...server.position }, velocity: { ...server.velocity } };
+        clientB = { position: { ...server.position }, velocity: { ...server.velocity } };
+      }
+    }
+
+    expect(Math.abs(clientA.position.x - clientB.position.x)).toBeLessThan(8);
+    expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(8);
+    expect(clientA.position.x).toBeGreaterThan(0);
+    expect(clientB.position.x).toBeGreaterThan(0);
   });
 });

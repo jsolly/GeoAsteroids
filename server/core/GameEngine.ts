@@ -4,6 +4,7 @@ import { EntityManager, GameEntity } from './EntityManager';
 import { AsteroidManager } from './AsteroidManager.ts';
 import { RNGService } from './RNGService';
 import { SHIP } from '../../src/constants';
+import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { logger } from '../../setup/serverLogger';
 
 export class GameEngine {
@@ -190,7 +191,12 @@ export class GameEngine {
     return this.asteroidManager.getAsteroidCount();
   }
 
-  public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Array<{ x: number; y: number }> = [], playerPositions: Array<{ x: number; y: number }> = []): AsteroidData[] {
+  public createAsteroids(
+    count: number,
+    bounds = { radius: getAsteroidFieldRadius() },
+    botPositions: Array<{ x: number; y: number }> = [],
+    playerPositions: Array<{ x: number; y: number }> = []
+  ): AsteroidData[] {
     return this.asteroidManager.createAsteroids(count, bounds, botPositions, playerPositions);
   }
 

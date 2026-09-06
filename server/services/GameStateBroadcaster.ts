@@ -41,6 +41,18 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message, excludeId);
   }
 
+  public broadcastPlayerLeft(playerId: string): void {
+    const message = {
+      type: 'playerLeft',
+      data: {
+        id: playerId,
+      },
+      timestamp: Date.now(),
+    } as const;
+
+    this.broadcastToAll(message, playerId);
+  }
+
   public broadcastPlayerJoined(playerId: string, playerName: string, position: { x: number; y: number }): void {
     const message = {
       type: 'playerJoined',
@@ -270,6 +282,7 @@ export class GameStateBroadcaster {
           }
           // Remove the player from the game engine
           this.gameEngine.removePlayer(player.id);
+          this.broadcastPlayerLeft(player.id);
         }
       }
     }

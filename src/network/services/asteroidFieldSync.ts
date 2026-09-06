@@ -1,8 +1,10 @@
 import type { AsteroidData } from '../../../shared-types';
+import { containAsteroidPosition } from '../../physics/asteroidMotion';
 
 export interface AsteroidFieldSyncResult {
   created: AsteroidData[];
   updated: AsteroidData[];
+  removed: string[];
 }
 
 /**
@@ -15,8 +17,10 @@ export function partitionAsteroidSnapshot(
 ): AsteroidFieldSyncResult {
   const created: AsteroidData[] = [];
   const updated: AsteroidData[] = [];
+  const snapshotIds = new Set<string>();
 
   for (const asteroid of asteroids) {
+    snapshotIds.add(asteroid.id);
     if (seenIds.has(asteroid.id)) {
       updated.push(asteroid);
     } else {
@@ -25,7 +29,21 @@ export function partitionAsteroidSnapshot(
     }
   }
 
-  return { created, updated };
+  const removed: string[] = [];
+  // An empty snapshot is not a wipe — last-player reset + a dropped packet
+  // must not clear the remaining tab's local belt.
+  if (asteroids.length > 0) {
+    for (const id of seenIds) {
+      if (!snapshotIds.has(id)) {
+        removed.push(id);
+      }
+    }
+    for (const id of removed) {
+      seenIds.delete(id);
+    }
+  }
+
+  return { created, updated, removed };
 }
 
 /** Pose + health fields that must stay server-authoritative after first create. */
@@ -61,7 +79,7 @@ export function applyAsteroidKinematics(
   updates: Partial<AsteroidData>
 ): void {
   if (updates.position) {
-    roid.position = { x: updates.position.x, y: updates.position.y };
+    roid.position = containAsteroidPosition(updates.position.x, updates.position.y);
   }
   if (updates.velocity) {
     roid.velocity = { x: updates.velocity.x, y: updates.velocity.y };

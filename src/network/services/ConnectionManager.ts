@@ -525,8 +525,8 @@ export class ConnectionManager {
         }
       }
 
-      // Server never sends playerLeft; drop remotes that vanished from the
-      // snapshot so a closed tab leaves the leaderboard. Bots are left alone.
+      // Drop remotes that vanished from the snapshot so a closed tab leaves
+      // the leaderboard even if `playerLeft` was missed. Bots are left alone.
       const snapshotIds = new Set(data.entities.map((entity) => entity.id));
       for (const id of staleRemotePlayerIds(this.allPlayers.values(), snapshotIds)) {
         this.allPlayers.delete(id);
@@ -542,7 +542,7 @@ export class ConnectionManager {
   }
 
   private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
-    const { created, updated } = partitionAsteroidSnapshot(asteroids, this.seenAsteroidIds);
+    const { created, updated, removed } = partitionAsteroidSnapshot(asteroids, this.seenAsteroidIds);
     for (const asteroid of created) {
       window.dispatchEvent(
         new CustomEvent('serverAsteroidCreated', {
@@ -557,6 +557,13 @@ export class ConnectionManager {
             asteroidId: asteroid.id,
             updates: asteroidKinematicUpdates(asteroid),
           },
+        })
+      );
+    }
+    for (const asteroidId of removed) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidDestroyed', {
+          detail: { asteroidId },
         })
       );
     }

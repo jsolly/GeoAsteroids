@@ -148,7 +148,7 @@ export interface RoidBelt {
 
   addRoid(): void;
   destroyRoid(index: number): { score: number; newRoids: Roid[] };
-  moveRoids(): void;
+  moveRoids(tickScale?: number): void;
   spawnRoids(): void;
   getRoids(): readonly Roid[];
   setRoidLimits(min: number, max: number): void;

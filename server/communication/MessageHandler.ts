@@ -4,6 +4,7 @@ import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
 import { DEBUG } from '../../src/constants';
+import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
@@ -442,7 +443,12 @@ export class MessageHandler {
       const playerPositions = humanPlayers.map(player => player.position);
       const botPositions = bots.map(bot => bot.position);
       
-      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: 3100 }, botPositions, playerPositions);
+      const asteroids = this.gameEngine.createAsteroids(
+        asteroidCount,
+        { radius: getAsteroidFieldRadius() },
+        botPositions,
+        playerPositions
+      );
       this.broadcaster.broadcastAsteroidCreation(asteroids);
       logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids with ${playerPositions.length} player positions and ${botPositions.length} bot positions`);
     } else {
