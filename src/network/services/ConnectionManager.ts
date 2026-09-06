@@ -418,6 +418,7 @@ export class ConnectionManager {
         name: this.localPlayerName,
         color: this.getLocalPlayerColor(),
         position: playerPosition,
+        kitId: localPlayer?.ship.kitId,
       },
       timestamp: Date.now(),
     };
@@ -601,6 +602,8 @@ export class ConnectionManager {
               name: entityData.name,
               type: entityData.type === 'bot' ? 'bot' : 'remote',
               color: entityData.color,
+              kitId: entityData.kitId,
+              factionId: entityData.factionId,
             });
           }
 
@@ -634,6 +637,21 @@ export class ConnectionManager {
             : {}),
           ...(entityData.spawnProtectionTimer !== undefined
             ? { spawnProtectionTimer: entityData.spawnProtectionTimer }
+            : {}),
+          ...(entityData.kitId !== undefined ? { kitId: entityData.kitId } : {}),
+          ...(entityData.factionId !== undefined ? { factionId: entityData.factionId } : {}),
+          ...(entityData.abilityCooldownFrames !== undefined
+            ? { abilityCooldownFrames: entityData.abilityCooldownFrames }
+            : {}),
+          ...(entityData.abilityActiveFrames !== undefined
+            ? { abilityActiveFrames: entityData.abilityActiveFrames }
+            : {}),
+          ...(entityData.shieldTimer !== undefined ? { shieldTimer: entityData.shieldTimer } : {}),
+          ...(entityData.harpoonTimer !== undefined
+            ? { harpoonTimer: entityData.harpoonTimer }
+            : {}),
+          ...(entityData.harpoonTargetId !== undefined
+            ? { harpoonTargetId: entityData.harpoonTargetId }
             : {}),
         };
         entity.updateFromServer(serverSnapshot);

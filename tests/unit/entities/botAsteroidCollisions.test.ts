@@ -296,10 +296,10 @@ describe('Bot-Asteroid Collision System', () => {
         expect(isDestroyed).toBe(false); // Not destroyed yet
       }
 
-      // Check all bots were damaged
+      // Check all bots were damaged (kits have different max health)
       for (const bot of bots!) {
         const updatedBot = gameEngine.getBot(bot.id);
-        expect(updatedBot!.health).toBe(70); // 100 - 30
+        expect(updatedBot!.health).toBe(updatedBot!.maxHealth - 30);
       }
     });
   });

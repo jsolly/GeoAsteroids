@@ -1,5 +1,8 @@
 import { WebSocket } from 'ws';
-import type { Position, Velocity } from '../../shared-types';
+import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
+import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
+import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
+import { parseSoftFactionId } from '../../src/entities/player/softFactions';
 import { RNGService } from './RNGService';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { logger } from '../../setup/serverLogger';
@@ -36,6 +39,13 @@ export interface GameEntity {
   respawnAnchor?: Position;
   ws?: WebSocket; // Only for human players
   explodeTime?: number; // For bot explosion handling
+  kitId: ShipKitId;
+  factionId?: SoftFactionId;
+  abilityCooldownFrames: number;
+  abilityActiveFrames: number;
+  shieldTimer: number;
+  harpoonTimer: number;
+  harpoonTargetId?: string;
 }
 
 /** True when a client update is still the death pose, not the new spawn. */
@@ -135,7 +145,15 @@ export class EntityManager {
   }
 
   // Human player management
-  public addHumanPlayer(id: string, name: string, ws: WebSocket, position?: Position, color?: string): GameEntity {
+  public addHumanPlayer(
+    id: string,
+    name: string,
+    ws: WebSocket,
+    position?: Position,
+    color?: string,
+    kitId?: ShipKitId,
+    factionId?: SoftFactionId
+  ): GameEntity {
     const existing = this.entities.get(id);
     if (existing && existing.type === 'human') {
       if (existing.lives > 0) {
@@ -144,6 +162,9 @@ export class EntityManager {
         existing.lastUpdate = Date.now();
         if (color) {
           existing.color = color;
+        }
+        if (factionId !== undefined) {
+          existing.factionId = parseSoftFactionId(factionId);
         }
         return existing;
       }
@@ -177,7 +198,14 @@ export class EntityManager {
       lastUpdate: Date.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
       ws,
+      kitId: DEFAULT_SHIP_KIT_ID,
+      factionId: parseSoftFactionId(factionId),
+      abilityCooldownFrames: 0,
+      abilityActiveFrames: 0,
+      shieldTimer: 0,
+      harpoonTimer: 0,
     };
+    applyShipKitStats(entity, kitId ?? DEFAULT_SHIP_KIT_ID);
 
     this.addEntity(entity);
     return entity;
@@ -300,7 +328,13 @@ export class EntityManager {
         maxHealth: 100,
         lastUpdate: Date.now(),
         spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
+        kitId: DEFAULT_SHIP_KIT_ID,
+        abilityCooldownFrames: 0,
+        abilityActiveFrames: 0,
+        shieldTimer: 0,
+        harpoonTimer: 0,
       };
+      applyShipKitStats(bot, SHIP_KIT_IDS[i % SHIP_KIT_IDS.length]);
 
       this.addEntity(bot);
       newBots.push(bot);
@@ -330,6 +364,11 @@ export class EntityManager {
         // Humans always have spawn protection when timer > 0
         return null;
       }
+    }
+
+    if (absorbDamageWithShield(entity)) {
+      entity.lastUpdate = Date.now();
+      return entity;
     }
 
     const wasAlive = entity.health > 0;
@@ -582,6 +621,12 @@ export class EntityManager {
 
   public isCreating(): boolean {
     return this.isCreatingBots;
+  }
+
+  public tickAbilityState(): void {
+    for (const entity of this.entities.values()) {
+      tickAbilityHost(entity);
+    }
   }
 
 

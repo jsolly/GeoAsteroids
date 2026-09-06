@@ -10,10 +10,11 @@ const shipSrc = readFileSync(resolve(process.cwd(), 'src/entities/ship/shipRende
 const loopSrc = readFileSync(resolve(process.cwd(), 'src/core/gameController.ts'), 'utf8');
 
 test('player and bot ships share the phosphor hull draw path', () => {
-  expect(shipSrc).toMatch(/export function strokePhosphorHull/);
-  expect(shipSrc).toMatch(/strokePhosphorHull\(ctx, \{ nose, rearLeft, rearRight \}, shipColor\)/);
-  expect(canvasSrc).toMatch(/drawShipAtPosition\(currShip, currShip\.position, factionColor/);
-  expect(canvasSrc).toMatch(/drawShipAtPosition\(player\.ship, currShip\.position, factionColor/);
+  expect(shipSrc).toMatch(/export function strokePhosphorPolyline/);
+  expect(shipSrc).toMatch(/export function strokeKitHullOutline/);
+  expect(shipSrc).toMatch(/strokeKitHullOutline\(ctx, screenX, screenY, shipR, ship\.angle, shipColor, ship\.kitId\)/);
+  expect(canvasSrc).toMatch(/drawShipAtPosition\(\s*currShip,\s*currShip\.position,\s*ownerColor/);
+  expect(canvasSrc).toMatch(/drawShipAtPosition\(\s*player\.ship,\s*currShip\.position,\s*ownerColor/);
   expect(canvasSrc).not.toMatch(/drawBotShip|drawLocalShip|drawRemoteShip/);
 });
 

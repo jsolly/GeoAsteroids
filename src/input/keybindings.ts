@@ -1,9 +1,7 @@
 import { upsertThrustSource } from '../audio/gameSounds';
-import { GAME, SHIP } from '../constants';
+import { GAME } from '../constants';
 import type { Player } from '../entities/player/Player';
 import { logger } from '../utils/Logger';
-
-const TURN_SPEED_RAD_PER_FRAME = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
 
 interface KeyStates {
   ArrowLeft: boolean;
@@ -72,15 +70,20 @@ export function updateThrustFromKeys(player: Player): void {
 // both arrow keys (ArrowLeft/ArrowRight) and WASD (KeyA/KeyD); opposing keys
 // held together cancel out. Using the per-player pressed set (rather than the
 // global `keys` map) keeps combinations correct across arrow/WASD mixes.
+export function turnSpeedForShip(player: Player): number {
+  return (player.ship.turnSpeed * Math.PI) / (180 * GAME.FPS);
+}
+
 export function updateTurnFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
   const turningLeft = pressed.has('ArrowLeft') || pressed.has('KeyA');
   const turningRight = pressed.has('ArrowRight') || pressed.has('KeyD');
+  const turnSpeed = turnSpeedForShip(player);
 
   if (turningLeft && !turningRight) {
-    player.ship.angularVelocity = TURN_SPEED_RAD_PER_FRAME;
+    player.ship.angularVelocity = turnSpeed;
   } else if (turningRight && !turningLeft) {
-    player.ship.angularVelocity = -TURN_SPEED_RAD_PER_FRAME;
+    player.ship.angularVelocity = -turnSpeed;
   } else {
     // Neither held, or both held (opposing turns cancel).
     player.ship.angularVelocity = 0;
@@ -107,7 +110,7 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         player.ship.shoot();
         break;
       case 'KeyE':
-        player.ship.empPulse();
+        player.ship.activateAbility();
         break;
       case 'ArrowLeft':
       case 'KeyA':

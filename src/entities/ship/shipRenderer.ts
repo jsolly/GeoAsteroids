@@ -1,56 +1,73 @@
+import type { SoftFactionId } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
 import { Point } from '../../physics/Point';
 import { canvasManager } from '../../rendering/canvas';
 import { hexToRgba } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { logger } from '../../utils/Logger';
-
+import { drawSoftFactionMark } from '../player/factionMarkPainters';
+import { findHarpoonFieldBody } from './harpoonField';
+import {
+  getKitHullOutline,
+  projectHullPoint,
+  projectHullPolyline,
+  projectKitHullEdges,
+} from './hullOutlines';
 import type { Ship } from './Ship';
+import { CLASSIC_HULL, HAULER_TETHER_COLOR, type HullProfile, type ShipKitId } from './shipKits';
 
 // Helper function to calculate ship triangle points for consistent ship rendering
 export function calculateShipTrianglePoints(
   centerX: number,
   centerY: number,
   radius: number,
-  angle: number
+  angle: number,
+  hull: HullProfile = CLASSIC_HULL
 ): {
   nose: { x: number; y: number };
   rearLeft: { x: number; y: number };
   rearRight: { x: number; y: number };
 } {
-  // Create a more isosceles triangle shape for better ship appearance
   const nose = {
-    x: centerX + radius * Math.cos(angle), // Pointed nose
-    y: centerY - radius * Math.sin(angle),
+    x: centerX + radius * hull.nose * Math.cos(angle),
+    y: centerY - radius * hull.nose * Math.sin(angle),
   };
   const rearLeft = {
-    x: centerX - radius * 0.8 * Math.cos(angle) + radius * 0.5 * Math.sin(angle), // Wider back
-    y: centerY + radius * 0.8 * Math.sin(angle) + radius * 0.5 * Math.cos(angle),
+    x: centerX - radius * hull.rear * Math.cos(angle) + radius * hull.beam * Math.sin(angle),
+    y: centerY + radius * hull.rear * Math.sin(angle) + radius * hull.beam * Math.cos(angle),
   };
   const rearRight = {
-    x: centerX - radius * 0.8 * Math.cos(angle) - radius * 0.5 * Math.sin(angle), // Wider back
-    y: centerY + radius * 0.8 * Math.sin(angle) - radius * 0.5 * Math.cos(angle),
+    x: centerX - radius * hull.rear * Math.cos(angle) - radius * hull.beam * Math.sin(angle),
+    y: centerY + radius * hull.rear * Math.sin(angle) - radius * hull.beam * Math.cos(angle),
   };
 
   return { nose, rearLeft, rearRight };
 }
 
-/** Shared phosphor hull stroke for local, remote, and bot ships (and HUD lives). */
-export function strokePhosphorHull(
+/** Shared phosphor stroke for v2 kit outlines (and the leftover 3-point helper). */
+export function strokePhosphorPolyline(
   ctx: CanvasRenderingContext2D,
-  hull: {
-    nose: { x: number; y: number };
-    rearLeft: { x: number; y: number };
-    rearRight: { x: number; y: number };
-  },
-  color: string
+  points: readonly { x: number; y: number }[],
+  color: string,
+  closed = true
 ): void {
+  const first = points[0];
+  if (!first) {
+    return;
+  }
+
   const trace = (): void => {
     ctx.beginPath();
-    ctx.moveTo(hull.nose.x, hull.nose.y);
-    ctx.lineTo(hull.rearLeft.x, hull.rearLeft.y);
-    ctx.lineTo(hull.rearRight.x, hull.rearRight.y);
-    ctx.closePath();
+    ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < points.length; i++) {
+      const point = points[i];
+      if (point) {
+        ctx.lineTo(point.x, point.y);
+      }
+    }
+    if (closed) {
+      ctx.closePath();
+    }
   };
 
   ctx.save();
@@ -67,6 +84,44 @@ export function strokePhosphorHull(
   trace();
   ctx.stroke();
   ctx.restore();
+}
+
+export function strokePhosphorHull(
+  ctx: CanvasRenderingContext2D,
+  hull: {
+    nose: { x: number; y: number };
+    rearLeft: { x: number; y: number };
+    rearRight: { x: number; y: number };
+  },
+  color: string
+): void {
+  strokePhosphorPolyline(ctx, [hull.nose, hull.rearLeft, hull.rearRight], color, true);
+}
+
+export function strokeKitHullOutline(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  angle: number,
+  color: string,
+  kitId?: ShipKitId
+): void {
+  const outline = getKitHullOutline(kitId);
+  strokePhosphorPolyline(
+    ctx,
+    projectHullPolyline(centerX, centerY, radius, angle, outline.hull),
+    color,
+    outline.hull.closed
+  );
+  for (const extra of outline.extras) {
+    strokePhosphorPolyline(
+      ctx,
+      projectHullPolyline(centerX, centerY, radius, angle, extra),
+      color,
+      extra.closed
+    );
+  }
 }
 
 export function strokePhosphorSegment(
@@ -141,18 +196,16 @@ export function drawGenericThruster(
   y: number,
   angle: number,
   radius: number,
-  color: string = PALETTE.LOCAL
+  color: string = PALETTE.LOCAL,
+  kitId?: ShipKitId
 ): void {
   const ctx = canvasManager.getContext();
   if (!ctx) {
     return;
   }
 
-  // The hull's rear edge sits 0.8r behind centre; the trail is an open V hanging off it.
-  const rearCenter = {
-    x: x - radius * 0.8 * Math.cos(angle),
-    y: y + radius * 0.8 * Math.sin(angle),
-  };
+  const aft = getKitHullOutline(kitId).thruster;
+  const rearCenter = projectHullPoint(x, y, radius, angle, aft);
 
   const flicker = Math.floor(performance.now() / VISUAL.THRUSTER_FLICKER_MS) % 2 === 0;
   const lengthRatio = flicker ? VISUAL.THRUSTER_LENGTH_RATIO : VISUAL.THRUSTER_FLICKER_RATIO;
@@ -213,7 +266,7 @@ export function drawThruster(ship: Ship, color: string = ship.color): void {
     });
 
     // Use the generic thruster function
-    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r, color);
+    drawGenericThruster(screenCenter.x, screenCenter.y, ship.angle, ship.r, color, ship.kitId);
   } else {
     logger.debug('THRUSTER', 'Thruster not drawn - conditions not met', {
       exploding: ship.exploding,
@@ -235,7 +288,7 @@ export function drawThrusterAtPosition(
   if (!ship.exploding && ship.thrusting) {
     const screen = canvasManager.worldToScreen(ship.position, shipPosition);
     const scale = canvasManager.getPlayfieldScale();
-    drawGenericThruster(screen.x, screen.y, ship.angle, ship.r * scale, color);
+    drawGenericThruster(screen.x, screen.y, ship.angle, ship.r * scale, color, ship.kitId);
   }
 }
 
@@ -272,17 +325,13 @@ function drawVectorExplosion(
   radius: number,
   angle: number,
   progress: number,
-  color: string
+  color: string,
+  kitId?: ShipKitId
 ): void {
   const t = Math.min(Math.max(progress, 0), 1);
   const alpha = 1 - t * 0.85;
   const spread = radius * VISUAL.EXPLOSION_SPREAD_RATIO * t;
-  const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(x, y, radius, angle);
-  const edges: [{ x: number; y: number }, { x: number; y: number }][] = [
-    [nose, rearLeft],
-    [rearLeft, rearRight],
-    [rearRight, nose],
-  ];
+  const edges = projectKitHullEdges(x, y, radius, angle, kitId);
 
   ctx.save();
   ctx.strokeStyle = hexToRgba(color, alpha);
@@ -344,7 +393,8 @@ export function drawShipExplosion(ship: Ship, color?: string): void {
     ship.r * canvasManager.getPlayfieldScale(),
     ship.angle,
     explosionProgress(ship),
-    color || ship.color || PALETTE.LOCAL
+    color || ship.color || PALETTE.LOCAL,
+    ship.kitId
   );
 }
 
@@ -368,7 +418,8 @@ export function drawShipExplosionAtPosition(
     ship.r * scale,
     ship.angle,
     explosionProgress(ship),
-    color || ship.color || PALETTE.REMOTE
+    color || ship.color || PALETTE.REMOTE,
+    ship.kitId
   );
 }
 
@@ -469,7 +520,8 @@ export function drawShipAtPosition(
   ship: Ship,
   shipPosition: { x: number; y: number },
   color?: string,
-  playerName?: string
+  playerName?: string,
+  factionId?: SoftFactionId
 ): void {
   const ctx = canvasManager.getContext();
   const cvs = canvasManager.getCanvas();
@@ -492,15 +544,14 @@ export function drawShipAtPosition(
   // Use ship's own color or provided color
   const shipColor = color || ship.color;
 
-  // Use the shared ship triangle calculation function for consistency
-  const { nose, rearLeft, rearRight } = calculateShipTrianglePoints(
-    screenX,
-    screenY,
-    shipR,
-    ship.angle
-  );
-
-  strokePhosphorHull(ctx, { nose, rearLeft, rearRight }, shipColor);
+  strokeKitHullOutline(ctx, screenX, screenY, shipR, ship.angle, shipColor, ship.kitId);
+  drawSoftFactionMark(ctx, factionId, {
+    x: screenX,
+    y: screenY,
+    radius: shipR,
+    angle: ship.angle,
+  });
+  drawAbilityFx(ctx, ship, screenX, screenY, shipR, shipPosition);
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
@@ -509,6 +560,75 @@ export function drawShipAtPosition(
   if (playerName) {
     drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
   }
+}
+
+export function canDrawHaulerHarpoon(ship: {
+  kitId: string;
+  harpoonTimer: number;
+  harpoonTargetId?: string;
+}): boolean {
+  return ship.kitId === 'hauler' && ship.harpoonTimer > 0 && Boolean(ship.harpoonTargetId);
+}
+
+/** Tether + latch ring. Hauler only — other kits never draw this. */
+export function drawHaulerHarpoonVfx(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  cameraShipPosition: { x: number; y: number }
+): void {
+  if (!canDrawHaulerHarpoon(ship)) {
+    return;
+  }
+  const target = findHarpoonFieldBody(ship.harpoonTargetId);
+  if (!target) {
+    return;
+  }
+
+  const latch = canvasManager.worldToScreen(target.position, cameraShipPosition);
+  const pulse = 0.55 + 0.25 * Math.sin(Date.now() / 80);
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(HAULER_TETHER_COLOR, pulse);
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(screenX, screenY);
+  ctx.lineTo(latch.x, latch.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(latch.x, latch.y, 7, 0, Math.PI * 2);
+  ctx.lineWidth = 1.25;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Ability rings only. Kit hulls come from the v2 outline bake. */
+function drawAbilityFx(
+  ctx: CanvasRenderingContext2D,
+  ship: Ship,
+  screenX: number,
+  screenY: number,
+  shipR: number,
+  cameraShipPosition: { x: number; y: number }
+): void {
+  if (ship.shieldTimer > 0) {
+    const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 90);
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, shipR + 10, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(PALETTE.HUD, pulse);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  if (ship.abilityActiveFrames > 0 && ship.harpoonTimer <= 0 && ship.shieldTimer <= 0) {
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, shipR + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(PALETTE.ACCENT_UI, 0.45);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  drawHaulerHarpoonVfx(ctx, ship, screenX, screenY, cameraShipPosition);
 }
 
 function drawShipImpactFlash(

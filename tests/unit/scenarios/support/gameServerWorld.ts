@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import { WebSocket } from 'ws';
-import type { Position } from '../../../../shared-types';
+import type { Position, ShipKitId, SoftFactionId } from '../../../../shared-types';
 import { WebSocketCore } from '../../../../server/communication/WebSocketCore';
 import type { GameEntity } from '../../../../server/core/EntityManager';
 import { GameEngine } from '../../../../server/core/GameEngine';
@@ -70,11 +70,23 @@ export class GameServerWorld {
     this.core = new WebSocketCore(this.engine);
   }
 
-  join(name: string, position: Position = { x: 0, y: 0 }): Pilot {
+  join(
+    name: string,
+    position: Position = { x: 0, y: 0 },
+    options: { kitId?: ShipKitId; factionId?: SoftFactionId } = {}
+  ): Pilot {
     this.joinCount += 1;
     const id = `${name.toLowerCase()}-${this.joinCount}`;
     const socket = new FakeSocket();
-    this.send({ id, name, socket }, { type: 'join', id, name, data: { name, position } });
+    this.send(
+      { id, name, socket },
+      {
+        type: 'join',
+        id,
+        name,
+        data: { name, position, kitId: options.kitId, factionId: options.factionId },
+      }
+    );
     return { id, name, socket };
   }
 

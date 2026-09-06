@@ -1,5 +1,8 @@
 import { DAMAGE } from '../../constants';
 import type { Laser } from '../../entities/laser/Laser';
+import type { Player } from '../../entities/player/Player';
+import { PlayerManager } from '../../entities/player/PlayerManager';
+import { canDealCombatDamage } from '../../entities/player/softFactions';
 import type { Roid } from '../../entities/roid/Roid';
 import type { Ship } from '../../entities/ship/Ship';
 import {
@@ -164,7 +167,10 @@ export class CollisionManager {
         continue;
       }
 
-      if (checkShipCollision(localShip.position, localShip.r, otherShip.position, otherShip.r)) {
+      if (
+        canDealCombatDamage(this.factionForId(localPlayerId), this.factionForShip(otherShip)) &&
+        checkShipCollision(localShip.position, localShip.r, otherShip.position, otherShip.r)
+      ) {
         this.handleShipShipCollision(localShip, otherShip, other.id, localPlayerId);
         isColliding = true;
         break;
@@ -224,7 +230,10 @@ export class CollisionManager {
             continue;
           }
 
-          if (checkLaserShipCollision(laser.position, ship.position, ship.r)) {
+          if (
+            canDealCombatDamage(this.factionForId(localPlayerId), this.factionForId(player.id)) &&
+            checkLaserShipCollision(laser.position, ship.position, ship.r)
+          ) {
             this.handleLaserPlayerHit(laser, player, localPlayerId);
             // Mark laser for explosion
             laser.updateExplodeTime();
@@ -252,6 +261,13 @@ export class CollisionManager {
       attackerId,
       reportAsteroidHits,
     });
+
+    if (asteroid.isCollabTarget) {
+      if (reportAsteroidHits) {
+        this.reportAsteroidDamage(asteroid, attackerId);
+      }
+      return;
+    }
 
     lockAsteroidPending(asteroid);
 
@@ -373,6 +389,38 @@ export class CollisionManager {
         points: this.getAsteroidPoints(asteroid.r),
       },
     });
+  }
+
+  private reportAsteroidDamage(asteroid: Roid, playerId: string): void {
+    this.networkManager.sendMessage({
+      type: 'asteroidDamage',
+      data: {
+        asteroidId: asteroid.id,
+        playerId,
+        damage: DAMAGE.LASER_HIT,
+        points: this.getAsteroidPoints(asteroid.r),
+      },
+    });
+  }
+
+  private factionForId(playerId: string): Player['factionId'] {
+    if (!playerId) {
+      return undefined;
+    }
+    const fromNet = this.networkManager.getPlayer(playerId);
+    if (fromNet) {
+      return fromNet.factionId;
+    }
+    const local = PlayerManager.getInstance().getLocalPlayer();
+    if (local && (local.id === playerId || this.networkManager.getLocalPlayerId() === playerId)) {
+      return local.factionId;
+    }
+    return undefined;
+  }
+
+  private factionForShip(ship: Ship): Player['factionId'] {
+    const match = this.networkManager.getAllPlayers().find((player) => player.ship === ship);
+    return match?.factionId;
   }
 
   /**

@@ -1,10 +1,11 @@
-import type { Position } from '../../../shared-types';
+import type { Position, ShipKitId, SoftFactionId } from '../../../shared-types';
 import { GAME } from '../../constants';
 import type { PlayerInput } from '../../input/PlayerInput';
 import { getFactionColor } from '../../utils/colorUtils';
 import { isStaleGameOverSnapshot } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { Ship } from '../ship/Ship';
+import { applyShipKitToShip } from '../ship/shipKits';
 import {
   applySharedShipExplodingFlag,
   applySharedShipRespawnCue,
@@ -13,6 +14,7 @@ import {
   isSilentHudReset,
   resolveCombatDeathCause,
 } from '../ship/shipUtils';
+import { parseSoftFactionId } from './softFactions';
 
 export class Player {
   id: string;
@@ -25,6 +27,7 @@ export class Player {
   color: string; // Player's unique color for lasers and other visual elements
   deathCause?: string; // What killed the player (asteroid, boundary, player name, etc.)
   input: PlayerInput; // Unified input system for all player types
+  factionId?: SoftFactionId;
 
   // For the local player: from the moment it dies until it is confirmed alive
   // again, trust the server for position (so the respawn point is adopted).
@@ -54,11 +57,14 @@ export class Player {
     name: string;
     type: 'local' | 'remote' | 'bot';
     input: PlayerInput;
+    kitId?: ShipKitId;
+    factionId?: SoftFactionId;
   }) {
     this.id = params.id;
     this.name = params.name;
     this.type = params.type;
     this.input = params.input;
+    this.factionId = parseSoftFactionId(params.factionId);
 
     this.color = getFactionColor(this.type);
 
@@ -68,6 +74,7 @@ export class Player {
       isBot: this.type === 'bot',
       isLocalPlayer: this.type === 'local',
       frictionCoefficient: this.getFrictionCoefficient(),
+      kitId: params.kitId,
     });
   }
 
@@ -86,7 +93,22 @@ export class Player {
     maxHealth?: number;
     respawnTimer?: number;
     spawnProtectionTimer?: number;
+    kitId?: ShipKitId;
+    factionId?: SoftFactionId;
+    abilityCooldownFrames?: number;
+    abilityActiveFrames?: number;
+    shieldTimer?: number;
+    harpoonTimer?: number;
+    harpoonTargetId?: string;
   }): void {
+    if (data.kitId && data.kitId !== this.ship.kitId) {
+      const color = this.ship.color;
+      applyShipKitToShip(this.ship, data.kitId);
+      this.ship.color = color;
+    }
+    if (data.factionId !== undefined) {
+      this.factionId = parseSoftFactionId(data.factionId);
+    }
     if (data.spawnProtectionTimer !== undefined) {
       this.serverSpawnProtectionTimer = data.spawnProtectionTimer;
     }
@@ -255,6 +277,23 @@ export class Player {
     if (data.maxHealth !== undefined) {
       this.ship.maxHealth = data.maxHealth;
     }
+    if (this.type !== 'local') {
+      if (data.abilityCooldownFrames !== undefined) {
+        this.ship.abilityCooldownFrames = data.abilityCooldownFrames;
+      }
+      if (data.abilityActiveFrames !== undefined) {
+        this.ship.abilityActiveFrames = data.abilityActiveFrames;
+      }
+      if (data.shieldTimer !== undefined) {
+        this.ship.shieldTimer = data.shieldTimer;
+      }
+      if (data.harpoonTimer !== undefined) {
+        this.ship.harpoonTimer = data.harpoonTimer;
+      }
+    }
+    if (data.harpoonTargetId !== undefined) {
+      this.ship.harpoonTargetId = data.harpoonTargetId || undefined;
+    }
     // Handle respawn timer from server
     if (data.respawnTimer !== undefined) {
       // When respawnTimer is 0, the server has finished the countdown. Remote
@@ -370,7 +409,7 @@ export class Player {
 
     // Update EMP pulse state
     if (this.input.getEmpPulse()) {
-      this.ship.empPulse();
+      this.ship.activateAbility();
     }
   }
 

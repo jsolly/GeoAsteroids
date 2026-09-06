@@ -85,6 +85,9 @@ export function asteroidKinematicUpdates(asteroid: Partial<AsteroidData>): Parti
   if (asteroid.size !== undefined) {
     updates.size = asteroid.size;
   }
+  if (asteroid.isCollabTarget !== undefined) {
+    updates.isCollabTarget = asteroid.isCollabTarget;
+  }
   return updates;
 }
 
@@ -123,6 +126,7 @@ export interface AsteroidKinematicTarget {
   health: number;
   maxHealth: number;
   r: number;
+  isCollabTarget?: boolean;
 }
 
 export function shouldSnapAsteroidPose(
@@ -166,5 +170,8 @@ export function applyAsteroidKinematics(
   }
   if (updates.maxHealth !== undefined) {
     roid.maxHealth = updates.maxHealth;
+  }
+  if (updates.isCollabTarget !== undefined) {
+    roid.isCollabTarget = updates.isCollabTarget;
   }
 }

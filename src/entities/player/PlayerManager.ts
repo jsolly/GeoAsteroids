@@ -1,3 +1,4 @@
+import type { ShipKitId } from '../../../shared-types';
 import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { entityFactory } from '../EntityFactory';
@@ -46,9 +47,9 @@ class PlayerManager {
   // Local player management
   private localPlayer: Player | null = null;
 
-  public createLocalPlayer(): Player {
+  public createLocalPlayer(kitId?: ShipKitId): Player {
     // Use EntityFactory to ensure proper positioning based on DEBUG settings
-    const player = entityFactory.createLocalPlayer('Player');
+    const player = entityFactory.createLocalPlayer('Player', undefined, kitId);
     this.localPlayer = player;
     return player;
   }

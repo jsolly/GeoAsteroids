@@ -13,6 +13,12 @@ export interface Velocity {
 }
 
 // Network update interface - only what needs to be synced
+/** Chosen at join. Shared by human and bot ships. Independent of soft faction. */
+export type ShipKitId = 'dart' | 'hauler' | 'warden' | 'skirmisher' | 'quake';
+
+/** Soft side (ION / EMBER). Assigned on join by the factions stream. */
+export type SoftFactionId = 'ion' | 'ember';
+
 export interface PlayerUpdate {
   id: string;
   name: string;
@@ -25,6 +31,8 @@ export interface PlayerUpdate {
   exploding: boolean;
   health: number;
   maxHealth: number;
+  kitId?: ShipKitId;
+  factionId?: SoftFactionId;
   lasers?: Array<{
     position: Position;
     velocity: Velocity;
@@ -39,6 +47,8 @@ export interface PlayerJoin {
   name: string;
   position: Position;
   color: string;
+  kitId?: ShipKitId;
+  factionId?: SoftFactionId;
 }
 
 export interface PlayerLeave {
@@ -64,6 +74,8 @@ export interface AsteroidData {
   maxHealth: number;
   vertices: number;
   offsets: number[];
+  /** High-HP rock that stacks hits from every pilot (voluntary coop). */
+  isCollabTarget?: boolean;
 }
 
 export interface BotData {
@@ -78,6 +90,8 @@ export interface BotData {
   lives: number;
   health: number;
   maxHealth: number;
+  kitId?: ShipKitId;
+  factionId?: SoftFactionId;
 }
 
 // Server game state structure (what the server actually sends)
@@ -121,4 +135,11 @@ export interface ServerEntityData {
   maxHealth: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
+  kitId?: ShipKitId;
+  factionId?: SoftFactionId;
+  abilityCooldownFrames?: number;
+  abilityActiveFrames?: number;
+  shieldTimer?: number;
+  harpoonTimer?: number;
+  harpoonTargetId?: string;
 }

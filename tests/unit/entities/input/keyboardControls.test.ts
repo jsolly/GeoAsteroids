@@ -64,6 +64,12 @@ test('opposing turn keys (arrow + WASD) cancel out', () => {
   expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
 });
 
+test('KeyE activates the ship kit ability', () => {
+  const activateSpy = vi.spyOn(player.ship, 'activateAbility');
+  press('KeyE');
+  expect(activateSpy).toHaveBeenCalledTimes(1);
+});
+
 test('WASD is ignored while dead', () => {
   player.lives = 0;
   press('KeyW');

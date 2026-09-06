@@ -171,3 +171,9 @@ test('kinematic updates omit undefined fields so a lean row cannot wipe pose', (
     position: { x: 3, y: 4 },
   });
 });
+
+test('collab flag copies onto the local rock so both pilots can chip it', () => {
+  const local = { ...localRoid(1, 2), isCollabTarget: false };
+  applyAsteroidKinematics(local, { ...roid('server-asteroid-0', 10, 10), isCollabTarget: true });
+  expect(local.isCollabTarget).toBe(true);
+});

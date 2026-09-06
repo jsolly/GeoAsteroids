@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, Velocity } from '../../../shared-types';
+import type { Position, ShipKitId, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { getThrustSound } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
@@ -8,7 +8,9 @@ import { NetworkManager } from '../../network/networkManager';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
-import { createLaser } from '../laser/laserUtils';
+import { createLaser, createLaserAtAngle } from '../laser/laserUtils';
+import { type AbilityWorld, activateAbilityOnHost, tickAbilityHost } from './shipAbilities';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from './shipKits';
 import { drawThruster } from './shipRenderer';
 
 import {
@@ -58,6 +60,15 @@ class Ship {
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
   frictionCoefficient: number = GAME.FRICTION; // Player-specific friction coefficient
   isLocalPlayer: boolean = false; // Track if this is the local player
+  kitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
+  thrust: number = SHIP.THRUST;
+  maxVelocity: number = SHIP.MAX_VELOCITY;
+  turnSpeed: number = SHIP.TURN_SPEED;
+  abilityCooldownFrames: number = 0;
+  abilityActiveFrames: number = 0;
+  shieldTimer: number = 0;
+  harpoonTimer: number = 0;
+  harpoonTargetId?: string;
 
   // Server-authoritative smoothing targets (for remote/bot ships)
   targetPosition?: Position;
@@ -86,6 +97,7 @@ class Ship {
     isBot?: boolean;
     isLocalPlayer?: boolean;
     frictionCoefficient?: number;
+    kitId?: ShipKitId;
   }) {
     // Set initial spawn protection for local players to prevent immediate collisions
     if (options?.isLocalPlayer) {
@@ -120,6 +132,13 @@ class Ship {
     }
     if (options?.frictionCoefficient !== undefined) {
       this.frictionCoefficient = options.frictionCoefficient;
+    }
+    applyShipKitToShip(this, options?.kitId ?? DEFAULT_SHIP_KIT_ID);
+    if (options?.shotCooldown !== undefined) {
+      this.shotCooldown = options.shotCooldown;
+    }
+    if (options?.color) {
+      this.color = options.color;
     }
   }
 
@@ -168,8 +187,8 @@ class Ship {
 
     if (this.thrusting) {
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
-        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
+        x: (Math.cos(this.angle) * this.thrust) / GAME.FPS,
+        y: (-Math.sin(this.angle) * this.thrust) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -177,8 +196,8 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > SHIP.MAX_VELOCITY) {
-        const scale = SHIP.MAX_VELOCITY / currentSpeed;
+      if (currentSpeed > this.maxVelocity) {
+        const scale = this.maxVelocity / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }
@@ -242,6 +261,49 @@ class Ship {
 
     // Send shooting event to network system
     this.sendShootEvent(laser.position, laser.velocity);
+  }
+
+  fireBurst(count: number, spread: number): void {
+    const mid = (count - 1) / 2;
+    for (let i = 0; i < count; i++) {
+      if (this.lasers.length >= SHIP.MAX_LASERS) {
+        break;
+      }
+      const angle = this.angle + (i - mid) * spread;
+      const laser = createLaserAtAngle(this, angle);
+      this.lasers.push(laser);
+      if (i === 0) {
+        laser.playLaserSound();
+      }
+      this.sendShootEvent(laser.position, laser.velocity);
+    }
+    this.canShoot = false;
+    this.lastShotTime = Date.now();
+  }
+
+  activateAbility(world?: AbilityWorld): boolean {
+    if (this.exploding) {
+      return false;
+    }
+    const result = activateAbilityOnHost(this, world);
+    if (!result.activated) {
+      return false;
+    }
+    if (result.abilityId === 'burstFire') {
+      const kit = getShipKit(this.kitId);
+      this.fireBurst(kit.burstCount, 0.12);
+    }
+    if (this.isLocalPlayer && !this.isBot) {
+      const networkManager = NetworkManager.getInstance();
+      if (networkManager.isConnected) {
+        networkManager.sendMessage({
+          type: 'useAbility',
+          id: networkManager.getLocalPlayerId(),
+          data: { kitId: this.kitId, abilityId: result.abilityId },
+        });
+      }
+    }
+    return true;
   }
 
   moveLasers(): void {
@@ -428,6 +490,9 @@ class Ship {
     if (this.exploding) {
       return;
     }
+    if (this.shieldTimer > 0) {
+      return;
+    }
 
     // Instrumentation for tests: trace damage handling when under test
     const prevHealth = this.health;
@@ -611,6 +676,7 @@ class Ship {
     for (let i = 0; i < steps; i++) {
       this.updateInvincibility();
       tickShipImpactFlash(this);
+      tickAbilityHost(this);
       this.updateHealth();
     }
 
@@ -634,8 +700,8 @@ class Ship {
     // Apply thrust if thrusting
     if (this.thrusting) {
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
-        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
+        x: (Math.cos(this.angle) * this.thrust) / GAME.FPS,
+        y: (-Math.sin(this.angle) * this.thrust) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -643,8 +709,8 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > SHIP.MAX_VELOCITY) {
-        const scale = SHIP.MAX_VELOCITY / currentSpeed;
+      if (currentSpeed > this.maxVelocity) {
+        const scale = this.maxVelocity / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }
