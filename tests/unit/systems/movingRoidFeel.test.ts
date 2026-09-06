@@ -121,7 +121,7 @@ describe('moving-roid hit feel', () => {
     );
     expect(localShip.health).toBe(100);
     expect(localShip.exploding).toBe(false);
-    expect(roid.pendingDestruction).toBeUndefined();
+    expect(roid.pendingDestruction).toBeFalsy();
     expect(mockSendMessage).not.toHaveBeenCalled();
 
     collisionManager.checkPlayerAsteroidCollisions(

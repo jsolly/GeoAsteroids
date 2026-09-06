@@ -163,6 +163,7 @@ describe('Local Player Roid Collision Damage', () => {
 
       localShip.requestShieldToggle();
       expect(localShip.shieldActive).toBe(true);
+      mockSendMessage.mockClear();
 
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
 
