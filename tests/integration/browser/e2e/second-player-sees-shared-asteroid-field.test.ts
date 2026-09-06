@@ -27,6 +27,28 @@ test('second player sees shared asteroid field', async () => {
   expect(count1).toBeGreaterThan(0);
   expect(Math.abs(count1 - count2)).toBeLessThanOrEqual(2);
 
+  const field1Start = await game1.getAsteroidPositions();
+  await page1.waitForTimeout(1500);
+  const field1Later = await game1.getAsteroidPositions();
+  const field2Later = await game2.getAsteroidPositions();
+
+  const moved = field1Start.some((start) => {
+    const later = field1Later.find((roid) => roid.id === start.id);
+    return later !== undefined && (Math.abs(later.x - start.x) > 1 || Math.abs(later.y - start.y) > 1);
+  });
+  expect(moved, 'asteroids should translate over ~1.5s').toBe(true);
+
+  const ids1 = [...field1Later.map((roid) => roid.id)].sort();
+  const ids2 = [...field2Later.map((roid) => roid.id)].sort();
+  expect(ids1).toEqual(ids2);
+
+  for (const roid of field1Later) {
+    const peer = field2Later.find((other) => other.id === roid.id);
+    expect(peer).toBeDefined();
+    expect(Math.abs(peer!.x - roid.x)).toBeLessThan(80);
+    expect(Math.abs(peer!.y - roid.y)).toBeLessThan(80);
+  }
+
   await expect
     .poll(() => game1.getAllPlayerCount(), { timeout: 10000, message: 'both players should see each other' })
     .toBeGreaterThanOrEqual(2);

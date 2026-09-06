@@ -65,6 +65,25 @@ export class AsteroidManager {
     this.asteroids.clear();
   }
 
+  /**
+   * Advance every asteroid one simulation frame (same units as client `moveRoids`:
+   * velocity is pixels per 60 FPS tick). Debug placement modes stay frozen so
+   * collision tests that pin roids on ships/bots do not drift.
+   */
+  public updateMotion(): void {
+    if (DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER || DEBUG.ROIDS.PLACE_ON_BOT) {
+      return;
+    }
+
+    for (const asteroid of this.asteroids.values()) {
+      asteroid.position = {
+        x: asteroid.position.x + asteroid.velocity.x,
+        y: asteroid.position.y + asteroid.velocity.y,
+      };
+      asteroid.rotation += asteroid.angularVelocity;
+    }
+  }
+
   public createAsteroids(count: number, bounds = { radius: 3100 }, botPositions: Position[] = [], playerPositions: Position[] = []): AsteroidData[] {
     // If we already have asteroids and no player positions are provided, return them instead of recreating
     // But if player positions are provided, we should recreate to place roids on players

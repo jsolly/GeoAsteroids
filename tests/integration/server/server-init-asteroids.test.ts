@@ -93,4 +93,86 @@ describe('Server initAsteroids sync', () => {
       playerTwo.close();
     }
   });
+
+  it('moves asteroids over time and a late joiner receives that same live field', async () => {
+    const playerOne = await openGameSocket(wsUrl);
+    const playerTwo = await openGameSocket(wsUrl);
+
+    try {
+      playerOne.send(
+        JSON.stringify({
+          type: 'join',
+          id: 'motion-one',
+          data: { name: 'MotionOne', position: { x: 0, y: 0 } },
+          timestamp: Date.now(),
+        })
+      );
+      const joinedOne = await waitForMessage(playerOne, 'joined');
+
+      playerOne.send(
+        JSON.stringify({
+          type: 'initAsteroids',
+          id: joinedOne.data?.id ?? 'motion-one',
+          data: { asteroidCount: 10 },
+          timestamp: Date.now(),
+        })
+      );
+      const firstBatch = await waitForMessage(playerOne, 'asteroidCreateBatch');
+      const initial = (firstBatch.data?.asteroids ?? []) as Array<{
+        id: string;
+        position: { x: number; y: number };
+        velocity: { x: number; y: number };
+      }>;
+      expect(initial.length).toBeGreaterThan(0);
+
+      const tracked = initial[0]!;
+      server.gameEngine.updateAsteroid(tracked.id, {
+        position: { x: 0, y: 0 },
+        velocity: { x: 2, y: 0 },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const liveBeforeJoin = server.gameEngine.getAsteroid(tracked.id);
+      expect(liveBeforeJoin).toBeDefined();
+      expect(liveBeforeJoin!.position.x).toBeGreaterThan(2);
+
+      playerTwo.send(
+        JSON.stringify({
+          type: 'join',
+          id: 'motion-two',
+          data: { name: 'MotionTwo', position: { x: 50, y: 50 } },
+          timestamp: Date.now(),
+        })
+      );
+      const joinedTwo = await waitForMessage(playerTwo, 'joined');
+
+      playerTwo.send(
+        JSON.stringify({
+          type: 'initAsteroids',
+          id: joinedTwo.data?.id ?? 'motion-two',
+          data: { asteroidCount: 10 },
+          timestamp: Date.now(),
+        })
+      );
+      const lateBatch = await waitForMessage(playerTwo, 'asteroidCreateBatch');
+      const lateField = (lateBatch.data?.asteroids ?? []) as Array<{
+        id: string;
+        position: { x: number; y: number };
+        velocity: { x: number; y: number };
+      }>;
+
+      const lateTracked = lateField.find((asteroid) => asteroid.id === tracked.id);
+      const liveAfterJoin = server.gameEngine.getAsteroid(tracked.id);
+      expect(lateTracked).toBeDefined();
+      expect(liveAfterJoin).toBeDefined();
+      expect(lateTracked!.velocity).toEqual(liveAfterJoin!.velocity);
+      expect(Math.abs(lateTracked!.position.x - liveAfterJoin!.position.x)).toBeLessThan(12);
+      expect(Math.abs(lateTracked!.position.y - liveAfterJoin!.position.y)).toBeLessThan(12);
+      expect(lateTracked!.position.x).toBeGreaterThan(tracked.position.x);
+    } finally {
+      playerOne.close();
+      playerTwo.close();
+    }
+  });
 });

@@ -15,6 +15,10 @@ import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { logger } from '../../utils/Logger';
 import type { ClientMessage, ServerMessage } from '../types';
 import {
+  asteroidKinematicUpdates,
+  partitionAsteroidSnapshot,
+} from './asteroidFieldSync';
+import {
   CONNECTION_STALE_TIMEOUT_MS,
   HEARTBEAT_INTERVAL_MS,
   isConnectionStale,
@@ -532,19 +536,31 @@ export class ConnectionManager {
       }
     }
 
-    // Dispatch asteroid events only for NEW asteroids
+    // Apply the authoritative field: create unseen roids, then keep pose in sync
+    // so late joiners and every client share the same moving asteroids.
     if (data.asteroids) {
-      for (const asteroidData of data.asteroids) {
-        // Only dispatch event if we haven't seen this asteroid before
-        if (!this.seenAsteroidIds.has(asteroidData.id)) {
-          this.seenAsteroidIds.add(asteroidData.id);
-          window.dispatchEvent(
-            new CustomEvent('serverAsteroidCreated', {
-              detail: { asteroid: asteroidData },
-            })
-          );
-        }
-      }
+      this.applyAuthoritativeAsteroids(data.asteroids);
+    }
+  }
+
+  private applyAuthoritativeAsteroids(asteroids: AsteroidData[]): void {
+    const { created, updated } = partitionAsteroidSnapshot(asteroids, this.seenAsteroidIds);
+    for (const asteroid of created) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidCreated', {
+          detail: { asteroid },
+        })
+      );
+    }
+    for (const asteroid of updated) {
+      window.dispatchEvent(
+        new CustomEvent('serverAsteroidUpdated', {
+          detail: {
+            asteroidId: asteroid.id,
+            updates: asteroidKinematicUpdates(asteroid),
+          },
+        })
+      );
     }
   }
 
@@ -578,6 +594,9 @@ export class ConnectionManager {
   }
 
   private handleAsteroidCreated(data: { asteroid: AsteroidData }): void {
+    if (data.asteroid?.id) {
+      this.seenAsteroidIds.add(data.asteroid.id);
+    }
     window.dispatchEvent(
       new CustomEvent('serverAsteroidCreated', {
         detail: { asteroid: data.asteroid },
@@ -587,17 +606,7 @@ export class ConnectionManager {
 
   private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
     if (data.asteroids && Array.isArray(data.asteroids)) {
-      for (const asteroid of data.asteroids) {
-        if (this.seenAsteroidIds.has(asteroid.id)) {
-          continue;
-        }
-        this.seenAsteroidIds.add(asteroid.id);
-        window.dispatchEvent(
-          new CustomEvent('serverAsteroidCreated', {
-            detail: { asteroid },
-          })
-        );
-      }
+      this.applyAuthoritativeAsteroids(data.asteroids);
     }
   }
 
