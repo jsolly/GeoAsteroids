@@ -523,6 +523,14 @@ export class MessageHandler {
         origin: hit.origin,
       });
 
+      if (hit.split && hit.origin) {
+        this.gameEngine.queueCollabShockwave(hit.origin);
+        this.broadcaster.broadcastShockwave({
+          origin: hit.origin,
+          asteroidId: hit.asteroidId,
+        });
+      }
+
       if (hit.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(hit.newAsteroids);
       }

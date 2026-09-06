@@ -255,6 +255,10 @@ export interface CustomEventMap {
     collabSplit?: boolean;
     origin?: Position;
   }>;
+  serverShockwave: CustomEvent<{
+    origin: Position;
+    asteroidId?: string;
+  }>;
   botShoot: CustomEvent<{
     laserStart: Position;
     laserDirection: Velocity;
@@ -328,6 +332,28 @@ export interface GameConstants {
   readonly EMP: {
     readonly RADIUS: number;
     readonly DURATION: number;
+  };
+
+  readonly SHOCKWAVE: {
+    readonly REFERENCE_SIZE: number;
+    readonly MIN_SIZE: number;
+    readonly MIN_SIZE_SCALE: number;
+    readonly MAX_SIZE_SCALE: number;
+    readonly SIZE_EXPONENT: number;
+    readonly FAST: {
+      readonly delayFrames: number;
+      readonly durationFrames: number;
+      readonly radius: number;
+      readonly impulse: number;
+      readonly strokeWidth: number;
+    };
+    readonly HEAVY: {
+      readonly delayFrames: number;
+      readonly durationFrames: number;
+      readonly radius: number;
+      readonly impulse: number;
+      readonly strokeWidth: number;
+    };
   };
 
   readonly SHIELD: {

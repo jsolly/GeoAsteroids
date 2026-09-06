@@ -16,6 +16,7 @@ import {
 } from '../../src/entities/ship/shipShield';
 import { DEBUG, PALETTE, SHIP } from '../../src/constants';
 import { containAsteroidPosition, getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
+import { applyShockwaveToBody } from '../../src/physics/shockwave';
 import { applySharedShipSlope } from '../../src/physics/terrain/applyShipSlope';
 import {
   GROWTH,
@@ -139,6 +140,27 @@ export class EntityManager {
 
   public getBotCount(): number {
     return this.getBots().length;
+  }
+
+  /** Kick living ships away from a collab-split origin. Smaller ships move more. */
+  public applyRadialImpulse(origin: Position, radius: number, impulse: number): number {
+    let affected = 0;
+    const shipSize = SHIP.SIZE / 2;
+    for (const entity of this.entities.values()) {
+      if (entity.exploding || entity.health <= 0 || entity.respawnTimer !== undefined) {
+        continue;
+      }
+      const next = applyShockwaveToBody(
+        { position: entity.position, velocity: entity.velocity, size: shipSize },
+        origin,
+        { radius, impulse }
+      );
+      if (next) {
+        entity.velocity = next;
+        affected += 1;
+      }
+    }
+    return affected;
   }
 
   public updateEntity(entityId: string, updates: Partial<GameEntity>): GameEntity | undefined {

@@ -32,6 +32,7 @@ import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
 import { playfieldZoom, projectWorldToScreenInto } from './playfieldCamera';
+import { drawShockwaves } from './shockwaveRenderer';
 import { drawStarfield } from './starfield';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
@@ -311,6 +312,8 @@ class CanvasManager {
         error instanceof Error ? error : new Error(String(error))
       );
     }
+
+    drawShockwaves(currShip.position);
 
     drawLasers(currShip, localLaserColor);
 

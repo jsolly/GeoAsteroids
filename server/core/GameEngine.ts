@@ -19,6 +19,7 @@ import {
   checkLaserAsteroidCollisionSwept,
   isLaserNearAsteroid,
 } from '../../src/physics/collision/collisionDetection';
+import { framesToMs, SHOCKWAVE_WAVES, type ShockwaveWaveSpec } from '../../src/physics/shockwave';
 import { TERRAIN } from '../../src/physics/terrain/terrainConfig';
 import { ensureTerrain, getTerrainSeed } from '../../src/physics/terrain/terrainSession';
 import { getVelocityMagnitude } from '../../src/utils/mathUtils';
@@ -78,6 +79,13 @@ export type CombatSink = (result: CombatBroadcast) => void;
 /** Matches client Laser.isExpired when the canvas is the internal playfield. */
 const SERVER_LASER_MAX_DISTANCE = LASER.TRAVEL_DISTANCE_RATIO + CANVAS.INTERNAL_WIDTH;
 
+type PendingShockwave = {
+  origin: Position;
+  radius: number;
+  impulse: number;
+  fireAt: number;
+};
+
 export class GameEngine {
   public entityManager: EntityManager;
   private asteroidManager: AsteroidManager;
@@ -96,6 +104,7 @@ export class GameEngine {
   private laserSeq = 0;
   private onAsteroidHits?: (hits: AppliedAsteroidHit[]) => void;
   private pendingAsteroidHits: AppliedAsteroidHit[] = [];
+  private pendingShockwaves: PendingShockwave[] = [];
 
   constructor(rngSeed?: number) {
     this.rngService = new RNGService(rngSeed);
@@ -165,6 +174,7 @@ export class GameEngine {
     this.collectLoot();
     this.asteroidManager.updateMotion();
     this.emitAsteroidHits(this.advanceLasersAndResolveHits());
+    this.flushDueShockwaves();
     this.flushExpiredCollabHits();
     if (this.gameTime % 2 === 0) {
       this.entityManager.updateBotMovement();
@@ -265,6 +275,7 @@ export class GameEngine {
     // Clear all asteroids and pending collab resolutions
     this.asteroidManager.clearAsteroids();
     this.resolvedCollabHits = [];
+    this.pendingShockwaves = [];
     this.lootManager.clear();
     this.lasers = [];
     this.laserSeq = 0;
@@ -658,7 +669,6 @@ export class GameEngine {
     return items;
   }
 
-
   public handleAsteroidDestruction(
     asteroidId: string,
     playerId: string,
@@ -802,6 +812,49 @@ export class GameEngine {
       return;
     }
     this.pendingAsteroidHits.push(...applied);
+  }
+
+  public queueCollabShockwave(origin: Position, now = Date.now()): void {
+    const source = { x: origin.x, y: origin.y };
+    for (const wave of SHOCKWAVE_WAVES) {
+      if (wave.delayFrames <= 0) {
+        this.applyShockwaveWave(source, wave);
+      } else {
+        this.pendingShockwaves.push({
+          origin: source,
+          radius: wave.radius,
+          impulse: wave.impulse,
+          fireAt: now + framesToMs(wave.delayFrames),
+        });
+      }
+    }
+  }
+
+  public flushDueShockwaves(now = Date.now()): number {
+    let applied = 0;
+    const remaining: PendingShockwave[] = [];
+    for (const pending of this.pendingShockwaves) {
+      if (now >= pending.fireAt) {
+        this.applyShockwaveWave(pending.origin, pending);
+        applied += 1;
+      } else {
+        remaining.push(pending);
+      }
+    }
+    this.pendingShockwaves = remaining;
+    return applied;
+  }
+
+  public getPendingShockwaveCount(): number {
+    return this.pendingShockwaves.length;
+  }
+
+  private applyShockwaveWave(
+    origin: Position,
+    wave: Pick<ShockwaveWaveSpec, 'radius' | 'impulse'>
+  ): void {
+    this.asteroidManager.applyRadialImpulse(origin, wave.radius, wave.impulse);
+    this.entityManager.applyRadialImpulse(origin, wave.radius, wave.impulse);
   }
 
   // Game state

@@ -211,6 +211,19 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message);
   }
 
+  public broadcastShockwave(event: { origin: { x: number; y: number }; asteroidId?: string }): void {
+    const message = {
+      type: 'shockwave',
+      data: {
+        origin: { x: event.origin.x, y: event.origin.y },
+        asteroidId: event.asteroidId,
+      },
+      timestamp: Date.now(),
+    };
+
+    this.broadcastToAll(message);
+  }
+
   public broadcastAsteroidTagged(event: {
     asteroidId: string;
     shooterId: string;
