@@ -27,6 +27,8 @@ test('live ship and laser strokes never use white', () => {
   expect(PALETTE.LASER_ENEMY.toLowerCase()).not.toBe('#ffffff');
   expect(shipSrc).toMatch(/strokePhosphorSegment/);
   expect(shipSrc).toMatch(/VISUAL\.LASER_LENGTH/);
+  expect(shipSrc).toMatch(/drawGenericThruster/);
+  expect(shipSrc).not.toMatch(/#fff|#ffffff|#FFFFFF/i);
 });
 
 test('play loop ticks remote ships on the shared 60 Hz lifecycle clock', () => {

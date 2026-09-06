@@ -31,6 +31,14 @@ export function lockAsteroidPending(roid: PendingAsteroid, now: number = Date.no
   roid.pendingUntilMs = now + ASTEROID_PENDING_MS;
 }
 
+/** Elapsed ms since the pending lock — shatter VFX uses the first slice. */
+export function pendingElapsedMs(roid: PendingAsteroid, now: number = Date.now()): number | null {
+  if (!roid.pendingDestruction || roid.pendingUntilMs <= 0) {
+    return null;
+  }
+  return now - (roid.pendingUntilMs - ASTEROID_PENDING_MS);
+}
+
 /** Remote humans already report their own shots; spectators only play the VFX. */
 export function shouldReportLaserAsteroidHit(ownerType: 'local' | 'remote' | 'bot'): boolean {
   return ownerType !== 'remote';

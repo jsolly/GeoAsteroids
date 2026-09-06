@@ -68,32 +68,41 @@ export const PALETTE = {
   ACCENT_UI: '#A78BFA',
 } as const;
 
-// Retro vector pass: hairline polylines, no entity fills, phosphor glow hard-capped ≤ stroke
-// so nothing blooms or washes the void.
+// Wave 2 feel: classic Asteroids silhouettes + Geometry Wars juice, still matt-blush.
+// Ships stay hairline. Lasers / thrust / hits may bloom a little past stroke.
 export const VISUAL = {
   SHIP_STROKE_WIDTH: 1.25,
   SHIP_GLOW: 1.25,
-  // Short cream dash (not a 4px pin, not a beam). Soft round caps + glow ≤ stroke.
+  // Short cream dash plus a faint heading ghost — still a shot, never a beam.
   LASER_STROKE_WIDTH: 2,
-  LASER_LENGTH: 12,
-  LASER_EXPLODE_RADIUS: 5,
-  LASER_GLOW: 2,
+  LASER_LENGTH: 15,
+  LASER_TRAIL_LENGTH: 8,
+  LASER_EXPLODE_RADIUS: 10,
+  LASER_GLOW: 3.5,
+  LASER_HIT_TICKS: 4,
   HEALTH_CAPSULE_HEIGHT: 1.5,
   BOUNDARY_STROKE_WIDTH: 1.25,
   BOUNDARY_GLOW: 1.25,
-  ROID_STROKE_LARGE: 1.5,
-  ROID_STROKE_MEDIUM: 1.25,
-  ROID_STROKE_SMALL: 1,
-  ROID_GLOW: 1,
-  // Tiny open-V thruster trail in faction colour; flickers between two lengths like a vector flame.
-  THRUSTER_STROKE_WIDTH: 1,
-  THRUSTER_GLOW: 1,
-  THRUSTER_LENGTH_RATIO: 0.5,
-  THRUSTER_FLICKER_RATIO: 0.3,
-  THRUSTER_FLICKER_MS: 60,
-  // Ship break-up: hull edges drift apart as hairline fragments, no filled fireball.
-  EXPLOSION_STROKE_WIDTH: 1,
-  EXPLOSION_SPREAD_RATIO: 1.6,
+  ROID_STROKE_LARGE: 2,
+  ROID_STROKE_MEDIUM: 1.5,
+  ROID_STROKE_SMALL: 1.25,
+  ROID_GLOW: 2.25,
+  ROID_INNER_SCALE: 0.46,
+  ROID_SHATTER_MS: 280,
+  ROID_SHATTER_SPREAD: 1.8,
+  // Open-V thruster with a shorter inner core; flickers between two lengths.
+  THRUSTER_STROKE_WIDTH: 1.25,
+  THRUSTER_GLOW: 2.25,
+  THRUSTER_LENGTH_RATIO: 0.68,
+  THRUSTER_FLICKER_RATIO: 0.4,
+  THRUSTER_CORE_RATIO: 0.42,
+  THRUSTER_FLICKER_MS: 50,
+  // Hull edges pop, then drift; ring + ticks, no filled fireball.
+  EXPLOSION_STROKE_WIDTH: 1.25,
+  EXPLOSION_SPREAD_RATIO: 2.05,
+  EXPLOSION_SPARKS: 8,
+  EXPLOSION_RING_RATIO: 2.35,
+  EXPLOSION_HIT_TICKS: 4,
   // Sparse world-anchored star points seeded deterministically so they never twinkle or shift.
   STAR_COUNT: 900,
   STAR_SIZE: 1,
