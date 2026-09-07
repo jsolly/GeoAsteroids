@@ -16,9 +16,13 @@ export interface ServerMessage {
     | 'asteroidCreateBatch'
     | 'asteroidUpdate'
     | 'asteroidDestroy'
+    | 'asteroidTagged'
+    | 'shockwave'
     | 'botCreated'
     | 'botUpdate'
-    | 'botDestroyed';
+    | 'botDestroyed'
+    | 'abilityUsed'
+    | 'lootExploded';
   // Prefer `data`; accept `payload` temporarily during transition
   data?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
   payload?: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | string | unknown;
@@ -41,11 +45,14 @@ export interface ClientMessage {
     | 'laserDamage'
     | 'playerKilled'
     | 'initAsteroids'
+    | 'shield'
     | 'asteroidDestroyed'
     | 'asteroidCreate'
     | 'asteroidUpdate'
     | 'asteroidDestroy'
-    | 'clientLog';
+    | 'clientLog'
+    | 'useAbility'
+    | 'lootExplode';
   id?: string; // Optional ID field for messages that need it
   data: PlayerJoin | PlayerLeave | PlayerUpdate | PlayerShoot | unknown; // Flexible payload for custom messages
   timestamp: number;

@@ -1,4 +1,5 @@
 import { canvasManager } from '../rendering/canvas';
+import '../ui/mainMenu'; // wires nickname + Enter Game listeners
 import { initNetworkStatusUI } from '../ui/networkStatus';
 import { logger } from '../utils/Logger';
 import { GameController } from './gameController';
@@ -15,22 +16,25 @@ if (document.readyState === 'loading') {
   canvasManager.initialize();
 }
 
-// Set up main menu updates
-(async () => {
-  const { setupMainMenuUpdates } = await import('../ui/mainMenu');
-  setupMainMenuUpdates();
-})();
-
 // Game loop with updates and rendering
+let gameLoopScheduled = false;
 window.addEventListener('gameStart', () => {
-  function gameLoop(): void {
+  if (gameLoopScheduled) {
+    return;
+  }
+  gameLoopScheduled = true;
+  let lastTime = performance.now();
+
+  function gameLoop(now: number): void {
     if (!gameController.getIsGameRunning()) {
+      gameLoopScheduled = false;
       return;
     }
 
     try {
-      // Update game state first
-      gameController.updateGame();
+      const dtMs = now - lastTime;
+      lastTime = now;
+      gameController.updateGame(dtMs);
 
       // Then render the current game state
       gameController.renderGame();

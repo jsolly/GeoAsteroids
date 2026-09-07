@@ -10,6 +10,8 @@
     "ignoreUnknown": true,
     "includes": [
       "src/**/*.{ts,tsx,json,css,html,md}",
+      "shared/**/*.{ts,tsx,json}",
+      "shared-types.ts",
       "test/**/*.{ts,tsx,json}",
       "api/**/*.{ts,tsx,json}",
       "setup/**/*.{ts,tsx,json}",

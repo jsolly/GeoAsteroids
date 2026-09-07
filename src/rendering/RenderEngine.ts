@@ -5,7 +5,7 @@
 
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
-import { drawRoidsRelative } from '../entities/roid/roidRenderer';
+import { drawRoidsRelative, rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
   drawLasers,
@@ -14,14 +14,16 @@ import {
   drawShipExplosionAtPosition,
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
+import { shouldDrawShipHull } from '../entities/ship/shipUtils';
 import { GameError } from '../types';
 import { errorHandler } from '../utils/ErrorHandler';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { canvasManager } from './canvas';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
-import { drawMiniMap, drawServerInfo } from './hud/minimap';
+import { drawMiniMap } from './hud/minimap';
 
 export interface RenderFrame {
   readonly player: Player;
@@ -112,6 +114,10 @@ export class RenderEngine {
 
       // Clear canvas with optimized method
       this.clearCanvas();
+      canvasManager.beginPlayfieldFrame(
+        frame.player.ship.position,
+        rocksForPlayfieldZoom(frame.roidBelt.getRoids())
+      );
 
       // Render game world in order of depth (back to front)
       this.renderBackground(frame);
@@ -188,26 +194,24 @@ export class RenderEngine {
     const localPlayer = allPlayers.find((p) => p.type === 'local');
 
     for (const player of allPlayers) {
-      // Skip rendering players who are exploding (truly dead)
       if (player.ship.exploding) {
-        continue;
-      }
-
-      if (player.ship.exploding) {
-        // Render explosion - use cached local player reference
         if (player.id === localPlayer?.id) {
           drawShipExplosion(player.ship, player.ship.color);
         } else {
           drawShipExplosionAtPosition(player.ship, localShip.position, player.ship.color);
         }
-      } else {
-        // Render ship
-        drawShipAtPosition(player.ship, localShip.position, player.ship.color, player.name);
+      } else if (shouldDrawShipHull(player.ship)) {
+        drawShipAtPosition(
+          player.ship,
+          localShip.position,
+          player.ship.color,
+          player.name,
+          player.factionId
+        );
       }
 
-      // Render thruster if thrusting (local player thruster handled by Ship.applyVelocity())
       if (
-        !player.ship.exploding &&
+        shouldDrawShipHull(player.ship) &&
         player.ship.thrusting &&
         localPlayer &&
         player.id !== localPlayer.id
@@ -255,8 +259,8 @@ export class RenderEngine {
     } = frame;
 
     // Render HUD elements
-    drawScoreOverlay(this.ctx, this.canvas, score);
-    drawLivesIndicator(this.ctx, lives, player.ship.color);
+    drawScoreOverlay(this.ctx, this.canvas, score, lives, player.factionId);
+    drawLivesIndicator(this.ctx, lives, player.ship.color, player.ship.kitId);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(this.ctx, this.canvas, text, textAlpha);
@@ -268,7 +272,6 @@ export class RenderEngine {
 
     if (showMinimap) {
       drawMiniMap(this.ctx, this.canvas, player.ship);
-      drawServerInfo(this.ctx, this.canvas);
     }
 
     // Render debug information

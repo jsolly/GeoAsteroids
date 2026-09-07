@@ -1,9 +1,18 @@
 import { WebSocket } from 'ws';
-import { GameEngine } from '../core/GameEngine';
+import { GameEngine, type AppliedAsteroidHit } from '../core/GameEngine';
 import { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { ClientLogger } from '../services/ClientLogger';
 import { logger } from '../../setup/serverLogger';
-import { DEBUG } from '../../src/constants';
+import { DAMAGE, DEBUG } from '../../src/constants';
+import {
+  clampLaserDamage,
+  isAllowedLaserReporter,
+  isClientOwnedCollisionAttacker,
+  isServerOwnedRamAttacker,
+} from '../../shared/combat';
+import { LOOT_BLAST } from '../../shared/lootBlast';
+import type { CombatDamageSource } from '../../src/entities/ship/shipShield';
+import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
 import { isStaleDeathPose, type GameEntity } from '../core/EntityManager';
 
 const PAYLOAD_PREVIEW_MAX_CHARS = 500;
@@ -44,16 +53,14 @@ export class MessageHandler {
     delete (restData as any).id;
     delete (restData as any).name;
     
-    // Debug logging for join messages
     if (type === 'join') {
-      console.log('🔌 SERVER: Raw message:', JSON.stringify(message, null, 2));
-      console.log('🔌 SERVER: Message keys:', Object.keys(message));
-      console.log('🔌 SERVER: Message.data type:', typeof message.data);
-      console.log('🔌 SERVER: Message.data value:', message.data);
-      console.log('🔌 SERVER: Payload:', JSON.stringify(payload, null, 2));
-      console.log('🔌 SERVER: RestData before processing:', JSON.stringify(restData, null, 2));
+      logger.debug('Handling join message', {
+        id,
+        name,
+        keys: Object.keys(message),
+      });
     }
-    
+
     // Don't delete data field for clientLog and join messages as they need the nested structure
     if (type !== 'clientLog' && type !== 'join') {
       delete (restData as any).data;
@@ -65,12 +72,24 @@ export class MessageHandler {
           this.handleJoin(ws, id, name, restData);
           break;
 
+        case 'useAbility':
+          this.handleUseAbility(ws, id, restData);
+          break;
+
+        case 'asteroidDamage':
+          this.handleAsteroidDamage(ws, restData);
+          break;
+
         case 'update':
           this.handlePlayerUpdate(ws, id, restData);
           break;
 
         case 'shoot':
           this.handlePlayerShoot(ws, id, restData);
+          break;
+
+        case 'shield':
+          this.handleShield(ws, id, restData);
           break;
 
         case 'chat':
@@ -91,6 +110,10 @@ export class MessageHandler {
 
         case 'asteroidDestroyed':
           this.handleAsteroidDestroyed(ws, restData);
+          break;
+
+        case 'lootExplode':
+          this.handleLootExplode(ws, id, restData);
           break;
 
         case 'initAsteroids':
@@ -140,34 +163,27 @@ export class MessageHandler {
   }
 
   private handleJoin(ws: WebSocket, id: string, name: string, data: any): void {
-    logger.debug('🔌 Handling join message', { id, name, data });
-    console.log('🔌 SERVER: Handling join message', { id, name, data });
-    console.log('🔌 SERVER: Data details:', {
-      name: data.name,
-      color: data.color,
-      position: data.position
-    });
-    
+    logger.debug('Handling join message', { id, name });
+
     if (!id || !name) {
       logger.warn('❌ Missing player ID or name for join', { id, name });
       this.broadcaster.sendError(ws, 'Missing player ID or name');
       return;
     }
 
-    // Handle position if provided by client
-    console.log('🔌 SERVER: Raw position from client:', data.position);
-    console.log('🔌 SERVER: Position type:', typeof data.position);
-    console.log('🔌 SERVER: Position keys:', data.position ? Object.keys(data.position) : 'null');
     const validatedPosition = this.gameEngine.validatePosition(data.position);
-    console.log('🔌 SERVER: Validated position:', validatedPosition);
     const joinPosition = validatedPosition || { x: 0, y: 0 };
-    const joinColor = data.color || '#00ff00'; // Default to green if no color provided
-    console.log('🔌 SERVER: Final position:', joinPosition);
-    logger.debug('📍 Player join position', { id, position: joinPosition });
-    logger.debug('🎨 Player join color', { id, color: joinColor });
+    const kitId = data.kitId ?? data.data?.kitId;
+    const factionId = data.factionId ?? data.data?.factionId;
+    logger.debug('Player join', { id, position: joinPosition, kitId, factionId });
 
-    this.gameEngine.addPlayer(id, name, ws, joinPosition, joinColor);
-    logger.info('✅ Player added to game engine', { id, name });
+    const player = this.gameEngine.addPlayer(id, name, ws, joinPosition, undefined, kitId, factionId);
+    logger.info('✅ Player added to game engine', { id, name, factionId: player.factionId });
+
+    const replacedId = this.gameEngine.consumeReplacedHumanId();
+    if (replacedId) {
+      this.broadcaster.broadcastPlayerLeft(replacedId);
+    }
 
     // Send confirmation to the joining player
     this.broadcaster.sendToWebSocket(ws, {
@@ -176,6 +192,10 @@ export class MessageHandler {
         id,
         name,
         position: joinPosition,
+        color: player.color,
+        kitId: player.kitId,
+        factionId: player.factionId,
+        terrainSeed: this.gameEngine.getTerrainSeed(),
       },
       timestamp: Date.now(),
     });
@@ -218,10 +238,26 @@ export class MessageHandler {
     const sanitizedData: any = { ...data };
     delete (sanitizedData as any).health;
     delete (sanitizedData as any).maxHealth;
+    delete (sanitizedData as any).fuel;
+    delete (sanitizedData as any).maxFuel;
+    delete (sanitizedData as any).mass;
     delete (sanitizedData as any).score;
     delete (sanitizedData as any).lives;
     delete (sanitizedData as any).respawnTimer;
     delete (sanitizedData as any).spawnProtectionTimer;
+    delete (sanitizedData as any).kitId;
+    delete (sanitizedData as any).factionId;
+    delete (sanitizedData as any).faction;
+    delete (sanitizedData as any).color;
+    delete (sanitizedData as any).abilityCooldownFrames;
+    delete (sanitizedData as any).abilityActiveFrames;
+    delete (sanitizedData as any).shieldTimer;
+    delete (sanitizedData as any).harpoonTimer;
+    delete (sanitizedData as any).harpoonTargetId;
+    delete (sanitizedData as any).shieldActive;
+    delete (sanitizedData as any).shieldTime;
+    delete (sanitizedData as any).shieldCooldown;
+    delete (sanitizedData as any).shieldFlashTime;
 
     // Normalize client fields to server schema
     if (sanitizedData.angle !== undefined && sanitizedData.rotation === undefined) {
@@ -252,7 +288,23 @@ export class MessageHandler {
       return;
     }
 
+    this.gameEngine.spawnLaser(id, data.laserStart, data.laserDirection);
     this.broadcaster.broadcastPlayerShoot(id, data.laserStart, data.laserDirection);
+    this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits());
+  }
+
+  private handleShield(ws: WebSocket, id: string, data: any): void {
+    if (!id) {
+      this.broadcaster.sendError(ws, 'Missing player ID for shield');
+      return;
+    }
+    if (typeof data.active !== 'boolean') {
+      this.broadcaster.sendError(ws, 'Missing active flag for shield');
+      return;
+    }
+
+    this.gameEngine.requestShield(id, data.active);
+    this.broadcaster.broadcastGameState();
   }
 
   private handleChat(ws: WebSocket, id: string, data: any): void {
@@ -267,100 +319,91 @@ export class MessageHandler {
     }
   }
 
+  private getReporterId(ws: WebSocket): string | undefined {
+    return this.gameEngine.entityManager.getHumanBySocket(ws)?.id;
+  }
+
+  private emitShipDamage(
+    targetId: string,
+    attackerId: string,
+    damage: number,
+    healthBefore: number | undefined,
+    source?: CombatDamageSource
+  ): void {
+    const outcome = this.gameEngine.handleShipDamage(targetId, attackerId, damage, source);
+    if (!outcome.applied || !outcome.entity) {
+      return;
+    }
+    const healthDropped =
+      healthBefore !== undefined && outcome.entity.health < healthBefore;
+    if (!outcome.isDestroyed && !healthDropped) {
+      if (outcome.entity.shieldActive || outcome.entity.shieldTimer > 0) {
+        this.broadcaster.broadcastGameState();
+      }
+      return;
+    }
+    this.broadcaster.broadcastCombatResult({
+      targetId,
+      attackerId,
+      damage,
+      remainingHealth: outcome.entity.health,
+      remainingLives: outcome.entity.lives,
+      isDestroyed: outcome.isDestroyed,
+      targetType: outcome.entity.type,
+      targetName: outcome.entity.name,
+      awardedScore: outcome.isDestroyed
+        ? (() => {
+            const attacker = this.gameEngine.entityManager.getEntity(attackerId);
+            return attacker ? { playerId: attackerId, score: attacker.score } : undefined;
+          })()
+        : undefined,
+    });
+  }
+
   private handleLaserDamage(ws: WebSocket, data: any): void {
     if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
       this.broadcaster.sendError(ws, 'Missing required fields for laserDamage');
       return;
     }
 
-    const isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
-
-    const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
-    if (targetPlayer) {
-      this.broadcaster.broadcastPlayerDamaged(
-        data.targetPlayerId,
-        data.attackerId,
-        data.damage,
-        targetPlayer.health ?? 0,
-        isDestroyed,
-        targetPlayer.lives
-      );
-
-      // Broadcast score update if points were awarded
-      if (isDestroyed) {
-        const attacker = this.gameEngine.getPlayer(data.attackerId);
-        if (attacker) {
-          this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
-        }
-        
-        // Broadcast player killed event to notify the killer
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetPlayer.name, data.attackerId);
-      }
+    const reporterId = this.getReporterId(ws);
+    if (!reporterId || !isAllowedLaserReporter(reporterId, data.attackerId, data.targetPlayerId)) {
+      return;
     }
+
+    const damage = clampLaserDamage(data.damage);
+    if (damage <= 0) {
+      return;
+    }
+
+    const before = this.gameEngine.entityManager.getEntity(data.targetPlayerId);
+    this.emitShipDamage(data.targetPlayerId, data.attackerId, damage, before?.health, 'laser');
   }
 
   private handleCollisionDamage(ws: WebSocket, data: any): void {
-    console.log('DEBUG: handleCollisionDamage called with data:', data);
+    logger.debug('handleCollisionDamage', { targetPlayerId: data?.targetPlayerId });
     if (!data.targetPlayerId || !data.attackerId || data.damage === undefined) {
       this.broadcaster.sendError(ws, 'Missing required fields for collisionDamage');
       return;
     }
 
-    let isDestroyed = false;
-    let remainingHealth = 0;
-    let targetName = '';
-
-    // Check if target is a bot or player
-    if (data.targetPlayerId.startsWith('server-bot-')) {
-      // Target is a bot
-      isDestroyed = this.gameEngine.handleBotDamage(data.targetPlayerId, data.attackerId, data.damage);
-      const targetBot = this.gameEngine.getBot(data.targetPlayerId);
-      if (targetBot) {
-        remainingHealth = targetBot.health;
-        targetName = targetBot.name;
-        // Always broadcast bot update after damage
-        this.broadcaster.broadcastBotUpdate(data.targetPlayerId);
-      }
-    } else {
-      // Target is a player
-      const before = this.gameEngine.getPlayer(data.targetPlayerId);
-      const healthBefore = before?.health;
-      isDestroyed = this.gameEngine.handlePlayerDamage(data.targetPlayerId, data.attackerId, data.damage);
-      const targetPlayer = this.gameEngine.getPlayer(data.targetPlayerId);
-      if (targetPlayer) {
-        remainingHealth = targetPlayer.health ?? 0;
-        targetName = targetPlayer.name;
-        const healthDropped =
-          healthBefore !== undefined && remainingHealth < healthBefore;
-        // Do not echo ignored hits (spawn protection / already dead). Those
-        // bounces arrive as remainingHealth=100 and heal the client hull.
-        if (isDestroyed || healthDropped) {
-          this.broadcaster.broadcastPlayerDamaged(
-            data.targetPlayerId,
-            data.attackerId,
-            data.damage,
-            remainingHealth,
-            isDestroyed,
-            targetPlayer.lives
-          );
-        }
-      }
+    // Ship↔asteroid and ship↔ship are resolved in the server game loop.
+    if (!isClientOwnedCollisionAttacker(data.attackerId)) {
+      return;
     }
 
-    // Handle destruction for both players and bots
-    if (isDestroyed) {
-      const attacker = this.gameEngine.getPlayer(data.attackerId);
-      if (attacker) {
-        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
-      }
-
-      if (data.targetPlayerId.startsWith('server-bot-')) {
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
-      } else {
-        // Player was destroyed
-        this.broadcaster.broadcastPlayerKilled(data.targetPlayerId, targetName, data.attackerId);
-      }
+    const reporterId = this.getReporterId(ws);
+    if (!reporterId || reporterId !== data.targetPlayerId) {
+      return;
     }
+
+    const before = this.gameEngine.getPlayer(data.targetPlayerId);
+    this.emitShipDamage(
+      data.targetPlayerId,
+      'boundary',
+      DAMAGE.BOUNDARY_COLLISION,
+      before?.health
+    );
   }
 
   private handleBotDamage(ws: WebSocket, data: any): void {
@@ -369,50 +412,207 @@ export class MessageHandler {
       return;
     }
 
-    const isDestroyed = this.gameEngine.handleBotDamage(data.botId, data.attackerId, data.damage);
-
-    // Always broadcast bot update after damage to ensure health synchronization
-    this.broadcaster.broadcastBotUpdate(data.botId);
-
-    if (isDestroyed) {
-      const attacker = this.gameEngine.getPlayer(data.attackerId);
-      const targetBot = this.gameEngine.getBot(data.botId);
-      if (attacker) {
-        this.broadcaster.broadcastScoreUpdate(data.attackerId, attacker.score);
-      }
-      if (targetBot) {
-        this.broadcaster.broadcastPlayerKilled(data.botId, targetBot.name, data.attackerId);
-      }
-    }
-  }
-
-  private handleAsteroidDestroyed(ws: WebSocket, data: any): void {
-    if (!data.asteroidId || !data.playerId || data.points === undefined) {
-      this.broadcaster.sendError(ws, 'Missing required fields for asteroidDestroyed');
+    if (isServerOwnedRamAttacker(data.attackerId)) {
       return;
     }
 
-    const result = this.gameEngine.handleAsteroidDestruction(data.asteroidId, data.playerId, data.points);
+    const reporterId = this.getReporterId(ws);
+    if (!reporterId || (reporterId !== data.attackerId && reporterId !== data.botId)) {
+      return;
+    }
 
-    if (result.success) {
-      // Broadcast score update
+    const before = this.gameEngine.getBot(data.botId);
+    this.emitShipDamage(data.botId, data.attackerId, data.damage, before?.health, 'laser');
+  }
+
+  private handleUseAbility(ws: WebSocket, id: string, data: any): void {
+    const playerId = id || data.id;
+    if (!playerId) {
+      this.broadcaster.sendError(ws, 'Missing player ID for useAbility');
+      return;
+    }
+    const canvasWidth = Number(data.canvasWidth);
+    const canvasHeight = Number(data.canvasHeight);
+    const playfieldScale = Number(data.playfieldScale);
+    const activated = this.gameEngine.useAbility(playerId, data.kitId, {
+      playfieldScale:
+        Number.isFinite(playfieldScale) && playfieldScale > 0 ? playfieldScale : undefined,
+      canvas:
+        Number.isFinite(canvasWidth) &&
+        Number.isFinite(canvasHeight) &&
+        canvasWidth > 0 &&
+        canvasHeight > 0
+          ? { width: canvasWidth, height: canvasHeight }
+          : undefined,
+    });
+    if (!activated) {
+      return;
+    }
+    const entity = this.gameEngine.getPlayer(playerId) ?? this.gameEngine.getBot(playerId);
+    this.broadcaster.broadcastToAll({
+      type: 'abilityUsed',
+      data: {
+        id: playerId,
+        kitId: entity?.kitId,
+        abilityId: data.abilityId,
+        harpoonTimer: entity?.harpoonTimer,
+        harpoonTargetId: entity?.harpoonTargetId,
+        harpoonLatchPos: entity?.harpoonLatchPos,
+      },
+      timestamp: Date.now(),
+    });
+    this.broadcaster.broadcastGameState();
+  }
+
+  private handleAsteroidDamage(ws: WebSocket, data: any): void {
+    if (!data.asteroidId || !data.playerId || data.damage === undefined) {
+      this.broadcaster.sendError(ws, 'Missing required fields for asteroidDamage');
+      return;
+    }
+
+    const result = this.gameEngine.handleAsteroidDamage(
+      data.asteroidId,
+      data.playerId,
+      data.damage,
+      data.points ?? 0
+    );
+
+    if (result.destroyed) {
       const player = this.gameEngine.getPlayer(data.playerId);
       if (player) {
         this.broadcaster.broadcastScoreUpdate(data.playerId, player.score);
       }
-
-      // Broadcast asteroid destruction
       this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
-
-      // Broadcast new asteroids created from splitting if any
       if (result.newAsteroids.length > 0) {
         this.broadcaster.broadcastAsteroidCreation(result.newAsteroids);
+      }
+      return;
+    }
+
+    if (result.asteroid) {
+      this.broadcaster.broadcastAsteroidUpdate(data.asteroidId, {
+        health: result.asteroid.health,
+        maxHealth: result.asteroid.maxHealth,
+      });
+    }
+  }
+
+  private handleAsteroidDestroyed(ws: WebSocket, data: any): void {
+    if (!data.asteroidId || !data.playerId) {
+      this.broadcaster.sendError(ws, 'Missing required fields for asteroidDestroyed');
+      return;
+    }
+
+    const shooterId = this.resolveAsteroidShooter(ws, data.playerId);
+    if (!shooterId) {
+      this.broadcaster.sendError(ws, 'Unknown shooter for asteroidDestroyed');
+      return;
+    }
+
+    const cause = data.cause === 'collision' ? 'collision' : 'laser';
+    this.broadcastAppliedAsteroidHits([
+      this.gameEngine.applyLaserAsteroidHit(
+        data.asteroidId,
+        shooterId,
+        data.laserPosition,
+        cause
+      ),
+    ]);
+  }
+
+  public broadcastAppliedAsteroidHits(hits: AppliedAsteroidHit[]): void {
+    for (const hit of hits) {
+      if (!hit.applied) {
+        continue;
+      }
+
+      if (hit.outcome === 'tagged' && hit.expiresAt) {
+        this.broadcaster.broadcastAsteroidTagged({
+          asteroidId: hit.asteroidId,
+          shooterId: hit.playerId,
+          expiresAt: hit.expiresAt,
+        });
+        continue;
+      }
+
+      if (hit.outcome !== 'destroyed') {
+        continue;
+      }
+
+      const scorer = this.gameEngine.getPlayer(hit.playerId);
+      if (scorer) {
+        this.broadcaster.broadcastScoreUpdate(hit.playerId, scorer.score);
+      }
+
+      this.broadcaster.broadcastAsteroidDestruction(hit.asteroidId, {
+        collabSplit: hit.split,
+        origin: hit.origin,
+      });
+
+      if (hit.split && hit.origin) {
+        this.gameEngine.queueCollabShockwave(hit.origin);
+        this.broadcaster.broadcastShockwave({
+          origin: hit.origin,
+          asteroidId: hit.asteroidId,
+        });
+      }
+
+      if (hit.newAsteroids.length > 0) {
+        this.broadcaster.broadcastAsteroidCreation(hit.newAsteroids);
       }
     }
   }
 
+  private handleLootExplode(ws: WebSocket, id: string, data: any): void {
+    const lootId = data.lootId;
+    if (!lootId) {
+      this.broadcaster.sendError(ws, 'Missing loot ID for lootExplode');
+      return;
+    }
+
+    const shooterId = this.resolveAsteroidShooter(ws, data.playerId ?? id);
+    if (!shooterId) {
+      this.broadcaster.sendError(ws, 'Unknown shooter for lootExplode');
+      return;
+    }
+
+    const result = this.gameEngine.handleLootExplode(shooterId, lootId);
+    if (!result.success || !result.origin) {
+      return;
+    }
+
+    this.broadcaster.broadcastLootExploded({
+      lootId,
+      position: result.origin,
+      radius: LOOT_BLAST.RADIUS,
+      shooterId,
+    });
+
+    for (const asteroidId of result.pushedAsteroidIds) {
+      const asteroid = this.gameEngine.getAsteroid(asteroidId);
+      if (asteroid) {
+        this.broadcaster.broadcastAsteroidUpdate(asteroidId, { velocity: asteroid.velocity });
+      }
+    }
+  }
+
+  /** Human hits bind to the socket. Bot ids may be reported by any connected client. */
+  private resolveAsteroidShooter(ws: WebSocket, claimedId: string): string | null {
+    const claimed = typeof claimedId === 'string' ? this.gameEngine.getPlayer(claimedId) : undefined;
+    if (claimed?.type === 'bot') {
+      return claimed.id;
+    }
+
+    const socketPlayer = this.gameEngine.getPlayerBySocket(ws);
+    if (socketPlayer) {
+      return socketPlayer.id;
+    }
+
+    return claimed?.type === 'human' ? claimed.id : null;
+  }
+
   private handleInitAsteroids(ws: WebSocket, id: string, data: any): void {
-    console.log('🪨 SERVER: Handling initAsteroids message', { id, data });
+    logger.debug('Handling initAsteroids message', { id });
     if (!id) {
       this.broadcaster.sendError(ws, 'Missing player ID for initAsteroids');
       return;
@@ -431,18 +631,21 @@ export class MessageHandler {
       const humanPlayers = allEntities.filter(entity => entity.type === 'human');
       const bots = allEntities.filter(entity => entity.type === 'bot');
       
-      console.log('🪨 SERVER: Available entities for asteroid placement:', {
+      logger.debug('Asteroid placement entities', {
         allEntities: allEntities.length,
         humanPlayers: humanPlayers.length,
         bots: bots.length,
-        humanPlayerPositions: humanPlayers.map(p => p.position),
-        botPositions: bots.map(b => b.position)
       });
-      
+
       const playerPositions = humanPlayers.map(player => player.position);
       const botPositions = bots.map(bot => bot.position);
       
-      const asteroids = this.gameEngine.createAsteroids(asteroidCount, { radius: 3100 }, botPositions, playerPositions);
+      const asteroids = this.gameEngine.createAsteroids(
+        asteroidCount,
+        { radius: getAsteroidFieldRadius() },
+        botPositions,
+        playerPositions
+      );
       this.broadcaster.broadcastAsteroidCreation(asteroids);
       logger.debug(`Player ${id} triggered server asteroid creation: ${asteroidCount} asteroids with ${playerPositions.length} player positions and ${botPositions.length} bot positions`);
     } else {
@@ -475,7 +678,10 @@ export class MessageHandler {
       return;
     }
 
-    this.gameEngine.removeAsteroid(data.asteroidId);
+    const removed = this.gameEngine.removeAsteroid(data.asteroidId);
+    if (!removed) {
+      return;
+    }
     this.broadcaster.broadcastAsteroidDestruction(data.asteroidId);
   }
 
@@ -502,6 +708,20 @@ export class MessageHandler {
         lives: bot.lives,
         health: bot.health,
         maxHealth: bot.maxHealth,
+        fuel: bot.fuel,
+        maxFuel: bot.maxFuel,
+        mass: bot.mass,
+        kitId: bot.kitId,
+        factionId: bot.factionId,
+        abilityCooldownFrames: bot.abilityCooldownFrames,
+        abilityActiveFrames: bot.abilityActiveFrames,
+        shieldTimer: bot.shieldTimer,
+        harpoonTimer: bot.harpoonTimer,
+        harpoonTargetId: bot.harpoonTargetId,
+        shieldActive: bot.shieldActive,
+        shieldTime: bot.shieldTime,
+        shieldCooldown: bot.shieldCooldown,
+        shieldFlashTime: bot.shieldFlashTime,
       },
       timestamp: Date.now(),
     });

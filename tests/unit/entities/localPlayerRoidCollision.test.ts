@@ -32,6 +32,10 @@ vi.mock('../../../src/utils/Logger', () => ({
 // Mock collision detection
 vi.mock('../../../src/physics/collision/collisionDetection', () => ({
   checkShipCollision: vi.fn(),
+  checkLaserAsteroidCollision: vi.fn(),
+  checkLaserAsteroidCollisionSwept: vi.fn(),
+  checkLaserShipCollision: vi.fn(),
+  asteroidPointsForRadius: vi.fn((radius: number) => (radius >= 20 ? 50 : 100)),
 }));
 
 describe('Local Player Roid Collision Damage', () => {
@@ -103,49 +107,25 @@ describe('Local Player Roid Collision Damage', () => {
       console.log('  Health:', localShip.health);
       console.log('  Network manager calls:', mockSendMessage.mock.calls.length);
       
-      // Server applies damage; client only sends network messages
+      // Server owns ship↔asteroid health; the client must not apply or report it.
       expect(localShip.health).toBe(100);
-      
-      // Verify both collision damage and asteroid destruction messages were sent
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'collisionDamage',
-        data: {
-          targetPlayerId: 'local-player-123',
-          attackerId: 'asteroid',
-          damage: 25, // LASER_HIT damage
-        },
-      });
-
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: roid.id,
-          playerId: 'local-player-123',
-          points: expect.any(Number),
-        },
-      });
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
   });
 
   describe('Server-Authoritative Damage', () => {
-    test('asteroid collision sends damage to server without applying locally', async () => {
+    test('asteroid overlap does not apply local damage or send client reports', async () => {
       // Mock the collision detection to return true
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
 
       const initialHealth = localShip.health;
-      
-      // Check collision
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
-      
-      // Server applies damage; client only sends network messages
       expect(localShip.health).toBe(initialHealth);
-      
-      // Verify both messages were sent
-      expect(mockSendMessage).toHaveBeenCalledTimes(2);
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
-    test('asteroid collision triggers asteroid splitting', async () => {
+    test('asteroid overlap does not request client-side splitting', async () => {
       // Mock the collision detection to return true
       const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
       vi.mocked(checkShipCollision).mockReturnValue(true);
@@ -153,15 +133,7 @@ describe('Local Player Roid Collision Damage', () => {
       // Check collision
       collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
       
-      // Verify asteroid destruction message was sent (triggers splitting on server)
-      expect(mockSendMessage).toHaveBeenCalledWith({
-        type: 'asteroidDestroyed',
-        data: {
-          asteroidId: roid.id,
-          playerId: 'local-player-123',
-          points: expect.any(Number),
-        },
-      });
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
   });
 
@@ -175,16 +147,28 @@ describe('Local Player Roid Collision Damage', () => {
 
     test('local player is not invincible in debug mode', () => {
       expect(DEBUG.LOCAL_PLAYER.INVINCIBLE).toBe(false);
-      // Damage is applied by the server after the client sends collisionDamage
+      // Damage is applied by the server from authoritative overlap, not client reports
     });
   });
 
   describe('Damage Constants', () => {
-    test('asteroid collision uses laser hit damage', () => {
-      expect(DAMAGE.LASER_HIT).toBe(25);
-      
-      // Asteroid collisions now use the same damage as laser hits
-      expect(DAMAGE.LASER_HIT).toBe(25);
+    test('asteroid collision is an instant kill like the wall', () => {
+      expect(DAMAGE.ASTEROID_COLLISION).toBe(DAMAGE.BOUNDARY_COLLISION);
+      expect(DAMAGE.ASTEROID_COLLISION).toBe(100);
+    });
+
+    test('a raised shield does not report asteroid ram — server owns it', async () => {
+      const { checkShipCollision } = await import('../../../src/physics/collision/collisionDetection');
+      vi.mocked(checkShipCollision).mockReturnValue(true);
+
+      localShip.requestShieldToggle();
+      expect(localShip.shieldActive).toBe(true);
+      mockSendMessage.mockClear();
+
+      collisionManager.checkPlayerAsteroidCollisions(localPlayer, [roid]);
+
+      expect(localShip.health).toBe(100);
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
   });
 

@@ -27,6 +27,8 @@
     "package.json",
     "setup",
     "server",
-    "server.ts"
+    "server.ts",
+    "shared",
+    "shared-types.ts"
   ]
 }

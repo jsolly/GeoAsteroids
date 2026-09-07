@@ -18,8 +18,8 @@ export async function bootTwoClientGames(browserManager: BrowserManager): Promis
   const game1 = new GameInteractions(page1);
   const game2 = new GameInteractions(page2);
 
-  await game1.bootSinglePlayerGame();
-  await game2.bootSinglePlayerGame();
+  await game1.bootGame();
+  await game2.bootGame();
   await game1.waitForRemoteHumanPlayers(1);
   await game2.waitForRemoteHumanPlayers(1);
 

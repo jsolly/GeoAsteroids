@@ -12,7 +12,7 @@ test('ship respawns after asteroid collision when spawn protection ends', async 
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
 
   expect(await game.getShipHealth()).toBe(100);
 

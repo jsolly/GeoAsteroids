@@ -1,10 +1,10 @@
-import { playSound } from '../audio/Sound';
-import { GAME, SHIP } from '../constants';
+import { upsertThrustSource } from '../audio/gameSounds';
+import { GAME } from '../constants';
 import type { Player } from '../entities/player/Player';
-import { Ship } from '../entities/ship/Ship';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID } from '../entities/ship/shipKits';
+import { getSelectedShipKitId } from '../ui/shipKitSelect';
 import { logger } from '../utils/Logger';
-
-const TURN_SPEED_RAD_PER_FRAME = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
+import { controlSources } from './controlSources';
 
 interface KeyStates {
   ArrowLeft: boolean;
@@ -21,9 +21,6 @@ export const keys: KeyStates = {
   ArrowUp: false,
 };
 
-// Track whether we've started thrust sound to avoid relying on HTMLAudioElement state in tests
-let thrustSoundActive = false;
-
 // Track pressed keys per-player to avoid cross-player/global interference (e.g., parallel tests)
 const playerPressedKeys = new WeakMap<Player, Set<string>>();
 
@@ -36,11 +33,15 @@ export function getPressedKeysForPlayer(player: Player): Set<string> {
   return set;
 }
 
-// Helper function to update thrust state based on aggregate key state.
-// Thrust keys are ArrowUp and KeyW (Space is the fire key — see keyDown).
+// Helper function to update thrust state based on aggregate input.
+// Thrust sources: ArrowUp / KeyW, right-mouse, and the left virtual stick.
 export function updateThrustFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
-  const shouldThrust = pressed.has('ArrowUp') || pressed.has('KeyW');
+  const shouldThrust =
+    pressed.has('ArrowUp') ||
+    pressed.has('KeyW') ||
+    controlSources.mouseThrust ||
+    controlSources.touchThrust;
   const currentlyThrusting = player.ship.thrusting;
 
   logger.debug('KEYBINDINGS', 'updateThrustFromKeys', {
@@ -49,6 +50,8 @@ export function updateThrustFromKeys(player: Player): void {
     currentlyThrusting,
     hasArrowUp: pressed.has('ArrowUp'),
     hasKeyW: pressed.has('KeyW'),
+    mouseThrust: controlSources.mouseThrust,
+    touchThrust: controlSources.touchThrust,
     playerId: player.id,
     playerName: player.name,
   });
@@ -60,15 +63,11 @@ export function updateThrustFromKeys(player: Player): void {
       to: shouldThrust,
     });
     player.ship.thrusting = shouldThrust;
-    if (shouldThrust) {
-      if (!thrustSoundActive) {
-        playSound(Ship.fxThrust);
-        thrustSoundActive = true;
-      }
-    } else {
-      Ship.fxThrust.stop();
-      thrustSoundActive = false;
-    }
+    upsertThrustSource({
+      id: player.id,
+      thrusting: shouldThrust,
+      position: player.ship.position,
+    });
   } else {
     logger.debug('KEYBINDINGS', 'Thrust state unchanged', {
       thrusting: shouldThrust,
@@ -80,19 +79,37 @@ export function updateThrustFromKeys(player: Player): void {
 // both arrow keys (ArrowLeft/ArrowRight) and WASD (KeyA/KeyD); opposing keys
 // held together cancel out. Using the per-player pressed set (rather than the
 // global `keys` map) keeps combinations correct across arrow/WASD mixes.
+export function turnSpeedForShip(player: Player): number {
+  return (player.ship.turnSpeed * Math.PI) / (180 * GAME.FPS);
+}
+
 export function updateTurnFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
   const turningLeft = pressed.has('ArrowLeft') || pressed.has('KeyA');
   const turningRight = pressed.has('ArrowRight') || pressed.has('KeyD');
+  const turnSpeed = turnSpeedForShip(player);
 
   if (turningLeft && !turningRight) {
-    player.ship.angularVelocity = TURN_SPEED_RAD_PER_FRAME;
+    player.ship.angularVelocity = turnSpeed;
   } else if (turningRight && !turningLeft) {
-    player.ship.angularVelocity = -TURN_SPEED_RAD_PER_FRAME;
+    player.ship.angularVelocity = -turnSpeed;
   } else {
     // Neither held, or both held (opposing turns cancel).
     player.ship.angularVelocity = 0;
   }
+
+  // Stick aims like the mouse. A held turn key still wins so WASD on a
+  // touchscreen laptop is unchanged.
+  if (controlSources.touchHeading !== null && !turningLeft && !turningRight) {
+    player.ship.angle = controlSources.touchHeading;
+    player.ship.angularVelocity = 0;
+  }
+}
+
+/** Re-apply thrust, turn, and stick heading from every live input source. */
+export function reconcilePlayerInput(player: Player): void {
+  updateTurnFromKeys(player);
+  updateThrustFromKeys(player);
 }
 
 export function keyDown(ev: KeyboardEvent, player: Player): void {
@@ -115,19 +132,32 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
         player.ship.shoot();
         break;
       case 'KeyE':
-        player.ship.empPulse();
+        if (!ev.repeat) {
+          const selectedKit = getSelectedShipKitId();
+          // Title kit only wins when the live ship is still the default Dart.
+          // A stale dart menu must not strip Quake / Hauler mid-match.
+          if (player.ship.kitId === DEFAULT_SHIP_KIT_ID && selectedKit !== player.ship.kitId) {
+            applyShipKitToShip(player.ship, selectedKit);
+          }
+          player.ship.activateAbility();
+        }
+        break;
+      case 'KeyF':
+        if (!ev.repeat) {
+          player.ship.requestShieldToggle();
+        }
         break;
       case 'ArrowLeft':
       case 'KeyA':
       case 'ArrowRight':
       case 'KeyD':
         logger.debug('KEYBINDINGS', 'Updating rotation', { key: ev.code });
-        updateTurnFromKeys(player);
+        reconcilePlayerInput(player);
         break;
       case 'ArrowUp':
       case 'KeyW':
         logger.debug('KEYBINDINGS', 'Setting thrust', { key: ev.code });
-        updateThrustFromKeys(player);
+        reconcilePlayerInput(player);
         break;
     }
   }
@@ -167,13 +197,11 @@ export function keyUp(ev: KeyboardEvent, player: Player): void {
   switch (ev.code) {
     case 'ArrowUp':
     case 'KeyW':
-      updateThrustFromKeys(player);
-      break;
     case 'ArrowLeft':
     case 'KeyA':
     case 'ArrowRight':
     case 'KeyD':
-      updateTurnFromKeys(player);
+      reconcilePlayerInput(player);
       break;
   }
 }

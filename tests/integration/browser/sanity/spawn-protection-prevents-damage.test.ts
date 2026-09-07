@@ -10,7 +10,7 @@ test('spawn protection prevents damage', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame({ waitForCombatReady: false });
+  await game.bootGame({ waitForCombatReady: false });
   await game.waitForServerSpawnProtection();
 
   expect(await game.isServerSpawnProtected()).toBe(true);

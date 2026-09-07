@@ -130,7 +130,7 @@ export class GameInteractions {
         }
 
         const gameArea = document.querySelector('#gameArea');
-        const canvas = document.querySelector('canvas');
+        const canvas = document.querySelector('#gameCanvas');
         if (!gameArea || !canvas) {
           return false;
         }
@@ -150,7 +150,7 @@ export class GameInteractions {
    */
   async verifyGameCanvas(): Promise<void> {
     await this.page.waitForFunction(() => {
-      const canvas = document.querySelector('canvas');
+      const canvas = document.querySelector('#gameCanvas');
       if (!canvas) return false;
       
       const computedStyle = window.getComputedStyle(canvas);
@@ -430,6 +430,52 @@ export class GameInteractions {
     });
   }
 
+  async getLoot(): Promise<
+    Array<{ id: string; x: number; y: number; mass: number; radius: number; kind: string }>
+  > {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      const loot = gameController?.getLoot?.() ?? [];
+      return loot.map(
+        (drop: {
+          id: string;
+          position: { x: number; y: number };
+          mass: number;
+          radius: number;
+          kind?: string;
+        }) => ({
+          id: drop.id,
+          x: drop.position.x,
+          y: drop.position.y,
+          mass: drop.mass,
+          radius: drop.radius,
+          kind: drop.kind ?? 'wreckage',
+        })
+      );
+    });
+  }
+
+  async getShipMass(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      return gameController?.playerManager?.getLocalPlayer?.()?.ship?.mass ?? 1;
+    });
+  }
+
+  async getShipRadius(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      return gameController?.playerManager?.getLocalPlayer?.()?.ship?.r ?? 15;
+    });
+  }
+
+  async getShipMaxHealth(): Promise<number> {
+    return await this.page.evaluate(() => {
+      const gameController = (window as any).gameController;
+      return gameController?.playerManager?.getLocalPlayer?.()?.ship?.maxHealth ?? 100;
+    });
+  }
+
   /**
    * Get asteroid sizes
    */
@@ -507,7 +553,19 @@ export class GameInteractions {
   /**
    * Get asteroid positions. (Roid exposes its radius as `r`, not `radius`.)
    */
-  async getAsteroidPositions(): Promise<Array<{ x: number; y: number; radius: number; id: string }>> {
+  async getCanvasSize(): Promise<{ width: number; height: number }> {
+    return await this.page.evaluate(() => {
+      const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
+      return {
+        width: canvas?.width || 800,
+        height: canvas?.height || 600,
+      };
+    });
+  }
+
+  async getAsteroidPositions(): Promise<
+    Array<{ x: number; y: number; radius: number; id: string; isCollabTarget?: boolean }>
+  > {
     return await this.page.evaluate(() => {
       const gameController = (window as any).gameController;
       if (gameController?.getCurrRoidBelt) {
@@ -517,6 +575,7 @@ export class GameInteractions {
           y: roid.position.y,
           radius: roid.r,
           id: roid.id,
+          isCollabTarget: roid.isCollabTarget === true,
         })) : [];
       }
       return [];
@@ -1049,8 +1108,14 @@ export class GameInteractions {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const ready = await this.page.evaluate(() => {
-        const lp = (window as any).gameController?.playerManager?.getLocalPlayer?.();
-        return (lp?.serverSpawnProtectionTimer ?? 0) === 0;
+        const ship = (window as any).gameController?.playerManager?.getLocalPlayer?.()?.ship;
+        if (!ship) {
+          return false;
+        }
+        // #467 lean snapshots omit expired spawnProtectionTimer; the last
+        // positive echo sticks on serverSpawnProtectionTimer. Collisions
+        // use the ship blink window, so that is what "combat ready" means.
+        return ship.health > 0 && !ship.exploding && (ship.blinkCount ?? 0) === 0;
       });
       if (ready) {
         return;
@@ -1160,26 +1225,27 @@ export class GameInteractions {
         return;
       }
 
-      // Fallback: drive server collision damage if client overlap detection did not fire.
-      await this.page.evaluate(
-        async ({ damage }) => {
-          const gc = (window as any).gameController;
-          const nm = gc?.getNetworkManager?.();
-          const playerId = nm?.getLocalPlayerId?.();
-          if (!nm || !playerId) {
-            throw new Error('Cannot send collision damage — not connected');
-          }
+      // Keep the predicted pose pinned and echo it so the server loop
+      // can apply the only remaining asteroid-ram path.
+      await this.page.evaluate(({ ax, ay }) => {
+        const gc = (window as any).gameController;
+        const nm = gc?.getNetworkManager?.();
+        const playerId = nm?.getLocalPlayerId?.();
+        const ship = gc?.playerManager?.getLocalPlayer()?.ship;
+        if (ship) {
+          ship.position = { x: ax, y: ay };
+          ship.velocity = { x: 0, y: 0 };
+        }
+        if (nm && playerId) {
           nm.sendMessage({
-            type: 'collisionDamage',
-            data: { targetPlayerId: playerId, attackerId: 'asteroid', damage },
+            type: 'update',
+            id: playerId,
+            position: { x: ax, y: ay },
+            velocity: { x: 0, y: 0 },
           });
-          for (let frame = 0; frame < 30; frame++) {
-            gc.updateGame();
-            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          }
-        },
-        { damage: 100 }
-      );
+        }
+      }, { ax: asteroid.x, ay: asteroid.y });
+      await this.page.waitForTimeout(50);
     }
     throw new Error('Ship was not destroyed by sustained asteroid collision');
   }
@@ -1557,14 +1623,19 @@ export class GameInteractions {
     }
   }
 
-  /** Send server-authoritative damage to a bot (simulates asteroid ram). */
-  async damageBot(botId: string, damage: number, attackerId = 'asteroid-collision'): Promise<void> {
+  /** Apply laser-style bot damage from the local human (asteroid ram is server-owned). */
+  async damageBot(botId: string, damage: number, attackerId?: string): Promise<void> {
     await this.page.evaluate(
       ({ botId, damage, attackerId }) => {
         const gc = (window as any).gameController;
-        gc?.getNetworkManager?.().sendMessage?.({
+        const nm = gc?.getNetworkManager?.();
+        const reporterId =
+          !attackerId || attackerId === 'asteroid' || String(attackerId).startsWith('asteroid')
+            ? nm?.getLocalPlayerId?.()
+            : attackerId;
+        nm?.sendMessage?.({
           type: 'botDamage',
-          data: { botId, attackerId, damage },
+          data: { botId, attackerId: reporterId, damage },
         });
       },
       { botId, damage, attackerId }
@@ -1677,9 +1748,17 @@ export class GameInteractions {
     }, playerId);
   }
 
-  /** Standard single-player boot sequence for scenario tests. */
-  async bootSinglePlayerGame(options?: { waitForCombatReady?: boolean }): Promise<void> {
+  /** Standard one-client boot against the multiplayer server. */
+  async bootGame(options?: {
+    waitForCombatReady?: boolean;
+    kitId?: 'dart' | 'hauler' | 'warden' | 'skirmisher' | 'quake';
+  }): Promise<void> {
     await this.navigateToGame();
+    if (options?.kitId) {
+      const kitButton = this.page.locator(`[data-kit-id="${options.kitId}"]`);
+      await kitButton.waitFor({ state: 'visible', timeout: 5000 });
+      await kitButton.click();
+    }
     await this.startGame();
     await this.waitForGameReady();
     await this.waitForServerJoin();

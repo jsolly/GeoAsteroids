@@ -12,6 +12,7 @@ export class WebSocketCore {
     this.gameEngine = gameEngine;
     this.broadcaster = new GameStateBroadcaster(gameEngine);
     this.messageHandler = new MessageHandler(gameEngine, this.broadcaster);
+    this.gameEngine.setCombatSink((result) => this.broadcaster.broadcastCombatResult(result));
   }
 
   public startPeriodicGameStateBroadcast(): void {
@@ -47,7 +48,11 @@ export class WebSocketCore {
   }
 
   public removePlayer(id: string) {
-    return this.gameEngine.removePlayer(id);
+    const removed = this.gameEngine.removePlayer(id);
+    if (removed?.type === 'human') {
+      this.broadcaster.broadcastPlayerLeft(id);
+    }
+    return removed;
   }
 
   // Convenience methods for external access
@@ -57,5 +62,9 @@ export class WebSocketCore {
 
   public getBroadcaster(): GameStateBroadcaster {
     return this.broadcaster;
+  }
+
+  public getMessageHandler(): MessageHandler {
+    return this.messageHandler;
   }
 }

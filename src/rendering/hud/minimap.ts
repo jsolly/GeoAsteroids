@@ -1,15 +1,31 @@
 import { PALETTE, VISUAL } from '../../constants';
 import { GameController } from '../../core/gameController';
+import { drawSoftFactionMark } from '../../entities/player/factionMarkPainters';
 import { PlayerNetwork } from '../../entities/player/playerNetwork';
+import type { SoftFactionId } from '../../entities/player/softFactions';
+import { canDrawAsteroid } from '../../entities/roid/roidRenderer';
 import type { Ship } from '../../entities/ship/Ship';
-
+import { calculateShipTrianglePoints, strokePhosphorHull } from '../../entities/ship/shipRenderer';
+import type { CircleBoundary } from '../../physics/boundary';
 import { getGameBoundary } from '../../physics/boundary';
-import { getFactionColor, hexToRgba } from '../../utils/colorUtils';
+import { isAsteroidPending } from '../../physics/collision/asteroidHitFeel';
+import { getShipDisplayColor, hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
+import { hudLayoutForCanvas } from './hudLayout';
 
-type CircleBoundary = { cx: number; cy: number; radius: number };
+type RadarMark =
+  | { kind: 'local'; x: number; y: number; heading: number; factionId?: SoftFactionId }
+  | {
+      kind: 'other';
+      x: number;
+      y: number;
+      heading: number;
+      color: string;
+      factionId?: SoftFactionId;
+    }
+  | { kind: 'roid'; x: number; y: number };
 
-function projectToMiniMap(
+export function projectWorldToMiniMap(
   boundary: CircleBoundary,
   miniMapX: number,
   miniMapY: number,
@@ -35,58 +51,138 @@ function projectToMiniMap(
   return { x, y };
 }
 
+function drawRadarMark(ctx: CanvasRenderingContext2D, mark: RadarMark): void {
+  switch (mark.kind) {
+    case 'local': {
+      const hull = calculateShipTrianglePoints(
+        mark.x,
+        mark.y,
+        VISUAL.MINIMAP_LOCAL_SIZE,
+        mark.heading
+      );
+      strokePhosphorHull(ctx, hull, PALETTE.LOCAL);
+      drawSoftFactionMark(ctx, mark.factionId, {
+        x: mark.x,
+        y: mark.y,
+        radius: VISUAL.MINIMAP_LOCAL_SIZE,
+        angle: mark.heading,
+      });
+      return;
+    }
+    case 'other': {
+      ctx.save();
+      ctx.fillStyle = mark.color;
+      ctx.beginPath();
+      ctx.arc(mark.x, mark.y, VISUAL.MINIMAP_DOT / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      drawSoftFactionMark(ctx, mark.factionId, {
+        x: mark.x,
+        y: mark.y,
+        radius: VISUAL.MINIMAP_DOT,
+        angle: mark.heading,
+      });
+      return;
+    }
+    case 'roid': {
+      ctx.save();
+      ctx.fillStyle = hexToRgba(PALETTE.ROID, 0.55);
+      const size = VISUAL.MINIMAP_ROID;
+      ctx.fillRect(mark.x - size / 2, mark.y - size / 2, size, size);
+      ctx.restore();
+      return;
+    }
+  }
+}
+
 export function drawMiniMap(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   ship: Ship
 ): void {
   const boundary = getGameBoundary();
-  const miniMapSize = VISUAL.MINIMAP_SIZE;
-  const centerX = canvas.width - 16 - miniMapSize / 2;
-  const centerY = canvas.height - 16 - miniMapSize / 2;
-  const miniMapX = centerX - miniMapSize / 2;
-  const miniMapY = centerY - miniMapSize / 2;
+  const { x: miniMapX, y: miniMapY, size: miniMapSize } = hudLayoutForCanvas(canvas).miniMap;
+  const centerX = miniMapX + miniMapSize / 2;
+  const centerY = miniMapY + miniMapSize / 2;
 
-  // Hairline radar ring only — no filled panel behind it; the void shows through.
   ctx.save();
   ctx.beginPath();
   ctx.arc(centerX, centerY, miniMapSize / 2, 0, Math.PI * 2);
   ctx.closePath();
-  ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, 0.4);
+  ctx.fillStyle = hexToRgba(PALETTE.BG, VISUAL.MINIMAP_VOID_ALPHA);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(PALETTE.HUD_MUTED, VISUAL.MINIMAP_RING_ALPHA);
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.clip();
-
-  const boundaryScale = miniMapSize / 2 / boundary.radius;
-  const boundaryOffsetX = miniMapX + miniMapSize / 2;
-  const boundaryOffsetY = miniMapY + miniMapSize / 2;
-
-  ctx.strokeStyle = hexToRgba(PALETTE.ROID, 0.35);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.arc(boundaryOffsetX, boundaryOffsetY, boundary.radius * boundaryScale, 0, Math.PI * 2);
-  ctx.stroke();
-
-  drawShipMiniMap(ctx, ship, PALETTE.LOCAL, boundary, miniMapX, miniMapY, miniMapSize);
 
   try {
     const gameController = GameController.getInstance();
     const playerNetwork = PlayerNetwork.getInstance();
     const otherPlayers = playerNetwork.getOtherPlayers();
 
+    const currRoidBelt = gameController.getCurrRoidBelt();
+    if (currRoidBelt) {
+      for (const roid of currRoidBelt.getRoids()) {
+        if (isAsteroidPending(roid) || !canDrawAsteroid(roid)) {
+          continue;
+        }
+        const p = projectWorldToMiniMap(
+          boundary,
+          miniMapX,
+          miniMapY,
+          miniMapSize,
+          roid.position.x,
+          roid.position.y
+        );
+        if (p) {
+          drawRadarMark(ctx, { kind: 'roid', x: p.x, y: p.y });
+        }
+      }
+    }
+
     for (const player of otherPlayers) {
       if (player.ship.exploding) {
         continue;
       }
-      const color = getFactionColor(player.type === 'bot' ? 'bot' : 'remote');
-      drawShipMiniMap(ctx, player.ship, color, boundary, miniMapX, miniMapY, miniMapSize);
+      const p = projectWorldToMiniMap(
+        boundary,
+        miniMapX,
+        miniMapY,
+        miniMapSize,
+        player.ship.position.x,
+        player.ship.position.y
+      );
+      if (!p) {
+        continue;
+      }
+      drawRadarMark(ctx, {
+        kind: 'other',
+        x: p.x,
+        y: p.y,
+        heading: player.ship.angle,
+        color: getShipDisplayColor(player),
+        factionId: player.ship.factionId,
+      });
     }
 
-    const currRoidBelt = gameController.getCurrRoidBelt();
-    if (currRoidBelt) {
-      const roids = currRoidBelt.getRoids();
-      for (const roid of roids) {
-        drawRoidMiniMap(ctx, roid, boundary, miniMapX, miniMapY, miniMapSize);
+    if (!ship.exploding) {
+      const p = projectWorldToMiniMap(
+        boundary,
+        miniMapX,
+        miniMapY,
+        miniMapSize,
+        ship.position.x,
+        ship.position.y
+      );
+      if (p) {
+        drawRadarMark(ctx, {
+          kind: 'local',
+          x: p.x,
+          y: p.y,
+          heading: ship.angle,
+          factionId: ship.factionId,
+        });
       }
     }
   } catch (error: unknown) {
@@ -97,71 +193,5 @@ export function drawMiniMap(
     );
   }
 
-  ctx.restore();
-}
-
-export function drawServerInfo(_ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement): void {
-  // Intentionally empty: playfield HUD no longer labels the radar.
-}
-
-export function drawShipMiniMap(
-  ctx: CanvasRenderingContext2D,
-  ship: Ship,
-  color: string,
-  boundary: CircleBoundary,
-  miniMapX: number,
-  miniMapY: number,
-  miniMapSize: number
-): void {
-  if (ship.exploding) {
-    return;
-  }
-
-  const p = projectToMiniMap(
-    boundary,
-    miniMapX,
-    miniMapY,
-    miniMapSize,
-    ship.position.x,
-    ship.position.y,
-    10
-  );
-  if (!p) {
-    return;
-  }
-
-  ctx.save();
-  ctx.fillStyle = color;
-  const dotSize = VISUAL.MINIMAP_DOT;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, dotSize / 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-export function drawRoidMiniMap(
-  ctx: CanvasRenderingContext2D,
-  roid: { position: { x: number; y: number }; r: number },
-  boundary: CircleBoundary,
-  miniMapX: number,
-  miniMapY: number,
-  miniMapSize: number
-): void {
-  const p = projectToMiniMap(
-    boundary,
-    miniMapX,
-    miniMapY,
-    miniMapSize,
-    roid.position.x,
-    roid.position.y,
-    10
-  );
-  if (!p) {
-    return;
-  }
-
-  ctx.save();
-  ctx.fillStyle = hexToRgba(PALETTE.ROID, 0.7);
-  ctx.fillRect(p.x - 0.75, p.y - 0.75, 1.5, 1.5);
   ctx.restore();
 }

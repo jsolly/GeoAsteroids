@@ -27,8 +27,10 @@ vi.mock('../../../src/utils/Logger', () => ({
 vi.mock('../../../src/physics/collision/collisionDetection', () => ({
   checkBoundaryCollision: vi.fn(() => true),
   checkLaserAsteroidCollision: vi.fn(),
+  checkLaserAsteroidCollisionSwept: vi.fn(),
   checkLaserShipCollision: vi.fn(),
   checkShipCollision: vi.fn(),
+  asteroidPointsForRadius: vi.fn(() => 50),
 }));
 
 describe('Boundary collision immunity', () => {
@@ -59,6 +61,9 @@ describe('Boundary collision immunity', () => {
         damage: 100,
       },
     });
+    expect(ship.exploding).toBe(true);
+    expect(ship.health).toBe(0);
+    expect(ship.impactFlashFrames).toBeGreaterThan(0);
   });
 
   test('does not send boundary damage while blinking', () => {

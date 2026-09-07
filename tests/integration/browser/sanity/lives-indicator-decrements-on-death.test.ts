@@ -10,7 +10,7 @@ test('lives indicator decrements on death', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
 
   expect(await game.getLives()).toBe(3);
