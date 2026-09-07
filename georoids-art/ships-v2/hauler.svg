@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AD v2 bake. Topology: barge-hex. Source: src/entities/ship/hullOutlines.ts -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="hauler barge-hex">
+  <title>hauler — barge-hex</title>
+  <rect width="64" height="64" fill="#000011"/>
+  <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 19.6 L13.2 31.6 L13.2 41.2 L20.8 48 L43.2 48 L50.8 41.2 L50.8 31.6 Z"/>
+  </g>
+</svg>

@@ -10,7 +10,7 @@ test('leaderboard updates when score changes', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForBots(1);
 
   const target = (await game.getBots())[0]!;

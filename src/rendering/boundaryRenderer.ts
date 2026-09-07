@@ -14,9 +14,10 @@ export function drawFieryBoundary(shipPosition: Position): void {
   }
 
   const boundary = getGameBoundary();
-  const centerX = cvs.width / 2 - shipPosition.x + boundary.cx;
-  const centerY = cvs.height / 2 - shipPosition.y + boundary.cy;
-  const radius = boundary.radius;
+  const center = canvasManager.worldToScreen({ x: boundary.cx, y: boundary.cy }, shipPosition);
+  const centerX = center.x;
+  const centerY = center.y;
+  const radius = boundary.radius * canvasManager.getPlayfieldScale();
 
   ctx.save();
   ctx.shadowColor = PALETTE.HUD_MUTED;

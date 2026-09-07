@@ -13,7 +13,7 @@ test('server properly handles and broadcasts laser events', async () => {
   const game = new GameInteractions(page);
   
   // Navigate and start the game
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
 
   const networkMessages: string[] = [];
   page.on('console', (msg) => {

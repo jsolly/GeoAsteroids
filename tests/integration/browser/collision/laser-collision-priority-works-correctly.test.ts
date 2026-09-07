@@ -10,7 +10,7 @@ test('laser collision priority works correctly', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
   await game.waitForCombatReady();
   await game.waitForAsteroids(1);
 

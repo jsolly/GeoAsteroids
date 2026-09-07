@@ -9,7 +9,27 @@ export enum ServerLogLevel {
   DEBUG = 3,
 }
 
-const CURRENT_LOG_LEVEL = ServerLogLevel.DEBUG;
+export function resolveServerLogLevel(
+  env: { NODE_ENV?: string; SERVER_LOG_LEVEL?: string } = {}
+): ServerLogLevel {
+  const explicit = (env.SERVER_LOG_LEVEL ?? process.env.SERVER_LOG_LEVEL)?.toLowerCase();
+  if (explicit === 'debug') {
+    return ServerLogLevel.DEBUG;
+  }
+  if (explicit === 'info') {
+    return ServerLogLevel.INFO;
+  }
+  if (explicit === 'warn') {
+    return ServerLogLevel.WARN;
+  }
+  if (explicit === 'error') {
+    return ServerLogLevel.ERROR;
+  }
+  const nodeEnv = env.NODE_ENV ?? process.env.NODE_ENV;
+  return nodeEnv === 'production' ? ServerLogLevel.INFO : ServerLogLevel.DEBUG;
+}
+
+const CURRENT_LOG_LEVEL = resolveServerLogLevel();
 
 function shouldLog(level: ServerLogLevel): boolean {
   return level <= CURRENT_LOG_LEVEL;

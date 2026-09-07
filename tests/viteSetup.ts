@@ -7,76 +7,65 @@ const dom = new JSDOM(
   `<!DOCTYPE html>
 <html lang="en">
   <body>
+    <canvas id="title-starfield"></canvas>
     <div id="gameWrapper">
       <div id="start-screen" class="screen">
-        <h1 class="text-center fs-1">GeoRoids</h1>
-        <ul class="nav flex-column">
-          <li class="nav-item">
-            
-          </li>
-          <li class="nav-item">
-                    <button id="start-game" class="btn btn-lg btn-info">
-          Game 🌐
-        </button>
-          </li>
-          <li class="nav-item">
+        <h1 class="text-center">GeoRoids</h1>
+        <p id="controls-hint" class="controls-hint">WASD + Space / arrows · E ability · F shield</p>
+        <div class="game-modes">
+          <div class="mb-3">
+            <label for="playerNameInput" class="form-label">Your Nickname</label>
             <input
-              class="form-check-input"
-              type="checkbox"
-              value=""
-              id="soundPref"
+              type="text"
+              id="playerNameInput"
+              maxlength="20"
+              placeholder="Crimson Falcon"
+              class="form-control"
             />
-            <label class="form-check-label" for="soundPref"> Sound </label>
-          </li>
-
-        </ul>
-        <h2>Difficulty</h2>
-        <div
-          class="btn-group"
-          role="group"
-          aria-label="Basic radio toggle button group"
-        >
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="easy"
-            autocomplete="off"
-            checked
-          />
-          <label class="btn btn-outline-success" for="easy">Easy</label>
-
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="medium"
-            autocomplete="off"
-          />
-          <label class="btn btn-outline-warning" for="medium">Medium</label>
-
-          <input
-            type="radio"
-            class="btn-check"
-            name="btnradio"
-            id="hard"
-            autocomplete="off"
-          />
-          <label class="btn btn-outline-danger" for="hard">Hard</label>
+          </div>
+          <fieldset class="ship-kit-select">
+            <legend>Ship kit</legend>
+            <div id="ship-kit-grid" class="ship-kit-grid" role="group" aria-label="Ship kit"></div>
+            <p class="ship-kit-placeholder-note">AD v2 silhouettes</p>
+          </fieldset>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <button id="start-game" class="btn btn-lg btn-phosphor">
+                Enter Game
+              </button>
+            </li>
+          </ul>
+        </div>
+        <div class="settings">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                value=""
+                id="soundPref"
+                checked
+              />
+              <label class="form-check-label" for="soundPref">Sound</label>
+            </li>
+          </ul>
         </div>
       </div>
       <div id="gameArea" style="display: none">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-
+        <div id="touch-controls" class="touch-controls" hidden aria-hidden="true">
+          <div id="touch-stick" class="touch-stick">
+            <div id="touch-stick-knob" class="touch-stick-knob"></div>
+          </div>
+          <button id="touch-fire" type="button" class="touch-fire">FIRE</button>
+        </div>
       </div>
+      <div id="safe-area-probe"></div>
+    </div>
+    <div id="attribution">
+      <span id="buildInfo" class="build-info"></span>
     </div>
   </body>
-  <div id="attribution">
-    <a
-      href="https://www.freepik.com/free-photo/starry-night-sky_7061153.htm#query=space&position=11&from_view=search"
-      >Image by kjpargeter on Freepik</a
-    >
-  </div>
 </html>`
 );
 global.document = dom.window.document;

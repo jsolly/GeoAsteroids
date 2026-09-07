@@ -13,7 +13,7 @@ test('a player destroys a bot with lasers and is awarded the kill', async () => 
 
   const game = new GameInteractions(page);
 
-  await game.bootSinglePlayerGame();
+  await game.bootGame();
 
   // The server spawns bot opponents.
   await game.waitForBots(1);

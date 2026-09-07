@@ -6,6 +6,7 @@ import {
   handleMouseUp,
   preventContextMenu,
 } from '../../input/mouse';
+import { initializeTouchControls } from '../../input/touchControls';
 import { logger } from '../../utils/Logger';
 import { GameStateManager } from './GameStateManager';
 
@@ -65,7 +66,7 @@ export class InputManager {
     });
 
     // Mouse listeners on canvas
-    const canvas = document.querySelector('canvas');
+    const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
     if (canvas) {
       canvas.addEventListener('mousemove', (ev) => {
         const localPlayer = getLocalPlayer();
@@ -87,6 +88,13 @@ export class InputManager {
       });
       // Prevent default context menu for right-click thrust
       canvas.addEventListener('contextmenu', preventContextMenu);
+      canvas.addEventListener(
+        'touchstart',
+        (ev) => {
+          ev.preventDefault();
+        },
+        { passive: false }
+      );
     }
 
     // Reset shoot cooldown if the mouse is released outside the canvas
@@ -97,6 +105,8 @@ export class InputManager {
       }
     });
 
+    initializeTouchControls();
+
     this.listenersInitialized = true;
   }
 
@@ -104,7 +114,7 @@ export class InputManager {
     const gameBtn = document.getElementById('start-game') as HTMLButtonElement;
 
     if (gameBtn) {
-      gameBtn.innerText = '🌐 Start Game';
+      gameBtn.innerText = 'Enter Game';
     }
   }
 }

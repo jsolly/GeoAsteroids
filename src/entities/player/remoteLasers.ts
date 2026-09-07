@@ -1,22 +1,35 @@
 import type { Player } from './Player';
 
 /**
- * Advance client-side lasers for remote human players.
+ * Advance remote human ships on the shared 60 Hz lifecycle clock.
  *
- * Remote ships are server-driven: the game loop calls `Ship.update()` only for
- * the local player and bots, never for `type === 'remote'`. Remote lasers are
- * created locally from the server's `playerShoot` broadcast (see
- * `ConnectionManager.handlePlayerShoot`) but, without an update tick, they would
- * freeze at the muzzle forever — you'd see another player's shot appear as a
- * stationary dot and never travel, and the lasers would accumulate unbounded.
- *
- * Calling `moveLasers()` each frame makes other players' shots travel and
- * expire exactly like local/bot lasers, so firing is visible across tabs.
+ * Pose stays server-driven (`updateLifecycle` does not predict movement).
+ * Explode / blink must still tick or remotes freeze at the first death frame
+ * and stay laser-immune after respawn. Lasers still move once per display
+ * frame so shots travel instead of sitting on the muzzle (#418).
  */
-export function advanceRemotePlayerLasers(players: Player[]): void {
+export function advanceRemotePlayerShips(players: Player[], lifecycleFrames = 1): void {
   for (const player of players) {
     if (player.type === 'remote') {
-      player.ship.moveLasers();
+      player.ship.updateLifecycle(lifecycleFrames);
+      if (!player.ship.exploding && player.ship.health > 0) {
+        player.ship.moveLasers();
+      }
     }
   }
+}
+
+/**
+ * Local shots are already appended in `fireLaser`. Replays and unknown
+ * players must not grow `ship.lasers` past the same cap the local gun uses.
+ */
+export function shouldApplyRemoteShoot(
+  player: { id: string; type: string; ship: { lasers: readonly unknown[] } },
+  localPlayerId: string,
+  maxLasers: number
+): boolean {
+  if (player.type === 'local' || player.id === localPlayerId) {
+    return false;
+  }
+  return player.ship.lasers.length < maxLasers;
 }

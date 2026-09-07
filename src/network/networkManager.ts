@@ -28,8 +28,8 @@ export class NetworkManager {
     await this.connectionManager.connect();
   }
 
-  disconnect(): void {
-    this.connectionManager.disconnect();
+  disconnect(options?: { newSession?: boolean }): void {
+    this.connectionManager.disconnect(options);
   }
 
   get isConnected(): boolean {
@@ -68,8 +68,8 @@ export class NetworkManager {
     velocity: Velocity;
     r: number;
     angle: number;
-    lives: number;
-    score: number;
+    lives?: number;
+    score?: number;
     exploding: boolean;
     thrusting?: boolean;
     health?: number;

@@ -24,8 +24,12 @@ export function generateLaserVelocity(shipAngle: number, shipVelocity: Velocity)
 }
 
 export function createLaser(ship: Ship): Laser {
-  const laserStartPosition = calculateLaserStartPosition(ship.position, ship.angle, ship.r);
-  const laserVelocity = generateLaserVelocity(ship.angle, ship.velocity);
+  return createLaserAtAngle(ship, ship.angle);
+}
+
+export function createLaserAtAngle(ship: Ship, angle: number): Laser {
+  const laserStartPosition = calculateLaserStartPosition(ship.position, angle, ship.r);
+  const laserVelocity = generateLaserVelocity(angle, ship.velocity);
 
   return new Laser(laserStartPosition, laserVelocity, 0, 0, false);
 }

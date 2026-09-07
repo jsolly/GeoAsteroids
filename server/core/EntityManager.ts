@@ -1,12 +1,41 @@
 import { WebSocket } from 'ws';
-import type { Position, Velocity } from '../../shared-types';
-import { RNGService } from './RNGService';
-import { DEBUG, PALETTE, SHIP } from '../../src/constants';
+import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../shared-types';
+import { pickBalancedFactionFromShips } from '../../shared/factions';
+import { parseSoftFactionId } from '../../src/entities/player/softFactions';
+import { absorbDamageWithShield, tickAbilityHost } from '../../src/entities/ship/shipAbilities';
+import { applyShipKitStats, DEFAULT_SHIP_KIT_ID, isShipKitId, SHIP_KIT_IDS } from '../../src/entities/ship/shipKits';
+import {
+  clearShield,
+  createShieldState,
+  maybeActivateBotShield,
+  noteShieldLaserHit,
+  shouldBlockDamage,
+  updateShield,
+  type CombatDamageSource,
+  type ShieldState,
+} from '../../src/entities/ship/shipShield';
+import { createFuelTank } from '../../shared/fuel';
+import { BOT_AI, BotBrain, makeBotShot, type BotShot } from '../ai/botController';
+import { applyShipMotionSteps, containShipInArena } from '../ai/shipMotion';
+import { DEBUG, FUEL, PALETTE, SHIP } from '../../src/constants';
+import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
+import { applyShockwaveToBody } from '../../src/physics/shockwave';
+import { GROWTH, applyShipMass, resetShipMass } from '../../shared/shipGrowth';
 import { logger } from '../../setup/serverLogger';
+import { RNGService } from './RNGService';
 
 export const RESPAWN_ANCHOR_ACK_DISTANCE = 100;
+/** Keep lives/score after a dropped socket so the same id can rejoin. */
+export const HUMAN_REJOIN_STASH_TTL_MS = 5 * 60 * 1000;
 
-export interface GameEntity {
+interface HumanRejoinStash {
+  lives: number;
+  score: number;
+  name: string;
+  savedAt: number;
+}
+
+export interface GameEntity extends ShieldState {
   id: string;
   name: string;
   type: 'human' | 'bot';
@@ -20,6 +49,9 @@ export interface GameEntity {
   score: number;
   health: number;
   maxHealth: number;
+  fuel: number;
+  maxFuel: number;
+  mass: number;
   lastUpdate: number;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
@@ -27,6 +59,16 @@ export interface GameEntity {
   respawnAnchor?: Position;
   ws?: WebSocket; // Only for human players
   explodeTime?: number; // For bot explosion handling
+  kitId: ShipKitId;
+  factionId?: SoftFactionId;
+  abilityCooldownFrames: number;
+  abilityActiveFrames: number;
+  shieldTimer: number;
+  harpoonTimer: number;
+  harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
+  /** Killer of the current death (cleared on respawn). */
+  deathCause?: string;
 }
 
 /** True when a client update is still the death pose, not the new spawn. */
@@ -45,6 +87,11 @@ export class EntityManager {
   private entities = new Map<string, GameEntity>();
   private rng: RNGService;
   private isCreatingBots = false;
+  private humanRejoinStash = new Map<string, HumanRejoinStash>();
+  private humanRejoinByName = new Map<string, HumanRejoinStash>();
+  private readonly botBrain = new BotBrain();
+  /** Old human id remapped by same-name takeover — consume after addHumanPlayer. */
+  private replacedHumanId: string | undefined;
 
   constructor(rngService: RNGService) {
     this.rng = rngService;
@@ -68,8 +115,21 @@ export class EntityManager {
     return Array.from(this.entities.values()).filter(entity => entity.type === 'human');
   }
 
+  public getEntityBySocket(ws: WebSocket): GameEntity | undefined {
+    for (const entity of this.entities.values()) {
+      if (entity.ws === ws) {
+        return entity;
+      }
+    }
+    return undefined;
+  }
+
   public getBots(): GameEntity[] {
     return Array.from(this.entities.values()).filter(entity => entity.type === 'bot');
+  }
+
+  public getHumanBySocket(ws: WebSocket): GameEntity | undefined {
+    return this.getHumanPlayers().find((entity) => entity.ws === ws);
   }
 
   public getEntityCount(): number {
@@ -84,6 +144,27 @@ export class EntityManager {
     return this.getBots().length;
   }
 
+  /** Kick living ships away from a collab-split origin. Smaller ships move more. */
+  public applyRadialImpulse(origin: Position, radius: number, impulse: number): number {
+    let affected = 0;
+    const shipSize = SHIP.SIZE / 2;
+    for (const entity of this.entities.values()) {
+      if (entity.exploding || entity.health <= 0 || entity.respawnTimer !== undefined) {
+        continue;
+      }
+      const next = applyShockwaveToBody(
+        { position: entity.position, velocity: entity.velocity, size: shipSize },
+        origin,
+        { radius, impulse }
+      );
+      if (next) {
+        entity.velocity = next;
+        affected += 1;
+      }
+    }
+    return affected;
+  }
+
   public updateEntity(entityId: string, updates: Partial<GameEntity>): GameEntity | undefined {
     const entity = this.entities.get(entityId);
     if (!entity) {
@@ -92,6 +173,11 @@ export class EntityManager {
 
     // Ignore any updates to id since it's the Map key
     const { id: ignoredId, ...allowedUpdates } = updates;
+
+    // Validate and apply mass first so maxHealth/health follow growth.
+    if (typeof allowedUpdates.mass === 'number' && Number.isFinite(allowedUpdates.mass)) {
+      applyShipMass(entity, allowedUpdates.mass);
+    }
 
     // Validate and apply maxHealth first
     if (typeof allowedUpdates.maxHealth === 'number' && Number.isFinite(allowedUpdates.maxHealth)) {
@@ -103,8 +189,20 @@ export class EntityManager {
       entity.health = Math.max(0, Math.min(entity.maxHealth, allowedUpdates.health));
     }
 
-    // Apply other allowed properties
-    const { maxHealth: ignoredMaxHealth, health: ignoredHealth, ...otherUpdates } = allowedUpdates;
+    // Apply other allowed properties. Shield timers are owned by requestShield /
+    // updateShields — a stale client echo must not toggle them off.
+    const {
+      maxHealth: ignoredMaxHealth,
+      health: ignoredHealth,
+      mass: ignoredMass,
+      maxFuel: _ignoredMaxFuel,
+      fuel: _ignoredFuel,
+      shieldActive: _ignoredShieldActive,
+      shieldTime: _ignoredShieldTime,
+      shieldCooldown: _ignoredShieldCooldown,
+      shieldFlashTime: _ignoredShieldFlashTime,
+      ...otherUpdates
+    } = allowedUpdates;
     Object.assign(entity, otherUpdates);
 
     // Update lastUpdate timestamp
@@ -116,14 +214,47 @@ export class EntityManager {
   public removeEntity(entityId: string): GameEntity | undefined {
     const entity = this.entities.get(entityId);
     if (entity) {
+      this.stashHumanForRejoin(entity);
       this.entities.delete(entityId);
       logger.debug('ENTITY', `Removed ${entity.type} entity: ${entity.name} (${entityId})`);
     }
     return entity;
   }
 
+  private nextFaction(): SoftFactionId {
+    return pickBalancedFactionFromShips(this.getAllEntities());
+  }
+
   // Human player management
-  public addHumanPlayer(id: string, name: string, ws: WebSocket, position?: Position, color?: string): GameEntity {
+  public addHumanPlayer(
+    id: string,
+    name: string,
+    ws: WebSocket,
+    position?: Position,
+    _color?: string,
+    kitId?: ShipKitId,
+    factionId?: SoftFactionId
+  ): GameEntity {
+    this.replacedHumanId = undefined;
+
+    const existing = this.entities.get(id);
+    if (existing && existing.type === 'human') {
+      if (existing.lives > 0) {
+        return this.attachLiveHuman(existing, id, name, ws, kitId);
+      }
+      // Leftover 0-life ship after game-over — Start must not rejoin it.
+      this.entities.delete(id);
+    }
+
+    const sameName = this.getHumanPlayers().find((human) => human.name === name);
+    if (sameName && sameName.lives > 0) {
+      return this.attachLiveHuman(sameName, id, name, ws, kitId);
+    }
+    if (sameName && sameName.lives <= 0) {
+      this.entities.delete(sameName.id);
+    }
+
+    const restored = this.consumeHumanRejoinStash(id, name);
     const entity: GameEntity = {
       id,
       name,
@@ -133,22 +264,124 @@ export class EntityManager {
       angle: 0,
       exploding: false,
       thrusting: false,
-      color: color || PALETTE.REMOTE,
-      lives: 3,
-      score: 0,
+      color: PALETTE.REMOTE,
+      lives: restored?.lives ?? 3,
+      score: restored?.score ?? 0,
       health: 100,
       maxHealth: 100,
+      ...createFuelTank(FUEL.START, FUEL.MAX),
+      mass: GROWTH.BASE_MASS,
       lastUpdate: Date.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
+      ...createShieldState(),
       ws,
+      kitId: DEFAULT_SHIP_KIT_ID,
+      factionId: parseSoftFactionId(factionId) ?? this.nextFaction(),
+      abilityCooldownFrames: 0,
+      abilityActiveFrames: 0,
+      shieldTimer: 0,
+      harpoonTimer: 0,
     };
+    applyShipKitStats(entity, kitId ?? DEFAULT_SHIP_KIT_ID);
 
     this.addEntity(entity);
     return entity;
   }
 
+  private applyRequestedKit(entity: GameEntity, kitId?: unknown): void {
+    if (!isShipKitId(kitId)) {
+      return;
+    }
+    applyShipKitStats(entity, kitId);
+  }
+
+  /** Id displaced by a same-name takeover. Call after addHumanPlayer. */
+  public consumeReplacedHumanId(): string | undefined {
+    const id = this.replacedHumanId;
+    this.replacedHumanId = undefined;
+    return id;
+  }
+
+  private isPendingShipRespawn(entity: GameEntity): boolean {
+    return entity.exploding || entity.health <= 0 || entity.respawnTimer !== undefined;
+  }
+
+  /**
+   * Attach a new socket to a living human. Mid-death reuse must finish
+   * respawn so two-tab reconnect never inherits a corpse, zero-vel, or
+   * leftover explode timer. Live flyers keep pose and velocity.
+   */
+  private attachLiveHuman(
+    existing: GameEntity,
+    id: string,
+    name: string,
+    ws: WebSocket,
+    kitId?: unknown
+  ): GameEntity {
+    const oldWs = existing.ws;
+    const oldId = existing.id;
+    if (oldId !== id) {
+      this.entities.delete(oldId);
+      existing.id = id;
+      this.entities.set(id, existing);
+      this.replacedHumanId = oldId;
+    }
+    existing.ws = ws;
+    existing.name = name;
+    existing.lastUpdate = Date.now();
+    if (!existing.factionId) {
+      existing.factionId = this.nextFaction();
+    }
+    this.applyRequestedKit(existing, kitId);
+    if (this.isPendingShipRespawn(existing) && this.shouldScheduleRespawn(existing)) {
+      this.respawnShip(existing);
+    }
+    if (oldWs && oldWs !== ws) {
+      try {
+        oldWs.close();
+      } catch {
+        // Old tab or zombie socket; the close handler must not see this ws.
+      }
+    }
+    return existing;
+  }
+
+  private stashHumanForRejoin(entity: GameEntity): void {
+    if (entity.type !== 'human' || entity.lives <= 0) {
+      return;
+    }
+    const stash: HumanRejoinStash = {
+      lives: entity.lives,
+      score: entity.score,
+      name: entity.name,
+      savedAt: Date.now(),
+    };
+    this.humanRejoinStash.set(entity.id, stash);
+    this.humanRejoinByName.set(entity.name, stash);
+  }
+
+  private consumeHumanRejoinStash(id: string, name?: string): HumanRejoinStash | undefined {
+    const stash = this.humanRejoinStash.get(id) ?? (name ? this.humanRejoinByName.get(name) : undefined);
+    if (!stash) {
+      return undefined;
+    }
+    for (const [key, value] of this.humanRejoinStash) {
+      if (value === stash || key === id) {
+        this.humanRejoinStash.delete(key);
+      }
+    }
+    this.humanRejoinByName.delete(stash.name);
+    if (name) {
+      this.humanRejoinByName.delete(name);
+    }
+    if (Date.now() - stash.savedAt > HUMAN_REJOIN_STASH_TTL_MS) {
+      return undefined;
+    }
+    return stash;
+  }
+
   // Bot management
-  public createBots(count: number, bounds = { radius: 3100 }): GameEntity[] {
+  public createBots(count: number, bounds = { radius: getAsteroidFieldRadius() }): GameEntity[] {
     // Clear existing bots
     const existingBots = this.getBots();
     for (const bot of existingBots) {
@@ -199,9 +432,19 @@ export class EntityManager {
         score: 0,
         health: 100,
         maxHealth: 100,
+        ...createFuelTank(FUEL.START, FUEL.MAX),
+        mass: GROWTH.BASE_MASS,
         lastUpdate: Date.now(),
         spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
+        kitId: DEFAULT_SHIP_KIT_ID,
+        factionId: this.nextFaction(),
+        abilityCooldownFrames: 0,
+        abilityActiveFrames: 0,
+        shieldTimer: 0,
+        harpoonTimer: 0,
+        ...createShieldState(),
       };
+      applyShipKitStats(bot, SHIP_KIT_IDS[i % SHIP_KIT_IDS.length]);
 
       this.addEntity(bot);
       newBots.push(bot);
@@ -213,8 +456,12 @@ export class EntityManager {
     return newBots;
   }
 
-  // Damage system
-  public damageEntity(entityId: string, damage: number): GameEntity | null {
+  // Damage system — laser hits honor the shared shield; collisions do not.
+  public damageEntity(
+    entityId: string,
+    damage: number,
+    source: CombatDamageSource = 'collision'
+  ): GameEntity | null {
     const entity = this.entities.get(entityId);
     if (!entity || entity.exploding || entity.health <= 0) {
       return null;
@@ -233,6 +480,17 @@ export class EntityManager {
       }
     }
 
+    if (absorbDamageWithShield(entity)) {
+      entity.lastUpdate = Date.now();
+      return entity;
+    }
+
+    if (shouldBlockDamage(entity, source)) {
+      noteShieldLaserHit(entity);
+      entity.lastUpdate = Date.now();
+      return null;
+    }
+
     const wasAlive = entity.health > 0;
     entity.health = Math.max(0, entity.health - damage);
 
@@ -241,15 +499,34 @@ export class EntityManager {
       entity.exploding = true;
       // Set explosion timer for all entity types
       entity.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
+      clearShield(entity);
     }
 
     entity.lastUpdate = Date.now();
     return entity;
   }
 
-  // Shared ship explosion: tick the animation, then start a respawn countdown.
-  // Do not restore health/position here and do not reset an existing timer
-  // (GameEngine already schedules humans at death — resetting stacked a second 3s).
+  private shouldScheduleRespawn(entity: GameEntity): boolean {
+    return entity.type === 'bot' || entity.lives > 0;
+  }
+
+  /**
+   * One schedule for humans and bots. Do not reset an existing countdown
+   * (that stacked a second wait and felt like freeze-stick). Last-life
+   * humans stay dead; bots always come back.
+   */
+  public scheduleShipRespawn(entity: GameEntity): void {
+    if (entity.respawnTimer !== undefined) {
+      return;
+    }
+    if (!this.shouldScheduleRespawn(entity)) {
+      return;
+    }
+    entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
+  }
+
+  // Shared ship explosion: tick the animation. Respawn is scheduled at death
+  // for every ship; this only fills in if a kill path forgot to.
   public updateExplosions(): string[] {
     const finishedExploding: string[] = [];
 
@@ -264,9 +541,7 @@ export class EntityManager {
       }
 
       entity.exploding = false;
-      if (entity.respawnTimer === undefined && entity.lives > 0) {
-        entity.respawnTimer = SHIP.RESPAWN_DELAY_FRAMES;
-      }
+      this.scheduleShipRespawn(entity);
       finishedExploding.push(entityId);
     }
 
@@ -284,6 +559,12 @@ export class EntityManager {
         }
 
         if (entity.respawnTimer === 0) {
+          // A leftover timer must not resurrect a human who already spent their last life.
+          if (!this.shouldScheduleRespawn(entity)) {
+            entity.respawnTimer = undefined;
+            continue;
+          }
+
           this.respawnShip(entity);
           finishedRespawning.push(entityId);
           logger.debug('ENTITY', `Respawned ${entity.type} entity: ${entity.name} (${entityId})`, {
@@ -310,17 +591,32 @@ export class EntityManager {
     return finishedRespawning;
   }
 
+  public updateShields(): void {
+    for (const entity of this.entities.values()) {
+      updateShield(entity);
+      if (entity.type === 'bot') {
+        maybeActivateBotShield(entity, Math.random);
+      }
+    }
+  }
+
   private respawnShip(entity: GameEntity): void {
     entity.respawnTimer = undefined;
+    resetShipMass(entity);
+    applyShipKitStats(entity, entity.kitId);
     entity.health = entity.maxHealth;
+    entity.fuel = FUEL.START;
+    entity.maxFuel = FUEL.MAX;
     entity.exploding = false;
     entity.explodeTime = undefined;
+    entity.deathCause = undefined;
+    clearShield(entity);
     this.placeEntityInArena(entity);
     entity.spawnProtectionTimer = SHIP.INVINCIBILITY_DURATION_FRAMES;
     entity.respawnAnchor = { x: entity.position.x, y: entity.position.y };
   }
 
-  private placeEntityInArena(entity: GameEntity, boundsRadius = 3100): void {
+  private placeEntityInArena(entity: GameEntity, boundsRadius = getAsteroidFieldRadius()): void {
     const respawnRadius = boundsRadius * 0.8;
     const angle = this.rng.random() * Math.PI * 2;
     const radius = this.rng.random() * respawnRadius;
@@ -332,98 +628,41 @@ export class EntityManager {
     entity.velocity = { x: 0, y: 0 };
   }
 
-  // Movement updates (for bots)
-  public updateBotMovement(): void {
-    // Skip bot movement if disabled in DEBUG mode
+  // Controller-driven bot step. Same hull physics as players; only the brain is unique.
+  public updateBotMovement(): BotShot[] {
     if (!DEBUG.BOT_PLAYER.MOVEMENT) {
-      return;
+      return [];
     }
 
     const bots = this.getBots();
-    
-    // Reduced debug logging frequency
-    if (bots.length > 0 && Math.random() < 0.002) { // ~1/500 chance (once every 8+ seconds)
+    this.botBrain.forgetMissing(bots.map((bot) => bot.id));
+
+    if (bots.length > 0 && this.rng.random() < 0.002) {
       logger.info('🤖', `Updating movement for ${bots.length} bots`);
     }
-    
+
+    const humans = this.getHumanPlayers();
+    const shots: BotShot[] = [];
+
     for (const bot of bots) {
-      if (bot.exploding || bot.health <= 0) {
-        continue; // Skip exploding or dead bots
+      if (bot.exploding || bot.health <= 0 || bot.respawnTimer !== undefined) {
+        continue;
       }
 
-      // Optimized AI: less frequent but more meaningful direction changes
-      if (Math.random() < 0.02) { // Reduced from 5% to 2% chance per frame
-        bot.angle += (Math.random() - 0.5) * 0.3; // Reduced rotation amount for smoother movement
+      const decision = this.botBrain.decide(bot, humans, this.rng);
+      bot.angle = decision.angle;
+      bot.thrusting = decision.thrusting;
+
+      if (decision.fire) {
+        shots.push(makeBotShot(bot));
       }
 
-      // Less frequent dramatic direction changes
-      if (Math.random() < 0.005) { // Reduced from 1% to 0.5% chance per frame
-        bot.angle += (Math.random() - 0.5) * Math.PI * 0.5; // Reduced from full 180 to 90 degrees
-      }
-
-      // Apply thrust in current direction with optimized calculation
-      const thrustMagnitude = 1.5 / 60; // Reduced from 2.0 to 1.5 for smoother movement
-      const cosAngle = Math.cos(bot.angle);
-      const sinAngle = Math.sin(bot.angle);
-      
-      // Set thruster state based on movement
-      bot.thrusting = true;
-      
-      bot.velocity.x += cosAngle * thrustMagnitude;
-      bot.velocity.y -= sinAngle * thrustMagnitude; // Negative for screen coordinates
-
-      // Optimized velocity capping using faster approximation
-      const speedSquared = bot.velocity.x * bot.velocity.x + bot.velocity.y * bot.velocity.y;
-      const maxSpeed = 6; // Reduced from 8 to 6 for more controlled movement
-      if (speedSquared > maxSpeed * maxSpeed) {
-        const scale = maxSpeed / Math.sqrt(speedSquared);
-        bot.velocity.x *= scale;
-        bot.velocity.y *= scale;
-      }
-
-      // Turn off thrusters occasionally for more realistic behavior
-      if (Math.random() < 0.1) { // 10% chance to turn off thrusters
-        bot.thrusting = false;
-      }
-
-      // Update position based on velocity
-      bot.position.x += bot.velocity.x;
-      bot.position.y += bot.velocity.y;
-
-      // Keep bots inside the circular play boundary. Without this they thrust
-      // in a straight line forever and escape the arena, so the player never
-      // encounters them. Bounce off the boundary and steer back toward center.
-      const BOUNDARY_RADIUS = 3100;
-      const CONTAIN_RADIUS = BOUNDARY_RADIUS - 200; // stay safely inside the wall
-      const distFromCenter = Math.sqrt(
-        bot.position.x * bot.position.x + bot.position.y * bot.position.y
-      );
-      if (distFromCenter > CONTAIN_RADIUS) {
-        const nx = bot.position.x / distFromCenter;
-        const ny = bot.position.y / distFromCenter;
-        // Clamp back onto the containment circle
-        bot.position.x = nx * CONTAIN_RADIUS;
-        bot.position.y = ny * CONTAIN_RADIUS;
-        // Reflect outward velocity component back inward
-        const vDotN = bot.velocity.x * nx + bot.velocity.y * ny;
-        if (vDotN > 0) {
-          bot.velocity.x -= 2 * vDotN * nx;
-          bot.velocity.y -= 2 * vDotN * ny;
-        }
-        // Steer heading toward the center (forward vector is (cos a, -sin a))
-        bot.angle = Math.atan2(ny, -nx);
-      }
-
-      // Optimized friction - only apply if velocity is significant
-      const velocityMagnitude = Math.sqrt(speedSquared);
-      if (velocityMagnitude > 0.1) {
-        const frictionFactor = 0.995; // Slightly reduced friction for smoother movement
-        bot.velocity.x *= frictionFactor;
-        bot.velocity.y *= frictionFactor;
-      }
-
+      applyShipMotionSteps(bot, BOT_AI.MOTION_STEPS);
+      containShipInArena(bot);
       bot.lastUpdate = Date.now();
     }
+
+    return shots;
   }
 
   // Cleanup
@@ -443,7 +682,10 @@ export class EntityManager {
   }
 
   // Atomic bot creation to prevent race conditions
-  public createBotsSafely(count: number, bounds = { radius: 3100 }): GameEntity[] | null {
+  public createBotsSafely(
+    count: number,
+    bounds = { radius: getAsteroidFieldRadius() }
+  ): GameEntity[] | null {
     if (this.isCreatingBots) {
       return null; // Already creating bots
     }
@@ -463,8 +705,15 @@ export class EntityManager {
     return this.isCreatingBots;
   }
 
+  public tickAbilityState(): void {
+    for (const entity of this.entities.values()) {
+      tickAbilityHost(entity);
+    }
+  }
+
 
   public clearAll(): void {
     this.entities.clear();
+    this.botBrain.clear();
   }
 }

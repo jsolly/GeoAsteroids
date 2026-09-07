@@ -1,12 +1,18 @@
 import type { Position, Velocity } from '../../../shared-types';
-import { playSound, Sound } from '../../audio/Sound';
-import { playWorldSound } from '../../audio/spatialAudio';
+import {
+  getHitSound,
+  getLaserSound,
+  playHitSound as playHitSoundAt,
+  playLaserSound as playLaserSoundAt,
+} from '../../audio/gameSounds';
+import type { Sound } from '../../audio/Sound';
 import { GAME, LASER } from '../../constants';
 import { canvasManager } from '../../rendering/canvas';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
 
 export interface LaserData {
   position: Position;
+  prevPosition: Position;
   velocity: Velocity;
   distTraveled: number;
   explodeTime: number;
@@ -14,8 +20,13 @@ export interface LaserData {
 }
 
 export class Laser implements LaserData {
-  static fxLaser: Sound = new Sound('sounds/laser.m4a', 5);
-  static fxHit: Sound = new Sound('sounds/hit.m4a', 5);
+  static get fxLaser(): Sound {
+    return getLaserSound();
+  }
+  static get fxHit(): Sound {
+    return getHitSound();
+  }
+  prevPosition: Position;
 
   constructor(
     public position: Position,
@@ -23,12 +34,15 @@ export class Laser implements LaserData {
     public distTraveled: number,
     public explodeTime: number,
     public hasExploded: boolean = false
-  ) {}
+  ) {
+    this.prevPosition = { x: position.x, y: position.y };
+  }
 
   move(): void {
     if (this.explodeTime > 0) {
       this.explodeTime--;
     } else {
+      this.prevPosition = { x: this.position.x, y: this.position.y };
       this.position = {
         x: this.position.x + this.velocity.x,
         y: this.position.y + this.velocity.y,
@@ -56,10 +70,10 @@ export class Laser implements LaserData {
   }
 
   playLaserSound(): void {
-    playSound(Laser.fxLaser);
+    playLaserSoundAt(this.position);
   }
 
   playHitSound(): void {
-    playWorldSound(Laser.fxHit, this.position);
+    playHitSoundAt(this.position);
   }
 }

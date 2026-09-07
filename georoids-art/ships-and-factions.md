@@ -1,0 +1,73 @@
+# GeoRoids — ships and factions (AD v2 bake)
+
+Art-box replica of AD v2 **topology**. John locked silhouette v2 on 2026-09-06
+via Game Director. `AD_V2_HULL_BAKE_LOCKED` is **true**. Bake against v2 only —
+no v1 silhouettes.
+
+Stroke `#5EEAD4` on `#000011`. Play-scale target ~32px. Matt-blush outline Asteroids.
+
+Canonical sheets (John lock): `ship-silhouettes-contact-v2.png` /
+`ship-silhouettes-play-scale-v2.png`. Runtime + SVG source:
+`src/entities/ship/hullOutlines.ts`. Pack copies:
+`georoids-art/ships-v2/{dart,hauler,warden,skirmisher,quake}.svg`.
+
+Sheet construction (play-scale must still read class at a glance):
+
+- Dart — 4-point needle; two downward tail fins; small inverted-V notch
+- Hauler — squat barge; flat keel; vertical sides; single bow apex
+- Warden — tall delta with a large aft triangular notch + detached shield arc
+- Skirmisher — vertical parallel prongs; inners meet; outers taper to a point
+- Quake — triangular peak on two 90° rectangular terraces; wide flat base
+
+## Kits (John lock — exactly five)
+
+There is **no Hook sixth ship class**. Harpoon is a **Hauler-only** ability.
+
+| Kit | Topology | Ability |
+| --- | --- | --- |
+| Dart | needle — tall thin isosceles; inverted-V notch at aft | Boost dash |
+| Hauler | barge hex — wide low polygon; flat keel; faceted bow | **Harpoon** (tether / latch) |
+| Warden | Δ + forward shield arc — detached arc above the apex | Shield |
+| Skirmisher | Y-fork — two forward prongs; pointed aft | Burst fire |
+| Quake | terraced mountain — stepped tiers; triangular peak | Shock pulse |
+
+Soft factions stay on the factions stream (#465). Names stay **ION** / **EMBER**.
+Art is tiny marks only via `FACTION_MARK_PAINTERS`:
+
+| Side | Mark | Stroke |
+| --- | --- | --- |
+| ION | chevron | `#A8A0C8` |
+| EMBER | diamond | `#D4B896` |
+
+Never paint full hulls with `#5EEAD4` or `#FB923C` — those are local/bot ownership
+only. Hull stroke stays local / remote / bot.
+
+## Harpoon (Hauler only)
+
+John lock via Game Director. This **is** the Hauler ability — latch, haul, and
+tether VFX. It is not a sixth class and not “VFX-only until Hook.”
+
+- Only the Hauler kit may activate or draw harpoon
+- Latch one nearby rock (forward hemisphere preferred, else nearest in range)
+- While latched, haul that rock toward the Hauler
+- Tether VFX is Hauler only — cream line `#E8D5A3` + amber tip `#FDE68A`
+- Never draw the cable on Dart / Warden / Skirmisher / Quake
+
+See `src/entities/ship/shipAbilities.ts` and `drawHaulerHarpoonVfx`.
+
+## Saucer NPC (separate language)
+
+Ambient NPC. Not player line-ship DNA. Not a faction mark.
+
+The current UFO-disc is **TEMPORARY only**. John locked an **EO satellite**
+redesign — **art-first**. No new saucer/satellite drawing until Game Director
+hands packs (`SAUCER_EO_SATELLITE_PACKS_HANDED`). Do not expand disc fidelity.
+Swap slot is `eo-sat` on `registerSaucerNpcPainter` when packs land.
+
+Temporary disc files (box paths, do not polish):
+
+| State | Path |
+| --- | --- |
+| Idle | `georoids-art/saucer-npc.svg` |
+| Firing | `georoids-art/saucer-npc-firing.svg` |
+| Preview | `georoids-art/saucer-silhouette-svgish.png` |
