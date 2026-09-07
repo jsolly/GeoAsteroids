@@ -1,14 +1,60 @@
-import type { AsteroidData } from '../../shared-types';
+import { areAllied } from '../../shared/factions';
+import { consumeTickAccumulator } from '../../shared/gameClock';
+import type { AsteroidData, LootData, Position, ShipKitId } from '../../shared-types';
+import {
+  replaceThrustSources,
+  resetThrustSources,
+  thrustSourcesFromPlayers,
+} from '../audio/gameSounds';
 import { bindGameAudio } from '../audio/spatialAudio';
+import { playSplitSound } from '../audio/splitSound';
+import { GAME } from '../constants';
 import { entityFactory } from '../entities/EntityFactory';
+import { LootField } from '../entities/loot/LootField';
+import type { Player } from '../entities/player/Player';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import { PlayerNetwork } from '../entities/player/playerNetwork';
-import { advanceRemotePlayerLasers } from '../entities/player/remoteLasers';
+import { advanceRemotePlayerShips } from '../entities/player/remoteLasers';
 import type { RoidBelt } from '../entities/roid/Roid';
+import { rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
+import {
+  bindHarpoonFieldSource,
+  collectPlayHarpoonField,
+  harpoonBodiesFromRocks,
+  harpoonBodyFromShip,
+  publishHarpoonField,
+} from '../entities/ship/harpoonField';
+import type { Ship } from '../entities/ship/Ship';
+import { diagnoseHarpoonLatch } from '../entities/ship/shipAbilities';
+import { shockwaveManager } from '../fx/ShockwaveManager';
+import { tickTouchControls } from '../input/touchControls';
 import { NetworkManager } from '../network/networkManager';
-import { CollisionManager } from '../physics/collision/CollisionManager';
+import {
+  applyAsteroidKinematics,
+  applyAsteroidRowToBelt,
+  bindAsteroidFieldApply,
+  unbindAsteroidFieldApply,
+} from '../network/services/asteroidFieldSync';
+import { asteroidTickScale } from '../physics/asteroidMotion';
+import { shouldReportLaserAsteroidHit } from '../physics/collision/asteroidHitFeel';
+import {
+  CollisionManager,
+  type LaserCollisionOptions,
+  type LaserTarget,
+} from '../physics/collision/CollisionManager';
+import { applyShockwaveToBody, type ShockwaveWaveSpec } from '../physics/shockwave';
+import { contourSegmentCount } from '../physics/terrain/contours';
+import { sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
+import {
+  getTerrainContours,
+  getTerrainField,
+  getTerrainSeed,
+} from '../physics/terrain/terrainSession';
 import { canvasManager } from '../rendering/canvas';
-import { toggleScreen } from '../ui/uiUtils';
+import { playfieldZoom } from '../rendering/playfieldCamera';
+import { getSelectedShipKitId } from '../ui/shipKitSelect';
+import { setPlayView } from '../ui/uiUtils';
+import { formatGameOverText, preferDeathCause } from '../utils/deathCause';
 import { logger } from '../utils/Logger';
 import { GameStateManager } from './services/GameStateManager';
 import { InputManager } from './services/InputManager';
@@ -23,6 +69,17 @@ export class GameController {
   private collisionManager: CollisionManager;
 
   private currRoidBelt: RoidBelt;
+  private recentShockwaveKeys = new Set<string>();
+  private readonly otherShips: { ship: Ship; id: string }[] = [];
+  private readonly laserTargets: LaserTarget[] = [];
+  private readonly incomingLocalTarget: LaserTarget[] = [];
+  private readonly localFirstPlayers: Player[] = [];
+  private readonly laserOwnerSeen = new Set<string>();
+  private readonly laserHitOptions: LaserCollisionOptions = { reportAsteroidHits: true };
+  private gameOverInProgress = false;
+  private gameOverTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly GAME_OVER_MENU_DELAY_MS = 3500;
+  private lifecycleAccumulatorMs = 0;
 
   private constructor() {
     this.gameStateManager = GameStateManager.getInstance();
@@ -42,14 +99,20 @@ export class GameController {
       },
     });
 
+    shockwaveManager.setWaveFireHandler((origin, wave) => {
+      this.applyLocalShockwaveKick(origin, wave);
+    });
+
     // Initialize with empty asteroid belt - will be populated by server
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    bindHarpoonFieldSource(() => this.snapshotHarpoonField());
 
     // Set up network disconnection handler
     this.setupNetworkDisconnectionHandler();
 
     // Set up game over handler
     this.setupGameOverHandler();
+    this.setupShipExplodedHandler();
 
     // Expose game controller globally for testing
     if (typeof window !== 'undefined') {
@@ -65,9 +128,10 @@ export class GameController {
   }
 
   // Game lifecycle methods
-  newGame(playerName?: string): void {
+  newGame(playerName?: string, kitId?: ShipKitId): void {
+    this.lifecycleAccumulatorMs = 0;
     // Create new player
-    this.playerManager.createLocalPlayer();
+    this.playerManager.createLocalPlayer(kitId ?? getSelectedShipKitId());
 
     // Set the player name if provided
     if (playerName) {
@@ -77,12 +141,12 @@ export class GameController {
     // Note: Asteroid belt creation is now handled in startGame() to support server-authoritative mode
   }
 
-  async startGame(playerName?: string): Promise<void> {
-    logger.debug('GAME_CONTROLLER', 'startGame called', { playerName });
-    this.newGame(playerName);
-    toggleScreen('start-screen', false);
-    toggleScreen('gameArea', true);
-    this.gameStateManager.toggleIsGameRunning();
+  async startGame(playerName?: string, kitId?: ShipKitId): Promise<void> {
+    logger.debug('GAME_CONTROLLER', 'startGame called', { playerName, kitId });
+    this.resetSessionForNewGame();
+    this.newGame(playerName, kitId ?? getSelectedShipKitId());
+    setPlayView(true);
+    this.gameStateManager.setIsGameRunning(true);
 
     // Reset button text to default state
     this.inputManager.resetButtonText();
@@ -106,10 +170,12 @@ export class GameController {
       this.showConnectionFailureMessage(errorType, 'Cannot connect');
       throw new Error(`Network connection failed: ${errorMessage}`);
     }
-    this.networkManager.initializeAsteroidSync();
-
-    // Create an empty asteroid belt - server will populate with authoritative asteroids
+    // Empty belt + listeners must be ready before join so the first
+    // asteroidCreateBatch / gameState cannot land on a static local set.
     this.currRoidBelt = entityFactory.createEmptyRoidBelt();
+    shockwaveManager.clear();
+    this.setupServerAsteroidListeners();
+    this.networkManager.initializeAsteroidSync();
 
     // Initialize listeners
     if (this.playerManager.getLocalPlayer()) {
@@ -119,9 +185,6 @@ export class GameController {
       logger.warn('GAME_CONTROLLER', 'No local player found, cannot initialize input listeners');
     }
 
-    // Set up server asteroid event listeners
-    this.setupServerAsteroidListeners();
-
     // Begin sending continuous local player updates to server
     PlayerNetwork.getInstance().startNetworkUpdates();
 
@@ -129,9 +192,7 @@ export class GameController {
   }
 
   // Event handler methods for server asteroid synchronization
-  private handleServerAsteroidCreated = (event: Event): void => {
-    const customEvent = event as CustomEvent<{ asteroid: AsteroidData }>;
-    const { asteroid } = customEvent.detail;
+  private applyServerAsteroidCreated = (asteroid: AsteroidData): void => {
     logger.debug('GAME', 'Adding server asteroid to local belt', { asteroidId: asteroid.id });
 
     // Clear local asteroids only once when receiving the first server asteroid (server-authoritative)
@@ -146,11 +207,13 @@ export class GameController {
       this.currRoidBelt.roids.length = 0;
     }
 
-    // Check if asteroid already exists to prevent duplicates
+    // Duplicate create (late join / rejoined snapshot) must still take the
+    // live pose — skipping here left a private static copy on prod.
     if (this.currRoidBelt) {
       const existingRoid = this.currRoidBelt.roids.find((r) => r.id === asteroid.id);
       if (existingRoid) {
-        return; // Skip duplicate
+        applyAsteroidKinematics(existingRoid, asteroid, { snapPosition: true });
+        return;
       }
     }
 
@@ -161,23 +224,26 @@ export class GameController {
       id: asteroid.id,
     });
 
-    // Override properties with server data
-    roid.velocity = asteroid.velocity;
-    roid.angle = asteroid.rotation;
-    roid.angularVelocity = asteroid.angularVelocity;
-    roid.health = asteroid.health;
-    roid.maxHealth = asteroid.maxHealth;
+    applyAsteroidKinematics(roid, asteroid, { snapPosition: true });
 
-    // Override shape properties to match server exactly
-    roid.jaggedness = asteroid.jaggedness;
-    roid.vertices = asteroid.vertices;
-    roid.offsets.length = 0; // Clear existing offsets
-    roid.offsets.push(...asteroid.offsets); // Copy server offsets
+    // Override shape properties to match server exactly. Keep the factory
+    // silhouette when the snapshot omits offsets / vertices — wiping those
+    // made the playfield skip every rock while the minimap still dotted.
+    if (asteroid.jaggedness !== undefined) {
+      roid.jaggedness = asteroid.jaggedness;
+    }
+    if (asteroid.vertices !== undefined) {
+      roid.vertices = asteroid.vertices;
+    }
+    if (asteroid.offsets && asteroid.offsets.length > 0) {
+      roid.offsets.length = 0;
+      roid.offsets.push(...asteroid.offsets);
+    }
 
     // Add to current asteroid belt if it exists
     if (this.currRoidBelt) {
       this.currRoidBelt.roids.push(roid);
-      logger.info(
+      logger.debug(
         'GAME',
         `Added asteroid ${asteroid.id} to belt. Total asteroids: ${this.currRoidBelt.roids.length}`
       );
@@ -186,48 +252,33 @@ export class GameController {
     }
   };
 
-  private handleServerAsteroidUpdated = (event: Event): void => {
-    const customEvent = event as CustomEvent<{
-      asteroidId: string;
-      updates: Partial<AsteroidData>;
-    }>;
-    const { asteroidId, updates } = customEvent.detail;
+  private applyServerAsteroidUpdated = (
+    asteroidId: string,
+    updates: Partial<AsteroidData>
+  ): void => {
     logger.debug('GAME', 'Updating server asteroid in local belt', { asteroidId });
 
-    // Find and update the asteroid in the local belt
-    if (this.currRoidBelt) {
-      const roid = this.currRoidBelt.roids.find((r) => r.id === asteroidId);
-      if (roid && updates) {
-        if (updates.position) {
-          roid.position = updates.position;
-        }
-        if (updates.velocity) {
-          roid.velocity = updates.velocity;
-        }
-        if (updates.size !== undefined) {
-          roid.r = updates.size;
-        }
-        // jaggedness is read-only in Roid class, skip updating it
-        if (updates.rotation !== undefined) {
-          roid.angle = updates.rotation;
-        }
-        if (updates.angularVelocity !== undefined) {
-          roid.angularVelocity = updates.angularVelocity;
-        }
-        if (updates.health !== undefined) {
-          roid.health = updates.health;
-        }
-        if (updates.maxHealth !== undefined) {
-          roid.maxHealth = updates.maxHealth;
-        }
-      }
+    if (!this.currRoidBelt || !updates) {
+      return;
     }
+    applyAsteroidRowToBelt(
+      (id) => this.currRoidBelt.roids.find((roid) => roid.id === id),
+      asteroidId,
+      updates,
+      this.applyServerAsteroidCreated
+    );
   };
 
-  private handleServerAsteroidDestroyed = (event: Event): void => {
-    const customEvent = event as CustomEvent<{ asteroidId: string }>;
-    const { asteroidId } = customEvent.detail;
-    logger.debug('GAME', 'Removing server asteroid from local belt', { asteroidId });
+  private applyServerAsteroidDestroyed = (event: {
+    asteroidId: string;
+    collabSplit?: boolean;
+    origin?: Position;
+  }): void => {
+    const { asteroidId, collabSplit, origin } = event;
+    logger.debug('GAME', 'Removing server asteroid from local belt', {
+      asteroidId,
+      collabSplit,
+    });
 
     // Remove the asteroid from the local belt
     if (this.currRoidBelt) {
@@ -235,47 +286,171 @@ export class GameController {
       if (index !== -1) {
         const roid = this.currRoidBelt.roids[index];
         if (roid !== undefined) {
+          if (collabSplit) {
+            this.spawnCollabShockwave(origin ?? roid.position, asteroidId);
+          }
           // Clear pending destruction flag before removing
           roid.pendingDestruction = false;
+          roid.pendingUntilMs = 0;
+          roid.taggedUntil = undefined;
           this.currRoidBelt.roids.splice(index, 1);
         }
       }
     }
   };
 
+  private handleServerShockwave = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ origin: Position; asteroidId?: string }>;
+    const { origin, asteroidId } = customEvent.detail;
+    if (!origin) {
+      return;
+    }
+    this.spawnCollabShockwave(origin, asteroidId);
+  };
+
+  private spawnCollabShockwave(origin: Position, asteroidId?: string): void {
+    const key = asteroidId ?? `${Math.round(origin.x)}:${Math.round(origin.y)}`;
+    if (this.recentShockwaveKeys.has(key)) {
+      return;
+    }
+    this.recentShockwaveKeys.add(key);
+    window.setTimeout(() => this.recentShockwaveKeys.delete(key), 1000);
+    playSplitSound(origin);
+    shockwaveManager.spawn(origin);
+  }
+
+  private applyLocalShockwaveKick(origin: Position, wave: ShockwaveWaveSpec): void {
+    const ship = this.playerManager.getLocalShip();
+    if (ship && !ship.exploding) {
+      const next = applyShockwaveToBody(
+        { position: ship.position, velocity: ship.velocity, size: ship.r },
+        origin,
+        wave
+      );
+      if (next) {
+        ship.velocity = next;
+      }
+    }
+
+    if (!this.currRoidBelt) {
+      return;
+    }
+    for (const roid of this.currRoidBelt.roids) {
+      const next = applyShockwaveToBody(
+        { position: roid.position, velocity: roid.velocity, size: roid.r },
+        origin,
+        wave
+      );
+      if (next) {
+        roid.velocity = next;
+      }
+    }
+  }
+
+  getActiveShockwaves(): ReturnType<typeof shockwaveManager.getActive> {
+    return shockwaveManager.getActive();
+  }
+
+  getShockwaveDebug(): ReturnType<typeof shockwaveManager.getDebugState> {
+    return shockwaveManager.getDebugState();
+  }
+
+  private applyServerAsteroidTagged = (event: { asteroidId: string; expiresAt: number }): void => {
+    const { asteroidId, expiresAt } = event;
+    const roid = this.currRoidBelt?.roids.find((r) => r.id === asteroidId);
+    if (!roid) {
+      return;
+    }
+    roid.taggedUntil = expiresAt;
+    logger.debug('GAME', 'Server tagged asteroid for collab window', { asteroidId, expiresAt });
+  };
+
   private setupServerAsteroidListeners(): void {
-    // Listen for server asteroid creation events
-    window.addEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
-
-    // Listen for server asteroid update events
-    window.addEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
-
-    // Listen for server asteroid destruction events
-    window.addEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
+    this.cleanupServerAsteroidListeners();
+    bindAsteroidFieldApply({
+      onCreated: this.applyServerAsteroidCreated,
+      onUpdated: this.applyServerAsteroidUpdated,
+      onDestroyed: this.applyServerAsteroidDestroyed,
+      onTagged: this.applyServerAsteroidTagged,
+    });
+    window.addEventListener('serverShockwave', this.handleServerShockwave);
   }
 
   private cleanupServerAsteroidListeners(): void {
-    // Remove all server asteroid event listeners
-    window.removeEventListener('serverAsteroidCreated', this.handleServerAsteroidCreated);
-    window.removeEventListener('serverAsteroidUpdated', this.handleServerAsteroidUpdated);
-    window.removeEventListener('serverAsteroidDestroyed', this.handleServerAsteroidDestroyed);
+    unbindAsteroidFieldApply();
+    window.removeEventListener('serverShockwave', this.handleServerShockwave);
+  }
+
+  /** Drop a pending return-to-menu so Start (or a test) can open a new session. */
+  cancelPendingGameOver(): void {
+    if (this.gameOverTimer !== null) {
+      clearTimeout(this.gameOverTimer);
+      this.gameOverTimer = null;
+    }
+    this.gameOverInProgress = false;
+  }
+
+  private resetSessionForNewGame(): void {
+    this.cancelPendingGameOver();
+    this.gameStateManager.clearOverlay();
+    canvasManager.clearPlayfield();
+    resetThrustSources();
+    PlayerNetwork.getInstance().stopNetworkUpdates();
+    this.networkManager.disconnect({ newSession: true });
   }
 
   gameOver(deathCause?: string): void {
-    const gameOverText = deathCause ? `Game Over: You were killed by ${deathCause}` : 'Game Over';
-    this.gameStateManager.updateTextProperties(gameOverText, 1.0);
+    if (this.gameOverInProgress) {
+      return;
+    }
+    this.gameOverInProgress = true;
 
-    // Clean up server asteroid listeners to prevent memory leaks
+    const localPlayer = this.playerManager.getLocalPlayer();
+    const raw = preferDeathCause(
+      deathCause,
+      localPlayer?.deathCause,
+      localPlayer?.ship.lastExplodeCause
+    );
+    const resolveName = (id: string): string | undefined => this.networkManager.getPlayer(id)?.name;
+    this.gameStateManager.updateTextProperties(formatGameOverText(raw, resolveName), 1.0);
+
     this.cleanupServerAsteroidListeners();
+    PlayerNetwork.getInstance().stopNetworkUpdates();
+    this.networkManager.disconnect({ newSession: true });
 
-    // Don't stop the game loop yet - let the text render for a few seconds
-    setTimeout(() => {
-      // Stop the game loop and return to main menu
+    this.gameOverTimer = setTimeout(() => {
+      this.gameOverTimer = null;
       this.gameStateManager.setIsGameRunning(false);
-      import('../ui/mainMenu').then(({ showGameOverMenu }) => {
-        showGameOverMenu();
-      });
-    }, 3500); // Increased time to read the death message
+      resetThrustSources();
+      setPlayView(false);
+    }, GameController.GAME_OVER_MENU_DELAY_MS);
+  }
+
+  private setupShipExplodedHandler(): void {
+    window.addEventListener('shipExploded', (event) => {
+      const customEvent = event as CustomEvent<{
+        shipId: string;
+        cause?: string;
+        killerName?: string;
+      }>;
+      const cause = customEvent.detail.cause;
+      if (!cause) {
+        return;
+      }
+
+      const localPlayer = this.playerManager.getLocalPlayer();
+      if (localPlayer?.ship.id === customEvent.detail.shipId) {
+        localPlayer.onShipExploded({ cause });
+        return;
+      }
+
+      for (const player of this.networkManager.getAllPlayers()) {
+        if (player.ship.id === customEvent.detail.shipId) {
+          player.onShipExploded({ cause });
+          return;
+        }
+      }
+    });
   }
 
   private setupGameOverHandler(): void {
@@ -380,6 +555,36 @@ export class GameController {
     return this.currRoidBelt.roids.length;
   }
 
+  /** QA probe: kit, field, nearest gap, latch, WS. Used by the headed smoke. */
+  diagnoseHarpoon():
+    | (ReturnType<typeof diagnoseHarpoonLatch> & {
+        connected: boolean;
+        harpoonTimer: number;
+        abilityActiveFrames: number;
+        latchPos?: { x: number; y: number };
+        liveTargetId?: string;
+      })
+    | null {
+    const local = this.playerManager.getLocalPlayer();
+    if (!local) {
+      return null;
+    }
+    this.publishLiveHarpoonField(local);
+    const probe = diagnoseHarpoonLatch(local.ship);
+    return {
+      ...probe,
+      connected: this.networkManager.isConnected,
+      harpoonTimer: local.ship.harpoonTimer,
+      abilityActiveFrames: local.ship.abilityActiveFrames,
+      latchPos: local.ship.harpoonLatchPos,
+      liveTargetId: local.ship.harpoonTargetId,
+    };
+  }
+
+  getLoot(): LootData[] {
+    return LootField.getInstance().getAll();
+  }
+
   // Score management — the server is authoritative; the local player's entity
   // score is synced from the server's gameState broadcast.
   getCurrScore(): number {
@@ -440,6 +645,23 @@ export class GameController {
 
   getPlayerManager(): PlayerManager {
     return this.playerManager;
+  }
+
+  /** Probe the shared heightfield — used by tests to read elevation / slope. */
+  getTerrainProbe(position?: { x: number; y: number }): {
+    seed: number;
+    height: number;
+    gradient: { x: number; y: number };
+    contourCount: number;
+  } {
+    const field = getTerrainField();
+    const at = position ?? this.playerManager.getLocalShip()?.position ?? { x: 0, y: 0 };
+    return {
+      seed: getTerrainSeed(),
+      height: sampleHeight(field, at.x, at.y),
+      gradient: sampleGradient(field, at.x, at.y),
+      contourCount: contourSegmentCount(getTerrainContours()),
+    };
   }
 
   // Connection error handling methods
@@ -530,8 +752,8 @@ export class GameController {
 
     // Listen for successful reconnection
     window.addEventListener('networkReconnected', () => {
-      logger.info('NETWORK', 'Successfully reconnected to server - game continues');
-      // Game continues running normally - no action needed
+      logger.info('NETWORK', 'Successfully reconnected to server - re-joining the live field');
+      this.networkManager.initializeAsteroidSync();
     });
 
     // Listen for permanent disconnection (after all reconnection attempts fail)
@@ -544,8 +766,8 @@ export class GameController {
 
       // Only stop the game when reconnection has permanently failed
       this.gameStateManager.toggleIsGameRunning();
-      toggleScreen('gameArea', false);
-      toggleScreen('start-screen', true);
+      resetThrustSources();
+      setPlayView(false);
 
       // Show permanent disconnection message
       this.showConnectionFailureMessage('network', 'Connection permanently lost');
@@ -553,49 +775,53 @@ export class GameController {
   }
 
   // Update game state (movement, physics, etc.)
-  updateGame(): void {
+  updateGame(dtMs: number = 1000 / GAME.FPS): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer) {
       return;
     }
 
-    // Update local player ship
-    logger.debug('GAME_LOOP', 'Updating ship', {
-      shipPosition: currPlayer.ship.position,
-      shipAngle: currPlayer.ship.angle,
-    });
-    currPlayer.ship.update();
+    const elapsed = Number.isFinite(dtMs) ? Math.max(0, dtMs) : 1000 / GAME.FPS;
+    this.lifecycleAccumulatorMs += elapsed;
+    const { frames: lifecycleFrames, remainingMs } = consumeTickAccumulator(
+      this.lifecycleAccumulatorMs
+    );
+    this.lifecycleAccumulatorMs = remainingMs;
 
-    // Update all bot ships
+    tickTouchControls(currPlayer);
+    this.publishLiveHarpoonField(currPlayer);
+    currPlayer.ship.update(lifecycleFrames);
+    shockwaveManager.update();
+
+    // Bots predict locally; remotes share the same 60 Hz explode/blink clock
+    // so a hitch does not freeze their corpse or latch blink forever.
     const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
-    for (const botPlayer of botPlayers) {
-      if (botPlayer.ship) {
-        botPlayer.ship.update();
+    for (const player of allPlayers) {
+      if (player.type === 'bot' && player.ship) {
+        player.ship.update(lifecycleFrames);
       }
     }
+    advanceRemotePlayerShips(allPlayers, lifecycleFrames);
 
-    // Remote human ships are server-driven and never run Ship.update(); advance
-    // their lasers so other players' shots visibly travel and expire instead of
-    // freezing at the muzzle.
-    advanceRemotePlayerLasers(allPlayers);
+    // One thrust loop for local + bot + remote ships; volume is the loudest in-range source.
+    replaceThrustSources(
+      thrustSourcesFromPlayers(
+        allPlayers.includes(currPlayer) ? allPlayers : this.playersWithLocal(currPlayer, allPlayers)
+      )
+    );
 
     // Update asteroids
     if (this.currRoidBelt) {
-      this.currRoidBelt.moveRoids();
+      this.currRoidBelt.moveRoids(asteroidTickScale(dtMs));
+      this.publishLiveHarpoonField(currPlayer);
     }
 
     // Check laser collisions with asteroids and bots
-    this.checkLaserCollisions();
+    this.checkLaserCollisions(allPlayers);
 
-    // Check ship collisions with asteroids
-    this.checkShipAsteroidCollisions();
-
-    // Check ship collisions with other ships
-    this.checkShipShipCollisions();
-
-    // Check bot collisions with asteroids
-    this.checkBotAsteroidCollisions();
+    // Ship↔asteroid damage is server-owned. Keep local ship-ship overlap
+    // for offline DOT / visual contact only. Factions still skip allies.
+    this.checkShipShipCollisions(allPlayers);
 
     // Check boundary collisions for ships
     this.checkBoundaryCollisions();
@@ -604,34 +830,136 @@ export class GameController {
     this.gameStateManager.updateKillMessageTimer();
   }
 
+  private snapshotHarpoonField(localPlayer?: Player | null) {
+    const local = localPlayer ?? this.playerManager.getLocalPlayer();
+    const allPlayers = this.networkManager.getAllPlayers();
+    const ships = allPlayers
+      .filter((player) => player.id && player.id !== local?.id && player.ship)
+      .map((player) =>
+        harpoonBodyFromShip(player.id, player.ship, player.factionId ?? player.ship.factionId)
+      );
+    const rocks = harpoonBodiesFromRocks(this.currRoidBelt?.roids ?? []);
+    const canvas = canvasManager.getCanvas();
+    const shipPos = local?.ship.position ?? { x: 0, y: 0 };
+    // KeyE runs outside the render loop. Recompute zoom here so latch range
+    // matches the playfield the pilot sees, not last frame's stored scale=1.
+    const playfieldScale = canvas
+      ? playfieldZoom(rocksForPlayfieldZoom(this.currRoidBelt?.roids ?? []), shipPos, canvas)
+      : canvasManager.getPlayfieldScale();
+    return {
+      bodies: collectPlayHarpoonField(rocks, ships),
+      playfieldScale,
+      canvas: canvas ? { width: canvas.width, height: canvas.height } : undefined,
+    };
+  }
+
+  private publishLiveHarpoonField(localPlayer?: Player | null): void {
+    const snapshot = this.snapshotHarpoonField(localPlayer);
+    publishHarpoonField(snapshot.bodies, snapshot.playfieldScale, snapshot.canvas);
+  }
+
+  private playersWithLocal(local: Player, allPlayers: Player[]): Player[] {
+    this.localFirstPlayers.length = 0;
+    this.localFirstPlayers.push(local);
+    for (const player of allPlayers) {
+      this.localFirstPlayers.push(player);
+    }
+    return this.localFirstPlayers;
+  }
+
+  private fillLaserTargets(allPlayers: Player[]): void {
+    let count = 0;
+    for (const player of allPlayers) {
+      if (player.type !== 'bot' && player.type !== 'remote') {
+        continue;
+      }
+      const existing = this.laserTargets[count];
+      if (existing) {
+        existing.ship = player.ship;
+        existing.id = player.id;
+        existing.type = player.type;
+        existing.faction = player.factionId;
+      } else {
+        this.laserTargets[count] = {
+          ship: player.ship,
+          id: player.id,
+          type: player.type,
+          faction: player.factionId,
+        };
+      }
+      count += 1;
+    }
+    this.laserTargets.length = count;
+  }
+
   // Check laser collisions with asteroids and bots
-  private checkLaserCollisions(): void {
+  private checkLaserCollisions(allPlayers: Player[]): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer || !this.currRoidBelt) {
       return;
     }
 
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const laserTargets = allPlayers
-      .filter((player) => player.type === 'bot' || player.type === 'remote')
-      .map((player) => ({
-        ship: player.ship,
-        id: player.id,
-        type: player.type as 'bot' | 'remote',
-      }));
+    this.fillLaserTargets(allPlayers);
 
     // Attribute kills to the server-assigned player id (set at join time), not
     // currPlayer.id which only becomes the server id once the first gameState
     // reconciles the local player — asteroids can arrive before that.
     const attackerId = this.networkManager.getLocalPlayerId() || currPlayer.id;
 
-    this.collisionManager.checkLaserCollisions(
-      currPlayer.ship.lasers,
-      this.currRoidBelt.roids,
-      laserTargets,
-      attackerId
-    );
+    const incoming = this.incomingLocalTarget[0];
+    if (incoming) {
+      incoming.ship = currPlayer.ship;
+      incoming.id = attackerId;
+      incoming.type = 'local';
+      incoming.faction = currPlayer.factionId;
+    } else {
+      this.incomingLocalTarget[0] = {
+        ship: currPlayer.ship,
+        id: attackerId,
+        type: 'local',
+        faction: currPlayer.factionId,
+      };
+    }
+
+    this.laserOwnerSeen.clear();
+    const ships = allPlayers.includes(currPlayer)
+      ? allPlayers
+      : this.playersWithLocal(currPlayer, allPlayers);
+    for (const player of ships) {
+      if (this.laserOwnerSeen.has(player.id)) {
+        continue;
+      }
+      this.laserOwnerSeen.add(player.id);
+      if (!player.ship?.lasers.length) {
+        continue;
+      }
+      const ownerType = player.type;
+      this.laserHitOptions.reportAsteroidHits = shouldReportLaserAsteroidHit(ownerType);
+      this.laserHitOptions.attackerFaction = player.factionId;
+      const ownerAttackerId = ownerType === 'local' ? attackerId : player.id;
+      // Human shooters report their own hits. Bots have no shooter client, so
+      // incoming bot lasers use the same hull check against the local ship.
+      const targets =
+        ownerType === 'local'
+          ? this.laserTargets
+          : ownerType === 'bot'
+            ? this.incomingLocalTarget
+            : [];
+      this.collisionManager.checkLaserCollisions(
+        player.ship.lasers,
+        this.currRoidBelt.roids,
+        targets,
+        ownerAttackerId,
+        this.laserHitOptions
+      );
+    }
+
+    for (const other of allPlayers) {
+      if (other.type === 'local') {
+        continue;
+      }
+      this.collisionManager.explodeIncomingLasersOnShieldedShip(other.ship.lasers, currPlayer.ship);
+    }
   }
 
   // Check boundary collisions for ships
@@ -648,62 +976,30 @@ export class GameController {
     this.collisionManager.checkBoundaryCollisions([currPlayer.ship], currPlayer.id);
   }
 
-  // Check ship collisions with asteroids
-  private checkShipAsteroidCollisions(): void {
-    const currPlayer = this.playerManager.getLocalPlayer();
-    if (!currPlayer || !this.currRoidBelt) {
-      return;
-    }
-
-    // Check asteroid collisions for local player
-    logger.debug('COLLISION', 'Checking ship-asteroid collisions', {
-      shipPos: currPlayer.ship.position,
-      shipRadius: currPlayer.ship.r,
-      asteroidCount: this.currRoidBelt.roids.length,
-      localPlayerId: currPlayer.id,
-    });
-    this.collisionManager.checkPlayerAsteroidCollisions(currPlayer, this.currRoidBelt.roids);
-  }
-
   // Check ship collisions with other ships
-  private checkShipShipCollisions(): void {
+  private checkShipShipCollisions(allPlayers: Player[]): void {
     const currPlayer = this.playerManager.getLocalPlayer();
     if (!currPlayer) {
       return;
     }
 
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const otherShips = allPlayers
-      .filter((player) => player.id !== currPlayer.id)
-      .map((player) => player.ship);
-
-    // Check ship-to-ship collisions
-    this.collisionManager.checkShipShipCollisions(currPlayer.ship, otherShips, currPlayer.id);
-  }
-
-  // Check bot collisions with asteroids
-  private checkBotAsteroidCollisions(): void {
-    if (!this.currRoidBelt) {
-      return;
-    }
-
-    // Get all players (including bots) from network manager
-    const allPlayers = this.networkManager.getAllPlayers();
-    const botPlayers = allPlayers.filter((player) => player.type === 'bot');
-
-    // Check asteroid collisions for each bot
-    for (const botPlayer of botPlayers) {
-      if (botPlayer.ship && !botPlayer.ship.exploding) {
-        logger.debug('COLLISION', 'Checking bot-asteroid collisions', {
-          botId: botPlayer.id,
-          botPos: botPlayer.ship.position,
-          botRadius: botPlayer.ship.r,
-          asteroidCount: this.currRoidBelt.roids.length,
-        });
-        this.collisionManager.checkPlayerAsteroidCollisions(botPlayer, this.currRoidBelt.roids);
+    let count = 0;
+    for (const player of allPlayers) {
+      if (player.id === currPlayer.id || areAllied(currPlayer.factionId, player.factionId)) {
+        continue;
       }
+      const existing = this.otherShips[count];
+      if (existing) {
+        existing.ship = player.ship;
+        existing.id = player.id;
+      } else {
+        this.otherShips[count] = { ship: player.ship, id: player.id };
+      }
+      count += 1;
     }
+    this.otherShips.length = count;
+
+    this.collisionManager.checkShipShipCollisions(currPlayer.ship, this.otherShips, currPlayer.id);
   }
 
   // Simple render method - no game logic, just rendering
@@ -715,10 +1011,9 @@ export class GameController {
 
     // Use NetworkManager's player list which has the correct names from server
     const allPlayers = this.networkManager.getAllPlayers();
-    const playersToRender = [...allPlayers];
-    if (!playersToRender.includes(currPlayer)) {
-      playersToRender.unshift(currPlayer);
-    }
+    const playersToRender = allPlayers.includes(currPlayer)
+      ? allPlayers
+      : this.playersWithLocal(currPlayer, allPlayers);
     const currScore = currPlayer.score;
     const textAlpha = this.gameStateManager.getTextAlpha();
     const text = this.gameStateManager.getText();

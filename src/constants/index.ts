@@ -49,9 +49,24 @@ export const CANVAS = {
 } as const;
 
 // ============================================================================
+// TOUCH CONTROLS
+// ============================================================================
+export const TOUCH = {
+  STICK_RADIUS: 56,
+  STICK_DEADZONE: 0.18,
+  STICK_THRUST: 0.38,
+  FIRE_SIZE: 72,
+  // Canvas space reserved above the fire button so the radar stays readable.
+  FIRE_RESERVE: 112,
+  PHONE_MAX_WIDTH: 500,
+  PHONE_LANDSCAPE_MAX_HEIGHT: 430,
+  PHONE_LANDSCAPE_MAX_WIDTH: 1000,
+  TABLET_MIN_SIDE: 820,
+} as const;
+
+// ============================================================================
 // LOCKED PLAYFIELD PALETTE
 // ============================================================================
-// Exact hexes for the visual pass. accent_ui is title/menu only — never the playfield.
 export const PALETTE = {
   BG: '#000011',
   STARS: '#8BA3C7',
@@ -59,55 +74,98 @@ export const PALETTE = {
   REMOTE: '#7DD3FC',
   BOT: '#FB923C',
   ROID: '#94A3B8',
+  /** Darker than HUD_MUTED so topo lines stay behind ships/lasers/roids. */
+  CONTOUR: '#334155',
   LASER_LOCAL: '#FDE68A',
   LASER_ENEMY: '#FCA5A5',
   HUD: '#E2E8F0',
   HUD_MUTED: '#64748B',
   DANGER: '#F43F5E',
   HEALTH: '#4ADE80',
-  ACCENT_UI: '#A78BFA',
+  LOOT: '#FBBF24',
+  SHIELD: '#67E8F9',
 } as const;
 
-// Retro vector pass: hairline polylines, no entity fills, phosphor glow hard-capped ≤ stroke
-// so nothing blooms or washes the void.
+export const TITLE = {
+  ACCENT: '#A78BFA',
+} as const;
+
+// Wave 2 feel: classic Asteroids silhouettes + Geometry Wars juice, still matt-blush.
+// Ships stay hairline. Lasers / thrust / hits may bloom a little past stroke.
 export const VISUAL = {
   SHIP_STROKE_WIDTH: 1.25,
   SHIP_GLOW: 1.25,
-  // Classic Atari shot: a short hard-edged segment along the heading, not a beam or disc.
+  // Short cream dash plus a faint heading ghost — still a shot, never a beam.
   LASER_STROKE_WIDTH: 2,
-  LASER_LENGTH: 4,
-  LASER_EXPLODE_RADIUS: 4,
-  LASER_GLOW: 2,
+  LASER_LENGTH: 15,
+  LASER_TRAIL_LENGTH: 8,
+  LASER_EXPLODE_RADIUS: 10,
+  LASER_GLOW: 3.5,
+  LASER_HIT_TICKS: 4,
   HEALTH_CAPSULE_HEIGHT: 1.5,
   BOUNDARY_STROKE_WIDTH: 1.25,
   BOUNDARY_GLOW: 1.25,
-  ROID_STROKE_LARGE: 1.5,
-  ROID_STROKE_MEDIUM: 1.25,
-  ROID_STROKE_SMALL: 1,
-  ROID_GLOW: 1,
-  // Tiny open-V thruster trail in faction colour; flickers between two lengths like a vector flame.
-  THRUSTER_STROKE_WIDTH: 1,
-  THRUSTER_GLOW: 1,
-  THRUSTER_LENGTH_RATIO: 0.5,
-  THRUSTER_FLICKER_RATIO: 0.3,
-  THRUSTER_FLICKER_MS: 60,
-  // Ship break-up: hull edges drift apart as hairline fragments, no filled fireball.
-  EXPLOSION_STROKE_WIDTH: 1,
-  EXPLOSION_SPREAD_RATIO: 1.6,
+  ROID_STROKE_LARGE: 2,
+  ROID_STROKE_MEDIUM: 1.5,
+  ROID_STROKE_SMALL: 1.25,
+  ROID_GLOW: 2.25,
+  ROID_INNER_SCALE: 0.46,
+  ROID_SHATTER_MS: 280,
+  ROID_SHATTER_SPREAD: 1.8,
+  // Open-V thruster with a shorter inner core; flickers between two lengths.
+  THRUSTER_STROKE_WIDTH: 1.25,
+  THRUSTER_GLOW: 2.25,
+  THRUSTER_LENGTH_RATIO: 0.68,
+  THRUSTER_FLICKER_RATIO: 0.4,
+  THRUSTER_CORE_RATIO: 0.42,
+  THRUSTER_FLICKER_MS: 50,
+  // Hull edges pop, then drift; ring + ticks, no filled fireball.
+  EXPLOSION_STROKE_WIDTH: 1.25,
+  EXPLOSION_SPREAD_RATIO: 2.05,
+  EXPLOSION_SPARKS: 8,
+  EXPLOSION_RING_RATIO: 2.35,
+  EXPLOSION_HIT_TICKS: 4,
   // Sparse world-anchored star points seeded deterministically so they never twinkle or shift.
   STAR_COUNT: 900,
   STAR_SIZE: 1,
   STAR_SEED: 0x9e3779b9,
   STAR_ALPHA_MIN: 0.3,
   STAR_ALPHA_MAX: 0.8,
+  LOOT_STROKE_WIDTH: 1.25,
+  LOOT_GLOW: 1.25,
+  FUEL_BAR_WIDTH: 72,
+  FUEL_BAR_HEIGHT: 2,
+  // Title void uses the same 1px #8BA3C7 points; density matches play (~48 / 1080p).
+  TITLE_STARS_PER_1080P: 48,
   MINIMAP_SIZE: 96,
-  MINIMAP_DOT: 3,
-  SCORE_FONT: '12px Arial',
+  MINIMAP_DOT: 5,
+  MINIMAP_LOCAL_SIZE: 6,
+  MINIMAP_ROID: 1.5,
+  MINIMAP_VOID_ALPHA: 0.5,
+  MINIMAP_RING_ALPHA: 0.85,
+  HUD_INSET: 16,
+  HUD_LIFE_SIZE: 14,
+  HUD_LIFE_HEADING: Math.PI / 2,
+  HUD_LIFE_GAP: 6,
+  HUD_SCORE_GAP: 10,
+  SCORE_FONT: '14px Arial',
+  NAME_LABEL_FONT: '11px Arial',
+  NAME_LABEL_ALPHA: 0.4,
+  // Iso-contours: hairline slate, no glow. Index lines are only slightly stronger.
+  CONTOUR_STROKE_WIDTH: 1,
+  CONTOUR_ALPHA: 0.16,
+  CONTOUR_INDEX_ALPHA: 0.24,
+  CONTOUR_INDEX_EVERY: 3,
+  // Hairline shield ring; glow capped to stroke so it stays a vector outline.
+  SHIELD_STROKE_WIDTH: 1.25,
+  SHIELD_GLOW: 1.25,
 } as const;
 
 // ============================================================================
 // SHIP CONFIGURATION
 // ============================================================================
+const EXPLODE_DURATION_FRAMES = 18;
+
 export const SHIP = {
   // Movement
   TURN_SPEED: 450, // degrees per second
@@ -125,10 +183,12 @@ export const SHIP = {
   HEALTH_REGEN_DELAY: 5, // seconds
 
   // Timing (in frames at 60 FPS)
-  EXPLODE_DURATION_FRAMES: 18, // 0.3 seconds
-  INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds
+  EXPLODE_DURATION_FRAMES: EXPLODE_DURATION_FRAMES, // 0.3 seconds of flash/explode
+  INVINCIBILITY_DURATION_FRAMES: 180, // 3 seconds of blink after respawn
   INVINCIBILITY_BLINK_DURATION_FRAMES: 6, // 0.1 seconds
-  RESPAWN_DELAY_FRAMES: 180, // 3 seconds — shared by player and bot ships
+  // Parallel with explode so wall/roid death is flash → respawn+invuln, not a 3s corpse freeze.
+  RESPAWN_DELAY_FRAMES: EXPLODE_DURATION_FRAMES,
+  IMPACT_FLASH_FRAMES: 10, // hairline ring on a lethal wall/roid hit
 } as const;
 
 // ============================================================================
@@ -138,6 +198,7 @@ export const DAMAGE = {
   // Instant damage (applied immediately)
   LASER_HIT: 25, // Damage dealt by a single laser hit
   BOUNDARY_COLLISION: 100, // Instant kill when hitting game boundary
+  ASTEROID_COLLISION: 100, // Instant kill — same flash/explode path as the wall
 
   // Damage over time (applied per second while colliding)
   PLAYER_COLLISION_PER_SECOND: 20, // Damage per second when colliding with another player
@@ -171,11 +232,26 @@ export const ROID = {
   POINTS_MEDIUM: 50,
   POINTS_SMALL: 100,
 
+  // Collaborative split: only the biggest asteroids, and only when two
+  // distinct ships (player or bot) land laser hits within this window.
+  // The server owns the clock, shooter identity, and resolve/expire.
+  COLLAB_SPLIT_WINDOW_MS: 1000,
+  COLLAB_SPLIT_MIN_SIZE: 40,
+  // Same-shooter reports inside this gap are one shot (multi-client echo).
+  COLLAB_HIT_DEDUPE_MS: 100,
+
   // Spawning (can be overridden by DEBUG.ROIDS.INITIAL_COUNT when in debug mode)
   INITIAL_ROID_COUNT: 10,
   MIN_COUNT: 5,
   MAX_COUNT: 20,
   SPAWN_TIME_FRAMES: 180, // 3 seconds at 60 FPS
+
+  // Shared moving belt. The ship-kill wall is ~3100px; a 1080p camera around a
+  // center-spawned ship only sees ~960×540. Opposite-side wrap at the wall
+  // parked every roid at ~3000px (minimap dots, empty canvas). Keep the belt
+  // inside the same "nearby" radius the audio/network layer already uses.
+  FIELD_RADIUS: 1200,
+  FIELD_INNER_SCALE: 0.96,
 } as const;
 
 // ============================================================================
@@ -187,14 +263,81 @@ export const EMP = {
 } as const;
 
 // ============================================================================
+// COLLAB SPLIT SHOCKWAVE
+// ============================================================================
+// Double phosphor ring + radial impulse when a biggest asteroid splits.
+// First wave is small/fast; second is large/impactful. Size scale is inverse
+// so crumbs and ships get shoved harder than remaining big rocks.
+export const SHOCKWAVE = {
+  REFERENCE_SIZE: 25,
+  MIN_SIZE: 8,
+  MIN_SIZE_SCALE: 0.28,
+  MAX_SIZE_SCALE: 2.6,
+  SIZE_EXPONENT: 1.2,
+  FAST: {
+    delayFrames: 0,
+    durationFrames: 8,
+    radius: 150,
+    impulse: 3.2,
+    strokeWidth: 1.25,
+  },
+  HEAVY: {
+    delayFrames: 7,
+    durationFrames: 36,
+    radius: 400,
+    impulse: 7.0,
+    strokeWidth: 2.25,
+  },
+} as const;
+
+// ============================================================================
+// FUEL CONFIGURATION
+// ============================================================================
+// Shared tank on every kit. Biggest rocks drop fuel; Quake shock / leftover
+// EMP spends it. Reuses PALETTE.LOOT (matt amber) — do not add a sixth kit.
+export const FUEL = {
+  MAX: 100,
+  START: 50,
+  EMP_COST: 25,
+  DROP_AMOUNT: 25,
+  DROP_RADIUS: 8,
+  MIN_ROID_SIZE_TO_DROP: ROID.COLLAB_SPLIT_MIN_SIZE,
+} as const;
+
+// ============================================================================
+// SHIELD CONFIGURATION
+// ============================================================================
+// Timed bubble that blocks enemy lasers only. Duration is short and cooldown
+// is longer so camping the shield is never free. Shared by players and bots.
+export const SHIELD = {
+  DURATION_SECONDS: 2,
+  COOLDOWN_SECONDS: 6,
+  RADIUS_RATIO: 1.55,
+  FLASH_SECONDS: 0.12,
+  BOT_HEALTH_THRESHOLD: 0.7,
+  BOT_ACTIVATE_CHANCE: 0.02,
+} as const;
+
+// ============================================================================
 // AUDIO CONFIGURATION
 // ============================================================================
 export const AUDIO = {
   EXPLOSION_PATH: 'sounds/explode.m4a',
+  LASER_PATH: 'sounds/laser.m4a',
+  HIT_PATH: 'sounds/hit.m4a',
+  THRUST_PATH: 'sounds/thrust.m4a',
   EXPLOSION_MAX_STREAMS: 5,
+  LASER_MAX_STREAMS: 5,
+  HIT_MAX_STREAMS: 5,
+  THRUST_MAX_STREAMS: 2,
+  // Soft matt-blush levels — quieter than arcade default, loops stay under one-shots.
+  EXPLOSION_VOLUME: 0.055,
+  LASER_VOLUME: 0.04,
+  HIT_VOLUME: 0.035,
+  THRUST_VOLUME: 0.03,
   // Used when the canvas size is unknown (matches PlayerNetwork nearby radius).
   FALLBACK_MAX_DISTANCE: 1200,
-  // Floor so an on-screen explosion at the viewport edge stays audible.
+  // Floor so an on-screen source at the viewport edge stays a soft blush, not silent.
   MIN_IN_VIEWPORT_VOLUME: 0.2,
 } as const;
 
@@ -252,11 +395,12 @@ export const PREFERENCES = {
 // LOGGING CONFIGURATION
 // ============================================================================
 export const LOGGING = {
-  // Global log level that affects both client and server logging
-  // This controls what gets written to both server.log and client.log
-  GLOBAL_LOG_LEVEL: 'debug' as 'error' | 'warn' | 'info' | 'debug',
+  // Opt in to `debug` locally when chasing a bug. Production must stay
+  // `info` or quieter — per-frame `logger.debug` at 60 FPS stalls the
+  // main thread, misses heartbeats, and disconnects both tabs.
+  GLOBAL_LOG_LEVEL: 'info' as 'error' | 'warn' | 'info' | 'debug',
 
-  // Whether to forward client logs to the server
+  // Whether to forward client logs to the server (warn+ only; see Logger)
   FORWARD_TO_SERVER: true,
 
   // Whether to write logs to browser console

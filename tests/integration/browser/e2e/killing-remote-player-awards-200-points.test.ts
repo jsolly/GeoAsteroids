@@ -16,8 +16,8 @@ test('killing remote player awards 200 points', async () => {
   const game1 = new GameInteractions(page1);
   const game2 = new GameInteractions(page2);
 
-  await game1.bootSinglePlayerGame();
-  await game2.bootSinglePlayerGame();
+  await game1.bootGame();
+  await game2.bootGame();
   await game1.waitForCombatReady();
   await game2.waitForCombatReady();
 

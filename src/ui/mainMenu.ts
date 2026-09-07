@@ -3,12 +3,13 @@
 import { setSound } from '../audio/Sound';
 // Simple logging - removed complex logger dependency
 import { GameController } from '../core/gameController';
+import { initTitleStarfield } from '../rendering/starfield';
 import { getBuildInfoString } from '../utils/buildInfo';
+import { applyLockedPaletteCss } from '../utils/colorUtils';
 import { attachEventListener, getElementById } from '../utils/dom';
 import { logger } from '../utils/Logger';
-import { toggleScreen } from './uiUtils';
-
-// toggleScreen lives in uiUtils
+import { getSelectedShipKitId, mountShipKitSelect } from './shipKitSelect';
+import { controlsHintFor } from './viewportChrome';
 
 // UI element references
 const soundCheckBox = getElementById<HTMLInputElement>('soundPref');
@@ -163,7 +164,7 @@ function startGameWithName(): void {
   startGameBtn?.classList.add('active-mode');
 
   // Start the game (this will set the player name)
-  getGameController().startGame(playerName);
+  getGameController().startGame(playerName, getSelectedShipKitId());
 }
 
 // Set up player name input to allow Enter key to start game
@@ -185,19 +186,6 @@ attachEventListener(soundCheckBox, 'change', (ev) => {
   setSound(target.checked);
 });
 
-export function showGameOverMenu(): void {
-  // Return to main menu
-  toggleScreen('start-screen', true);
-  toggleScreen('gameArea', false);
-
-  // Do not reset game state here; let the next start initialize cleanly
-}
-
-// Export function to set up periodic updates
-export function setupMainMenuUpdates(): void {
-  // Player count updates removed - no longer needed
-}
-
 // Display build info
 function displayBuildInfo(): void {
   const buildInfoElement = getElementById<HTMLElement>('buildInfo');
@@ -208,6 +196,20 @@ function displayBuildInfo(): void {
 
 // Initialize build info display
 displayBuildInfo();
+applyLockedPaletteCss();
+initTitleStarfield();
+mountShipKitSelect();
+
+function syncControlsHint(): void {
+  const hint = getElementById<HTMLElement>('controls-hint');
+  if (hint) {
+    hint.textContent = controlsHintFor();
+  }
+}
+
+syncControlsHint();
+window.addEventListener('resize', syncControlsHint);
+window.visualViewport?.addEventListener('resize', syncControlsHint);
 
 // Generate a nickname once and use it consistently
 const generatedNickname = generateFunNickname();

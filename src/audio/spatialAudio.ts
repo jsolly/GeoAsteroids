@@ -1,5 +1,6 @@
 import type { Position } from '../../shared-types';
 import { AUDIO } from '../constants';
+import { soundIsOn } from '../constants/user-preferences';
 import { getDistance } from '../utils/mathUtils';
 import { playSound, type Sound } from './Sound';
 
@@ -15,6 +16,11 @@ type ViewportProvider = () => ViewportSize | undefined;
 
 let getListenerPosition: ListenerProvider = () => undefined;
 let getViewportSize: ViewportProvider = () => undefined;
+const resetHooks: Array<() => void> = [];
+
+export function registerAudioResetHook(hook: () => void): void {
+  resetHooks.push(hook);
+}
 
 export function bindGameAudio(options: {
   getListenerPosition: ListenerProvider;
@@ -27,6 +33,9 @@ export function bindGameAudio(options: {
 export function resetGameAudio(): void {
   getListenerPosition = () => undefined;
   getViewportSize = () => undefined;
+  for (const hook of resetHooks) {
+    hook();
+  }
 }
 
 /**
@@ -49,7 +58,9 @@ export function volumeScaleForDistance(distance: number, maxDistance: number): n
   if (distance >= maxDistance) {
     return 0;
   }
-  return 1 - distance / maxDistance;
+  // Smoothstep: stay warmer nearby, blush away toward the edge (not a hard linear drop).
+  const t = 1 - distance / maxDistance;
+  return t * t * (3 - 2 * t);
 }
 
 export function maxAudibleDistance(viewport?: ViewportSize): number {
@@ -96,12 +107,22 @@ export function planPositionalPlayback(
   };
 }
 
+export function planBoundPlayback(
+  sourcePosition: Position | undefined,
+  options?: { requireViewport?: boolean }
+): PlaybackPlan {
+  return planPositionalPlayback(sourcePosition, getListenerPosition(), getViewportSize(), options);
+}
+
 export function playWorldSound(
   sound: Sound,
   position?: Position,
   options?: { requireViewport?: boolean }
 ): void {
-  const plan = planPositionalPlayback(position, getListenerPosition(), getViewportSize(), options);
+  if (!soundIsOn()) {
+    return;
+  }
+  const plan = planBoundPlayback(position, options);
   if (!plan.shouldPlay) {
     return;
   }

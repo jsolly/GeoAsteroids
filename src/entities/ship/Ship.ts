@@ -1,16 +1,45 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Position, Velocity } from '../../../shared-types';
+import { applyFuelSnapshot, createFuelTank, trySpendEmpFuel } from '../../../shared/fuel';
+import {
+  GROWTH,
+  maxVelocityFromMass,
+  radiusFromMass,
+  thrustScaleFromMass,
+} from '../../../shared/shipGrowth';
+import type { Position, ShipKitId, SoftFactionId, Velocity } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
-import { Sound } from '../../audio/Sound';
-import { DAMAGE, EMP, GAME, PALETTE, SHIP } from '../../constants';
+import { getThrustSound } from '../../audio/gameSounds';
+import type { Sound } from '../../audio/Sound';
+import { DAMAGE, EMP, FUEL, GAME, PALETTE, SHIP } from '../../constants';
 import { NetworkManager } from '../../network/networkManager';
+import { applySharedShipSlope } from '../../physics/terrain/applyShipSlope';
+import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity, addVectors, multiplyVelocity } from '../../utils/mathUtils';
 import type { Laser } from '../laser/Laser';
-import { createLaser } from '../laser/laserUtils';
+import { createLaser, createLaserAtAngle } from '../laser/laserUtils';
+import { getHarpoonFieldCanvas, getHarpoonFieldScale } from './harpoonField';
+import {
+  type AbilityWorld,
+  activateAbilityOnHost,
+  canActivateAbility,
+  tickAbilityHost,
+} from './shipAbilities';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from './shipKits';
 import { drawThruster } from './shipRenderer';
 
 import {
+  activateShield,
+  applyShieldSnapshot,
+  clearShield,
+  deactivateShield,
+  isShieldBlockingLasers,
+  noteShieldLaserHit,
+  updateShield,
+} from './shipShield';
+import {
+  applySharedShipExplodingFlag,
+  applySharedShipRespawnCue,
   applyShipSpawnProtection,
   calculateHealthAfterDamage,
   calculateHealthAfterHeal,
@@ -18,13 +47,15 @@ import {
   calculateHealthRegenPerFrame,
   canTakeCollisionDamage,
   shouldStartHealthRegeneration,
+  tickShipImpactFlash,
 } from './shipUtils';
 
 class Ship {
   id: string = uuidv4(); // Unique identifier for event handling
   position: Position = { x: 0, y: 0 };
   velocity: Velocity = { x: 0, y: 0 };
-  r: number = SHIP.SIZE / 2;
+  r: number = radiusFromMass(GROWTH.BASE_MASS);
+  mass: number = GROWTH.BASE_MASS;
   angle: number = (90 / 180) * Math.PI;
   blinkCount: number = 0;
   spawnProtectionTimer: number = 0;
@@ -37,11 +68,19 @@ class Ship {
   thrusting = false;
   empPulseActive = false;
   empPulseTime = 0;
+  shieldActive = false;
+  shieldTime = 0;
+  shieldCooldown = 0;
+  shieldFlashTime = 0;
   health: number = SHIP.MAX_HEALTH;
   maxHealth: number = SHIP.MAX_HEALTH;
+  fuel: number = FUEL.START;
+  maxFuel: number = FUEL.MAX;
+  lastLocalFuelWriteMs: number = 0;
   lastDamageTime: number = 0;
   healthRegenTimer: number = 0;
   lastCollisionTime: number = 0;
+  impactFlashFrames: number = 0;
   blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
   shotCooldown: number = 250;
@@ -50,9 +89,20 @@ class Ship {
   lastRotation?: number; // Track previous rotation for movement analysis
   lastThrusting?: boolean; // Track previous thruster state for network updates
   color: string = PALETTE.LOCAL;
+  factionId?: SoftFactionId;
   isBot: boolean = false; // Flag to identify if this ship belongs to a bot
   frictionCoefficient: number = GAME.FRICTION; // Player-specific friction coefficient
   isLocalPlayer: boolean = false; // Track if this is the local player
+  kitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
+  thrust: number = SHIP.THRUST;
+  maxVelocity: number = SHIP.MAX_VELOCITY;
+  turnSpeed: number = SHIP.TURN_SPEED;
+  abilityCooldownFrames: number = 0;
+  abilityActiveFrames: number = 0;
+  shieldTimer: number = 0;
+  harpoonTimer: number = 0;
+  harpoonTargetId?: string;
+  harpoonLatchPos?: Position;
 
   // Server-authoritative smoothing targets (for remote/bot ships)
   targetPosition?: Position;
@@ -69,8 +119,12 @@ class Ship {
   playerCollisionStartTime: number = 0;
   lastPlayerCollisionDamageTime: number = 0;
   collidingPlayerId?: string;
+  /** Last non-generic explode token (boundary, asteroid, attacker id). */
+  lastExplodeCause?: string;
 
-  static fxThrust = new Sound('sounds/thrust.m4a', 5);
+  static get fxThrust(): Sound {
+    return getThrustSound();
+  }
 
   constructor(options?: {
     position?: Position;
@@ -79,6 +133,7 @@ class Ship {
     isBot?: boolean;
     isLocalPlayer?: boolean;
     frictionCoefficient?: number;
+    kitId?: ShipKitId;
   }) {
     // Set initial spawn protection for local players to prevent immediate collisions
     if (options?.isLocalPlayer) {
@@ -114,6 +169,16 @@ class Ship {
     if (options?.frictionCoefficient !== undefined) {
       this.frictionCoefficient = options.frictionCoefficient;
     }
+    const tank = createFuelTank();
+    this.fuel = tank.fuel;
+    this.maxFuel = tank.maxFuel;
+    applyShipKitToShip(this, options?.kitId ?? DEFAULT_SHIP_KIT_ID);
+    if (options?.shotCooldown !== undefined) {
+      this.shotCooldown = options.shotCooldown;
+    }
+    if (options?.color) {
+      this.color = options.color;
+    }
   }
 
   setBlinkOn(): void {
@@ -125,8 +190,15 @@ class Ship {
       return;
     }
 
+    if (cause && !isGenericDeathCause(cause)) {
+      this.lastExplodeCause = cause;
+    } else if (cause && !this.lastExplodeCause) {
+      this.lastExplodeCause = cause;
+    }
+
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
     this.exploding = true; // Set exploding flag when explosion starts
+    clearShield(this);
     playExplosionSound(this.position);
 
     // Dispatch event to notify that ship has exploded with cause information
@@ -160,9 +232,11 @@ class Ship {
     }
 
     if (this.thrusting) {
+      const thrustScale = thrustScaleFromMass(this.mass);
+      const maxVelocity = maxVelocityFromMass(this.mass);
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
-        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
+        x: (Math.cos(this.angle) * this.thrust * thrustScale) / GAME.FPS,
+        y: (-Math.sin(this.angle) * this.thrust * thrustScale) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -170,8 +244,9 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > SHIP.MAX_VELOCITY) {
-        const scale = SHIP.MAX_VELOCITY / currentSpeed;
+      const speedCap = this.maxVelocity * (maxVelocity / SHIP.MAX_VELOCITY);
+      if (currentSpeed > speedCap) {
+        const scale = speedCap / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }
@@ -182,6 +257,9 @@ class Ship {
       const frictionCoeff = this.isBot ? SHIP.BOT_FRICTION : GAME.FRICTION;
       this.velocity = multiplyVelocity(this.velocity, 1 - frictionCoeff / GAME.FPS);
     }
+
+    applySharedShipSlope(this.velocity, this.position);
+    this.capVelocity();
   }
 
   move(): void {
@@ -235,6 +313,59 @@ class Ship {
 
     // Send shooting event to network system
     this.sendShootEvent(laser.position, laser.velocity);
+  }
+
+  fireBurst(count: number, spread: number): void {
+    const mid = (count - 1) / 2;
+    for (let i = 0; i < count; i++) {
+      if (this.lasers.length >= SHIP.MAX_LASERS) {
+        break;
+      }
+      const angle = this.angle + (i - mid) * spread;
+      const laser = createLaserAtAngle(this, angle);
+      this.lasers.push(laser);
+      if (i === 0) {
+        laser.playLaserSound();
+      }
+      this.sendShootEvent(laser.position, laser.velocity);
+    }
+    this.canShoot = false;
+    this.lastShotTime = Date.now();
+  }
+
+  activateAbility(world?: AbilityWorld): boolean {
+    if (this.exploding) {
+      return false;
+    }
+    const kit = getShipKit(this.kitId);
+    const canTry = canActivateAbility(this);
+    const result = activateAbilityOnHost(this, world);
+    if (result.activated && result.abilityId === 'shockPulse') {
+      this.lastLocalFuelWriteMs = Date.now();
+    }
+    if (result.abilityId === 'burstFire') {
+      this.fireBurst(kit.burstCount, 0.12);
+    }
+    // Always tell the server on a legal E. Do not start the Hauler cooldown
+    // on a miss — that 3s lock was why a later in-range tap stayed dead.
+    if (this.isLocalPlayer && !this.isBot && canTry) {
+      const networkManager = NetworkManager.getInstance();
+      if (networkManager.isConnected) {
+        const canvas = getHarpoonFieldCanvas();
+        networkManager.sendMessage({
+          type: 'useAbility',
+          id: networkManager.getLocalPlayerId(),
+          data: {
+            kitId: this.kitId,
+            abilityId: result.abilityId ?? kit.abilityId,
+            playfieldScale: getHarpoonFieldScale(),
+            canvasWidth: canvas?.width,
+            canvasHeight: canvas?.height,
+          },
+        });
+      }
+    }
+    return result.activated;
   }
 
   moveLasers(): void {
@@ -292,8 +423,6 @@ class Ship {
           velocity: this.velocity,
           r: this.r,
           angle: this.angle,
-          lives: 0, // This will be updated by server
-          score: 0, // This will be updated by server
           exploding: this.exploding,
           thrusting: this.thrusting,
         });
@@ -311,6 +440,13 @@ class Ship {
     thrusting?: boolean;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
+    mass?: number;
+    shieldActive?: boolean;
+    shieldTime?: number;
+    shieldCooldown?: number;
+    shieldFlashTime?: number;
   }): void {
     // Local player uses immediate state; bots/remote ships use smoothing targets
     if (this.isBot) {
@@ -359,19 +495,32 @@ class Ship {
     exploding?: boolean;
     health?: number;
     maxHealth?: number;
+    fuel?: number;
+    maxFuel?: number;
+    mass?: number;
+    spawnProtectionTimer?: number;
+    shieldActive?: boolean;
+    shieldTime?: number;
+    shieldCooldown?: number;
+    shieldFlashTime?: number;
   }): void {
-    const wasDead = this.health <= 0 || this.exploding;
-    if (data.exploding !== undefined) {
-      this.exploding = data.exploding;
+    if (data.mass !== undefined) {
+      this.mass = data.mass;
+      this.r = radiusFromMass(data.mass);
     }
+    const wasDeadOrExploding = this.health <= 0 || this.exploding;
+    applySharedShipExplodingFlag(this, data.exploding);
     if (data.health !== undefined) {
       this.health = data.health;
     }
     if (data.maxHealth !== undefined) {
       this.maxHealth = data.maxHealth;
     }
-    if (wasDead && this.health > 0) {
-      applyShipSpawnProtection(this);
+    applyFuelSnapshot(this, data);
+    applyShieldSnapshot(this, data);
+    applySharedShipRespawnCue(this, wasDeadOrExploding, data.spawnProtectionTimer);
+    if (wasDeadOrExploding && this.health > 0) {
+      clearShield(this);
     }
   }
 
@@ -393,10 +542,14 @@ class Ship {
     };
   }
 
-  empPulse(): void {
-    if (this.exploding) {
-      return;
+  empPulse(): boolean {
+    if (this.exploding || this.empPulseActive) {
+      return false;
     }
+    if (!trySpendEmpFuel(this)) {
+      return false;
+    }
+    this.lastLocalFuelWriteMs = Date.now();
 
     this.empPulseActive = true;
     this.empPulseTime = Math.ceil(EMP.DURATION * GAME.FPS);
@@ -410,6 +563,7 @@ class Ship {
     });
 
     window.dispatchEvent(empEvent);
+    return true;
   }
 
   updateEmpPulse(): void {
@@ -422,8 +576,51 @@ class Ship {
     }
   }
 
+  requestShieldToggle(): boolean {
+    if (this.exploding) {
+      return false;
+    }
+    if (this.shieldActive) {
+      deactivateShield(this);
+      this.sendShieldEvent(false);
+      return true;
+    }
+    if (!activateShield(this, this.exploding)) {
+      return false;
+    }
+    this.sendShieldEvent(true);
+    return true;
+  }
+
+  private sendShieldEvent(active: boolean): void {
+    if (this.isBot) {
+      return;
+    }
+    const networkManager = NetworkManager.getInstance();
+    if (!networkManager.isConnected) {
+      return;
+    }
+    const id = networkManager.getLocalPlayerId();
+    if (!id) {
+      return;
+    }
+    networkManager.sendMessage({
+      type: 'shield',
+      id,
+      data: { active },
+    });
+  }
+
   takeDamage(amount: number, cause?: string, killerName?: string): void {
     if (this.exploding) {
+      return;
+    }
+    if (this.shieldTimer > 0) {
+      return;
+    }
+
+    if (cause === 'laser' && isShieldBlockingLasers(this)) {
+      noteShieldLaserHit(this);
       return;
     }
 
@@ -480,31 +677,8 @@ class Ship {
     const damageInterval = DAMAGE.PLAYER_COLLISION_INTERVAL_MS;
 
     if (timeSinceLastDamage >= damageInterval) {
-      // Apply local damage only when not connected to server; otherwise server-authoritative
       const networkManager = NetworkManager.getInstance();
-      if (networkManager.isConnected && this.collidingPlayerId) {
-        const myPlayerId = networkManager.getLocalPlayerId();
-        if (myPlayerId) {
-          const tickDamage = Math.max(
-            1,
-            Math.round(DAMAGE.PLAYER_COLLISION_PER_SECOND * (damageInterval / 1000))
-          );
-          logger.debug('COLLISION', 'Sending collision damage', {
-            from: myPlayerId,
-            to: this.collidingPlayerId,
-            toIsBot: this.collidingPlayerId.startsWith('server-bot-'),
-            damage: tickDamage,
-          });
-          networkManager.sendMessage({
-            type: 'collisionDamage',
-            data: {
-              targetPlayerId: myPlayerId,
-              attackerId: this.collidingPlayerId,
-              damage: tickDamage,
-            },
-          });
-        }
-      } else {
+      if (!networkManager.isConnected) {
         logger.debug('COLLISION', 'Applying local collision damage', { damage: 1 });
         this.takeDamage(1, 'player');
       }
@@ -559,9 +733,8 @@ class Ship {
   updateExplosion(): void {
     if (this.exploding && this.explodeTime > 0) {
       this.explodeTime--;
-      if (this.explodeTime <= 0) {
-        this.exploding = false;
-      }
+      // Stay exploding at t=0 so a late exploding=true snapshot cannot
+      // restart the FX, and the dead hull does not resume movement.
     }
   }
 
@@ -593,26 +766,43 @@ class Ship {
     }
   }
 
-  // Main update method called each frame
-  update(): void {
+  /**
+   * 60 Hz explode / blink / regen. Shared by local, remote, and bot ships.
+   * Movement is not applied here so remotes can tick death FX without predicting pose.
+   */
+  updateLifecycle(lifecycleFrames = 1): void {
+    const steps = Math.max(0, Math.floor(lifecycleFrames));
     if (this.exploding) {
-      this.updateExplosion();
+      for (let i = 0; i < steps; i++) {
+        this.updateExplosion();
+      }
+      return;
+    }
+    if (this.health <= 0) {
       return;
     }
 
-    // Update invincibility and blinking
-    this.updateInvincibility();
+    for (let i = 0; i < steps; i++) {
+      this.updateInvincibility();
+      tickShipImpactFlash(this);
+      tickAbilityHost(this);
+      this.updateHealth();
+    }
+  }
 
-    // Update health
-    this.updateHealth();
+  /**
+   * @param lifecycleFrames whole 60 Hz steps for explode / blink / regen.
+   * Movement still runs once per display frame so high-refresh stays smooth.
+   */
+  update(lifecycleFrames = 1): void {
+    this.updateLifecycle(lifecycleFrames);
+    if (this.exploding || this.health <= 0) {
+      return;
+    }
 
-    // Apply movement
     this.updateMovement();
-
-    // Update EMP pulse
     this.updateEmpPulse();
-
-    // Update lasers
+    updateShield(this);
     this.updateShootCooldown();
     this.moveLasers();
   }
@@ -630,9 +820,11 @@ class Ship {
 
     // Apply thrust if thrusting
     if (this.thrusting) {
+      const thrustScale = thrustScaleFromMass(this.mass);
+      const maxVelocity = maxVelocityFromMass(this.mass);
       const thrust: Velocity = {
-        x: (Math.cos(this.angle) * SHIP.THRUST) / GAME.FPS,
-        y: (-Math.sin(this.angle) * SHIP.THRUST) / GAME.FPS,
+        x: (Math.cos(this.angle) * this.thrust * thrustScale) / GAME.FPS,
+        y: (-Math.sin(this.angle) * this.thrust * thrustScale) / GAME.FPS,
       };
       this.velocity = addVectors(this.velocity, thrust);
 
@@ -640,8 +832,9 @@ class Ship {
       const currentSpeed = Math.sqrt(
         this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y
       );
-      if (currentSpeed > SHIP.MAX_VELOCITY) {
-        const scale = SHIP.MAX_VELOCITY / currentSpeed;
+      const speedCap = this.maxVelocity * (maxVelocity / SHIP.MAX_VELOCITY);
+      if (currentSpeed > speedCap) {
+        const scale = speedCap / currentSpeed;
         this.velocity.x *= scale;
         this.velocity.y *= scale;
       }
@@ -650,8 +843,20 @@ class Ship {
       this.velocity = multiplyVelocity(this.velocity, 1 - this.frictionCoefficient / GAME.FPS);
     }
 
+    applySharedShipSlope(this.velocity, this.position);
+    this.capVelocity();
+
     // Update position based on velocity
     this.position = addPositionAndVelocity(this.position, this.velocity);
+  }
+
+  private capVelocity(): void {
+    const currentSpeed = Math.hypot(this.velocity.x, this.velocity.y);
+    if (currentSpeed > this.maxVelocity) {
+      const scale = this.maxVelocity / currentSpeed;
+      this.velocity.x *= scale;
+      this.velocity.y *= scale;
+    }
   }
 
   // Smoothly approach target state for non-local ships

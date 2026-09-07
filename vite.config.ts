@@ -39,6 +39,12 @@ export default defineConfig(() => {
           changeOrigin: true,
           secure: false,
         },
+        '/logs': {
+          target: 'ws://localhost:3001',
+          ws: true,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     define,

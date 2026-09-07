@@ -37,6 +37,12 @@ export class GameStateManager {
     this.textAlpha = alpha;
   }
 
+  clearOverlay(): void {
+    this.text = '';
+    this.textAlpha = 0;
+    this.clearKillMessage();
+  }
+
   toggleIsGameRunning(): void {
     this.isGameRunning = !this.isGameRunning;
     logger.debug('GAME_STATE', 'Game state toggled', { isGameRunning: this.isGameRunning });

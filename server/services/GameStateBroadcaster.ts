@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { GameEngine } from '../core/GameEngine';
+import { GameEngine, type CombatBroadcast } from '../core/GameEngine';
 import { logger } from '../../setup/serverLogger';
 
 export class GameStateBroadcaster {
@@ -17,10 +17,20 @@ export class GameStateBroadcaster {
 
     // Periodic game state broadcast (30 FPS for smooth bot movement)
     this.broadcastInterval = setInterval(() => {
+      this.flushExpiredCollabHits();
       if (this.gameEngine.getPlayerCount() > 0) {
         this.broadcastGameState();
+        this.broadcastPendingBotShots();
       }
     }, 1000 / 30); // 30 FPS (33.33ms) for smooth bot movement
+  }
+
+  private broadcastPendingBotShots(): void {
+    for (const shot of this.gameEngine.consumeBotShots()) {
+      // Bot ids never match a human socket, so every client receives the shot
+      // on the same playerShoot path used by remote humans.
+      this.broadcastPlayerShoot(shot.botId, shot.laserStart, shot.laserDirection);
+    }
   }
 
   public stopPeriodicBroadcast(): void {
@@ -39,6 +49,18 @@ export class GameStateBroadcaster {
     };
 
     this.broadcastToAll(message, excludeId);
+  }
+
+  public broadcastPlayerLeft(playerId: string): void {
+    const message = {
+      type: 'playerLeft',
+      data: {
+        id: playerId,
+      },
+      timestamp: Date.now(),
+    } as const;
+
+    this.broadcastToAll(message, playerId);
   }
 
   public broadcastPlayerJoined(playerId: string, playerName: string, position: { x: number; y: number }): void {
@@ -78,6 +100,41 @@ export class GameStateBroadcaster {
     };
 
     this.broadcastToAll(message, playerId);
+  }
+
+  public broadcastCombatResult(result: CombatBroadcast): void {
+    if (result.targetType === 'bot') {
+      this.broadcastBotUpdate(result.targetId);
+    } else {
+      this.broadcastPlayerDamaged(
+        result.targetId,
+        result.attackerId,
+        result.damage,
+        result.remainingHealth,
+        result.isDestroyed,
+        result.remainingLives
+      );
+    }
+
+    if (result.isDestroyed) {
+      this.broadcastPlayerKilled(result.targetId, result.targetName, result.attackerId);
+      if (result.awardedScore) {
+        this.broadcastScoreUpdate(result.awardedScore.playerId, result.awardedScore.score);
+      }
+    }
+
+    if (result.destroyedAsteroidId) {
+      this.broadcastAsteroidDestruction(result.destroyedAsteroidId, {
+        collabSplit: result.collabSplit === true,
+        origin: result.origin,
+      });
+      if (result.newAsteroids && result.newAsteroids.length > 0) {
+        this.broadcastAsteroidCreation(result.newAsteroids);
+      }
+      if (result.asteroidScore) {
+        this.broadcastScoreUpdate(result.asteroidScore.playerId, result.asteroidScore.score);
+      }
+    }
   }
 
   public broadcastPlayerDamaged(
@@ -140,21 +197,86 @@ export class GameStateBroadcaster {
       timestamp: Date.now(),
     };
 
-    console.log('🪨 SERVER: Broadcasting asteroid creation batch', { 
+    logger.debug('Broadcasting asteroid creation batch', {
       asteroidCount: asteroids.length,
-      asteroidIds: asteroids.map(a => a.id)
     });
     this.broadcastToAll(message);
   }
 
-  public broadcastAsteroidDestruction(asteroidId: string): void {
+  public broadcastLootExploded(event: {
+    lootId: string;
+    position: { x: number; y: number };
+    radius: number;
+    shooterId: string;
+  }): void {
+    this.broadcastToAll({
+      type: 'lootExploded',
+      data: event,
+      timestamp: Date.now(),
+    });
+  }
+
+  public broadcastAsteroidDestruction(
+    asteroidId: string,
+    extras?: { collabSplit?: boolean; origin?: { x: number; y: number } }
+  ): void {
     const message = {
       type: 'asteroidDestroy',
-      data: { asteroidId },
+      data: {
+        asteroidId,
+        collabSplit: extras?.collabSplit === true,
+        origin: extras?.origin,
+      },
       timestamp: Date.now(),
     };
 
     this.broadcastToAll(message);
+  }
+
+  public broadcastShockwave(event: { origin: { x: number; y: number }; asteroidId?: string }): void {
+    const message = {
+      type: 'shockwave',
+      data: {
+        origin: { x: event.origin.x, y: event.origin.y },
+        asteroidId: event.asteroidId,
+      },
+      timestamp: Date.now(),
+    };
+
+    this.broadcastToAll(message);
+  }
+
+  public broadcastAsteroidTagged(event: {
+    asteroidId: string;
+    shooterId: string;
+    expiresAt: number;
+  }): void {
+    const message = {
+      type: 'asteroidTagged',
+      data: {
+        asteroidId: event.asteroidId,
+        shooterId: event.shooterId,
+        expiresAt: event.expiresAt,
+      },
+      timestamp: Date.now(),
+    };
+
+    this.broadcastToAll(message);
+  }
+
+  private flushExpiredCollabHits(): void {
+    this.gameEngine.flushExpiredCollabHits();
+    const expired = this.gameEngine.drainResolvedCollabHits();
+    for (const item of expired) {
+      const player = this.gameEngine.getPlayer(item.playerId);
+      if (player) {
+        this.broadcastScoreUpdate(item.playerId, player.score);
+      }
+      this.broadcastAsteroidDestruction(item.destroyed.id, {
+        collabSplit: false,
+        origin: item.destroyed.position,
+      });
+    }
   }
 
   public broadcastAsteroidUpdate(asteroidId: string, updates: any): void {
@@ -202,6 +324,21 @@ export class GameStateBroadcaster {
           lives: bot.lives,
           health: bot.health,
           maxHealth: bot.maxHealth,
+          fuel: bot.fuel,
+          maxFuel: bot.maxFuel,
+          mass: bot.mass,
+          kitId: bot.kitId,
+          factionId: bot.factionId,
+          abilityCooldownFrames: bot.abilityCooldownFrames,
+          abilityActiveFrames: bot.abilityActiveFrames,
+          shieldTimer: bot.shieldTimer,
+          harpoonTimer: bot.harpoonTimer,
+          harpoonTargetId: bot.harpoonTargetId,
+          harpoonLatchPos: bot.harpoonLatchPos,
+          shieldActive: bot.shieldActive,
+          shieldTime: bot.shieldTime,
+          shieldCooldown: bot.shieldCooldown,
+          shieldFlashTime: bot.shieldFlashTime,
         },
         timestamp: Date.now(),
       };
@@ -249,7 +386,18 @@ export class GameStateBroadcaster {
   }
 
   public broadcastToAll(message: any, excludeId?: string): void {
-    const messageStr = JSON.stringify(message);
+    let messageStr: string;
+    try {
+      messageStr = JSON.stringify(message);
+    } catch (error) {
+      // A circular Timeout on player.ws used to kill the process here and
+      // flap every client into the Reconnecting banner (#485 live miss).
+      logger.error('Failed to serialize broadcast', {
+        type: message?.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
     const humanPlayers = this.gameEngine.entityManager.getHumanPlayers();
 
     for (const player of humanPlayers) {
@@ -270,6 +418,7 @@ export class GameStateBroadcaster {
           }
           // Remove the player from the game engine
           this.gameEngine.removePlayer(player.id);
+          this.broadcastPlayerLeft(player.id);
         }
       }
     }

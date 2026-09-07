@@ -1,5 +1,11 @@
 import { expect, test, describe } from 'vitest';
-import { checkLaserAsteroidCollision, checkLaserShipCollision } from '../../../src/physics/collision/collisionDetection';
+import {
+  asteroidPointsForRadius,
+  checkLaserAsteroidCollision,
+  checkLaserAsteroidCollisionSwept,
+  checkLaserShipCollision,
+  isLaserNearAsteroid,
+} from '../../../src/physics/collision/collisionDetection';
 
 describe('Laser Collision Detection Functions', () => {
   describe('checkLaserAsteroidCollision', () => {
@@ -66,6 +72,42 @@ describe('Laser Collision Detection Functions', () => {
 
       const result = checkLaserAsteroidCollision(laserPos, asteroidPos, asteroidRadius);
       expect(result).toBe(true);
+    });
+  });
+
+  describe('checkLaserAsteroidCollisionSwept', () => {
+    test('detects a laser that tunnels through a small asteroid in one step', () => {
+      const asteroidPos = { x: 100, y: 100 };
+      const asteroidRadius = 8;
+      const prev = { x: 70, y: 100 };
+      const curr = { x: 130, y: 100 };
+
+      expect(checkLaserAsteroidCollision(prev, asteroidPos, asteroidRadius)).toBe(false);
+      expect(checkLaserAsteroidCollision(curr, asteroidPos, asteroidRadius)).toBe(false);
+      expect(checkLaserAsteroidCollisionSwept(prev, curr, asteroidPos, asteroidRadius)).toBe(true);
+    });
+
+    test('misses when the swept path stays outside the asteroid', () => {
+      const result = checkLaserAsteroidCollisionSwept(
+        { x: 0, y: 0 },
+        { x: 40, y: 0 },
+        { x: 20, y: 40 },
+        8
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('isLaserNearAsteroid / asteroidPointsForRadius', () => {
+    test('accepts a nearby reported hit and rejects a far phantom', () => {
+      expect(isLaserNearAsteroid({ x: 110, y: 100 }, { x: 100, y: 100 }, 20)).toBe(true);
+      expect(isLaserNearAsteroid({ x: 400, y: 400 }, { x: 100, y: 100 }, 20)).toBe(false);
+    });
+
+    test('scores large / medium / small roids like the client table', () => {
+      expect(asteroidPointsForRadius(50)).toBe(20);
+      expect(asteroidPointsForRadius(20)).toBe(50);
+      expect(asteroidPointsForRadius(10)).toBe(100);
     });
   });
 

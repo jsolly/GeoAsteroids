@@ -1,8 +1,9 @@
 import type { Position, Velocity } from '../../../shared-types';
-import { Sound } from '../../audio/Sound';
+import { playHitSound as playHitSoundAt } from '../../audio/gameSounds';
 import { DEBUG, GAME, ROID } from '../../constants';
+import { stepAsteroidMotionInto } from '../../physics/asteroidMotion';
 import { isDebugMode } from '../../utils/debugUtils';
-import { getRandomPositionWithinBoundary } from '../../utils/positionUtils';
+import { getRandomPositionInAsteroidField } from '../../utils/spawnPosition';
 
 class Roid {
   id: string;
@@ -14,8 +15,15 @@ class Roid {
   health: number;
   maxHealth: number;
   pendingDestruction: boolean = false; // Track asteroids waiting for server confirmation
+  pendingUntilMs: number = 0;
+  /** Shared multi-pilot HP rock. Lasers chip; do not pending-lock. */
+  isCollabTarget: boolean = false;
+  taggedUntil?: number; // Server-owned collab window; do not destroy locally while set
   private _jaggedness: number = ROID.JAGGEDNESS; // Store jaggedness value
-  static fxHit = new Sound('sounds/hit.m4a', 5);
+
+  playHitSound(): void {
+    playHitSoundAt(this.position);
+  }
 
   constructor(
     public position: Position,
@@ -89,7 +97,7 @@ class RoidBelt {
 
   addRoid(): void {
     // Generate random position within boundary since roidSpawn was removed
-    const roidPosition = getRandomPositionWithinBoundary();
+    const roidPosition = getRandomPositionInAsteroidField();
     const size = DEBUG.ROIDS.ALL_LARGE ? ROID.SIZE : Math.ceil(ROID.SIZE / 2);
     this.roids.push(new Roid(roidPosition, size));
   }
@@ -119,19 +127,16 @@ class RoidBelt {
     return this.roids;
   }
 
-  moveRoids(): void {
-    // Check if asteroid movement is disabled in debug mode
-    if (!DEBUG.ROIDS.MOVEMENT) {
+  moveRoids(tickScale = 1): void {
+    // Freeze only when debug mode explicitly disables movement.
+    // Production interpolates with a dt scale so 120 Hz tabs do not race
+    // 60 Hz tabs (or the 60 FPS server) to the wrap/bounce edge.
+    if (DEBUG.ENABLED && !DEBUG.ROIDS.MOVEMENT) {
       return;
     }
 
     for (const roid of this.roids) {
-      // let beta_squared = (ship.xv-roids[i].xv)**2 +(ship.yv-roids[i].yv)**2
-      // let dt = 1/Math.sqrt(1-beta_squared)
-      roid.position = {
-        x: roid.position.x + roid.velocity.x,
-        y: roid.position.y + roid.velocity.y,
-      };
+      stepAsteroidMotionInto(roid.position, roid.velocity, tickScale, roid.position, roid.velocity);
     }
   }
 

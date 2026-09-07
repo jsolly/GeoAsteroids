@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AD v2 bake. Topology: y-fork. Source: src/entities/ship/hullOutlines.ts -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="skirmisher y-fork">
+  <title>skirmisher — y-fork</title>
+  <rect width="64" height="64" fill="#000011"/>
+  <g fill="none" stroke="#5EEAD4" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 8.8 L34.4 29.6 L32 32 L29.6 29.6 L24 8.8 L24 29.6 L32 55.6 L40 29.6 Z"/>
+  </g>
+</svg>

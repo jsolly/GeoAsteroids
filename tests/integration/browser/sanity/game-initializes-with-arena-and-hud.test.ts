@@ -10,7 +10,7 @@ test('game initializes with arena and hud', async () => {
   if (!page) throw new Error('Page not available');
 
   const game = new GameInteractions(page);
-  await game.bootSinglePlayerGame({ waitForCombatReady: false });
+  await game.bootGame({ waitForCombatReady: false });
 
   await game.verifyGameCanvas();
   await game.verifyGameArea();

@@ -6,9 +6,11 @@ import {
   CANVAS_INTERNAL_HEIGHT,
   CANVAS_INTERNAL_WIDTH,
 } from '../constants/canvas';
+import { LootField } from '../entities/loot/LootField';
+import { drawLootRelative } from '../entities/loot/lootRenderer';
 import type { Player } from '../entities/player/Player';
 import type { RoidBelt } from '../entities/roid/Roid';
-import { drawRoidsRelative } from '../entities/roid/roidRenderer';
+import { drawRoidsRelative, rocksForPlayfieldZoom } from '../entities/roid/roidRenderer';
 import type { Ship } from '../entities/ship/Ship';
 import {
   drawLasers,
@@ -18,16 +20,20 @@ import {
   drawThruster,
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
+import { shouldDrawShipHull } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
 import { Point } from '../physics/Point';
 import { getFactionColor, getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { logger } from '../utils/Logger';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { drawIsoContours } from './contourRenderer';
 import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawLivesIndicator } from './hud/lives';
 import { drawMiniMap } from './hud/minimap';
+import { playfieldZoom, projectWorldToScreenInto } from './playfieldCamera';
+import { drawShockwaves } from './shockwaveRenderer';
 import { drawStarfield } from './starfield';
 
 // Canvas manager class for handling dynamic canvas operations and game rendering
@@ -35,20 +41,16 @@ class CanvasManager {
   private canvas: HTMLCanvasElement | null = null;
   private context: CanvasRenderingContext2D | null = null;
   private resizeHandler: (() => void) | null = null;
+  private playfieldScale = 1;
+  private readonly screenPos = { x: 0, y: 0 };
 
   // Initialize canvas with proper scaling
   initialize(): void {
-    this.canvas = document.querySelector('canvas');
-    this.context = this.canvas?.getContext('2d') || null;
+    this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
+    this.context = this.canvas?.getContext('2d', { alpha: false }) || null;
 
     if (this.canvas && this.context) {
-      // Get the viewport dimensions
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // Set the internal resolution to match the viewport (what the game logic uses)
-      this.canvas.width = viewportWidth;
-      this.canvas.height = viewportHeight;
+      this.applyViewportSize();
 
       // Enable crisp pixel rendering
       this.context.imageSmoothingEnabled = true;
@@ -57,21 +59,37 @@ class CanvasManager {
       // Add resize handler to maintain full-screen coverage
       this.resizeHandler = this.handleCanvasResize.bind(this);
       window.addEventListener('resize', this.resizeHandler);
+      window.visualViewport?.addEventListener('resize', this.resizeHandler);
+      window.visualViewport?.addEventListener('scroll', this.resizeHandler);
 
       // Initial resize call
       this.handleCanvasResize();
     }
   }
 
+  private viewportSize(): { width: number; height: number } {
+    const vv = window.visualViewport;
+    return {
+      width: Math.max(1, Math.round(vv?.width ?? window.innerWidth)),
+      height: Math.max(1, Math.round(vv?.height ?? window.innerHeight)),
+    };
+  }
+
+  private applyViewportSize(): void {
+    if (!this.canvas) {
+      return;
+    }
+    const { width, height } = this.viewportSize();
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+  }
+
   // Handle canvas resizing to maintain full-screen coverage
   private handleCanvasResize(): void {
     if (this.canvas && this.context) {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // Update internal resolution to match new viewport size
-      this.canvas.width = viewportWidth;
-      this.canvas.height = viewportHeight;
+      this.applyViewportSize();
 
       // Re-enable crisp rendering after resize
       this.context.imageSmoothingEnabled = true;
@@ -83,6 +101,8 @@ class CanvasManager {
   destroy(): void {
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
+      window.visualViewport?.removeEventListener('resize', this.resizeHandler);
+      window.visualViewport?.removeEventListener('scroll', this.resizeHandler);
       this.resizeHandler = null;
     }
     this.canvas = null;
@@ -96,6 +116,16 @@ class CanvasManager {
 
   getContext(): CanvasRenderingContext2D | null {
     return this.context;
+  }
+
+  clearPlayfield(): void {
+    const ctx = this.context;
+    const canvas = this.canvas;
+    if (!ctx || !canvas) {
+      return;
+    }
+    ctx.fillStyle = PALETTE.BG;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   requireCanvas(): HTMLCanvasElement {
@@ -136,28 +166,50 @@ class CanvasManager {
     };
   }
 
+  beginPlayfieldFrame(
+    shipPos: Position,
+    roids: ReadonlyArray<{ position: Position; r?: number }>
+  ): void {
+    if (!this.canvas) {
+      this.playfieldScale = 1;
+      return;
+    }
+    this.playfieldScale = playfieldZoom(roids, shipPos, this.canvas);
+  }
+
+  getPlayfieldScale(): number {
+    return this.playfieldScale;
+  }
+
+  worldToScreenInto(
+    out: { x: number; y: number },
+    worldPos: Position,
+    shipPos: Position
+  ): { x: number; y: number } {
+    const scale = this.playfieldScale;
+    if (!this.canvas) {
+      out.x = (worldPos.x - shipPos.x) * scale;
+      out.y = (worldPos.y - shipPos.y) * scale;
+      return out;
+    }
+    return projectWorldToScreenInto(out, worldPos, shipPos, this.canvas, scale);
+  }
+
   // Viewport transformation methods
   worldToScreen(worldPos: Position, shipPos: Position): Point {
-    if (!this.canvas) {
-      // Fallback to default values if canvas is not available
-      return new Point(worldPos.x - shipPos.x, worldPos.y - shipPos.y);
-    }
-
-    return new Point(
-      this.canvas.width / 2 - shipPos.x + worldPos.x,
-      this.canvas.height / 2 - shipPos.y + worldPos.y
-    );
+    const pos = this.worldToScreenInto(this.screenPos, worldPos, shipPos);
+    return new Point(pos.x, pos.y);
   }
 
   screenToWorld(screenPos: Point, shipPos: Position): Position {
+    const scale = this.playfieldScale || 1;
     if (!this.canvas) {
-      // Fallback to default values if canvas is not available
-      return { x: screenPos.x + shipPos.x, y: screenPos.y + shipPos.y };
+      return { x: screenPos.x / scale + shipPos.x, y: screenPos.y / scale + shipPos.y };
     }
 
     return {
-      x: screenPos.x - this.canvas.width / 2 + shipPos.x,
-      y: screenPos.y - this.canvas.height / 2 + shipPos.y,
+      x: (screenPos.x - this.canvas.width / 2) / scale + shipPos.x,
+      y: (screenPos.y - this.canvas.height / 2) / scale + shipPos.y,
     };
   }
 
@@ -167,7 +219,7 @@ class CanvasManager {
       return true;
     }
 
-    const screenPos = this.worldToScreen(worldPos, shipPos);
+    const screenPos = this.worldToScreenInto(this.screenPos, worldPos, shipPos);
     return (
       screenPos.x >= -margin &&
       screenPos.x <= this.canvas.width + margin &&
@@ -198,36 +250,60 @@ class CanvasManager {
     ctx.fillStyle = PALETTE.BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Draw roids
+    const roids = currRoidBelt.getRoids();
+    this.beginPlayfieldFrame(currShip.position, rocksForPlayfieldZoom(roids));
+
     drawStarfield(currShip.position);
+    drawIsoContours(currShip.position);
 
     // Draw fiery boundary using actual ship position for proper world coordinates
     drawFieryBoundary(currShip.position);
 
-    // Draw roids
-    const roids = currRoidBelt.getRoids();
     if (roids.length > 0) {
-      logger.debug('RENDERING', `Rendering ${roids.length} asteroids`);
       drawRoidsRelative(currShip, roids);
-    } else {
-      logger.debug('RENDERING', 'No asteroids to render');
     }
 
-    // Draw all players (including bots) using unified rendering
+    drawLootRelative(currShip, LootField.getInstance().getAll());
+
+    const localId = NetworkManager.getInstance().getLocalPlayerId();
+    const localLaserColor = getLaserColor(true);
+    const enemyLaserColor = getLaserColor(false);
+
     try {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
       for (const player of allPlayers) {
         const factionColor = getFactionColor(player.type);
-        if (player.ship.exploding) {
-          if (player.id === localId) {
+        const isLocal = player.id === localId;
+        const ship = isLocal ? currShip : player.ship;
+
+        if (ship.exploding) {
+          if (isLocal) {
             drawShipExplosion(currShip, factionColor);
           } else {
-            drawShipExplosionAtPosition(player.ship, currShip.position, factionColor);
+            drawShipExplosionAtPosition(ship, currShip.position, factionColor);
           }
-        } else if (player.ship.health <= 0) {
-        } else if (player.id === localId) {
-          drawShipAtPosition(currShip, currShip.position, factionColor, currPlayer.name);
+        } else if (shouldDrawShipHull(ship)) {
+          drawShipAtPosition(
+            ship,
+            currShip.position,
+            factionColor,
+            isLocal ? currPlayer.name : player.name,
+            player.factionId
+          );
+        }
+      }
+
+      for (const player of allPlayers) {
+        const isLocal = player.id === localId;
+        const ship = isLocal ? currShip : player.ship;
+        if (!shouldDrawShipHull(ship) || !ship.thrusting) {
+          continue;
+        }
+        const factionColor = getFactionColor(player.type);
+        if (isLocal) {
+          drawThruster(currShip, factionColor);
         } else {
-          drawShipAtPosition(player.ship, currShip.position, factionColor, player.name);
+          drawThrusterAtPosition(ship, currShip.position, factionColor);
         }
       }
     } catch (error: unknown) {
@@ -238,61 +314,22 @@ class CanvasManager {
       );
     }
 
-    // Draw thrusters for all players (including bots) at their world positions
-    try {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
-      for (const player of allPlayers) {
-        if (player.ship.exploding || player.ship.health <= 0) {
-          continue;
-        }
+    drawShockwaves(currShip.position);
 
-        const factionColor = getFactionColor(player.type);
-        if (player.id === localId) {
-          if (!currShip.exploding && currShip.thrusting) {
-            logger.debug('RENDERING', 'Drawing local player thruster', {
-              thrusting: currShip.thrusting,
-              blinkOn: currShip.blinkOn,
-              exploding: currShip.exploding,
-            });
-            drawThruster(currShip, factionColor);
-          } else {
-            logger.debug('RENDERING', 'Local player thruster not drawn', {
-              thrusting: currShip.thrusting,
-              blinkOn: currShip.blinkOn,
-              exploding: currShip.exploding,
-            });
-          }
-        } else if (!player.ship.exploding && player.ship.thrusting) {
-          drawThrusterAtPosition(player.ship, currShip.position, factionColor);
-        }
-      }
-    } catch (error: unknown) {
-      logger.error(
-        'RENDERING',
-        'Error drawing thrusters',
-        error instanceof Error ? error : new Error(String(error))
-      );
-    }
-
-    drawLasers(currShip, getLaserColor(true));
+    drawLasers(currShip, localLaserColor);
 
     for (const player of allPlayers) {
-      const localId = NetworkManager.getInstance().getLocalPlayerId();
-      if (player.id === localId) {
+      if (player.id === localId || !shouldDrawShipHull(player.ship)) {
         continue;
       }
-      if (player.ship.exploding || player.ship.health <= 0) {
-        continue;
-      }
-
-      drawLasers(player.ship, getLaserColor(false), currShip.position);
+      drawLasers(player.ship, enemyLaserColor, currShip.position);
     }
 
     this.drawMiniMapWithPlayers(currShip);
 
-    drawScoreOverlay(ctx, canvas, currScore);
+    drawScoreOverlay(ctx, canvas, currScore, lives, currPlayer.factionId);
 
-    drawLivesIndicator(ctx, lives, PALETTE.LOCAL);
+    drawLivesIndicator(ctx, lives, PALETTE.LOCAL, currShip.kitId);
 
     if (text && textAlpha > 0) {
       drawTextOverlay(ctx, canvas, text, textAlpha);

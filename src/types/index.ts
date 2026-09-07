@@ -94,6 +94,12 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   readonly explodeTime: number;
   readonly empPulseActive: boolean;
   readonly empPulseTime: number;
+  readonly fuel: number;
+  readonly maxFuel: number;
+  readonly shieldActive: boolean;
+  readonly shieldTime: number;
+  readonly shieldCooldown: number;
+  readonly shieldFlashTime: number;
   readonly lastPosition?: Position;
   readonly lastRotation?: number;
   readonly isBot: boolean;
@@ -101,9 +107,11 @@ export interface Ship extends BaseEntity, Damageable, Movable, Shootable {
   setBlinkOn(): void;
   explode(): void;
   setExploding(): void;
-  empPulse(): void;
+  empPulse(): boolean;
   updateEmpPulse(): void;
+  requestShieldToggle(): boolean;
   updateExplosion(): void;
+  updateLifecycle(lifecycleFrames?: number): void;
   updateInvincibility(): void;
   canTakeCollisionDamage(cooldownMs?: number): boolean;
 }
@@ -148,7 +156,7 @@ export interface RoidBelt {
 
   addRoid(): void;
   destroyRoid(index: number): { score: number; newRoids: Roid[] };
-  moveRoids(): void;
+  moveRoids(tickScale?: number): void;
   spawnRoids(): void;
   getRoids(): readonly Roid[];
   setRoidLimits(min: number, max: number): void;
@@ -239,6 +247,20 @@ export interface CustomEventMap {
     shipPosition: Position;
     shipRadius: number;
   }>;
+  serverAsteroidTagged: CustomEvent<{
+    asteroidId: string;
+    shooterId: string;
+    expiresAt: number;
+  }>;
+  serverAsteroidDestroyed: CustomEvent<{
+    asteroidId: string;
+    collabSplit?: boolean;
+    origin?: Position;
+  }>;
+  serverShockwave: CustomEvent<{
+    origin: Position;
+    asteroidId?: string;
+  }>;
   botShoot: CustomEvent<{
     laserStart: Position;
     laserDirection: Velocity;
@@ -300,6 +322,9 @@ export interface GameConstants {
     readonly POINTS_LARGE: number;
     readonly POINTS_MEDIUM: number;
     readonly POINTS_SMALL: number;
+    readonly COLLAB_SPLIT_WINDOW_MS: number;
+    readonly COLLAB_SPLIT_MIN_SIZE: number;
+    readonly COLLAB_HIT_DEDUPE_MS: number;
     readonly INITIAL_ROID_COUNT: number;
     readonly MIN_COUNT: number;
     readonly MAX_COUNT: number;
@@ -309,6 +334,46 @@ export interface GameConstants {
   readonly EMP: {
     readonly RADIUS: number;
     readonly DURATION: number;
+  };
+
+  readonly SHOCKWAVE: {
+    readonly REFERENCE_SIZE: number;
+    readonly MIN_SIZE: number;
+    readonly MIN_SIZE_SCALE: number;
+    readonly MAX_SIZE_SCALE: number;
+    readonly SIZE_EXPONENT: number;
+    readonly FAST: {
+      readonly delayFrames: number;
+      readonly durationFrames: number;
+      readonly radius: number;
+      readonly impulse: number;
+      readonly strokeWidth: number;
+    };
+    readonly HEAVY: {
+      readonly delayFrames: number;
+      readonly durationFrames: number;
+      readonly radius: number;
+      readonly impulse: number;
+      readonly strokeWidth: number;
+    };
+  };
+
+  readonly FUEL: {
+    readonly MAX: number;
+    readonly START: number;
+    readonly EMP_COST: number;
+    readonly DROP_AMOUNT: number;
+    readonly DROP_RADIUS: number;
+    readonly MIN_ROID_SIZE_TO_DROP: number;
+  };
+
+  readonly SHIELD: {
+    readonly DURATION_SECONDS: number;
+    readonly COOLDOWN_SECONDS: number;
+    readonly RADIUS_RATIO: number;
+    readonly FLASH_SECONDS: number;
+    readonly BOT_HEALTH_THRESHOLD: number;
+    readonly BOT_ACTIVATE_CHANCE: number;
   };
 }
 

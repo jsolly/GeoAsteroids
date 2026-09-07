@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { GAME } from '../../../../src/constants';
 import { Player } from '../../../../src/entities/player/Player';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
-import { playerFactory } from '../../../../src/entities/player/PlayerFactory';
+import { entityFactory } from '../../../../src/entities/EntityFactory';
 import { Ship } from '../../../../src/entities/ship/Ship';
 import {
   calculateHealthRegenDelayFrames,
@@ -284,7 +284,7 @@ describe('Health Regeneration', () => {
 
     beforeEach(() => {
       // Create a bot player
-      botPlayer = playerFactory.createBotPlayer('Test Bot');
+      botPlayer = entityFactory.createBotPlayer('Test Bot');
     });
 
     it('should accept server health updates that represent damage', () => {
