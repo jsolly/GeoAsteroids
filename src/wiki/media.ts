@@ -17,7 +17,7 @@ export const media: Record<string, WikiMediaEntry> = {
       'Press E to send one pulse that classifies nearby rocks on every teammate radar. The tag stays after the pulse ends and records the Scout for a later furnace delivery.',
     sources: [
       'src/entities/ship/shipAbilities.ts',
-      'src/entities/ship/surveyScan.ts',
+      'shared/surveyScan.ts',
       'src/entities/ship/shipRenderer.ts',
       'src/rendering/hud/minimap.ts',
       'src/rendering/hud/resourceMapMark.ts',
@@ -53,6 +53,7 @@ export const media: Record<string, WikiMediaEntry> = {
     sources: [
       'src/entities/ship/shipUtils.ts',
       'src/constants/index.ts',
+      'shared/constants/gameplay.ts',
       'src/entities/ship/hullOutlines.ts',
     ],
   },
@@ -62,11 +63,11 @@ export const media: Record<string, WikiMediaEntry> = {
     caption:
       'Controlled demonstration: follow a contour for extra speed, lock onto it for faster automatic guidance, then release to steer across. Steering is ignored while locked.',
     sources: [
-      'src/physics/terrain/heightfield.ts',
+      'shared/heightfield.ts',
       'src/physics/terrain/contours.ts',
       'src/rendering/contourSpeedLines.ts',
-      'src/physics/terrain/terrainConfig.ts',
-      'src/physics/terrain/terrainTravel.ts',
+      'shared/terrainConfig.ts',
+      'shared/terrainTravel.ts',
       'src/entities/ship/cruiseMotion.ts',
       'src/rendering/contourSpatialIndex.ts',
       'src/physics/terrain/contourCapture.ts',
@@ -131,7 +132,8 @@ export const media: Record<string, WikiMediaEntry> = {
     sources: [
       'server/core/SatellitePickupManager.ts',
       'src/constants/index.ts',
-      'src/entities/satellitePickup/satellitePickupMath.ts',
+      'shared/constants/gameplay.ts',
+      'shared/satellitePickupMath.ts',
       'src/entities/satellitePickup/satellitePickupRenderer.ts',
       'src/entities/satellitePickup/satellitePickupGlow.ts',
       'src/entities/satellitePickup/satelliteHealthRenderer.ts',
@@ -147,6 +149,7 @@ export const media: Record<string, WikiMediaEntry> = {
       'src/entities/ship/Ship.ts',
       'src/entities/ship/shipUtils.ts',
       'src/constants/index.ts',
+      'shared/constants/gameplay.ts',
       'shared/combat.ts',
       'server/core/CollisionAuthority.ts',
     ],

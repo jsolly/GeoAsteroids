@@ -1,6 +1,6 @@
+import { getGameBoundary } from '../../shared/boundary';
 import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
-import { getGameBoundary } from '../physics/boundary';
 import { hexToRgba } from '../utils/colorUtils';
 import { canvasManager } from './canvasSurface';
 import { drawStarLayers, type StarPoint } from './nativeStarPainter';

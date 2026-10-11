@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest';
 import { TerrainSpiderManager } from '../../../server/core/TerrainSpiderManager';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import { FurnaceField } from '../../../shared/furnaceField';
 import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { SPIDER } from '../../../shared/terrainSpider';
-import { DAMAGE } from '../../../src/constants';
 
 function actorAt(position: { x: number; y: number }) {
   return { id: 'pilot', position, health: 100, exploding: false, radius: 20 };

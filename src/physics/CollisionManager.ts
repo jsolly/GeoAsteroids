@@ -1,12 +1,12 @@
-import type { Ship } from '../../entities/ship/Ship';
+import { checkBoundaryCollision } from '../../shared/collisionDetection';
+import type { Ship } from '../entities/ship/Ship';
 import {
   applyShipBoundaryDeath,
   applyShipImpactFlash,
   isShipCollisionImmune,
-} from '../../entities/ship/shipUtils';
-import { NetworkManager } from '../../network/networkManager';
-import { logger } from '../../utils/Logger';
-import { checkBoundaryCollision } from './collisionDetection';
+} from '../entities/ship/shipUtils';
+import { NetworkManager } from '../network/networkManager';
+import { logger } from '../utils/Logger';
 
 export class CollisionManager {
   private static instance: CollisionManager;

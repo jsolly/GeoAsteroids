@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { CIVIC_LOTS } from '../../../shared/furnaces';
 import { WORLD } from '../../../shared/world';
 import type { ShipKitId } from '../../../shared-types';
@@ -576,7 +577,7 @@ describe('painted HUD composition', () => {
     const court = strokes[5 + darkLotsInRadar.length];
     expect(court).toMatchObject({
       closed: false,
-      style: normalizedCanvasColor(ctx, PALETTE.REMOTE),
+      style: normalizedCanvasColor(ctx, WIRE_PALETTE.REMOTE),
       width: 1.4,
     });
     expect(court?.points).toHaveLength(8);
@@ -598,7 +599,7 @@ describe('painted HUD composition', () => {
     const rimX = radarX;
     const rimY = radarY - rimRadius;
     const localColor = normalizedCanvasColor(ctx, player.color);
-    const remoteColor = normalizedCanvasColor(ctx, PALETTE.REMOTE);
+    const remoteColor = normalizedCanvasColor(ctx, WIRE_PALETTE.REMOTE);
     expectRadarKitMark(
       strokes,
       localColor,
@@ -705,7 +706,6 @@ test('locked palette hexes stay the #415/#435 playfield swatch', () => {
     BG: '#000011',
     STARS: '#8BA3C7',
     LOCAL: '#5EEAD4',
-    REMOTE: '#7DD3FC',
     ROID: '#94A3B8',
     CONTOUR: '#686868',
     LASER_LOCAL: '#FDE68A',
@@ -715,8 +715,8 @@ test('locked palette hexes stay the #415/#435 playfield swatch', () => {
     CLEARED_NEST: '#444444',
     HEALTH: '#4ADE80',
     LOOT: '#E8D5A3',
-    SATELLITE: '#C4B5FD',
   });
+  expect(WIRE_PALETTE).toEqual({ REMOTE: '#7DD3FC', SATELLITE: '#C4B5FD' });
   expect(TITLE.ACCENT).toBe('#A78BFA');
   expect(PALETTE).not.toHaveProperty('ACCENT_UI');
 });

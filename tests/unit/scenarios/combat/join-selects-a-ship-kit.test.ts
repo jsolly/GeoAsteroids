@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { SHIP } from '../../../../src/constants';
+import { SHIP } from '../../../../shared/constants/gameplay';
 import { getShipKit } from '../../../../src/entities/ship/shipKits';
 import { GameServerWorld, type Pilot, useQuietServerConsole } from '../support/gameServerWorld';
 

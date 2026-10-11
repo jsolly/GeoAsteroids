@@ -1,16 +1,17 @@
 import { laserDamagesShips } from '../../shared/combat';
+import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { PALETTE } from '../constants';
 
 type PlayerColorType = 'local' | 'remote';
 
 export function getPlayerColor(
   type: PlayerColorType
-): typeof PALETTE.LOCAL | typeof PALETTE.REMOTE {
+): typeof PALETTE.LOCAL | typeof WIRE_PALETTE.REMOTE {
   switch (type) {
     case 'local':
       return PALETTE.LOCAL;
     case 'remote':
-      return PALETTE.REMOTE;
+      return WIRE_PALETTE.REMOTE;
     default:
       throw new Error(`Unexpected player color type: ${type}`);
   }

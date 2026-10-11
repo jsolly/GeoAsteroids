@@ -1,4 +1,4 @@
-import { DAMAGE, GAME } from '../src/constants';
+import { DAMAGE, GAME } from './constants/gameplay';
 
 /** Surface predators stay anchored even while reaching out to bite. */
 export const BELT_CRAWLER = {

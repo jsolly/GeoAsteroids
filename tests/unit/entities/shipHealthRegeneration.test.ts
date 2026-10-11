@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest';
+import { GAME, SHIP } from '../../../shared/constants/gameplay';
 import {
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
 } from '../../../shared/constants/health';
-import { GAME, SHIP } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { shouldStartHealthRegeneration } from '../../../src/entities/ship/shipUtils';

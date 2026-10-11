@@ -5,9 +5,9 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import WebSocket from 'ws';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { createServerInstance } from '../../../server/createServer';
+import { GAME, LASER, ROID } from '../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION, SnapshotDecoder } from '../../../shared/snapshotProtocol';
 import type { AsteroidData, ServerGameSnapshot } from '../../../shared-types';
-import { GAME, LASER, ROID } from '../../../src/constants';
 
 function asteroidAt(
   id: string,

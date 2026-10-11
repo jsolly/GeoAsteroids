@@ -1,5 +1,5 @@
-import type { Position, Velocity } from '../../../shared-types';
-import { SATELLITE_PICKUP } from '../../constants';
+import type { Position, Velocity } from '../shared-types';
+import { SATELLITE_PICKUP } from './constants/gameplay';
 
 /** Circular offset around an owner. */
 export function orbitOffset(phase: number, radius: number): Position {

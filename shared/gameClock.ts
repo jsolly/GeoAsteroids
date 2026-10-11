@@ -1,4 +1,4 @@
-import { GAME } from '../src/constants';
+import { GAME } from './constants/gameplay';
 
 /** One simulation frame at the authoritative 60 Hz tick. */
 export const GAME_TICK_MS = 1000 / GAME.FPS;

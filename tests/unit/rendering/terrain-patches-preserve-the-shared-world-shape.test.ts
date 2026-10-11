@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto';
 import { expect, test } from 'vitest';
-import { WORLD } from '../../../shared/world';
-import { type ContourLevel, extractIsoContours } from '../../../src/physics/terrain/contours';
 import {
   createHeightfield,
   createHeightGrid,
@@ -9,8 +7,10 @@ import {
   sampleGradient,
   sampleGradientInto,
   sampleHeight,
-} from '../../../src/physics/terrain/heightfield';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
+} from '../../../shared/heightfield';
+import { TERRAIN } from '../../../shared/terrainConfig';
+import { WORLD } from '../../../shared/world';
+import { type ContourLevel, extractIsoContours } from '../../../src/physics/terrain/contours';
 
 type Bounds = Pick<Heightfield, 'cx' | 'cy' | 'radius'>;
 type TerrainCase = {

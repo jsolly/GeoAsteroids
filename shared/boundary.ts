@@ -1,4 +1,4 @@
-import { WORLD } from '../../shared/world';
+import { WORLD } from './world';
 
 export interface CircleBoundary {
   cx: number;

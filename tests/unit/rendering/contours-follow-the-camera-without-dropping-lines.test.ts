@@ -1,8 +1,8 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import { TERRAIN } from '../../../shared/terrainConfig';
 import { CAMERA, VISUAL } from '../../../src/constants';
 import { findContourCapture } from '../../../src/physics/terrain/contourCapture';
 import type { ContourLevel } from '../../../src/physics/terrain/contours';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
 import {
   ensureTerrain,
   getTerrainContours,

@@ -5,8 +5,8 @@ import { once } from 'node:events';
 import { expect, test } from 'vitest';
 import { Pilot } from '../../../benchmarks/pilot';
 import { createServerInstance } from '../../../server/createServer';
+import { GAME, LASER } from '../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
-import { GAME, LASER } from '../../../src/constants';
 
 test('a benchmark pilot moves and fires a shot that the authoritative world publishes', async () => {
   const server = createServerInstance({ port: 0, nodeEnv: 'test', seed: 42 });

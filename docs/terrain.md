@@ -6,9 +6,9 @@ Ships gain speed when their heading follows the local contour tangent, in either
 
 A longer curved contour route can compete with a shorter direct crossing. Laser motion is unchanged, and short contour highlights under shots remain decorative.
 
-`src/physics/terrain/passages.ts` preserves the two seeded warped families of interconnected cuts as geometry only. Their smooth proximity profile reshapes the heightfield used by both contour extraction and travel; the starter area and world edge smoothly disable these cuts. There is no separate passage speed multiplier or route membership. Existing seeds and saved progress remain unchanged.
+`shared/passages.ts` preserves the two seeded warped families of interconnected cuts as geometry only. Their smooth proximity profile reshapes the heightfield used by both contour extraction and travel; the starter area and world edge smoothly disable these cuts. There is no separate passage speed multiplier or route membership. Existing seeds and saved progress remain unchanged.
 
-`src/physics/terrain/heightfield.ts` defines the seeded heightfield and sampled gradient. `terrainConfig.ts` controls feature size, contour density, and travel strength. `terrainTravel.ts` calculates the shared travel velocity. The room seed in snapshots keeps clients and the server on the same terrain. The homepage uses a fixed terrain preview with denser, muted lines and no stars.
+`shared/heightfield.ts` defines the seeded heightfield and sampled gradient. `terrainConfig.ts` controls feature size, contour density, and travel strength. `terrainTravel.ts` calculates the shared travel velocity. The room seed in snapshots keeps clients and the server on the same terrain. The homepage uses a fixed terrain preview with denser, muted lines and no stars.
 
 From `/Users/johnsolly/code/GeoRoids`, run `npx vitest run tests/unit/systems/isoContourTerrain.test.ts tests/unit/systems/contourLaser.test.ts tests/unit/ui/titleTerrain.test.ts` for terrain, contour, and homepage coverage. Desktop/mobile contour travel is a manual observation; the retired browser scenario no longer supplies automated evidence.
 

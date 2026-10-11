@@ -1,7 +1,7 @@
+import { checkBoundaryCollision } from '../../../shared/collisionDetection';
+import { GAME, SHIP } from '../../../shared/constants/gameplay';
 import { GROWTH, maxVelocityFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import type { Position, Velocity } from '../../../shared-types';
-import { GAME, SHIP } from '../../constants';
-import { checkBoundaryCollision } from '../../physics/collision/collisionDetection';
 import { isGenericDeathCause } from '../../utils/deathCause';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 

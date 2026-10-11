@@ -1,5 +1,5 @@
-import { ROID } from '../constants';
 import { getGameBoundary } from './boundary';
+import { ROID } from './constants/gameplay';
 
 /** Asteroids inhabit the full world; the server activates nearby sectors. */
 export function getAsteroidFieldRadius(): number {
@@ -77,20 +77,6 @@ export function stepAsteroidMotion(
   const nextVelocity = { x: 0, y: 0 };
   stepAsteroidMotionInto(position, velocity, tickScale, nextPosition, nextVelocity);
   return { position: nextPosition, velocity: nextVelocity };
-}
-
-/**
- * Test whether a world point falls inside the ship-centered 1:1 viewport.
- * Draw culling also needs the object's radius and stroke margin.
- */
-export function isOnPlayfieldCanvas(
-  world: { x: number; y: number },
-  ship: { x: number; y: number },
-  canvas: { width: number; height: number } = { width: 1920, height: 1080 }
-): boolean {
-  const screenX = canvas.width / 2 - ship.x + world.x;
-  const screenY = canvas.height / 2 - ship.y + world.y;
-  return screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height;
 }
 
 export function isPoseInAsteroidField(x: number, y: number, slop = 1): boolean {

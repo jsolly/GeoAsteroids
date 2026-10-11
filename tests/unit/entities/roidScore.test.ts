@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { ROID } from '../../../src/constants';
-import { pointsForRoidSize } from '../../../src/entities/roid/roidScore';
+import { ROID } from '../../../shared/constants/gameplay';
+import { pointsForRoidSize } from '../../../shared/roidScore';
 
 describe('roid score helpers', () => {
   test('points follow size class', () => {

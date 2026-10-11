@@ -6,9 +6,9 @@ import { InlineWorldPersistence } from '../../../server/world/InlineWorldPersist
 import { WorldStore } from '../../../server/world/WorldStore';
 import { beltSlotForAsteroid, beltSlotPosition } from '../../../shared/asteroidBelt';
 import { BELT_CRAWLER } from '../../../shared/beltCrawler';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import { captureSnapshot } from '../../../shared/snapshotProtocol';
 import type { AsteroidData } from '../../../shared-types';
-import { DAMAGE } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function addPilot(engine: GameEngine) {

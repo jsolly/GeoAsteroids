@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest';
-import { GAME } from '../../../src/constants';
+import { GAME } from '../../../shared/constants/gameplay';
+import { scannedMaterial } from '../../../shared/surveyScan';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { activateAbilityOnHost, tickAbilityHost } from '../../../src/entities/ship/shipAbilities';
 import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
-import { scannedMaterial } from '../../../src/entities/ship/surveyScan';
 
 test('Scout scan identifies nearby minerals then expires without changing motion', () => {
   const ship = new Ship({ kitId: 'scout' });

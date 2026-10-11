@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { PALETTE, VISUAL } from '../../../src/constants';
+import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
+import { VISUAL } from '../../../src/constants';
 import {
   addFurnaceFlamePath,
   addFurnaceInnerFlamePath,
@@ -140,7 +141,7 @@ test('a radar furnace mark is a hairline three-tongue campfire in fire ink, not 
   }
   expect(flame.curves).toBe(FURNACE_CAMPFIRE_PATH.filter((command) => command.t === 'C').length);
   expect(flame.color).toBe(canvasColor(ctx, FURNACE_MAP_INK));
-  expect(flame.color).not.toBe(canvasColor(ctx, PALETTE.SATELLITE));
+  expect(flame.color).not.toBe(canvasColor(ctx, WIRE_PALETTE.SATELLITE));
 
   const xs = flame.points.map((point) => point.x);
   const ys = flame.points.map((point) => point.y);

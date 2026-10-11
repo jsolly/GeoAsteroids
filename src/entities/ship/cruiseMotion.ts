@@ -1,8 +1,8 @@
+import { GAME } from '../../../shared/constants/gameplay';
 import { cruiseSpeed } from '../../../shared/shipFlight';
 import { thrustScaleFromMass } from '../../../shared/shipGrowth';
-import { GAME } from '../../constants';
-import { TERRAIN } from '../../physics/terrain/terrainConfig';
-import { terrainCruiseVelocity } from '../../physics/terrain/terrainTravel';
+import { TERRAIN } from '../../../shared/terrainConfig';
+import { terrainCruiseVelocity } from '../../../shared/terrainTravel';
 import type { Ship } from './Ship';
 
 /** Cruise follows the nose with a bidirectional bonus for following contours. */

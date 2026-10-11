@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { GAME } from '../../../../src/constants';
+import { getGameBoundary } from '../../../../shared/boundary';
+import { GAME } from '../../../../shared/constants/gameplay';
 import { Player } from '../../../../src/entities/player/Player';
 import {
   applyShipBoundaryDeath,
@@ -7,7 +8,6 @@ import {
   resolveCombatDeathCause,
 } from '../../../../src/entities/ship/shipUtils';
 import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
-import { getGameBoundary } from '../../../../src/physics/boundary';
 import { formatDeathCauseForOverlay } from '../../../../src/utils/deathCause';
 
 function localPilot(): Player {

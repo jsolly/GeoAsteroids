@@ -6,12 +6,12 @@ import {
   contourLockVelocity,
 } from '../../../shared/contourLock';
 import { cruiseSpeed } from '../../../shared/shipFlight';
+import { TERRAIN } from '../../../shared/terrainConfig';
+import { terrainSpeedLimit } from '../../../shared/terrainTravel';
 import { WORLD } from '../../../shared/world';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { findContourCapture } from '../../../src/physics/terrain/contourCapture';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
 import { ensureTerrain } from '../../../src/physics/terrain/terrainSession';
-import { terrainSpeedLimit } from '../../../src/physics/terrain/terrainTravel';
 
 beforeEach(() => ensureTerrain(TERRAIN.DEFAULT_SEED, { cx: 0, cy: 0, radius: WORLD.radius }));
 

@@ -11,9 +11,9 @@ import { InlineWorldPersistence } from '../../../server/world/InlineWorldPersist
 import { RegionalAsteroidField } from '../../../server/world/RegionalAsteroidField';
 import { WorldStore } from '../../../server/world/WorldStore';
 import { isInBeltFootprint } from '../../../shared/asteroidBelt';
+import { DEPOSIT_FIELD, ROID } from '../../../shared/constants/gameplay';
 import { sectorAt, WORLD } from '../../../shared/world';
 import type { AsteroidData, Position } from '../../../shared-types';
-import { DEPOSIT_FIELD, ROID } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 const SEED = 82;

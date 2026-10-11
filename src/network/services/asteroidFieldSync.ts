@@ -1,6 +1,6 @@
 import { isAsteroidMaterial } from '../../../shared/asteroidMaterials';
+import { containAsteroidPositionInto, isPoseInAsteroidField } from '../../../shared/asteroidMotion';
 import type { AsteroidData, AsteroidDestroyEvent, AsteroidMaterial } from '../../../shared-types';
-import { containAsteroidPositionInto, isPoseInAsteroidField } from '../../physics/asteroidMotion';
 import { logger } from '../../utils/Logger';
 
 function writeOptionalField<K extends keyof AsteroidData>(

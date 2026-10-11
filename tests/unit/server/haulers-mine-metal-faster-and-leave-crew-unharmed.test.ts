@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
+import { ROID } from '../../../shared/constants/gameplay';
 import type { AsteroidData } from '../../../shared-types';
-import { ROID } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 let engine: GameEngine;

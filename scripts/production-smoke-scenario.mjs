@@ -14,7 +14,7 @@ const { SNAPSHOT_VERSION, SnapshotDecoder } = await tsImport(
   '../shared/snapshotProtocol.ts',
   import.meta.url
 );
-const { GAME, LASER } = await tsImport('../src/constants/index.ts', import.meta.url);
+const { GAME, LASER } = await tsImport('../shared/constants/gameplay.ts', import.meta.url);
 
 function documentAssets(html) {
   requireEvidence(

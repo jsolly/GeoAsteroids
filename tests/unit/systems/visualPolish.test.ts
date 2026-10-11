@@ -1,6 +1,8 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import { SHIP, WIRE_PALETTE } from '../../../shared/constants/gameplay';
+import { TERRAIN } from '../../../shared/terrainConfig';
 import type { ShipKitId } from '../../../shared-types';
-import { PALETTE, SHIP, VISUAL } from '../../../src/constants';
+import { PALETTE, VISUAL } from '../../../src/constants';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { lootScreenRadius } from '../../../src/entities/loot/lootRenderer';
 import { Player } from '../../../src/entities/player/Player';
@@ -20,7 +22,6 @@ import {
   strokeKitHullOutline,
 } from '../../../src/entities/ship/shipRenderer';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
 import { ensureTerrain, getTerrainField } from '../../../src/physics/terrain/terrainSession';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { drawContourLaserTicks } from '../../../src/rendering/contourLaserRenderer';
@@ -390,7 +391,7 @@ test('local and remote kit thrusters draw two open V contours only while thrusti
   for (const kit of KITS) {
     for (const { player, center, color } of [
       { player: local, center: { x: 400, y: 300 }, color: PALETTE.LOCAL },
-      { player: remote, center: { x: 490, y: 260 }, color: PALETTE.REMOTE },
+      { player: remote, center: { x: 490, y: 260 }, color: WIRE_PALETTE.REMOTE },
     ]) {
       const ship = player.ship;
       ship.kitId = kit.id;

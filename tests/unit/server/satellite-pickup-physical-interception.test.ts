@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { GameEngine } from '../../../server/core/GameEngine';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import type { AsteroidData } from '../../../shared-types';
-import { DAMAGE } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function clearAsteroids(engine: GameEngine): void {

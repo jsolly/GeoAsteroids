@@ -1,8 +1,8 @@
-import { cruiseVelocity } from '../../../shared/shipFlight';
-import type { Position, Velocity } from '../../../shared-types';
+import type { Position, Velocity } from '../shared-types';
+import { getTerrainField } from '../src/physics/terrain/terrainSession';
 import { sampleGradient } from './heightfield';
+import { cruiseVelocity } from './shipFlight';
 import { TERRAIN } from './terrainConfig';
-import { getTerrainField } from './terrainSession';
 
 function travelGradient(position: Position): { x: number; y: number; strength: number } {
   const gradient = sampleGradient(getTerrainField(), position.x, position.y);

@@ -1,6 +1,6 @@
+import { getGameBoundary } from '../../shared/boundary';
+import { SHIP } from '../../shared/constants/gameplay';
 import type { Position } from '../../shared-types';
-import { SHIP } from '../constants';
-import { getGameBoundary } from '../physics/boundary';
 
 /**
  * Generates a random position near the game boundary, ensuring it's within the boundary

@@ -8,8 +8,8 @@ import {
   previewChargedReflections,
   seedAsteroidPhenomena,
 } from '../../../shared/asteroidPhenomena';
+import { GAME, LASER } from '../../../shared/constants/gameplay';
 import type { AsteroidData, Position } from '../../../shared-types';
-import { GAME, LASER } from '../../../src/constants';
 
 function rock(id: string, position: Position): AsteroidData {
   return {

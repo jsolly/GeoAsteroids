@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { WebSocketCore } from '../../../server/communication/WebSocketCore';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { logger } from '../../../setup/serverLogger';
+import { DAMAGE, SHIP } from '../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
 import type { AsteroidData } from '../../../shared-types';
-import { DAMAGE, SHIP } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 import { attachTowForScenario } from '../../support/tool-flight';
 

@@ -1,5 +1,5 @@
+import { GAME, SHIP } from '../../../shared/constants/gameplay';
 import type { ShipKitId } from '../../../shared-types';
-import { GAME, SHIP } from '../../constants';
 
 export const SHIP_KIT_IDS = ['scout', 'hauler'] as const;
 

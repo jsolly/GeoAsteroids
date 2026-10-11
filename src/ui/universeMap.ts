@@ -1,8 +1,10 @@
 import { beltSlotPosition, beltSlots } from '../../shared/asteroidBelt';
+import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { oreResource } from '../../shared/economy';
 import { explorationCellAt, isCellExplored } from '../../shared/exploration';
 import { CIVIC_LOTS, pipeHopToParent } from '../../shared/furnaces';
 import { RICOCHET_COURT } from '../../shared/ricochetCourt';
+import { activeScanners, scannedMaterial } from '../../shared/surveyScan';
 import { WORLD } from '../../shared/world';
 import type { ExplorationTile, MapAsset, Position } from '../../shared-types';
 import { PALETTE } from '../constants';
@@ -10,7 +12,6 @@ import { LootField } from '../entities/loot/LootField';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import type { Roid } from '../entities/roid/Roid';
 import { getKitHullOutline, projectHullPolyline } from '../entities/ship/hullOutlines';
-import { activeScanners, scannedMaterial } from '../entities/ship/surveyScan';
 import { getWorldExploration, getWorldMapAssets, worldFurnaces } from '../network/worldExploration';
 import { getSpiderField } from '../physics/terrain/spiderSession';
 import { strokeFurnaceFireTrail } from '../rendering/furnaceRenderer';
@@ -217,7 +218,7 @@ export function paintMapLegend(canvas: HTMLCanvasElement, kind: MapLegendKind): 
   if (ctx) {
     ctx.scale(2, 2);
     if (kind === 'You' || kind === 'Crew') {
-      ctx.strokeStyle = kind === 'You' ? PALETTE.LOCAL : PALETTE.REMOTE;
+      ctx.strokeStyle = kind === 'You' ? PALETTE.LOCAL : WIRE_PALETTE.REMOTE;
       ctx.lineWidth = 1;
       const player =
         kind === 'You'
@@ -258,7 +259,7 @@ function rebuildExplorationRaster(tiles: readonly ExplorationTile[]): void {
   }
 
   context.clearRect(0, 0, MAP_RASTER_SIZE, MAP_RASTER_SIZE);
-  context.fillStyle = hexToRgba(PALETTE.REMOTE, 0.14);
+  context.fillStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.14);
   context.imageSmoothingEnabled = false;
 
   // The server sends sparse 16×16 sector tiles. Decode only revealed bytes once
@@ -371,7 +372,7 @@ function drawMapBackground(context: CanvasRenderingContext2D, frame: MapFrame): 
   context.arc(0, 0, WORLD.radius, 0, Math.PI * 2);
   context.stroke();
 
-  context.strokeStyle = hexToRgba(PALETTE.REMOTE, 0.2);
+  context.strokeStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.2);
   context.lineWidth = 1 / frame.scale;
   context.beginPath();
   context.moveTo(-WORLD.radius, 0);
@@ -418,7 +419,7 @@ function drawMapAsset(
     drawFoundationMapMark(context, 0, 0, screen * 0.7);
     context.restore();
   } else {
-    const color = asset.kind === 'satellite' ? PALETTE.SATELLITE : PALETTE.LOOT;
+    const color = asset.kind === 'satellite' ? WIRE_PALETTE.SATELLITE : PALETTE.LOOT;
     context.scale(1 / frame.scale, 1 / frame.scale);
     drawResourceMapMark(context, asset.kind, 0, 0, screen, color);
     context.scale(frame.scale, frame.scale);
@@ -688,7 +689,7 @@ function drawCourtLandmark(
     context.font = '12px "Courier New", monospace';
     context.textAlign = 'center';
     context.textBaseline = 'top';
-    context.fillStyle = hexToRgba(PALETTE.REMOTE, 0.9);
+    context.fillStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.9);
     context.fillText(RICOCHET_COURT.name, 0, markSize * 1.6);
   }
   context.restore();
