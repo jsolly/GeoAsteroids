@@ -491,10 +491,10 @@
     "src/runtime/debugPresentation.ts": "sha256:3b60bd7df351cc04e69d4781438c44993a47bd8d49653bd5902d8bb85a119230",
     "tests/unit/components/debug-controls.test.ts": "sha256:56801c433ada1979081698eadf2ee2b5db5cec01417b5d5187d13e9da2f690aa",
     "shared/shipUtilities.ts": "sha256:4765616269b47a3896eeeb10c683ca0437e11d36ac202f933290f7aba20247d5",
-    "shared/asteroidMotion.ts": "sha256:3bbfc55b591079f8d0186a840f59a5ec297f090c5f3e770703a357b3a0f682ff",
+    "shared/asteroidMotion.ts": "sha256:c43565f457f5d4179c602373398e503a5167b830c47b04a8132023b2d3e68ff4",
     "shared/boundary.ts": "sha256:57695fde0da2263d0b02de6e1a572123a3e5cf923517d83c6579f9e41573dabb",
     "shared/collisionDetection.ts": "sha256:52c18afa35e8ebcdf24999235beb40cbdd14e19d0e131dbbb0a27d5f4ad401e7",
-    "shared/constants/gameplay.ts": "sha256:1ad6e315e18ad1405f48dc69c27f4130bcb98e4d856d12d2858450467cc87a30",
+    "shared/constants/gameplay.ts": "sha256:afbfc7db45af6e1fced352efd2379a796aabd862f945d857095b0bd6235b5277",
     "shared/heightfield.ts": "sha256:30c64a9298980efa122dbd4a32b18fd3b480b76775b57744af3f645dfb6d40ae",
     "shared/passages.ts": "sha256:681c1117dca8b8086c8a494830f75376d1850d03969f41e6be81ef8586ae3cb4",
     "shared/playerName.ts": "sha256:4145ed9914dc1eba2091ff3712384234975239665f7cd6cb3b3d2ada0c072b74",
@@ -3549,6 +3549,23 @@
       "topics": ["field-manual", "hud-network"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Review follow-up: the server laser range now derives from named ratio and playfield-width constants (still 800.6), and the test-only viewport helper moved out of shared asteroid motion into its test. No rule, value or demonstration changed.",
+      "sources": ["shared/asteroidMotion.ts", "shared/constants/gameplay.ts"],
+      "topics": [
+        "asteroids",
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "loot-growth",
+        "satellites",
+        "scout"
+      ],
+      "media": ["movement", "pickups", "survival"],
+      "owners": {
+        "shared/asteroidMotion.ts": "asteroids"
+      }
     }
   ]
 }

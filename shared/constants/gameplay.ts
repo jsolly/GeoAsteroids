@@ -62,12 +62,16 @@ export const DAMAGE = {
 // ============================================================================
 // LASER CONFIGURATION
 // ============================================================================
+const LASER_TRAVEL_DISTANCE_RATIO = 0.6; // fraction of screen width
+/** Playfield width the server assumes when it expires shots. */
+const INTERNAL_PLAYFIELD_WIDTH = 800;
+
 export const LASER = {
   SPEED: 300 * GAME.MOTION_SCALE, // pixels per second
   MAX_COUNT: 200, // limit of lasers that can exist
-  TRAVEL_DISTANCE_RATIO: 0.6, // fraction of screen width
-  /** Server range; matches client Laser.isExpired on the 800-unit internal playfield. */
-  MAX_TRAVEL_DISTANCE: 0.6 + 800,
+  TRAVEL_DISTANCE_RATIO: LASER_TRAVEL_DISTANCE_RATIO,
+  /** Server range; matches client Laser.isExpired on the internal playfield. */
+  MAX_TRAVEL_DISTANCE: LASER_TRAVEL_DISTANCE_RATIO + INTERNAL_PLAYFIELD_WIDTH,
   EXPLODE_DURATION: 0.1, // seconds
   PREDICTION_TIMEOUT_MS: 2000, // Bound unacknowledged local shots during connection loss
   /** Projectile thickness for hits. Ship hull radii stay independent. */
