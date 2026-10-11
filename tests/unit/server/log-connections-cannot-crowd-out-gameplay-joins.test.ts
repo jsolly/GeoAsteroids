@@ -9,16 +9,15 @@ import {
   LOG_CONNECTIONS_PER_WINDOW,
 } from '../../../server/communication/connectionAdmission';
 
-test('production enables connection budgets and test runs leave them off unless enforced', () => {
+test('production enables connection budgets and test or development runs leave them off', () => {
   expect(LOG_CONNECTIONS_PER_WINDOW).toBe(6);
   expect(GAMEPLAY_CONNECTIONS_PER_WINDOW).toBe(50);
   expect(CONNECTION_ADMISSION_WINDOW_MS).toBe(60_000);
   expect(connectionLimitsDisabled({ nodeEnv: 'production' })).toBe(false);
   expect(connectionLimitsDisabled({ nodeEnv: 'test', vitest: 'true' })).toBe(true);
   expect(connectionLimitsDisabled({ nodeEnv: 'development' })).toBe(true);
-  expect(
-    connectionLimitsDisabled({ nodeEnv: 'test', vitest: 'true', enforceConnectionLimits: true })
-  ).toBe(false);
+  expect(connectionLimitsDisabled({ nodeEnv: 'production', processNodeEnv: 'test' })).toBe(true);
+  expect(connectionLimitsDisabled({ nodeEnv: 'production', vitest: 'true' })).toBe(true);
 });
 
 test('a log-socket burst keeps its own budget and leaves gameplay joins open', () => {

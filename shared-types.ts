@@ -39,9 +39,8 @@ export interface TerrainSpider {
 
 export interface SpiderFieldState {
   spiders: TerrainSpider[];
-  /** Known nest homes whose original stationary resource is still present.
-   * Missing cleared status from a previous server release means still guarded. */
-  nests: { id: string; resourceId: string; position: Position; cleared?: boolean }[];
+  /** Known nest homes whose original stationary resource is still present. */
+  nests: { id: string; resourceId: string; position: Position; cleared: boolean }[];
 }
 
 // Common position and velocity types used throughout the system
@@ -55,7 +54,6 @@ export interface Velocity {
   y: number;
 }
 
-// Network update interface - only what needs to be synced
 /** Chosen at join. Shared by every player ship. */
 export type ShipKitId = 'scout' | 'hauler';
 
@@ -115,8 +113,12 @@ export interface PlayerJoin {
   /** Required current-protocol acknowledgement. */
   snapshotVersion: 3;
   asteroidInteractions: 1;
-  /** The server accepts correlated shoot requests and emits per-shot acknowledgements. */
-  shotAcknowledgements?: boolean;
+  /**
+   * Retired: clients always track shot receipts. Still sent because cached
+   * pre-receipt bundles read it and the production smoke's join admission
+   * requires it; remove all three together.
+   */
+  shotAcknowledgements?: true;
   /** Private to the joined socket; never included in world snapshots. */
   resumeToken: string;
   /** Private server build identifier for correlating client and server diagnostics. */
@@ -139,7 +141,7 @@ export interface PlayerJoin {
   color: string;
   kitId?: ShipKitId;
   /** Seeded heightfield shared by every client in the room. */
-  terrainSeed?: number;
+  terrainSeed: number;
 }
 
 export interface PlayerLeave {
@@ -170,8 +172,6 @@ export interface PlayerMotionState {
 }
 
 export interface PlayerProjectileState {
-  /** Ability bolts do not consume the regular weapon limit. */
-
   id: string;
   ownerId: string;
   position: Position;
@@ -225,7 +225,7 @@ export interface AsteroidData {
   beltCrawlerIds?: string[];
   /** Mineral composition when present on the asteroid. */
   material?: AsteroidMaterial;
-  /** Null is barren. Absent old rocks use a stable ID-derived deposit. */
+  /** Null is barren. When absent, a stable deposit is derived from the rock id. */
   ore?: AsteroidMaterial | null;
   /** Pilots who identified this deposit by scan or satellite; retained until it leaves the field. */
   surveyedBy?: string[];
@@ -240,8 +240,7 @@ export interface AsteroidData {
 /** Shared world pickups. Destroy-drop is shard; Tap extract is tap; mined cargo is points. */
 export type EquipmentId = 'resource_tap' | 'boost_coupling' | 'survey_probe';
 
-/** `wreckage` remains a reserved loot kind; current mining produces point cargo. */
-export type LootKind = 'shard' | 'tap' | 'silk' | EquipmentId | 'points' | 'wreckage';
+export type LootKind = 'shard' | 'tap' | 'silk' | EquipmentId | 'points';
 
 /** One accepted collection, emitted before the next world snapshot. */
 export interface LootCollected {
@@ -342,7 +341,7 @@ export interface ServerGameState {
   gameTime: number;
   isPaused: boolean;
   /** Same seed on every client → same contours and slope field. */
-  terrainSeed?: number;
+  terrainSeed: number;
 }
 
 export interface MapAsset {
@@ -420,6 +419,57 @@ export interface PingMessage {
   probeId?: number;
 }
 
+type EmptyData = Record<string, never>;
+
+/** Every frame the gameplay client sends on `/ws`; the server still decodes each as untrusted. */
+export type ClientWireMessage =
+  | {
+      type: 'join';
+      id: string;
+      data: {
+        name: string;
+        position: Position;
+        kitId: ShipKitId;
+        snapshotVersion: 3;
+        asteroidInteractions: 1;
+        clientReleaseId: string;
+        resumeToken?: string;
+      };
+    }
+  | { type: 'update'; data: PlayerUpdate }
+  | {
+      type: 'shoot';
+      id: string;
+      data: { laserStart: Position; laserDirection: Velocity; requestId: string };
+    }
+  | { type: 'snapshotAck'; data: SnapshotAcknowledgement }
+  | { type: 'snapshotResync'; data: EmptyData }
+  | { type: 'leave'; data: EmptyData }
+  | { type: 'useAbility'; id: string; data: EmptyData }
+  | { type: 'setHaulerUtility'; id: string; data: { utilityId: HaulerUtilityId } }
+  | { type: 'setScoutUtility'; id: string; data: { utilityId: ScoutUtilityId } }
+  | { type: 'equipSatellite'; id: string; data: { pickupId: string } }
+  | { type: 'buyStoreItem'; id: string; data: { offerId: string } }
+  | { type: 'travelFurnace'; id: string; data: { destinationId: string } }
+  | { type: 'collisionDamage'; data: { targetPlayerId: string; attackerId: 'boundary' } }
+  | PingMessage;
+
+/** Commands a pilot may send only after the server acknowledged its join. */
+export type ClientGameplayMessage = Extract<
+  ClientWireMessage,
+  {
+    type:
+      | 'useAbility'
+      | 'setHaulerUtility'
+      | 'setScoutUtility'
+      | 'equipSatellite'
+      | 'buyStoreItem'
+      | 'travelFurnace'
+      | 'collisionDamage'
+      | 'snapshotResync';
+  }
+>;
+
 /** One newly accepted ship shot; snapshots remain silent on join/reconnect. */
 export type PlayerShotFired = Pick<PlayerProjectileState, 'id' | 'ownerId' | 'position'>;
 
@@ -429,7 +479,7 @@ export interface FurnaceDelivery {
   asteroidId: string;
   position: Position;
   material: AsteroidMaterial;
-  rewards: Array<{ playerId: string; playerName: string; points: number; score: number }>;
+  rewards: Array<{ playerId: string; playerName: string; points: number }>;
 }
 
 /** A sector of permanent shared map discoveries; 16 by 16 bits, hex encoded. */

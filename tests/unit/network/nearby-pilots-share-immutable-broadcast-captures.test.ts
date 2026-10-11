@@ -46,16 +46,9 @@ test('overlapping Scout and Hauler broadcasts share captured rocks while retaini
   });
   try {
     engine.createAsteroids(2, { radius: 500 });
-    const scout = engine.addPlayer('capture-scout', 'Scout', scoutSocket, { x: 0, y: 0 }, 'scout');
-    const hauler = engine.addPlayer(
-      'capture-hauler',
-      'Hauler',
-      haulerSocket,
-      { x: 20, y: 0 },
-      'hauler'
-    );
-    engine.enableAsteroidInteractions(scout);
-    engine.enableAsteroidInteractions(hauler);
+    engine.addPlayer('capture-scout', 'Scout', scoutSocket, { x: 0, y: 0 }, 'scout');
+    engine.addPlayer('capture-hauler', 'Hauler', haulerSocket, { x: 20, y: 0 }, 'hauler');
+    engine.seedAsteroidInteractions();
     broadcaster.negotiateSnapshot(scoutSocket);
     broadcaster.negotiateSnapshot(haulerSocket);
     const probe = engine.dropEquipmentAt({ x: 10, y: 10 }, 'survey_probe');

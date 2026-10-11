@@ -2,7 +2,69 @@
 
 import { expect, test } from 'vitest';
 import { decodeClientCommand } from '../../../server/communication/clientCommandDecoder';
-import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
+import {
+  ASTEROID_INTERACTIONS_CAPABILITY,
+  SNAPSHOT_VERSION,
+} from '../../../shared/snapshotProtocol';
+import { STORE_OFFERS } from '../../../shared/townStore';
+import type { ClientWireMessage } from '../../../shared-types';
+
+/** One frame per client wire type; adding a type without a fixture is a compile error. */
+const clientFrames: { [K in ClientWireMessage['type']]: Extract<ClientWireMessage, { type: K }> } =
+  {
+    join: {
+      type: 'join',
+      id: 'pilot',
+      data: {
+        name: 'Pilot',
+        position: { x: 0, y: 0 },
+        kitId: 'scout',
+        snapshotVersion: SNAPSHOT_VERSION,
+        asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        clientReleaseId: 'a'.repeat(40),
+      },
+    },
+    update: {
+      type: 'update',
+      data: {
+        id: 'pilot',
+        position: { x: 0, y: 0 },
+        velocity: { x: 0, y: 0 },
+        angle: 0,
+        thrusting: false,
+      },
+    },
+    shoot: {
+      type: 'shoot',
+      id: 'pilot',
+      data: { laserStart: { x: 0, y: 0 }, laserDirection: { x: 1, y: 0 }, requestId: 'shot-1' },
+    },
+    snapshotAck: { type: 'snapshotAck', data: { sequence: 1 } },
+    snapshotResync: { type: 'snapshotResync', data: {} },
+    leave: { type: 'leave', data: {} },
+    useAbility: { type: 'useAbility', id: 'pilot', data: {} },
+    setHaulerUtility: { type: 'setHaulerUtility', id: 'pilot', data: { utilityId: 'tow_cable' } },
+    setScoutUtility: { type: 'setScoutUtility', id: 'pilot', data: { utilityId: 'mineral_scan' } },
+    equipSatellite: { type: 'equipSatellite', id: 'pilot', data: { pickupId: 'pickup-1' } },
+    buyStoreItem: {
+      type: 'buyStoreItem',
+      id: 'pilot',
+      data: { offerId: STORE_OFFERS[0].id },
+    },
+    travelFurnace: { type: 'travelFurnace', id: 'pilot', data: { destinationId: 'hearth' } },
+    collisionDamage: {
+      type: 'collisionDamage',
+      data: { targetPlayerId: 'pilot', attackerId: 'boundary' },
+    },
+    ping: { type: 'ping', probeId: 1 },
+  };
+
+test('every frame the gameplay client sends decodes to the matching server command', () => {
+  for (const [type, frame] of Object.entries(clientFrames)) {
+    const decoded = decodeClientCommand(frame);
+    expect(decoded.ok ? decoded.command.type : decoded).toBe(type);
+  }
+});
 
 test('applied-world acknowledgments require a positive safe sequence at the wire boundary', () => {
   expect(decodeClientCommand({ type: 'snapshotAck', data: { sequence: 7 } })).toEqual({
@@ -111,7 +173,7 @@ test('shoot request IDs remain optional while malformed correlation values stop 
   }
 });
 
-test('nested joins keep finite positions and capability offers', () => {
+test('nested joins keep finite positions once the required capabilities are offered', () => {
   expect(
     decodeClientCommand({
       type: 'join',
@@ -132,11 +194,30 @@ test('nested joins keep finite positions and capability offers', () => {
       name: 'Pilot',
       position: { x: 12.5, y: -4 },
       kitId: 'hauler',
-      snapshotVersion: SNAPSHOT_VERSION,
-      asteroidInteractions: 1,
       resumeRequested: false,
     },
   });
+});
+
+test('joins without the asteroid interaction capability ask the client to refresh', () => {
+  for (const asteroidInteractions of [undefined, 2, '1']) {
+    expect(
+      decodeClientCommand({
+        type: 'join',
+        data: {
+          id: 'pilot',
+          name: 'Pilot',
+          position: { x: 0, y: 0 },
+          snapshotVersion: SNAPSHOT_VERSION,
+          asteroidInteractions,
+        },
+      })
+    ).toEqual({
+      ok: false,
+      messageType: 'join',
+      error: 'Client update required; refresh GeoRoids',
+    });
+  }
 });
 
 test('join coordinates must be finite numbers', () => {
@@ -204,8 +285,14 @@ test('Scout utility commands accept current tools and reject the retired furnace
   }
 });
 
-test('retired asteroid tool and pickup claim commands are rejected at the wire boundary', () => {
-  for (const type of ['asteroidTool', 'asteroidInput', 'satellitePickupCollected']) {
+test('retired client commands are rejected at the wire boundary', () => {
+  for (const type of [
+    'asteroidTool',
+    'asteroidInput',
+    'satellitePickupCollected',
+    'chat',
+    'clientLog',
+  ]) {
     expect(decodeClientCommand({ type, data: {} })).toEqual({
       ok: false,
       messageType: type,
@@ -220,13 +307,6 @@ test('malformed current commands retain their action-specific error policy', () 
     ok: false,
     messageType: 'shoot',
     error: 'Missing finite laser coordinates for shoot',
-  });
-});
-
-test('client telemetry reaches ingress validation even when its payload is malformed', () => {
-  expect(decodeClientCommand({ type: 'clientLog', data: 'malformed' })).toEqual({
-    ok: true,
-    command: { type: 'clientLog', payload: {} },
   });
 });
 

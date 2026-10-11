@@ -107,7 +107,6 @@ test('an explored world with hundreds of saved sectors keeps each simulation fra
   const engine = new GameEngine(SEED, clock, new InlineWorldPersistence(store));
   cleanups.push(() => engine.stopGameLoop());
   const pilot = engine.addPlayer('pilot', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
-  pilot.asteroidInteractions = 1;
   expect(engine.getDiagnostics().isPaused).toBe(false);
 
   // Steady flight: the pilot stays inside already-active sectors, so nothing

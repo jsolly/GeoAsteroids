@@ -19,6 +19,7 @@ function arrange(furnaces = new FurnaceField()) {
     position: { x: 6800, y: 3000 },
     health: 100,
     exploding: false,
+    radius: 0,
   };
   const passer = { ...owner, id: 'passer', position: { x: 7000, y: 3040 } };
   const options = {

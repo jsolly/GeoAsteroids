@@ -14,7 +14,6 @@ interface PendingShot {
 export class AuthoritativeProjectileField {
   private static instance: AuthoritativeProjectileField;
   private rows: PlayerProjectileState[] = [];
-  private enabled = false;
   private pending = new Map<string, PendingShot>();
   static getInstance(): AuthoritativeProjectileField {
     if (!AuthoritativeProjectileField.instance) {
@@ -22,11 +21,7 @@ export class AuthoritativeProjectileField {
     }
     return AuthoritativeProjectileField.instance;
   }
-  isEnabled(): boolean {
-    return this.enabled;
-  }
   sync(projectiles: readonly PlayerProjectileState[]): void {
-    this.enabled = true;
     this.rows = projectiles.map((row) => ({
       ...row,
       position: { ...row.position },
@@ -115,6 +110,5 @@ export class AuthoritativeProjectileField {
     }
     this.pending.clear();
     this.rows = [];
-    this.enabled = false;
   }
 }

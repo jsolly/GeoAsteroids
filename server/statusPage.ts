@@ -1,5 +1,5 @@
 import { createLogRecord, stringifyLogRecord } from '../shared/logRecords';
-import { SNAPSHOT_VERSION } from '../shared/snapshotProtocol';
+import { ASTEROID_INTERACTIONS_CAPABILITY, SNAPSHOT_VERSION } from '../shared/snapshotProtocol';
 import { SERVER_RELEASE_ID } from './release';
 
 function clientLogTemplate(message: string): string {
@@ -22,7 +22,7 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WebSocket Status - GeoAsteroids</title>
+    <title>WebSocket Status - GeoRoids</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -319,7 +319,7 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
             }
 
             addLog('Connecting to game WebSocket...', 'info');
-            gameWs = createStatusSocket(\`\${wsBase}/ws?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=1\`, 'Game', {
+            gameWs = createStatusSocket(\`\${wsBase}/ws?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=${ASTEROID_INTERACTIONS_CAPABILITY}\`, 'Game', {
                 onopen: function(socket) {
                     if (gameWs !== socket) return;
                     addLog('Game WebSocket connected', 'info');
@@ -483,21 +483,35 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
             const panel = document.getElementById('serverHealth');
             const loggingPanel = document.getElementById('loggingHealth');
             try {
-                const data = await requestJson('/health');
-                if (!data || data.status !== 'healthy' ||
+                // A 503 still carries the full health body; show why instead of a bare status code.
+                const response = await fetch('/health', { signal: AbortSignal.timeout(5000) });
+                if (!response.ok && response.status !== 503) {
+                    throw new Error('HTTP ' + response.status + ' from /health');
+                }
+                const data = await response.json();
+                const healthy = response.ok && data && data.status === 'healthy';
+                if (!data || data.status !== (response.ok ? 'healthy' : 'unhealthy') ||
                     !Number.isSafeInteger(data.players) || data.players < 0 ||
                     !Number.isFinite(data.uptime) || data.uptime < 0 ||
                     typeof data.timestamp !== 'string' || !Number.isFinite(Date.parse(data.timestamp))) {
                     throw new Error('Invalid health response');
                 }
-                panel.className = '';
+                const persistence = data.world && data.world.persistence;
+                const messages = [healthy ? '✅ Server is healthy' : '❌ Server is unhealthy: world persistence failed',
+                    'Players: ' + data.players, 'Uptime: ' + data.uptime.toFixed(2) + 's', 'Timestamp: ' + data.timestamp];
+                if (!healthy && persistence) {
+                    messages.push('World persistence: ' + JSON.stringify(persistence));
+                }
+                panel.className = healthy ? '' : 'error';
                 panel.replaceChildren();
-                for (const message of ['✅ Server is healthy', 'Players: ' + data.players,
-                    'Uptime: ' + data.uptime.toFixed(2) + 's', 'Timestamp: ' + data.timestamp]) {
+                for (const message of messages) {
                     const row = document.createElement('div');
-                    row.className = 'log info';
+                    row.className = healthy ? 'log info' : 'log error';
                     row.textContent = message;
                     panel.appendChild(row);
+                }
+                if (!healthy) {
+                    addLog('Health check: world persistence failed', 'error');
                 }
                 renderLoggingHealth(data.logging);
             } catch (error) {

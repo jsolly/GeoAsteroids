@@ -42,12 +42,6 @@ test('snapshot v3 accepts every current Hauler and Scout utility', () => {
   }
 });
 
-test('historical furnace utility snapshots remain readable and resolve to Mineral Scan', () => {
-  const pilot = receivePilot({ kitId: 'scout', scoutUtility: 'build_furnace' });
-  expect(pilot.scoutUtility).toBe('build_furnace');
-  expect(scoutUtilityOf(pilot)).toBe('mineral_scan');
-});
-
 test('missing utility fields preserve the Tow Cable and Mineral Scan defaults', () => {
   const hauler = receivePilot({ kitId: 'hauler' });
   const scout = receivePilot({ kitId: 'scout' });
@@ -58,7 +52,15 @@ test('missing utility fields preserve the Tow Cable and Mineral Scan defaults', 
 });
 
 test('snapshot v3 rejects unknown, cross-kit, and malformed utility tokens', () => {
-  for (const scoutUtility of ['tow_cable', 'unknown', 'constructor', null, 7, {}]) {
+  for (const scoutUtility of [
+    'tow_cable',
+    'build_furnace',
+    'unknown',
+    'constructor',
+    null,
+    7,
+    {},
+  ]) {
     expect(() => receivePilot({ kitId: 'scout', scoutUtility })).toThrow(
       'Incomplete or invalid public snapshot DTO'
     );

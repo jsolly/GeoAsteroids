@@ -99,7 +99,15 @@ type ScheduledTimer = {
   delay: number;
 };
 
-function createStatusDocument(): {
+type HealthReply = { ok: boolean; status: number; body: Record<string, unknown> };
+
+const HEALTHY_REPLY: HealthReply = {
+  ok: true,
+  status: 200,
+  body: { players: 0, status: 'healthy', timestamp: '2026-01-01T00:00:00.000Z', uptime: 1 },
+};
+
+function createStatusDocument(health: HealthReply = HEALTHY_REPLY): {
   advanceTimers: (maximumDelay: number) => void;
   pendingTimers: () => number;
   dispose: () => void;
@@ -119,13 +127,9 @@ function createStatusDocument(): {
         configurable: true,
         value: () =>
           Promise.resolve({
-            ok: true,
-            json: async () => ({
-              players: 0,
-              status: 'healthy',
-              timestamp: '2026-01-01T00:00:00.000Z',
-              uptime: 1,
-            }),
+            ok: health.ok,
+            status: health.status,
+            json: async () => health.body,
           }),
       });
       Object.defineProperty(window, 'setTimeout', {
@@ -356,5 +360,44 @@ test('both status log controls send fresh bounded client records accepted by rea
     await ClientLogger.flushPending();
     vi.unstubAllEnvs();
     await rm(logDirectory, { recursive: true, force: true });
+  }
+});
+
+test('a healthy reply renders as healthy', async () => {
+  StatusPageSocket.reset();
+  const status = createStatusDocument();
+  try {
+    await settleMicrotasks();
+    const health = text(status.window, 'serverHealth');
+    expect(health).toContain('Server is healthy');
+    expect(health).toContain('Players: 0');
+    expect(health).not.toMatch(/unhealthy|failed/u);
+  } finally {
+    status.dispose();
+  }
+});
+
+test('a 503 health reply shows the failed world persistence instead of a bare HTTP error', async () => {
+  StatusPageSocket.reset();
+  const status = createStatusDocument({
+    ok: false,
+    status: 503,
+    body: {
+      players: 2,
+      status: 'unhealthy',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      uptime: 3,
+      world: { persistence: { failed: true, pendingBatches: 1 } },
+    },
+  });
+  try {
+    await settleMicrotasks();
+    const health = text(status.window, 'serverHealth');
+    expect(health).toContain('Server is unhealthy: world persistence failed');
+    expect(health).toContain('Players: 2');
+    expect(health).toContain('"failed":true');
+    expect(health).not.toContain('HTTP 503');
+  } finally {
+    status.dispose();
   }
 });

@@ -118,6 +118,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       color: '#fff',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken,
     });
   }
@@ -224,13 +225,16 @@ describe('actual ConnectionManager WebSocket message path', () => {
       ws.receive('lootCollected', { ...collection, lootId: 'tap-canister', kind: 'tap' });
       expect(played).toHaveLength(3);
       expect(played[2]).toMatch(LOOT_PICKUP_SOUND_PATH_PATTERN);
+      ws.receive('lootCollected', { ...collection, lootId: 'mined-points', kind: 'points' });
+      expect(played).toHaveLength(4);
+      expect(played[3]).toMatch(LOOT_PICKUP_SOUND_PATH_PATTERN);
       ws.receive('lootCollected', { ...collection, lootId: 'invalid-kind', kind: 'unknown' });
       ws.receive('lootCollected', {
         ...collection,
         lootId: 'distant-loot',
         position: { x: 10000, y: 0 },
       });
-      expect(played).toHaveLength(3);
+      expect(played).toHaveLength(4);
       setSound(false);
       ws.receive('playerShotFired', {
         id: 'muted-shot',
@@ -238,21 +242,21 @@ describe('actual ConnectionManager WebSocket message path', () => {
         position: { x: 30, y: 0 },
       });
       ws.receive('lootCollected', { ...collection, lootId: 'muted-loot' });
-      expect(played).toHaveLength(3);
+      expect(played).toHaveLength(4);
       manager.disconnect();
       const reconnected = await connect();
       acknowledge(reconnected);
       setSound(true);
       reconnected.receive('lootCollected', collection);
-      expect(played).toHaveLength(3);
+      expect(played).toHaveLength(4);
       reconnected.receive(
         'snapshot',
         new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1)
       );
       reconnected.receive('lootCollected', collection);
-      expect(played).toHaveLength(3);
-      reconnected.receive('lootCollected', { ...collection, lootId: 'new-live-pickup' });
       expect(played).toHaveLength(4);
+      reconnected.receive('lootCollected', { ...collection, lootId: 'new-live-pickup' });
+      expect(played).toHaveLength(5);
     } finally {
       resetGameAudio();
       setSound(false);
@@ -502,7 +506,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       expect(ws.sent.filter((message) => message.type === 'useAbility')).toEqual([
         expect.objectContaining({
           id: player.id,
-          data: { kitId: 'scout' },
+          data: {},
         }),
       ]);
       expect(paths).toEqual([]);
@@ -637,6 +641,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
         position: player.ship.position,
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: 1,
+        terrainSeed: 7,
         resumeToken: 'a'.repeat(64),
       });
       const state = captureSnapshot(snapshotFixture());
@@ -699,6 +704,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       position: player.ship.position,
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'b'.repeat(64),
     });
     const state = captureSnapshot(snapshotFixture());
@@ -815,6 +821,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       position: player.ship.position,
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'a'.repeat(64),
     });
     const state = captureSnapshot(snapshotFixture());
@@ -864,6 +871,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       position: player.ship.position,
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'b'.repeat(64),
     });
     const freshEntity = state.entities[0];
@@ -1276,7 +1284,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       abilityActiveFrames: 30,
       abilityCooldownFrames: 80,
     });
-    manager.sendMessage({ type: 'useAbility', data: {} });
+    manager.sendMessage({ type: 'useAbility', id: manager.getLocalPlayerId(), data: {} });
     const emptyBelt = captureSnapshot(zero);
     emptyBelt.asteroids = [];
     ws.receive('snapshot', new SnapshotEncoder(emptyBelt).encode(2));
@@ -1375,7 +1383,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       type: 'snapshotAck',
       data: { sequence: 16 },
     });
-    expect(manager.sendMessage({ type: 'chat', data: { message: 'Still joining' } })).toBe(false);
+    expect(manager.sendMessage({ type: 'useAbility', id: 'pilot-1', data: {} })).toBe(false);
     acknowledge(ws);
     ws.receive('snapshot', new SnapshotEncoder(state).encode(17));
     const statePilot = state.entities[1];
@@ -1404,7 +1412,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
     expect(ws.sent.filter((message) => message.type === 'snapshotResync')).toEqual([
       { type: 'snapshotResync', data: {} },
     ]);
-    expect(manager.sendMessage({ type: 'chat', data: { message: 'Still joining' } })).toBe(false);
+    expect(manager.sendMessage({ type: 'useAbility', id: 'pilot-1', data: {} })).toBe(false);
     acknowledge(ws);
     ws.receive('snapshot', new SnapshotEncoder(state).encode(17));
     expect(ws.sent.filter((message) => message.type === 'snapshotAck').at(-1)).toEqual({
@@ -1429,6 +1437,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       position: { x: 0, y: 0 },
       snapshotVersion: 2,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'b'.repeat(64),
     });
     expect(ws.close).toHaveBeenCalled();
@@ -1448,24 +1457,41 @@ describe('actual ConnectionManager WebSocket message path', () => {
       snapshotVersion: 2,
       asteroidInteractions: 1,
       resumeToken: 'a'.repeat(64),
+      terrainSeed: 7,
     },
     {
       label: 'future snapshot version',
       snapshotVersion: SNAPSHOT_VERSION + 1,
       asteroidInteractions: 1,
       resumeToken: 'a'.repeat(64),
+      terrainSeed: 7,
     },
     {
       label: 'asteroid interaction capability',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 2,
       resumeToken: 'a'.repeat(64),
+      terrainSeed: 7,
     },
     {
       label: 'resume token',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
       resumeToken: 'short',
+      terrainSeed: 7,
+    },
+    {
+      label: 'terrain seed',
+      snapshotVersion: SNAPSHOT_VERSION,
+      asteroidInteractions: 1,
+      resumeToken: 'a'.repeat(64),
+    },
+    {
+      label: 'numeric terrain seed',
+      snapshotVersion: SNAPSHOT_VERSION,
+      asteroidInteractions: 1,
+      resumeToken: 'a'.repeat(64),
+      terrainSeed: 'seven',
     },
   ])('fails closed when the joined acknowledgment omits a valid $label', async (ack) => {
     const ws = await connect();

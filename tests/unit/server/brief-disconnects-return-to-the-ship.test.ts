@@ -11,7 +11,6 @@ import { RecordingSocket } from '../../support/recordingSocket';
 function registerPilot(engine: GameEngine, id: string, position: { x: number; y: number }) {
   const socket = new RecordingSocket();
   const actor = engine.addPlayer(id, id, socket, position, 'scout');
-  actor.asteroidInteractions = 1;
   const registered = engine.registerPilot(actor, socket);
   assert(registered.ok);
   return { actor, token: registered.resumeToken };

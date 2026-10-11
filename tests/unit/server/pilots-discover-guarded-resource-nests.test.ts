@@ -19,7 +19,13 @@ const homeSector = '7,2';
 const nestCellId = '3,1';
 function setup(value: SpiderResource['value'] = 1) {
   const manager = new TerrainSpiderManager(() => 0.5);
-  const pilot = { id: 'pilot', position: { ...approach }, health: 100, exploding: false };
+  const pilot = {
+    id: 'pilot',
+    position: { ...approach },
+    health: 100,
+    exploding: false,
+    radius: 0,
+  };
   const resource: SpiderResource = { id: 'ore', position: home, value };
   const resources = () => [resource];
   let frame = 0;
@@ -124,6 +130,7 @@ test('nests never materialize beside a pilot or in a furnace yard', () => {
     position: { x: TOWN_HEARTH.position.x - 2_000, y: TOWN_HEARTH.position.y },
     health: 100,
     exploding: false,
+    radius: 0,
   };
   worksYard.advance({
     players: [worksPilot],
@@ -147,6 +154,7 @@ test('nests never materialize beside a pilot or in a furnace yard', () => {
         position: { x: lot.position.x - 2_000, y: lot.position.y },
         health: 100,
         exploding: false,
+        radius: 0,
       },
     ],
     resources: () => [{ id: 'ore', position: { ...lot.position }, value: 1 }],
@@ -214,6 +222,7 @@ test('multiplayer nest creation and sleeping guards share the same active popula
     position: { x: resource.position.x - 2000, y: resource.position.y },
     health: 100,
     exploding: false,
+    radius: 0,
   }));
   manager.advance({
     players: players.slice(0, 1),
@@ -274,7 +283,13 @@ test.each(['collected', 'moved', 'replaced'] as const)(
   'a %s deposit no longer advertises the old nest on the map',
   (change) => {
     const manager = new TerrainSpiderManager(() => 0.5);
-    const pilot = { id: 'pilot', position: { ...approach }, health: 100, exploding: false };
+    const pilot = {
+      id: 'pilot',
+      position: { ...approach },
+      health: 100,
+      exploding: false,
+      radius: 0,
+    };
     let resources: SpiderResource[] = [{ id: 'ore', position: { ...home }, value: 1 }];
     const advance = (nowFrame: number) =>
       manager.advance({ players: [pilot], resources: () => resources, nowFrame });
@@ -296,7 +311,13 @@ test.each(['collected', 'moved', 'replaced'] as const)(
 
 test('map snapshots reuse the scheduled resource refresh and roaming spiders add no nests', () => {
   const manager = new TerrainSpiderManager(() => 0.5);
-  const pilot = { id: 'pilot', position: { ...approach }, health: 100, exploding: false };
+  const pilot = {
+    id: 'pilot',
+    position: { ...approach },
+    health: 100,
+    exploding: false,
+    radius: 0,
+  };
   let reads = 0;
   const resources = (): SpiderResource[] => {
     reads++;
@@ -335,7 +356,13 @@ test.each(['collected', 'moved'] as const)(
     const field = new RegionalAsteroidField(42, new Map([[homeSector, [deposit]]]));
     const rocks = new AsteroidManager(new RNGService(42));
     const manager = new TerrainSpiderManager(() => 0.5);
-    const pilot = { id: 'pilot', position: { ...approach }, health: 100, exploding: false };
+    const pilot = {
+      id: 'pilot',
+      position: { ...approach },
+      health: 100,
+      exploding: false,
+      radius: 0,
+    };
     const advance = (nowFrame: number) => {
       field.update(rocks, [pilot.position]);
       manager.advance({
@@ -391,7 +418,13 @@ test('nearby resource cells each have ten guards and seed treasure only on first
     { id: 'west-ore', position: { x: 14_800, y: 5_000 }, value: 0 },
     { id: 'east-ore', position: { x: 15_200, y: 5_000 }, value: 2 },
   ];
-  const pilot = { id: 'pilot', position: { x: 15_000, y: 7_000 }, health: 100, exploding: false };
+  const pilot = {
+    id: 'pilot',
+    position: { x: 15_000, y: 7_000 },
+    health: 100,
+    exploding: false,
+    radius: 0,
+  };
   const created: string[] = [];
   const advance = (nowFrame: number) =>
     manager.advance({
@@ -428,7 +461,13 @@ test('treasure that evicts an older guarded deposit changes its marker on the ne
   const loot = new LootManager(new RNGService(7));
   const west = { x: 14_800, y: 5_000 };
   const east = { x: 15_200, y: 5_000 };
-  const pilot = { id: 'pilot', position: { x: 15_000, y: 7_000 }, health: 100, exploding: false };
+  const pilot = {
+    id: 'pilot',
+    position: { x: 15_000, y: 7_000 },
+    health: 100,
+    exploding: false,
+    radius: 0,
+  };
   const older = loot.spawnShard(west, 0, 0.75);
   const created: string[] = [];
   const advance = (nowFrame: number) =>
@@ -486,7 +525,9 @@ test('treasure that evicts an older guarded deposit changes its marker on the ne
 test('resource-centered nests still leave the starter area safe', () => {
   const manager = new TerrainSpiderManager(() => 0.5);
   manager.advance({
-    players: [{ id: 'pilot', position: { x: 2_500, y: 0 }, health: 100, exploding: false }],
+    players: [
+      { id: 'pilot', position: { x: 2_500, y: 0 }, health: 100, exploding: false, radius: 0 },
+    ],
     resources: () => [{ id: 'starter-ore', position: { x: 500, y: 0 }, value: 2 }],
     nowFrame: 1,
   });

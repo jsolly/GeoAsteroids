@@ -39,7 +39,6 @@ test('a UTC month boundary keeps scores, exploration, and the live ship', () => 
     const engine = new GameEngine(82, clock, new InlineWorldPersistence(store));
     const socket = new RecordingSocket();
     const actor = engine.addPlayer('pilot', 'Bob', socket, { x: 4_000, y: 1_200 });
-    actor.asteroidInteractions = 1;
     const registered = engine.registerPilot(actor, socket);
     assert(registered.ok);
     actor.score = 880;
