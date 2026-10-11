@@ -9,6 +9,6 @@ test('high-frequency gameplay frames are not inbound-logged', () => {
 
 test('rare gameplay messages may still be inbound-logged', () => {
   expect(shouldLogInboundGameplayMessage('join')).toBe(true);
-  expect(shouldLogInboundGameplayMessage('initAsteroids')).toBe(true);
+  expect(shouldLogInboundGameplayMessage('snapshotResync')).toBe(true);
   expect(shouldLogInboundGameplayMessage('shoot')).toBe(true);
 });

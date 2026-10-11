@@ -5,7 +5,6 @@ import type {
   AsteroidPhenomenon,
   AsteroidProbe,
   FurnaceTransit,
-  HaulerUtilityId,
   LootData,
   LootKind,
   MapAsset,
@@ -31,6 +30,7 @@ import { validEquipment } from './equipment';
 import { validExploration } from './exploration';
 import { civicLot, TOWN_HEARTH, validCivicModules } from './furnaces';
 import { FURNACE_TRAVEL } from './furnaceTravel';
+import { isHaulerUtilityId, isScoutUtilityId } from './shipUtilities';
 import { SPIDER } from './terrainSpider';
 import { WORLD } from './world';
 
@@ -57,14 +57,8 @@ const kit = enumeration<ShipKitId>({
   scout: true,
   hauler: true,
 });
-const haulerUtility = enumeration<HaulerUtilityId>({
-  resource_tap: true,
-  boost_coupling: true,
-  tow_cable: true,
-});
-// `build_furnace` is a retired equip token. Older clients may still send it.
-const scoutUtility: Rule = (value) =>
-  value === 'mineral_scan' || value === 'survey_probe' || value === 'build_furnace';
+// Historical snapshots retain this token; utility resolution uses Mineral Scan.
+const scoutUtility: Rule = (value) => isScoutUtilityId(value) || value === 'build_furnace';
 const lootKind = enumeration<LootKind>({
   shard: true,
   tap: true,
@@ -183,7 +177,7 @@ const entity = shape<ServerEntityData>({
   harpoonTargetId: optional((value) => value === null || string(value)),
   harpoonLatchPos: optional(position),
   utilityFlight: optional((value) => value === null || utilityFlight(value)),
-  haulerUtility: optional(haulerUtility),
+  haulerUtility: optional(isHaulerUtilityId),
   scoutUtility: optional(scoutUtility),
   deathCause: optional(string),
   playerMotion: optional(motion),

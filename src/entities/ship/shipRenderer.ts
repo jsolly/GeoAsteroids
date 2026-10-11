@@ -1,4 +1,5 @@
 import { planFurnaceRoute } from '../../../shared/furnaceTravel';
+import { haulerUtilityOf, isResourceTapUtility } from '../../../shared/shipUtilities';
 import { UTILITY_FLIGHT } from '../../../shared/utilityFlight';
 import type { HaulerUtilityId, Position, ShipKitId, Velocity } from '../../../shared-types';
 import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
@@ -20,7 +21,6 @@ import { hexToRgba, laserBoltColor } from '../../utils/colorUtils';
 import { isDebugMode } from '../../utils/debugUtils';
 import { contourSpeedStrength } from './cruiseMotion';
 import { findHarpoonFieldBody } from './harpoonField';
-import { haulerUtilityOf, isResourceTapUtility } from './haulerUtility';
 import {
   getHaulerEquipment,
   getKitHullOutline,

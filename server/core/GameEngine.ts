@@ -58,6 +58,12 @@ import {
 } from '../../shared/lootBlast';
 import { readReleaseId, releaseField } from '../../shared/releaseId';
 import { canCollectLoot, GROWTH } from '../../shared/shipGrowth';
+import {
+  haulerUtilityOf,
+  isResourceTapUtility,
+  isTowCableUtility,
+  scoutUtilityOf,
+} from '../../shared/shipUtilities';
 import { boundedDiagnosticError, captureDiagnosticActorState } from '../../shared/stateDiagnostics';
 import { SURVEY_PROBE } from '../../shared/surveyProbe';
 import { SPIDER, spiderHitRadius } from '../../shared/terrainSpider';
@@ -92,12 +98,6 @@ import type {
 } from '../../shared-types';
 import { CANVAS, DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../src/constants';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
-import {
-  haulerUtilityOf,
-  isResourceTapUtility,
-  isTowCableUtility,
-} from '../../src/entities/ship/haulerUtility';
-import { scoutUtilityOf } from '../../src/entities/ship/scoutUtility';
 import {
   activateAbilityOnHost,
   clearHaulerLatch,
@@ -708,7 +708,7 @@ export class GameEngine {
     this.ensureSatellitePickups();
 
     // Asteroids are server-owned world state. A fresh active session must not
-    // depend on a client's initAsteroids message to seed the belt.
+    // depend on a client initialization request to seed the belt.
     this.ensureAsteroidField();
   }
 

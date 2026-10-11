@@ -1,6 +1,15 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { type DOMWindow, JSDOM } from 'jsdom';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
+import { ClientLogger } from '../../../server/services/ClientLogger';
 import { renderStatusPage } from '../../../server/statusPage';
+import { LOG_LINE_MAX_BYTES, parseClientLogRecord } from '../../../shared/logRecords';
+
+vi.mock('../../../server/release', () => ({
+  SERVER_RELEASE_ID: 'status-</script><script>window.statusInjected=true</script>',
+}));
 
 type SocketEvent = {
   code: number;
@@ -16,9 +25,11 @@ class StatusPageSocket {
   static readonly CLOSED = 3;
   private static readonly attempts = new Map<'game' | 'logs', number>();
   private static throwNextSend = false;
+  static sent: string[] = [];
 
   static reset(): void {
     StatusPageSocket.attempts.clear();
+    StatusPageSocket.sent = [];
     StatusPageSocket.throwNextSend = false;
   }
 
@@ -65,7 +76,7 @@ class StatusPageSocket {
       StatusPageSocket.throwNextSend = false;
       throw new Error('simulated send race');
     }
-    void data;
+    StatusPageSocket.sent.push(data);
   }
 
   close(): void {
@@ -98,7 +109,7 @@ function createStatusDocument(): {
   let nextTimerId = 1;
   const dom = new JSDOM(renderStatusPage(false), {
     runScripts: 'dangerously',
-    url: 'http://status.test/status',
+    url: 'http://status.test/status?token=private-token#fragment',
     beforeParse(window) {
       Object.defineProperty(window, 'WebSocket', {
         configurable: true,
@@ -279,3 +290,71 @@ test.each([
     }
   }
 );
+
+test('both status log controls send fresh bounded client records accepted by real ingress', async () => {
+  StatusPageSocket.reset();
+  const logDirectory = await mkdtemp(path.join(os.tmpdir(), 'georoids-status-logs-'));
+  vi.stubEnv('GEOROIDS_TEST_LOG_DIR', logDirectory);
+  const status = createStatusDocument();
+  try {
+    await settleMicrotasks();
+    button(status.window, 'connectLogsBtn').click();
+    await settleMicrotasks();
+    button(status.window, 'connectLogsBtn').click();
+    await settleMicrotasks();
+    expect(text(status.window, 'logStatus')).toBe('Connected');
+
+    const sentAfter = Date.now();
+    button(status.window, 'testLogBtn').click();
+    button(status.window, 'clientLogBtn').click();
+    await settleMicrotasks();
+    const sentBefore = Date.now();
+    expect(StatusPageSocket.sent).toHaveLength(2);
+    expect(status.window.document.querySelectorAll('script')).toHaveLength(1);
+    expect(Reflect.get(status.window, 'statusInjected')).toBeUndefined();
+
+    const sessions = new Set<string>();
+    for (const wire of StatusPageSocket.sent) {
+      const message = JSON.parse(wire);
+      expect(message.type).toBe('clientLog');
+      const line = message.data.line;
+      expect(new TextEncoder().encode(line).byteLength).toBeLessThanOrEqual(LOG_LINE_MAX_BYTES);
+      const record = parseClientLogRecord(line);
+      if (!record) {
+        throw new Error('Status control sent an invalid client log record');
+      }
+      expect(record).toMatchObject({
+        source: 'client',
+        level: 'info',
+        category: 'STATUS',
+        releaseId: 'status-</script><script>window.statusInjected=true</script>',
+        sessionId: message.data.sessionId,
+      });
+      expect(record.sessionId).toMatch(/^status-page-/u);
+      expect(Date.parse(record.timestamp)).toBeGreaterThanOrEqual(sentAfter);
+      expect(Date.parse(record.timestamp)).toBeLessThanOrEqual(sentBefore);
+      expect(message.timestamp).toBe(Date.parse(record.timestamp));
+      expect(message.data).toMatchObject({ level: 'info', pageUrl: 'http://status.test/status' });
+      expect(message.data).not.toHaveProperty('message');
+      sessions.add(message.data.sessionId);
+      expect(ClientLogger.logClientMessage(message.data, {})).toBe('accepted');
+    }
+    expect(sessions.size).toBe(2);
+    expect(await ClientLogger.flushPending()).toBe(true);
+    const written = (await readFile(path.join(logDirectory, 'client.log'), 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    expect(written).toHaveLength(2);
+    expect(written.map((record) => record.message)).toEqual([
+      'Test message from debug console',
+      'Test client log from /status page',
+    ]);
+    expect(new Set(written.map((record) => record.sessionId))).toEqual(sessions);
+  } finally {
+    status.dispose();
+    await ClientLogger.flushPending();
+    vi.unstubAllEnvs();
+    await rm(logDirectory, { recursive: true, force: true });
+  }
+});

@@ -1,10 +1,12 @@
+import {
+  DEFAULT_SCOUT_UTILITY,
+  isScoutUtilityId,
+  parseScoutUtilityId,
+} from '../../../shared/shipUtilities';
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
-import type { ScoutUtilityId, ShipKitId } from '../../../shared-types';
+import type { ScoutUtilityId } from '../../../shared-types';
 import { getStoredItem, removeStoredItem, setStoredItem } from '../../utils/safeStorage';
 
-export const SCOUT_UTILITY_IDS = ['mineral_scan', 'survey_probe'] as const;
-
-export const DEFAULT_SCOUT_UTILITY: ScoutUtilityId = 'mineral_scan';
 export const SCOUT_UTILITY_STORAGE_KEY = 'georoids.scoutUtility';
 
 export const SCOUT_UTILITY = {
@@ -20,25 +22,9 @@ export const SCOUT_UTILITY = {
     hint: `Tap to equip · ${SURVEY_PROBE.MAX_PER_OWNER} max`,
     copy: `Aim and fire a beacon forward; misses disintegrate. It scans a ${SURVEY_PROBE.RANGE}-unit radius for ${SURVEY_PROBE.LIFETIME_MS / 60_000} minutes, with ${SURVEY_PROBE.MAX_HEALTH} health. Everyone benefits.`,
   },
-} as const;
-
-export function isScoutUtilityId(value: unknown): value is ScoutUtilityId {
-  return value === 'mineral_scan' || value === 'survey_probe';
-}
-
-function parseScoutUtilityId(value: unknown): ScoutUtilityId {
-  return isScoutUtilityId(value) ? value : DEFAULT_SCOUT_UTILITY;
-}
-
-export function scoutUtilityOf(host: {
-  kitId?: ShipKitId | string;
-  scoutUtility?: unknown;
-}): ScoutUtilityId {
-  if (host.kitId !== 'scout') {
-    return DEFAULT_SCOUT_UTILITY;
-  }
-  return isScoutUtilityId(host.scoutUtility) ? host.scoutUtility : DEFAULT_SCOUT_UTILITY;
-}
+} as const satisfies {
+  [Id in ScoutUtilityId]: { id: Id; name: string; hint: string; copy: string };
+};
 
 export function preferredScoutUtility(): ScoutUtilityId {
   let stored = getStoredItem(SCOUT_UTILITY_STORAGE_KEY);

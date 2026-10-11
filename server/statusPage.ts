@@ -1,4 +1,20 @@
+import { createLogRecord, stringifyLogRecord } from '../shared/logRecords';
 import { SNAPSHOT_VERSION } from '../shared/snapshotProtocol';
+import { SERVER_RELEASE_ID } from './release';
+
+function clientLogTemplate(message: string): string {
+  return stringifyLogRecord(
+    createLogRecord({
+      timestamp: new Date(0).toISOString(),
+      source: 'client',
+      level: 'info',
+      releaseId: SERVER_RELEASE_ID,
+      category: 'STATUS',
+      message,
+    })
+  ).replaceAll('<', '\\u003c');
+}
+
 export function renderStatusPage(diagnosticsEnabled: boolean): string {
   return `
 <!DOCTYPE html>
@@ -127,6 +143,26 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
     <script>
         // Compute endpoints from current page location
         const wsBase = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host;
+
+        const testLogRecord = ${clientLogTemplate('Test message from debug console')};
+        const clientLogRecord = ${clientLogTemplate('Test client log from /status page')};
+
+        function clientLogMessage(template) {
+            const now = new Date();
+            const sessionId = 'status-page-' + now.getTime() + '-' + Math.random().toString(36).slice(2);
+            const record = { ...template, timestamp: now.toISOString(), sessionId };
+            return {
+                type: 'clientLog',
+                timestamp: now.getTime(),
+                data: {
+                    sessionId,
+                    level: record.level,
+                    line: JSON.stringify(record),
+                    userAgent: navigator.userAgent,
+                    pageUrl: location.origin + location.pathname
+                }
+            };
+        }
 
         const STATUS_SOCKET_CONNECT_TIMEOUT_MS = 5000;
         const socketDeadlines = new WeakMap();
@@ -391,18 +427,7 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
             const socket = logWs;
             if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
-            const testMessage = {
-                type: 'clientLog',
-                timestamp: Date.now(),
-                data: {
-                    sessionId: 'debug-session-' + Date.now(),
-                    level: 'INFO',
-                    line: \`[\${new Date().toISOString()}] INFO Test message from debug console\`,
-                    message: 'Test message from debug console',
-                    userAgent: navigator.userAgent,
-                    pageUrl: location.href
-                }
-            };
+            const testMessage = clientLogMessage(testLogRecord);
 
             try {
                 socket.send(JSON.stringify(testMessage));
@@ -574,18 +599,7 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
             createStatusSocket(\`\${wsBase}/logs\`, 'Client log', {
                 onopen: function(socket) {
                     if (finished) return;
-                    const testMessage = {
-                        type: 'clientLog',
-                        timestamp: Date.now(),
-                        data: {
-                            sessionId: 'status-page-test',
-                            level: 'INFO',
-                            line: '[Status Page Test] INFO Test client log from /status page',
-                            message: 'Test client log from /status page - this should appear in client.log',
-                            userAgent: navigator.userAgent,
-                            pageUrl: location.href
-                        }
-                    };
+                    const testMessage = clientLogMessage(clientLogRecord);
 
                     try {
                         socket.send(JSON.stringify(testMessage));

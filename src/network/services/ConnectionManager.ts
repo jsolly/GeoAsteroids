@@ -1,6 +1,7 @@
 import { isEquipmentId } from '../../../shared/equipment';
 import { validExploration } from '../../../shared/exploration';
 import { releaseField } from '../../../shared/releaseId';
+import { isTowCableUtility, scoutUtilityOf } from '../../../shared/shipUtilities';
 import {
   SNAPSHOT_VERSION,
   SnapshotDecoder,
@@ -49,8 +50,6 @@ import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { SatellitePickupManager } from '../../entities/satellitePickup/SatellitePickupManager';
 import { setHoldEmptyHarpoonField } from '../../entities/ship/harpoonField';
-import { isTowCableUtility } from '../../entities/ship/haulerUtility';
-import { scoutUtilityOf } from '../../entities/ship/scoutUtility';
 import { setScoutUtilityOnHost } from '../../entities/ship/shipAbilities';
 import type { ShipCombatNetwork } from '../../entities/ship/shipCombatNetwork';
 import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from '../../entities/ship/shipKits';
@@ -195,7 +194,6 @@ export class ConnectionManager {
   private localPlayerId: string = '';
   private allPlayers: Map<string, Player> = new Map();
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
-  private hasInitializedAsteroidsForConnection: boolean = false;
   private readonly playerListCache = new PlayerListCache<Player>();
   private readonly snapshotEntityIds = new Set<string>();
   private readonly playedLootCollectionIds = new Set<string>();
@@ -479,7 +477,6 @@ export class ConnectionManager {
     this.state.isConnected = false;
     this.state.socket = null;
     this.stopHeartbeat();
-    this.hasInitializedAsteroidsForConnection = false;
     // Preserve the visible belt while the next socket rejoins the authoritative world.
     setHoldEmptyHarpoonField(true);
     if (this.disconnectReason === null) {
@@ -572,7 +569,6 @@ export class ConnectionManager {
     this.allPlayers.clear();
     this.playerListCache.invalidate();
     this.seenAsteroidIds.clear();
-    this.hasInitializedAsteroidsForConnection = false;
     LootField.getInstance().clear();
     SatellitePickupManager.getInstance().clear();
     this.localPlayerId = '';
@@ -917,41 +913,6 @@ export class ConnectionManager {
     if (!this.sendPayload(joinMessage)) {
       this.failJoinCompletion(new Error('Failed to send join message'), true);
     }
-  }
-
-  // Initialize asteroids after the server acknowledges join
-  private initializeAsteroids(): void {
-    if (this.hasInitializedAsteroidsForConnection) {
-      return;
-    }
-    if (
-      !this.state.isConnected ||
-      !this.state.socket ||
-      this.state.socket.readyState !== WebSocket.OPEN
-    ) {
-      logger.warn('NETWORK', 'Cannot initialize asteroids - not connected');
-      return;
-    }
-    if (!this.localPlayerId) {
-      logger.warn('NETWORK', 'Cannot initialize asteroids - missing local player id');
-      return;
-    }
-
-    logger.debug('NETWORK', 'Sending initAsteroids message', {
-      playerId: this.localPlayerId,
-    });
-
-    const message: ClientMessage = {
-      type: 'initAsteroids',
-      id: this.localPlayerId,
-      data: {},
-    };
-
-    if (!this.sendPayload(message)) {
-      return;
-    }
-    this.hasInitializedAsteroidsForConnection = true;
-    logger.debug('NETWORK', 'Sent initAsteroids message', { playerId: this.localPlayerId });
   }
 
   // Send a generic message to the server
@@ -1614,10 +1575,7 @@ export class ConnectionManager {
       LootField.getInstance().clear();
       SatellitePickupManager.getInstance().clear();
     }
-    // `keepField` controls whether the warm local belt is retained. It must
-    // not suppress the handshake: a reconnect can land on a fresh server
-    // process whose asteroid manager is empty.
-    this.hasInitializedAsteroidsForConnection = false;
+    // Keep the warm belt until the first authoritative snapshot replaces it.
 
     applyTerrainSeed(data.terrainSeed);
 
@@ -1667,7 +1625,6 @@ export class ConnectionManager {
         });
       }
     }
-    this.initializeAsteroids();
   }
 
   private handlePlayerJoined(data: PlayerJoin): void {

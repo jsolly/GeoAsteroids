@@ -1,8 +1,8 @@
+import { HAULER_UTILITY_IDS } from '../../shared/shipUtilities';
 import type { HaulerUtilityId, ScoutUtilityId, ShipKitId } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import { traceTapCanister } from '../entities/loot/lootRenderer';
 import { latchShudderOffset } from '../entities/roid/latchShudder';
-import { HAULER_UTILITY_IDS } from '../entities/ship/haulerUtility';
 import {
   getHaulerEquipment,
   getKitHullOutline,

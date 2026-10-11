@@ -11,8 +11,7 @@ import {
 import type { DiagnosticLogRecord } from '../../shared-types';
 import { SERVER_RELEASE_ID } from '../release';
 
-const FIELDS = new Set(['level', 'line', 'message', 'sessionId', 'userAgent', 'pageUrl']);
-const LEVELS = new Set(['debug', 'info', 'warn', 'error', 'DEBUG', 'INFO', 'WARN', 'ERROR']);
+const FIELDS = new Set(['level', 'line', 'sessionId', 'userAgent', 'pageUrl']);
 const WINDOW_MS = 60_000;
 const MESSAGES_PER_WINDOW = 120;
 const BYTES_PER_WINDOW = 256 * 1024;
@@ -21,9 +20,7 @@ const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const FLUSH_TIMEOUT_MS = 1000;
 
 type Payload = {
-  level: 'debug' | 'info' | 'warn' | 'error';
-  line?: string;
-  message?: string;
+  record: DiagnosticLogRecord;
   sessionId: string;
   userAgent?: string;
   pageUrl?: string;
@@ -78,12 +75,14 @@ function sanitize(value: unknown): Payload | undefined {
   if (!isRecord(value) || Object.keys(value).some((key) => !FIELDS.has(key))) {
     return;
   }
-  const rawLevel = value['level'] ?? 'info';
-  if (typeof rawLevel !== 'string' || !LEVELS.has(rawLevel)) {
+  const line = value['line'];
+  if (typeof line !== 'string' || Buffer.byteLength(line, 'utf8') > LOG_LINE_MAX_BYTES) {
     return;
   }
-  const line = text(value['line'], LOG_LINE_MAX_BYTES);
-  const message = text(value['message'], 4096);
+  const record = parseClientLogRecord(line);
+  if (!record || value['level'] !== record.level) {
+    return;
+  }
   const sessionId = text(value['sessionId'] ?? 'unknown-session', 128);
   const userAgent = text(value['userAgent'], 512);
   const rawPageUrl = text(value['pageUrl'], 2048);
@@ -98,13 +97,7 @@ function sanitize(value: unknown): Payload | undefined {
       pageUrl = undefined;
     }
   }
-  if ((!line && !message) || !sessionId) {
-    return;
-  }
-  if (value['line'] !== undefined && line === undefined) {
-    return;
-  }
-  if (value['message'] !== undefined && message === undefined) {
+  if (!sessionId) {
     return;
   }
   if (value['userAgent'] !== undefined && userAgent === undefined) {
@@ -114,10 +107,8 @@ function sanitize(value: unknown): Payload | undefined {
     return;
   }
   return {
-    level: rawLevel.toLowerCase() as Payload['level'],
+    record,
     sessionId,
-    ...(line ? { line } : {}),
-    ...(message ? { message } : {}),
     ...(userAgent ? { userAgent } : {}),
     ...(pageUrl ? { pageUrl } : {}),
   };
@@ -239,28 +230,15 @@ function startDrain(): void {
 }
 
 function receivedRecord(payload: Payload): DiagnosticLogRecord {
-  const parsed = payload.line ? parseClientLogRecord(payload.line) : undefined;
   const receivedAt = new Date().toISOString();
-  const legacyText = payload.line ?? payload.message ?? '';
-  const base =
-    parsed ??
-    createLogRecord({
-      timestamp: receivedAt,
-      source: 'client',
-      level: payload.level,
-      releaseId: 'unknown',
-      category: 'LEGACY_CLIENT',
-      message: 'legacy_client_log_redacted',
-      context: { legacyByteLength: Buffer.byteLength(legacyText, 'utf8') },
-    });
   return createLogRecord({
-    ...base,
+    ...payload.record,
     source: 'client',
     sessionId: payload.sessionId,
     receivedAt,
     receiverReleaseId: SERVER_RELEASE_ID,
     context: {
-      ...base.context,
+      ...payload.record.context,
       ...(payload.userAgent ? { userAgent: payload.userAgent } : {}),
       ...(payload.pageUrl ? { pageUrl: payload.pageUrl } : {}),
     },
