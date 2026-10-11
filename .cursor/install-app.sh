@@ -37,16 +37,30 @@ fi
 # --- Node 24 via nvm ---
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-  echo "install-app: ERROR — nvm not found at $NVM_DIR/nvm.sh" >&2
-  exit 1
+  # Claude Code cloud images ship no nvm; bootstrap a pinned release.
+  echo "install-app: installing nvm v0.40.3 into $NVM_DIR"
+  mkdir -p "$NVM_DIR"
+  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh |
+    PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash
 fi
+# nvm.sh exits 3 under `set -eu` when no default alias exists yet.
+set +eu
 # shellcheck disable=SC1091
-. "$NVM_DIR/nvm.sh"
+. "$NVM_DIR/nvm.sh" --no-use
+set -eu
 nvm install 24
 nvm alias default 24
 nvm use 24
 node24_dir="$(dirname "$(nvm which 24)")"
 export PATH="$node24_dir:$PATH"
+# Claude Code cloud sessions do not source nvm and put an image Node first on
+# PATH; link Node 24 into ~/.local/bin, which that PATH searches earlier.
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  mkdir -p "$HOME/.local/bin"
+  for tool in node npm npx corepack; do
+    ln -sf "$node24_dir/$tool" "$HOME/.local/bin/$tool"
+  done
+fi
 echo "install-app: using node $(node --version) (npm $(npm --version))"
 
 # --- project dependencies ---
