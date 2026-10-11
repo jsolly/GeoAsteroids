@@ -363,7 +363,7 @@
     "tests/unit/input/touchAbility.test.ts": "sha256:f53216a35f18353daec5a6adf9df61496e5c8f0cbf1410fc10158244bb89026a",
     "tests/unit/network/asteroidFieldSync.test.ts": "sha256:cd533414af285646da6972e3a48f13d9c989941f6d093144f04d26126be65bfd",
     "tests/unit/network/failed-connections-settle-and-recover.test.ts": "sha256:49389a0ce2aa417cc9a960c6409f9f566eaa6ec2739cc5c78bfaad66e2c35840",
-    "tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts": "sha256:f2e41f66f0d81d6aeea21eb75cacb92a160170f428b3be22665cbe9f1e04ea20",
+    "tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts": "sha256:a9bbae1b24270037c5a05a21dc5377cf3d63577e1716416e990d121627436e4a",
     "tests/unit/network/pilots-reconcile-respawns-and-reconnects.test.ts": "sha256:5d3eac8d8a88f868e18aba78db892719be0dbf832b4fde2e7893ed6701424ecc",
     "tests/unit/network/pilots-recover-complete-snapshots.test.ts": "sha256:0640c475e53ce95a855a7b8dbbc9f84f9d830a8ca2ba9bed3f9b1b19f45320ca",
     "tests/unit/network/resume-credential-stores-release-provenance.test.ts": "sha256:6ad859a57905a6db1119e110a3d35409da4639f49a74bafbaa133676654df9c7",
@@ -3379,6 +3379,13 @@
     },
     {
       "note": "Removed the canvas and viewport spies from the stalled-prediction test. Client laser expiry no longer reads either value, and the test passes unchanged without them. Player rules and demonstrations are unchanged.",
+      "sources": ["tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts"],
+      "topics": ["combat-survival"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Added a just-before-deadline check: a stationary prediction survives one millisecond before LASER.PREDICTION_TIMEOUT_MS and is dropped at it. Player rules and demonstrations are unchanged.",
       "sources": ["tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts"],
       "topics": ["combat-survival"],
       "media": [],

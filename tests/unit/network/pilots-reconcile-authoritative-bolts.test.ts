@@ -282,6 +282,9 @@ describe('pilots reconcile complete authoritative bolts through the actual socke
     const predicted = local.ship.lasers[0];
     expect(predicted?.velocity).toEqual({ x: 0, y: 0 });
     const requestId = ws.sent.findLast((packet) => packet.type === 'shoot')?.data?.['requestId'];
+    clock.mockReturnValue(100 + LASER.PREDICTION_TIMEOUT_MS - 1);
+    local.ship.update();
+    expect(local.ship.lasers).toEqual([predicted]);
     clock.mockReturnValue(100 + LASER.PREDICTION_TIMEOUT_MS);
     local.ship.update();
     expect(local.ship.lasers).toEqual([]);

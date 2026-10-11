@@ -54,19 +54,21 @@ describe('shared ship motion helper', () => {
     }
     const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true });
     ship.angle = 0;
-    ship.velocity = { x: 0, y: 0 };
+    // Inherited drift turns the 2.8125-unit bolt step into exactly 4 units per frame.
+    ship.velocity = { x: 1.1875, y: 0 };
     const laser = createLaser(ship);
     ship.lasers = [laser];
     expect(LASER.MAX_TRAVEL_DISTANCE).toBe(800);
-    expect(LASER.SPEED / GAME.FPS).toBe(2.8125);
-    // 284 steps of 2.8125 = 798.75 units, still in flight; step 285 = 801.5625 crosses 800.
-    for (let frame = 0; frame < 284; frame += 1) {
+    expect(laser.velocity).toEqual({ x: 4, y: 0 });
+    // 199 steps of 4 = 796 units, still in flight; step 200 lands on 800, which the
+    // former 800.6 reach would still have allowed.
+    for (let frame = 0; frame < 199; frame += 1) {
       ship.moveLasers();
     }
     expect(ship.lasers).toEqual([laser]);
-    expect(laser.distTraveled).toBeCloseTo(798.75);
+    expect(laser.distTraveled).toBe(796);
     ship.moveLasers();
-    expect(laser.distTraveled).toBeCloseTo(801.5625);
+    expect(laser.distTraveled).toBe(800);
     expect(ship.lasers).toEqual([]);
   });
 
