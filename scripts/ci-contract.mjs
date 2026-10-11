@@ -17,7 +17,17 @@ assert.deepEqual(required.needs, [
   'integration-tests',
   'wiki-media',
 ]);
-assert.match(required.if, /always\(\)/u);
+// The required check runs whenever its lanes run, keeps the deferred name otherwise, and fails
+// when any of its steps fails.
+assert.equal(required.if, `always() && (${ci.jobs['static-checks'].if})`);
+assert.equal(required.name, ci.jobs['static-checks'].name.replaceAll('static-checks', 'ci'));
+assert.equal(required['continue-on-error'], undefined, 'ci must fail when it fails');
+assert.deepEqual(
+  required.steps
+    .filter((step) => step['continue-on-error'] !== undefined || step.if !== undefined)
+    .map((step) => step.name ?? step.uses),
+  []
+);
 for (const name of required.needs) {
   assert.equal(
     ci.jobs[name].needs,
@@ -340,12 +350,6 @@ const aggregate = required.steps.find(
   (step) => step.name === 'Require all four validation lanes to pass'
 );
 assert.ok(aggregate);
-// The required check must run its aggregate on every event and fail when it fails.
-assert.equal(required['continue-on-error'], undefined);
-assert.deepEqual(
-  required.steps.filter((step) => step['continue-on-error'] !== undefined || step.if !== undefined),
-  []
-);
 const laneResults = {
   STATIC_RESULT: 'static-checks',
   RUNNER_RESULT: 'runner-contracts',
