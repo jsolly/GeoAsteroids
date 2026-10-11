@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GAME } from '../../constants';
+  import { GAME } from '../../../shared/constants/gameplay';
   import { isShipKitId, listShipKits, SHIP_ABILITY } from '../../entities/ship/shipKits';
   import type { WikiArticle } from '../../wiki/article';
   import Table from '../ui/table/table.svelte';

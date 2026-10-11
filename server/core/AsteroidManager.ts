@@ -2,18 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { logger } from '../../setup/serverLogger';
 import { tickAsteroidBoost } from '../../shared/asteroidBoost';
 import { asteroidMaterialAt, MATERIAL_OUTLINES } from '../../shared/asteroidMaterials';
-import { isColossalAsteroid } from '../../shared/asteroidScale';
-import { oreResource } from '../../shared/economy';
-import { FurnaceField } from '../../shared/furnaceField';
-import { WORLD } from '../../shared/world';
-import type { AsteroidData, Position } from '../../shared-types';
-import { DAMAGE, DEBUG, GAME, ROID } from '../../src/constants';
 import {
   containAsteroidPosition,
   getAsteroidFieldRadius,
   stepAsteroidMotionInto,
-} from '../../src/physics/asteroidMotion';
-import { isDebugMode } from '../../src/utils/debugUtils';
+} from '../../shared/asteroidMotion';
+import { isColossalAsteroid } from '../../shared/asteroidScale';
+import { DAMAGE, DEBUG, GAME, ROID } from '../../shared/constants/gameplay';
+import { oreResource } from '../../shared/economy';
+import { FurnaceField } from '../../shared/furnaceField';
+import { WORLD } from '../../shared/world';
+import type { AsteroidData, Position } from '../../shared-types';
 import { AsteroidSpatialIndex } from '../world/AsteroidSpatialIndex';
 import type { RNGService } from './RNGService';
 
@@ -183,7 +182,7 @@ export class AsteroidManager {
     // The requested count remains useful to deterministic tests and explicit
     // tools. Only the opt-in debug mode overrides it; production callers pass
     // the canonical ROID.INITIAL_ROID_COUNT from GameEngine.
-    const asteroidCount = isDebugMode() ? DEBUG.ROIDS.INITIAL_COUNT : count;
+    const asteroidCount = DEBUG.ENABLED ? DEBUG.ROIDS.INITIAL_COUNT : count;
     const newAsteroids: AsteroidData[] = [];
 
     // Scope deterministic slot IDs to this field generation. A delayed

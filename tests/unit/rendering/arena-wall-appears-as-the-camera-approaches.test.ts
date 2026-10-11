@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { getGameBoundary } from '../../../src/physics/boundary';
+import { getGameBoundary } from '../../../shared/boundary';
 import { drawFieryBoundary } from '../../../src/rendering/boundaryRenderer';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 

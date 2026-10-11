@@ -1,8 +1,9 @@
+import { GAME, LASER, SHIP, WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { planFurnaceRoute } from '../../../shared/furnaceTravel';
 import { haulerUtilityOf, isResourceTapUtility } from '../../../shared/shipUtilities';
 import { UTILITY_FLIGHT } from '../../../shared/utilityFlight';
 import type { HaulerUtilityId, Position, ShipKitId, Velocity } from '../../../shared-types';
-import { GAME, LASER, PALETTE, SHIP, VISUAL } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import { canvasManager } from '../../rendering/canvasSurface';
 import { drawContourSpeedLines } from '../../rendering/contourSpeedLines';
 import type { DrawingContext } from '../../rendering/drawingContext';
@@ -405,7 +406,7 @@ export function drawShipExplosionAtPosition(
     ship.r * scale,
     ship.angle - canvasManager.getCameraRotation(),
     explosionProgress(ship),
-    color ?? ship.color ?? PALETTE.REMOTE,
+    color ?? ship.color ?? WIRE_PALETTE.REMOTE,
     ship.kitId
   );
 }

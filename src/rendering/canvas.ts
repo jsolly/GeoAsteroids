@@ -1,3 +1,4 @@
+import { activeScanners } from '../../shared/surveyScan';
 import type { Position } from '../../shared-types';
 import { LootField } from '../entities/loot/LootField';
 import { drawLootRelative } from '../entities/loot/lootRenderer';
@@ -18,7 +19,6 @@ import {
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
 import { shouldDrawShipHull } from '../entities/ship/shipUtils';
-import { activeScanners } from '../entities/ship/surveyScan';
 import { drawSchematicEquipHint } from '../ui/schematicEquipHint';
 import { getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';

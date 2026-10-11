@@ -2,8 +2,8 @@ import { strict as assert } from 'node:assert';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { GameStateBroadcaster } from '../../../server/services/GameStateBroadcaster';
+import { ROID } from '../../../shared/constants/gameplay';
 import { GROWTH } from '../../../shared/shipGrowth';
-import { ROID } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function addSmallAsteroid(engine: GameEngine, id: string, size = 12): void {

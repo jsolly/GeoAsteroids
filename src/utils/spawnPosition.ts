@@ -1,8 +1,8 @@
+import { getAsteroidFieldRadius } from '../../shared/asteroidMotion';
+import { getGameBoundary } from '../../shared/boundary';
+import { DEBUG } from '../../shared/constants/gameplay';
 import { townSquareSpawn } from '../../shared/furnaces';
 import type { Position } from '../../shared-types';
-import { DEBUG } from '../constants';
-import { getAsteroidFieldRadius } from '../physics/asteroidMotion';
-import { getGameBoundary } from '../physics/boundary';
 import { getRandomPositionNearBoundary } from './positionUtils';
 
 /**

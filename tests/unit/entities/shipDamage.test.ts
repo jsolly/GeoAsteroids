@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { SHIP } from '../../../src/constants';
+import { SHIP } from '../../../shared/constants/gameplay';
 import { Ship } from '../../../src/entities/ship/Ship';
 
 describe('Ship Damage System', () => {

@@ -6,9 +6,9 @@ import {
   seedAsteroidPhenomena,
 } from '../../shared/asteroidPhenomena';
 import { applyColossalDeposit, sectorHostsColossal } from '../../shared/asteroidScale';
+import { DAMAGE, DEPOSIT_FIELD, ROID } from '../../shared/constants/gameplay';
 import { WORLD } from '../../shared/world';
 import type { AsteroidData, AsteroidMaterial, Position } from '../../shared-types';
-import { DAMAGE, DEPOSIT_FIELD, ROID } from '../../src/constants';
 import { RNGService } from '../core/RNGService';
 
 const SECTOR_EDGE_EPSILON = 1e-6;

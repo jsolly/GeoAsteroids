@@ -1,5 +1,6 @@
+import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import type { Position } from '../../../shared-types';
-import { PALETTE, VISUAL } from '../../constants';
+import { VISUAL } from '../../constants';
 import { canvasManager } from '../../rendering/canvasSurface';
 import { resolveGlow } from '../../rendering/renderQuality';
 import { drawEoSatelliteOutline } from '../satellite/eoOutlines';
@@ -23,7 +24,7 @@ function drawSatellitePickup(pickup: SatellitePickup, viewer: Position): void {
 
   const screen = canvasManager.worldToScreen(pickup.position, viewer);
   const radius = Math.max(5, pickup.radius * canvasManager.getPlayfieldScale());
-  const color = pickup.color || PALETTE.SATELLITE;
+  const color = pickup.color || WIRE_PALETTE.SATELLITE;
   drawSatellitePickupGlow(ctx, pickup, screen, radius);
   ctx.save();
   ctx.translate(screen.x, screen.y);

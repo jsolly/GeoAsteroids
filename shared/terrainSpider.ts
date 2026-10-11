@@ -1,4 +1,4 @@
-import { DAMAGE, GAME } from '../src/constants';
+import { DAMAGE, GAME } from './constants/gameplay';
 
 /**
  * Shared spider tuning. Distances are world units and speeds are world units

@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { logger } from '../../setup/serverLogger';
+import { DEBUG, SATELLITE_PICKUP, WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { satelliteProfileAt } from '../../shared/eoSatellites';
-import type { Position, SatellitePickupData } from '../../shared-types';
-import { DEBUG, PALETTE, SATELLITE_PICKUP } from '../../src/constants';
 import {
   attachOrbitPosition,
   orbitRadiusForOwner,
   spawnRingPosition,
   velocityFromDelta,
-} from '../../src/entities/satellitePickup/satellitePickupMath';
+} from '../../shared/satellitePickupMath';
+import type { Position, SatellitePickupData } from '../../shared-types';
 import type { RNGService } from './RNGService';
 
 interface PickupOwnerPose {
@@ -260,7 +260,7 @@ export class SatellitePickupManager {
       velocity: { x: 0, y: 0 },
       angle: orbitPhase,
       radius: SATELLITE_PICKUP.SIZE / 2,
-      color: PALETTE.SATELLITE,
+      color: WIRE_PALETTE.SATELLITE,
       state: 'loose',
       ownerId: null,
       health: SATELLITE_PICKUP.HEALTH,

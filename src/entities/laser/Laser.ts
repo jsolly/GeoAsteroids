@@ -1,5 +1,6 @@
 import { ASTEROID_INTERACTIONS } from '../../../shared/asteroidPhenomena';
 import { reflectVector } from '../../../shared/asteroidReflection';
+import { GAME, LASER } from '../../../shared/constants/gameplay';
 import { findLaserSurfaceImpact } from '../../../shared/laserSurface';
 import type { Position, Velocity } from '../../../shared-types';
 import {
@@ -9,7 +10,6 @@ import {
   playLaserSound as playLaserSoundAt,
 } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
-import { GAME, LASER } from '../../constants';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
 
 interface LaserData {

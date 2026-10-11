@@ -144,11 +144,12 @@ the tested independent graphs do not represent two complete games or sockets.
 - `src/core/gameController.ts` — top-level lifecycle (`newGame`, `startGame`, `setupNetworkDisconnectionHandler`).
 - `src/core/eventLoop.ts` — injected render/update loop with owned RAF and visibility/start listeners; `dispose()` cancels its work and removes those listeners. `src/runtime/gameRuntime.ts` owns browser startup and the production HUD callback.
 - `src/entities/{player,ship,roid,laser,satellite,satellitePickup,loot}/` — entity classes and their managers/renderers. Ship motion and combat live in `Ship.ts` and its ship helpers.
-- `src/physics/collision/{CollisionManager,collisionDetection}.ts` — collision system.
+- `src/physics/CollisionManager.ts` — client collision system; boundary checks live in `shared/collisionDetection.ts`.
 - `src/network/networkManager.ts` + `services/ConnectionManager.ts` — WS lifecycle, reconnection, message dispatch.
 - `src/rendering/{canvas,boundaryRenderer,hud/}` — canvas + HUD; `GameController.renderGame` calls `canvasManager.drawGame`.
 - `src/input/{PlayerInput,MockPlayerInput,mouse}.ts` — input abstraction; `MockPlayerInput` is what tests drive.
-- `src/constants/index.ts` — single source of truth for tuning, `LOGGING`, and `DEBUG` flags.
+- `shared/constants/gameplay.ts` — gameplay tuning both sides enforce (`GAME`, `SHIP`, `LASER`, `ROID`, deposits, pickups, snapshot colours) and the simulation `DEBUG` flags.
+- `src/constants/index.ts` — client presentation tuning (`VISUAL`, `PALETTE`, `TOUCH`, `AUDIO`) and `LOGGING`.
 
 ### Debug & logging
 
@@ -157,10 +158,10 @@ logs, or `?log-level=info` or `?log-level=warn` to select a quieter threshold.
 The normal `/` page uses Info and never remembers debug mode.
 
 Simulation debug overrides remain compile-time constants, not URL or environment
-settings. Set both `DEBUG.ENABLED = true` and
-`LOGGING.GLOBAL_LOG_LEVEL = 'debug'` in `src/constants/index.ts` when those
-local world overrides are needed. That global constant gates simulation debug
-behavior; it does not select client log verbosity.
+settings. Set `DEBUG.ENABLED = true` in `shared/constants/gameplay.ts` when those
+local world overrides are needed; the server reads that switch alone. The client's
+debug drawing also requires `LOGGING.GLOBAL_LOG_LEVEL = 'debug'` in
+`src/constants/index.ts`; that constant does not select client log verbosity.
 
 Notable flags under `DEBUG.*`: `ROIDS.{INITIAL_COUNT,MOVEMENT,PLACE_ON_LOCAL_PLAYER}`, `PLACE_PLAYERS_NEAR_BOUNDARY`. Client logs forward over `/logs` to the server; both ends append to:
 

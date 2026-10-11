@@ -1,5 +1,5 @@
-import { isColossalAsteroid } from '../../../shared/asteroidScale';
-import { ROID } from '../../constants';
+import { isColossalAsteroid } from './asteroidScale';
+import { ROID } from './constants/gameplay';
 
 export function pointsForRoidSize(
   size: number

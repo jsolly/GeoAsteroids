@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { getAsteroidFieldRadius } from '../../../shared/asteroidMotion';
 import type { AsteroidData, AsteroidDestroyEvent } from '../../../shared-types';
 import type { AsteroidKinematicTarget } from '../../../src/network/services/asteroidFieldSync';
 import {
@@ -16,7 +17,6 @@ import {
   unbindAsteroidFieldApply,
   writeAsteroidKinematicUpdates,
 } from '../../../src/network/services/asteroidFieldSync';
-import { getAsteroidFieldRadius } from '../../../src/physics/asteroidMotion';
 
 function roid(id: string, x: number, y: number): AsteroidData {
   return {

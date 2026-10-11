@@ -1,6 +1,6 @@
+import { type Heightfield, sampleGradientInto } from '../../../shared/heightfield';
+import { TERRAIN } from '../../../shared/terrainConfig';
 import { VISUAL } from '../../constants';
-import { type Heightfield, sampleGradientInto } from './heightfield';
-import { TERRAIN } from './terrainConfig';
 
 export interface ContourLaserTick {
   ax: number;

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { RNGService } from '../../../server/core/RNGService';
-import { DEBUG } from '../../../src/constants';
+import { DEBUG } from '../../../shared/constants/gameplay';
 
 const defaultPlacement = DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER;
 const playerPositions = [

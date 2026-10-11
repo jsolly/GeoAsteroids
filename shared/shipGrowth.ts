@@ -1,5 +1,5 @@
 import type { Position, ShipKitId } from '../shared-types';
-import { GAME, SHIP } from '../src/constants';
+import { GAME, SHIP } from './constants/gameplay';
 import { cargoCapacity } from './economy';
 
 /**

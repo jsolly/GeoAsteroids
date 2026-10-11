@@ -1,4 +1,4 @@
-import { GAME, SHIP } from '../../src/constants';
+import { GAME, SHIP } from './gameplay';
 
 /** Health restored by one authoritative or predicted 60 Hz frame. */
 export function calculateHealthRegenPerFrame(maxHealth: number): number {

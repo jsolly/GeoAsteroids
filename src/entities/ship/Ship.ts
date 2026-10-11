@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { GAME, SHIP } from '../../../shared/constants/gameplay';
 import {
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
@@ -14,6 +15,7 @@ import { PLAYER_MOTION } from '../../../shared/playerMotion';
 import { cruiseSpeed } from '../../../shared/shipFlight';
 import { GROWTH, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import { scoutUtilityOf } from '../../../shared/shipUtilities';
+import { terrainCruiseVelocity, terrainSpeedLimit } from '../../../shared/terrainTravel';
 import type {
   ContourLockState,
   EquipmentId,
@@ -27,11 +29,10 @@ import type {
 } from '../../../shared-types';
 import { playExplosionSound } from '../../audio/explosionSound';
 import { playFeedback } from '../../audio/feedbackSounds';
-import { GAME, PALETTE, SHIP } from '../../constants';
+import { PALETTE } from '../../constants';
 import { playLocalHaptic } from '../../fx/haptics';
 import { worldFurnaces } from '../../network/worldExploration';
 import { findContourCapture, findContourHop } from '../../physics/terrain/contourCapture';
-import { terrainCruiseVelocity, terrainSpeedLimit } from '../../physics/terrain/terrainTravel';
 import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity } from '../../utils/mathUtils';

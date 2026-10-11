@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { GameEngine } from '../../../../server/core/GameEngine';
+import { SHIP } from '../../../../shared/constants/gameplay';
 import { GAME_TICK_MS } from '../../../../shared/gameClock';
 import type { AsteroidData } from '../../../../shared-types';
-import { SHIP } from '../../../../src/constants';
 import { RecordingSocket } from '../../../support/recordingSocket';
 
 const CLOCK_MOVED_BACKWARDS_PATTERN = /moved backwards/u;

@@ -3,8 +3,8 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import WebSocket from 'ws';
 import { createServerInstance } from '../../../server/createServer';
+import { SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
-import { SATELLITE_PICKUP } from '../../../src/constants';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

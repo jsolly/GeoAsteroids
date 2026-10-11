@@ -2,6 +2,7 @@ import { afterEach, beforeEach, vi } from 'vitest';
 import { WebSocketCore } from '../../../../server/communication/WebSocketCore';
 import type { GameEntity } from '../../../../server/core/EntityManager';
 import { GameEngine } from '../../../../server/core/GameEngine';
+import { SHIP } from '../../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION, SnapshotDecoder } from '../../../../shared/snapshotProtocol';
 import type {
   AsteroidData,
@@ -9,7 +10,6 @@ import type {
   ServerGameSnapshot,
   ShipKitId,
 } from '../../../../shared-types';
-import { SHIP } from '../../../../src/constants';
 import { RecordingSocket } from '../../../support/recordingSocket';
 
 function scenarioAsteroid(overrides: Partial<AsteroidData> = {}): AsteroidData {

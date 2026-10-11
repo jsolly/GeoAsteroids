@@ -1,12 +1,9 @@
 import { expect, test } from 'vitest';
-import { sampleHeight } from '../../../src/physics/terrain/heightfield';
-import { samplePassages } from '../../../src/physics/terrain/passages';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
+import { sampleHeight } from '../../../shared/heightfield';
+import { samplePassages } from '../../../shared/passages';
+import { TERRAIN } from '../../../shared/terrainConfig';
+import { terrainCruiseVelocity, terrainSpeedLimit } from '../../../shared/terrainTravel';
 import { ensureTerrain } from '../../../src/physics/terrain/terrainSession';
-import {
-  terrainCruiseVelocity,
-  terrainSpeedLimit,
-} from '../../../src/physics/terrain/terrainTravel';
 
 test('narrow cuts keep their contour shape while all directions use the same cruise floor and ceiling', () => {
   const terrain = ensureTerrain(TERRAIN.DEFAULT_SEED, { cx: 0, cy: 0, radius: 60000 });

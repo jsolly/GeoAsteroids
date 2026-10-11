@@ -7,10 +7,20 @@ import {
   containAsteroidPosition,
   containAsteroidPositionInto,
   getAsteroidFieldRadius,
-  isOnPlayfieldCanvas,
   stepAsteroidMotion,
   stepAsteroidMotionInto,
-} from '../../../src/physics/asteroidMotion';
+} from '../../../shared/asteroidMotion';
+
+/** Whether a world point falls inside the ship-centered 1:1 viewport. */
+function isOnPlayfieldCanvas(
+  world: { x: number; y: number },
+  ship: { x: number; y: number },
+  canvas: { width: number; height: number } = { width: 1920, height: 1080 }
+): boolean {
+  const screenX = canvas.width / 2 - ship.x + world.x;
+  const screenY = canvas.height / 2 - ship.y + world.y;
+  return screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height;
+}
 
 describe('authoritative asteroid motion', () => {
   let engine: GameEngine | undefined;

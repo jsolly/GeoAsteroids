@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
-import { SHIP } from '../../../src/constants';
+import { SHIP } from '../../../shared/constants/gameplay';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 describe('Crew survival against world hazards', () => {

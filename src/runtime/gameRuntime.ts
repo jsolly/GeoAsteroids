@@ -1,3 +1,4 @@
+import { sanitizePlayerName } from '../../shared/playerName';
 import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import { activateAudio, disposeAudioRuntime } from '../audio/audioRuntime';
 import { playFeedback } from '../audio/feedbackSounds';
@@ -40,7 +41,6 @@ import { getBuildInfoString } from '../utils/buildInfo';
 import { disposeGlobalErrorLogging, installGlobalErrorLogging } from '../utils/globalErrorLogging';
 import { logger } from '../utils/Logger';
 import { generatePilotNickname } from '../utils/pilotNickname';
-import { sanitizePlayerName } from '../utils/playerName';
 import { createDebugPresentation } from './debugPresentation';
 import {
   equipInventorySatellite,

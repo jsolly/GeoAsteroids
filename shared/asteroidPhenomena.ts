@@ -1,6 +1,6 @@
 import type { AsteroidData, Position } from '../shared-types';
-import { GAME } from '../src/constants';
 import { previewAsteroidReflections, type ReflectionPreview } from './asteroidReflection';
+import { GAME } from './constants/gameplay';
 
 export const ASTEROID_INTERACTIONS = {
   clusterCount: 2,

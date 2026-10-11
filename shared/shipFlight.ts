@@ -1,5 +1,5 @@
 import type { Velocity } from '../shared-types';
-import { SHIP } from '../src/constants';
+import { SHIP } from './constants/gameplay';
 import { maxVelocityFromMass } from './shipGrowth';
 
 export function cruiseSpeed(mass: number, kitMaxVelocity: number): number {

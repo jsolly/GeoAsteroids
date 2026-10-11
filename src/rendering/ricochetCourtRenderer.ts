@@ -1,3 +1,4 @@
+import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { COURT_REFLECTORS, RICOCHET_COURT } from '../../shared/ricochetCourt';
 import type { Position } from '../../shared-types';
 import { PALETTE } from '../constants';
@@ -18,7 +19,7 @@ export function drawCourtMapMark(
   ctx.save();
   ctx.translate(x, y);
   const scale = radius / RICOCHET_COURT.radius;
-  ctx.strokeStyle = PALETTE.REMOTE;
+  ctx.strokeStyle = WIRE_PALETTE.REMOTE;
   ctx.lineWidth = 1.4;
   ctx.lineCap = 'round';
   ctx.beginPath();
@@ -65,11 +66,11 @@ export function drawRicochetCourt(viewer: Position): void {
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
-    ctx.strokeStyle = hexToRgba(PALETTE.REMOTE, 0.09);
+    ctx.strokeStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.09);
     ctx.lineWidth = 14;
     ctx.stroke();
-    ctx.strokeStyle = hexToRgba(PALETTE.REMOTE, 0.75);
-    ctx.shadowColor = PALETTE.REMOTE;
+    ctx.strokeStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.75);
+    ctx.shadowColor = WIRE_PALETTE.REMOTE;
     ctx.shadowBlur = resolveGlow(8);
     ctx.lineWidth = 1.5;
     ctx.setLineDash([10, 5]);
@@ -87,7 +88,7 @@ export function drawRicochetCourt(viewer: Position): void {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = '12px "Courier New", monospace';
-  ctx.fillStyle = hexToRgba(PALETTE.REMOTE, 0.55);
+  ctx.fillStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.55);
   ctx.fillText(RICOCHET_COURT.name.toUpperCase(), 0, -100);
   ctx.font = '10px "Courier New", monospace';
   ctx.fillStyle = hexToRgba(PALETTE.HUD, 0.4);

@@ -1,3 +1,4 @@
+import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { explorationCellAt, isCellExplored } from '../../shared/exploration';
 import { CIVIC_LOTS, pipeHopToParent, TOWN_HEARTH } from '../../shared/furnaces';
 import type { Position } from '../../shared-types';
@@ -20,7 +21,7 @@ const PIPE_SCREEN: Array<{ x: number; y: number }> = [
 ];
 const TRAIL_SCREEN: Array<{ x: number; y: number }> = [];
 const trailEmber = { x: 0, y: 0 };
-const FURNACE_COLOR = PALETTE.SATELLITE;
+const FURNACE_COLOR = WIRE_PALETTE.SATELLITE;
 const FURNACE_LABEL_COLOR = PALETTE.HUD;
 /** Contour samples per flame edge; enough for a curling tongue, few enough to stay hairline. */
 const FLAME_STEPS = 18;

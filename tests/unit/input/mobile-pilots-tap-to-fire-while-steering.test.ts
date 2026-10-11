@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
+import { sampleGradient } from '../../../shared/heightfield';
 import * as feedback from '../../../src/audio/feedbackSounds';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
@@ -15,7 +16,6 @@ import {
   tickTouchControls,
 } from '../../../src/input/touchControls';
 import { NetworkManager } from '../../../src/network/networkManager';
-import { sampleGradient } from '../../../src/physics/terrain/heightfield';
 import { getTerrainField } from '../../../src/physics/terrain/terrainSession';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import {

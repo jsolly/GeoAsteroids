@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { ASTEROID_INTERACTIONS } from '../../../shared/asteroidPhenomena';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import { findCourtImpact } from '../../../shared/ricochetCourt';
-import { DAMAGE } from '../../../src/constants';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { RecordingSocket } from '../../support/recordingSocket';
 

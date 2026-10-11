@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import { SPIDER } from '../../../shared/terrainSpider';
-import { DAMAGE } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 test('the last pilot disconnecting preserves a wounded resource guard and its slain nestmate', () => {

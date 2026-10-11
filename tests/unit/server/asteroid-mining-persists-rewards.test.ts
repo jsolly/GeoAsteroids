@@ -8,10 +8,10 @@ import { afterEach, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { InlineWorldPersistence } from '../../../server/world/InlineWorldPersistence';
 import { WorldStore } from '../../../server/world/WorldStore';
+import { ROID } from '../../../shared/constants/gameplay';
 import { FURNACES } from '../../../shared/furnaces';
 import { sectorAt, WORLD } from '../../../shared/world';
 import type { AsteroidData } from '../../../shared-types';
-import { ROID } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 const stores: WorldStore[] = [];

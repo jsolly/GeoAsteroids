@@ -1,5 +1,5 @@
-import type { Position } from '../../../shared-types';
-import { getGameBoundary } from '../boundary';
+import type { Position } from '../shared-types';
+import { getGameBoundary } from './boundary';
 
 /** Same rounding as `Point.distance` — keep combat feel, drop Point allocs. */
 function flooredDistance(ax: number, ay: number, bx: number, by: number): number {

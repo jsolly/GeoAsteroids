@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { PALETTE, ROID, VISUAL } from '../../../src/constants';
+import { ROID } from '../../../shared/constants/gameplay';
+import { PALETTE, VISUAL } from '../../../src/constants';
 import { entityFactory } from '../../../src/entities/EntityFactory';
 import { Roid } from '../../../src/entities/roid/Roid';
 import {

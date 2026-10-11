@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { SATELLITE_PICKUP } from '../../../src/constants';
+import { SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import {
   attachOrbitPosition,
   isWithinCollectRange,
   orbitOffset,
   spawnRingPosition,
   velocityFromDelta,
-} from '../../../src/entities/satellitePickup/satellitePickupMath';
+} from '../../../shared/satellitePickupMath';
 
 describe('satellite pickup orbit math', () => {
   test('orbitOffset traces a circle around the origin', () => {

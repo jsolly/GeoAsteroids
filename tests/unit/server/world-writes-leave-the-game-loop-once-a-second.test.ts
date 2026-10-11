@@ -11,8 +11,8 @@ import type {
   WorldPersistence,
   WorldPersistenceDiagnostics,
 } from '../../../server/world/worldPersistence';
+import { GAME } from '../../../shared/constants/gameplay';
 import type { AsteroidData } from '../../../shared-types';
-import { GAME } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 const WALL_ORIGIN_MS = 10_000;

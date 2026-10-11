@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { RNGService } from '../../../server/core/RNGService';
+import { ROID } from '../../../shared/constants/gameplay';
 import type { AsteroidData } from '../../../shared-types';
-import { ROID } from '../../../src/constants';
 
 function makeAsteroid(
   overrides: Partial<AsteroidData> & Pick<AsteroidData, 'id' | 'size'>

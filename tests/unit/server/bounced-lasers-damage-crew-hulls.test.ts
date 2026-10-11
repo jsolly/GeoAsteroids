@@ -2,9 +2,9 @@
 import assert from 'node:assert/strict';
 import { expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import { WORLD } from '../../../shared/world';
 import type { AsteroidData } from '../../../shared-types';
-import { DAMAGE } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function crew() {

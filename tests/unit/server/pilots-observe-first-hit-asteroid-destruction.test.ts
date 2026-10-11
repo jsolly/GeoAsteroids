@@ -4,9 +4,9 @@ import { strict as assert } from 'node:assert';
 import { afterEach, describe, expect, test } from 'vitest';
 import WebSocket from 'ws';
 import { createServerInstance } from '../../../server/createServer';
+import { GAME, LASER, ROID } from '../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
 import type { AsteroidData } from '../../../shared-types';
-import { GAME, LASER, ROID } from '../../../src/constants';
 import { WireClient, type WireMessage } from '../../support/wireClient';
 
 type TestServer = ReturnType<typeof createServerInstance>;

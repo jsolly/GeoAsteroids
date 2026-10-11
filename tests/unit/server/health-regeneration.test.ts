@@ -1,10 +1,10 @@
 /* @vitest-environment node */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { DAMAGE, GAME, SHIP } from '../../../shared/constants/gameplay';
 import {
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
 } from '../../../shared/constants/health';
-import { DAMAGE, GAME, SHIP } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 import { GameServerWorld, type Pilot } from '../scenarios/support/gameServerWorld';
 

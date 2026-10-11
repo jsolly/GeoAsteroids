@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { SHIP } from '../../../src/constants';
+import { SHIP } from '../../../shared/constants/gameplay';
 import { Ship } from '../../../src/entities/ship/Ship';
 
 afterEach(() => {

@@ -5,9 +5,9 @@ import {
   beltAsteroid,
   beltSlots,
 } from '../../shared/asteroidBelt';
+import { DEPOSIT_FIELD } from '../../shared/constants/gameplay';
 import { parseSectorId, sectorAt, WORLD } from '../../shared/world';
 import type { AsteroidData, Position } from '../../shared-types';
-import { DEPOSIT_FIELD } from '../../src/constants';
 import type { AsteroidManager } from '../core/AsteroidManager';
 import { sectorDeposits } from './depositLayout';
 
