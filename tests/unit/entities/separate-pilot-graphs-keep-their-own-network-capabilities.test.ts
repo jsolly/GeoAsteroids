@@ -44,7 +44,6 @@ test('creating a second pilot graph preserves the first pilot’s crew, input, s
     expect(graph.combat.sendShoot).toHaveBeenCalledExactlyOnceWith(graph.local.ship.lasers[0]);
     expect(graph.combat.sendAbility).toHaveBeenCalledExactlyOnceWith({
       kitId: 'hauler',
-      abilityId: 'harpoon',
     });
   }
   expect(a.combat.sendShoot.mock.calls[0]?.[0]).not.toBe(b.local.ship.lasers[0]);
@@ -67,7 +66,6 @@ test('creating a second pilot graph preserves the first pilot’s crew, input, s
   );
   expect(replacement.combat.sendAbility).toHaveBeenCalledExactlyOnceWith({
     kitId: 'hauler',
-    abilityId: 'harpoon',
   });
   expect(a.port.setLocalPlayerName).toHaveBeenCalledTimes(1);
   expect(a.port.updatePlayerState).toHaveBeenCalledTimes(1);
@@ -96,7 +94,6 @@ test('production player composition requires one complete pair and refuses anoth
   expect(a.port.setLocalPlayerName).toHaveBeenCalledExactlyOnceWith('Retained production pilot');
   expect(a.combat.sendAbility).toHaveBeenCalledExactlyOnceWith({
     kitId: 'hauler',
-    abilityId: 'harpoon',
   });
   expect(b.port.setLocalPlayerName).not.toHaveBeenCalled();
   expect(b.combat.sendAbility).not.toHaveBeenCalled();

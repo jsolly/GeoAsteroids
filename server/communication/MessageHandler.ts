@@ -64,8 +64,6 @@ export class MessageHandler {
         'equipSatellite',
         'setHaulerUtility',
         'setScoutUtility',
-        'buyShipPaint',
-        'buyExtraLife',
       ].includes(commandType)
     ) {
       return;

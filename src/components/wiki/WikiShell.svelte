@@ -27,6 +27,7 @@
   let generation = 0;
   let frame: number | undefined;
   let disposeRadar = () => {};
+  let historyFailureReported = false;
 
   function savedScroll(state: unknown): { id?: string; y?: number } {
     if (!state || typeof state !== 'object') {
@@ -56,8 +57,15 @@
     const previous = history.state && typeof history.state === 'object' ? history.state : {};
     try {
       history.replaceState({ ...previous, wikiScrollId: id, wikiScrollY: y }, '');
-    } catch {
-      /* In-memory history remains available when the browser throttles writes. */
+      historyFailureReported = false;
+    } catch (error) {
+      if (!historyFailureReported) {
+        historyFailureReported = true;
+        console.error(
+          '[WIKI] Saving scroll history failed; retaining it in memory for this visit',
+          error
+        );
+      }
     }
   }
   function routeKey() {

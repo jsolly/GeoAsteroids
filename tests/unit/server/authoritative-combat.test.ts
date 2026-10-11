@@ -419,7 +419,7 @@ describe('server-authoritative combat', () => {
       {
         type: 'useAbility',
         id: 'beta',
-        data: { kitId: 'hauler', abilityId: 'harpoon' },
+        data: { kitId: 'hauler' },
       },
       alphaWs
     );
@@ -427,7 +427,7 @@ describe('server-authoritative combat', () => {
       {
         type: 'useAbility',
         id: 'alpha',
-        data: { kitId: 'scout', abilityId: 'surveyScan' },
+        data: { kitId: 'scout' },
       },
       unjoinedWs
     );

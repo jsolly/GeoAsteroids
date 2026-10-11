@@ -23,16 +23,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetControlSources();
+  vi.restoreAllMocks();
   setSelectedShipKitId('scout');
   publishHarpoonField([]);
-});
-
-test('KeyW is freed while cruise continues without throttle input', () => {
-  reconcilePlayerInput(player);
-  press('KeyW');
-  expect(player.ship.thrusting).toBe(true);
-  release('KeyW');
-  expect(player.ship.thrusting).toBe(true);
 });
 
 test('KeyA turns left and KeyD turns right', () => {
@@ -44,31 +38,6 @@ test('KeyA turns left and KeyD turns right', () => {
   press('KeyD');
   expect(player.ship.angularVelocity).toBeCloseTo(-TURN, 10);
   release('KeyD');
-  expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
-});
-
-test('Space fires while automatic thrust continues', () => {
-  const shootSpy = vi.spyOn(player.ship, 'shoot');
-  press('Space');
-  expect(shootSpy).toHaveBeenCalledTimes(1);
-  expect(player.ship.thrusting).toBe(true);
-});
-
-test('Space creates a laser end-to-end', () => {
-  expect(player.ship.lasers.length).toBe(0);
-  press('Space');
-  expect(player.ship.lasers.length).toBe(1);
-});
-
-test('releasing Space re-arms the next shot', () => {
-  player.ship.canShoot = false;
-  release('Space');
-  expect(player.ship.canShoot).toBe(true);
-});
-
-test('opposing turn keys (arrow + WASD) cancel out', () => {
-  press('ArrowLeft');
-  press('KeyD');
   expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
 });
 

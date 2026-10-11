@@ -1,10 +1,11 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
 import { Ship } from '../../../src/entities/ship/Ship';
+import type { ShipCombatNetwork } from '../../../src/entities/ship/shipCombatNetwork';
 import { resolveToolFlights } from '../../support/tool-flight';
 import { GameServerWorld } from '../scenarios/support/gameServerWorld';
 
-const mockSendAbility = vi.fn<(data: { kitId: string; abilityId: string }) => boolean>(() => true);
+const mockSendAbility = vi.fn<ShipCombatNetwork['sendAbility']>(() => true);
 afterEach(() => {
   mockSendAbility.mockReset();
   mockSendAbility.mockReturnValue(true);
@@ -15,7 +16,7 @@ function testCombatNetwork() {
   return {
     isConnected: true,
     sendShoot: () => undefined,
-    sendAbility: (data: { kitId: string; abilityId: string }) => mockSendAbility(data),
+    sendAbility: mockSendAbility,
   };
 }
 
@@ -26,7 +27,7 @@ test('a Hauler asks the server even when its visible field has no eligible targe
     combatNetwork: testCombatNetwork(),
   });
   expect(ship.activateAbility()).toBe(true);
-  expect(mockSendAbility).toHaveBeenCalledWith({ kitId: 'hauler', abilityId: 'harpoon' });
+  expect(mockSendAbility).toHaveBeenCalledWith({ kitId: 'hauler' });
   expect(ship.abilityCooldownFrames).toBe(0);
   expect(ship.harpoonTargetId).toBeNull();
 });

@@ -48,7 +48,7 @@ describe('A Hauler Resource Tap extracts four canisters and leaves the rock', ()
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     for (let frame = 0; frame < 23; frame++) {
       world.engine.tickAbilities();
@@ -76,7 +76,7 @@ describe('A Hauler Resource Tap extracts four canisters and leaves the rock', ()
       world.send(alice, {
         type: 'useAbility',
         id: alice.id,
-        data: { kitId: 'hauler', abilityId: 'harpoon' },
+        data: { kitId: 'hauler' },
       });
       for (let frame = 0; frame < 23; frame++) {
         world.engine.tickAbilities();
@@ -92,7 +92,7 @@ describe('A Hauler Resource Tap extracts four canisters and leaves the rock', ()
         world.send(alice, {
           type: 'useAbility',
           id: alice.id,
-          data: { kitId: 'hauler', abilityId: 'harpoon' },
+          data: { kitId: 'hauler' },
         });
       }
       for (let frame = 0; frame < 100; frame++) {

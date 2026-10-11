@@ -9,6 +9,7 @@ import {
   resetHapticsForTests,
   setHaptics,
 } from '../../../src/fx/haptics';
+import { logger } from '../../../src/utils/Logger';
 import { resetSafeStorage } from '../../../src/utils/safeStorage';
 
 const originalVibrate = navigator.vibrate;
@@ -128,4 +129,30 @@ test('remote-flagged cues never call vibrate even when haptics are on', () => {
   expect(vibrate).not.toHaveBeenCalled();
   playLocalHaptic(true, 'boom');
   expect(vibrate).toHaveBeenCalled();
+});
+
+test('vibration exceptions preserve the preference and report once until the API recovers', () => {
+  const failure = new Error('Vibration device failed');
+  const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+  const vibrate = vi.fn(() => {
+    throw failure;
+  });
+  installVibrate(vibrate);
+
+  expect(() => setHaptics(true)).not.toThrow();
+  expect(hapticsIsEnabled()).toBe(true);
+  expect(() => playHaptic('boom')).not.toThrow();
+  expect(vibrate).toHaveBeenCalledTimes(2);
+  expect(error).toHaveBeenCalledExactlyOnceWith(
+    'HAPTICS',
+    'Vibration failed; continuing without this cue',
+    expect.objectContaining({ name: 'Error', message: failure.message })
+  );
+
+  installVibrate(() => true);
+  setHaptics(true);
+  installVibrate(vibrate);
+  expect(() => setHaptics(false)).not.toThrow();
+  expect(hapticsIsEnabled()).toBe(false);
+  expect(error).toHaveBeenCalledTimes(2);
 });

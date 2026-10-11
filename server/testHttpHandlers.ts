@@ -59,20 +59,7 @@ export function handleTestResetWorld(
   nodeEnv: string,
   gameEngine: GameEngine
 ): void {
-  if (!areTestHttpEndpointsEnabled(nodeEnv)) {
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not found' }));
-    return;
-  }
-  if (!isLoopbackRequest(req)) {
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not found' }));
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.writeHead(405, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Method not allowed' }));
+  if (!acceptTestPost(req, res, nodeEnv)) {
     return;
   }
 

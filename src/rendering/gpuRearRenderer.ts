@@ -1,6 +1,8 @@
+import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import type { ContourLevel } from '../physics/terrain/contours';
+import { logger } from '../utils/Logger';
 import { GpuResources } from './gpuResources';
 import {
   GPU_COMPOSITE_FRAGMENT,
@@ -295,8 +297,13 @@ export class GpuRearRenderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       this.canvas.hidden = false;
       return true;
-    } catch {
+    } catch (error) {
       this.retire();
+      logger.error(
+        'RENDER',
+        'GPU drawing failed; using Canvas',
+        boundedDiagnosticError(error, 'Unknown browser failure')
+      );
       return false;
     }
   }
@@ -327,8 +334,13 @@ export class GpuRearRenderer {
       this.stats.rearBlits++;
       this.stats.totalRearBlits++;
       return true;
-    } catch {
+    } catch (error) {
       this.retire();
+      logger.error(
+        'RENDER',
+        'GPU composition failed; using Canvas',
+        boundedDiagnosticError(error, 'Unknown browser failure')
+      );
       return false;
     } finally {
       context.restore();
@@ -407,9 +419,14 @@ export class GpuRearRenderer {
           contours: new Map(),
         },
       };
-    } catch {
+    } catch (error) {
       owner.destroy();
       this.state = { kind: 'failed' };
+      logger.error(
+        'RENDER',
+        'GPU initialization failed; using Canvas',
+        boundedDiagnosticError(error, 'Unknown browser failure')
+      );
     }
   }
 

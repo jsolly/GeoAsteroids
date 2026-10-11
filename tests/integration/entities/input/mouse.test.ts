@@ -18,33 +18,12 @@ let testCanvas: HTMLCanvasElement;
 beforeEach(() => {
   resetControlSources();
   localStorage.setItem(LOCAL_STORAGE_KEYS.soundOn, 'true');
-  // Set predictable viewport size used by canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'))
-  Object.defineProperty(window, 'innerWidth', { value: 800, writable: true });
-  Object.defineProperty(window, 'innerHeight', { value: 600, writable: true });
-
-  // Create and mount a canvas element so canvasManager can find it
+  vi.stubGlobal('innerWidth', 800);
+  vi.stubGlobal('innerHeight', 600);
   testCanvas = document.createElement('canvas');
   document.body.appendChild(testCanvas);
-
-  // Initialize canvas manager
-  canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'));
-
-  // JSDOM layout: mock bounding rect to align with (0,0)
-  // Set mock after canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas')) to ensure it works
-  const canvas = canvasManager.getCanvas();
-  if (canvas) {
-    canvas.getBoundingClientRect = () => ({
-      left: 0,
-      top: 0,
-      width: 800,
-      height: 600,
-      right: 800,
-      bottom: 600,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    });
-  }
+  canvasManager.initialize(testCanvas);
+  vi.spyOn(testCanvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
 
   player = new Player({ id: 'p1', name: 'Tester', type: 'local', input: new MockPlayerInput() });
   reconcilePlayerInput(player);
@@ -52,12 +31,10 @@ beforeEach(() => {
 
 afterEach(() => {
   resetControlSources();
-  // Perform DOM-safe cleanup by removing only the test canvas
-  if (testCanvas?.parentNode) {
-    testCanvas.parentNode.removeChild(testCanvas);
-  }
-
-  vi.resetAllMocks();
+  canvasManager.destroy();
+  testCanvas.remove();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 test('mouse movement turns the ship toward the cursor at a capped rate', () => {
@@ -92,28 +69,38 @@ test('mouse movement turns the ship toward the cursor at a capped rate', () => {
   expect(Math.abs(player.ship.angle - Math.PI / 2)).toBeLessThan(1e-6);
 });
 
-test('left click fires shoot() and release resets canShoot', () => {
-  const shootSpy = vi.spyOn(player.ship, 'shoot');
-  const down = new MouseEvent('mousedown', { button: 0 });
-  handleMouseDown(down, player);
-  expect(shootSpy).toHaveBeenCalled();
-  player.ship.canShoot = false;
-  const up = new MouseEvent('mouseup', { button: 0 });
-  handleMouseUp(up, player);
-  expect(player.ship.canShoot).toBeTruthy();
+test('left click fires once and release re-arms without interrupting cruise', () => {
+  const shoot = vi.spyOn(player.ship, 'shoot');
+  handleMouseDown(new MouseEvent('mousedown', { button: 0 }), player);
+  expect(shoot).toHaveBeenCalledOnce();
+  expect(player.ship.canShoot).toBe(false);
+  expect(player.ship.lasers).toHaveLength(1);
+  handleMouseUp(new MouseEvent('mouseup', { button: 0 }), player);
+  expect(player.ship.canShoot).toBe(true);
+  expect(player.ship.thrusting).toBe(true);
 });
 
-test('right click toggles contour lock once and release preserves automatic thrust', () => {
-  const toggle = vi.spyOn(player.ship, 'toggleContourLock').mockReturnValue(true);
-  const down = new MouseEvent('mousedown', { button: 2 });
-  handleMouseDown(down, player);
-  expect(toggle).toHaveBeenCalledTimes(1);
-  expect(player.ship.thrusting).toBeTruthy();
+test('right click toggles contour lock once per press without firing or interrupting cruise', () => {
+  const toggle = vi.spyOn(player.ship, 'toggleContourLock').mockImplementation(() => {
+    player.ship.contourLock = player.ship.contourLocked ? null : { height: 0.1, direction: 1 };
+    return player.ship.contourLocked;
+  });
+  const shoot = vi.spyOn(player.ship, 'shoot');
+  expect(player.ship.contourLocked).toBe(false);
+  handleMouseDown(new MouseEvent('mousedown', { button: 2 }), player);
+  expect(toggle).toHaveBeenCalledOnce();
+  expect(player.ship.contourLocked).toBe(true);
+  expect(player.ship.thrusting).toBe(true);
+  expect(shoot).not.toHaveBeenCalled();
 
-  const up = new MouseEvent('mouseup', { button: 2 });
-  handleMouseUp(up, player);
-  expect(toggle).toHaveBeenCalledTimes(1);
-  expect(player.ship.thrusting).toBeTruthy();
+  handleMouseUp(new MouseEvent('mouseup', { button: 2 }), player);
+  expect(toggle).toHaveBeenCalledOnce();
+  expect(player.ship.contourLocked).toBe(true);
+  expect(player.ship.thrusting).toBe(true);
+
+  handleMouseDown(new MouseEvent('mousedown', { button: 2 }), player);
+  expect(toggle).toHaveBeenCalledTimes(2);
+  expect(player.ship.contourLocked).toBe(false);
 });
 
 test('preventContextMenu prevents default on right click', () => {

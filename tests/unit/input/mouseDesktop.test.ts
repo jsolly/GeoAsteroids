@@ -8,7 +8,7 @@ import {
   togglePlayerContourLock,
 } from '../../../src/input/keybindings';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
-import { handleMouseDown, handleMouseMove, handleMouseUp } from '../../../src/input/mouse';
+import { handleMouseDown, handleMouseMove } from '../../../src/input/mouse';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { closeGameOverlay, openGameOverlay } from '../../../src/runtime/overlayState';
 
@@ -30,33 +30,6 @@ afterEach(() => {
   closeGameOverlay('inventory');
   resetControlSources();
   vi.restoreAllMocks();
-});
-
-test('left click still fires and release re-arms', () => {
-  const shoot = vi.spyOn(player.ship, 'shoot');
-  handleMouseDown(new MouseEvent('mousedown', { button: 0 }), player);
-  expect(shoot).toHaveBeenCalledTimes(1);
-  player.ship.canShoot = false;
-  handleMouseUp(new MouseEvent('mouseup', { button: 0 }), player);
-  expect(player.ship.canShoot).toBe(true);
-});
-
-test('right click toggles contour lock without firing or interrupting cruise', () => {
-  vi.spyOn(player.ship, 'toggleContourLock').mockImplementation(() => {
-    player.ship.contourLock = player.ship.contourLocked ? null : { height: 0.1, direction: 1 };
-    return player.ship.contourLocked;
-  });
-  const shoot = vi.spyOn(player.ship, 'shoot');
-  expect(player.ship.contourLocked).toBe(false);
-  handleMouseDown(new MouseEvent('mousedown', { button: 2 }), player);
-  expect(player.ship.contourLocked).toBe(true);
-  expect(player.ship.thrusting).toBe(true);
-  expect(shoot).not.toHaveBeenCalled();
-  handleMouseUp(new MouseEvent('mouseup', { button: 2 }), player);
-  expect(player.ship.contourLocked).toBe(true);
-  expect(player.ship.thrusting).toBe(true);
-  handleMouseDown(new MouseEvent('mousedown', { button: 2 }), player);
-  expect(player.ship.contourLocked).toBe(false);
 });
 
 test.each(['dead', 'exploding', 'schematic'])(

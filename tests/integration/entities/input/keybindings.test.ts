@@ -44,8 +44,11 @@ test('opposing turn keys cancel and releasing either resumes the other turn', ()
 
 test('Space fires and release re-arms without interrupting automatic thrust', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
+  expect(player.ship.lasers).toHaveLength(0);
   press('Space');
   expect(shoot).toHaveBeenCalledOnce();
+  expect(player.ship.lasers).toHaveLength(1);
+  expect(player.ship.thrusting).toBe(true);
   expect(player.ship.canShoot).toBe(false);
   release('Space');
   expect(player.ship.canShoot).toBe(true);
@@ -57,6 +60,8 @@ test.each(['ArrowUp', 'KeyW', 'KeyZ'])(
   (code) => {
     press('ArrowLeft');
     press(code);
+    expect(player.ship.angularVelocity).toBeCloseTo(turn);
+    expect(player.ship.thrusting).toBe(true);
     release(code);
     expect(player.ship.angularVelocity).toBeCloseTo(turn);
     expect(player.ship.thrusting).toBe(true);

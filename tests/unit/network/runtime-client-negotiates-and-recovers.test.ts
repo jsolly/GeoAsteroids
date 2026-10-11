@@ -502,7 +502,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       expect(ws.sent.filter((message) => message.type === 'useAbility')).toEqual([
         expect.objectContaining({
           id: player.id,
-          data: { kitId: 'scout', abilityId: 'surveyScan' },
+          data: { kitId: 'scout' },
         }),
       ]);
       expect(paths).toEqual([]);
@@ -1219,7 +1219,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       abilityActiveFrames: 30,
       abilityCooldownFrames: 80,
     });
-    manager.sendMessage({ type: 'useAbility', data: { abilityId: 'harpoon' } });
+    manager.sendMessage({ type: 'useAbility', data: {} });
     const emptyBelt = captureSnapshot(zero);
     emptyBelt.asteroids = [];
     ws.receive('snapshot', new SnapshotEncoder(emptyBelt).encode(2));
