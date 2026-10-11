@@ -52,7 +52,6 @@ export type ClientCommand =
       type: 'useAbility';
       id: string;
       kitId?: ShipKitId;
-      abilityId?: string;
     }
   | {
       type: 'setHaulerUtility';
@@ -196,22 +195,19 @@ function decodeUpdate(id: string, fields: WireRecord): ClientCommandDecodeResult
 }
 
 function decodeUseAbility(id: string, fields: WireRecord): ClientCommandDecodeResult {
-  const playerId = id ? id : (readString(fields['id']) ?? '');
-  if (!playerId) {
+  if (!id) {
     return invalid('useAbility', 'Missing player ID for useAbility');
   }
   const rawKitId = fields['kitId'];
   if (rawKitId !== undefined && !isShipKitId(rawKitId)) {
     return invalid('useAbility');
   }
-  const abilityId = readString(fields['abilityId']);
   return {
     ok: true,
     command: {
       type: 'useAbility',
-      id: playerId,
+      id,
       ...(rawKitId !== undefined ? { kitId: rawKitId } : {}),
-      ...(abilityId !== undefined ? { abilityId } : {}),
     },
   };
 }

@@ -40,7 +40,6 @@ test('a stripped active field does not refill within the next frame', () => {
   const engine = new GameEngine(7);
   const player = engine.addPlayer('pilot', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
   const firstField = engine.getAllAsteroids();
-  const firstIds = new Set(firstField.map((asteroid) => asteroid.id));
 
   expect(player.type).toBe('player');
   expect(firstField.length).toBeGreaterThan(0);
@@ -55,7 +54,6 @@ test('a stripped active field does not refill within the next frame', () => {
   engine.advanceOneFrame();
   const secondField = engine.getAllAsteroids();
   expect(secondField).toEqual([]);
-  expect(secondField.every((asteroid) => !firstIds.has(asteroid.id))).toBe(true);
 
   engine.removePlayer('pilot');
   engine.stopGameLoop();

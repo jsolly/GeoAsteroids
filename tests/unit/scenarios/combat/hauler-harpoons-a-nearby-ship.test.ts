@@ -26,7 +26,7 @@ describe('A Hauler cannot harpoon a teammate ship', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     world.tick(4);
 

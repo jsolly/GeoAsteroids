@@ -1,4 +1,6 @@
+import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import { LOCAL_STORAGE_KEYS } from '../constants/user-preferences';
+import { logger } from '../utils/Logger';
 import { getStoredItem, setStoredItem } from '../utils/safeStorage';
 
 type HapticKind = 'asteroidIgnition' | 'preview' | 'shot' | 'hit' | 'boom' | 'ability' | 'pickup';
@@ -24,6 +26,7 @@ const MIN_GAP_MS: Record<HapticKind, number> = {
 };
 
 const lastPlayedAt = new Map<HapticKind, number>();
+let failureReported = false;
 
 /** Desktop Chrome exposes `vibrate` without a motor; require a touch device too. */
 export function hapticsApiAvailable(): boolean {
@@ -45,6 +48,7 @@ export function hapticsIsEnabled(): boolean {
 
 export function resetHapticsForTests(): void {
   lastPlayedAt.clear();
+  failureReported = false;
 }
 
 function vibrateNow(pattern: number | number[]): void {
@@ -53,9 +57,16 @@ function vibrateNow(pattern: number | number[]): void {
   }
   try {
     navigator.vibrate(pattern);
-  } catch {
-    // Vibration is best-effort; a missing motor or a blocked call must not
-    // interrupt flight.
+    failureReported = false;
+  } catch (error) {
+    if (!failureReported) {
+      failureReported = true;
+      logger.error(
+        'HAPTICS',
+        'Vibration failed; continuing without this cue',
+        boundedDiagnosticError(error, 'Unknown browser failure')
+      );
+    }
   }
 }
 

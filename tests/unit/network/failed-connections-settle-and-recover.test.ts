@@ -129,7 +129,7 @@ test('a thrown gameplay send reports failure and reconnects without replaying th
     throw cause;
   });
   const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
-  expect(manager.sendMessage({ type: 'useAbility', data: { abilityId: 'harpoon' } })).toBe(false);
+  expect(manager.sendMessage({ type: 'useAbility', data: {} })).toBe(false);
   expect(error).toHaveBeenCalledWith('NETWORK', 'Failed to send gameplay message', cause);
   expect(manager.getSocket()).toBeNull();
   expect(manager.isConnected()).toBe(false);

@@ -52,7 +52,6 @@ import type { ShipCombatNetwork } from './shipCombatNetwork';
 import {
   applyShipKitToShip,
   DEFAULT_SHIP_KIT_ID,
-  getShipKit,
   hullRadiusForKit,
   SHIP_ABILITY,
 } from './shipKits';
@@ -366,7 +365,6 @@ class Ship {
     ) {
       return false;
     }
-    const kit = getShipKit(this.kitId);
     if (this.isLocalPlayer) {
       const network = this.combatNetwork;
       if (network?.isConnected) {
@@ -374,7 +372,6 @@ class Ship {
         // can be undone by an older snapshot or disagree about eligible cargo.
         const sent = network.sendAbility({
           kitId: this.kitId,
-          abilityId: kit.abilityId,
         });
         if (!sent) {
           return false;

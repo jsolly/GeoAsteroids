@@ -120,9 +120,9 @@ function syncLiveTouches(ev: TouchEvent): void {
   }
   touchListObserved = true;
   liveTouchPoints.clear();
-  for (let i = 0; i < touches.length; i++) {
-    const touch =
-      typeof touches.item === 'function' ? touches.item(i) : (touches as unknown as Touch[])[i];
+  let index = 0;
+  while (index < touches.length) {
+    const touch = touches[index++];
     if (touch) {
       liveTouchPoints.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
     }

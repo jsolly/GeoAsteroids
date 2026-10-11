@@ -40,7 +40,7 @@ test('furnace intake tells every client the rock was consumed so they play the r
     world.send(hauler, {
       type: 'useAbility',
       id: hauler.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     expect(actor.harpoonTargetId).toBeNull();
     resolveToolFlights(world.engine);

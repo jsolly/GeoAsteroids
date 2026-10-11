@@ -62,7 +62,7 @@ describe('server authority boundaries', () => {
       {
         type: 'useAbility',
         id: 'pilot',
-        data: { kitId: 'hauler', abilityId: 'harpoon' },
+        data: { kitId: 'hauler' },
       },
       ws
     );
@@ -76,7 +76,7 @@ describe('server authority boundaries', () => {
       {
         type: 'useAbility',
         id: 'pilot',
-        data: { kitId: 'scout', abilityId: 'surveyScan' },
+        data: { kitId: 'scout' },
       },
       ws
     );

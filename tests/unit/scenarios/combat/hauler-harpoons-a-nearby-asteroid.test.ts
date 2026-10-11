@@ -40,7 +40,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     resolveToolFlights(world.engine);
 
@@ -66,7 +66,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     resolveToolFlights(world.engine);
     const rock = world.engine.getAsteroid('haul-rock');
@@ -76,7 +76,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     resolveToolFlights(world.engine);
 
@@ -104,7 +104,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     resolveToolFlights(world.engine);
     expect(world.entity(alice).harpoonTargetId).toBe('haul-rock');
@@ -126,7 +126,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     resolveToolFlights(world.engine);
     world.engine.entityManager.updateEntity(alice.id, { spawnProtectionTimer: 0 });
@@ -149,7 +149,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.send(alice, {
       type: 'useAbility',
       id: alice.id,
-      data: { kitId: 'scout', abilityId: 'harpoon' },
+      data: { kitId: 'scout' },
     });
     resolveToolFlights(world.engine);
 

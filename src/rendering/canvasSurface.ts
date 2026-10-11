@@ -1,7 +1,9 @@
+import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import type { Position } from '../../shared-types';
 import { clientPerformance } from '../diagnostics/performanceMetrics';
 import { Point } from '../physics/Point';
 import { shouldUseTouchControls } from '../ui/viewportChrome';
+import { logger } from '../utils/Logger';
 import { paintOpaqueBackground } from './canvasBackground';
 import { watchDevicePixelRatio } from './devicePixelRatioWatcher';
 import { type GpuContourLayer, GpuRearRenderer } from './gpuRearRenderer';
@@ -107,8 +109,13 @@ class CanvasManager {
               this.gpuFrameActive = false;
             }
           });
-        } catch {
+        } catch (error) {
           this.gpuRenderer = null;
+          logger.error(
+            'RENDER',
+            'GPU creation failed; using Canvas',
+            boundedDiagnosticError(error, 'Unknown browser failure')
+          );
         }
       }
       this.resizeHandler = () => {

@@ -84,7 +84,7 @@ describe('Colossal asteroids need a crew', () => {
     world.send(pilot, {
       type: 'useAbility',
       id: pilot.id,
-      data: { kitId: 'hauler', abilityId: 'harpoon' },
+      data: { kitId: 'hauler' },
     });
     resolveToolFlights(world.engine);
   }

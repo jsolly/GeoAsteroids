@@ -13,6 +13,7 @@ describe('test-world reset lifecycle failures', () => {
   afterEach(() => {
     gameEngine?.stopGameLoop();
     gameEngine = undefined;
+    vi.restoreAllMocks();
   });
 
   test('reports a live socket close failure before clearing the world', () => {

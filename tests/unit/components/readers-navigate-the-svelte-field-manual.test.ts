@@ -189,3 +189,38 @@ test('desktop readers see expanded navigation after the manual mounts', async ()
   await start();
   expect(document.querySelector<HTMLDetailsElement>('#navigation')?.open).toBe(true);
 });
+
+test('blocked history writes report once while in-memory scroll restoration remains usable', async () => {
+  const failure = new DOMException('History writes blocked', 'SecurityError');
+  const report = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const replace = vi.spyOn(history, 'replaceState').mockImplementation(() => {
+    throw failure;
+  });
+  await start();
+  expect(document.querySelector('[data-panel="overview"]')).not.toBeNull();
+  vi.runOnlyPendingTimers();
+  scrollY = 320;
+  window.dispatchEvent(new Event('scroll'));
+  vi.advanceTimersByTime(500);
+  expect(replace.mock.calls.length).toBeGreaterThan(1);
+  expect(report).toHaveBeenCalledExactlyOnceWith(
+    '[WIKI] Saving scroll history failed; retaining it in memory for this visit',
+    expect.objectContaining({ name: 'SecurityError', message: 'History writes blocked' })
+  );
+
+  const input = document.querySelector<HTMLInputElement>('#wiki-search');
+  if (!input) {
+    throw new Error('Search input missing');
+  }
+  input.value = 'hauler';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await settle();
+  expect(document.querySelector('[data-panel="search"]')).not.toBeNull();
+  scrollY = 0;
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await settle();
+  expect(document.querySelector('[data-panel="overview"]')).not.toBeNull();
+  await vi.waitFor(() => expect(scrollY).toBe(320));
+  expect(report).toHaveBeenCalledOnce();
+});
