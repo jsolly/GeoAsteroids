@@ -188,8 +188,28 @@ assert.doesNotMatch(
   read('.github/workflows/production-smoke.yml'),
   /playwright install|chromium|webkit/u
 );
+const releaseGuard = production.jobs.smoke.steps.find(
+  (step) => step.name === 'Verify the release belongs to main'
+)?.run;
+assert.equal(
+  releaseGuard,
+  '[[ "$PRODUCTION_SMOKE_RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1\ngit merge-base --is-ancestor "$PRODUCTION_SMOKE_RELEASE_SHA" origin/main\n'
+);
+assert.equal(production.jobs.smoke.steps[0].with['fetch-depth'], 0);
+assert.match(production.jobs.smoke.if, /github\.event\.deployment\.ref == 'main'/u);
+assert.match(production.jobs.smoke.if, /github\.event\.deployment\.ref == 'refs\/heads\/main'/u);
+assert.match(
+  production.jobs.smoke.if,
+  /github\.event\.deployment\.ref == github\.event\.deployment\.sha/u
+);
+assert.ok(
+  production.jobs.smoke.if.includes(
+    "github.event.deployment_status.environment_url == 'https://railway.com/project/08a7b6ee-af66-4c58-a21e-700d5468ee14?environmentId=94d3de2f-4bb0-4051-8975-a30190c2fffa'"
+  )
+);
 const productionCommands = production.jobs.smoke.steps.map((step) => step.run).filter(Boolean);
 assert.deepEqual(productionCommands, [
+  releaseGuard,
   'npm ci',
   'npm run smoke:scenario-contract',
   'npm run smoke:production',
