@@ -198,6 +198,9 @@ export function identity(root, inputEnvironment = process.env) {
   const allowed = new Set([
     'NODE_ENV',
     'NODE_OPTIONS',
+    // Selects TLS trust for every file-based Node child, so it stays in execution
+    // and its value enters the digest; hosts such as Claude desktop set it.
+    'NODE_USE_SYSTEM_CA',
     'PATH',
     'HOME',
     'TMPDIR',
