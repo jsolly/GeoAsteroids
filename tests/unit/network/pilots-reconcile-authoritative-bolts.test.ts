@@ -11,7 +11,6 @@ import { Laser } from '../../../src/entities/laser/Laser';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { NetworkManager } from '../../../src/network/networkManager';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
-import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { snapshotFixture } from './snapshotFixture';
 
 /** Transport seam only: packets still cross the production onmessage handler,
@@ -275,14 +274,15 @@ describe('pilots reconcile complete authoritative bolts through the actual socke
     const ws = await connect();
     receiveLocalPose(ws);
     const clock = vi.spyOn(performance, 'now').mockReturnValue(100);
-    vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(document.createElement('canvas'));
-    vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue({ width: 1280, height: 900 });
     local.ship.angle = 0;
     local.ship.velocity = { x: -LASER.SPEED / 60, y: 0 };
     local.ship.fireLaser();
     const predicted = local.ship.lasers[0];
     expect(predicted?.velocity).toEqual({ x: 0, y: 0 });
     const requestId = ws.sent.findLast((packet) => packet.type === 'shoot')?.data?.['requestId'];
+    clock.mockReturnValue(100 + LASER.PREDICTION_TIMEOUT_MS - 1);
+    local.ship.update();
+    expect(local.ship.lasers).toEqual([predicted]);
     clock.mockReturnValue(100 + LASER.PREDICTION_TIMEOUT_MS);
     local.ship.update();
     expect(local.ship.lasers).toEqual([]);

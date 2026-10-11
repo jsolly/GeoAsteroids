@@ -79,7 +79,7 @@
     "server/core/BeltCrawlerManager.ts": "sha256:b82be9d9d1b690d9351e08eb73ce4c854d719967028e049bf5cc4d7790dc4263",
     "server/core/CollisionAuthority.ts": "sha256:4e184ce89aedaf85be7c5e5d8f5a6aa6d4c715b1727210905e4f9b0475566c87",
     "server/core/EntityManager.ts": "sha256:d3dcdf50bbc4471d31d9fab78036e7a29d15fb9c68805d949a6bf3129101369c",
-    "server/core/GameEngine.ts": "sha256:0c146cf34b738290b067d035e701a3412b8fd171e5637d7531f44344324efe4e",
+    "server/core/GameEngine.ts": "sha256:dd649c5c0f0c417436991b86862b1924bc927fbb3afcaaa80c1a926034ff9ca0",
     "server/core/GameLoopHealth.ts": "sha256:4c934a63da53b93facc60b6dadf197e95c3df69e749f90fe4c794eee22fe19ba",
     "server/core/LootManager.ts": "sha256:6e9cfd59737fa72c4d88955cad8bea3e3b43f9fdbd8e3256acd60f36e828ca57",
     "server/core/PlayerMotionService.ts": "sha256:fe85f7cd7f3e47278b6053c5ac616b3c8b696538664849517328cecb7926975a",
@@ -162,7 +162,7 @@
     "src/components/ui/button/button.svelte": "sha256:9225943b80347ddad9a06c5b00138d271294f5dac05e5d2f01ed436474d63f28",
     "src/components/ui/input/input.svelte": "sha256:fab152caba80865304d177a2dea67a12672f90a852f354928ddb3be3c0ec78a9",
     "src/components/wiki/WikiShell.svelte": "sha256:67ee5c0491bd9c0d5f75d3cca9cbc7a153eeb3dfdef5b66651ad6ccbc6d722ee",
-    "src/constants/index.ts": "sha256:3ad3ab78a4445b2e3c9f218ceb68b8daa25f05364f4ed6d6c0803976c2fa21cb",
+    "src/constants/index.ts": "sha256:745b63eab35050becd419fa2e7c29ac5484b5a85a83d90adf5e9196d7d662368",
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
     "src/core/eventLoop.ts": "sha256:928cc5eb12804626760698dc9e86b8f576714047f59c52f1634af7484e6198aa",
@@ -174,7 +174,7 @@
     "src/diagnostics/performanceMetrics.ts": "sha256:904856ee129e503df7a5f04b0a5f1edf7c7d261c0644e6f443b1f4ef603cff06",
     "src/entities/EntityFactory.ts": "sha256:be6957bbaf45b67be6e60bfa3e4f1c495d04e6ee322855396be104f2e98efd3c",
     "src/entities/laser/AuthoritativeProjectileField.ts": "sha256:d2aae980286d4682056d0fdba3ee23ffffc4f6e3c29cb81658cb275774388530",
-    "src/entities/laser/Laser.ts": "sha256:3b2f432c0c255e1441955ed5cd5d63be29c32f2ceb13f74db79306ae754359b4",
+    "src/entities/laser/Laser.ts": "sha256:a37de68d6efffe38e19aae9e21f6faa0a373034baae5791ceac1cfd5dd5ad14a",
     "src/entities/laser/laserUtils.ts": "sha256:581eaa44a310667d430a939e871d7cc26e6b4d00a36553fa215792ab2bf92e1d",
     "src/entities/loot/LootField.ts": "sha256:e46c493e19c1b7c7c56d9a27ed3716aed62f862b3decb7928fdbd237a338967c",
     "src/entities/loot/lootRenderer.ts": "sha256:cb4e131eb6df2a2929f7a998c8a5aa408f8259cc52626ae1619b6486e2ed3704",
@@ -253,7 +253,7 @@
     "src/rendering/boundaryRenderer.ts": "sha256:434b87b42a7230f74f05452cf8758bf90f9ed63cdd434104140fde89f0698c15",
     "src/rendering/canvas.ts": "sha256:939bb0ff951476713ccb98070fa77ca3dbc0711160b27a46e2db41cdb4c4c644",
     "src/rendering/canvasBackground.ts": "sha256:aa0fcb20a82cd5c7e9bf65c8661bb2da121a346a08f16dff223095546636ef75",
-    "src/rendering/canvasSurface.ts": "sha256:0548d94057378b05b8e7fa86ff52746bb9e64fd980402fab5be9c9cd63cf6df3",
+    "src/rendering/canvasSurface.ts": "sha256:e70c67471e6e0e0905473737a325f12a7092069f3b610253d47fc232c33ca270",
     "src/rendering/cargoHoldRenderer.ts": "sha256:52f6e5b0120f7442fc93972c7743a6062e634241b8a74c41dd9aa6f2fc351b6c",
     "src/rendering/cargoOffloadRenderer.ts": "sha256:c4b2f3a0bda19a35fc03b6016d8c77ef81cd2aa02519610cf020f574569e826d",
     "src/rendering/contourLaserRenderer.ts": "sha256:a58dbd844c9cb3eb469cd5ecfd5c5c21778f2f57a5dbc869b3be423d9f0acabf",
@@ -318,7 +318,7 @@
     "src/wiki/article.ts": "sha256:b62f1df19562aa8d5f970a31a162080adaf833e1ac97f68c2a229f4b8dde13fe",
     "src/wiki/articleSources.json": "sha256:d0893db6bb326762745d66caa188315d4a30e00a5bf1a792bf8588e4fdf45f7d",
     "src/wiki/contentLoader.ts": "sha256:abe0ee24945205113a07ededf0b8b54888a7d08e619b9d7a018d80a273e5afa4",
-    "src/wiki/gameReference.ts": "sha256:c82ac295809191d1ce1b8a9ba1c3452a57c78d68965a08b59430de3d148cd78b",
+    "src/wiki/gameReference.ts": "sha256:78d253619864b7ca22bd6355ddb98d9be3d1ff5354d975299fef7e6837e0670c",
     "src/wiki/media.ts": "sha256:6e548df7f61de674f267d98894f1261a377f02bb2ef9be03fba60c18809cf158",
     "src/wiki/mediaPlayback.ts": "sha256:642adacbffd7dc70307a4197531664ce7eed12f4f032d535ab5aa17e9b1eb4c9",
     "src/wiki/presentation.ts": "sha256:8394cdb4adf09ca4c2a4d5dc26e7a80e76f90cada01df74cc9f40a171d761ab5",
@@ -362,7 +362,7 @@
     "tests/unit/input/touchAbility.test.ts": "sha256:f53216a35f18353daec5a6adf9df61496e5c8f0cbf1410fc10158244bb89026a",
     "tests/unit/network/asteroidFieldSync.test.ts": "sha256:cd533414af285646da6972e3a48f13d9c989941f6d093144f04d26126be65bfd",
     "tests/unit/network/failed-connections-settle-and-recover.test.ts": "sha256:8521bd0c3a82690f3fc0ae2a04ab51699e2523306ba2ca8cf997a1201752167c",
-    "tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts": "sha256:8c88943ad63f0ec98d4c08e8aeb4bf8a745f13ec000157407977af01b5991af7",
+    "tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts": "sha256:8041b45e513303e0932ac221b58e284f3f7c44c10b9598d1e21a4f320d58fef8",
     "tests/unit/network/pilots-reconcile-respawns-and-reconnects.test.ts": "sha256:5d3eac8d8a88f868e18aba78db892719be0dbf832b4fde2e7893ed6701424ecc",
     "tests/unit/network/pilots-recover-complete-snapshots.test.ts": "sha256:0640c475e53ce95a855a7b8dbbc9f84f9d830a8ca2ba9bed3f9b1b19f45320ca",
     "tests/unit/network/resume-credential-stores-release-provenance.test.ts": "sha256:6ad859a57905a6db1119e110a3d35409da4639f49a74bafbaa133676654df9c7",
@@ -3462,6 +3462,35 @@
       ],
       "media": ["cargo", "hauler", "scout", "survival", "terrain"],
       "owners": {}
+    },
+    {
+      "note": "Laser range is one explicit LASER.MAX_TRAVEL_DISTANCE of 800 world units, shared by client prediction and server authority. It replaces the additive ratio-plus-width typo. Live server reach is unchanged: a stationary shot still expires on frame 285. The Combat values reference now states the range. No article prose cites laser range, screen width or CANVAS.INTERNAL_WIDTH, and no demonstration fires ship lasers; other mapped topics and media are untouched. CANVAS.INTERNAL_WIDTH was removed as dead, and the canvasSurface comment no longer lists laser reach as viewport-driven. The stalled-prediction test dropped its canvas spies and now proves the shot survives until one millisecond before its timeout. Re-recorded after merging #790 into the branch; the merged GameEngine.ts keeps both changes. wiki:media:check fails on the terrain GIF on clean origin/main 02c45500 as well; that is pre-existing and not regenerated here.",
+      "sources": [
+        "server/core/GameEngine.ts",
+        "src/constants/index.ts",
+        "src/entities/laser/Laser.ts",
+        "src/rendering/canvasSurface.ts",
+        "src/wiki/gameReference.ts",
+        "tests/unit/network/pilots-reconcile-authoritative-bolts.test.ts"
+      ],
+      "topics": [
+        "asteroids",
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "hauler",
+        "hud-network",
+        "loot-growth",
+        "satellites",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": ["cargo", "hauler", "movement", "pickups", "scout", "survival"],
+      "owners": {
+        "src/entities/laser/Laser.ts": "combat-survival",
+        "src/wiki/gameReference.ts": "combat-survival"
+      }
     }
   ]
 }
