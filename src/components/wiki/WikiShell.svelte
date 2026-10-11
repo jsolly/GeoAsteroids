@@ -14,7 +14,7 @@
   let initialized = $state(false);
   let route = $state('content');
   let query = $state('');
-  let navigationOpen = $state(true);
+  let navigationOpen = $state(false);
   let content: HTMLElement;
   let searchInput = $state<HTMLInputElement | null>(null);
   const categories = $derived([...new Set(articles.map((entry) => entry.category))]);
@@ -96,7 +96,7 @@
       : article
         ? `${article.title} | GeoRoids field manual`
         : overview
-          ? 'Field manual | GeoRoids'
+          ? 'GeoRoids Field Manual | Ships, Controls and Teamwork'
           : 'Entry not found | GeoRoids field manual';
     if (article && !query.trim()) {
       if (article.media.length !== content.querySelectorAll('.demo').length) {

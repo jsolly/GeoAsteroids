@@ -163,3 +163,29 @@ test('a reader requesting reduced motion sees demonstration posters', async () =
     '/wiki/media/hauler.png'
   );
 });
+
+test('mobile readers expand the manual navigation and it closes after choosing a topic', async () => {
+  vi.stubGlobal('innerWidth', 390);
+  shell = mount(WikiShell, { target: document.body, props: { articles } });
+  const navigation = document.querySelector<HTMLDetailsElement>('#navigation');
+  if (!navigation) {
+    throw new Error('Manual navigation missing');
+  }
+  // The first render must be collapsed before mount effects choose a viewport layout.
+  expect(navigation.open).toBe(false);
+  await settle();
+  expect(navigation.open).toBe(false);
+  navigation.open = true;
+  navigation.dispatchEvent(new Event('toggle'));
+  await settle();
+  expect(navigation.querySelector('a[href="#controls"]')).not.toBeNull();
+  await show('#controls');
+  expect(navigation.open).toBe(false);
+  expect(document.querySelector('[data-panel="article"]')?.id).toBe('controls');
+});
+
+test('desktop readers see expanded navigation after the manual mounts', async () => {
+  vi.stubGlobal('innerWidth', 1280);
+  await start();
+  expect(document.querySelector<HTMLDetailsElement>('#navigation')?.open).toBe(true);
+});
