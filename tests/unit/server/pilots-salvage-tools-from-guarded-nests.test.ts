@@ -109,7 +109,6 @@ test('salvaged tools survive an ordinary death, reconnect, and a server restart'
     const engine = new GameEngine(82, undefined, new InlineWorldPersistence(store));
     const socket = new RecordingSocket();
     const actor = engine.addPlayer('pilot', 'Pilot', socket, undefined, 'hauler');
-    actor.asteroidInteractions = 1;
     const registered = engine.registerPilot(actor, socket);
     assert(registered.ok);
     for (const equipment of EQUIPMENT_IDS) {
@@ -239,7 +238,6 @@ test('death preserves bank and equipment through a restart', () => {
     const engine = new GameEngine(82, undefined, new InlineWorldPersistence(store));
     const socket = new RecordingSocket();
     const actor = engine.addPlayer('pilot', 'Pilot', socket, undefined, 'hauler');
-    actor.asteroidInteractions = 1;
     const registered = engine.registerPilot(actor, socket);
     assert(registered.ok);
     for (const equipment of EQUIPMENT_IDS) {

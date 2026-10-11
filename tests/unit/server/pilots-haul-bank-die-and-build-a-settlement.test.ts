@@ -25,7 +25,6 @@ function pilot(engine: GameEngine, id = 'pilot', kit: 'scout' | 'hauler' = 'scou
   const socket = new RecordingSocket();
   const actor = engine.addPlayer(id, id, socket, { x: 1000, y: 1000 }, kit);
   actor.spawnProtectionTimer = 0;
-  actor.asteroidInteractions = 1;
   return { actor, socket };
 }
 function rock(id: string, ore: AsteroidData['ore'], size = 25): AsteroidData {

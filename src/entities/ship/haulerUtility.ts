@@ -1,4 +1,4 @@
-import { PREFERRED_HAULER_UTILITY, parseHaulerUtilityId } from '../../../shared/shipUtilities';
+import { DEFAULT_HAULER_UTILITY, parseHaulerUtilityId } from '../../../shared/shipUtilities';
 import type { HaulerUtilityId } from '../../../shared-types';
 import { getStoredItem, setStoredItem } from '../../utils/safeStorage';
 
@@ -29,7 +29,7 @@ export const HAULER_UTILITY = {
 
 export function preferredHaulerUtility(): HaulerUtilityId {
   const stored = getStoredItem(HAULER_UTILITY_STORAGE_KEY);
-  return stored ? parseHaulerUtilityId(stored) : PREFERRED_HAULER_UTILITY;
+  return stored ? parseHaulerUtilityId(stored) : DEFAULT_HAULER_UTILITY;
 }
 
 export function rememberHaulerUtility(utilityId: HaulerUtilityId): void {

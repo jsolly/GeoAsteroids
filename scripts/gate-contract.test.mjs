@@ -614,6 +614,9 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     writeFileSync(join(f.root, 'bin', 'bash'), 'new executable');
     assert.notEqual(identity(f.root, env).runtime, second.runtime);
     assert.equal(identity(f.root, { ...env, GEOROIDS_UNKNOWN_OVERRIDE: '1' }).reusable, false);
+    const systemCa = identity(f.root, { ...env, NODE_USE_SYSTEM_CA: '1' });
+    assert.equal(systemCa.reusable, true, JSON.stringify(systemCa.unknown));
+    assert.notEqual(systemCa.runtime, identity(f.root, env).runtime);
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }
@@ -1205,8 +1208,7 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   );
   const base = Object.fromEntries(
     Object.entries(process.env).filter(
-      ([key]) =>
-        !key.startsWith('GIT_') && !key.startsWith('GEOROIDS_') && !key.startsWith('NODE_TEST_')
+      ([key]) => !key.startsWith('GIT_') && !key.startsWith('GEOROIDS_') && !key.startsWith('NODE_')
     )
   );
   Object.assign(base, {
@@ -1248,6 +1250,18 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
     }),
     direct
   );
+  // Claude desktop sets Node's system TLS trust; every launch keeps and digests it.
+  const systemCa = { ...base, NODE_USE_SYSTEM_CA: '1' };
+  const trusted = launch(systemCa);
+  assert.equal(trusted.reusable, true, JSON.stringify(trusted.unknown));
+  assert.deepEqual(launch(systemCa, true), trusted);
+  assert.deepEqual(launch(systemCa, false, true), trusted);
+  assert.deepEqual(
+    launch({ ...systemCa, GIT_PREFIX: '', PATH: `${core}:${systemCa.PATH}` }),
+    trusted
+  );
+  assert.notEqual(trusted.runtime, direct.runtime);
+  assert.notEqual(launch({ ...base, NODE_USE_SYSTEM_CA: '0' }).runtime, trusted.runtime);
   assert.deepEqual(launch({ ...base, GIT_PREFIX: '', PATH: `${core}:${base.PATH}` }), direct);
   assert.notEqual(
     launch({ ...base, PATH: `${core}:${base.PATH}` }).runtime,

@@ -419,7 +419,7 @@ describe('server-authoritative combat', () => {
       {
         type: 'useAbility',
         id: 'beta',
-        data: { kitId: 'hauler' },
+        data: {},
       },
       alphaWs
     );
@@ -427,7 +427,7 @@ describe('server-authoritative combat', () => {
       {
         type: 'useAbility',
         id: 'alpha',
-        data: { kitId: 'scout' },
+        data: {},
       },
       unjoinedWs
     );
@@ -444,9 +444,8 @@ describe('server-authoritative combat', () => {
     actor.velocity = { x: 1.0352958031951747, y: -2.0318824196562435 };
     actor.angle = 1.0995574287564278;
     actor.spawnProtectionTimer = 0;
-    actor.asteroidInteractions = 1;
     const now = engine.getServerTime();
-    expect(engine.playerMotion.register(actor, socket, 1, now).ok).toBe(true);
+    expect(engine.playerMotion.register(actor, socket, now).ok).toBe(true);
     const start = { x: -126.73821133054508, y: -103.1050782968309 };
     const velocity = { x: 2.322998686897575, y: -4.559141627179853 };
     expect(engine.spawnPlayerLaser(actor.id, start, velocity, now + 92)).toBeNull();

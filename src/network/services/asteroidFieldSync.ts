@@ -329,7 +329,7 @@ export function unbindAsteroidFieldApply(): void {
   applyHandlers = null;
 }
 
-export function notifyAsteroidCreated(asteroid: AsteroidData): void {
+function notifyAsteroidCreated(asteroid: AsteroidData): void {
   if (!asteroidHasValidMaterial(asteroid)) {
     reportInvalidAsteroidMaterial(asteroid.id, asteroid.material);
     return;
@@ -337,10 +337,10 @@ export function notifyAsteroidCreated(asteroid: AsteroidData): void {
   applyHandlers?.onCreated(asteroid);
 }
 
-export function notifyAsteroidUpdated(
+function notifyAsteroidUpdated(
   asteroidId: string,
   updates: Partial<AsteroidData>,
-  complete = false
+  complete: boolean
 ): void {
   applyHandlers?.onUpdated(
     asteroidId,

@@ -14,7 +14,7 @@ test('observing natural pilots preserves their real spawns and every generated a
   for (let index = 0; index < 5; index++) {
     const socket = new RecordingSocket();
     const actor = engine.addPlayer(`pilot-${index}`, `Pilot ${index}`, socket);
-    engine.enableAsteroidInteractions(actor);
+    engine.seedAsteroidInteractions();
     expect(engine.registerPilot(actor, socket).ok).toBe(true);
   }
   const before = structuredClone(engine.getGameState());

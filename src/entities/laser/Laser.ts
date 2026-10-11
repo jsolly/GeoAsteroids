@@ -10,7 +10,6 @@ import {
   playLaserSound as playLaserSoundAt,
 } from '../../audio/gameSounds';
 import type { Sound } from '../../audio/Sound';
-import { canvasManager } from '../../rendering/canvasSurface';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
 
 interface LaserData {
@@ -87,11 +86,7 @@ export class Laser implements LaserData {
   }
 
   isExpired(): boolean {
-    const cvs = canvasManager.getCanvas();
-    if (!cvs) {
-      return true; // Expire immediately if canvas is unavailable
-    }
-    return this.distTraveled >= LASER.TRAVEL_DISTANCE_RATIO + canvasManager.getViewportSize().width;
+    return this.distTraveled >= LASER.MAX_TRAVEL_DISTANCE;
   }
 
   shouldBeRemoved(): boolean {

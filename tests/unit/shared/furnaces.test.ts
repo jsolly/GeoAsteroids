@@ -11,7 +11,6 @@ import {
   TOWN_SPAWN_RADIUS,
   townSquareSpawn,
   validCivicModules,
-  validLitCivicLotIds,
 } from '../../../shared/furnaces';
 import { WORLD } from '../../../shared/world';
 
@@ -120,12 +119,13 @@ test('a furnace stays dark until its inward parent lot is lit', () => {
       lot.ring === 1 ? TOWN_HEARTH.id : `street-${lot.ring - 1}-${Math.floor(index / 2)}`
     );
   }
-  expect(validLitCivicLotIds(['street-1-0'])).toBe(true);
-  expect(validLitCivicLotIds(['street-2-0', 'street-1-0'])).toBe(true);
-  expect(validLitCivicLotIds(['street-2-0'])).toBe(false);
-  expect(validLitCivicLotIds(['street-1-0', 'street-1-0'])).toBe(false);
-  expect(validLitCivicLotIds(['built:pilot:1'])).toBe(false);
-  expect(validLitCivicLotIds('street-1-0')).toBe(false);
+  const named = (id: string) => ({ id, builderName: 'Ada' });
+  expect(validCivicModules([named('street-1-0')])).toBe(true);
+  expect(validCivicModules([named('street-2-0'), named('street-1-0')])).toBe(true);
+  expect(validCivicModules([named('street-2-0')])).toBe(false);
+  expect(validCivicModules([named('street-1-0'), named('street-1-0')])).toBe(false);
+  expect(validCivicModules([named('built:pilot:1')])).toBe(false);
+  expect(validCivicModules(named('street-1-0'))).toBe(false);
   expect(validCivicModules([{ id: 'street-1-0', builderName: 'Ada' }])).toBe(true);
   expect(
     validCivicModules([{ id: 'street-1-0', builderName: 'Ada', builderId: 'client-ada' }])

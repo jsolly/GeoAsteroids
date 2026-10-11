@@ -55,7 +55,6 @@ function cargo(id: string, position: { x: number; y: number }): AsteroidData {
 function addScout(engine: GameEngine, id = 'scout', socket = new RecordingSocket()) {
   const actor = engine.addPlayer(id, id, socket, { ...furnace.position }, 'scout');
   actor.position = { ...furnace.position };
-  actor.asteroidInteractions = 1;
   const pilot = engine.registerPilot(actor, socket);
   assert(pilot.ok);
   actor.abilityCooldownFrames = 0;
@@ -163,11 +162,14 @@ test('a dead ship and the wrong kit spend neither score nor a furnace', () => {
   actor.health = 0;
   expect(engine.useAbility(actor.id)).toBe(false);
   expect(engine.furnaceBuildIssue(actor.id)).toBe(FURNACE_BUILD.ISSUE.READY);
-  actor.health = 100;
-  expect(engine.useAbility(actor.id, 'hauler')).toBe(false);
-  expect(engine.getGameState().civicModules).toEqual([]);
-  expect(actor.score).toBe(furnace.cost);
   const hauler = engine.addPlayer('hauler', 'Hauler', new RecordingSocket(), undefined, 'hauler');
+  hauler.position = { ...furnace.position };
+  hauler.score = furnace.cost;
+  hauler.abilityCooldownFrames = 0;
+  engine.useAbility(hauler.id);
+  expect(engine.getGameState().civicModules).toEqual([]);
+  expect(hauler.score).toBe(furnace.cost);
+  expect(actor.score).toBe(furnace.cost);
   expect(engine.setScoutUtility(hauler.id, 'mineral_scan')).toBe(false);
 });
 
@@ -240,7 +242,6 @@ test('an obsolete personal-furnace save does not restore hearths, and a broken m
       builtFurnaces?: unknown;
       townCredit?: number;
       civicModules?: unknown;
-      litCivicLotIds?: string[];
     };
     saved.builtFurnaces = [
       {
@@ -272,17 +273,8 @@ test('an obsolete personal-furnace save does not restore hearths, and a broken m
     } finally {
       loaded.close();
     }
-    const namedOnlyById = new DatabaseSync(path);
-    delete saved.civicModules;
-    saved.litCivicLotIds = [furnace.id];
-    namedOnlyById.prepare('UPDATE world SET json=? WHERE id=1').run(JSON.stringify(saved));
-    namedOnlyById.close();
-    const migrated = new WorldStore(path);
-    expect(migrated.loadWorld()?.civicModules).toEqual([{ id: furnace.id, builderName: '' }]);
-    migrated.close();
     const childOnly = new DatabaseSync(path);
     saved.civicModules = [{ id: child.id, builderName: 'Ada' }];
-    delete saved.litCivicLotIds;
     childOnly.prepare('UPDATE world SET json=? WHERE id=1').run(JSON.stringify(saved));
     childOnly.close();
     const orphan = new WorldStore(path);
@@ -329,7 +321,7 @@ test('a Scout beside the grate scans instead of being told a build failed', () =
   scout.actor.position = { x: furnace.position.x + furnace.radius + 40, y: furnace.position.y };
   const broadcaster = new GameStateBroadcaster(engine);
   const handler = new MessageHandler(engine, broadcaster);
-  handler.handleMessage({ type: 'useAbility', id: scout.actor.id, kitId: 'scout' }, socket);
+  handler.handleMessage({ type: 'useAbility', id: scout.actor.id }, socket);
   expect(socket.received('furnaceBuildResult')).toEqual([]);
   expect(engine.getGameState().civicModules).toEqual([]);
   expect(scout.actor.score).toBe(furnace.cost);
@@ -344,7 +336,7 @@ test('a raised furnace toasts the Scout with the lot name', () => {
   scout.actor.score = furnace.cost;
   const broadcaster = new GameStateBroadcaster(engine);
   const handler = new MessageHandler(engine, broadcaster);
-  handler.handleMessage({ type: 'useAbility', id: scout.actor.id, kitId: 'scout' }, socket);
+  handler.handleMessage({ type: 'useAbility', id: scout.actor.id }, socket);
   expect(socket.lastReceived('furnaceBuildResult')?.data).toBe(
     `${civicModuleName('scout', furnace.name)} is burning`
   );
@@ -369,6 +361,7 @@ test('a lit furnace matches Town Square for spider occupancy', () => {
       position: { x: origin.x + 2_000, y: origin.y },
       health: 100,
       exploding: false,
+      radius: 0,
     };
     manager.advance({ players: [witness], nowFrame: 1 });
     const retreating = manager.snapshot().spiders.find((body) => body.id === inside.id);
@@ -388,6 +381,7 @@ test('a lit furnace matches Town Square for spider occupancy', () => {
       position: { x: origin.x + 40, y: origin.y },
       health: 100,
       exploding: false,
+      radius: 0,
     };
     manager.advance({ players: [sheltered], nowFrame: 2 });
     expect(manager.snapshot().spiders.find((body) => body.id === hunter.id)?.targetId).toBeNull();

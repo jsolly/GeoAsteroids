@@ -30,10 +30,9 @@ function enhancedMotionWorld() {
   const asteroid = motionAsteroid();
   world.addAsteroid(asteroid);
   const actor = world.addPlayer('hauler', 'Hauler', socket, { x: 100, y: 0 }, 'hauler');
-  actor.asteroidInteractions = 1;
   actor.spawnProtectionTimer = 0;
   actor.abilityCooldownFrames = 0;
-  const registered = world.playerMotion.register(actor, socket, 1, 1000);
+  const registered = world.playerMotion.register(actor, socket, 1000);
   if (!registered.ok) {
     throw new Error(registered.error);
   }

@@ -12,7 +12,6 @@ test('a dead pilot resumes the countdown and preserves bank and exploration', ()
     const engine = new GameEngine(82, undefined, new InlineWorldPersistence(store));
     const socket = new RecordingSocket();
     const actor = engine.addPlayer('old-run', 'Pilot', socket, { x: 4000, y: 0 });
-    actor.asteroidInteractions = 1;
     const registered = engine.registerPilot(actor, socket);
     assert(registered.ok);
     actor.score = 1200;

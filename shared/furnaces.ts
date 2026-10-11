@@ -415,25 +415,6 @@ function litParentReady(ids: ReadonlySet<string>): boolean {
   return true;
 }
 
-/** Lit ids must be real lots, unique, and only children of an already-lit parent. */
-export function validLitCivicLotIds(value: unknown): value is string[] {
-  if (!Array.isArray(value)) {
-    return false;
-  }
-  const ids = new Set<string>();
-  for (const id of value) {
-    if (typeof id !== 'string' || ids.has(id)) {
-      return false;
-    }
-    const lot = LOT_BY_ID.get(id);
-    if (!lot) {
-      return false;
-    }
-    ids.add(id);
-  }
-  return litParentReady(ids);
-}
-
 function validModuleBuilderId(value: unknown): value is string {
   if (typeof value !== 'string' || value.length < 1 || value.length > 128) {
     return false;
@@ -447,7 +428,7 @@ function validModuleBuilderId(value: unknown): value is string {
   return true;
 }
 
-/** Saved modules keep a nickname and the same parent order as lit lot ids. */
+/** Saved modules are real lots, unique, named, and only children of an already-lit parent. */
 export function validCivicModules(value: unknown): value is CivicModule[] {
   if (!Array.isArray(value)) {
     return false;

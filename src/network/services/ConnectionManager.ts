@@ -1,8 +1,9 @@
-import { isEquipmentId } from '../../../shared/equipment';
 import { validExploration } from '../../../shared/exploration';
 import { releaseField } from '../../../shared/releaseId';
 import { isTowCableUtility, scoutUtilityOf } from '../../../shared/shipUtilities';
+import { isLootKind } from '../../../shared/snapshotDto';
 import {
+  ASTEROID_INTERACTIONS_CAPABILITY,
   SNAPSHOT_VERSION,
   SnapshotDecoder,
   type SnapshotMetadata,
@@ -12,9 +13,10 @@ import type {
   AbilityUsedEvent,
   AsteroidData,
   AsteroidDestroyEvent,
+  ClientGameplayMessage,
+  ClientWireMessage,
   FurnaceDelivery,
   LootCollected,
-  LootKind,
   PingMessage,
   PlayerJoin,
   PlayerLeave,
@@ -64,7 +66,6 @@ import { getSelectedShipKitId } from '../../runtime/shipSelection';
 import { getClientReleaseId } from '../../utils/buildInfo';
 import { setClientLogContext } from '../../utils/clientLogContext';
 import { logger } from '../../utils/Logger';
-import type { ClientMessage } from '../types';
 import {
   resetWorldExploration,
   setWorldExploration,
@@ -73,11 +74,8 @@ import {
 } from '../worldExploration';
 import {
   applyAsteroidFieldPartition,
-  asteroidHasSpawnPose,
   createAsteroidFieldSyncScratch,
-  notifyAsteroidCreated,
   notifyAsteroidDestroyed,
-  notifyAsteroidUpdated,
   partitionAsteroidSnapshot,
   shouldPreserveSeenAsteroidsOnJoin,
 } from './asteroidFieldSync';
@@ -140,10 +138,6 @@ function isFinitePosition(value: unknown): value is Position {
   );
 }
 
-function isLootKind(value: unknown): value is LootKind {
-  return value === 'shard' || value === 'tap' || value === 'silk' || isEquipmentId(value);
-}
-
 function isLootCollectedEvent(value: unknown): value is LootCollected {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return false;
@@ -201,7 +195,7 @@ export class ConnectionManager {
   private readonly playedLootExplosionIds = new Set<string>();
   private readonly asteroidScratch = createAsteroidFieldSyncScratch();
   private readonly pingPayload: PingMessage = { type: 'ping' };
-  private readonly updateEnvelope: ClientMessage = {
+  private readonly updateEnvelope: Extract<ClientWireMessage, { type: 'update' }> = {
     type: 'update',
     data: {} as PlayerUpdate,
   };
@@ -212,7 +206,6 @@ export class ConnectionManager {
   private joinCompletionTimer: ReturnType<typeof setTimeout> | null = null;
   private joinCompletionPending: boolean = false;
   private joinAcknowledged: boolean = false;
-  private shotAcknowledgements: boolean = false;
   private joinWait?: { resolve: (ok: boolean) => void };
 
   // Only unexpected closes retry; terminal join failures already report an error.
@@ -236,8 +229,8 @@ export class ConnectionManager {
         return connection.isConnected();
       },
       sendShoot: (laser) => this.sendShootEvent(laser),
-      sendAbility: (data) =>
-        this.sendMessage({ type: 'useAbility', id: this.getLocalPlayerId(), data }),
+      sendAbility: () =>
+        this.sendMessage({ type: 'useAbility', id: this.getLocalPlayerId(), data: {} }),
     };
     this.state = {
       isConnected: false,
@@ -323,7 +316,10 @@ export class ConnectionManager {
         const computedUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
         const wsEndpoint = new URL(import.meta.env.VITE_WEBSOCKET_URL || computedUrl);
         wsEndpoint.searchParams.set('snapshotVersion', String(SNAPSHOT_VERSION));
-        wsEndpoint.searchParams.set('asteroidInteractions', '1');
+        wsEndpoint.searchParams.set(
+          'asteroidInteractions',
+          String(ASTEROID_INTERACTIONS_CAPABILITY)
+        );
         logger.debug('NETWORK', 'Connecting to WebSocket', { url: wsEndpoint.toString() });
         this.resetSnapshotSession();
         const socket = new WebSocket(wsEndpoint.toString());
@@ -517,7 +513,7 @@ export class ConnectionManager {
   }
 
   /** A failed send invalidates the transport; commands are never silently queued. */
-  private sendPayload(message: unknown): boolean {
+  private sendPayload(message: ClientWireMessage): boolean {
     const socket = this.state.socket;
     if (!this.state.isConnected || !socket || socket.readyState !== WebSocket.OPEN) {
       return false;
@@ -844,18 +840,18 @@ export class ConnectionManager {
       return;
     }
     const field = AuthoritativeProjectileField.getInstance();
-    const requestId = this.shotAcknowledgements ? field.trackShot(ship, laser) : undefined;
-    const message: ClientMessage = {
+    const requestId = field.trackShot(ship, laser);
+    const message: Extract<ClientWireMessage, { type: 'shoot' }> = {
       type: 'shoot',
       id: this.localPlayerId || this.clientId,
       data: {
         laserStart: laser.position,
         laserDirection: laser.velocity,
-        ...(requestId ? { requestId } : {}),
+        requestId,
       },
     };
 
-    if (!this.sendPayload(message) && requestId) {
+    if (!this.sendPayload(message)) {
       field.acknowledgeShot({ requestId, projectileId: null });
     }
   }
@@ -888,7 +884,7 @@ export class ConnectionManager {
     const playerPosition = this.getLocalPlayerPosition();
 
     // First join the game
-    const joinMessage: ClientMessage = {
+    const joinMessage: Extract<ClientWireMessage, { type: 'join' }> = {
       type: 'join',
       id: this.clientId,
       data: {
@@ -896,7 +892,7 @@ export class ConnectionManager {
         position: playerPosition,
         kitId: localPlayer?.ship.kitId ?? getSelectedShipKitId(),
         snapshotVersion: SNAPSHOT_VERSION,
-        asteroidInteractions: 1,
+        asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
         clientReleaseId: getClientReleaseId(),
         ...(this.resumeToken ? { resumeToken: this.resumeToken } : {}),
       },
@@ -915,8 +911,7 @@ export class ConnectionManager {
     }
   }
 
-  // Send a generic message to the server
-  sendMessage(message: Record<string, unknown>): boolean {
+  sendMessage(message: ClientGameplayMessage): boolean {
     if (!this.joinAcknowledged) {
       return false;
     }
@@ -993,20 +988,11 @@ export class ConnectionManager {
       case 'joined':
         this.handleJoined(data as PlayerJoin);
         break;
-      case 'playerJoined':
-        this.handlePlayerJoined(data as PlayerJoin);
-        break;
       case 'playerLeft':
         this.handlePlayerLeft(data as PlayerLeave);
         break;
-      case 'asteroidCreate':
-        this.handleAsteroidCreated(data as { asteroid: AsteroidData });
-        break;
       case 'asteroidCreateBatch':
         this.handleAsteroidCreateBatch(data as { asteroids: AsteroidData[] });
-        break;
-      case 'asteroidUpdate':
-        this.handleAsteroidUpdated(data as { asteroidId: string; updates: Partial<AsteroidData> });
         break;
       case 'asteroidDestroy':
         this.handleAsteroidDestroyed(data as AsteroidDestroyEvent);
@@ -1076,7 +1062,6 @@ export class ConnectionManager {
     this.playedLootExplosionIds.clear();
     setSpiderField(undefined);
     setBeltRecovery();
-    this.shotAcknowledgements = false;
     AuthoritativeProjectileField.getInstance().clear();
     this.clearJoinCompletionTimer();
     this.joinAcknowledged = false;
@@ -1524,11 +1509,14 @@ export class ConnectionManager {
     this.snapshotResyncPending = false;
     if (
       data.snapshotVersion !== SNAPSHOT_VERSION ||
-      data.asteroidInteractions !== 1 ||
-      !isValidResumeToken(data.resumeToken)
+      data.asteroidInteractions !== ASTEROID_INTERACTIONS_CAPABILITY ||
+      !isValidResumeToken(data.resumeToken) ||
+      !Number.isFinite(data.terrainSeed)
     ) {
       this.failCurrentProtocol(
-        new Error('Joined acknowledgment is missing the current snapshot, motion, or resume token')
+        new Error(
+          'Joined acknowledgment is missing the current snapshot, motion, resume token, or terrain seed'
+        )
       );
       return;
     }
@@ -1537,7 +1525,6 @@ export class ConnectionManager {
     this.motionReconciliation.reset();
     this.motionReconciliation.awaitAuthoritativePose();
     this.joinAcknowledged = true;
-    this.shotAcknowledgements = data.shotAcknowledgements === true;
     this.currentProtocolReady = true;
     this.resumeToken = data.resumeToken;
     storeResumeCredential(data.resumeToken, data.name, {
@@ -1558,7 +1545,6 @@ export class ConnectionManager {
     logger.info('STATE', 'player_joined', {
       joinedAt: Date.now(),
       playerId: data.id,
-      asteroidInteractions: 1,
       snapshotVersion: SNAPSHOT_VERSION,
       ...(data.serverReleaseId ? { serverReleaseId: data.serverReleaseId } : {}),
       ...(data.credentialReleaseId ? { credentialReleaseId: data.credentialReleaseId } : {}),
@@ -1627,11 +1613,6 @@ export class ConnectionManager {
     }
   }
 
-  private handlePlayerJoined(data: PlayerJoin): void {
-    logger.info('NETWORK', 'Player joined', data as unknown as Record<string, unknown>);
-    // Player handling is now done through unified entity system in handleSnapshotState
-  }
-
   private handlePlayerLeft(data: PlayerLeave): void {
     logger.info('NETWORK', 'Player left', data as unknown as Record<string, unknown>);
     if (data.id) {
@@ -1639,24 +1620,10 @@ export class ConnectionManager {
     }
   }
 
-  private handleAsteroidCreated(data: { asteroid: AsteroidData }): void {
-    if (data.asteroid?.id && asteroidHasSpawnPose(data.asteroid)) {
-      this.seenAsteroidIds.add(data.asteroid.id);
-    }
-    notifyAsteroidCreated(data.asteroid);
-  }
-
   private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
     if (data.asteroids && Array.isArray(data.asteroids)) {
       this.applyAuthoritativeAsteroids(data.asteroids);
     }
-  }
-
-  private handleAsteroidUpdated(data: {
-    asteroidId: string;
-    updates: Partial<AsteroidData>;
-  }): void {
-    notifyAsteroidUpdated(data.asteroidId, data.updates);
   }
 
   private handleAsteroidDestroyed(data: AsteroidDestroyEvent): void {

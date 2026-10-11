@@ -11,7 +11,6 @@ afterEach(() => vi.useRealTimers());
 function pilot(engine: GameEngine, id = 'pilot') {
   const actor = engine.addPlayer(id, id, new RecordingSocket(), { x: 1000, y: 1000 }, 'scout');
   actor.spawnProtectionTimer = 0;
-  actor.asteroidInteractions = 1;
   return actor;
 }
 

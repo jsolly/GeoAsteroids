@@ -90,9 +90,8 @@ test('an old completed-sector list neither walls harvested ground nor refills it
     const outside = { x: 1_980, y: 800 };
     const pilot = engine.addPlayer('pilot', 'Pilot', socket, outside);
     expect(pilot.position).toEqual(outside);
-    pilot.asteroidInteractions = 1;
     const joinedAt = engine.getServerTime();
-    expect(engine.playerMotion.register(pilot, socket, 1, joinedAt).ok).toBe(true);
+    expect(engine.playerMotion.register(pilot, socket, joinedAt).ok).toBe(true);
     const crossed = engine.playerMotion.acceptFreePose(
       socket,
       {

@@ -49,7 +49,6 @@ function world(persistence: WorldPersistence) {
   cleanups.push(() => engine.stopGameLoop());
   const socket = new RecordingSocket();
   const miner = engine.addPlayer('miner', 'Miner', socket, { x: 0, y: 0 }, 'hauler');
-  miner.asteroidInteractions = 1;
   assert(engine.registerPilot(miner, socket).ok);
   for (const rock of engine.getAllAsteroids()) {
     engine.removeAsteroid(rock.id);

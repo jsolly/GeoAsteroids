@@ -37,6 +37,11 @@ export class AsteroidManager {
   private readonly MIN_ASTEROID_SIZE = 10;
   private readonly COLOSSAL_SPLIT_SIZE_RATIO = 0.5;
 
+  /** One RNG draw per rock keeps seeded fields reproducible. */
+  private randomSpin(): number {
+    return (this.rng.random() - 0.5) * 0.01 * GAME.MOTION_SCALE;
+  }
+
   constructor(
     rngService: RNGService,
     private readonly furnaces = new FurnaceField(),
@@ -235,8 +240,7 @@ export class AsteroidManager {
         size,
         jaggedness,
         rotation: this.rng.random() * Math.PI * 2,
-        // Keep the server-owned spin in step with the client fallback.
-        angularVelocity: (this.rng.random() - 0.5) * 0.01 * GAME.MOTION_SCALE,
+        angularVelocity: this.randomSpin(),
         health: healthValue,
         maxHealth: healthValue,
         vertices,
@@ -392,7 +396,7 @@ export class AsteroidManager {
         size: newSize,
         jaggedness: newJaggedness,
         rotation: this.rng.random() * Math.PI * 2,
-        angularVelocity: (this.rng.random() - 0.5) * 0.01 * GAME.MOTION_SCALE,
+        angularVelocity: this.randomSpin(),
         health: Math.floor(newSize * 0.8),
         maxHealth: Math.floor(newSize * 0.8),
         vertices: newVertices,

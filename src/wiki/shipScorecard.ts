@@ -56,17 +56,6 @@ export function shipRatings(id: ShipKitId) {
   });
 }
 
-export function shipScorecard(id: ShipKitId): string {
-  const kit = getShipKit(id);
-  const rows = shipRatings(id)
-    .map(
-      (stat) =>
-        `<div class="ship-stat"><dt>${stat.label}</dt><dd><span class="ship-stat-value">${stat.display}</span><span class="stat-bubbles" role="img" aria-label="${stat.rating} out of 5" title="${stat.rating} out of 5">${[1, 2, 3, 4, 5].map((level) => `<span class="stat-bubble${level <= stat.rating ? ' filled' : ''}" aria-hidden="true"></span>`).join('')}</span></dd></div>`
-    )
-    .join('');
-  return `<section class="ship-scorecard" aria-labelledby="${id}-scorecard-title"><div class="ship-scorecard-heading"><div><p class="eyebrow">SHIP PROFILE</p><h2 class="ship-scorecard-title" id="${id}-scorecard-title">At a glance</h2></div><p class="ship-ability-name"><span class="ship-ability-label">E ABILITY</span>${kit.abilityName}</p></div><div class="ship-profile-layout"><div class="ship-radar" role="img" aria-label="${kit.name} base stat profile, rated from 1 to 5. Exact values and ratings follow."></div><dl class="ship-stat-grid">${rows}</dl></div><details class="ship-rating-guide"><summary>How to read the ratings</summary><p>More filled bubbles means a stronger base stat compared with the other ships. Each stat runs from 1 for the fleet’s lowest value to 5 for its highest, rounded to a whole bubble. Smaller size and shorter shot intervals and cooldowns score higher. Special abilities, growth, and upgrades aren’t ranked.</p></details></section>`;
-}
-
 /** A single SVG chart per article, with explicit cleanup when navigation replaces the card. */
 export function mountShipRadar(element: HTMLElement, id: ShipKitId): () => void {
   const ratings = shipRatings(id);

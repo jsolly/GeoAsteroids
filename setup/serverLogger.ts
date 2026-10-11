@@ -1,9 +1,9 @@
 import fs, { promises as fsPromises } from 'node:fs';
-import path from 'node:path';
 import process from 'node:process';
 import { SERVER_RELEASE_ID } from '../server/release';
 import { createLogRecord, stringifyLogRecord } from '../shared/logRecords';
 import type { DiagnosticLogRecord } from '../shared-types';
+import { logsDirectory, RotatingLogFile } from './rotatingLogFile';
 
 const CATEGORIZED_LOG_MESSAGE_PATTERN = /^[A-Z][A-Z0-9_]{1,31}$/u;
 
@@ -37,7 +37,6 @@ export function resolveServerLogLevel(
 const CURRENT_LOG_LEVEL = resolveServerLogLevel();
 const DEFAULT_LOG_FLUSH_TIMEOUT_MS = 1000;
 const SERVER_LOG_QUEUE_MAX_BYTES = 256 * 1024;
-const SERVER_LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;
 const SERVER_STDOUT_MAX_BUFFERED_BYTES = 256 * 1024;
 
 type StdoutLogState = {
@@ -71,7 +70,7 @@ if (!stdoutLogState.listenerInstalled) {
 
 let serverLogStream: fs.WriteStream | null = null;
 let isLogDirReady = false;
-let serverLogBytes: number | null = null;
+const serverLogFile = new RotatingLogFile('server.log');
 let pendingFileWrites: Promise<void> = Promise.resolve();
 let queuedFileBytes = 0;
 let droppedFileRecords = 0;
@@ -154,36 +153,12 @@ function internalFailure(
   );
 }
 
-function logsDirectory(): string {
-  return process.env['GEOROIDS_TEST_LOG_DIR'] ?? path.join(process.cwd(), 'logs');
-}
-
-function serverLogPath(): string {
-  return path.join(logsDirectory(), 'server.log');
-}
-
 async function ensureLogDirectory(): Promise<void> {
   if (isLogDirReady) {
     return;
   }
   await fsPromises.mkdir(logsDirectory(), { recursive: true });
   isLogDirReady = true;
-}
-
-async function readServerLogSize(filePath: string): Promise<number> {
-  if (serverLogBytes !== null) {
-    return serverLogBytes;
-  }
-  try {
-    serverLogBytes = (await fsPromises.stat(filePath)).size;
-  } catch (error) {
-    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
-      serverLogBytes = 0;
-    } else {
-      throw error;
-    }
-  }
-  return serverLogBytes;
 }
 
 async function closeLogStream(): Promise<void> {
@@ -195,31 +170,12 @@ async function closeLogStream(): Promise<void> {
   await new Promise<void>((resolve) => stream.end(resolve));
 }
 
-async function rotateIfNeeded(filePath: string, nextBytes: number): Promise<void> {
-  if ((await readServerLogSize(filePath)) + nextBytes <= SERVER_LOG_FILE_MAX_BYTES) {
-    return;
-  }
-  await closeLogStream();
-  const rotatedPath = `${filePath}.1`;
-  await fsPromises.rm(rotatedPath, { force: true });
-  try {
-    await fsPromises.rename(filePath, rotatedPath);
-  } catch (error) {
-    if (
-      !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT')
-    ) {
-      throw error;
-    }
-  }
-  serverLogBytes = 0;
-}
-
 async function ensureServerLogStream(): Promise<fs.WriteStream> {
   if (serverLogStream) {
     return serverLogStream;
   }
   await ensureLogDirectory();
-  const stream = fs.createWriteStream(serverLogPath(), { flags: 'a', encoding: 'utf8' });
+  const stream = fs.createWriteStream(serverLogFile.path, { flags: 'a', encoding: 'utf8' });
   stream.on('error', (error) => {
     internalFailure('Server log stream failed', error, true, !fileErrorsWithoutStdout.has(error));
     if (serverLogStream === stream) {
@@ -265,12 +221,11 @@ async function writeLineToFile(
   bytes: number,
   reportFailureToStdout: boolean
 ): Promise<boolean> {
-  const filePath = serverLogPath();
   try {
     await ensureLogDirectory();
-    await rotateIfNeeded(filePath, bytes);
+    await serverLogFile.rotateFor(bytes, closeLogStream);
     await writeStreamLine(await ensureServerLogStream(), line, reportFailureToStdout);
-    serverLogBytes = (serverLogBytes ?? 0) + bytes;
+    serverLogFile.recordWritten(bytes);
     reportedFileFailures.clear();
     return true;
   } catch (error) {

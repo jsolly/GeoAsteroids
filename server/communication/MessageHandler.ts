@@ -5,15 +5,16 @@ import { onDarkFurnaceFootprint } from '../../shared/furnaceField';
 import { isTownSquareArrival } from '../../shared/furnaces';
 import { MAX_TICK_DEBT_MS } from '../../shared/gameClock';
 import { sanitizePlayerName } from '../../shared/playerName';
-import type { AbilityUsedEvent, PlayerShotAcknowledgement } from '../../shared-types';
+import { ASTEROID_INTERACTIONS_CAPABILITY } from '../../shared/snapshotProtocol';
+import type { AbilityUsedEvent, PlayerJoin, PlayerShotAcknowledgement } from '../../shared-types';
 import { getShipKit } from '../../src/entities/ship/shipKits';
 import type { GameEntity } from '../core/EntityManager';
 import type { AppliedAsteroidHit, GameEngine } from '../core/GameEngine';
 import type { MotionOutcome } from '../core/PlayerMotionService';
 import { SERVER_RELEASE_ID } from '../release';
-import { ClientLogger } from '../services/ClientLogger';
 import type { GameStateBroadcaster } from '../services/GameStateBroadcaster';
 import { type ClientCommand, decodeClientCommand } from './clientCommandDecoder';
+import { MAX_PLAYERS } from './connectionAdmission';
 
 type CommandOf<Type extends ClientCommand['type']> = Extract<ClientCommand, { type: Type }>;
 
@@ -101,13 +102,11 @@ export class MessageHandler {
             break;
           }
           const issue = this.gameEngine.travelFurnace(command.id, command.destinationId);
-          ws.send(
-            JSON.stringify({
-              type: 'furnaceTravelResult',
-              data: { ok: !issue, message: issue ?? 'Travelling' },
-              timestamp: this.gameEngine.getServerTime(),
-            })
-          );
+          this.broadcaster.sendToWebSocket(ws, {
+            type: 'furnaceTravelResult',
+            data: { ok: !issue, message: issue ?? 'Travelling' },
+            timestamp: this.gameEngine.getServerTime(),
+          });
           if (!issue) {
             this.broadcaster.broadcastGameState();
           }
@@ -146,16 +145,8 @@ export class MessageHandler {
           this.handlePlayerShoot(ws, command);
           break;
 
-        case 'chat':
-          this.handleChat(ws, command);
-          break;
-
         case 'collisionDamage':
           this.handleCollisionDamage(ws, command);
-          break;
-
-        case 'clientLog':
-          ClientLogger.logClientMessage(command.payload, ws);
           break;
 
         case 'ping':
@@ -247,14 +238,13 @@ export class MessageHandler {
         this.broadcaster.sendError(ws, 'This pilot requires its private resume token');
         return;
       }
-      if (this.gameEngine.getAllPlayers().length >= 100) {
+      if (this.gameEngine.getAllPlayers().length >= MAX_PLAYERS) {
         this.broadcaster.sendError(ws, 'The game server is full');
         return;
       }
       const arrival =
         command.position && isTownSquareArrival(command.position) ? command.position : undefined;
       player = this.gameEngine.addPlayer(id, name, ws, arrival, command.kitId);
-      player.asteroidInteractions = 1;
       const registered = this.gameEngine.registerPilot(player, ws, command.clientReleaseId);
       if (!registered.ok) {
         this.gameEngine.removePlayer(player.id);
@@ -262,7 +252,7 @@ export class MessageHandler {
         return;
       }
       resumeToken = registered.resumeToken;
-      this.gameEngine.enableAsteroidInteractions(player);
+      this.gameEngine.seedAsteroidInteractions();
     }
 
     const snapshotVersion = this.broadcaster.negotiateSnapshot(ws);
@@ -276,7 +266,7 @@ export class MessageHandler {
         name,
         position: player.position,
         resumeToken,
-        asteroidInteractions: 1,
+        asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
         shotAcknowledgements: true,
         color: player.color,
         kitId: player.kitId,
@@ -284,7 +274,7 @@ export class MessageHandler {
         serverReleaseId: SERVER_RELEASE_ID,
         snapshotVersion,
         ...provenance,
-      },
+      } satisfies PlayerJoin,
       timestamp: Date.now(),
     });
     if (
@@ -305,7 +295,6 @@ export class MessageHandler {
       joinedAt: Date.now(),
       gameTime: this.gameEngine.getDiagnostics().gameTime,
       resumed: resumedSession,
-      enhanced: player.asteroidInteractions === 1,
       snapshotVersion,
       ...provenance,
       ...(command.clientReleaseId ? { clientReleaseId: command.clientReleaseId } : {}),
@@ -319,10 +308,8 @@ export class MessageHandler {
     });
     logger.debug('📤 Sent joined confirmation', { playerId: id });
 
-    // Broadcast to all other players
-    this.broadcaster.broadcastPlayerJoined(id, name, player.position);
     this.broadcaster.broadcastGameState();
-    logger.debug('📢 Broadcasted player joined and game state', { playerId: id });
+    logger.debug('📢 Broadcasted game state after join', { playerId: id });
   }
 
   private handlePlayerUpdate(ws: WebSocket, command: CommandOf<'update'>): void {
@@ -395,9 +382,9 @@ export class MessageHandler {
         command.motionSequence
       );
     }
-    // Only the first pose after a block carries its credit, so this fires once
-    // per session per stall and marks where the old one-second cap would have
-    // rebased an honest pilot.
+    // Only the first pose after a block carries its credit, so this fires once per
+    // stall: blocked time beyond the one-second client-silence cap
+    // (MAX_TICK_DEBT_MS) was credited and let the pose through.
     if (outcome.ok && outcome.blockedMs >= MAX_TICK_DEBT_MS) {
       logger.warn('STATE', 'motion_blocked_time_credited', {
         releaseId: SERVER_RELEASE_ID,
@@ -441,14 +428,6 @@ export class MessageHandler {
     }
 
     this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits(laser.id));
-  }
-
-  private handleChat(ws: WebSocket, command: CommandOf<'chat'>): void {
-    const { id, message } = command;
-    const player = this.gameEngine.getPlayerBySocket(ws);
-    if (player && player.id === id) {
-      this.broadcaster.broadcastChatMessage(player.id, player.name, message);
-    }
   }
 
   private getReporterId(ws: WebSocket): string | undefined {
@@ -518,19 +497,17 @@ export class MessageHandler {
     }
     const issue = this.gameEngine.buyStoreItem(command.id, command.offerId);
     const pilot = this.gameEngine.getPlayer(command.id);
-    ws.send(
-      JSON.stringify({
-        type: 'townStoreResult',
-        data: issue
-          ? { message: issue }
-          : {
-              message: this.gameEngine.townStoreNotice(command.offerId),
-              score: pilot?.score,
-              purchases: pilot?.purchases,
-            },
-        timestamp: Date.now(),
-      })
-    );
+    this.broadcaster.sendToWebSocket(ws, {
+      type: 'townStoreResult',
+      data: issue
+        ? { message: issue }
+        : {
+            message: this.gameEngine.townStoreNotice(command.offerId),
+            score: pilot?.score,
+            purchases: pilot?.purchases,
+          },
+      timestamp: Date.now(),
+    });
     if (!issue) {
       this.broadcaster.broadcastGameState();
     }
@@ -553,12 +530,6 @@ export class MessageHandler {
     if (!socketPlayer || socketPlayer.id !== playerId) {
       return;
     }
-    // The join payload selects the kit. An ability request may echo that
-    // selection for compatibility, but it cannot change authoritative ship
-    // stats after the socket has joined.
-    if (command.kitId !== undefined && command.kitId !== socketPlayer.kitId) {
-      return;
-    }
     const latchedTarget = socketPlayer.harpoonTargetId
       ? this.gameEngine.getAsteroid(socketPlayer.harpoonTargetId)
       : undefined;
@@ -566,17 +537,15 @@ export class MessageHandler {
     const offeringBuild =
       socketPlayer.kitId === 'scout' &&
       onDarkFurnaceFootprint(socketPlayer.position, (id) => this.gameEngine.isFurnaceLit(id));
-    const activated = this.gameEngine.useAbility(playerId, command.kitId);
+    const activated = this.gameEngine.useAbility(playerId);
     if (offeringBuild) {
-      ws.send(
-        JSON.stringify({
-          type: 'furnaceBuildResult',
-          data: activated
-            ? this.gameEngine.furnaceBuildNotice()
-            : (this.gameEngine.furnaceBuildIssue(playerId) ?? 'Furnace builder not ready'),
-          timestamp: Date.now(),
-        })
-      );
+      this.broadcaster.sendToWebSocket(ws, {
+        type: 'furnaceBuildResult',
+        data: activated
+          ? this.gameEngine.furnaceBuildNotice()
+          : (this.gameEngine.furnaceBuildIssue(playerId) ?? 'Furnace builder not ready'),
+        timestamp: Date.now(),
+      });
     }
     if (!activated) {
       return;
@@ -618,11 +587,6 @@ export class MessageHandler {
 
       if (hit.outcome !== 'destroyed') {
         continue;
-      }
-
-      const scorer = this.gameEngine.getPlayer(hit.playerId);
-      if (scorer) {
-        this.broadcaster.broadcastScoreUpdate(scorer.id, scorer.score);
       }
 
       this.broadcaster.broadcastAsteroidDestruction(

@@ -83,7 +83,6 @@ test('registering a pilot stamps the current server and joining client on the cr
   const engine = engineWithStore(store, frozenClock(issuedAt));
   const socket = new RecordingSocket();
   const actor = engine.addPlayer('scout', 'Bob', socket, { x: 200, y: 300 });
-  actor.asteroidInteractions = 1;
   const registered = engine.registerPilot(actor, socket, CLIENT_RELEASE);
   assert(registered.ok);
   engine.checkpointWorld();
@@ -113,7 +112,6 @@ test('a later score write updates score provenance without rotating the credenti
   const engine = engineWithStore(store, clock);
   const socket = new RecordingSocket();
   const actor = engine.addPlayer('miner', 'Miner', socket, { x: 0, y: 0 });
-  actor.asteroidInteractions = 1;
   assert(engine.registerPilot(actor, socket, CLIENT_RELEASE).ok);
   const issuedAt = engine.getServerTime();
   monotonicMs += 5_000;
@@ -136,7 +134,6 @@ test('death preserves bank provenance and keeps the issued credential', () => {
   const engine = engineWithStore(store);
   const socket = new RecordingSocket();
   const actor = engine.addPlayer('pilot', 'Pilot', socket, { x: 400, y: 0 });
-  actor.asteroidInteractions = 1;
   assert(engine.registerPilot(actor, socket, CLIENT_RELEASE).ok);
   actor.score = 1200;
   actor.spawnProtectionTimer = 0;
@@ -166,7 +163,6 @@ test('a new UTC month leaves the saved score and its credential stamps alone', (
   const engine = engineWithStore(store, clock);
   const socket = new RecordingSocket();
   const actor = engine.addPlayer('pilot', 'Bob', socket, { x: 4_000, y: 1_200 });
-  actor.asteroidInteractions = 1;
   assert(engine.registerPilot(actor, socket, CLIENT_RELEASE).ok);
   actor.score = 880;
   engine.checkpointWorld();
@@ -281,8 +277,6 @@ test('join decoding keeps a valid client release and ignores a malformed one', (
       id: 'pilot',
       name: 'Pilot',
       position: { x: 12.5, y: -4 },
-      snapshotVersion: SNAPSHOT_VERSION,
-      asteroidInteractions: 1,
       resumeRequested: false,
       clientReleaseId: CLIENT_RELEASE,
     },
@@ -296,8 +290,6 @@ test('join decoding keeps a valid client release and ignores a malformed one', (
       id: 'pilot',
       name: 'Pilot',
       position: { x: 12.5, y: -4 },
-      snapshotVersion: SNAPSHOT_VERSION,
-      asteroidInteractions: 1,
       resumeRequested: false,
     },
   });
@@ -310,8 +302,6 @@ test('offline delivery credit restamps the server score without copying the last
   const haulerSocket = new RecordingSocket();
   const scout = engine.addPlayer('scout', 'Scout', scoutSocket, { x: 0, y: 0 }, 'scout');
   const hauler = engine.addPlayer('hauler', 'Hauler', haulerSocket, { x: 80, y: 0 }, 'hauler');
-  scout.asteroidInteractions = 1;
-  hauler.asteroidInteractions = 1;
   assert(engine.registerPilot(scout, scoutSocket, CLIENT_RELEASE).ok);
   assert(engine.registerPilot(hauler, haulerSocket, CLIENT_RELEASE).ok);
   for (const rock of engine.getAllAsteroids()) {

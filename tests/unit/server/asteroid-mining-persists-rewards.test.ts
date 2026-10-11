@@ -60,7 +60,6 @@ function pilot(
 ) {
   const socket = new RecordingSocket();
   const actor = engine.addPlayer(id, id, socket, position, kit);
-  actor.asteroidInteractions = 1;
   const registered = engine.registerPilot(actor, socket);
   assert(registered.ok);
   return actor;
