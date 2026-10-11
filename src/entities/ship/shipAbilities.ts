@@ -8,6 +8,14 @@ import {
 import { segmentCircleContact } from '../../../shared/asteroidPhenomena';
 import { asteroidCrewNeeded, isColossalAsteroid } from '../../../shared/asteroidScale';
 import type { FurnaceField } from '../../../shared/furnaceField';
+import {
+  haulerUtilityOf,
+  isHaulerUtilityId,
+  isResourceTapUtility,
+  isScoutUtilityId,
+  isTowCableUtility,
+  scoutUtilityOf,
+} from '../../../shared/shipUtilities';
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
 import {
   firstToolFlightContact,
@@ -31,13 +39,6 @@ import type {
   Velocity,
 } from '../../../shared-types';
 import { findHarpoonFieldBody, getHarpoonField, syncHarpoonFieldFromPlay } from './harpoonField';
-import {
-  haulerUtilityOf,
-  isHaulerUtilityId,
-  isResourceTapUtility,
-  isTowCableUtility,
-} from './haulerUtility';
-import { isScoutUtilityId, scoutUtilityOf } from './scoutUtility';
 import { getShipKit, hullRadiusForKit, SHIP_ABILITY, type ShipAbilityId } from './shipKits';
 import { attachTowCable, tickTowCable } from './towCable';
 

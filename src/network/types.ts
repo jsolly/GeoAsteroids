@@ -7,7 +7,6 @@ export interface ClientMessage {
     | 'update'
     | 'shoot'
     | 'collisionDamage'
-    | 'initAsteroids'
     | 'clientLog'
     | 'useAbility'
     | 'setHaulerUtility'

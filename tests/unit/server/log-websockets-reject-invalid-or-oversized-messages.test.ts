@@ -5,6 +5,8 @@ import { WebSocket } from 'ws';
 import { createServerInstance } from '../../../server/createServer';
 import { ClientLogger } from '../../../server/services/ClientLogger';
 import { logger } from '../../../setup/serverLogger';
+import { createLogRecord, stringifyLogRecord } from '../../../shared/logRecords';
+import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
 
 let server: ReturnType<typeof createServerInstance> | undefined;
 const sockets: WebSocket[] = [];
@@ -13,7 +15,12 @@ async function connect(path: string): Promise<WebSocket> {
   if (!server) {
     throw new Error('Test server is not running');
   }
-  const socket = new WebSocket(`ws://127.0.0.1:${await server.listening}${path}`);
+  const url = new URL(`ws://127.0.0.1:${await server.listening}${path}`);
+  if (url.pathname === '/ws') {
+    url.searchParams.set('snapshotVersion', String(SNAPSHOT_VERSION));
+    url.searchParams.set('asteroidInteractions', '1');
+  }
+  const socket = new WebSocket(url);
   socket.on('error', () => undefined);
   sockets.push(socket);
   await once(socket, 'open');
@@ -58,7 +65,7 @@ test('public WebSockets reject inbound frames larger than 64 KiB', async () => {
   logs.send(
     JSON.stringify({
       type: 'clientLog',
-      data: { level: 'ERROR', line: 'x'.repeat(70 * 1024) },
+      data: { level: 'error', line: 'x'.repeat(70 * 1024) },
     })
   );
 
@@ -66,27 +73,52 @@ test('public WebSockets reject inbound frames larger than 64 KiB', async () => {
   expect(code).toBe(1009);
 });
 
-test('the log route closes invalid schemas while preserving valid forwarding', async () => {
-  server = createServerInstance({ port: 0, nodeEnv: 'test' });
-  const valid = await connect('/logs');
-  valid.send(
-    JSON.stringify({
-      type: 'clientLog',
-      data: { level: 'INFO', message: 'bounded forwarding remains active' },
-    })
-  );
-  const pong = once(valid, 'pong');
-  valid.ping();
-  await pong;
-  expect(valid.readyState).toBe(WebSocket.OPEN);
+test.each(['/logs', '/ws'])(
+  '%s accepts structured records through the real ingress',
+  async (route) => {
+    server = createServerInstance({ port: 0, nodeEnv: 'test' });
+    const before = ClientLogger.getDiagnostics();
+    const valid = await connect(route);
+    valid.send(
+      JSON.stringify({
+        type: 'clientLog',
+        data: {
+          level: 'info',
+          sessionId: 'wire-session',
+          line: stringifyLogRecord(
+            createLogRecord({
+              timestamp: new Date().toISOString(),
+              source: 'client',
+              level: 'info',
+              releaseId: 'test',
+              message: 'bounded forwarding remains active',
+            })
+          ),
+        },
+      })
+    );
+    const pong = once(valid, 'pong');
+    valid.ping();
+    await pong;
+    expect(valid.readyState).toBe(WebSocket.OPEN);
+    expect(ClientLogger.getDiagnostics().accepted).toBe(before.accepted + 1);
+    expect(await ClientLogger.flushPending()).toBe(true);
+  }
+);
 
-  const invalid = await connect('/logs');
-  const closed = once(invalid, 'close');
-  invalid.send(
-    JSON.stringify({ type: 'clientLog', data: { level: 'TRACE', message: 'not allowed' } })
-  );
-  const [code] = await closed;
-  expect(code).toBe(1006);
+test('the log route closes retired plaintext and invalid record schemas', async () => {
+  server = createServerInstance({ port: 0, nodeEnv: 'test' });
+  for (const data of [
+    { level: 'info', message: 'retired plaintext' },
+    { level: 'info', line: '{broken', sessionId: 'wire-session' },
+    { level: 'TRACE', line: 'not allowed', sessionId: 'wire-session' },
+  ]) {
+    const invalid = await connect('/logs');
+    const closed = once(invalid, 'close');
+    invalid.send(JSON.stringify({ type: 'clientLog', data }));
+    const [code] = await closed;
+    expect(code).toBe(1006);
+  }
 });
 
 test('a bad log frame ends the socket so a following frame is not parsed', async () => {

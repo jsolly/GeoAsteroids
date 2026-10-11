@@ -168,10 +168,11 @@ that was credited a blocked second logs `motion_blocked_time_credited` once.
 Contexts are copied when logged, with bounded depth and text length. Sensitive
 fields are redacted, and page URLs omit query strings and fragments. Do not log
 chat, player names, authentication/resume tokens, complete packets or full
-world state. Legacy plaintext clients remain wire-compatible, but their prose
-is replaced with a redacted marker and byte count. Production exposes aggregate
-logging health, not a public endpoint
-for reading log contents. Test-only diagnostic routes stay disabled there.
+world state. Client log ingress requires a valid structured client record in
+`line` and a matching lowercase envelope `level`; plaintext and legacy `message`
+payloads are rejected. The envelope `sessionId` supplies receiver correlation.
+Production exposes aggregate logging health, not a public endpoint for reading
+log contents. Test-only diagnostic routes stay disabled there.
 
 ## Profile the correct loop
 

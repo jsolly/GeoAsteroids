@@ -1,4 +1,12 @@
 import { canEquipUtility } from '../../shared/equipment';
+import {
+  HAULER_UTILITY_IDS,
+  haulerUtilityOf,
+  isHaulerUtilityId,
+  isScoutUtilityId,
+  SCOUT_UTILITY_IDS,
+  scoutUtilityOf,
+} from '../../shared/shipUtilities';
 import type { HaulerUtilityId, ScoutUtilityId } from '../../shared-types';
 import { playFeedback } from '../audio/feedbackSounds';
 import { GAME, SATELLITE_PICKUP } from '../constants';
@@ -9,19 +17,13 @@ import {
 } from '../entities/satellitePickup/SatellitePickupManager';
 import {
   HAULER_UTILITY,
-  HAULER_UTILITY_IDS,
-  haulerUtilityOf,
-  isHaulerUtilityId,
   preferredHaulerUtility,
   rememberHaulerUtility,
 } from '../entities/ship/haulerUtility';
 import {
-  isScoutUtilityId,
   preferredScoutUtility,
   rememberScoutUtility,
   SCOUT_UTILITY,
-  SCOUT_UTILITY_IDS,
-  scoutUtilityOf,
 } from '../entities/ship/scoutUtility';
 import { setHaulerUtilityOnHost, setScoutUtilityOnHost } from '../entities/ship/shipAbilities';
 import { getShipKit } from '../entities/ship/shipKits';

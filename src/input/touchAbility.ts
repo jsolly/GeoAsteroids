@@ -1,7 +1,6 @@
 import { onDarkFurnaceFootprint } from '../../shared/furnaceField';
+import { haulerUtilityOf, scoutUtilityOf } from '../../shared/shipUtilities';
 import type { HaulerUtilityId, ScoutUtilityId, ShipKitId, UtilityFlight } from '../../shared-types';
-import { haulerUtilityOf } from '../entities/ship/haulerUtility';
-import { scoutUtilityOf } from '../entities/ship/scoutUtility';
 import { abilityCooldownFramesFor } from '../entities/ship/shipAbilities';
 import { getShipKit, SHIP_ABILITY, type ShipAbilityId } from '../entities/ship/shipKits';
 import { worldFurnaces } from '../network/worldExploration';

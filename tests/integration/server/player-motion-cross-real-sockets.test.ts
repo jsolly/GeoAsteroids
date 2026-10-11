@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it as test } from 'vitest';
 import { WebSocket } from 'ws';
 import { createServerInstance } from '../../../server/createServer';
 import { SNAPSHOT_VERSION, SnapshotDecoder } from '../../../shared/snapshotProtocol';
+import { WORLD } from '../../../shared/world';
 import type { ServerEntityData, ServerGameSnapshot } from '../../../shared-types';
+import { closePlayerMotionScenario } from '../../support/playerMotionCleanup';
 import { WireClient } from '../../support/wireClient';
 
 interface Packet {
@@ -155,12 +157,45 @@ async function world(observerX = -600) {
 }
 
 afterEach(async () => {
-  await Promise.all(clients.splice(0).map((client) => client.close()));
-  await server?.close();
-  server = undefined;
+  try {
+    await closePlayerMotionScenario({ clients, server });
+  } finally {
+    clients.length = 0;
+    server = undefined;
+  }
 });
 
 describe('Enhanced player motion cross real gameplay WebSockets', () => {
+  test('joining receives nearby asteroids before resync and retired initialization cannot interrupt play', async () => {
+    server = createServerInstance({ port: 0, nodeEnv: 'test' });
+    await server.listening;
+    server.gameEngine.stopGameLoop();
+    const pilot = await connect();
+    await pilot.join('baseline-pilot', 100);
+    const initial = await pilot.waitFor(() => pilot.snapshots[0], 'unsolicited join baseline');
+    const ship = entity(initial, 'baseline-pilot');
+    expect(initial.asteroids.length).toBeGreaterThan(0);
+    for (const rock of initial.asteroids) {
+      expect(
+        Math.hypot(rock.position.x - ship.position.x, rock.position.y - ship.position.y)
+      ).toBeLessThanOrEqual(WORLD.asteroidInterestRadius);
+    }
+    expect(pilot.messages[0]?.type).toBe('joined');
+    expect(pilot.messages.some((message) => message.type === 'asteroidCreateBatch')).toBe(false);
+
+    pilot.send('initAsteroids', { id: 'baseline-pilot' });
+    await pilot.waitFor(
+      () => pilot.messages.find((message) => message.type === 'error'),
+      'retired command rejection'
+    );
+    expect(pilot.ws.readyState).toBe(WebSocket.OPEN);
+    const recovered = await pilot.state();
+    expect(entity(recovered, 'baseline-pilot').id).toBe('baseline-pilot');
+    expect(recovered.asteroids.map((rock) => rock.id)).toEqual(
+      initial.asteroids.map((rock) => rock.id)
+    );
+  });
+
   test('publishes a correction after rejected movement and accepts the recovered pilot', async () => {
     const { pilot, observer } = await world();
     const initial = entity(await pilot.state(), 'pilot');

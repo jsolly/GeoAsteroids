@@ -103,7 +103,7 @@ The following bars remain the product checks for the combined client/server rele
 
 ### Empty belt after reconnect
 
-- Server/client must re-seed asteroids after soft reconnect (`initAsteroids` skip bug)
+- Server/client must reconcile the asteroid field from the first snapshot after reconnect
 
 ### EO pickups
 

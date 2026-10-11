@@ -1,13 +1,13 @@
 import { expect, test } from 'vitest';
 import {
-  HAULER_UTILITY,
   haulerUtilityOf,
   isResourceTapUtility,
   isTowCableUtility,
   PREFERRED_HAULER_UTILITY,
   parseHaulerUtilityId,
   UNSET_HAULER_UTILITY,
-} from '../../../src/entities/ship/haulerUtility';
+} from '../../../shared/shipUtilities';
+import { HAULER_UTILITY } from '../../../src/entities/ship/haulerUtility';
 import {
   type AbilityBody,
   type AbilityHost,

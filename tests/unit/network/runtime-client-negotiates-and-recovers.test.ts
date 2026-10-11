@@ -1044,6 +1044,63 @@ describe('actual ConnectionManager WebSocket message path', () => {
     });
   });
 
+  test('join snapshots replace cold, warm and restarted asteroid fields without initialization requests', async () => {
+    const belt = new Map<string, Roid>();
+    function create(row: AsteroidData) {
+      belt.set(row.id, new Roid({ ...row.position }, row.size, row.id));
+    }
+    bindAsteroidFieldApply({
+      onCreated: create,
+      onUpdated: (id, row, complete) => {
+        applyAsteroidRowToBelt((key) => belt.get(key), id, row, create, complete);
+      },
+      onDestroyed: (event) => belt.delete(event.asteroidId),
+      onReconciled: (id) => belt.delete(id),
+    });
+    let ws = await connect();
+    acknowledge(ws);
+    const first = captureSnapshot(snapshotFixture());
+    const firstRock = first.asteroids[0];
+    assert.ok(firstRock);
+    first.asteroids = [firstRock];
+    ws.receive('snapshot', new SnapshotEncoder(first).encode(1));
+    expect([...belt.keys()]).toEqual([firstRock.id]);
+    const warmRock = belt.get(firstRock.id);
+
+    ws.close();
+    ws = await connect();
+    acknowledge(ws);
+    expect(belt.get(firstRock.id)).toBe(warmRock);
+    const moved = captureSnapshot(first);
+    const movedRock = moved.asteroids[0];
+    assert.ok(movedRock);
+    movedRock.position = { x: 240, y: -120 };
+    ws.receive('snapshot', new SnapshotEncoder(moved).encode(1));
+    expect(belt.get(firstRock.id)).toBe(warmRock);
+    expect(warmRock?.position).toEqual({ x: 240, y: -120 });
+
+    // A fresh process starts sequence 1 with a different nearby sector.
+    ws.close();
+    ws = await connect();
+    acknowledge(ws);
+    const restarted = captureSnapshot(first);
+    restarted.asteroids = [{ ...firstRock, id: 'new-sector-rock', position: { x: -400, y: 200 } }];
+    ws.receive('snapshot', new SnapshotEncoder(restarted).encode(1));
+    expect([...belt.keys()]).toEqual(['new-sector-rock']);
+    expect(belt.get('new-sector-rock')?.position).toEqual({ x: -400, y: 200 });
+
+    const empty = captureSnapshot(restarted);
+    empty.asteroids = [];
+    ws.receive('snapshot', new SnapshotEncoder(empty).encode(2, { sequence: 1, state: restarted }));
+    expect([...belt.keys()]).toEqual([]);
+    expect(ws.sent.filter((message) => message.type === 'initAsteroids')).toEqual([]);
+    expect(ws.sent.filter((message) => message.type === 'snapshotResync')).toEqual([]);
+    expect(ws.sent.filter((message) => message.type === 'snapshotAck')).toEqual([
+      { type: 'snapshotAck', data: { sequence: 1 } },
+      { type: 'snapshotAck', data: { sequence: 2 } },
+    ]);
+  });
+
   test('pickup ownership and asteroid metadata reconcile in real managers', async () => {
     const ws = await connect();
     acknowledge(ws);

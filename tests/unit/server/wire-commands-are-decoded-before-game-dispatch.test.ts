@@ -158,17 +158,19 @@ test('join coordinates must be finite numbers', () => {
   });
 });
 
-test('Hauler utility slot commands accept only the two equipped tools', () => {
-  expect(
-    decodeClientCommand({
-      type: 'setHaulerUtility',
-      id: 'pilot',
-      data: { utilityId: 'resource_tap' },
-    })
-  ).toEqual({
-    ok: true,
-    command: { type: 'setHaulerUtility', id: 'pilot', utilityId: 'resource_tap' },
-  });
+test('Hauler utility slot commands accept all current tools', () => {
+  for (const utilityId of ['tow_cable', 'resource_tap', 'boost_coupling']) {
+    expect(
+      decodeClientCommand({
+        type: 'setHaulerUtility',
+        id: 'pilot',
+        data: { utilityId },
+      })
+    ).toEqual({
+      ok: true,
+      command: { type: 'setHaulerUtility', id: 'pilot', utilityId },
+    });
+  }
   expect(
     decodeClientCommand({
       type: 'setHaulerUtility',
@@ -180,6 +182,26 @@ test('Hauler utility slot commands accept only the two equipped tools', () => {
     messageType: 'setHaulerUtility',
     error: 'Invalid Hauler utility',
   });
+});
+
+test('Scout utility commands accept current tools and reject the retired furnace token', () => {
+  for (const utilityId of ['mineral_scan', 'survey_probe']) {
+    expect(
+      decodeClientCommand({ type: 'setScoutUtility', id: 'pilot', data: { utilityId } })
+    ).toEqual({
+      ok: true,
+      command: { type: 'setScoutUtility', id: 'pilot', utilityId },
+    });
+  }
+  for (const utilityId of ['build_furnace', 'tow_cable', 'constructor', null]) {
+    expect(
+      decodeClientCommand({ type: 'setScoutUtility', id: 'pilot', data: { utilityId } })
+    ).toEqual({
+      ok: false,
+      messageType: 'setScoutUtility',
+      error: 'Invalid Scout utility',
+    });
+  }
 });
 
 test('retired asteroid tool and pickup claim commands are rejected at the wire boundary', () => {

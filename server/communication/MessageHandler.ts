@@ -4,10 +4,8 @@ import { isClientOwnedCollisionAttacker } from '../../shared/combat';
 import { onDarkFurnaceFootprint } from '../../shared/furnaceField';
 import { isTownSquareArrival } from '../../shared/furnaces';
 import { MAX_TICK_DEBT_MS } from '../../shared/gameClock';
-import { asteroidReach, nearbyAsteroidRows } from '../../shared/world';
 import type { AbilityUsedEvent, PlayerShotAcknowledgement } from '../../shared-types';
 import { getShipKit } from '../../src/entities/ship/shipKits';
-import { isActiveScanner } from '../../src/entities/ship/surveyScan';
 import { sanitizePlayerName } from '../../src/utils/playerName';
 import type { GameEntity } from '../core/EntityManager';
 import type { AppliedAsteroidHit, GameEngine } from '../core/GameEngine';
@@ -154,10 +152,6 @@ export class MessageHandler {
 
         case 'collisionDamage':
           this.handleCollisionDamage(ws, command);
-          break;
-
-        case 'initAsteroids':
-          this.handleInitAsteroids(ws, command);
           break;
 
         case 'clientLog':
@@ -640,49 +634,6 @@ export class MessageHandler {
         this.broadcaster.broadcastAsteroidCreation(hit.newAsteroids);
       }
     }
-  }
-
-  private handleInitAsteroids(ws: WebSocket, command: CommandOf<'initAsteroids'>): void {
-    const { id } = command;
-    logger.debug('Handling initAsteroids message', { id });
-
-    const socketPlayer = this.gameEngine.getPlayerBySocket(ws);
-    if (!socketPlayer || socketPlayer.id !== id) {
-      return;
-    }
-
-    // The active server owns field creation and replenishment. This message
-    // is an idempotent resync for reconnecting clients.
-    const created = this.gameEngine.ensureAsteroidField();
-    if (created.length > 0) {
-      this.broadcaster.broadcastAsteroidCreation(created);
-      logger.debug('Player received the newly seeded asteroid field', { playerId: id });
-      return;
-    }
-
-    const scanning = isActiveScanner(socketPlayer);
-    const reach = asteroidReach(scanning);
-    const existingAsteroids = nearbyAsteroidRows(
-      this.gameEngine.getAsteroidSpatialIndex().query({
-        minX: socketPlayer.position.x - reach,
-        minY: socketPlayer.position.y - reach,
-        maxX: socketPlayer.position.x + reach,
-        maxY: socketPlayer.position.y + reach,
-      }),
-      socketPlayer.position,
-      scanning
-    );
-    this.broadcaster.sendToWebSocket(ws, {
-      type: 'asteroidCreateBatch',
-      data: {
-        asteroids: existingAsteroids,
-      },
-      timestamp: Date.now(),
-    });
-    logger.debug('Player requested asteroid initialization', {
-      playerId: id,
-      asteroidCount: existingAsteroids.length,
-    });
   }
 
   private handlePing(ws: WebSocket, probeId: number | undefined): void {

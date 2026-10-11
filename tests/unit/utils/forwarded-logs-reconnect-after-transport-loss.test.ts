@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import { createLogRecord, stringifyLogRecord } from '../../../shared/logRecords';
 
 vi.mock('../../../src/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../src/constants')>();
@@ -248,7 +249,17 @@ test.each([false, true])(
       first.onopen?.();
       first.readyState = FakeWebSocket.CONNECTING;
       first.failClose = closeThrows;
-      forwardLogToServer('queued before socket error');
+      forwardLogToServer(
+        stringifyLogRecord(
+          createLogRecord({
+            timestamp: new Date().toISOString(),
+            source: 'client',
+            level: 'warn',
+            releaseId: 'test',
+            message: 'queued before socket error',
+          })
+        )
+      );
       first.onerror?.(new Event('error'));
       expect(failure).toHaveBeenCalledExactlyOnceWith(
         expect.stringContaining('socket error; retaining queued records'),

@@ -13,6 +13,7 @@ import { furnaceTravelPose } from '../../../shared/furnaceTravel';
 import { PLAYER_MOTION } from '../../../shared/playerMotion';
 import { cruiseSpeed } from '../../../shared/shipFlight';
 import { GROWTH, thrustScaleFromMass } from '../../../shared/shipGrowth';
+import { scoutUtilityOf } from '../../../shared/shipUtilities';
 import type {
   ContourLockState,
   EquipmentId,
@@ -39,7 +40,6 @@ import type { Laser } from '../laser/Laser';
 import { createLaser } from '../laser/laserUtils';
 import { advanceCruiseVelocity } from './cruiseMotion';
 import { getHarpoonField } from './harpoonField';
-import { scoutUtilityOf } from './scoutUtility';
 import {
   type AbilityWorld,
   abilityCooldownFramesFor,

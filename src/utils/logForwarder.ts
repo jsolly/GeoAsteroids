@@ -49,7 +49,7 @@ function normalizeLine(line: string): QueuedLine {
         level: parsed?.level ?? 'warn',
         releaseId: parsed?.releaseId ?? import.meta.env['VITE_COMMIT_HASH'] ?? 'dev',
         category: parsed?.category ?? 'LOG_FORWARD',
-        message: parsed?.message ?? 'Oversized legacy client log',
+        message: parsed?.message ?? 'Oversized client log record',
         context: { truncated: true },
         ...getClientLogContext(),
       })

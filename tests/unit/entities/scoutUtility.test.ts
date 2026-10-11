@@ -1,13 +1,12 @@
 import { afterEach, expect, test } from 'vitest';
+import { DEFAULT_SCOUT_UTILITY, scoutUtilityOf } from '../../../shared/shipUtilities';
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
 import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
 import {
-  DEFAULT_SCOUT_UTILITY,
   preferredScoutUtility,
   rememberScoutUtility,
   SCOUT_UTILITY_STORAGE_KEY,
-  scoutUtilityOf,
 } from '../../../src/entities/ship/scoutUtility';
 import {
   type AbilityHost,
@@ -60,6 +59,8 @@ test('equipping Survey Probe clears a predicted scan pulse while preserving the 
   expect(scout.scoutUtility).toBe('survey_probe');
   expect(scout.abilityActiveFrames).toBe(0);
   expect(setScoutUtilityOnHost(scout, 'unknown')).toBe(false);
+  expect(setScoutUtilityOnHost(scout, 'build_furnace')).toBe(false);
+  expect(scout.scoutUtility).toBe('survey_probe');
   expect(setScoutUtilityOnHost(host('hauler'), 'survey_probe')).toBe(false);
 });
 
@@ -138,4 +139,14 @@ test('a returning pilot keeps their old tool choice under the Scout preference k
   setStoredItem('georoids.surveyorUtility', 'survey_probe');
   expect(preferredScoutUtility()).toBe('mineral_scan');
   expect(getStoredItem('georoids.surveyorUtility')).toBeNull();
+});
+
+test('a retired furnace preference resolves to Mineral Scan and removes the old key', () => {
+  setStoredItem('georoids.surveyorUtility', 'build_furnace');
+  expect(preferredScoutUtility()).toBe('mineral_scan');
+  expect(getStoredItem('georoids.surveyorUtility')).toBeNull();
+  expect(getStoredItem(SCOUT_UTILITY_STORAGE_KEY)).toBeNull();
+
+  setStoredItem(SCOUT_UTILITY_STORAGE_KEY, 'build_furnace');
+  expect(preferredScoutUtility()).toBe('mineral_scan');
 });

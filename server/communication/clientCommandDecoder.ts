@@ -1,5 +1,6 @@
 import { isContourLockState } from '../../shared/contourLock';
 import { readReleaseId } from '../../shared/releaseId';
+import { isHaulerUtilityId, isScoutUtilityId } from '../../shared/shipUtilities';
 import { SNAPSHOT_VERSION } from '../../shared/snapshotProtocol';
 import { storeOffer } from '../../shared/townStore';
 import { WORLD } from '../../shared/world';
@@ -13,8 +14,6 @@ import type {
   SnapshotAcknowledgement,
   Velocity,
 } from '../../shared-types';
-import { isHaulerUtilityId } from '../../src/entities/ship/haulerUtility';
-import { isScoutUtilityId } from '../../src/entities/ship/scoutUtility';
 import { isShipKitId } from '../../src/entities/ship/shipKits';
 
 type WireRecord = Record<string, unknown>;
@@ -84,7 +83,6 @@ export type ClientCommand =
     }
   | { type: 'chat'; id: string; message: string }
   | { type: 'collisionDamage'; targetPlayerId: string; attackerId: string }
-  | { type: 'initAsteroids'; id: string }
   | { type: 'clientLog'; payload: WireRecord }
   | PingMessage;
 
@@ -384,10 +382,6 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
         ? { ok: true, command: { type, targetPlayerId, attackerId } }
         : invalid(type, 'Missing required fields for collisionDamage');
     }
-    case 'initAsteroids':
-      return id
-        ? { ok: true, command: { type, id } }
-        : invalid(type, 'Missing player ID for initAsteroids');
     default:
       return {
         ok: false,
