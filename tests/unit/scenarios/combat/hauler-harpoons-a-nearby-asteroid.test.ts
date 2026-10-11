@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { DAMAGE } from '../../../../src/constants';
+import { DAMAGE } from '../../../../shared/constants/gameplay';
 import { resolveToolFlights } from '../../../support/tool-flight';
 import { GameServerWorld, type Pilot, useQuietServerConsole } from '../support/gameServerWorld';
 

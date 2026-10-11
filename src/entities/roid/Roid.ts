@@ -1,4 +1,6 @@
 import { tickAsteroidBoost } from '../../../shared/asteroidBoost';
+import { stepAsteroidMotionInto } from '../../../shared/asteroidMotion';
+import { DEBUG, GAME, ROID } from '../../../shared/constants/gameplay';
 import type {
   AsteroidBoost,
   AsteroidMaterial,
@@ -8,9 +10,7 @@ import type {
   Velocity,
 } from '../../../shared-types';
 import { playHitSound as playHitSoundAt } from '../../audio/gameSounds';
-import { DEBUG, GAME, ROID } from '../../constants';
 import { worldFurnaces } from '../../network/worldExploration';
-import { stepAsteroidMotionInto } from '../../physics/asteroidMotion';
 
 class Roid {
   id: string;

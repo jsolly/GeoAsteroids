@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
+import { SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import { ECONOMY } from '../../../shared/economy';
+import { orbitRadiusForOwner } from '../../../shared/satellitePickupMath';
 import { GROWTH } from '../../../shared/shipGrowth';
-import { SATELLITE_PICKUP } from '../../../src/constants';
-import { orbitRadiusForOwner } from '../../../src/entities/satellitePickup/satellitePickupMath';
 import { hullRadiusForKit } from '../../../src/entities/ship/shipKits';
 import { RecordingSocket } from '../../support/recordingSocket';
 

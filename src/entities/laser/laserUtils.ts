@@ -1,5 +1,5 @@
+import { GAME, LASER } from '../../../shared/constants/gameplay';
 import type { Velocity } from '../../../shared-types';
-import { GAME, LASER } from '../../constants';
 import { addVectors } from '../../utils/mathUtils';
 import type { Ship } from '../ship/Ship';
 import { calculateLaserStartPosition } from '../ship/shipUtils';

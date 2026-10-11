@@ -1,14 +1,10 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
+import { createHeightfield, sampleGradient, sampleHeight } from '../../../shared/heightfield';
+import { TERRAIN } from '../../../shared/terrainConfig';
 import { WORLD } from '../../../shared/world';
 import { PALETTE, VISUAL } from '../../../src/constants';
 import { contourSegmentCount, extractIsoContours } from '../../../src/physics/terrain/contours';
-import {
-  createHeightfield,
-  sampleGradient,
-  sampleHeight,
-} from '../../../src/physics/terrain/heightfield';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
 import {
   applyTerrainSeed,
   builtContourPatchCount,

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { CollisionManager } from '../../../src/physics/collision/CollisionManager';
+import { CollisionManager } from '../../../src/physics/CollisionManager';
 
 const mockSendMessage = vi.fn();
 const mockGetLocalPlayerId = vi.fn(() => 'local-player-123');
@@ -24,7 +24,7 @@ vi.mock('../../../src/utils/Logger', () => ({
   },
 }));
 
-vi.mock('../../../src/physics/collision/collisionDetection', () => ({
+vi.mock('../../../shared/collisionDetection', () => ({
   checkBoundaryCollision: vi.fn(() => true),
 }));
 

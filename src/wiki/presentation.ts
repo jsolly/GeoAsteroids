@@ -1,4 +1,4 @@
-import { GAME } from '../constants';
+import { GAME } from '../../shared/constants/gameplay';
 import { serializeKitHullSvg } from '../entities/ship/hullOutlines';
 import { isShipKitId, listShipKits, SHIP_ABILITY } from '../entities/ship/shipKits';
 import type { WikiArticle } from './article';

@@ -1,5 +1,5 @@
-import { createHeightGrid, type Heightfield } from './heightfield';
-import { TERRAIN } from './terrainConfig';
+import { createHeightGrid, type Heightfield } from '../../../shared/heightfield';
+import { TERRAIN } from '../../../shared/terrainConfig';
 
 interface ContourSegment {
   ax: number;

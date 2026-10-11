@@ -10,7 +10,7 @@ import {
   isOnPlayfieldCanvas,
   stepAsteroidMotion,
   stepAsteroidMotionInto,
-} from '../../../src/physics/asteroidMotion';
+} from '../../../shared/asteroidMotion';
 
 describe('authoritative asteroid motion', () => {
   let engine: GameEngine | undefined;

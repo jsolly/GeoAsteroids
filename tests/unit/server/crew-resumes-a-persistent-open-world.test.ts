@@ -11,11 +11,11 @@ import { sectorDeposits } from '../../../server/world/depositLayout';
 import { InlineWorldPersistence } from '../../../server/world/InlineWorldPersistence';
 import { RegionalAsteroidField } from '../../../server/world/RegionalAsteroidField';
 import { WorldStore } from '../../../server/world/WorldStore';
+import { DEPOSIT_FIELD } from '../../../shared/constants/gameplay';
 import { explorationCellAt, isCellExplored } from '../../../shared/exploration';
 import { FURNACES } from '../../../shared/furnaces';
 import { nearbyWorldRows, WORLD } from '../../../shared/world';
 import type { AsteroidData } from '../../../shared-types';
-import { DEPOSIT_FIELD } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 import { resolveToolFlights } from '../../support/tool-flight';
 

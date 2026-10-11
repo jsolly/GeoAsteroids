@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { PLAYER_NAME_MAX_LENGTH, sanitizePlayerName } from '../../../src/utils/playerName';
+import { PLAYER_NAME_MAX_LENGTH, sanitizePlayerName } from '../../../shared/playerName';
 
 test('title-screen nicknames keep letters, numbers, and spaces', () => {
   expect(sanitizePlayerName('  Bob  ')).toBe('Bob');

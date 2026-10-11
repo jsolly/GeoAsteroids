@@ -1,4 +1,4 @@
-import { GAME } from '../constants';
+import { GAME } from '../../shared/constants/gameplay';
 import type { Player } from '../entities/player/Player';
 import { worldFurnaces } from '../network/worldExploration';
 import { canvasManager } from '../rendering/canvasSurface';

@@ -3,6 +3,16 @@ import { ASTEROID_BOOST } from '../../shared/asteroidBoost';
 import { ASTEROID_INTERACTIONS } from '../../shared/asteroidPhenomena';
 import { colossalMiningHealth } from '../../shared/asteroidScale';
 import { BELT_CRAWLER } from '../../shared/beltCrawler';
+import { getGameBoundary } from '../../shared/boundary';
+import {
+  DAMAGE,
+  DEPOSIT_FIELD,
+  GAME,
+  LASER,
+  ROID,
+  SATELLITE_PICKUP,
+  SHIP,
+} from '../../shared/constants/gameplay';
 import { calculateHealthRegenDelayFrames } from '../../shared/constants/health';
 import { CONTOUR_LOCK } from '../../shared/contourLock';
 import { ECONOMY, settlementRecipe } from '../../shared/economy';
@@ -23,16 +33,14 @@ import { LOOT_BLAST } from '../../shared/lootBlast';
 import { PLAYER_MOTION } from '../../shared/playerMotion';
 import { GROWTH } from '../../shared/shipGrowth';
 import { SURVEY_PROBE } from '../../shared/surveyProbe';
+import { TERRAIN } from '../../shared/terrainConfig';
 import { SPIDER } from '../../shared/terrainSpider';
 import { STORE_OFFERS, TOWN_STORE_RADIUS } from '../../shared/townStore';
 import { WORLD } from '../../shared/world';
 import type { ShipKitId } from '../../shared-types';
-import { DAMAGE, DEPOSIT_FIELD, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../constants';
 import { getShipKit, SHIP_ABILITY, SHIP_KIT_IDS } from '../entities/ship/shipKits';
 import { CONNECTION_STALE_TIMEOUT_MS } from '../network/services/connectionHealth';
 import { RECONNECT_DELAYS_MS } from '../network/services/connectionReconnect';
-import { getGameBoundary } from '../physics/boundary';
-import { TERRAIN } from '../physics/terrain/terrainConfig';
 
 function seconds(frames: number): string {
   return `${frames / GAME.FPS} seconds`;

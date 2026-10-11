@@ -1,11 +1,11 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { LASER } from '../../../shared/constants/gameplay';
 import {
   captureSnapshot,
   SNAPSHOT_VERSION,
   SnapshotEncoder,
 } from '../../../shared/snapshotProtocol';
 import type { PlayerProjectileState, ServerGameSnapshot } from '../../../shared-types';
-import { LASER } from '../../../src/constants';
 import { AuthoritativeProjectileField } from '../../../src/entities/laser/AuthoritativeProjectileField';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';

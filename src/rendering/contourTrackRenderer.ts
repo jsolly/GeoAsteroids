@@ -1,8 +1,8 @@
 import { contourLockSpeed, contourLockVelocity } from '../../shared/contourLock';
+import { type Heightfield, sampleGradient, sampleHeight } from '../../shared/heightfield';
 import type { ContourLockState, Position } from '../../shared-types';
 import { PALETTE } from '../constants';
 import { findContourCapture } from '../physics/terrain/contourCapture';
-import { type Heightfield, sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
 import { getTerrainField } from '../physics/terrain/terrainSession';
 import { canvasManager } from './canvasSurface';
 

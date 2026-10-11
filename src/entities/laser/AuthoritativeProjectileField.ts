@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import { LASER } from '../../../shared/constants/gameplay';
 import type { PlayerProjectileState, PlayerShotAcknowledgement } from '../../../shared-types';
-import { LASER } from '../../constants';
 import type { Ship } from '../ship/Ship';
 import { Laser } from './Laser';
 

@@ -1,5 +1,6 @@
 import type { WebSocket } from 'ws';
 import { logger } from '../../setup/serverLogger';
+import { SHIP, WIRE_PALETTE } from '../../shared/constants/gameplay';
 import {
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
@@ -19,7 +20,6 @@ import type {
   UtilityFlight,
   Velocity,
 } from '../../shared-types';
-import { PALETTE, SHIP } from '../../src/constants';
 import { tickAbilityHost } from '../../src/entities/ship/shipAbilities';
 import { applyShipKitStats, DEFAULT_SHIP_KIT_ID } from '../../src/entities/ship/shipKits';
 import type { RNGService } from './RNGService';
@@ -187,7 +187,7 @@ export class EntityManager {
       exploding: false,
       thrusting: false,
       contourLock: null,
-      color: PALETTE.REMOTE,
+      color: WIRE_PALETTE.REMOTE,
       cargo: 0,
       purchases: [],
       score: 0,

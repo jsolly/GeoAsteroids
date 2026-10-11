@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
+import { GAME, LASER } from '../shared/constants/gameplay';
 import { SNAPSHOT_VERSION, SnapshotDecoder } from '../shared/snapshotProtocol';
 import type { ServerGameSnapshot } from '../shared-types';
-import { GAME, LASER } from '../src/constants';
 import { PerformanceBudget } from './performance-budget';
 
 export class Pilot {

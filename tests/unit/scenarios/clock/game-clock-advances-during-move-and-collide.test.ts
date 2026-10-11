@@ -1,6 +1,6 @@
 import { performance as nodePerformance } from 'node:perf_hooks';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { DAMAGE, SHIP } from '../../../../src/constants';
+import { DAMAGE, SHIP } from '../../../../shared/constants/gameplay';
 import { GameServerWorld, type Pilot, useQuietServerConsole } from '../support/gameServerWorld';
 
 useQuietServerConsole();

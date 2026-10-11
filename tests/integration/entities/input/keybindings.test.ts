@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { GAME } from '../../../../src/constants';
+import { GAME } from '../../../../shared/constants/gameplay';
 import { Player } from '../../../../src/entities/player/Player';
 import { resetControlSources } from '../../../../src/input/controlSources';
 import { keyDown, keyUp, reconcilePlayerInput } from '../../../../src/input/keybindings';

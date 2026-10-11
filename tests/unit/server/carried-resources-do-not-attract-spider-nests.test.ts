@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { spiderResources } from '../../../server/core/spiderResources';
+import { ROID } from '../../../shared/constants/gameplay';
 import type { AsteroidData, LootData, SatellitePickupData } from '../../../shared-types';
-import { ROID } from '../../../src/constants';
 
 const ore: AsteroidData = {
   id: 'ore',

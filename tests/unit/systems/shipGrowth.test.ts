@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { SHIP } from '../../../shared/constants/gameplay';
 import {
   addLootMagnetPull,
   canCollectLoot,
@@ -8,7 +9,6 @@ import {
   maxVelocityFromMass,
   thrustScaleFromMass,
 } from '../../../shared/shipGrowth';
-import { SHIP } from '../../../src/constants';
 import { hullRadiusForKit } from '../../../src/entities/ship/shipKits';
 
 describe('saved ship mass and salvage rules', () => {

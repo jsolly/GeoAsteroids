@@ -94,7 +94,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         '../src/entities/satellitePickup/SatellitePickupManager'
       );
       const { satelliteProfileAt } = await import('../shared/eoSatellites');
-      const { SATELLITE_PICKUP } = await import('../src/constants');
+      const { SATELLITE_PICKUP } = await import('../shared/constants/gameplay');
       const { ensureTerrain, getTerrainContours } = await import(
         '../src/physics/terrain/terrainSession'
       );
@@ -736,7 +736,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         const { drawLeaderboard } = await import('../src/rendering/hud/leaderboard');
         const { entityFactory } = await import('../src/entities/EntityFactory');
         const { drawFieryBoundary } = await import('../src/rendering/boundaryRenderer');
-        const { getGameBoundary } = await import('../src/physics/boundary');
+        const { getGameBoundary } = await import('../shared/boundary');
         const reads = { safeAreaStyles: 0, pointerMediaQueries: 0 };
         const originalStyle = window.getComputedStyle;
         const originalMedia = window.matchMedia;

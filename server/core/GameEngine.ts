@@ -4,6 +4,7 @@ import { logger } from '../../setup/serverLogger';
 import type { BeltSlotState } from '../../shared/asteroidBelt';
 import { boostOwnerIds, removeBoostOwner } from '../../shared/asteroidBoost';
 import { asteroidShardMass } from '../../shared/asteroidMaterials';
+import { getAsteroidFieldRadius } from '../../shared/asteroidMotion';
 import {
   ASTEROID_INTERACTIONS,
   advanceReflectionEnergy,
@@ -12,7 +13,9 @@ import {
 } from '../../shared/asteroidPhenomena';
 import { findNearestAsteroidImpact, reflectVector } from '../../shared/asteroidReflection';
 import { asteroidCrewNeeded, isColossalAsteroid } from '../../shared/asteroidScale';
+import { checkBoundaryCollision } from '../../shared/collisionDetection';
 import { isCombatantImmune, isWorldHazard, laserDamagesShips } from '../../shared/combat';
+import { DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../shared/constants/gameplay';
 import { calculateHealthRegenDelayFrames } from '../../shared/constants/health';
 import { chooseCrewSpawn } from '../../shared/crewSpawn';
 import {
@@ -56,7 +59,9 @@ import {
   isSmallRoid,
   LOOT_BLAST,
 } from '../../shared/lootBlast';
+import { sanitizePlayerName } from '../../shared/playerName';
 import { readReleaseId, releaseField } from '../../shared/releaseId';
+import { pointsForRoidSize } from '../../shared/roidScore';
 import { canCollectLoot, GROWTH } from '../../shared/shipGrowth';
 import {
   haulerUtilityOf,
@@ -66,6 +71,7 @@ import {
 } from '../../shared/shipUtilities';
 import { boundedDiagnosticError, captureDiagnosticActorState } from '../../shared/stateDiagnostics';
 import { SURVEY_PROBE } from '../../shared/surveyProbe';
+import { TERRAIN } from '../../shared/terrainConfig';
 import { SPIDER, spiderHitRadius } from '../../shared/terrainSpider';
 import {
   insideTownStore,
@@ -96,8 +102,6 @@ import type {
   ToolTargetPose,
   Velocity,
 } from '../../shared-types';
-import { CANVAS, DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../src/constants';
-import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import {
   activateAbilityOnHost,
   clearHaulerLatch,
@@ -113,12 +117,7 @@ import {
   hullRadiusForKit,
   SHIP_ABILITY,
 } from '../../src/entities/ship/shipKits';
-import { getAsteroidFieldRadius } from '../../src/physics/asteroidMotion';
-import { checkBoundaryCollision } from '../../src/physics/collision/collisionDetection';
-import { TERRAIN } from '../../src/physics/terrain/terrainConfig';
 import { ensureTerrain, getTerrainSeed } from '../../src/physics/terrain/terrainSession';
-import { getVelocityMagnitude } from '../../src/utils/mathUtils';
-import { sanitizePlayerName } from '../../src/utils/playerName';
 import { serverPerformanceMetrics } from '../performanceMetrics';
 import { SERVER_RELEASE_ID } from '../release';
 import { crawlerEvidence, FixtureCombatRecorder } from '../testing/FixtureCombatRecorder';
@@ -222,8 +221,6 @@ export interface CombatBroadcast {
 
 type CombatSink = (result: CombatBroadcast) => void;
 
-/** Matches client Laser.isExpired when the canvas is the internal playfield. */
-const SERVER_LASER_MAX_DISTANCE = LASER.TRAVEL_DISTANCE_RATIO + CANVAS.INTERNAL_WIDTH;
 /** 250 ms covers a delayed position packet at 30 Hz plus a brief browser/network hitch. */
 export const PLAYER_SHOOT_POSE_ALLOWANCE_MS = 250;
 /** Bounded positional rounding/muzzle disagreement in addition to the movement allowance. */
@@ -2400,9 +2397,9 @@ export class GameEngine {
         x: laser.position.x + laser.velocity.x,
         y: laser.position.y + laser.velocity.y,
       };
-      laser.distTraveled += getVelocityMagnitude(laser.velocity);
+      laser.distTraveled += Math.hypot(laser.velocity.x, laser.velocity.y);
 
-      if (laser.distTraveled >= SERVER_LASER_MAX_DISTANCE) {
+      if (laser.distTraveled >= LASER.MAX_TRAVEL_DISTANCE) {
         this.observeFixtureTerminal(laser, 'distance-limit');
         this.lasers.splice(i, 1);
         continue;
@@ -2619,7 +2616,7 @@ export class GameEngine {
         laser.velocity = reflectVector(laser.velocity, surface.normal);
         laser.bounces++;
         delete laser.lastAsteroidId;
-        const speed = getVelocityMagnitude(laser.velocity);
+        const speed = Math.hypot(laser.velocity.x, laser.velocity.y);
         const remaining = Math.max(0, distance - surface.distance);
         start = {
           x: surface.point.x - surface.normal.x * 1e-5,

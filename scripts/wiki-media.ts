@@ -1,7 +1,7 @@
+import { scannedMaterial } from '../shared/surveyScan';
 import type { ShipKitId } from '../shared-types';
 import { drawSatelliteHealth } from '../src/entities/satellitePickup/satelliteHealthRenderer';
 import { drawSatellitePickupGlow } from '../src/entities/satellitePickup/satellitePickupGlow';
-import { scannedMaterial } from '../src/entities/ship/surveyScan';
 import './wiki-media-node-shim';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -23,6 +23,7 @@ import { GameEngine } from '../server/core/GameEngine';
 import { LootManager } from '../server/core/LootManager';
 import { RNGService } from '../server/core/RNGService';
 import { SatellitePickupManager } from '../server/core/SatellitePickupManager';
+import { stepAsteroidMotion } from '../shared/asteroidMotion';
 import {
   ASTEROID_INTERACTIONS,
   layoutReflectiveCluster,
@@ -30,10 +31,12 @@ import {
   segmentCircleContact,
 } from '../shared/asteroidPhenomena';
 import { circlesOverlap } from '../shared/combat';
+import { DAMAGE, GAME, SATELLITE_PICKUP, SHIP, WIRE_PALETTE } from '../shared/constants/gameplay';
 import { CONTOUR_LOCK, contourLockDistance, contourLockSpeed } from '../shared/contourLock';
 import { cargoCapacity } from '../shared/economy';
 import { SATELLITE_PROFILES } from '../shared/eoSatellites';
 import { FURNACES, furnaceReward, TOWN_HEARTH } from '../shared/furnaces';
+import { sampleGradient } from '../shared/heightfield';
 import {
   blastPush,
   inBlastRadius,
@@ -43,8 +46,9 @@ import {
 } from '../shared/lootBlast';
 import { cruiseSpeed, cruiseVelocity } from '../shared/shipFlight';
 import { GROWTH, lootOverlap } from '../shared/shipGrowth';
+import { TERRAIN } from '../shared/terrainConfig';
 import type { AsteroidData, Position, SatellitePickupTypeId, Velocity } from '../shared-types';
-import { DAMAGE, GAME, PALETTE, SATELLITE_PICKUP, SHIP, TITLE, VISUAL } from '../src/constants';
+import { PALETTE, TITLE, VISUAL } from '../src/constants';
 import { lootScreenRadius } from '../src/entities/loot/lootRenderer';
 import { drawAsteroidMaterialDetails } from '../src/entities/roid/materialArt';
 import { drawRoidInteractionCues } from '../src/entities/roid/roidRenderer';
@@ -68,10 +72,7 @@ import {
 } from '../src/entities/ship/shipRenderer';
 import { applyShipImpactFlash, tickShipImpactFlash } from '../src/entities/ship/shipUtils';
 import { steeringTurn } from '../src/input/pointerSteering';
-import { stepAsteroidMotion } from '../src/physics/asteroidMotion';
 import { extractIsoContours } from '../src/physics/terrain/contours';
-import { sampleGradient } from '../src/physics/terrain/heightfield';
-import { TERRAIN } from '../src/physics/terrain/terrainConfig';
 import { getTerrainField, getTerrainSeed } from '../src/physics/terrain/terrainSession';
 import { drawCargoHoldArtwork } from '../src/rendering/cargoHoldRenderer';
 import { drawCargoOffloadArtwork } from '../src/rendering/cargoOffloadRenderer';
@@ -593,7 +594,7 @@ function makeScoutDemo(): Demo {
         height: HEIGHT,
       });
       drawShip(ctx, 'scout', host.position, Math.PI / 2, PALETTE.LOCAL);
-      drawShip(ctx, 'hauler', teammate.position, Math.PI, PALETTE.REMOTE);
+      drawShip(ctx, 'hauler', teammate.position, Math.PI, WIRE_PALETTE.REMOTE);
       for (const rock of rocks) {
         const material = rock.surveyedBy?.length ? rock.material : scannedMaterial(host, rock);
         classified ||= material !== undefined;
@@ -626,7 +627,7 @@ function makeScoutDemo(): Demo {
         210,
         325
       );
-      drawTag(ctx, 'Scout + teammate see the same marks', 330, 110, PALETTE.REMOTE);
+      drawTag(ctx, 'Scout + teammate see the same marks', 330, 110, WIRE_PALETTE.REMOTE);
     },
   };
 }
@@ -845,7 +846,7 @@ function makeHaulerDemo(): Demo {
         'scout',
         displayScout,
         Math.PI / 2,
-        PALETTE.REMOTE,
+        WIRE_PALETTE.REMOTE,
         hullRadiusForKit('scout') * displayScale
       );
       const furnaceScreen = screenPoint({ x: 0, y: 0 });
@@ -856,7 +857,13 @@ function makeHaulerDemo(): Demo {
         furnace.radius * displayScale,
         frame * VISUAL.THRUSTER_FLICKER_MS
       );
-      drawTag(ctx, furnace.name, furnaceScreen.x + 35, furnaceScreen.y - 20, PALETTE.SATELLITE);
+      drawTag(
+        ctx,
+        furnace.name,
+        furnaceScreen.x + 35,
+        furnaceScreen.y - 20,
+        WIRE_PALETTE.SATELLITE
+      );
       drawTag(
         ctx,
         delivered
@@ -1579,7 +1586,7 @@ function makeSatellitesDemo(): Demo {
         'EO SATELLITES',
         'stationary pickups · equip to deploy',
         frame,
-        PALETTE.SATELLITE
+        WIRE_PALETTE.SATELLITE
       );
       const panels: readonly SatelliteDemoPanel[] = recording[frame] ?? [];
       const displayScale = 0.3;
@@ -1800,7 +1807,7 @@ function makePickupsDemo(): Demo {
         'SATELLITE PICKUPS',
         'store nearby Landsat 7 → equip to orbit and scan until health runs out',
         frame,
-        PALETTE.SATELLITE
+        WIRE_PALETTE.SATELLITE
       );
       runSimulationTicks(SIM_TICKS_PER_FRAME, () => {
         manager.update([owner]);
@@ -1823,7 +1830,7 @@ function makePickupsDemo(): Demo {
               SATELLITE_PICKUP.ORBIT_RADIUS,
               owner.radius + firstPickup.radius + SATELLITE_PICKUP.ORBIT_GAP
             ),
-            PALETTE.SATELLITE,
+            WIRE_PALETTE.SATELLITE,
             0.28
           );
         }
@@ -1857,7 +1864,7 @@ function makePickupsDemo(): Demo {
             : `${firstPickup?.name ?? 'Landsat 7'} collected`,
         340,
         112,
-        PALETTE.SATELLITE
+        WIRE_PALETTE.SATELLITE
       );
       drawTag(
         ctx,

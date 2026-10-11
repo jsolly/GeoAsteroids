@@ -1,9 +1,9 @@
+import { getGameBoundary } from '../../../shared/boundary';
+import { createHeightfield, type Heightfield } from '../../../shared/heightfield';
+import { TERRAIN } from '../../../shared/terrainConfig';
 import type { Position } from '../../../shared-types';
 import { warmContourSpatialIndex } from '../../rendering/contourSpatialIndex';
-import { getGameBoundary } from '../boundary';
 import { type ContourBounds, type ContourLevel, extractIsoContours } from './contours';
-import { createHeightfield, type Heightfield } from './heightfield';
-import { TERRAIN } from './terrainConfig';
 
 interface TerrainCache {
   field: Heightfield;

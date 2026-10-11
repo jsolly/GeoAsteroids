@@ -1,5 +1,5 @@
-import { ROID } from '../constants';
 import { getGameBoundary } from './boundary';
+import { ROID } from './constants/gameplay';
 
 /** Asteroids inhabit the full world; the server activates nearby sectors. */
 export function getAsteroidFieldRadius(): number {

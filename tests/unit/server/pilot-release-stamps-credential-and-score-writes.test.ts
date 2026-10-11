@@ -15,10 +15,10 @@ import { SERVER_RELEASE_ID } from '../../../server/release';
 import { GameStateBroadcaster } from '../../../server/services/GameStateBroadcaster';
 import { InlineWorldPersistence } from '../../../server/world/InlineWorldPersistence';
 import { WorldStore } from '../../../server/world/WorldStore';
+import { GAME, ROID } from '../../../shared/constants/gameplay';
 import { FURNACES } from '../../../shared/furnaces';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
 import type { AsteroidData } from '../../../shared-types';
-import { GAME, ROID } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 const CLIENT_RELEASE = 'c'.repeat(40);

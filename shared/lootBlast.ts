@@ -1,5 +1,5 @@
 import type { Position, Velocity } from '../shared-types';
-import { GAME } from '../src/constants';
+import { GAME } from './constants/gameplay';
 
 /**
  * Shoot-a-drop blast (GH #313 / Todoist destroy-drop).

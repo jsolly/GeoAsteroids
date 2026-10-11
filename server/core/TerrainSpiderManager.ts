@@ -1,10 +1,10 @@
 import { segmentCircleContact } from '../../shared/asteroidPhenomena';
 import { FurnaceField } from '../../shared/furnaceField';
+import { sampleGradient } from '../../shared/heightfield';
 import { SPIDER, spiderHitRadius } from '../../shared/terrainSpider';
 import { WORLD } from '../../shared/world';
 import type { Position, SpiderFieldState, TerrainSpider } from '../../shared-types';
 import { SHIP_ABILITY } from '../../src/entities/ship/shipKits';
-import { sampleGradient } from '../../src/physics/terrain/heightfield';
 import { getTerrainField } from '../../src/physics/terrain/terrainSession';
 import { nearestRescueTow } from './spiderRescueTarget';
 import type { SpiderResource } from './spiderResources';

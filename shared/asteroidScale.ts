@@ -1,5 +1,5 @@
 import type { AsteroidData } from '../shared-types';
-import { DAMAGE, ROID } from '../src/constants';
+import { DAMAGE, ROID } from './constants/gameplay';
 
 /** Crew-scale rocks sit well above the ordinary large class. */
 export function isColossalAsteroid(size: number): boolean {

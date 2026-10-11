@@ -1,6 +1,6 @@
+import { sanitizePlayerName } from '../../../shared/playerName';
 import { releaseField } from '../../../shared/releaseId';
 import { getClientReleaseId } from '../../utils/buildInfo';
-import { sanitizePlayerName } from '../../utils/playerName';
 import { getStoredItem, removeStoredItem, setStoredItem } from '../../utils/safeStorage';
 
 const RESUME_TOKEN_STORAGE_KEY = 'georoids-resume-token';

@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { GAME, LASER, SHIP } from '../../../shared/constants/gameplay';
 import { cruiseSpeed } from '../../../shared/shipFlight';
-import { GAME, LASER, SHIP } from '../../../src/constants';
+import { TERRAIN } from '../../../shared/terrainConfig';
 import { createLaser } from '../../../src/entities/laser/laserUtils';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { getShipKit } from '../../../src/entities/ship/shipKits';
 import { applyThrustOrFriction } from '../../../src/entities/ship/shipUtils';
 import { resetWorldExploration } from '../../../src/network/worldExploration';
-import { TERRAIN } from '../../../src/physics/terrain/terrainConfig';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 
 afterEach(() => {

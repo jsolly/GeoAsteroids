@@ -1,5 +1,5 @@
-import type { AsteroidMaterial, Position, ShipKitId } from '../../../shared-types';
-import { SHIP_ABILITY } from './shipKits';
+import type { AsteroidMaterial, Position, ShipKitId } from '../shared-types';
+import { SHIP_ABILITY } from '../src/entities/ship/shipKits';
 
 type Scanner = {
   kitId: ShipKitId;

@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
+import { GAME, SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import type { SatellitePickupData } from '../../../shared-types';
-import { GAME, SATELLITE_PICKUP } from '../../../src/constants';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { SatellitePickupManager } from '../../../src/entities/satellitePickup/SatellitePickupManager';
 import { preferredHaulerUtility } from '../../../src/entities/ship/haulerUtility';

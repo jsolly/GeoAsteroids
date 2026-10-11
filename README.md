@@ -44,7 +44,7 @@ commands and basic manual browser smoke policy live in
 
 TypeScript checks the client, server, shared protocol, scripts, tests and build configuration. `strict` (including `noImplicitAny`) is enforced alongside checked indexed access, exact optional properties, index-signature bracket access and side-effect import checking. Clear absent optional state with `delete`; use `| undefined` only when an API intentionally distinguishes clearing a value from leaving it unchanged.
 
-Debug switches and log levels live in `src/constants/index.ts`. Client and server diagnostics share structured records with release, player, session and connection context. The [diagnostics guide](docs/diagnostics.md) explains the incident timeline reader, Railway/Vercel searches, state checkpoints, loss counters and game-loop profiling. See `AGENTS.md` for architecture and commands.
+Simulation debug switches live in `shared/constants/gameplay.ts`; log levels live in `src/constants/index.ts`. Client and server diagnostics share structured records with release, player, session and connection context. The [diagnostics guide](docs/diagnostics.md) explains the incident timeline reader, Railway/Vercel searches, state checkpoints, loss counters and game-loop profiling. See `AGENTS.md` for architecture and commands.
 
 Repeatable client, server, snapshot codec and loopback transport measurements use
 the [benchmark framework](benchmarks/README.md). It documents clean committed

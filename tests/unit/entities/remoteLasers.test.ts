@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest';
-import { SHIP } from '../../../src/constants';
+import { SHIP } from '../../../shared/constants/gameplay';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { Player } from '../../../src/entities/player/Player';
 import { advanceRemotePlayerShips } from '../../../src/entities/player/remoteLasers';

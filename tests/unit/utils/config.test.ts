@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 
-import { ROID } from '../../../src/constants';
+import { ROID } from '../../../shared/constants/gameplay';
 import { LOCAL_STORAGE_KEYS, musicIsOn, soundIsOn } from '../../../src/constants/user-preferences';
 
 beforeEach(() => {

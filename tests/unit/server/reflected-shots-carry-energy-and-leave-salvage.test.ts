@@ -5,9 +5,9 @@ import { MessageHandler } from '../../../server/communication/MessageHandler';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { GameStateBroadcaster } from '../../../server/services/GameStateBroadcaster';
 import { previewChargedReflections } from '../../../shared/asteroidPhenomena';
+import { GAME, LASER } from '../../../shared/constants/gameplay';
 import { captureSnapshot } from '../../../shared/snapshotProtocol';
 import type { AsteroidData } from '../../../shared-types';
-import { GAME, LASER } from '../../../src/constants';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function arena() {

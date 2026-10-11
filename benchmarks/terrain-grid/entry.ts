@@ -1,12 +1,12 @@
-import { WORLD } from '../../shared/world';
-import { type ContourLevel, extractIsoContours } from '../../src/physics/terrain/contours';
 import {
   createHeightfield,
   createHeightGrid,
   type Heightfield,
   type sampleHeight,
-} from '../../src/physics/terrain/heightfield';
-import { TERRAIN } from '../../src/physics/terrain/terrainConfig';
+} from '../../shared/heightfield';
+import { TERRAIN } from '../../shared/terrainConfig';
+import { WORLD } from '../../shared/world';
+import { type ContourLevel, extractIsoContours } from '../../src/physics/terrain/contours';
 import {
   contourSpatialIndexIsCached,
   createContourQuery,

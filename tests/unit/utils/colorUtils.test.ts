@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { DEBUG, LASER, PALETTE, ROID, SHIP, TITLE, VISUAL } from '../../../src/constants';
+import { DEBUG, LASER, ROID, SHIP, WIRE_PALETTE } from '../../../shared/constants/gameplay';
+import { PALETTE, TITLE, VISUAL } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
@@ -12,7 +13,7 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.BG).toBe('#000011');
   expect(PALETTE.STARS).toBe('#8BA3C7');
   expect(PALETTE.LOCAL).toBe('#5EEAD4');
-  expect(PALETTE.REMOTE).toBe('#7DD3FC');
+  expect(WIRE_PALETTE.REMOTE).toBe('#7DD3FC');
   expect(PALETTE.ROID).toBe('#94A3B8');
   expect(PALETTE.LASER_LOCAL).toBe('#FDE68A');
   expect(PALETTE.HUD).toBe('#E2E8F0');
@@ -22,9 +23,9 @@ test('locked palette hexes match the art-direction swatch', () => {
   expect(PALETTE.LOOT).toBe('#E8D5A3');
   expect(TITLE.ACCENT).toBe('#A78BFA');
   expect(PALETTE).not.toHaveProperty('ACCENT_UI');
-  expect(PALETTE.SATELLITE).toBe('#C4B5FD');
-  expect(PALETTE.SATELLITE.toLowerCase()).not.toBe('#ffffff');
-  expect(PALETTE.SATELLITE.toLowerCase()).not.toBe('#67e8f9');
+  expect(WIRE_PALETTE.SATELLITE).toBe('#C4B5FD');
+  expect(WIRE_PALETTE.SATELLITE.toLowerCase()).not.toBe('#ffffff');
+  expect(WIRE_PALETTE.SATELLITE.toLowerCase()).not.toBe('#67e8f9');
 });
 
 test('laser colors never use white', () => {
@@ -51,7 +52,7 @@ test('players and ships use the role palette instead of white', () => {
 
   expect(local.color).toBe(PALETTE.LOCAL);
   expect(local.ship.color).toBe(PALETTE.LOCAL);
-  expect(remote.color).toBe(PALETTE.REMOTE);
+  expect(remote.color).toBe(WIRE_PALETTE.REMOTE);
   expect(new Ship().color).toBe(PALETTE.LOCAL);
 });
 

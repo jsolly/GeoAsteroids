@@ -1,4 +1,6 @@
+import { GAME } from '../../shared/constants/gameplay';
 import { consumeTickAccumulator } from '../../shared/gameClock';
+import { sampleGradient, sampleHeight } from '../../shared/heightfield';
 import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import { spiderHitRadius } from '../../shared/terrainSpider';
 import type {
@@ -14,7 +16,6 @@ import { playFeedback } from '../audio/feedbackSounds';
 import { playRespawn } from '../audio/interactionSounds';
 import { bindGameAudio, resetGameAudio } from '../audio/spatialAudio';
 import { mountSpiderScore } from '../audio/spiderScore';
-import { GAME } from '../constants';
 import { clientPerformance } from '../diagnostics/performanceMetrics';
 import { entityFactory } from '../entities/EntityFactory';
 import { LootField } from '../entities/loot/LootField';
@@ -41,9 +42,8 @@ import {
   bindAsteroidFieldApply,
   unbindAsteroidFieldApply,
 } from '../network/services/asteroidFieldSync';
-import { CollisionManager } from '../physics/collision/CollisionManager';
+import { CollisionManager } from '../physics/CollisionManager';
 import { contourSegmentCount } from '../physics/terrain/contours';
-import { sampleGradient, sampleHeight } from '../physics/terrain/heightfield';
 import { getSpiderField } from '../physics/terrain/spiderSession';
 import {
   getTerrainContours,

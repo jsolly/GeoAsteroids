@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { RNGService } from '../../../server/core/RNGService';
+import { stepAsteroidMotion } from '../../../shared/asteroidMotion';
 import { partitionAsteroidSnapshot } from '../../../src/network/services/asteroidFieldSync';
-import { stepAsteroidMotion } from '../../../src/physics/asteroidMotion';
 import {
   countRocksOnCanvas,
   drawingOffsets,

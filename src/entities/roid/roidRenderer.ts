@@ -1,6 +1,7 @@
 import { isColossalAsteroid } from '../../../shared/asteroidScale';
+import { ROID } from '../../../shared/constants/gameplay';
 import type { AsteroidMaterial } from '../../../shared-types';
-import { PALETTE, ROID, VISUAL } from '../../constants';
+import { PALETTE, VISUAL } from '../../constants';
 import type { Ship } from '../../entities/ship/Ship';
 import { canvasManager } from '../../rendering/canvasSurface';
 import type { DrawingContext } from '../../rendering/drawingContext';

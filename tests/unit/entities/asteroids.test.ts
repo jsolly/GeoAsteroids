@@ -1,8 +1,8 @@
 import { expect, test, vi } from 'vitest';
 import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
 
-vi.mock('../../../src/constants', async (importOriginal) => {
-  const constants = await importOriginal<typeof import('../../../src/constants')>();
+vi.mock('../../../shared/constants/gameplay', async (importOriginal) => {
+  const constants = await importOriginal<typeof import('../../../shared/constants/gameplay')>();
   return { ...constants, DEBUG: { ...constants.DEBUG, ENABLED: false } };
 });
 

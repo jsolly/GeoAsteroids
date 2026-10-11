@@ -6,6 +6,7 @@ import { GameEngine } from '../../../server/core/GameEngine';
 import { LootManager } from '../../../server/core/LootManager';
 import { RNGService } from '../../../server/core/RNGService';
 import { GameStateBroadcaster } from '../../../server/services/GameStateBroadcaster';
+import { SHIP } from '../../../shared/constants/gameplay';
 import {
   advanceSettlement,
   ECONOMY,
@@ -15,7 +16,6 @@ import {
 } from '../../../shared/economy';
 import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import type { AsteroidData } from '../../../shared-types';
-import { SHIP } from '../../../src/constants';
 import { hullRadiusForKit } from '../../../src/entities/ship/shipKits';
 import { RecordingSocket } from '../../support/recordingSocket';
 

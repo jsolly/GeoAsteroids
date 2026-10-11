@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { DAMAGE, GAME, SHIP } from '../../../../src/constants';
+import { DAMAGE, GAME, SHIP } from '../../../../shared/constants/gameplay';
 import { Ship } from '../../../../src/entities/ship/Ship';
 import {
   EXPLOSION_FRAMES,

@@ -1,3 +1,4 @@
+import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import {
   cargoCapacity,
   RESOURCES,
@@ -66,7 +67,7 @@ export function drawScoreOverlay(
 
   const gameStateManager = GameStateManager.getInstance();
   if (gameStateManager.hasPickupMessage()) {
-    ctx.fillStyle = PALETTE.SATELLITE;
+    ctx.fillStyle = WIRE_PALETTE.SATELLITE;
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -97,7 +98,7 @@ export function drawScoreOverlay(
     );
     ctx.fillStyle = hexToRgba(PALETTE.HUD, 0.18);
     ctx.fillRect(x, y + 37, width, 5);
-    ctx.fillStyle = PALETTE.SATELLITE;
+    ctx.fillStyle = WIRE_PALETTE.SATELLITE;
     ctx.fillRect(x, y + 37, width * progress, 5);
     ctx.fillStyle = PALETTE.HUD_MUTED;
     ctx.font = '10px Arial';

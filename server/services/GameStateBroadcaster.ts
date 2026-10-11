@@ -8,6 +8,7 @@ import {
   SnapshotBroadcastCapture,
   SnapshotEncoder,
 } from '../../shared/snapshotProtocol';
+import { isActiveScanner } from '../../shared/surveyScan';
 import {
   asteroidReach,
   isWithinWorldInterest,
@@ -15,7 +16,6 @@ import {
   nearbyWorldRows,
 } from '../../shared/world';
 import type { AsteroidData, SatellitePickupCollected } from '../../shared-types';
-import { isActiveScanner } from '../../src/entities/ship/surveyScan';
 import type { CombatBroadcast, GameEngine } from '../core/GameEngine';
 import { type OutboundOutcome, serverPerformanceMetrics } from '../performanceMetrics';
 

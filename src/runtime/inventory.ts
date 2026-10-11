@@ -1,3 +1,4 @@
+import { GAME, SATELLITE_PICKUP } from '../../shared/constants/gameplay';
 import { canEquipUtility } from '../../shared/equipment';
 import {
   HAULER_UTILITY_IDS,
@@ -9,7 +10,6 @@ import {
 } from '../../shared/shipUtilities';
 import type { HaulerUtilityId, ScoutUtilityId } from '../../shared-types';
 import { playFeedback } from '../audio/feedbackSounds';
-import { GAME, SATELLITE_PICKUP } from '../constants';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import {
   SATELLITE_INVENTORY_PAGE_SIZE,

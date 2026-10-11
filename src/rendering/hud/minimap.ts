@@ -1,3 +1,4 @@
+import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { oreResource } from '../../../shared/economy';
 import {
   cellWorldBounds,
@@ -8,6 +9,7 @@ import {
 import { CIVIC_LOTS, pipeHopToParent } from '../../../shared/furnaces';
 import { RICOCHET_COURT } from '../../../shared/ricochetCourt';
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
+import { activeScanners, scannedMaterial } from '../../../shared/surveyScan';
 import { WORLD } from '../../../shared/world';
 import type {
   ExplorationTile,
@@ -23,7 +25,6 @@ import type { SatellitePickup } from '../../entities/satellitePickup/SatellitePi
 import { getKitHullOutline, projectHullPolyline } from '../../entities/ship/hullOutlines';
 import type { Ship } from '../../entities/ship/Ship';
 import { strokePhosphorPolyline } from '../../entities/ship/shipRenderer';
-import { activeScanners, scannedMaterial } from '../../entities/ship/surveyScan';
 import { getWorldExploration, worldFurnaces } from '../../network/worldExploration';
 import { getSpiderField } from '../../physics/terrain/spiderSession';
 import { hexToRgba } from '../../utils/colorUtils';
@@ -179,7 +180,7 @@ function solidRadarInk(tint: string, alpha: number): string {
 export function drawExplorationFog(ctx: CanvasRenderingContext2D, geometry: MiniMapGeometry): void {
   ctx.save();
   // Pale explored ground has to be its own ink: dark fog over a dark void disappears.
-  const exploredInk = solidRadarInk(PALETTE.REMOTE, EXPLORED_RADAR_ALPHA);
+  const exploredInk = solidRadarInk(WIRE_PALETTE.REMOTE, EXPLORED_RADAR_ALPHA);
   const cellScale = geometry.size / (geometry.radius * 2);
   const centerX = geometry.x + geometry.size / 2;
   const centerY = geometry.y + geometry.size / 2;
@@ -434,7 +435,7 @@ function drawLoosePickupMarks(
     }
     if (!painted) {
       ctx.save();
-      ctx.strokeStyle = hexToRgba(PALETTE.SATELLITE, 0.95);
+      ctx.strokeStyle = hexToRgba(WIRE_PALETTE.SATELLITE, 0.95);
       ctx.lineWidth = 1;
       ctx.beginPath();
     }
@@ -468,7 +469,7 @@ function drawOrbiterMarks(
     }
     if (!painted) {
       ctx.save();
-      ctx.strokeStyle = hexToRgba(PALETTE.SATELLITE, 0.95);
+      ctx.strokeStyle = hexToRgba(WIRE_PALETTE.SATELLITE, 0.95);
       ctx.lineWidth = 1;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';

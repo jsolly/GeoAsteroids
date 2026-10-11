@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { DAMAGE, SHIP } from '../../../../src/constants';
+import { DAMAGE, SHIP } from '../../../../shared/constants/gameplay';
 import {
   EXPLOSION_FRAMES,
   GameServerWorld,

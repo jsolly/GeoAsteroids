@@ -1,8 +1,8 @@
+import { getGameBoundary } from '../../shared/boundary';
+import { createHeightfield } from '../../shared/heightfield';
+import { TERRAIN } from '../../shared/terrainConfig';
 import { PALETTE, VISUAL } from '../constants';
-import { getGameBoundary } from '../physics/boundary';
 import { extractIsoContours } from '../physics/terrain/contours';
-import { createHeightfield } from '../physics/terrain/heightfield';
-import { TERRAIN } from '../physics/terrain/terrainConfig';
 import { hexToRgba } from '../utils/colorUtils';
 import { watchDevicePixelRatio } from './devicePixelRatioWatcher';
 

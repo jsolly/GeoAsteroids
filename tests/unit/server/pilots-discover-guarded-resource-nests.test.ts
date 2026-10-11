@@ -6,12 +6,12 @@ import { RNGService } from '../../../server/core/RNGService';
 import { type SpiderResource, spiderResources } from '../../../server/core/spiderResources';
 import { TerrainSpiderManager } from '../../../server/core/TerrainSpiderManager';
 import { RegionalAsteroidField } from '../../../server/world/RegionalAsteroidField';
+import { DAMAGE, ROID } from '../../../shared/constants/gameplay';
 import { FurnaceField } from '../../../shared/furnaceField';
 import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { GROWTH } from '../../../shared/shipGrowth';
 import { SPIDER } from '../../../shared/terrainSpider';
 import type { AsteroidData, Position } from '../../../shared-types';
-import { DAMAGE, ROID } from '../../../src/constants';
 
 const home = { x: 15_000, y: 5_000 };
 const approach = { x: home.x - 2_000, y: home.y };

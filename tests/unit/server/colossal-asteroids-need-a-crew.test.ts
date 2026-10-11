@@ -13,9 +13,9 @@ import {
   isColossalAsteroid,
   sectorHostsColossal,
 } from '../../../shared/asteroidScale';
+import { DAMAGE, ROID } from '../../../shared/constants/gameplay';
 import { WORLD } from '../../../shared/world';
 import type { AsteroidData, HaulerUtilityId } from '../../../shared-types';
-import { DAMAGE, ROID } from '../../../src/constants';
 import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
 import { attachTowForScenario, resolveToolFlights } from '../../support/tool-flight';
 import {
