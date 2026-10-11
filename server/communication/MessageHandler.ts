@@ -5,7 +5,7 @@ import { onDarkFurnaceFootprint } from '../../shared/furnaceField';
 import { isTownSquareArrival } from '../../shared/furnaces';
 import { MAX_TICK_DEBT_MS } from '../../shared/gameClock';
 import { ASTEROID_INTERACTIONS_CAPABILITY } from '../../shared/snapshotProtocol';
-import type { AbilityUsedEvent, PlayerShotAcknowledgement } from '../../shared-types';
+import type { AbilityUsedEvent, PlayerJoin, PlayerShotAcknowledgement } from '../../shared-types';
 import { getShipKit } from '../../src/entities/ship/shipKits';
 import { sanitizePlayerName } from '../../src/utils/playerName';
 import type { GameEntity } from '../core/EntityManager';
@@ -267,7 +267,6 @@ export class MessageHandler {
         position: player.position,
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
-        // Read only by cached bundles from before shot receipts were unconditional.
         shotAcknowledgements: true,
         color: player.color,
         kitId: player.kitId,
@@ -275,7 +274,7 @@ export class MessageHandler {
         serverReleaseId: SERVER_RELEASE_ID,
         snapshotVersion,
         ...provenance,
-      },
+      } satisfies PlayerJoin,
       timestamp: Date.now(),
     });
     if (

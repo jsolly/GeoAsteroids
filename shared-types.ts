@@ -113,6 +113,12 @@ export interface PlayerJoin {
   /** Required current-protocol acknowledgement. */
   snapshotVersion: 3;
   asteroidInteractions: 1;
+  /**
+   * Retired: clients always track shot receipts. Still sent because cached
+   * pre-receipt bundles read it and the production smoke's join admission
+   * requires it; remove all three together.
+   */
+  shotAcknowledgements?: true;
   /** Private to the joined socket; never included in world snapshots. */
   resumeToken: string;
   /** Private server build identifier for correlating client and server diagnostics. */

@@ -686,6 +686,36 @@ test('stored spider silk survives a world checkpoint and reload without becoming
   }
 });
 
+test('a pre-rename surveyor row from an old backup keeps its progress and drops only its flight', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'georoids-legacy-surveyor-'));
+  const path = join(directory, 'world.sqlite');
+  const saved = {
+    ...scorePilot(777),
+    cargo: 3,
+    kitId: 'surveyor',
+    lastSeenAt: 1234,
+    position: { x: 100, y: 200 },
+    velocity: { x: 1, y: 2 },
+    angle: 1.5,
+    mass: 9,
+    health: 75,
+  };
+  try {
+    new WorldStore(path).close();
+    const db = new DatabaseSync(path);
+    db.prepare('INSERT INTO pilots(id,json) VALUES(?,?)').run(saved.id, JSON.stringify(saved));
+    db.close();
+    const store = new WorldStore(path);
+    try {
+      expect(store.loadPilots()).toEqual([{ ...scorePilot(777), cargo: 3, purchases: [] }]);
+    } finally {
+      store.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('a saved flight drops its retired lives count on load without rewriting the row', () => {
   const directory = mkdtempSync(join(tmpdir(), 'georoids-legacy-lives-'));
   const path = join(directory, 'world.sqlite');

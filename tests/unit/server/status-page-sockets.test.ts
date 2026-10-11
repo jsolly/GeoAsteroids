@@ -363,6 +363,20 @@ test('both status log controls send fresh bounded client records accepted by rea
   }
 });
 
+test('a healthy reply renders as healthy', async () => {
+  StatusPageSocket.reset();
+  const status = createStatusDocument();
+  try {
+    await settleMicrotasks();
+    const health = text(status.window, 'serverHealth');
+    expect(health).toContain('Server is healthy');
+    expect(health).toContain('Players: 0');
+    expect(health).not.toMatch(/unhealthy|failed/u);
+  } finally {
+    status.dispose();
+  }
+});
+
 test('a 503 health reply shows the failed world persistence instead of a bare HTTP error', async () => {
   StatusPageSocket.reset();
   const status = createStatusDocument({

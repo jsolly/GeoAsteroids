@@ -193,7 +193,8 @@ describe('current pilots share the production handler and broadcaster', () => {
   test('current offers receive a joined acknowledgment before snapshot-v3 frames', () => {
     const pilot = socket();
     joinPilot(handler, pilot.ws, 'pilot');
-    applySnapshots(pilot, handler);
+    const [baseline] = applySnapshots(pilot, handler);
+    assert.ok(baseline, 'join baseline snapshot');
     broadcaster.broadcastGameState();
     const joined = pilot.messages.find((m) => m.type === 'joined');
     assert.ok(joined, 'joined message');
@@ -202,6 +203,10 @@ describe('current pilots share the production handler and broadcaster', () => {
       data: {
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: 1,
+        // Retired for clients, but the production smoke's join admission still requires it.
+        shotAcknowledgements: true,
+        // The client refuses an ack without the seed of the world it is about to apply.
+        terrainSeed: baseline.terrainSeed,
         resumeToken: expect.stringMatching(RESUME_TOKEN_PATTERN),
         serverReleaseId: expect.any(String),
         credentialReleaseId: expect.any(String),

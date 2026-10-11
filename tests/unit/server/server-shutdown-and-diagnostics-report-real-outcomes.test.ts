@@ -111,8 +111,11 @@ test('status reports the actual connected log clients and bounded writer counter
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(3000),
   });
+  expect(status.status).toBe(200);
   const body = await status.json();
   expect(body).toMatchObject({
+    server: { status: 'healthy' },
+    websockets: { game: { status: 'available' } },
     connections: { activeLogClients: 1 },
     logging: {
       activeLogClients: 1,

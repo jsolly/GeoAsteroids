@@ -76,10 +76,11 @@ keep absolute motion. Other asteroid changes, including
 optional field deletion, retain the general update shape.
 
 Only `objects.spiderField` supports a nested object patch, with the same optional
-`set`, `clear` and keyed `collections` operations for `spiders`, `nests` and
-`consumed`. Spider motion-only updates use position bit 1 and angle bit 2;
-bit 8 uses the same relative integer representation and exact size choice.
-other changed fields retain general updates. Spider and nest membership,
+`set`, `clear` and keyed `collections` operations for `spiders` and `nests`;
+any other collection target is rejected. Spider motion-only updates use
+position bit 1 and angle bit 2; bit 8 uses the same relative integer
+representation and exact size choice. Other changed fields retain general
+updates. Spider and nest membership,
 order and unchanged fields survive exactly; the decoded application still
 receives the complete `spiderField` DTO. No distant spider, discovered nest,
 map knowledge or furnace pulse is dropped to reduce bytes.

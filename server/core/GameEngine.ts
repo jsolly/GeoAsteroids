@@ -1589,7 +1589,7 @@ export class GameEngine {
     return this.asteroidManager.getAllAsteroids();
   }
 
-  /** Seed the always-on asteroid interaction field for the active arena. */
+  /** Seed phenomena on a fixture field once; the managed regional field seeds its own sectors. */
   public seedAsteroidInteractions(): void {
     if (this.managedField) {
       return;
@@ -1660,7 +1660,7 @@ export class GameEngine {
     if (!this.managedField) {
       return [];
     }
-    const created = this.regionalField.update(
+    return this.regionalField.update(
       this.asteroidManager,
       [
         ...this.entityManager.getAllEntities().map((entity) => entity.position),
@@ -1668,8 +1668,6 @@ export class GameEngine {
       ],
       this.getServerTime()
     );
-    this.seedAsteroidInteractions();
-    return created;
   }
 
   public createAsteroids(

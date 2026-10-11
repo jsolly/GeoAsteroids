@@ -5,7 +5,7 @@
     "astro.config.ts": "sha256:add972d8f27001af0742bec72153a349a9eae0beda5d881b10ee4b0a5a390cea",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
     "docs/diagnostics.md": "sha256:a4b9beb8482591331a8bb58ce7f4c4bef8f1e523f951f05734bb57e65ceeee44",
-    "docs/protocol/snapshot-v3.md": "sha256:3f448bd0d9629d8987e0883c8bf201b1f1e72b5ead8627613e12d5c69f9afa90",
+    "docs/protocol/snapshot-v3.md": "sha256:cc3a4b20b890ac07fad8a75816d23ec84010fee26123aabb6bf6e438954411ab",
     "docs/sounds.md": "sha256:88bd06e26a7688c6b348dc635c1badffa83635a0413abd033eb63843f5975eb8",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
     "package.json": "sha256:bafbcf487cbe832b7c54cade3d4c462287bd8793782d16dc7c75ef9143e38121",
@@ -68,7 +68,7 @@
     "scripts/wiki-media.ts": "sha256:e9a0feac3ba0b9c1071743c72d407df10961bbddc9386b812f8479c3562ba1a8",
     "scripts/wiki-satellite-demo.ts": "sha256:7ecaae18ab604448b3706caab776aaf48e7f4b18fc5781e97cae2838fca52f88",
     "server.ts": "sha256:1847341c2cd9286dc2a2ef87693cdb199d290d58f16a3a195c4e34d158c24125",
-    "server/communication/MessageHandler.ts": "sha256:c72ee0f34aad92f693f62d6b47d03f3c5ed7da852309adb6d0eb463bdddc6d6d",
+    "server/communication/MessageHandler.ts": "sha256:83626357bb7704117dbb48f51901329514edf03f4fc32fa166bc83812303db2b",
     "server/communication/WebSocketCore.ts": "sha256:824dcee22c88aadaaa97a372aaf955ac4094374d6dc7e48af7455d6caadaecf8",
     "server/communication/clientCommandDecoder.ts": "sha256:bf5569d516c82d8d8d7ea9097c68db0ba17b8bcf488ceda5653c5a159d63652d",
     "server/communication/connectionAdmission.ts": "sha256:a2a9327cb76fedd362cc156431b31c5d648a0dc222b44b1f87558acc56d5910a",
@@ -79,7 +79,7 @@
     "server/core/BeltCrawlerManager.ts": "sha256:b82be9d9d1b690d9351e08eb73ce4c854d719967028e049bf5cc4d7790dc4263",
     "server/core/CollisionAuthority.ts": "sha256:4e184ce89aedaf85be7c5e5d8f5a6aa6d4c715b1727210905e4f9b0475566c87",
     "server/core/EntityManager.ts": "sha256:d3dcdf50bbc4471d31d9fab78036e7a29d15fb9c68805d949a6bf3129101369c",
-    "server/core/GameEngine.ts": "sha256:715e3eafd4c598aa362206f59710df7f96b2af56c56472a86c8f1a46269d6fc8",
+    "server/core/GameEngine.ts": "sha256:0c146cf34b738290b067d035e701a3412b8fd171e5637d7531f44344324efe4e",
     "server/core/GameLoopHealth.ts": "sha256:4c934a63da53b93facc60b6dadf197e95c3df69e749f90fe4c794eee22fe19ba",
     "server/core/LootManager.ts": "sha256:6e9cfd59737fa72c4d88955cad8bea3e3b43f9fdbd8e3256acd60f36e828ca57",
     "server/core/PlayerMotionService.ts": "sha256:fe85f7cd7f3e47278b6053c5ac616b3c8b696538664849517328cecb7926975a",
@@ -104,7 +104,7 @@
     "server/world/worldPersistence.ts": "sha256:c0b69372e9e7c588d9e53091f3ead314bf6dc479377ba3d4116819868778d8f5",
     "server/world/worldStoreWorker.ts": "sha256:ab144e0908be8341c729f03a88ce1c67750e881b29839212e7b1b8f8f1dde2ea",
     "server/world/worldStoreWorkerProtocol.ts": "sha256:1dce91c104ad10ea5e905477bfdc875557c58e2785535ac4bce0b5f28b4e8d61",
-    "shared-types.ts": "sha256:01e7e3582d0f54c31b0c0ae638e4ffd429f7b286673361855a874e46750f5d13",
+    "shared-types.ts": "sha256:0e68aeec2be9c2a97e1d01ffbf6f3578d9404602463b36d5e7c862ed9931f4be",
     "shared/asteroidBelt.ts": "sha256:94d55e4288a9d968066ac05f666ae0cfe757739166a00ff1dd7a368339378b49",
     "shared/asteroidBoost.ts": "sha256:98594cb2fc30bac61c5a7ce16e9015c9aeb2c5517caa9bbe05711991dbae5b9c",
     "shared/asteroidMaterials.ts": "sha256:fcdc8ed77c790da388f773cb55f54bf890562df76acc44d9bb2b5c2e41cab84b",
@@ -405,7 +405,7 @@
     "tests/unit/server/loot-manager.test.ts": "sha256:5f704100886852b8140f45a2a66aae88ed00e9461cc07c74b61c73ae6129c2e6",
     "tests/unit/server/mineral-scans-drive-spiders-away.test.ts": "sha256:2289a3232855de3968754ade62fbef0275b0cf3fab724591e55d279fa21e570e",
     "tests/unit/server/nearby-asteroid-queries-stay-local-as-the-world-grows.test.ts": "sha256:d9f9246b8cace56695ca00aacebf786abdd804ce2130af1f2bf5c46ab2b4cd4d",
-    "tests/unit/server/persistent-world-boundaries.test.ts": "sha256:d6258bae24672f795e086d0249898b5b87f0ccf7a8443d05fcbc9e2c9e3ad150",
+    "tests/unit/server/persistent-world-boundaries.test.ts": "sha256:96581b745dfcfc2d41bd9fdf297555714ac95925f1fafaff625eed53e127aaad",
     "tests/unit/server/pilot-release-stamps-credential-and-score-writes.test.ts": "sha256:1158753146cfe142fa65f232786731302d6894d8a383da27ec3a873459fee727",
     "tests/unit/server/pilots-bank-shots-at-the-central-court.test.ts": "sha256:1b81bd9b23ec35804328671ee7323a555c1077a7ae0b0c82641881ed15d614f7",
     "tests/unit/server/pilots-discover-guarded-resource-nests.test.ts": "sha256:5e90edbc23eb8cb27420843d95be94245eb7a38efcdb5c401ce6ab56f801730b",
@@ -3437,6 +3437,31 @@
         "src/network/networkManager.ts": "hud-network",
         "src/network/types.ts": "hud-network"
       }
+    },
+    {
+      "note": "W1 review fixes. The joined reply is typed against PlayerJoin, which documents the retired shotAcknowledgements field its two remaining readers still need; an unreachable fixture seeding call is removed; the protocol doc stops listing the retired consumed patch target; tests cover the joined terrainSeed, the healthy /status reply, and a pre-rename surveyor backup row. No rule, value, control or demonstration changed; every listed article and media contract was reviewed and none needs an edit.",
+      "sources": [
+        "docs/protocol/snapshot-v3.md",
+        "server/communication/MessageHandler.ts",
+        "server/core/GameEngine.ts",
+        "shared-types.ts",
+        "tests/unit/server/persistent-world-boundaries.test.ts"
+      ],
+      "topics": [
+        "asteroids",
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "hauler",
+        "hud-network",
+        "loot-growth",
+        "satellites",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": ["cargo", "hauler", "scout", "survival", "terrain"],
+      "owners": {}
     }
   ]
 }
