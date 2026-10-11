@@ -53,8 +53,6 @@ for (const name of required.needs) {
   assert.match(steps[1].run, /--text/u);
   assert.match(steps[1].run, /--diff-merges=remerge/u);
   assert.equal(steps[1].run, ci.jobs['static-checks'].steps[1].run);
-  // The lane copies select the pinned gitleaks archive for the x64 media lane's runner too.
-  assert.match(steps[1].run, /X64\) gitleaks_arch=x64 gitleaks_sha256=[0-9a-f]{64} ;;/u);
   assert.equal(steps[2].id, 'verified-tree');
   assert.equal(steps[2].run, 'bash scripts/ci-verified-tree.sh');
   const proof = steps.find((step) => step.name === 'Record validated PR tree');
@@ -78,6 +76,22 @@ assert.doesNotMatch(read('scripts/gate.mjs'), /pre-commit|npm.*gate/u);
 assert.equal(
   JSON.parse(read('package.json')).scripts['test:review'],
   'bash scripts/test-review.sh'
+);
+
+// The lanes' scan is the canonical `ci` step plus an x64 archive for the media lane: the same
+// release, arm64 pin and range logic, so a canonical bump cannot leave the lanes behind.
+const laneScan = ci.jobs['static-checks'].steps[1].run;
+const armPin = laneScan.match(
+  /^ {2}ARM64\) gitleaks_arch=arm64 gitleaks_sha256=([0-9a-f]{64}) ;;$/mu
+)?.[1];
+assert.ok(armPin, 'lane scan must pin the arm64 gitleaks archive');
+assert.match(laneScan, /^ {2}X64\) gitleaks_arch=x64 gitleaks_sha256=[0-9a-f]{64} ;;$/mu);
+assert.equal(
+  laneScan
+    .replace(/^case "\$RUNNER_ARCH" in\n[\s\S]*?^esac\n/mu, '')
+    .replace(/"(https:\S+)_\$\{gitleaks_arch\}\.tar\.gz"/u, '$1_arm64.tar.gz')
+    .replace('$gitleaks_sha256', armPin),
+  required.steps.find((step) => step.name === 'Secrets scan (range)').run
 );
 
 // Moving a check between lanes must neither remove nor duplicate a validation.
@@ -326,6 +340,12 @@ const aggregate = required.steps.find(
   (step) => step.name === 'Require all four validation lanes to pass'
 );
 assert.ok(aggregate);
+// The required check must run its aggregate on every event and fail when it fails.
+assert.equal(required['continue-on-error'], undefined);
+assert.deepEqual(
+  required.steps.filter((step) => step['continue-on-error'] !== undefined || step.if !== undefined),
+  []
+);
 const laneResults = {
   STATIC_RESULT: 'static-checks',
   RUNNER_RESULT: 'runner-contracts',
