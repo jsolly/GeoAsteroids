@@ -40,11 +40,12 @@ test('furnace intake tells every client the rock was consumed so they play the r
     world.send(hauler, {
       type: 'useAbility',
       id: hauler.id,
-      data: { kitId: 'hauler' },
+      data: {},
     });
     expect(actor.harpoonTargetId).toBeNull();
     resolveToolFlights(world.engine);
     expect(actor.harpoonTargetId).toBe(rock.id);
+    const scoreBefore = actor.score;
     hauler.socket.clear();
     world.engine.processFurnaceDeliveries();
     world.broadcastGameState();
@@ -56,6 +57,10 @@ test('furnace intake tells every client the rock was consumed so they play the r
       asteroidId: rock.id,
       furnaceId: furnace.id,
     });
+    // The reward reaches the pilot only through snapshot v3 rows.
+    const delivered = world.snapshot(hauler).entities.find((entity) => entity.id === hauler.id);
+    expect(delivered?.score).toBe(actor.score);
+    expect(actor.score).toBeGreaterThan(scoreBefore);
   } finally {
     world.dispose();
   }

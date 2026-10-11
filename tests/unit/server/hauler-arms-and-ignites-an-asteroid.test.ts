@@ -28,7 +28,7 @@ describe('A Hauler arms an asteroid, then sends it on a furnace-guided delivery'
     world.send(pilot, {
       type: 'useAbility',
       id: pilot.id,
-      data: { kitId: 'hauler' },
+      data: {},
     });
     resolveToolFlights(world.engine);
   }
@@ -80,7 +80,7 @@ describe('A Hauler arms an asteroid, then sends it on a furnace-guided delivery'
       world.send(bob, {
         type: 'useAbility',
         id: alice.id,
-        data: { kitId: 'hauler' },
+        data: {},
       });
       resolveToolFlights(world.engine);
       expect(rock.boost?.phase).toBe('armed');

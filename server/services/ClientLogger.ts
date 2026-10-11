@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
+import { RotatingLogFile } from '../../setup/rotatingLogFile';
 import { emitExternalLogRecord, logger } from '../../setup/serverLogger';
 import {
   createLogRecord,
@@ -16,7 +16,6 @@ const WINDOW_MS = 60_000;
 const MESSAGES_PER_WINDOW = 120;
 const BYTES_PER_WINDOW = 256 * 1024;
 const QUEUE_MAX_BYTES = 256 * 1024;
-const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const FLUSH_TIMEOUT_MS = 1000;
 
 type Payload = {
@@ -43,7 +42,7 @@ const quotas = new WeakMap<object, Quota>();
 const queue: QueuedLine[] = [];
 let queuedBytes = 0;
 let drainPromise: Promise<void> | null = null;
-let fileBytes: number | null = null;
+const clientLogFile = new RotatingLogFile('client.log');
 let accepted = 0;
 let invalid = 0;
 let rateLimited = 0;
@@ -137,44 +136,6 @@ function withinQuota(source: object, bytes: number): boolean {
   return true;
 }
 
-function logPath(): string {
-  return path.join(
-    process.env['GEOROIDS_TEST_LOG_DIR'] ?? path.join(process.cwd(), 'logs'),
-    'client.log'
-  );
-}
-
-async function size(filePath: string): Promise<number> {
-  if (fileBytes !== null) {
-    return fileBytes;
-  }
-  try {
-    fileBytes = (await fs.stat(filePath)).size;
-  } catch (error) {
-    if (isRecord(error) && error['code'] === 'ENOENT') {
-      fileBytes = 0;
-    } else {
-      throw error;
-    }
-  }
-  return fileBytes;
-}
-
-async function rotate(filePath: string, nextBytes: number): Promise<void> {
-  if ((await size(filePath)) + nextBytes <= FILE_MAX_BYTES) {
-    return;
-  }
-  await fs.rm(`${filePath}.1`, { force: true });
-  try {
-    await fs.rename(filePath, `${filePath}.1`);
-  } catch (error) {
-    if (!isRecord(error) || error['code'] !== 'ENOENT') {
-      throw error;
-    }
-  }
-  fileBytes = 0;
-}
-
 function reportWriteFailure(error: unknown, recordDropped = false): void {
   writeFailureSinceFlush = true;
   writeErrors++;
@@ -190,7 +151,7 @@ function reportWriteFailure(error: unknown, recordDropped = false): void {
 }
 
 async function drain(): Promise<void> {
-  const filePath = logPath();
+  const filePath = clientLogFile.path;
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
   } catch (error) {
@@ -202,9 +163,9 @@ async function drain(): Promise<void> {
       continue;
     }
     try {
-      await rotate(filePath, line.bytes);
+      await clientLogFile.rotateFor(line.bytes);
       await fs.appendFile(filePath, line.value, 'utf8');
-      fileBytes = (fileBytes ?? 0) + line.bytes;
+      clientLogFile.recordWritten(line.bytes);
     } catch (error) {
       reportWriteFailure(error, true);
     } finally {

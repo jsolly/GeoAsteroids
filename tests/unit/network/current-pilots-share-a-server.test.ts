@@ -422,13 +422,13 @@ describe('current pilots share the production handler and broadcaster', () => {
     peer.fake.clear();
     pressured.fake.bufferedAmount = SNAPSHOT_BACKPRESSURE_BYTES + 1;
 
-    broadcaster.broadcastChatMessage('peer', 'peer', 'hello');
+    broadcaster.broadcastAsteroidDestruction('rock-1');
 
     expect(pressured.close).toHaveBeenCalledWith(
       1013,
       'Backpressure; reconnect for state recovery'
     );
-    expect(pressured.messages.some((message) => message.type === 'chat')).toBe(false);
+    expect(pressured.messages.some((message) => message.type === 'asteroidDestroy')).toBe(false);
     const pressuredPlayer = engine.getPlayer('pressured');
     assert.ok(pressuredPlayer, 'pressured pilot retained for recovery');
     expect(pressuredPlayer.ws).toBeUndefined();
@@ -458,7 +458,10 @@ describe('current pilots share the production handler and broadcaster', () => {
     expect(snapshot.close).not.toHaveBeenCalled();
 
     event.fake.bufferedAmount = SNAPSHOT_BACKPRESSURE_BYTES - 1;
-    broadcaster.sendToWebSocket(event.ws, { type: 'chat', data: { message: 'hello' } });
+    broadcaster.sendToWebSocket(event.ws, {
+      type: 'asteroidDestroy',
+      data: { asteroidId: 'rock-1' },
+    });
     expect(event.close).toHaveBeenCalledWith(1013, 'Backpressure; reconnect for state recovery');
     const pressuredEventPlayer = engine.getPlayer('projected-event');
     assert.ok(pressuredEventPlayer, 'event pilot retained for recovery');

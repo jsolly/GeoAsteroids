@@ -129,9 +129,8 @@ latch. Reconnection uses authoritative attachment state and never replays an
 ability request.
 
 Scout snapshots include optional `scoutUtility` (`mineral_scan` or
-`survey_probe`; missing means mineral scan). Retired wire token `build_furnace`
-still decodes and readers map it to mineral scan; `setScoutUtility` rejects
-it. Near a dark furnace lot within approach range, `useAbility` builds that
+`survey_probe`; missing means mineral scan). The retired token `build_furnace`
+is rejected on the wire. Near a dark furnace lot within approach range, `useAbility` builds that
 furnace instead of launching the equipped scan or probe. Clients never submit a
 probe pose, target, health, or expiry.
 An asteroid's optional `probe` stores its beacon ID, owner, health, maximum

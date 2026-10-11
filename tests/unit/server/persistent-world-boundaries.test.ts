@@ -38,7 +38,6 @@ test('a mid-checkpoint write failure rolls back the whole world and stops furthe
     const engine = server.gameEngine;
     const socket = new RecordingSocket();
     const miner = engine.addPlayer('miner', 'Miner', socket, { x: 100, y: 100 });
-    miner.asteroidInteractions = 1;
     expect(engine.registerPilot(miner, socket).ok).toBe(true);
     const target: AsteroidData = {
       ...asteroid('rollback-target', { x: 500, y: 500 }),
@@ -81,6 +80,16 @@ test('a mid-checkpoint write failure rolls back the whole world and stops furthe
     });
     expect(health.status).toBe(503);
     expect(await health.json()).toHaveProperty('status', 'unhealthy');
+    // The operator status JSON reports the same outage instead of a fixed healthy answer.
+    const status = await fetch(`http://127.0.0.1:${port}/status`, {
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(3000),
+    });
+    expect(status.status).toBe(503);
+    expect(await status.json()).toMatchObject({
+      server: { status: 'unhealthy' },
+      websockets: { game: { status: 'unavailable' }, logs: { status: 'available' } },
+    });
     const blocked = new RecordingSocket();
     server.wsCore.getMessageHandler().handleMessage(
       {
@@ -216,7 +225,6 @@ test('stale transport removal captures a pilot before its private token resumes 
   const engine = new GameEngine(1);
   const socket = new RecordingSocket();
   const actor = engine.addPlayer('pilot', 'Pilot', socket, { x: 0, y: 0 });
-  actor.asteroidInteractions = 1;
   const registered = engine.registerPilot(actor, socket);
   if (!registered.ok) {
     throw new Error(registered.error);
@@ -678,12 +686,12 @@ test('stored spider silk survives a world checkpoint and reload without becoming
   }
 });
 
-test('a saved Surveyor resumes as Scout without losing flight state across repeated starts', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'georoids-scout-migration-'));
+test('a saved flight drops its retired lives count on load without rewriting the row', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'georoids-legacy-lives-'));
   const path = join(directory, 'world.sqlite');
   const saved = {
     ...scorePilot(777),
-    kitId: 'surveyor',
+    kitId: 'scout',
     lastSeenAt: 1234,
     position: { x: 100, y: 200 },
     velocity: { x: 1, y: 2 },
@@ -701,9 +709,7 @@ test('a saved Surveyor resumes as Scout without losing flight state across repea
       const store = new WorldStore(path);
       try {
         const { lives: _legacyLives, ...flight } = saved;
-        expect(store.loadPilots()).toEqual([
-          { ...flight, kitId: 'scout', cargo: 0, purchases: [] },
-        ]);
+        expect(store.loadPilots()).toEqual([{ ...flight, cargo: 0, purchases: [] }]);
       } finally {
         store.close();
       }
@@ -712,7 +718,7 @@ test('a saved Surveyor resumes as Scout without losing flight state across repea
     try {
       expect(
         JSON.parse(String(readback.prepare('SELECT json FROM pilots').get()?.['json']))
-      ).toEqual({ ...saved, kitId: 'scout' });
+      ).toEqual(saved);
     } finally {
       readback.close();
     }

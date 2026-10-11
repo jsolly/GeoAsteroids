@@ -110,8 +110,7 @@ test('an owned player motion session still pulls cargo on the authoritative serv
   const hauler = actor('hauler');
   const ws = hauler.ws;
   assert(ws);
-  hauler.asteroidInteractions = 1;
-  expect(engine.playerMotion.register(hauler, ws, 1, engine.getServerTime()).ok).toBe(true);
+  expect(engine.playerMotion.register(hauler, ws, engine.getServerTime()).ok).toBe(true);
   const rock = deposit('cargo', { x: 0, y: 0 });
   engine.addAsteroid(rock);
   hauler.angle = Math.PI;

@@ -2,7 +2,7 @@ import type { AsteroidMaterial, LootKind } from '../../../shared-types';
 import { PALETTE } from '../../constants';
 import type { DrawingContext } from '../drawingContext';
 
-type ResourceMapIcon = 'asteroid' | 'satellite' | 'nest' | LootKind;
+type ResourceMapIcon = 'asteroid' | 'satellite' | 'nest' | 'wreckage' | LootKind;
 
 export function asteroidMapInk(material: AsteroidMaterial | undefined) {
   switch (material) {

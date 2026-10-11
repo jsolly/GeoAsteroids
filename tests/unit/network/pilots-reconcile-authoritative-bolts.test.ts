@@ -89,14 +89,14 @@ describe('pilots reconcile complete authoritative bolts through the actual socke
     vi.unstubAllEnvs();
   });
 
-  function acknowledge(ws: Transport, supportsShots = true): void {
+  function acknowledge(ws: Transport): void {
     ws.receive('joined', {
       id: manager.getClientId(),
       name: 'Projectile observer',
       position: { x: 0, y: 0 },
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
-      ...(supportsShots ? { shotAcknowledgements: true } : {}),
+      terrainSeed: 7,
       resumeToken: 'a'.repeat(64),
     });
   }
@@ -200,7 +200,6 @@ describe('pilots reconcile complete authoritative bolts through the actual socke
     const ws = await connect();
     const first = frame([bolt('stable-shot')]);
     ws.receive('snapshot', new SnapshotEncoder(first).encode(1));
-    expect(field.isEnabled()).toBe(true);
     expect(ship().lasers).toHaveLength(1);
     const original = ship().lasers[0];
     expect(original?.serverId).toBe('stable-shot');
@@ -232,7 +231,6 @@ describe('pilots reconcile complete authoritative bolts through the actual socke
     );
     expect(ship().lasers).toEqual([]);
     expect(field.getProjectiles()).toEqual([]);
-    expect(field.isEnabled()).toBe(true);
   });
 
   test('rejected, timed-out and disconnected predictions leave no ghost and receipts cannot claim another shot', async () => {
@@ -304,21 +302,6 @@ describe('pilots reconcile complete authoritative bolts through the actual socke
     });
     expect(local.ship.lasers).toEqual([]);
     expect(unobserved?.serverId).toBeUndefined();
-  });
-
-  test('a client joining a server without shot receipts does not duplicate its authoritative bolt', async () => {
-    const local = PlayerManager.getInstance().createLocalPlayer('scout');
-    const ws = await connect();
-    acknowledge(ws, false);
-    receiveLocalPose(ws);
-    local.ship.fireLaser();
-    expect(ws.sent.findLast((packet) => packet.type === 'shoot')?.data).not.toHaveProperty(
-      'requestId'
-    );
-    field.sync([{ ...bolt('older-server-shot'), ownerId: local.id }]);
-    field.reconcileShip(local.ship, local.id);
-    expect(local.ship.lasers).toHaveLength(1);
-    expect(local.ship.lasers[0]?.serverId).toBe('older-server-shot');
   });
 
   test('a missed delta requests one resync without replaying old bolts and a rejoin recovers exactly the current keyed list', async () => {

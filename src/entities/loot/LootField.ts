@@ -14,17 +14,14 @@ export class LootField {
   }
 
   applySnapshot(loot: LootData[]): void {
-    // Reserved wreckage rows are not collectible world loot.
-    this.loot = loot
-      .filter((drop) => drop.kind !== 'wreckage')
-      .map((drop) => ({
-        id: drop.id,
-        position: { x: drop.position.x, y: drop.position.y },
-        mass: drop.mass,
-        radius: drop.radius,
-        kind: drop.kind,
-        ...(drop.points !== undefined ? { points: drop.points } : {}),
-      }));
+    this.loot = loot.map((drop) => ({
+      id: drop.id,
+      position: { x: drop.position.x, y: drop.position.y },
+      mass: drop.mass,
+      radius: drop.radius,
+      kind: drop.kind,
+      ...(drop.points !== undefined ? { points: drop.points } : {}),
+    }));
   }
 
   getAll(): LootData[] {

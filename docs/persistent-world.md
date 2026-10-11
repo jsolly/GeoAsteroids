@@ -52,7 +52,7 @@ loses or duplicates a rock.
 
 Furnace IDs retain their historical `street-<ring>-<slot>` addresses so existing saved sites and pipe routes stay intact. Builder names and public IDs remain construction attribution; they do not affect rewards.
 
-Older world rows without `civicModules` load with only Town Square burning. A leftover `townCredit` value is ignored and dropped on the next world write. A leftover `litCivicLotIds` list loads as unnamed furnaces when `civicModules` is absent. A leftover `builtFurnaces` key is ignored and dropped on the next world write. A leftover `scoreSeason` key is ignored and dropped on the next world write. An illegal set of named furnaces fails startup rather than silently dropping them. A present `builderId` must be a short public pilot id; omitting it leaves an older unnamed furnace valid. Pilots may store `hullColor` only when it is a catalog paint hex. A non-string value rejects the pilot row. An unknown string is ignored. Purchased paint stays with the pilot across restarts. Building a furnace spends that Scout's score and changes memory only; the existing worker checkpoint writes the world row. A spatial index bounds local intake, spider-safety, and guidance lookups instead of scanning every saved structure.
+Older world rows without `civicModules` load with only Town Square burning. A leftover `townCredit` value is ignored and dropped on the next world write. A leftover `builtFurnaces` key is ignored and dropped on the next world write. A leftover `scoreSeason` key is ignored and dropped on the next world write. An illegal set of named furnaces fails startup rather than silently dropping them. A present `builderId` must be a short public pilot id; omitting it leaves an older unnamed furnace valid. Pilots may store `hullColor` only when it is a catalog paint hex. A non-string value rejects the pilot row. An unknown string is ignored. Purchased paint stays with the pilot across restarts. Building a furnace spends that Scout's score and changes memory only; the existing worker checkpoint writes the world row. A spatial index bounds local intake, spider-safety, and guidance lookups instead of scanning every saved structure.
 
 A private bearer token restores banked points, cargo, purchase receipts, and
 saved identity across reconnects and restarts. Recent healthy flights restore
@@ -68,7 +68,7 @@ The full-screen universe map shows shared exploration and revealed landmarks acr
 
 Asteroid boost couplings are stored with their deposit. Ignited couplings retain their original owner and resume guidance to the nearest furnace after restart. Their sectors stay awake until delivery. Guidance pauses when the world has no players. Legacy saved finite burns had no owner ID; the storage loader cancels only that propulsion, preserving the deposit and its momentum. New snapshots require an owner ID for ignited cargo, so deploy the server and client together and refresh older clients. Armed couplings lose their owner when the live attachment ends and clear before the next motion step; disconnect and removal clear them immediately.
 
-Local development writes `.data/world.sqlite` by default. This directory and its journals are ignored by Git. `GEOROIDS_WORLD_PATH` overrides the location. The integration runner uses `:memory:` so tests cannot reset a developer's saved world. Direct server instances in tests are in-memory unless given a `worldPath`.
+Local development writes `.data/world.sqlite` by default. This directory and its journals are ignored by Git. `GEOROIDS_WORLD_PATH` overrides the location. Tests never open it: server instances they create are in-memory unless given a `worldPath`.
 
 ## Railway deployment and recovery
 
@@ -103,14 +103,11 @@ checkpoint batch. The usual hard-crash write-behind loss window still applies.
 ## Scout rename
 
 The former Surveyor kit is now Scout, including the `scout` network ID and
-`scoutUtility` field. On opening the database, the server rewrites saved pilot
-kit IDs from `surveyor` to `scout` before validating their flight state. Scores,
-positions, inventory and resume credentials remain intact. The client migrates
-the saved utility preference to `georoids.scoutUtility`.
-
-Deploy the server and client together for this protocol change; old clients
-must reload. The previous server cannot interpret the migrated Scout flight
-IDs, so rolling back requires restoring the pre-deploy database backup.
+`scoutUtility` field. The startup rewrite of saved `surveyor` kit IDs has been
+retired: every live row was rewritten long ago. A pilot row restored from an
+older backup keeps its score, inventory and credentials; only its stored flight
+pose is dropped, which was already past its 30-second return window. The client
+migrates the saved utility preference to `georoids.scoutUtility`.
 
 ## Economy persistence
 

@@ -1,11 +1,10 @@
 import { expect, test } from 'vitest';
 import {
+  DEFAULT_HAULER_UTILITY,
   haulerUtilityOf,
   isResourceTapUtility,
   isTowCableUtility,
-  PREFERRED_HAULER_UTILITY,
   parseHaulerUtilityId,
-  UNSET_HAULER_UTILITY,
 } from '../../../shared/shipUtilities';
 import { HAULER_UTILITY } from '../../../src/entities/ship/haulerUtility';
 import {
@@ -34,9 +33,9 @@ function host(kitId: AbilityHost['kitId'] = 'hauler'): AbilityHost {
 }
 
 test('a new Hauler starts with the freely available tow cable', () => {
-  expect(parseHaulerUtilityId('nope')).toBe(UNSET_HAULER_UTILITY);
+  expect(parseHaulerUtilityId('nope')).toBe(DEFAULT_HAULER_UTILITY);
   expect(haulerUtilityOf(host())).toBe('tow_cable');
-  expect(PREFERRED_HAULER_UTILITY).toBe('tow_cable');
+  expect(DEFAULT_HAULER_UTILITY).toBe('tow_cable');
   expect(HAULER_UTILITY.resource_tap.name).toBe('Resource Tap');
 });
 
