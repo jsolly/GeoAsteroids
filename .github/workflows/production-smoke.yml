@@ -22,13 +22,17 @@ concurrency:
   cancel-in-progress: false
 jobs:
   smoke:
-    # Replace REPLACE_PRODUCTION_ENVIRONMENT with the host's production deployment environment name.
+    # Match the observed Railway project and environment before running the custom smoke.
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'deployment_status' &&
        github.event.deployment_status.state == 'success' &&
        github.event.deployment.environment == 'GeoRoids / production' &&
        github.event.deployment.task == 'deploy' &&
+       (github.event.deployment.ref == 'main' ||
+        github.event.deployment.ref == 'refs/heads/main' ||
+        github.event.deployment.ref == github.event.deployment.sha) &&
+       github.event.deployment_status.environment_url == 'https://railway.com/project/08a7b6ee-af66-4c58-a21e-700d5468ee14?environmentId=94d3de2f-4bb0-4051-8975-a30190c2fffa' &&
        github.event.deployment.creator.login == 'railway-app[bot]')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
@@ -42,6 +46,10 @@ jobs:
           ref: ${{ github.event.deployment.sha || inputs.release_sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify the release belongs to main
+        run: |
+          [[ "$PRODUCTION_SMOKE_RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git merge-base --is-ancestor "$PRODUCTION_SMOKE_RELEASE_SHA" origin/main
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
