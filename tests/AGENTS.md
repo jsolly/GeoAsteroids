@@ -148,6 +148,9 @@ Cleanup failures fail the run. Report the commands actually run, skipped checks
 and removed coverage. Any skipped or quarantined case needs a reason and repair
 step; it never counts as a pass. `npm run gate` remains the complete pre-publication gate.
 All enabled lint findings are errors; do not add suppressions to get green.
+The one accepted Svelte suppression is `a11y_no_noninteractive_tabindex` on a
+named, focusable `role="region"` scroll container, with its reason inside the
+directive.
 Retain printed artifact directories and actual exit results outside tracked
 source. Do not commit generated logs or reports.
 

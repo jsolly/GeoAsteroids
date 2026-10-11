@@ -3,12 +3,15 @@
   import { isShipKitId } from '../../entities/ship/shipKits';
   import type { WikiArticle } from '../../wiki/article';
   import { setMediaSource, shouldAutoplayMedia } from '../../wiki/mediaPlayback';
-  import { articleHtml, overviewHtml } from '../../wiki/presentation';
   import { WikiScrollMemory } from '../../wiki/scrollMemory';
   import { searchArticles } from '../../wiki/search';
   import { mountShipRadar } from '../../wiki/shipScorecard';
   import Button from '../ui/button/button.svelte';
   import Input from '../ui/input/input.svelte';
+  import ShipHull from './ShipHull.svelte';
+  import ShipScorecard from './ShipScorecard.svelte';
+  import TopicCard from './TopicCard.svelte';
+  import WikiOverview from './WikiOverview.svelte';
 
   let { articles }: { articles: WikiArticle[] } = $props();
   let initialized = $state(false);
@@ -17,10 +20,17 @@
   let navigationOpen = $state(false);
   let content: HTMLElement;
   let searchInput = $state<HTMLInputElement | null>(null);
+  // Keyed by article: the static document renders every ship article before one becomes active.
+  let radars = $state<Record<string, HTMLElement | null>>({});
   const categories = $derived([...new Set(articles.map((entry) => entry.category))]);
   const results = $derived(searchArticles(articles, query.trim()));
   const article = $derived(articles.find((entry) => entry.id === route));
   const overview = $derived(!route || route === 'content' || route === 'ships');
+  function relatedArticles(entry: WikiArticle) {
+    return entry.related
+      .map((id) => articles.find((item) => item.id === id))
+      .filter((item): item is WikiArticle => item !== undefined);
+  }
   let memory: WikiScrollMemory | undefined;
   let searchHeld = false;
   let alive = true;
@@ -110,7 +120,7 @@
       if (article.media.length !== content.querySelectorAll('.demo').length) {
         throw new Error(`Media mapping mismatch for ${article.id}`);
       }
-      const radar = content.querySelector<HTMLElement>('.ship-radar');
+      const radar = radars[article.id];
       if (radar && isShipKitId(article.id)) {
         disposeRadar = mountShipRadar(radar, article.id);
       }
@@ -310,24 +320,52 @@
     </aside>
     <main id="content" tabindex="-1" bind:this={content}>
       {#if !initialized || (!query.trim() && overview)}<div data-panel="overview">
-          {@html overviewHtml(articles)}
+          <WikiOverview {articles} />
         </div>{/if}
       {#each articles as entry (entry.id)}{#if !initialized || (!query.trim() && route === entry.id)}<section
             id={entry.id}
             data-panel="article"
           >
-            {@html articleHtml(entry, articles)}
+            <div class="breadcrumb">
+              <a href="#content">Field manual</a><span aria-hidden="true">/</span><span
+                >{entry.category}</span
+              >
+            </div>
+            <article>
+              <header class="article-header">
+                <p class="eyebrow">{entry.category}</p>
+                <div class="article-title">
+                  {#if isShipKitId(entry.id)}<ShipHull id={entry.id} size={80} />{/if}
+                  <h1>
+                    {entry.title}
+                  </h1>
+                </div>
+                <p class="article-summary">{entry.summary}</p>
+              </header>
+              {#if isShipKitId(entry.id)}<ShipScorecard
+                  id={entry.id}
+                  bind:radar={radars[entry.id]}
+                />{/if}
+              <!-- Compiled at build time with Markdown HTML disabled; scripts/wiki-content.ts owns .demo. -->
+              <div class="article-body">{@html entry.html}</div>
+              <aside class="related">
+                <p class="eyebrow">KEEP EXPLORING</p>
+                <h2>Related entries</h2>
+                <div>
+                  {#each relatedArticles(entry) as item (item.id)}<a
+                      class="related-link"
+                      href={`#${item.id}`}>{item.title}</a
+                    >{/each}
+                </div>
+              </aside>
+            </article>
           </section>{/if}{/each}
       {#if initialized && query.trim()}<section class="search-results" data-panel="search">
           <p class="eyebrow">Search the manual</p>
           <h1>Results for “{query.trim()}”</h1>
           <p>{results.length} {results.length === 1 ? 'entry' : 'entries'} found</p>
           <div class="topic-grid">
-            {#each results as entry (entry.id)}<a class="topic-card" href={`#${entry.id}`}
-                ><span>{entry.category}</span>
-                <h2>{entry.title}</h2>
-                <p>{entry.summary}</p></a
-              >{/each}
+            {#each results as entry (entry.id)}<TopicCard article={entry} headingLevel={2} />{/each}
           </div>
           {#if !results.length}<h2>No matching entries</h2>
             <p>Try a ship name, “furnace”, “minerals”, or “asteroid”.</p>
@@ -445,57 +483,42 @@
   main :global(a:hover) {
     text-decoration: underline;
   }
-  main :global(.eyebrow),
-  main :global(.card-category) {
+  main :global(.eyebrow) {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted-foreground);
   }
-  main :global(.topic-grid),
-  main :global(.ship-grid) {
+  .topic-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
     gap: 1rem;
     margin: 1.5rem 0;
   }
-  main :global(.topic-card),
-  main :global(.ship-card) {
-    display: block;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    background: var(--card);
-  }
-  main :global(.hero),
-  main :global(.section-block),
-  main :global(article) {
+  article {
     margin-bottom: 3rem;
   }
-  main :global(.hero-orbit) {
-    display: none;
-  }
-  main :global(.hero-links),
-  main :global(.related > div),
-  main :global(.breadcrumb) {
+  .related > div,
+  .breadcrumb {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
   }
-  main :global(.article-title) {
+  .article-title {
     display: flex;
     align-items: center;
     gap: 1rem;
   }
-  main :global(.table-scroll) {
+  /* Global rules below style markup compiled into each article body. */
+  main :global(.article-body .table-scroll) {
     overflow: auto;
   }
-  main :global(table) {
+  main :global(.article-body table) {
     width: 100%;
     border-collapse: collapse;
   }
-  main :global(th),
-  main :global(td) {
+  main :global(.article-body th),
+  main :global(.article-body td) {
     text-align: left;
     padding: 0.75rem;
     border-bottom: 1px solid var(--border);
@@ -507,45 +530,11 @@
     height: auto;
     border-radius: 0.5rem;
   }
-  main :global(.topic-demo-card),
-  main :global(.ship-scorecard) {
+  main :global(.topic-demo-card) {
     padding: 1.5rem;
     margin: 1.5rem 0;
     border: 1px solid var(--border);
     border-radius: 0.75rem;
-  }
-  main :global(.ship-profile-layout) {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  main :global(.ship-radar) {
-    height: 260px;
-    min-width: 0;
-  }
-  main :global(.ship-ability-name) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  main :global(.ship-stat) {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-  }
-  main :global(.stat-bubbles) {
-    display: inline-flex;
-    gap: 3px;
-    margin-left: 0.5rem;
-  }
-  main :global(.stat-bubble) {
-    width: 6px;
-    height: 6px;
-    border-radius: 100%;
-    background: var(--muted);
-  }
-  main :global(.stat-bubble.filled) {
-    background: var(--foreground);
   }
   .skip-link {
     position: absolute;
@@ -566,9 +555,6 @@
     }
     .sidebar {
       position: static;
-    }
-    main :global(.ship-profile-layout) {
-      grid-template-columns: 1fr;
     }
     .site-header {
       flex-wrap: wrap;
