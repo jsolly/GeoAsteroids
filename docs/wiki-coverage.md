@@ -6,8 +6,8 @@ are also recorded by article ID in `src/wiki/articleSources.json`. Editorial tex
 
 The browser test suite is retired. This inventory identifies owning gameplay
 source; source review and deterministic code checks do not certify native browser
-rendering, keyboard/touch delivery or audio. Assets and manual Wiki media capture
-are retained. The test-tooling removal changes no player-facing rule or Wiki text.
+rendering, keyboard/touch delivery or audio. Assets and Wiki media generation
+are retained; CI verifies the generated baseline. The test-tooling removal changes no player-facing rule or Wiki text.
 
 Code cases whose claimed outcomes depend on uncontrolled server deadlines are
 also removed. A retained source-file citation identifies the owning rules and

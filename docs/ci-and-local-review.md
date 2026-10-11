@@ -7,16 +7,21 @@ publication; PR CI independently validates the integration inventory.
 
 ## Required PR checks
 
-`static-checks`, `runner-contracts` and `integration-tests` start concurrently.
+`static-checks`, `runner-contracts`, `integration-tests` and `wiki-media` start concurrently.
 Static checks cover lint policy, formatting, unused code, Markdown, YAML, Actions,
 TypeScript, benchmark types, Wiki source review and the production build.
 Runner contracts exercise owned process startup, admission, ports and cleanup.
 Integration runs every test in `tests/integration/server/` and
-`tests/integration/entities/` through the repository runner.
+`tests/integration/entities/` through the repository runner. Wiki media verifies
+the committed demonstration baseline on `ubuntu-24.04`, the x64 platform that owns
+it, and uploads a regenerated candidate when it is stale; the other lanes run on
+arm64 ([Wiki maintenance](wiki-maintenance.md#generate-or-verify-gifs)).
 
-The required `ci` aggregate succeeds only when all three lanes succeed. Failed,
+The required `ci` aggregate succeeds only when all four lanes succeed. Failed,
 cancelled, skipped or absent required evidence cannot pass. Each lane performs
-the canonical range secrets scan before considering reusable exact-tree proof.
+the range secrets scan before considering reusable exact-tree proof. The lanes'
+copy selects the pinned gitleaks archive for its runner architecture, because the
+media lane runs on x64; the `ci` job keeps the canonical arm64 step.
 Post-merge CI reuses successful PR evidence only for the identical Git tree and
 matching lane. Missing proof reruns that lane; manual dispatch validates normally.
 Dependabot keeps its explicit manual-drain invocation gate.
@@ -42,7 +47,7 @@ the scenario checkout/request receipt;
 a skipped, failed, missing or timed-out smoke remains unverified.
 
 This test-tooling removal changes no gameplay behavior, controls, assets or Wiki
-player instructions. Wiki media generation remains a manual browser tool.
+player instructions. Wiki media generation uses node-canvas, not a browser.
 
 ## Exact validation receipts
 

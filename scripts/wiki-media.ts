@@ -2,8 +2,8 @@ import type { ShipKitId } from '../shared-types';
 import { drawSatelliteHealth } from '../src/entities/satellitePickup/satelliteHealthRenderer';
 import { drawSatellitePickupGlow } from '../src/entities/satellitePickup/satellitePickupGlow';
 import { scannedMaterial } from '../src/entities/ship/surveyScan';
-import './wiki-media-node-shim';
 import './wiki-media-fonts';
+import './wiki-media-node-shim';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -124,6 +124,11 @@ const SEED = 0x4f9d3c21;
 const ENCODER_VERSION = 'Pillow 12.3.0';
 const ENCODER_SCRIPT = resolve('scripts/wiki-media-encode.py');
 const STAR_SEED = 0x9e3779b9;
+// Committed assets are rendered and verified on this platform only; arm64 and macOS rasterize
+// a few pixels differently. CI's wiki-media lane runs here and uploads a regenerated baseline.
+const BASELINE_PLATFORM = 'linux-x64';
+const HOST_PLATFORM = `${process.platform}-${process.arch}`;
+const COMMITTED_OUTPUT = resolve('public/wiki/media');
 
 function renderHull(
   ctx: RenderContext,
@@ -213,7 +218,8 @@ interface AssetManifest {
 }
 
 interface MediaManifest {
-  version: 1;
+  version: 2;
+  platform: string;
   seed: number;
   simulationFps: number;
   ticksPerFrame: number;
@@ -1939,7 +1945,7 @@ function encodeGif(python: string, frames: string, output: string): void {
 }
 
 function parseArgs(): { output: string; python: string; verifyOnly: boolean } {
-  let output = resolve('public/wiki/media');
+  let output = COMMITTED_OUTPUT;
   let python = process.env['WIKI_MEDIA_PYTHON'] ?? 'python3';
   let verifyOnly = false;
   const args = process.argv.slice(2);
@@ -2008,6 +2014,7 @@ function verifyExistingOutput(output: string, expectedManifest: MediaManifest): 
   }
   invariant(
     actualManifest.version === expectedManifest.version &&
+      actualManifest.platform === expectedManifest.platform &&
       actualManifest.seed === expectedManifest.seed &&
       actualManifest.simulationFps === expectedManifest.simulationFps &&
       actualManifest.ticksPerFrame === expectedManifest.ticksPerFrame &&
@@ -2042,6 +2049,11 @@ function verifyExistingOutput(output: string, expectedManifest: MediaManifest): 
 function main(): void {
   verifyCoverage();
   const { output, python, verifyOnly } = parseArgs();
+  if ((verifyOnly || output === COMMITTED_OUTPUT) && HOST_PLATFORM !== BASELINE_PLATFORM) {
+    throw new Error(
+      `wiki-media baseline belongs to ${BASELINE_PLATFORM}; this host is ${HOST_PLATFORM}. Preview with --output <dir>, or commit the baseline from CI's wiki-media lane (docs/wiki-maintenance.md).`
+    );
+  }
   invariant(existsSync(ENCODER_SCRIPT), `missing encoder ${ENCODER_SCRIPT}`);
   const tempRoot = mkdtempSync(join(tmpdir(), 'georoids-wiki-media-'));
   const runA = renderRun(join(tempRoot, 'run-a'));
@@ -2088,7 +2100,8 @@ function main(): void {
   }
 
   const manifest: MediaManifest = {
-    version: 1,
+    version: 2,
+    platform: HOST_PLATFORM,
     seed: SEED,
     simulationFps: GAME.FPS,
     ticksPerFrame: SIM_TICKS_PER_FRAME,

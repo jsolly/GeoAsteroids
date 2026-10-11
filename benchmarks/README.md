@@ -5,8 +5,7 @@ of the benchmark harness. It produces raw artifacts for review. It does not make
 an optimization claim, a frame-rate guarantee, or a supported-capacity claim.
 
 Browser benchmarks and frame measurements are manual tools outside `npm run gate`
-and CI code-test validation. Playwright remains for those tools and Wiki media
-capture. Manual test-runner benchmark modes and frame measurements use the common-Git
+and CI code-test validation. Playwright remains for those tools. Manual test-runner benchmark modes and frame measurements use the common-Git
 heavyweight queue; code checks can overlap across different worktrees. The same
 checkout excludes overlapping validation. Install Chromium for browser tools with
 `npx --no-install playwright install chromium`.

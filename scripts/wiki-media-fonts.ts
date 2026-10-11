@@ -1,5 +1,6 @@
 /**
- * Pins demonstration text to committed Liberation Sans faces.
+ * Pins demonstration text to the committed Liberation Sans 2.1.5 faces (SIL OFL 1.1,
+ * see wiki-media-fonts/OFL.txt).
  *
  * The generator and the game renderers it reuses request `Arial`. Liberation Sans is
  * metric-compatible with Arial, so registering it under that family keeps text layout
