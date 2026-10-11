@@ -96,7 +96,7 @@ import type {
   ToolTargetPose,
   Velocity,
 } from '../../shared-types';
-import { CANVAS, DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../src/constants';
+import { DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../src/constants';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import {
   activateAbilityOnHost,
@@ -222,8 +222,6 @@ export interface CombatBroadcast {
 
 type CombatSink = (result: CombatBroadcast) => void;
 
-/** Matches client Laser.isExpired when the canvas is the internal playfield. */
-const SERVER_LASER_MAX_DISTANCE = LASER.TRAVEL_DISTANCE_RATIO + CANVAS.INTERNAL_WIDTH;
 /** 250 ms covers a delayed position packet at 30 Hz plus a brief browser/network hitch. */
 export const PLAYER_SHOOT_POSE_ALLOWANCE_MS = 250;
 /** Bounded positional rounding/muzzle disagreement in addition to the movement allowance. */
@@ -2402,7 +2400,7 @@ export class GameEngine {
       };
       laser.distTraveled += getVelocityMagnitude(laser.velocity);
 
-      if (laser.distTraveled >= SERVER_LASER_MAX_DISTANCE) {
+      if (laser.distTraveled >= LASER.MAX_TRAVEL_DISTANCE) {
         this.observeFixtureTerminal(laser, 'distance-limit');
         this.lasers.splice(i, 1);
         continue;

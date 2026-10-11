@@ -41,30 +41,41 @@ describe('shared ship motion helper', () => {
     expect(laser.position.y - start.y).toBeCloseTo(0);
   });
 
-  test('slower shots keep viewport reach and the 250 millisecond fire cooldown', () => {
-    vi.spyOn(canvasManager, 'getCanvas').mockReturnValue({
-      width: 390,
-      height: 844,
-    } as HTMLCanvasElement);
-    vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue({ width: 390, height: 844 });
+  test.each([
+    { screen: 'a 390-wide phone', viewport: { width: 390, height: 844 } },
+    { screen: 'a 1280-wide desktop', viewport: { width: 1280, height: 900 } },
+    { screen: 'no canvas', viewport: null },
+  ])('a shot reaches 800 world units on $screen, as the server enforces', ({ viewport }) => {
+    if (viewport) {
+      vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(document.createElement('canvas'));
+      vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue(viewport);
+    } else {
+      vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(null);
+    }
+    const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true });
+    ship.angle = 0;
+    ship.velocity = { x: 0, y: 0 };
+    const laser = createLaser(ship);
+    ship.lasers = [laser];
+    expect(LASER.MAX_TRAVEL_DISTANCE).toBe(800);
+    expect(LASER.SPEED / GAME.FPS).toBe(2.8125);
+    // 284 steps of 2.8125 = 798.75 units, still in flight; step 285 = 801.5625 crosses 800.
+    for (let frame = 0; frame < 284; frame += 1) {
+      ship.moveLasers();
+    }
+    expect(ship.lasers).toEqual([laser]);
+    expect(laser.distTraveled).toBeCloseTo(798.75);
+    ship.moveLasers();
+    expect(laser.distTraveled).toBeCloseTo(801.5625);
+    expect(ship.lasers).toEqual([]);
+  });
+
+  test('ships keep the 250 millisecond fire cooldown', () => {
     let now = 1000;
     vi.spyOn(Date, 'now').mockImplementation(() => now);
     const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true });
     ship.angle = 0;
     ship.velocity = { x: 0, y: 0 };
-    const laser = createLaser(ship);
-    const step = LASER.SPEED / GAME.FPS;
-    const reach = LASER.TRAVEL_DISTANCE_RATIO + 390;
-    const framesBeforeExpiry = Math.floor((reach - 1e-9) / step);
-    for (let frame = 0; frame < framesBeforeExpiry; frame += 1) {
-      laser.move();
-    }
-    expect(laser.distTraveled).toBeCloseTo(framesBeforeExpiry * step);
-    expect(laser.isExpired()).toBe(false);
-    laser.move();
-    expect(laser.distTraveled).toBeCloseTo((framesBeforeExpiry + 1) * step);
-    expect(laser.isExpired()).toBe(true);
-
     ship.shoot();
     expect(ship.lasers).toHaveLength(1);
     expect(ship.canShoot).toBe(false);
