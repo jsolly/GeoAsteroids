@@ -3,6 +3,7 @@ import { drawSatelliteHealth } from '../src/entities/satellitePickup/satelliteHe
 import { drawSatellitePickupGlow } from '../src/entities/satellitePickup/satellitePickupGlow';
 import { scannedMaterial } from '../src/entities/ship/surveyScan';
 import './wiki-media-node-shim';
+import './wiki-media-fonts';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
