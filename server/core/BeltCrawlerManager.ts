@@ -17,7 +17,7 @@ interface Actor {
   exploding: boolean;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
-  radius?: number;
+  radius: number;
 }
 interface AdvanceOptions {
   /** The live rock field: host lookup, host iteration and spatial queries. */
@@ -354,7 +354,7 @@ export class BeltCrawlerManager {
             target &&
             !body.struck &&
             Math.hypot(target.position.x - body.position.x, target.position.y - body.position.y) <=
-              BELT_CRAWLER.HIT_RADIUS + (target.radius ?? 18) &&
+              BELT_CRAWLER.HIT_RADIUS + target.radius &&
             !this.impact(body.position, target.position)
           ) {
             attacks.push({ spiderId: id, targetId: target.id, attackerId: 'spider' });
@@ -589,7 +589,7 @@ export class BeltCrawlerManager {
   private canReach(position: Position, target: Actor): boolean {
     return (
       Math.hypot(target.position.x - position.x, target.position.y - position.y) <=
-        BELT_CRAWLER.LUNGE_REACH + (target.radius ?? 18) && !this.impact(position, target.position)
+        BELT_CRAWLER.LUNGE_REACH + target.radius && !this.impact(position, target.position)
     );
   }
 

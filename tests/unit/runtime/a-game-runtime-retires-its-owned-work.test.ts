@@ -236,6 +236,7 @@ async function joinThroughTransport(name: string): Promise<RecordingTransport> {
     color: '#fff',
     snapshotVersion: SNAPSHOT_VERSION,
     asteroidInteractions: 1,
+    terrainSeed: 7,
     resumeToken: 'a'.repeat(64),
   });
   const state = snapshotFixture();

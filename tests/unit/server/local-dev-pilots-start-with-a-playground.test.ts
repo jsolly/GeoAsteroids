@@ -67,14 +67,12 @@ test('a local restart preserves builder ownership and larger balances while live
     const scout = first.addPlayer('builder', 'Ada', scoutSocket, lot.position, 'scout');
     scout.position = { ...lot.position };
     scout.score = lot.cost + 200;
-    scout.asteroidInteractions = 1;
     expect(first.useAbility(scout.id)).toBe(true);
     const low = first.registerPilot(scout, scoutSocket);
     assert(low.ok);
     const richSocket = new RecordingSocket();
     const rich = first.addPlayer('rich', 'Rich', richSocket);
     rich.score = 9_000;
-    rich.asteroidInteractions = 1;
     const high = first.registerPilot(rich, richSocket);
     assert(high.ok);
     first.removePlayer(scout.id);

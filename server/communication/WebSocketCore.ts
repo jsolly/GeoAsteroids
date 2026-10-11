@@ -31,14 +31,6 @@ export class WebSocketCore {
     this.broadcaster.sendError(ws, message);
   }
 
-  public getPlayerCount(): number {
-    return this.gameEngine.getPlayerCount();
-  }
-
-  public getAllPlayers() {
-    return this.gameEngine.getAllPlayers();
-  }
-
   public removePlayer(id: string) {
     const removed = this.gameEngine.removePlayer(id);
     if (removed) {

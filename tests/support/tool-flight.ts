@@ -61,7 +61,7 @@ export function attachTowForScenario(
   target.position = { x: pilot.position.x + target.size + 120, y: pilot.position.y };
   engine.addAsteroid(target);
   pilot.angle = 0;
-  expect(engine.useAbility(pilotId, 'hauler')).toBe(true);
+  expect(engine.useAbility(pilotId)).toBe(true);
   resolveToolFlights(engine);
   expect(pilot.harpoonTargetId).toBe(asteroidId);
   target.position = original;

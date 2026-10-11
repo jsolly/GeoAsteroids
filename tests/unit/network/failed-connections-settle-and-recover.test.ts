@@ -122,6 +122,7 @@ test('a thrown gameplay send reports failure and reconnects without replaying th
     color: '#fff',
     snapshotVersion: SNAPSHOT_VERSION,
     asteroidInteractions: 1,
+    terrainSeed: 7,
     resumeToken: 'a'.repeat(64),
   });
   const cause = new Error('transport write failed');
@@ -129,7 +130,9 @@ test('a thrown gameplay send reports failure and reconnects without replaying th
     throw cause;
   });
   const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
-  expect(manager.sendMessage({ type: 'useAbility', data: {} })).toBe(false);
+  expect(
+    manager.sendMessage({ type: 'useAbility', id: manager.getLocalPlayerId(), data: {} })
+  ).toBe(false);
   expect(error).toHaveBeenCalledWith('NETWORK', 'Failed to send gameplay message', cause);
   expect(manager.getSocket()).toBeNull();
   expect(manager.isConnected()).toBe(false);
@@ -276,6 +279,7 @@ test('a pre-join server error fails the attempt while a post-join error leaves t
       color: '#fff',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'a'.repeat(64),
     });
     postJoin.receive('error', 'Ability unavailable');
@@ -299,6 +303,7 @@ test('join waits for the joined pose and first snapshot before play can start', 
     color: '#fff',
     snapshotVersion: SNAPSHOT_VERSION,
     asteroidInteractions: 1,
+    terrainSeed: 7,
     resumeToken: 'a'.repeat(64),
   });
   expect(player.ship.position).toEqual({ x: 500, y: 600 });
@@ -339,6 +344,7 @@ test('the first local authoritative state clears the join completion deadline', 
       color: '#fff',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'a'.repeat(64),
     });
     const state = snapshotFixture();
@@ -371,6 +377,7 @@ test('resync diagnostics count successful sends only', async () => {
       color: '#fff',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
+      terrainSeed: 7,
       resumeToken: 'a'.repeat(64),
     });
   };

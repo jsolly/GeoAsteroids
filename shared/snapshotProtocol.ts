@@ -7,8 +7,11 @@ import {
   readRelativeMotion,
 } from './snapshotMotion';
 import { quantizeSnapshotKinematics, SNAPSHOT_KINEMATIC_FACTOR } from './snapshotPrecision';
+import { boundedDiagnosticError } from './stateDiagnostics';
 
 export const SNAPSHOT_VERSION = 3;
+/** Required join capability; clients without it are refused before any actor exists. */
+export const ASTEROID_INTERACTIONS_CAPABILITY = 1;
 // A late join includes the entire explored atlas plus nearby asteroid geometry.
 // Keep that keyframe admissible while bounding each socket's projected queue.
 export const SNAPSHOT_BACKPRESSURE_BYTES = 1024 * 1024;
@@ -1096,11 +1099,7 @@ function applyObjectPatch(base: Row, patch: unknown, nested: boolean): Row {
   }
   for (const [name, change] of Object.entries(collections ?? {})) {
     key(name);
-    // The consumed collection remains a reserved nested snapshot target.
-    if (
-      (nested && name !== 'spiders' && name !== 'nests' && name !== 'consumed') ||
-      !rows(base[name])
-    ) {
+    if ((nested && name !== 'spiders' && name !== 'nests') || !rows(base[name])) {
       throw new Error('Invalid snapshot collection target');
     }
     if (
@@ -1239,12 +1238,7 @@ export class SnapshotDecoder {
     } catch (error) {
       return {
         kind: 'snapshot-rejected',
-        error:
-          error instanceof Error
-            ? error
-            : new Error(typeof error === 'string' ? error : JSON.stringify(error), {
-                cause: error,
-              }),
+        error: boundedDiagnosticError(error, 'Snapshot decode failed'),
         ...(metadata ? { metadata } : {}),
         ...(collectTimings
           ? { timings: { parseMs, decodeMs: performance.now() - decodeStarted } }

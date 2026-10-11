@@ -193,7 +193,8 @@ describe('current pilots share the production handler and broadcaster', () => {
   test('current offers receive a joined acknowledgment before snapshot-v3 frames', () => {
     const pilot = socket();
     joinPilot(handler, pilot.ws, 'pilot');
-    applySnapshots(pilot, handler);
+    const [baseline] = applySnapshots(pilot, handler);
+    assert.ok(baseline, 'join baseline snapshot');
     broadcaster.broadcastGameState();
     const joined = pilot.messages.find((m) => m.type === 'joined');
     assert.ok(joined, 'joined message');
@@ -202,6 +203,10 @@ describe('current pilots share the production handler and broadcaster', () => {
       data: {
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: 1,
+        // Retired for clients, but the production smoke's join admission still requires it.
+        shotAcknowledgements: true,
+        // The client refuses an ack without the seed of the world it is about to apply.
+        terrainSeed: baseline.terrainSeed,
         resumeToken: expect.stringMatching(RESUME_TOKEN_PATTERN),
         serverReleaseId: expect.any(String),
         credentialReleaseId: expect.any(String),
@@ -422,13 +427,13 @@ describe('current pilots share the production handler and broadcaster', () => {
     peer.fake.clear();
     pressured.fake.bufferedAmount = SNAPSHOT_BACKPRESSURE_BYTES + 1;
 
-    broadcaster.broadcastChatMessage('peer', 'peer', 'hello');
+    broadcaster.broadcastAsteroidDestruction('rock-1');
 
     expect(pressured.close).toHaveBeenCalledWith(
       1013,
       'Backpressure; reconnect for state recovery'
     );
-    expect(pressured.messages.some((message) => message.type === 'chat')).toBe(false);
+    expect(pressured.messages.some((message) => message.type === 'asteroidDestroy')).toBe(false);
     const pressuredPlayer = engine.getPlayer('pressured');
     assert.ok(pressuredPlayer, 'pressured pilot retained for recovery');
     expect(pressuredPlayer.ws).toBeUndefined();
@@ -458,7 +463,10 @@ describe('current pilots share the production handler and broadcaster', () => {
     expect(snapshot.close).not.toHaveBeenCalled();
 
     event.fake.bufferedAmount = SNAPSHOT_BACKPRESSURE_BYTES - 1;
-    broadcaster.sendToWebSocket(event.ws, { type: 'chat', data: { message: 'hello' } });
+    broadcaster.sendToWebSocket(event.ws, {
+      type: 'asteroidDestroy',
+      data: { asteroidId: 'rock-1' },
+    });
     expect(event.close).toHaveBeenCalledWith(1013, 'Backpressure; reconnect for state recovery');
     const pressuredEventPlayer = engine.getPlayer('projected-event');
     assert.ok(pressuredEventPlayer, 'event pilot retained for recovery');

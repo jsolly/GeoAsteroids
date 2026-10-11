@@ -67,21 +67,11 @@ describe('server authority boundaries', () => {
       ws
     );
 
+    // The request's kit is ignored: stats stay Scout and the Scout tool runs.
     expect(pilot.kitId).toBe('scout');
     expect(pilot.maxHealth).toBe(maxHealth);
-    expect(engine.useAbility('pilot', 'hauler')).toBe(false);
-    expect(pilot.abilityCooldownFrames).toBe(0);
-
-    core.handleClientMessage(
-      {
-        type: 'useAbility',
-        id: 'pilot',
-        data: { kitId: 'scout' },
-      },
-      ws
-    );
-    expect(pilot.kitId).toBe('scout');
     expect(pilot.abilityCooldownFrames).toBeGreaterThan(0);
+    expect(pilot.harpoonTargetId ?? null).toBeNull();
   });
 
   test('a rammed rubble rock does not announce a cooperative split', () => {

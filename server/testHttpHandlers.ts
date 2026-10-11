@@ -1,7 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import process from 'node:process';
 import { logger } from '../setup/serverLogger';
-import type { WebSocketCore } from './communication/WebSocketCore';
 import type { GameEngine } from './core/GameEngine';
 import type { ServerPerformanceSummary } from './performanceMetrics';
 import { SERVER_RELEASE_ID } from './release';
@@ -35,7 +34,6 @@ export function areTestHttpEndpointsEnabled(nodeEnv: string): boolean {
 }
 
 export function buildHealthPayload(
-  wsCore: WebSocketCore,
   gameEngine: GameEngine,
   logging?: Record<string, unknown>,
   metrics?: ServerPerformanceSummary
@@ -45,7 +43,7 @@ export function buildHealthPayload(
     status: gameEngine.isPersistenceHealthy() ? 'healthy' : 'unhealthy',
     releaseId: SERVER_RELEASE_ID,
     timestamp: new Date().toISOString(),
-    players: wsCore.getPlayerCount(),
+    players: gameEngine.getPlayerCount(),
     uptime: process.uptime(),
     world: diagnostics,
     ...(logging ? { logging } : {}),

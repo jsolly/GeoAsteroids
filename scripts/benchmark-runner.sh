@@ -509,7 +509,7 @@ start_dev_servers() {
         export PORT="$TEST_SERVER_PORT"
         export GEOROIDS_PERFORMANCE=1
         export VITE_WEBSOCKET_URL="ws://localhost:$TEST_SERVER_PORT/ws"
-        GEOROIDS_WORLD_PATH=:memory: exec npx --no-install concurrently \
+        exec npx --no-install concurrently \
             --kill-others \
             --prefix-colors "blue.bold,green.bold" \
             --prefix "[{name}]" \

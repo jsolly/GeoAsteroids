@@ -729,7 +729,7 @@ export async function runWireLedgerSample(
         },
         'scout'
       );
-      engine.enableAsteroidInteractions(actor);
+      engine.seedAsteroidInteractions();
       const registered: ReturnType<GameEngine['registerPilot']> = engine.registerPilot(actor, peer);
       assert(registered.ok, 'Motion fixture registration failed');
       assert.equal(broadcaster.negotiateSnapshot(peer), SNAPSHOT_VERSION);
@@ -845,10 +845,7 @@ export async function runWireLedgerSample(
       }
       if (tick === options.warmupTicks + 1) {
         const first = streams[0];
-        assert(
-          first && engine.useAbility(first.id, 'scout'),
-          'Real Mineral Scan activation failed'
-        );
+        assert(first && engine.useAbility(first.id), 'Real Mineral Scan activation failed');
         work.abilityActivations++;
       }
       engine.advanceOneFrame();

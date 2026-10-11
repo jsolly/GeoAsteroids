@@ -63,7 +63,7 @@ export type MotionOutcome =
       contour?: ContourPoseRejection;
     };
 
-type EnhancedFreePose = Pick<GameEntity, 'position' | 'velocity' | 'angle' | 'thrusting'> & {
+type FreePose = Pick<GameEntity, 'position' | 'velocity' | 'angle' | 'thrusting'> & {
   epoch: number;
   sequence: number;
   contourLock?: ContourLockState | null;
@@ -164,7 +164,6 @@ export class PlayerMotionService {
   private validActor(actor: GameEntity): boolean {
     return (
       this.alive(actor) &&
-      actor.asteroidInteractions === 1 &&
       finiteMotionVector(actor.position) &&
       finiteMotionVector(actor.velocity) &&
       Number.isFinite(actor.angle) &&
@@ -226,13 +225,9 @@ export class PlayerMotionService {
   public register(
     actor: GameEntity,
     socket: WebSocket,
-    capability: unknown,
     now: number
   ): { ok: true; resumeToken: string; state: PlayerMotionState } | { ok: false; error: string } {
     this.assertTime(now);
-    if (capability !== 1) {
-      return { ok: false, error: 'Enhanced player motion was not negotiated' };
-    }
     if (
       !this.validActor(actor) ||
       actor.ws !== socket ||
@@ -419,7 +414,7 @@ export class PlayerMotionService {
 
   private failedEnvelopeCheck(
     session: Session,
-    pose: EnhancedFreePose,
+    pose: FreePose,
     limits: {
       speed: number;
       velocity: number;
@@ -449,7 +444,7 @@ export class PlayerMotionService {
     return undefined;
   }
 
-  public acceptFreePose(socket: WebSocket, pose: EnhancedFreePose, now: number): MotionOutcome {
+  public acceptFreePose(socket: WebSocket, pose: FreePose, now: number): MotionOutcome {
     this.assertTime(now);
     const session = this.owner(socket);
     if (
@@ -654,7 +649,7 @@ export class PlayerMotionService {
     }
   }
 
-  /** Keep test-only fixture placement coherent with enhanced motion ownership. */
+  /** Keep test-only fixture placement coherent with server motion ownership. */
   public placeActorForTesting(actorId: string, position: Position, now: number): boolean {
     this.assertTime(now);
     if (!finiteMotionVector(position)) {
@@ -811,7 +806,7 @@ export class PlayerMotionService {
 
   private contourPoseRejection(
     session: Session,
-    pose: EnhancedFreePose,
+    pose: FreePose,
     candidate: ContourLockState,
     acquiredAt: number,
     now: number

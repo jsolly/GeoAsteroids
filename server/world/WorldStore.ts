@@ -6,7 +6,7 @@ import { ECONOMY, emptySettlement, validSettlement } from '../../shared/economy'
 import { epochField } from '../../shared/epochField';
 import { validEquipment } from '../../shared/equipment';
 import { validExploration } from '../../shared/exploration';
-import { validCivicModules, validLitCivicLotIds } from '../../shared/furnaces';
+import { validCivicModules } from '../../shared/furnaces';
 import { finiteMotionVector, flightReturnWindowOpen } from '../../shared/playerMotion';
 import { releaseField } from '../../shared/releaseId';
 import { validateAsteroidDto } from '../../shared/snapshotDto';
@@ -34,12 +34,6 @@ function readCivicModules(value: object): CivicModule[] {
       throw new Error('Saved furnaces are invalid; refusing to replace player progress');
     }
     return value.civicModules;
-  }
-  if ('litCivicLotIds' in value) {
-    if (!validLitCivicLotIds(value.litCivicLotIds)) {
-      throw new Error('Saved furnaces are invalid; refusing to replace player progress');
-    }
-    return value.litCivicLotIds.map((id) => ({ id, builderName: '' }));
   }
   return [];
 }
@@ -323,9 +317,6 @@ export class WorldStore {
         CREATE TABLE IF NOT EXISTS sectors (id TEXT PRIMARY KEY, json TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS economy (id INTEGER PRIMARY KEY CHECK(id=1), json TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS pilots (id TEXT PRIMARY KEY, json TEXT NOT NULL);`);
-      // Persist the retired kit name once at startup, before validating saved flights.
-      this.db.exec(`UPDATE pilots SET json = json_set(json, '$.kitId', 'scout')
-        WHERE json_extract(json, '$.kitId') = 'surveyor'`);
       this.openedSectors = this.indexPersistedSectors();
     } catch (error) {
       this.db.close();

@@ -24,6 +24,6 @@ describe('supported gameplay message envelopes', () => {
     expect(socket.inbox).toEqual([
       { type: 'error', data: 'Missing player ID', timestamp: expect.any(Number) },
     ]);
-    expect(core.getPlayerCount()).toBe(0);
+    expect(engine.getPlayerCount()).toBe(0);
   });
 });

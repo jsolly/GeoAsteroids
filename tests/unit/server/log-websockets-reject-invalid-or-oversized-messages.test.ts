@@ -73,38 +73,60 @@ test('public WebSockets reject inbound frames larger than 64 KiB', async () => {
   expect(code).toBe(1009);
 });
 
-test.each(['/logs', '/ws'])(
-  '%s accepts structured records through the real ingress',
-  async (route) => {
-    server = createServerInstance({ port: 0, nodeEnv: 'test' });
-    const before = ClientLogger.getDiagnostics();
-    const valid = await connect(route);
-    valid.send(
-      JSON.stringify({
-        type: 'clientLog',
-        data: {
+function structuredLogFrame(): string {
+  return JSON.stringify({
+    type: 'clientLog',
+    data: {
+      level: 'info',
+      sessionId: 'wire-session',
+      line: stringifyLogRecord(
+        createLogRecord({
+          timestamp: new Date().toISOString(),
+          source: 'client',
           level: 'info',
-          sessionId: 'wire-session',
-          line: stringifyLogRecord(
-            createLogRecord({
-              timestamp: new Date().toISOString(),
-              source: 'client',
-              level: 'info',
-              releaseId: 'test',
-              message: 'bounded forwarding remains active',
-            })
-          ),
-        },
-      })
-    );
-    const pong = once(valid, 'pong');
-    valid.ping();
+          releaseId: 'test',
+          message: 'bounded forwarding remains active',
+        })
+      ),
+    },
+  });
+}
+
+test('/logs accepts structured records through the real ingress', async () => {
+  server = createServerInstance({ port: 0, nodeEnv: 'test' });
+  const before = ClientLogger.getDiagnostics();
+  const valid = await connect('/logs');
+  valid.send(structuredLogFrame());
+  const pong = once(valid, 'pong');
+  valid.ping();
+  await pong;
+  expect(valid.readyState).toBe(WebSocket.OPEN);
+  expect(ClientLogger.getDiagnostics().accepted).toBe(before.accepted + 1);
+  expect(await ClientLogger.flushPending()).toBe(true);
+});
+
+test('the gameplay socket rejects log telemetry because /logs is the only log ingress', async () => {
+  server = createServerInstance({ port: 0, nodeEnv: 'test' });
+  const before = ClientLogger.getDiagnostics();
+  const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  try {
+    const gameplay = await connect('/ws');
+    const received: unknown[] = [];
+    gameplay.on('message', (raw) => received.push(JSON.parse(String(raw))));
+    gameplay.send(structuredLogFrame());
+    // The server handles the text frame before answering the following ping.
+    const pong = once(gameplay, 'pong');
+    gameplay.ping();
     await pong;
-    expect(valid.readyState).toBe(WebSocket.OPEN);
-    expect(ClientLogger.getDiagnostics().accepted).toBe(before.accepted + 1);
-    expect(await ClientLogger.flushPending()).toBe(true);
+    expect(received).toContainEqual(
+      expect.objectContaining({ type: 'error', data: 'Unknown message type: clientLog' })
+    );
+    expect(gameplay.readyState).toBe(WebSocket.OPEN);
+    expect(ClientLogger.getDiagnostics().accepted).toBe(before.accepted);
+  } finally {
+    warn.mockRestore();
   }
-);
+});
 
 test('the log route closes retired plaintext and invalid record schemas', async () => {
   server = createServerInstance({ port: 0, nodeEnv: 'test' });
