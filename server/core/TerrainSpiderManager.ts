@@ -16,7 +16,7 @@ interface SpiderActor {
   exploding: boolean;
   respawnTimer?: number;
   spawnProtectionTimer?: number;
-  radius?: number;
+  radius: number;
   scanning?: boolean;
 }
 
@@ -615,7 +615,7 @@ export class TerrainSpiderManager {
     }
     const territory = spider.territory;
     const target = spider.targetId ? playerById.get(spider.targetId) : undefined;
-    if (target && !this.canOccupy(target.position, target.radius ?? 0)) {
+    if (target && !this.canOccupy(target.position, target.radius)) {
       // Shelter overrides an existing chase before it can move or bite.
       if (territory.kind === 'guard') {
         territory.activity = 'returning';
@@ -723,7 +723,7 @@ export class TerrainSpiderManager {
     const target = players
       .filter(
         (player) =>
-          this.canOccupy(player.position, player.radius ?? 0) &&
+          this.canOccupy(player.position, player.radius) &&
           distanceBetween(player.position, spider.position) <=
             SPIDER.BITE_DISTANCE + POSITION_EPSILON
       )
@@ -763,7 +763,7 @@ export class TerrainSpiderManager {
     return (
       this.spiders.has(friend.id) &&
       friend.health > 0 &&
-      this.canOccupy(owner.position, owner.radius ?? 0) &&
+      this.canOccupy(owner.position, owner.radius) &&
       this.canOccupy(friend.position, friend.size)
     );
   }
@@ -921,7 +921,7 @@ export class TerrainSpiderManager {
     return players
       .filter(
         (player) =>
-          this.canOccupy(player.position, player.radius ?? 0) &&
+          this.canOccupy(player.position, player.radius) &&
           distanceBetween(player.position, spider.position) <=
             (spider.territory.kind === 'guard'
               ? SPIDER.NEST_ACQUIRE_DISTANCE
@@ -954,7 +954,7 @@ export class TerrainSpiderManager {
   private spawnNearPlayers(players: readonly SpiderActor[], allPlayers = players): boolean {
     for (let attempt = 0; attempt < SPAWN_ATTEMPTS; attempt++) {
       const player = players[(this.spawnTargetIndex + attempt) % players.length];
-      if (!player || !this.canOccupy(player.position, player.radius ?? 0)) {
+      if (!player || !this.canOccupy(player.position, player.radius)) {
         continue;
       }
       const angle = this.random() * Math.PI * 2;

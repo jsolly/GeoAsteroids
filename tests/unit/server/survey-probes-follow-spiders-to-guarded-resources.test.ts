@@ -17,6 +17,7 @@ const pilot = {
   angle: 0,
   kitId: 'scout' as const,
   exploding: false,
+  radius: 0,
   health: 100,
   abilityCooldownFrames: 0,
 };
@@ -95,7 +96,13 @@ describe('spiders carry Scout probes', () => {
     const spiders = new TerrainSpiderManager(() => 0.5);
     const probes = new SurveyProbeManager();
     const resource = { id: 'guarded-metal', position: { x: 15000, y: 5000 }, value: 1 as const };
-    const scout = { id: 'scout', position: { x: 17000, y: 5000 }, health: 100, exploding: false };
+    const scout = {
+      id: 'scout',
+      position: { x: 17000, y: 5000 },
+      health: 100,
+      exploding: false,
+      radius: 0,
+    };
     const options = {
       players: [scout],
       resources: () => [resource],
@@ -175,7 +182,7 @@ describe('spiders carry Scout probes', () => {
     engine.setScoutUtility(scout.id, 'survey_probe');
     const spider = engine.spawnTerrainSpider({ x: 200, y: 0 });
     assert.ok(spider);
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     expect(
       engine.getSpiderField().spiders.find((body) => body.id === spider.id)?.probe?.ownerId

@@ -62,7 +62,6 @@ test('building multiple named furnaces keeps delivery payouts equal for all cont
   const scoutSocket = new RecordingSocket();
   const scout = engine.addPlayer('scout', 'scout', scoutSocket, { ...furnace.position }, 'scout');
   scout.position = { ...furnace.position };
-  scout.asteroidInteractions = 1;
   const registered = engine.registerPilot(scout, scoutSocket);
   assert(registered.ok);
   scout.abilityCooldownFrames = 0;

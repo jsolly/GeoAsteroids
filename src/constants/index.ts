@@ -21,14 +21,10 @@ export const GAME = {
 } as const;
 
 // ============================================================================
-// CANVAS CONFIGURATION
+// CAMERA CONFIGURATION
 // ============================================================================
 /** Keep north fixed across flight and navigation maps by default. */
 export const CAMERA = { FOLLOW_TRAVEL: false };
-
-export const CANVAS = {
-  INTERNAL_WIDTH: 800,
-} as const;
 
 // ============================================================================
 // TOUCH CONTROLS
@@ -210,7 +206,8 @@ export const DAMAGE = {
 export const LASER = {
   SPEED: 300 * GAME.MOTION_SCALE, // pixels per second
   MAX_COUNT: 200, // limit of lasers that can exist
-  TRAVEL_DISTANCE_RATIO: 0.6, // fraction of screen width
+  /** World units a shot travels before it expires; the server enforces the same reach. */
+  MAX_TRAVEL_DISTANCE: 800,
   EXPLODE_DURATION: 0.1, // seconds
   PREDICTION_TIMEOUT_MS: 2000, // Bound unacknowledged local shots during connection loss
   /** Projectile thickness for hits. Ship hull radii stay independent. */

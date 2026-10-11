@@ -96,7 +96,7 @@ import type {
   ToolTargetPose,
   Velocity,
 } from '../../shared-types';
-import { CANVAS, DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../src/constants';
+import { DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../src/constants';
 import { pointsForRoidSize } from '../../src/entities/roid/roidScore';
 import {
   activateAbilityOnHost,
@@ -216,14 +216,11 @@ export interface CombatBroadcast {
   targetType: 'player';
   destroyedAsteroidId?: string;
   newAsteroids?: AsteroidData[];
-  asteroidScore?: { playerId: string; score: number };
   origin?: { x: number; y: number };
 }
 
 type CombatSink = (result: CombatBroadcast) => void;
 
-/** Matches client Laser.isExpired when the canvas is the internal playfield. */
-const SERVER_LASER_MAX_DISTANCE = LASER.TRAVEL_DISTANCE_RATIO + CANVAS.INTERNAL_WIDTH;
 /** 250 ms covers a delayed position packet at 30 Hz plus a brief browser/network hitch. */
 export const PLAYER_SHOOT_POSE_ALLOWANCE_MS = 250;
 /** Bounded positional rounding/muzzle disagreement in addition to the movement allowance. */
@@ -695,11 +692,11 @@ export class GameEngine {
       // Nothing flushes while paused, so this write carries all deferred drift.
       this.regionalField.requestFullFlush();
       this.checkpointWorld();
-    } else if (playerCount > 0 && this.isPaused) {
-      this.isPaused = false;
-      logger.info('▶️ Game resumed - players are back online');
-      this.ensureAmbientWorld();
     } else if (playerCount > 0) {
+      if (this.isPaused) {
+        this.isPaused = false;
+        logger.info('▶️ Game resumed - players are back online');
+      }
       this.ensureAmbientWorld();
     }
   }
@@ -1020,7 +1017,7 @@ export class GameEngine {
     socket: WebSocket,
     clientReleaseId?: string
   ): ReturnType<PlayerMotionService['register']> {
-    const result = this.playerMotion.register(actor, socket, 1, this.getServerTime());
+    const result = this.playerMotion.register(actor, socket, this.getServerTime());
     if (!result.ok) {
       return result;
     }
@@ -1085,13 +1082,12 @@ export class GameEngine {
     if (flight) {
       this.restoreRecentFlight(actor, flight, requestedKit);
     }
-    actor.asteroidInteractions = 1;
     const registered = this.registerPilot(actor, socket, clientReleaseId);
     if (!registered.ok) {
       this.removePlayer(actor.id);
       return registered;
     }
-    this.enableAsteroidInteractions(actor);
+    this.seedAsteroidInteractions();
     if (saved.health === 0) {
       actor.health = 0;
       this.entityManager.scheduleShipRespawn(actor);
@@ -1591,13 +1587,8 @@ export class GameEngine {
     return this.asteroidManager.getAllAsteroids();
   }
 
-  /** Seed the always-on asteroid interaction field for the active arena. */
-  public enableAsteroidInteractions(player: GameEntity): void {
-    player.asteroidInteractions = 1;
-    this.seedAsteroidInteractions();
-  }
-
-  private seedAsteroidInteractions(): void {
+  /** Seed phenomena on a fixture field once; the managed regional field seeds its own sectors. */
+  public seedAsteroidInteractions(): void {
     if (this.managedField) {
       return;
     }
@@ -1667,7 +1658,7 @@ export class GameEngine {
     if (!this.managedField) {
       return [];
     }
-    const created = this.regionalField.update(
+    return this.regionalField.update(
       this.asteroidManager,
       [
         ...this.entityManager.getAllEntities().map((entity) => entity.position),
@@ -1675,8 +1666,6 @@ export class GameEngine {
       ],
       this.getServerTime()
     );
-    this.seedAsteroidInteractions();
-    return created;
   }
 
   public createAsteroids(
@@ -1990,10 +1979,6 @@ export class GameEngine {
           result.newAsteroids = destruction.newAsteroids;
           if (destruction.destroyed) {
             result.origin = destruction.destroyed.position;
-          }
-          const scorer = this.entityManager.getEntity(hit.shipId);
-          if (scorer) {
-            result.asteroidScore = { playerId: hit.shipId, score: scorer.score };
           }
         }
       }
@@ -2402,7 +2387,7 @@ export class GameEngine {
       };
       laser.distTraveled += getVelocityMagnitude(laser.velocity);
 
-      if (laser.distTraveled >= SERVER_LASER_MAX_DISTANCE) {
+      if (laser.distTraveled >= LASER.MAX_TRAVEL_DISTANCE) {
         this.observeFixtureTerminal(laser, 'distance-limit');
         this.lasers.splice(i, 1);
         continue;
@@ -2501,14 +2486,9 @@ export class GameEngine {
             ...(pickup.ownerId === null ? {} : { ownerId: pickup.ownerId }),
             kind: 'satellitePickup' as const,
           })),
+        // The arm-range circle query is exact; handleLootExplode re-checks before any blast.
         ...(owner ? this.lootManager.queryCircle(owner.position, LOOT_BLAST.ARM_RANGE) : [])
-          .filter(
-            (loot) =>
-              owner &&
-              loot.kind !== 'points' &&
-              !isEquipmentId(loot.kind) &&
-              inLootArmRange(owner.position, loot.position)
-          )
+          .filter((loot) => loot.kind !== 'points' && !isEquipmentId(loot.kind))
           .map((loot) => ({
             id: loot.id,
             position: loot.position,
@@ -2799,15 +2779,9 @@ export class GameEngine {
     return gameState;
   }
 
-  public useAbility(entityId: string, requestedKitId?: unknown): boolean {
+  public useAbility(entityId: string): boolean {
     const entity = this.entityManager.getEntity(entityId);
     if (!entity || entity.furnaceTransit) {
-      return false;
-    }
-    // Kit selection is authoritative at join time. Keep accepting the
-    // client's matching echo, but reject an alternate or malformed kit so an
-    // ability request cannot rewrite health, size, or movement stats.
-    if (requestedKitId !== undefined && requestedKitId !== entity.kitId) {
       return false;
     }
     if (entity.kitId === 'scout') {
@@ -3459,12 +3433,11 @@ export class GameEngine {
     const rewards: FurnaceDelivery['rewards'] = [];
     for (const playerId of recipients) {
       const player = this.getPlayer(playerId);
-      const score = this.awardPilotPoints(playerId, points);
-      if (score === undefined) {
+      if (this.awardPilotPoints(playerId, points) === undefined) {
         continue;
       }
       const saved = this.pilots.get(playerId);
-      rewards.push({ playerId, playerName: player?.name ?? saved?.name ?? '', points, score });
+      rewards.push({ playerId, playerName: player?.name ?? saved?.name ?? '', points });
     }
     this.releaseTowsAttachedTo(rock.id);
     return {

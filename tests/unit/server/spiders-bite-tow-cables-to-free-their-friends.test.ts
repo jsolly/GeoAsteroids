@@ -12,6 +12,7 @@ function arrange() {
     position: { x: 7000, y: 3000 },
     health: 100,
     exploding: false,
+    radius: 0,
     spawnProtectionTimer: 600,
   };
   const friend = manager.spawnSpider({ x: 7200, y: 3000 });

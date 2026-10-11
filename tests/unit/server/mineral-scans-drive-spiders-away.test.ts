@@ -3,7 +3,14 @@ import { TerrainSpiderManager } from '../../../server/core/TerrainSpiderManager'
 import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
 
 function pilot(scanning = false) {
-  return { id: 'scout', position: { x: 2200, y: 2200 }, health: 100, exploding: false, scanning };
+  return {
+    id: 'scout',
+    position: { x: 2200, y: 2200 },
+    health: 100,
+    exploding: false,
+    scanning,
+    radius: 0,
+  };
 }
 
 test('switching a scan on at bite distance cancels the bite and drives the spider away until it ends', () => {

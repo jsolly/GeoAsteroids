@@ -50,16 +50,14 @@ const choice =
   (value) =>
     typeof value === 'string' && values.includes(value);
 const enumeration =
-  <T extends string>(values: Record<T, true>): Rule =>
-  (value) =>
+  <T extends string>(values: Record<T, true>) =>
+  (value: unknown): value is T =>
     typeof value === 'string' && Object.hasOwn(values, value);
 const kit = enumeration<ShipKitId>({
   scout: true,
   hauler: true,
 });
-// Historical snapshots retain this token; utility resolution uses Mineral Scan.
-const scoutUtility: Rule = (value) => isScoutUtilityId(value) || value === 'build_furnace';
-const lootKind = enumeration<LootKind>({
+export const isLootKind = enumeration<LootKind>({
   shard: true,
   tap: true,
   silk: true,
@@ -67,7 +65,6 @@ const lootKind = enumeration<LootKind>({
   boost_coupling: true,
   survey_probe: true,
   points: true,
-  wreckage: true,
 });
 const array =
   (rule: Rule): Rule =>
@@ -178,7 +175,7 @@ const entity = shape<ServerEntityData>({
   harpoonLatchPos: optional(position),
   utilityFlight: optional((value) => value === null || utilityFlight(value)),
   haulerUtility: optional(isHaulerUtilityId),
-  scoutUtility: optional(scoutUtility),
+  scoutUtility: optional(isScoutUtilityId),
   deathCause: optional(string),
   playerMotion: optional(motion),
 });
@@ -257,7 +254,7 @@ const loot = shape<LootData>({
   position,
   mass: number,
   radius: number,
-  kind: lootKind,
+  kind: isLootKind,
 });
 const pickup = shape<SatellitePickupData>({
   id: string,
@@ -349,7 +346,7 @@ function uniqueRows(rule: Rule, maximum: number): Rule {
   };
 }
 const nest = shape<SpiderFieldState['nests'][number]>({
-  cleared: optional(boolean),
+  cleared: boolean,
   id: sectorIdentity,
   resourceId: (value) => typeof value === 'string' && value.length > 0,
   position,
@@ -384,7 +381,7 @@ const worldRules = {
   satellitePickups: array(pickup),
   gameTime: number,
   isPaused: boolean,
-  terrainSeed: optional(number),
+  terrainSeed: number,
 } satisfies Shape<ServerGameState>;
 const world = shape<ServerGameSnapshot>({
   ...worldRules,

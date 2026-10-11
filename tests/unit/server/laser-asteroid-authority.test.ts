@@ -284,9 +284,9 @@ describe('Asteroid destruction over real sockets', () => {
           },
         ]);
         expect(received.filter((message) => message.type === 'asteroidCreateBatch')).toEqual([]);
-        expect(received.filter((message) => message.type === 'scoreUpdate')).toEqual([
-          { type: 'scoreUpdate', data: { playerId: pilot.id, score: scoreBefore } },
-        ]);
+        expect(states.at(-1)?.entities.find((entity) => entity.id === pilot.id)?.score).toBe(
+          scoreBefore
+        );
         expect(server.gameEngine.getAllAsteroids().map((asteroid) => asteroid.id)).toEqual([
           untouched.id,
         ]);

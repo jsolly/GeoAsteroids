@@ -32,7 +32,7 @@ describe('Hauler tools interact with living spiders', () => {
     world.send(pilot, {
       type: 'useAbility',
       id: pilot.id,
-      data: { kitId: 'hauler' },
+      data: {},
     });
     resolveToolFlights(world.engine);
   }

@@ -27,7 +27,7 @@ test('a Hauler asks the server even when its visible field has no eligible targe
     combatNetwork: testCombatNetwork(),
   });
   expect(ship.activateAbility()).toBe(true);
-  expect(mockSendAbility).toHaveBeenCalledWith({ kitId: 'hauler' });
+  expect(mockSendAbility).toHaveBeenCalledWith();
   expect(ship.abilityCooldownFrames).toBe(0);
   expect(ship.harpoonTargetId).toBeNull();
 });
@@ -76,10 +76,10 @@ test('two rapid presses reach the server in order without a predicted cooldown d
     expect(ship.activateAbility()).toBe(true);
     expect(ship.activateAbility()).toBe(true);
     expect(mockSendAbility).toHaveBeenCalledTimes(2);
-    const requests = mockSendAbility.mock.calls.map((call) => ({
+    const requests = mockSendAbility.mock.calls.map(() => ({
       type: 'useAbility',
       id: 'alice',
-      data: call[0],
+      data: {},
     }));
     const first = requests[0];
     const second = requests[1];

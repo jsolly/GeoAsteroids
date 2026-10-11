@@ -84,7 +84,7 @@ describe('authoritative Scout probes', () => {
     engine.addAsteroid(host);
     engine.addAsteroid(fartherHost);
 
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     assert.ok(host.probe);
     expect(host.probe.ownerId).toBe(scout.id);
@@ -104,7 +104,7 @@ describe('authoritative Scout probes', () => {
     assert.ok(scout);
     const host = asteroidAt('moving-host', { x: 200, y: 0 });
     engine.addAsteroid(host);
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     assert.ok(host.probe);
     const before = probePosition(host, host.probe);
@@ -185,7 +185,7 @@ describe('authoritative Scout probes', () => {
     largeHost.size = 1_000;
     engine.addAsteroid(largeHost);
 
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     assert.ok(largeHost.probe);
     const beacon = probePosition(largeHost, largeHost.probe);
@@ -206,7 +206,7 @@ describe('authoritative Scout probes', () => {
       scout.position = { x: 0, y: host.position.y };
       scout.abilityCooldownFrames = 0;
       now.value += 1_000;
-      expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+      expect(engine.useAbility(scout.id)).toBe(true);
       resolveToolFlights(engine);
       if (index < 3) {
         expect(host.probe).toBeDefined();
@@ -218,7 +218,7 @@ describe('authoritative Scout probes', () => {
     scout.position = { x: 0, y: -400 };
     scout.abilityCooldownFrames = 0;
     now.value += 1_000;
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     expect(scout.utilityFlight?.phase).toBe('disintegrating');
     expect(hosts[1]?.probe).toBeDefined();
@@ -231,7 +231,7 @@ describe('authoritative Scout probes', () => {
     assert.ok(scout);
     const host = asteroidAt('projectile-host', { x: 200, y: 0 });
     engine.addAsteroid(host);
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     assert.ok(host.probe);
 
@@ -251,7 +251,7 @@ describe('authoritative Scout probes', () => {
     assert.ok(scout);
     const host = asteroidAt('expiring-host', { x: 200, y: 0 });
     engine.addAsteroid(host);
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     now.value += SURVEY_PROBE.LIFETIME_MS;
     scout.lastUpdate = now.value;
@@ -260,7 +260,7 @@ describe('authoritative Scout probes', () => {
 
     scout.abilityCooldownFrames = 0;
     now.value += 1;
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     engine.removeAsteroid(host.id);
     expect(engine.getAsteroid(host.id)).toBeUndefined();
@@ -271,7 +271,7 @@ describe('authoritative Scout probes', () => {
     assert.ok(scout);
     const host = asteroidAt('distant-host', { x: 200, y: 0 });
     engine.addAsteroid(host);
-    expect(engine.useAbility(scout.id, 'scout')).toBe(true);
+    expect(engine.useAbility(scout.id)).toBe(true);
     resolveToolFlights(engine);
     assert.ok(host.probe);
 
@@ -377,10 +377,7 @@ describe('authoritative Scout probes', () => {
       { type: 'setScoutUtility', id: owner.id, data: { utilityId: 'survey_probe' } },
       attackerSocket
     );
-    core.handleClientMessage(
-      { type: 'useAbility', id: owner.id, data: { kitId: 'scout' } },
-      attackerSocket
-    );
+    core.handleClientMessage({ type: 'useAbility', id: owner.id }, attackerSocket);
 
     expect(owner.scoutUtility).toBeUndefined();
     expect(host.probe).toBeUndefined();
