@@ -162,6 +162,22 @@ describe('server-authoritative player shooting', () => {
     expect(engine.getServerLasers()).toHaveLength(SHIP.MAX_LASERS + 1);
   });
 
+  test('a shot flies 800 world units before the server drops it, matching the client reach', () => {
+    vi.spyOn(engine, 'getServerTime').mockReturnValue(1000);
+    expect(LASER.MAX_TRAVEL_DISTANCE).toBe(800);
+    const shot = engine.spawnLaser('pilot', { x: 20, y: 0 }, { x: 4, y: 0 });
+    assert.ok(shot, 'spawned shot');
+    // 199 steps of 4 = 796 units, still in flight; step 200 lands on 800, which the
+    // former 800.6 reach would still have allowed.
+    for (let frame = 0; frame < 199; frame += 1) {
+      engine.advanceLasersAndResolveHits();
+    }
+    expect(engine.getServerLasers()).toEqual([shot]);
+    expect(shot.distTraveled).toBe(796);
+    engine.advanceLasersAndResolveHits();
+    expect(engine.getServerLasers()).toHaveLength(0);
+  });
+
   test('counter-thrust stationary shots have a finite server lifetime', () => {
     const clock = vi.spyOn(engine, 'getServerTime').mockReturnValue(1000);
     shoot({ x: 20, y: 0 }, { x: 0, y: 0 });

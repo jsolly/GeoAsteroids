@@ -32,8 +32,7 @@ describe('server motion clock', () => {
   test('a wall-clock rollback cannot stop an active session grace deadline', () => {
     const socket = {} as WebSocket;
     const player = engine.addPlayer('pilot', 'Pilot', socket, { x: 0, y: 0 }, undefined);
-    player.asteroidInteractions = 1;
-    const registered = engine.playerMotion.register(player, socket, 1, Date.now());
+    const registered = engine.playerMotion.register(player, socket, Date.now());
     expect(registered.ok).toBe(true);
 
     engine.advanceOneFrame();

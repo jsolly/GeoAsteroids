@@ -3,7 +3,7 @@ import type { WebSocket } from 'ws';
 /**
  * A gameplay client sends one pose per client frame (~60 Hz), up to 30
  * applied-snapshot acknowledgments per second, and occasional shoot,
- * ability and chat messages. The 120/s budget leaves 30/s command headroom.
+ * and ability messages. The 120/s budget leaves 30/s command headroom.
  * The burst covers a full backlog flush: the client keeps sampling poses on
  * a fixed 60 Hz timer while its link is stalled
  * and only gives up after 6 s (`CONNECTION_STALE_TIMEOUT_MS`), so TCP can

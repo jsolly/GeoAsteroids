@@ -231,10 +231,7 @@ export function getTerrainSeed(): number {
   return cache?.field.seed ?? TERRAIN.DEFAULT_SEED;
 }
 
-export function applyTerrainSeed(seed: number | undefined): Heightfield {
-  if (typeof seed !== 'number' || !Number.isFinite(seed)) {
-    return ensureTerrain();
-  }
+export function applyTerrainSeed(seed: number): Heightfield {
   return ensureTerrain(seed >>> 0);
 }
 

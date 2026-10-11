@@ -445,8 +445,8 @@ class CanvasManager {
   /**
    * World painters keep drawing at scale 1 into a larger virtual viewport; the context
    * transform shrinks it onto the real screen. Pair with `endWorldLayers` before the HUD.
-   * The zoom is presentation only: update-time rules that read the viewport (laser reach,
-   * contour capture, audio culling) deliberately stay at flight scale during a scan.
+   * The zoom is presentation only: update-time rules that read the viewport (contour
+   * capture, audio culling) deliberately stay at flight scale during a scan.
    */
   beginWorldLayers(ctx: CanvasRenderingContext2D): void {
     if (this.zoom === 1) {

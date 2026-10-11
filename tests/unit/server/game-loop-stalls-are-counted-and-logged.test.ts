@@ -16,8 +16,7 @@ test('a clock step that arrives seconds late is counted on /health and logged on
   const clock = new ServerClock({ wallNow: () => 10_000, monotonicNow: () => elapsed });
   const engine = new GameEngine(17, clock);
   try {
-    const pilot = engine.addPlayer('pilot', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
-    pilot.asteroidInteractions = 1;
+    engine.addPlayer('pilot', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
     for (const rock of engine.getAllAsteroids()) {
       engine.removeAsteroid(rock.id);
     }

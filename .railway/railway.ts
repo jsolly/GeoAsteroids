@@ -16,7 +16,6 @@ export default defineRailway(() => {
         iad: { numReplicas: 1 },
       },
       runtime: 'V2',
-      // Railway's default is ON_FAILURE with 10 retries; its importer omits these values.
       useLegacyStacker: false,
       ipv6EgressEnabled: false,
     },

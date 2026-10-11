@@ -13,10 +13,8 @@ const scoutUtilities = {
 export const HAULER_UTILITY_IDS: readonly HaulerUtilityId[] = Object.values(haulerUtilities);
 export const SCOUT_UTILITY_IDS: readonly ScoutUtilityId[] = Object.values(scoutUtilities);
 
-/** New Hauler flights start with the freely available Tow Cable. */
-export const PREFERRED_HAULER_UTILITY: HaulerUtilityId = 'tow_cable';
-/** Missing snapshot / legacy host keeps the existing tow cable. */
-export const UNSET_HAULER_UTILITY: HaulerUtilityId = 'tow_cable';
+/** Haulers fly the freely available Tow Cable unless another owned tool is equipped. */
+export const DEFAULT_HAULER_UTILITY: HaulerUtilityId = 'tow_cable';
 export const DEFAULT_SCOUT_UTILITY: ScoutUtilityId = 'mineral_scan';
 
 export function isHaulerUtilityId(value: unknown): value is HaulerUtilityId {
@@ -28,7 +26,7 @@ export function isScoutUtilityId(value: unknown): value is ScoutUtilityId {
 }
 
 export function parseHaulerUtilityId(value: unknown): HaulerUtilityId {
-  return isHaulerUtilityId(value) ? value : UNSET_HAULER_UTILITY;
+  return isHaulerUtilityId(value) ? value : DEFAULT_HAULER_UTILITY;
 }
 
 export function parseScoutUtilityId(value: unknown): ScoutUtilityId {
@@ -39,7 +37,9 @@ export function haulerUtilityOf(host: {
   kitId?: ShipKitId | string;
   haulerUtility?: unknown;
 }): HaulerUtilityId {
-  return host.kitId === 'hauler' ? parseHaulerUtilityId(host.haulerUtility) : UNSET_HAULER_UTILITY;
+  return host.kitId === 'hauler'
+    ? parseHaulerUtilityId(host.haulerUtility)
+    : DEFAULT_HAULER_UTILITY;
 }
 
 export function scoutUtilityOf(host: {

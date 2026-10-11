@@ -41,30 +41,43 @@ describe('shared ship motion helper', () => {
     expect(laser.position.y - start.y).toBeCloseTo(0);
   });
 
-  test('slower shots keep viewport reach and the 250 millisecond fire cooldown', () => {
-    vi.spyOn(canvasManager, 'getCanvas').mockReturnValue({
-      width: 390,
-      height: 844,
-    } as HTMLCanvasElement);
-    vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue({ width: 390, height: 844 });
+  test.each([
+    { screen: 'a 390-wide phone', viewport: { width: 390, height: 844 } },
+    { screen: 'a 1280-wide desktop', viewport: { width: 1280, height: 900 } },
+    { screen: 'no canvas', viewport: null },
+  ])('a shot reaches 800 world units on $screen, as the server enforces', ({ viewport }) => {
+    if (viewport) {
+      vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(document.createElement('canvas'));
+      vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue(viewport);
+    } else {
+      vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(null);
+    }
+    const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true });
+    ship.angle = 0;
+    // Inherited drift turns the 2.8125-unit bolt step into exactly 4 units per frame.
+    ship.velocity = { x: 1.1875, y: 0 };
+    const laser = createLaser(ship);
+    ship.lasers = [laser];
+    expect(LASER.MAX_TRAVEL_DISTANCE).toBe(800);
+    expect(laser.velocity).toEqual({ x: 4, y: 0 });
+    // 199 steps of 4 = 796 units, still in flight; step 200 lands on 800, which the
+    // former 800.6 reach would still have allowed.
+    for (let frame = 0; frame < 199; frame += 1) {
+      ship.moveLasers();
+    }
+    expect(ship.lasers).toEqual([laser]);
+    expect(laser.distTraveled).toBe(796);
+    ship.moveLasers();
+    expect(laser.distTraveled).toBe(800);
+    expect(ship.lasers).toEqual([]);
+  });
+
+  test('ships keep the 250 millisecond fire cooldown', () => {
     let now = 1000;
     vi.spyOn(Date, 'now').mockImplementation(() => now);
     const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true });
     ship.angle = 0;
     ship.velocity = { x: 0, y: 0 };
-    const laser = createLaser(ship);
-    const step = LASER.SPEED / GAME.FPS;
-    const reach = LASER.TRAVEL_DISTANCE_RATIO + 390;
-    const framesBeforeExpiry = Math.floor((reach - 1e-9) / step);
-    for (let frame = 0; frame < framesBeforeExpiry; frame += 1) {
-      laser.move();
-    }
-    expect(laser.distTraveled).toBeCloseTo(framesBeforeExpiry * step);
-    expect(laser.isExpired()).toBe(false);
-    laser.move();
-    expect(laser.distTraveled).toBeCloseTo((framesBeforeExpiry + 1) * step);
-    expect(laser.isExpired()).toBe(true);
-
     ship.shoot();
     expect(ship.lasers).toHaveLength(1);
     expect(ship.canShoot).toBe(false);

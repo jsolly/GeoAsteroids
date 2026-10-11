@@ -44,8 +44,6 @@ interface SnapshotRecipient {
   recoverySequence?: number;
 }
 
-type AsteroidUpdateData = Partial<AsteroidData>;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -153,9 +151,6 @@ export class GameStateBroadcaster {
     }
     this.flushSatellitePickupCollections();
     for (const delivery of this.gameEngine.drainFurnaceDeliveries()) {
-      for (const reward of delivery.rewards) {
-        this.broadcastScoreUpdate(reward.playerId, reward.score);
-      }
       this.broadcastAsteroidDestruction(delivery.asteroidId, { consumedBy: 'furnace' });
       this.broadcastToAll({ type: 'furnaceDelivery', data: delivery, timestamp: Date.now() });
     }
@@ -519,24 +514,6 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message, playerId);
   }
 
-  public broadcastPlayerJoined(
-    playerId: string,
-    playerName: string,
-    position: { x: number; y: number }
-  ): void {
-    const message = {
-      type: 'playerJoined',
-      data: {
-        id: playerId,
-        name: playerName,
-        position,
-      },
-      timestamp: Date.now(),
-    } as const;
-
-    this.broadcastToAll(message, playerId);
-  }
-
   public broadcastCombatResult(result: CombatBroadcast): void {
     this.broadcastPlayerDamaged(
       result.targetId,
@@ -553,9 +530,6 @@ export class GameStateBroadcaster {
       );
       if (result.newAsteroids && result.newAsteroids.length > 0) {
         this.broadcastAsteroidCreation(result.newAsteroids);
-      }
-      if (result.asteroidScore) {
-        this.broadcastScoreUpdate(result.asteroidScore.playerId, result.asteroidScore.score);
       }
     }
   }
@@ -582,19 +556,6 @@ export class GameStateBroadcaster {
     this.broadcastToAll(message);
   }
 
-  public broadcastScoreUpdate(playerId: string, score: number): void {
-    const message = {
-      type: 'scoreUpdate',
-      data: {
-        playerId,
-        score,
-      },
-      timestamp: Date.now(),
-    };
-
-    this.broadcastToAll(message);
-  }
-
   public broadcastSatellitePickupCollected(data: SatellitePickupCollected): void {
     this.broadcastToAll({
       type: 'satellitePickupCollected',
@@ -605,10 +566,6 @@ export class GameStateBroadcaster {
 
   private flushSatellitePickupCollections(): void {
     for (const event of this.gameEngine.drainSatellitePickupCollections()) {
-      this.broadcastScoreUpdate(
-        event.playerId,
-        this.gameEngine.getPlayer(event.playerId)?.score ?? 0
-      );
       this.broadcastSatellitePickupCollected(event);
     }
   }
@@ -657,30 +614,6 @@ export class GameStateBroadcaster {
     };
 
     this.broadcastToAll(message);
-  }
-
-  public broadcastAsteroidUpdate(asteroidId: string, updates: AsteroidUpdateData): void {
-    const message = {
-      type: 'asteroidUpdate',
-      data: { asteroidId, updates },
-      timestamp: Date.now(),
-    };
-
-    this.broadcastToAll(message);
-  }
-
-  public broadcastChatMessage(playerId: string, playerName: string, message: string): void {
-    const chatMessage = {
-      type: 'chat',
-      data: {
-        id: playerId,
-        name: playerName,
-        message,
-      },
-      timestamp: Date.now(),
-    };
-
-    this.broadcastToAll(chatMessage);
   }
 
   private closeSocketForRecovery(ws: WebSocket, code: number, reason: string): void {

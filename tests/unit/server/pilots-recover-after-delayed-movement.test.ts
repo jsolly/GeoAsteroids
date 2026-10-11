@@ -23,9 +23,8 @@ function flight() {
   engines.push(engine);
   const socket = new RecordingSocket();
   const actor = engine.addPlayer('pilot', 'Pilot', socket, { x: 0, y: 0 }, 'hauler');
-  actor.asteroidInteractions = 1;
   actor.spawnProtectionTimer = 0;
-  expect(engine.playerMotion.register(actor, socket, 1, clock.now()).ok).toBe(true);
+  expect(engine.playerMotion.register(actor, socket, clock.now()).ok).toBe(true);
   const ship = new Ship({ kitId: 'hauler' });
   const prediction = new PlayerMotionReconciliation();
   const reconcile = () => {

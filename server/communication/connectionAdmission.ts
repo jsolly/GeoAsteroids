@@ -1,16 +1,14 @@
 export const GAMEPLAY_CONNECTIONS_PER_WINDOW = 50;
 export const LOG_CONNECTIONS_PER_WINDOW = 6;
 export const CONNECTION_ADMISSION_WINDOW_MS = 60_000;
+/** Joins beyond this many live pilots are refused before an actor exists. */
+export const MAX_PLAYERS = 100;
 
 export function connectionLimitsDisabled(env: {
   nodeEnv: string;
   processNodeEnv?: string;
   vitest?: string;
-  enforceConnectionLimits?: boolean;
 }): boolean {
-  if (env.enforceConnectionLimits) {
-    return false;
-  }
   const isTest = env.nodeEnv === 'test' || env.vitest === 'true' || env.processNodeEnv === 'test';
   const isDevelopment = env.nodeEnv === 'development' || env.processNodeEnv === 'development';
   return isTest || isDevelopment;

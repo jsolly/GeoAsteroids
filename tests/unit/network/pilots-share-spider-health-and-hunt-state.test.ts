@@ -112,6 +112,7 @@ test('malformed or duplicate nest markers cannot enter the snapshot', () => {
     [{ ...valid, cleared: 'yes' }],
 
     [{ id: '0,0', position: { x: 5000, y: 5000 } }],
+    [{ id: '0,0', resourceId: 'ore', position: { x: 5000, y: 5000 } }],
     [{ id: '0,0', resourceId: '', cleared: false, position: { x: 5000, y: 5000 } }],
     [{ id: 'nest', resourceId: 'ore', cleared: false, position: { x: 5000, y: 5000 } }],
     [{ id: '0,0', resourceId: 'ore', cleared: false, position: { x: Number.NaN, y: 5000 } }],
@@ -140,18 +141,4 @@ test('the full multiplayer spider population fits a valid public snapshot', () =
     })),
   };
   expect(() => new SnapshotEncoder(world)).not.toThrow();
-});
-
-test('pilots keep receiving nests while the previous server release has no cleared flag', () => {
-  const world = snapshotFixture();
-  const nest = field.nests[0];
-  if (!nest) {
-    throw new Error('Missing nest fixture');
-  }
-  const { cleared: _cleared, ...previousNest } = nest;
-  world.spiderField = { spiders: field.spiders, nests: [previousNest] };
-  const encoder = new SnapshotEncoder(world);
-  const decoder = new SnapshotDecoder();
-  const state = decodeSnapshotMessage(decoder, snapshotMessage(encoder.encode(1)));
-  expect(state.spiderField?.nests).toEqual([previousNest]);
 });

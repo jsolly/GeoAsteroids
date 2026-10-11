@@ -1,7 +1,7 @@
 import { isContourLockState } from '../../shared/contourLock';
 import { readReleaseId } from '../../shared/releaseId';
 import { isHaulerUtilityId, isScoutUtilityId } from '../../shared/shipUtilities';
-import { SNAPSHOT_VERSION } from '../../shared/snapshotProtocol';
+import { ASTEROID_INTERACTIONS_CAPABILITY, SNAPSHOT_VERSION } from '../../shared/snapshotProtocol';
 import { storeOffer } from '../../shared/townStore';
 import { WORLD } from '../../shared/world';
 import type {
@@ -36,8 +36,6 @@ export type ClientCommand =
       name: string;
       position: Position;
       kitId?: ShipKitId;
-      snapshotVersion: typeof SNAPSHOT_VERSION;
-      asteroidInteractions: 1;
       resumeRequested: boolean;
       resumeToken?: string;
       clientReleaseId?: string;
@@ -47,11 +45,7 @@ export type ClientCommand =
   | { type: 'leave' }
   | { type: 'snapshotResync' }
   | ({ type: 'snapshotAck' } & SnapshotAcknowledgement)
-  | {
-      type: 'useAbility';
-      id: string;
-      kitId?: ShipKitId;
-    }
+  | { type: 'useAbility'; id: string }
   | {
       type: 'setHaulerUtility';
       id: string;
@@ -81,9 +75,7 @@ export type ClientCommand =
       laserDirection: Velocity;
       requestId?: string;
     }
-  | { type: 'chat'; id: string; message: string }
   | { type: 'collisionDamage'; targetPlayerId: string; attackerId: string }
-  | { type: 'clientLog'; payload: WireRecord }
   | PingMessage;
 
 type ClientCommandDecodeResult =
@@ -192,22 +184,11 @@ function decodeUpdate(id: string, fields: WireRecord): ClientCommandDecodeResult
   };
 }
 
-function decodeUseAbility(id: string, fields: WireRecord): ClientCommandDecodeResult {
-  if (!id) {
-    return invalid('useAbility', 'Missing player ID for useAbility');
-  }
-  const rawKitId = fields['kitId'];
-  if (rawKitId !== undefined && !isShipKitId(rawKitId)) {
-    return invalid('useAbility');
-  }
-  return {
-    ok: true,
-    command: {
-      type: 'useAbility',
-      id,
-      ...(rawKitId !== undefined ? { kitId: rawKitId } : {}),
-    },
-  };
+/** Kit selection is authoritative at join; extra request fields are ignored. */
+function decodeUseAbility(id: string): ClientCommandDecodeResult {
+  return id
+    ? { ok: true, command: { type: 'useAbility', id } }
+    : invalid('useAbility', 'Missing player ID for useAbility');
 }
 
 export function decodeClientCommand(message: unknown): ClientCommandDecodeResult {
@@ -244,7 +225,10 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
       const asteroidInteractionsOffer =
         message['asteroidInteractions'] ?? payload['asteroidInteractions'];
       const rawToken = message['resumeToken'] ?? payload['resumeToken'];
-      if (snapshotOffer !== SNAPSHOT_VERSION || asteroidInteractionsOffer !== 1) {
+      if (
+        snapshotOffer !== SNAPSHOT_VERSION ||
+        asteroidInteractionsOffer !== ASTEROID_INTERACTIONS_CAPABILITY
+      ) {
         return invalid(type, 'Client update required; refresh GeoRoids');
       }
       const position = readJoinPosition(fields['position']);
@@ -262,8 +246,6 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
           name,
           position,
           ...(isShipKitId(kitOffer) ? { kitId: kitOffer } : {}),
-          snapshotVersion: SNAPSHOT_VERSION,
-          asteroidInteractions: 1,
           resumeRequested: rawToken !== undefined,
           ...(typeof rawToken === 'string' ? { resumeToken: rawToken } : {}),
           ...(clientReleaseId ? { clientReleaseId } : {}),
@@ -289,12 +271,10 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
       }
       return { ok: true, command: { type, ...(typeof probeId === 'number' ? { probeId } : {}) } };
     }
-    case 'clientLog':
-      return { ok: true, command: { type, payload } };
     case 'update':
       return decodeUpdate(id, fields);
     case 'useAbility':
-      return decodeUseAbility(id, fields);
+      return decodeUseAbility(id);
     case 'travelFurnace': {
       const destinationId = fields['destinationId'];
       return id &&
@@ -365,15 +345,6 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
             },
           }
         : invalid(type, 'Missing finite laser coordinates for shoot');
-    }
-    case 'chat': {
-      if (!id || typeof fields['message'] !== 'string') {
-        return invalid(type, 'Missing player ID or message');
-      }
-      const chatMessage = fields['message'].trim();
-      return chatMessage && chatMessage.length <= 500
-        ? { ok: true, command: { type, id, message: chatMessage } }
-        : invalid(type, 'Chat message must be between 1 and 500 characters');
     }
     case 'collisionDamage': {
       const targetPlayerId = readNonEmptyString(fields['targetPlayerId']);

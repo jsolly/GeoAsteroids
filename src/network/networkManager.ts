@@ -1,4 +1,4 @@
-import type { PlayerUpdate } from '../../shared-types';
+import type { ClientGameplayMessage, PlayerUpdate } from '../../shared-types';
 import type { Laser } from '../entities/laser/Laser';
 import type { Player } from '../entities/player/Player';
 import { logger } from '../utils/Logger';
@@ -93,7 +93,7 @@ export class NetworkManager {
   }
 
   // Send a generic message to the server
-  sendMessage(message: Record<string, unknown>): boolean {
+  sendMessage(message: ClientGameplayMessage): boolean {
     return this.connectionManager.sendMessage(message);
   }
 

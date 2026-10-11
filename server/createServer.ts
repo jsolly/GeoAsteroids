@@ -2,11 +2,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import process from 'node:process';
 import { type WebSocket, WebSocketServer } from 'ws';
 import { getServerLogDiagnostics, logger, writeServerDiagnostic } from '../setup/serverLogger';
-import { SNAPSHOT_VERSION } from '../shared/snapshotProtocol';
+import { ASTEROID_INTERACTIONS_CAPABILITY, SNAPSHOT_VERSION } from '../shared/snapshotProtocol';
 import {
   CONNECTION_ADMISSION_WINDOW_MS,
   connectionLimitsDisabled,
   createConnectionAdmission,
+  MAX_PLAYERS,
 } from './communication/connectionAdmission';
 import { shouldLogInboundGameplayMessage } from './communication/inboundMessageLog';
 import { GameplayMessageBudget } from './communication/messageBudget';
@@ -36,8 +37,6 @@ type CreateServerOptions = {
   seed?: number;
   worldPath?: string;
   localPlayground?: boolean;
-  /** Apply production connection budgets even when test or development would skip them. */
-  enforceConnectionLimits?: boolean;
   /** Explicit transport injection; the production entry keeps compression disabled. */
   perMessageDeflate?: false | WebSocket.PerMessageDeflateOptions;
 };
@@ -82,7 +81,6 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       res.end(
         JSON.stringify(
           buildHealthPayload(
-            wsCore,
             gameEngine,
             loggingDiagnostics(),
             serverPerformanceMetricsEnabled() ? serverPerformanceMetrics.read() : undefined
@@ -151,11 +149,13 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       const wsProtocol = protocol === 'https' ? 'wss' : 'ws';
 
       if (prefersJson) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        // Mirror /health: a failed world commit makes the server unhealthy and gameplay unavailable.
+        const healthy = gameEngine.isPersistenceHealthy();
+        res.writeHead(healthy ? 200 : 503, { 'Content-Type': 'application/json' });
         const serverStats = {
           timestamp: new Date().toISOString(),
           server: {
-            status: 'healthy',
+            status: healthy ? 'healthy' : 'unhealthy',
             uptime: process.uptime(),
             port: getPort(),
             nodeEnv: NODE_ENV,
@@ -163,7 +163,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
           websockets: {
             game: {
               endpoint: `${wsProtocol}://${host}/ws`,
-              status: 'available',
+              status: healthy ? 'available' : 'unavailable',
               description: 'Gameplay WebSocket for network functionality',
             },
             logs: {
@@ -173,8 +173,8 @@ export function createServerInstance(options: CreateServerOptions = {}) {
             },
           },
           connections: {
-            currentPlayers: wsCore.getPlayerCount(),
-            maxPlayers: 100,
+            currentPlayers: gameEngine.getPlayerCount(),
+            maxPlayers: MAX_PLAYERS,
             activeLogClients: logClients.size,
           },
           logging: loggingDiagnostics(),
@@ -202,17 +202,11 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     res.end('Not Found');
   });
 
-  // More lenient rate limiting for testing and development
-  const isTestEnvironment =
-    NODE_ENV === 'test' || process.env['VITEST'] === 'true' || process.env['NODE_ENV'] === 'test';
-  const isDevelopmentEnvironment =
-    NODE_ENV === 'development' || process.env['NODE_ENV'] === 'development';
-  const shouldDisableRateLimit = isTestEnvironment || isDevelopmentEnvironment;
+  // Test and development runs skip both the connection and per-message budgets.
   const limitsDisabled = connectionLimitsDisabled({
     nodeEnv: NODE_ENV,
     ...(process.env['NODE_ENV'] ? { processNodeEnv: process.env['NODE_ENV'] } : {}),
     ...(process.env['VITEST'] ? { vitest: process.env['VITEST'] } : {}),
-    ...(options.enforceConnectionLimits ? { enforceConnectionLimits: true } : {}),
   });
   const admission = createConnectionAdmission(limitsDisabled);
   const logQuotaClosed = new WeakSet<WebSocket>();
@@ -232,7 +226,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       if (
         url.pathname !== '/logs' &&
         (url.searchParams.get('snapshotVersion') !== String(SNAPSHOT_VERSION) ||
-          url.searchParams.get('asteroidInteractions') !== '1')
+          url.searchParams.get('asteroidInteractions') !== String(ASTEROID_INTERACTIONS_CAPABILITY))
       ) {
         // Reject before open: clients without the supported capability otherwise
         // reset their retry counter on every successful upgrade and reconnect forever.
@@ -272,8 +266,6 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       NODE_ENV,
       VITEST: process.env['VITEST'],
       NODE_ENV_ENV: process.env['NODE_ENV'],
-      isTestEnvironment,
-      isDevelopmentEnvironment,
     });
   }
   const cleanupInterval = setInterval(() => {
@@ -289,7 +281,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     options.seed,
     undefined,
     persistence,
-    NODE_ENV === 'development' && (options.localPlayground ?? configuration.localPlayground)
+    NODE_ENV === 'development' && options.localPlayground === true
   );
   acquireServerPerformanceMetrics();
   // Ensure the server-side game loop runs
@@ -356,7 +348,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       logger.info('🔌 New player connected');
       ws.on('message', (data) => {
         const rawData = String(data);
-        if (!shouldDisableRateLimit) {
+        if (!limitsDisabled) {
           const decision = messageBudget.admit(ws, Buffer.byteLength(rawData, 'utf8'));
           if (decision !== 'ok') {
             // Only the first over-budget frame acts: terminate (a flooder need
@@ -403,7 +395,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
         if (resumable) {
           return;
         }
-        for (const connectedPlayer of wsCore.getAllPlayers()) {
+        for (const connectedPlayer of gameEngine.getAllPlayers()) {
           if (connectedPlayer.ws === ws) {
             wsCore.removePlayer(connectedPlayer.id);
             break;

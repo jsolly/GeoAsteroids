@@ -71,7 +71,6 @@ export interface GameEntity {
   tapExtractCompleted?: boolean;
   /** Environmental cause of the current death (cleared on respawn). */
   deathCause?: string;
-  asteroidInteractions?: 1;
   playerMotion?: PlayerMotionState;
 }
 

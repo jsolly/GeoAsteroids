@@ -370,9 +370,7 @@ class Ship {
       if (network?.isConnected) {
         // The server owns the ability result and cooldown. An optimistic toggle
         // can be undone by an older snapshot or disagree about eligible cargo.
-        const sent = network.sendAbility({
-          kitId: this.kitId,
-        });
+        const sent = network.sendAbility();
         if (!sent) {
           return false;
         }
