@@ -161,7 +161,7 @@
     "src/audio/spiderScore.ts": "sha256:90f229eae32eb1c00063e38ed90fda44b72aaefc397aab89586bb3f4c1e969af",
     "src/components/ui/button/button.svelte": "sha256:9225943b80347ddad9a06c5b00138d271294f5dac05e5d2f01ed436474d63f28",
     "src/components/ui/input/input.svelte": "sha256:fab152caba80865304d177a2dea67a12672f90a852f354928ddb3be3c0ec78a9",
-    "src/components/wiki/WikiShell.svelte": "sha256:9d40adfa4a5d647a0af3c56ad66305c12aa271fe8acceafc6c0cdaa6c2cbfbfb",
+    "src/components/wiki/WikiShell.svelte": "sha256:50b16b29229759c6618a094d6374cd781735e386b1dd489213e26c320faa2d58",
     "src/constants/index.ts": "sha256:3ad3ab78a4445b2e3c9f218ceb68b8daa25f05364f4ed6d6c0803976c2fa21cb",
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
@@ -235,7 +235,7 @@
     "src/network/worldExploration.ts": "sha256:64263a48b8c0226c6907a63a7ee773d4d683386361734a2a8cb085edd6d5f133",
     "src/pages/debug/index.astro": "sha256:9d2989374bab057befea1479251eda6c1bff2a645b6e7788a87aadba85adf4db",
     "src/pages/index.astro": "sha256:98f27a0d6da8910842b5884b0919abe5a7213379a89f6096ba82e75cb6557040",
-    "src/pages/wiki.astro": "sha256:fa12e9d13a1b67915a561490ab973f1cc1ef742bd79dcc48f527190558bec720",
+    "src/pages/wiki.astro": "sha256:d56c822737f808de4010d499d20399d6cc2246d2fd5407f76e1e170aea4d9cbc",
     "src/physics/Point.ts": "sha256:6630058ce08c3ce9d0e6c4fe73c974e5b9ae7e67b83c3c642af33629a47c7e5a",
     "src/physics/asteroidMotion.ts": "sha256:6901e0d7156264f9af2a1b8c32690b651842bb7811fef0cb2d4c1ecffa4f44dd",
     "src/physics/boundary.ts": "sha256:2d7e5ee9dfff31c74f606ff1068707503b55512cfba87f272c4d9ce1a4c606ea",
@@ -447,7 +447,7 @@
     "public/sounds/contour-flick-success.m4a": "sha256:74a49bfd234ba15162410e88afa41ee0be0b9d01fcc0f65cdc602daa2ef1393a",
     "public/sounds/contour-lock-acquired.m4a": "sha256:928afee6bf5a0bff7da80205e8a473dd811b1a16ff7e56f67a18897e4cff6c6e",
     "public/sounds/contour-lock-released.m4a": "sha256:83b3338feda3cb161d923470ec09b7a0139c4665b821aa1adbdb324e1f85bd67",
-    "src/components/GameDocument.astro": "sha256:a362f671073293ffbf2544b1d068d3484e3361f6aacc448a99679f2c78db358b",
+    "src/components/GameDocument.astro": "sha256:23b51b07c0082087356afdccb6a68c9e066eea8199eaa5a07b3812e4421d9d81",
     "src/components/game/GameOverlay.svelte": "sha256:223b95169e93fea57370f38c68fbeffc0d10ed2ef7bbfb8a6825b4d68062e391",
     "src/components/game/GameShell.svelte": "sha256:ec8d5112606258ac4e3e9b45cb678766814b677a36b01bdbc0fbcb7774be057a",
     "src/components/game/InventoryPanel.svelte": "sha256:740c87f43a0dd647d0f4629d523ac842727d5973cbe0d70037e2039e3cc64493",
@@ -3230,6 +3230,30 @@
       "topics": ["controls", "terrain"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Reviewed document titles and social metadata against the field manual. No gameplay instructions or demonstrations are affected. Verified both routes at desktop and mobile widths with no console warnings or errors.",
+      "sources": [
+        "src/components/GameDocument.astro",
+        "src/components/wiki/WikiShell.svelte",
+        "src/pages/wiki.astro"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/components/GameDocument.astro": "field-manual",
+        "src/pages/wiki.astro": "field-manual",
+        "src/components/wiki/WikiShell.svelte": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed collapsed static navigation and responsive enhancement. Mobile expansion and Controls selection work; desktop navigation expands. Seven focused component tests pass. Desktop/mobile browser checks have no console warnings or errors. Gameplay prose and demonstrations need no changes.",
+      "sources": ["src/components/wiki/WikiShell.svelte"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/components/wiki/WikiShell.svelte": "field-manual"
+      }
     }
   ]
 }

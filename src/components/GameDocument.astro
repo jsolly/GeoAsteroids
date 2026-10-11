@@ -11,7 +11,7 @@ import GameShell from './game/GameShell.svelte';
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000011" />
     <meta name="color-scheme" content="dark" />
-    <title>GeoRoids</title>
+    <title>GeoRoids | Free Cooperative Space Game</title>
     <meta
       name="description"
       content="Play GeoRoids, a free cooperative space game. Survey the unknown, tow asteroids to furnaces, and share discoveries with your crew."
@@ -25,7 +25,17 @@ import GameShell from './game/GameShell.svelte';
       content="Survey the unknown, tow asteroids to furnaces, and share discoveries with your crew in this free cooperative space game."
     />
     <meta property="og:url" content="https://www.georoids.com/" />
-    <meta name="twitter:card" content="summary" />
+    <meta
+      property="og:image"
+      content="https://www.georoids.com/wiki/uploads/georoids-first-flight.png"
+    />
+    <meta property="og:image:width" content="640" />
+    <meta property="og:image:height" content="360" />
+    <meta
+      property="og:image:alt"
+      content="A Scout flying through space in the GeoRoids movement demonstration."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <GameShell client:load />
