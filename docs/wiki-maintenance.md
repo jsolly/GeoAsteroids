@@ -23,6 +23,9 @@ without changing the hash. Clearing search restores the route; following its
 current hash clears search and returns to the route's beginning. Unknown or
 malformed hashes show the manual's not-found panel. Charts and animated media
 mount only for active articles and are disposed on navigation or teardown.
+Svelte components in `src/components/wiki/` render the overview, topic cards,
+article chrome and ship profiles as text; only each article's build-compiled body
+is inserted as HTML.
 
 ## Content and coverage
 
@@ -46,9 +49,11 @@ Back and Forward return to the scroll position of that visit, including after a 
 
 ## Ship profiles
 
-Each ship page pairs an Apache ECharts SVG radar with seven base-stat ratings and exact values. `src/wiki/shipScorecard.ts` derives both displays from the current ship definitions. Each stat maps linearly from the fleet minimum to maximum onto 1–5 bubbles, rounded to a whole bubble. Size, shot interval, and ability cooldown reverse the scale so smaller or shorter scores higher. Equal fleet-wide values score 3. These compare base stats, not ability effectiveness or an overall ship ranking.
+Each ship page pairs an Apache ECharts SVG radar with seven base-stat ratings and exact values. `shipRatings()` in `src/wiki/shipScorecard.ts` derives both displays from the current ship definitions, and `src/components/wiki/ShipScorecard.svelte` renders the values, bubbles and accessible labels. Each stat maps linearly from the fleet minimum to maximum onto 1–5 bubbles, rounded to a whole bubble. Size, shot interval, and ability cooldown reverse the scale so smaller or shorter scores higher. Equal fleet-wide values score 3. These compare base stats, not ability effectiveness or an overall ship ranking.
 
-The Wiki imports only the radar chart and SVG renderer; the build-generated gameplay module graph rejects ECharts in gameplay bundles. Static rendering does not initialize charts. Navigation disposes the chart and its resize observer. The HTML values and accessible bubble labels remain the readable counterpart to the visual radar.
+The Wiki imports only the radar chart and SVG renderer; the build-generated gameplay module graph rejects ECharts in gameplay bundles. Static rendering does not initialize charts. `WikiShell.svelte` mounts the radar from `activate()` through the scorecard's bound element, only for the active article outside search; components never mount it from their own lifecycle. Navigation disposes the chart and its resize observer. The HTML values and accessible bubble labels remain the readable counterpart to the visual radar.
+
+Ship hulls render as data-URI images from `serializeKitHullSvg`, as in the game's ship picker. The overview comparison uses the shadcn-svelte table primitive inside the focusable `.table-scroll` region, which stays its only scroll container. Markdown tables in article bodies still use the shell's legacy `.article-body` table rules; no article uses one yet, so move them to the primitive's styling when the first one is added.
 
 ## Demonstrations
 

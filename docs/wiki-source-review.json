@@ -161,7 +161,7 @@
     "src/audio/spiderScore.ts": "sha256:90f229eae32eb1c00063e38ed90fda44b72aaefc397aab89586bb3f4c1e969af",
     "src/components/ui/button/button.svelte": "sha256:9225943b80347ddad9a06c5b00138d271294f5dac05e5d2f01ed436474d63f28",
     "src/components/ui/input/input.svelte": "sha256:fab152caba80865304d177a2dea67a12672f90a852f354928ddb3be3c0ec78a9",
-    "src/components/wiki/WikiShell.svelte": "sha256:67ee5c0491bd9c0d5f75d3cca9cbc7a153eeb3dfdef5b66651ad6ccbc6d722ee",
+    "src/components/wiki/WikiShell.svelte": "sha256:3d21a72d9a0067bf89cea4e8888ea2ece3d37d434bd0b729540b4472f5667286",
     "src/constants/index.ts": "sha256:745b63eab35050becd419fa2e7c29ac5484b5a85a83d90adf5e9196d7d662368",
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
@@ -321,10 +321,9 @@
     "src/wiki/gameReference.ts": "sha256:78d253619864b7ca22bd6355ddb98d9be3d1ff5354d975299fef7e6837e0670c",
     "src/wiki/media.ts": "sha256:6e548df7f61de674f267d98894f1261a377f02bb2ef9be03fba60c18809cf158",
     "src/wiki/mediaPlayback.ts": "sha256:642adacbffd7dc70307a4197531664ce7eed12f4f032d535ab5aa17e9b1eb4c9",
-    "src/wiki/presentation.ts": "sha256:8394cdb4adf09ca4c2a4d5dc26e7a80e76f90cada01df74cc9f40a171d761ab5",
     "src/wiki/scrollMemory.ts": "sha256:e93c0b5b28979cd1442d230bd411a51158a7a69647e94791514039206908d680",
     "src/wiki/search.ts": "sha256:1ea0f78400fe463ce11c6e1b7f8b2d503729599b222b2409606cf16035f87e41",
-    "src/wiki/shipScorecard.ts": "sha256:d06dcdc59de164aff394f226417c60cc375e3362f690228106b960bbf40d3a92",
+    "src/wiki/shipScorecard.ts": "sha256:16dd3bd508ec622e4536b655bb3897c593df5ab8a329c48eea50b3603626e29e",
     "svelte.config.js": "sha256:9f2f3ce97f92d71c67e146ef4f859f1675ef3a536fbcd82b597481b35263d2dd",
     "tests/integration/entities/input/keybindings.test.ts": "sha256:b3bf53d2323347ad6d483113bbcf9a9906ea8c2afb7b77ffa3508cf79ea01aa8",
     "tests/integration/entities/input/mouse.test.ts": "sha256:c33bef15804056f90204fcc42a8085469f1c671b66cd0c9e029d90c2e88f8d97",
@@ -501,7 +500,18 @@
     "src/components/game/UniverseMap.svelte": "sha256:40418a80c514ac1f67e1ab3efdd694cd7fa42e097dbd420c1d8986d9199a6a93",
     "src/runtime/debugPresentation.ts": "sha256:3b60bd7df351cc04e69d4781438c44993a47bd8d49653bd5902d8bb85a119230",
     "tests/unit/components/debug-controls.test.ts": "sha256:56801c433ada1979081698eadf2ee2b5db5cec01417b5d5187d13e9da2f690aa",
-    "shared/shipUtilities.ts": "sha256:abd926875a269de58d8f8b301576f72d0444ca7815f2677788b7ed4d0056104e"
+    "shared/shipUtilities.ts": "sha256:abd926875a269de58d8f8b301576f72d0444ca7815f2677788b7ed4d0056104e",
+    "src/components/ui/table/table-body.svelte": "sha256:09b78e9184fe01f58dd7266b3be1ef5769a780fb6b7132d08123fc1469cf1ca2",
+    "src/components/ui/table/table-caption.svelte": "sha256:6248005e803c6adafca297f1e4f1c0d89791d9a991497aef8065d252995eece3",
+    "src/components/ui/table/table-cell.svelte": "sha256:26dd4d2a917daf8e00985a21a9ea10a737a01e1529351c751cb027dee54f53cb",
+    "src/components/ui/table/table-head.svelte": "sha256:00efe6eb1ccf80acea1d88730b71821e2eadcfa50b2eec99e6cac43261227025",
+    "src/components/ui/table/table-header.svelte": "sha256:0d0bb2454ae29321a95349bf847cd585c7ec46403dc134430909d1f5431a4d59",
+    "src/components/ui/table/table-row.svelte": "sha256:2f5bb881c3b3c04855e50b6e6cfb04a51070924e570801bdde25bcc242027e03",
+    "src/components/ui/table/table.svelte": "sha256:8323a611466d1730f05192a968e78b06225c51d2286ae7791769cc479a689cff",
+    "src/components/wiki/ShipHull.svelte": "sha256:9c9578c26ff706ce87374808d06c72d9e9466e343c9caff80e886f49cdf6d17b",
+    "src/components/wiki/ShipScorecard.svelte": "sha256:5feae5713993f69307b3a93a3678343972678b9c7df153cc7597433f2c2091da",
+    "src/components/wiki/TopicCard.svelte": "sha256:8a9b045b3be8ef1565cb9278c57bc9397a994ae6f5350e6894db578e2653e28e",
+    "src/components/wiki/WikiOverview.svelte": "sha256:46fcd795249d181389f648d683defcdbe6cdb6d209e6b04cac2fa01d7208d4e0"
   },
   "reviews": [
     {
@@ -3490,6 +3500,75 @@
       "owners": {
         "src/entities/laser/Laser.ts": "combat-survival",
         "src/wiki/gameReference.ts": "combat-survival"
+      }
+    },
+    {
+      "note": "Moved the Wiki overview, article chrome, topic cards and ship scorecards from HTML strings into Svelte components, rendered the comparison with the shadcn-svelte table primitive and removed the decorative hero orbit. Player rules, exact values, generated references and demonstrations are unchanged. Verified static-document parity against the previous build (ids, panels, headings, cards, scorecards, related links), component tests, and dev and production browser checks at 1280px plus mobile widths (375px dev, 390px production), including search, hash navigation, radar mount and dispose, and the no-JS static document.",
+      "sources": [
+        "src/components/ui/table/table-body.svelte",
+        "src/components/ui/table/table-caption.svelte",
+        "src/components/ui/table/table-cell.svelte",
+        "src/components/ui/table/table-head.svelte",
+        "src/components/ui/table/table-header.svelte",
+        "src/components/ui/table/table-row.svelte",
+        "src/components/ui/table/table.svelte",
+        "src/components/wiki/ShipHull.svelte",
+        "src/components/wiki/ShipScorecard.svelte",
+        "src/components/wiki/TopicCard.svelte",
+        "src/components/wiki/WikiOverview.svelte",
+        "src/components/wiki/WikiShell.svelte",
+        "src/wiki/presentation.ts",
+        "src/wiki/shipScorecard.ts"
+      ],
+      "topics": ["field-manual", "hauler", "scout"],
+      "media": [],
+      "owners": {
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/wiki/presentation.ts": "field-manual",
+        "src/wiki/shipScorecard.ts": "field-manual",
+        "src/components/ui/table/table-body.svelte": "field-manual",
+        "src/components/ui/table/table-caption.svelte": "field-manual",
+        "src/components/ui/table/table-cell.svelte": "field-manual",
+        "src/components/ui/table/table-head.svelte": "field-manual",
+        "src/components/ui/table/table-header.svelte": "field-manual",
+        "src/components/ui/table/table-row.svelte": "field-manual",
+        "src/components/ui/table/table.svelte": "field-manual",
+        "src/components/wiki/ShipHull.svelte": "field-manual",
+        "src/components/wiki/ShipScorecard.svelte": "field-manual",
+        "src/components/wiki/TopicCard.svelte": "field-manual",
+        "src/components/wiki/WikiOverview.svelte": "field-manual"
+      }
+    },
+    {
+      "note": "Moved Wiki overview, topic card and ship scorecard styles from the shell's global rules into scoped component styles, limited the legacy table rules to compiled article bodies so the overview comparison uses the shadcn-svelte table primitive's own styling, and documented the scroll-region suppression reason inside its directive. Verified in the dev browser at 1280px and 390px by diffing computed styles before and after: only the comparison table's cell padding, row height and cell borders changed; every other measured overview, ship-entry and search element was identical. Rules, values and demonstrations are unchanged.",
+      "sources": [
+        "src/components/wiki/ShipScorecard.svelte",
+        "src/components/wiki/TopicCard.svelte",
+        "src/components/wiki/WikiOverview.svelte",
+        "src/components/wiki/WikiShell.svelte"
+      ],
+      "topics": ["field-manual", "hauler", "scout"],
+      "media": [],
+      "owners": {
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/components/wiki/TopicCard.svelte": "field-manual",
+        "src/components/wiki/ShipScorecard.svelte": "field-manual",
+        "src/components/wiki/WikiOverview.svelte": "field-manual"
+      }
+    },
+    {
+      "note": "Gave the overview comparison region its own scroll rule, limited the shell's table-scroll rule to article bodies, reused the shared eyebrow style for topic-card categories and hid the decorative Compare ships arrow from assistive technology. A repeated computed-style diff at 1280px and 390px matched the previous result: only the comparison table's cells changed.",
+      "sources": [
+        "src/components/wiki/TopicCard.svelte",
+        "src/components/wiki/WikiOverview.svelte",
+        "src/components/wiki/WikiShell.svelte"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/components/wiki/TopicCard.svelte": "field-manual",
+        "src/components/wiki/WikiOverview.svelte": "field-manual"
       }
     }
   ]
