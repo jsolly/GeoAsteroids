@@ -123,6 +123,16 @@ function fixture() {
     },
   };
 }
+
+/** The digested variables Claude Code cloud's egress proxy injects, at fixture paths. */
+function cloudProxyEnvironment(root) {
+  return {
+    NODE_EXTRA_CA_CERTS: join(root, '.performance', 'proxy-ca.crt'),
+    NPM_CONFIG_USERCONFIG: join(root, '.performance', 'proxy.npmrc'),
+    npm_config_https_proxy: 'http://proxy.invalid:3128',
+  };
+}
+
 test('complete proof reuses only exact candidate and retained successful artifacts', async () => {
   const f = fixture();
   try {
@@ -593,7 +603,7 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     }
     writeFileSync(
       join(f.root, 'bin', 'npm'),
-      `console.log('userconfig='+(process.env.npm_config_userconfig || process.env.HOME+'/.npmrc')); console.log('globalconfig='+(process.env.npm_config_globalconfig || process.env.HOME+'/etc/npmrc'));`,
+      `console.log('userconfig='+(process.env.npm_config_userconfig || process.env.NPM_CONFIG_USERCONFIG || process.env.HOME+'/.npmrc')); console.log('globalconfig='+(process.env.npm_config_globalconfig || process.env.HOME+'/etc/npmrc'));`,
       { mode: 0o755 }
     );
     writeFileSync(join(f.root, '.gitignore'), '.performance/\nnode_modules/\nbin/\n.env.local\n');
@@ -617,6 +627,26 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     const systemCa = identity(f.root, { ...env, NODE_USE_SYSTEM_CA: '1' });
     assert.equal(systemCa.reusable, true, JSON.stringify(systemCa.unknown));
     assert.notEqual(systemCa.runtime, identity(f.root, env).runtime);
+    const proxyVariables = cloudProxyEnvironment(f.root);
+    for (const [key, value] of Object.entries(proxyVariables)) {
+      const proxied = identity(f.root, { ...env, [key]: value });
+      assert.equal(proxied.reusable, true, `${key}: ${JSON.stringify(proxied.unknown)}`);
+      assert.notEqual(proxied.runtime, identity(f.root, env).runtime, key);
+    }
+    // npm selects its user config from either case; the selected file's bytes are consumed.
+    const userconfig = { ...env, NPM_CONFIG_USERCONFIG: proxyVariables.NPM_CONFIG_USERCONFIG };
+    mkdirSync(join(f.root, '.performance'), { recursive: true });
+    writeFileSync(proxyVariables.NPM_CONFIG_USERCONFIG, 'loglevel=warn\n');
+    const configured = identity(f.root, userconfig);
+    writeFileSync(proxyVariables.NPM_CONFIG_USERCONFIG, 'loglevel=error\n');
+    assert.notEqual(identity(f.root, userconfig).runtime, configured.runtime);
+    // Only the exact injected names are classified; a sibling npm control still disables reuse.
+    const sibling = identity(f.root, {
+      ...env,
+      NPM_CONFIG_HTTPS_PROXY: 'http://proxy.invalid:3128',
+    });
+    assert.equal(sibling.reusable, false);
+    assert(sibling.unknown.includes('NPM_CONFIG_HTTPS_PROXY'));
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }
@@ -1172,18 +1202,22 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
     import {identity} from ${JSON.stringify(new URL('./gate-receipt.mjs', import.meta.url).href)};
     import {verifyChild} from ${JSON.stringify(new URL('./validation-admission.mjs', import.meta.url).href)};
     verifyChild(process.cwd(), 'checkout');
+    // Checked as received from the launcher, before this probe's own cleanup.
+    const incoming = { ...process.env };
+    for (const key of ['NODE_PATH','NODE_REPL_NODE_MODULE_DIRS','NODE_REPL_TRUSTED_CODE_PATHS','NODE_REPL_TRUSTED_SERVICES']) {
+      if (Object.hasOwn(incoming, key)) throw new Error('Host-only variable '+key+' reached validation execution');
+    }
+    const present = ['NODE_EXTRA_CA_CERTS','NPM_CONFIG_USERCONFIG','npm_config_https_proxy']
+      .filter((key) => Object.hasOwn(incoming, key));
     const env = canonicalEnvironment(process.cwd(), process.env);
     process.env.PATH = env.PATH;
     process.env.FLEET_DOC_FAST = env.FLEET_DOC_FAST;
     for (const key of Object.keys(process.env)) {
       if (!Object.hasOwn(env, key)) delete process.env[key];
     }
-    for (const key of ['NODE_REPL_NODE_MODULE_DIRS','NODE_REPL_TRUSTED_CODE_PATHS','NODE_REPL_TRUSTED_SERVICES']) {
-      if (Object.hasOwn(process.env, key)) throw new Error('REPL metadata reached validation execution');
-    }
     const r=identity(process.cwd(), env);
     console.log(JSON.stringify({runtime:r.runtime, source:r.sourceDigest, installation:r.installation,
-      reusable:r.reusable, unknown:r.unknown}));
+      reusable:r.reusable, unknown:r.unknown, present}));
   `
   );
   const launcher = join(f.root, 'launcher.mjs');
@@ -1208,7 +1242,11 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   );
   const base = Object.fromEntries(
     Object.entries(process.env).filter(
-      ([key]) => !key.startsWith('GIT_') && !key.startsWith('GEOROIDS_') && !key.startsWith('NODE_')
+      ([key]) =>
+        !key.startsWith('GIT_') &&
+        !key.startsWith('GEOROIDS_') &&
+        !key.startsWith('NODE_') &&
+        !/^npm_config_/iu.test(key)
     )
   );
   Object.assign(base, {
@@ -1262,6 +1300,40 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   );
   assert.notEqual(trusted.runtime, direct.runtime);
   assert.notEqual(launch({ ...base, NODE_USE_SYSTEM_CA: '0' }).runtime, trusted.runtime);
+  // Claude Code cloud's proxy injects its CA and npm settings; every launch keeps
+  // and digests them, and a changed value is a distinct runtime.
+  const proxyVariables = cloudProxyEnvironment(f.root);
+  mkdirSync(join(f.root, '.performance'), { recursive: true });
+  writeFileSync(proxyVariables.NPM_CONFIG_USERCONFIG, 'loglevel=warn\n');
+  writeFileSync(proxyVariables.NODE_EXTRA_CA_CERTS, 'fixture CA bundle\n');
+  for (const [key, value] of Object.entries(proxyVariables)) {
+    const alone = launch({ ...base, [key]: value });
+    assert.equal(alone.reusable, true, `${key}: ${JSON.stringify(alone.unknown)}`);
+    assert.deepEqual(alone.present, [key], `${key} stays in execution`);
+    assert.notEqual(alone.runtime, direct.runtime, `${key} enters the runtime digest`);
+  }
+  const proxied = { ...base, ...proxyVariables };
+  const cloud = launch(proxied);
+  assert.equal(cloud.reusable, true, JSON.stringify(cloud.unknown));
+  assert.deepEqual(cloud.present, Object.keys(proxyVariables));
+  // The proxy rotates its CA bundle; only the selected path is digested.
+  writeFileSync(proxyVariables.NODE_EXTRA_CA_CERTS, 'rotated fixture CA bundle\n');
+  assert.deepEqual(launch(proxied), cloud);
+  assert.deepEqual(launch(proxied, true), cloud);
+  assert.deepEqual(launch(proxied, false, true), cloud);
+  assert.deepEqual(launch({ ...proxied, GIT_PREFIX: '', PATH: `${core}:${proxied.PATH}` }), cloud);
+  assert.notEqual(cloud.runtime, direct.runtime);
+  assert.notEqual(
+    launch({ ...proxied, npm_config_https_proxy: 'http://other-proxy.invalid:3128' }).runtime,
+    cloud.runtime
+  );
+  // Its global module path never reaches execution, so neither its value nor the
+  // packages it names can alter or reuse a validation runtime.
+  assert.deepEqual(launch({ ...proxied, NODE_PATH: join(f.root, 'global-modules') }), cloud);
+  assert.deepEqual(launch({ ...proxied, NODE_PATH: join(f.root, 'other-modules') }, true), cloud);
+  // The uppercase npm user config selection is consumed by its bytes, as npm reads it.
+  writeFileSync(proxyVariables.NPM_CONFIG_USERCONFIG, 'loglevel=error\n');
+  assert.notEqual(launch(proxied).runtime, cloud.runtime);
   assert.deepEqual(launch({ ...base, GIT_PREFIX: '', PATH: `${core}:${base.PATH}` }), direct);
   assert.notEqual(
     launch({ ...base, PATH: `${core}:${base.PATH}` }).runtime,
