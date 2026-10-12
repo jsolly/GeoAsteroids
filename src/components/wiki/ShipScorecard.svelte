@@ -1,7 +1,6 @@
 <script lang="ts">
-  
   import { getShipKit } from '../../../shared/shipKits';
-import type { ShipKitId } from '../../../shared-types';
+  import type { ShipKitId } from '../../../shared-types';
   import { shipRatings } from '../../wiki/shipScorecard';
 
   // The shell mounts the radar into `radar` only for the active article; static rendering never does.
