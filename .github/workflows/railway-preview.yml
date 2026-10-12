@@ -1,0 +1,235 @@
+---
+# Opt-in full-stack Preview: an owner or member comments `/preview` on a same-repo
+# pull request, or the repository owner dispatches this workflow with a PR number.
+# The PR head is uploaded to the single Railway `preview` environment, whose game
+# server also serves the built client (GEOROIDS_PREVIEW_CLIENT=1), so one URL runs
+# client and server from the same commit against a disposable world. Last request
+# wins. Vercel stays production-only (vercel.json git.deploymentEnabled); this file
+# replaces the fleet vercel-preview.yml template and reuses its /preview matcher.
+#
+# RAILWAY_TOKEN is a Railway project token scoped to the `preview` environment; it
+# cannot deploy or configure production. It and RAILWAY_PREVIEW_DOMAIN live in the
+# `railway-preview` GitHub Environment (deployment branches: main) and reach only the
+# deploy step. issue_comment runs this file from the default branch, and no PR code
+# runs on the runner: the PR tree is only checked for symlinks, stamped and uploaded.
+name: Railway Preview
+
+'on':
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to deploy to the Railway preview environment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  REPO: ${{ github.repository }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  resolve:
+    name: resolve
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    # A re-run keeps the original actor and comment but resolves the PR head again, so only
+    # the repository owner may re-run an approved request.
+    if: >-
+      (github.run_attempt == 1 || github.triggering_actor == github.repository_owner) &&
+      (
+      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+      (
+        github.event.issue.pull_request &&
+        github.event.comment.user.type == 'User' &&
+        contains(github.event.comment.body, '/preview') &&
+        (
+          github.event.comment.author_association == 'OWNER' ||
+          github.event.comment.author_association == 'MEMBER'
+        )
+      )
+      )
+    outputs:
+      skip: ${{ steps.pr.outputs.skip }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      head_ref: ${{ steps.pr.outputs.head_ref }}
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      DISPATCH_PR: ${{ inputs.pr_number }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve the pull request head
+        id: pr
+        run: |
+          set -euo pipefail
+
+          fail() {
+            printf '%s\n' "$1" >"$RUNNER_TEMP/preview-failure.md"
+            echo "$1" >&2
+            exit 1
+          }
+
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            if ! printf '%s' "$COMMENT_BODY" | bash scripts/vercel-preview-comment.sh; then
+              echo "Comment is not an explicit /preview request; stopping."
+              echo "skip=true" >>"$GITHUB_OUTPUT"
+              exit 0
+            fi
+            pr_number="$ISSUE_NUMBER"
+          else
+            pr_number="$DISPATCH_PR"
+          fi
+          if [[ ! "$pr_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Invalid pull request number: ${pr_number:-empty}" >&2
+            exit 1
+          fi
+          echo "pr_number=${pr_number}" >>"$GITHUB_OUTPUT"
+
+          pr_json="$(gh api "repos/${REPO}/pulls/${pr_number}")" \
+            || fail "Preview request rejected: #${pr_number} could not be read as a pull request (${RUN_URL})."
+          state="$(printf '%s\n' "$pr_json" | jq -r '.state')"
+          head_sha="$(printf '%s\n' "$pr_json" | jq -r '.head.sha')"
+          head_ref="$(printf '%s\n' "$pr_json" | jq -r '.head.ref')"
+          head_repo="$(printf '%s\n' "$pr_json" | jq -r '.head.repo.full_name // empty')"
+
+          if [[ "$state" != "open" ]]; then
+            fail "Preview request rejected: PR #${pr_number} is ${state}."
+          fi
+          if [[ "$head_repo" != "$REPO" ]]; then
+            fail "Preview request rejected: PR #${pr_number} comes from a fork; previews deploy same-repository branches only."
+          fi
+          if [[ ! "$head_sha" =~ ^[a-f0-9]{40}$ ]]; then
+            fail "Preview request rejected: the PR head is not a 40-character commit SHA."
+          fi
+          if [[ ! "$head_ref" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            fail "Preview request rejected: the PR branch name contains unsupported characters."
+          fi
+
+          {
+            echo "head_sha=${head_sha}"
+            echo "head_ref=${head_ref}"
+            echo "skip=false"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Report a rejected preview request
+        if: ${{ (failure() || cancelled()) && steps.pr.outputs.pr_number != '' }}
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: |
+          note="Preview request rejected: ${RUN_URL}"
+          if [[ -s "$RUNNER_TEMP/preview-failure.md" ]]; then
+            note="$(cat "$RUNNER_TEMP/preview-failure.md")"
+          fi
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$note"
+
+  preview:
+    name: preview
+    needs: resolve
+    if: >-
+      ${{ (github.run_attempt == 1 || github.triggering_actor == github.repository_owner) &&
+      needs.resolve.outputs.skip == 'false' }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 35
+    environment: railway-preview
+    concurrency:
+      # One shared preview slot, joined only by real /preview requests.
+      group: railway-preview
+      cancel-in-progress: false
+    env:
+      PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+      HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+      HEAD_REF: ${{ needs.resolve.outputs.head_ref }}
+    steps:
+      # Node comes from the default branch's pin, before the PR tree exists, with no cache
+      # lookup that would read PR configuration.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.head_sha }}
+          persist-credentials: false
+
+      - name: Deploy the PR head to the Railway preview environment
+        env:
+          RAILWAY_PROJECT_ID: 08a7b6ee-af66-4c58-a21e-700d5468ee14
+          RAILWAY_SERVICE_ID: 4e2cb2a2-c1e2-41a8-a970-3f60659c2524
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PREVIEW_DOMAIN: ${{ secrets.RAILWAY_PREVIEW_DOMAIN }}
+        run: |
+          set -euo pipefail
+
+          fail() {
+            printf '%s\n' "$1" >"$RUNNER_TEMP/preview-failure.md"
+            echo "$1" >&2
+            exit 1
+          }
+
+          if [[ -z "${RAILWAY_TOKEN:-}" || -z "${RAILWAY_PREVIEW_DOMAIN:-}" ]]; then
+            fail "Preview deploy skipped: the \`railway-preview\` GitHub Environment needs secrets \`RAILWAY_TOKEN\` (a Railway project token scoped to the \`preview\` environment) and \`RAILWAY_PREVIEW_DOMAIN\`. Add them, then comment \`/preview\` again."
+          fi
+          if [[ ! "$RAILWAY_PREVIEW_DOMAIN" =~ ^[a-z0-9-]+\.up\.railway\.app$ ]]; then
+            fail "Preview deploy skipped: \`RAILWAY_PREVIEW_DOMAIN\` is not a Railway-provided hostname."
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$HEAD_SHA" ]]; then
+            fail "Preview deploy skipped: the checkout does not match PR head \`${HEAD_SHA}\`."
+          fi
+          # The Railway CLI follows symlinks while archiving, so a committed link could pull
+          # runner files into the upload. The repository tracks none.
+          if [[ -n "$(find "$GITHUB_WORKSPACE" -type l -print -quit)" ]]; then
+            fail "Preview deploy refused: the PR tree contains a symlink."
+          fi
+
+          # The production IaC never travels with a preview upload. The build copies public/
+          # into dist/, so the served file names exactly this upload's commit.
+          rm -rf "$GITHUB_WORKSPACE/.railway"
+          printf '%s\n' "$HEAD_SHA" >"$GITHUB_WORKSPACE/public/preview-release.txt"
+
+          # npm runs from $RUNNER_TEMP, outside the PR tree, so it reads no PR .npmrc.
+          (
+            cd "$RUNNER_TEMP"
+            timeout 900 npm exec --yes --package=@railway/cli@5.50.2 -- \
+              railway up "$GITHUB_WORKSPACE" --path-as-root --ci \
+              --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID" --environment preview \
+              --message "preview PR ${PR_NUMBER} ${HEAD_REF} ${HEAD_SHA}"
+          ) || fail "Preview build for \`${HEAD_SHA}\` failed or timed out (${RUN_URL}). A timed-out Railway build may still finish and go live; check the \`preview\` deployments before requesting again."
+
+          origin="https://${RAILWAY_PREVIEW_DOMAIN}"
+          deadline=$((SECONDS + 900))
+          while ((SECONDS < deadline)); do
+            served="$(curl --fail --silent --max-time 20 "${origin}/preview-release.txt" || true)"
+            if [[ "$served" == "$HEAD_SHA" ]] \
+              && curl --fail --silent --max-time 20 --output /dev/null "${origin}/health" \
+              && curl --fail --silent --max-time 20 "${origin}/" | grep -q '<html'; then
+              gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$(
+                printf '%s\n\n%s\n' \
+                  "Preview for \`${HEAD_REF}\` (\`${HEAD_SHA}\`): ${origin}" \
+                  "One shared preview slot with a disposable world: the next \`/preview\` on any PR replaces this deploy, and new commits do not rebuild until you comment \`/preview\` again."
+              )"
+              exit 0
+            fi
+            sleep 10
+          done
+          fail "Preview build for \`${HEAD_SHA}\` uploaded, but ${origin} did not serve it healthy within 15 minutes; see the \`preview\` deployment logs."
+
+      - name: Report a failed preview deploy
+        if: ${{ failure() || cancelled() }}
+        run: |
+          note="Preview deploy for \`${HEAD_SHA}\` failed or was cancelled: ${RUN_URL}"
+          if [[ -s "$RUNNER_TEMP/preview-failure.md" ]]; then
+            note="$(cat "$RUNNER_TEMP/preview-failure.md")"
+          fi
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$note"

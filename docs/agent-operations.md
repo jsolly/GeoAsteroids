@@ -16,7 +16,7 @@ Open clients check the static same-origin `release.json` for the full build iden
 
 ## Deploy
 
-Two separate deploy targets — client and server do not share a host.
+Two separate production deploy targets — client and server do not share a host. The opt-in [Railway preview](#railway-preview) is the one same-origin exception.
 
 ### Vercel (static client)
 
@@ -25,7 +25,7 @@ Two separate deploy targets — client and server do not share a host.
 | **Project** | `georoids` (`jsollys-projects`) |
 | **Production URLs** | **Canonical:** <https://www.georoids.com>; **apex:** <https://georoids.com> (redirects to www); **Vercel default:** `https://georoids-jsollys-projects.vercel.app` |
 | **Build** | `npm run build` → `dist/` (Astro static output; Vite is managed by Astro) |
-| **Trigger** | Merge to `main` after the pre-commit gate and PR CI; Vercel GitHub integration. Branch pushes do **not** create Preview deployments (`vercel.json` `git.deploymentEnabled`); GeoRoids has no Preview path. |
+| **Trigger** | Merge to `main` after the pre-commit gate and PR CI; Vercel GitHub integration. Branch pushes do **not** create Preview deployments (`vercel.json` `git.deploymentEnabled`); Vercel is production-only. The opt-in preview path is the [Railway preview](#railway-preview). |
 | **Local deploy** | None — no `npm run deploy` or CLI deploy step from `/ship` |
 
 **Required Vercel production env vars:**
@@ -69,6 +69,29 @@ because the platform importer omits these default values.
 Smoke: `curl -i https://georoids-production-2403.up.railway.app/health`. The server exposes `RAILWAY_GIT_COMMIT_SHA` in health JSON `releaseId` for diagnostics; host deployment status and gameplay smoke establish production verification.
 
 The former `geoasteroids-production-2403.up.railway.app` hostname returns a Railway edge 404. Use the current `georoids-production-2403.up.railway.app` host for client configuration and verification.
+
+### Railway preview
+
+One shared Railway environment, `preview`, runs a pull request's server **and** serves its built client from the same origin, so the client's same-origin `/ws` reaches the matching server. Use it to play a change before merge. It is never release evidence.
+
+| | |
+| --- | --- |
+| **Trigger** | An owner or member comments `/preview` (alone on the first non-empty line) on a same-repo PR, or the repository owner dispatches `Railway Preview` with a PR number. Agents never comment `/preview` or dispatch `Railway Preview` unless John asks. |
+| **Deploy** | `.github/workflows/railway-preview.yml` resolves the request in a job without secrets, then checks out the PR head, refuses symlinks, removes `.railway/`, stamps `public/preview-release.txt` with the head SHA, and runs `railway up --environment preview`. It installs nothing from the PR and executes no PR code. The pinned Railway CLI runs through `npm exec` from `$RUNNER_TEMP`, so no PR `.npmrc` applies. The PR comment carries the URL and SHA. Rejections, failures, timeouts and cancellations also comment; a request still queued when a newer `/preview` arrives is superseded without a comment. |
+| **Slot** | One environment: the latest `/preview` on any PR replaces the deploy. New commits do not redeploy until someone comments `/preview` again. |
+| **Server mode** | `GEOROIDS_PREVIEW_CLIENT=1` makes `server.ts` serve `dist/` through `server/staticClient.ts`; the exact server routes `/health`, `/status`, `/ws` and `/logs` keep precedence. The flag refuses to start unless `RAILWAY_ENVIRONMENT_NAME=preview`. `NODE_ENV` stays `production`, so rate limits stay on and test routes stay off, and the flag always disables the local playground. It is a deployment selector, like `GEOROIDS_LOCAL_PLAYGROUND`, rather than a second entrypoint, so preview and production share one startup, persistence guard and shutdown path. |
+| **World** | The environment's own `world-data` volume at `/data`. Treat it as disposable. |
+| **Credentials** | GitHub Environment `railway-preview` (deployment branches: `main`) holds `RAILWAY_TOKEN`, a Railway project token scoped to `preview`, plus `RAILWAY_PREVIEW_DOMAIN`. That token cannot deploy or configure production. |
+| **Release identity** | Upload deploys carry no Git metadata, so `/health` `releaseId` is `dev` and `release.json` holds a per-build token. `/preview-release.txt` names the deployed head SHA; the workflow waits for exactly that SHA. |
+
+One-time setup is human-owned production configuration:
+
+1. Duplicate production into an environment named `preview` without copying variable values into source. Confirm its volume id differs from production's `world-data`, and that it has a Railway-provided domain on port 8080.
+2. In `preview` only, set `GEOROIDS_PREVIEW_CLIENT=1`, disconnect its automatic deploys from `main`, enable app sleeping, and set a 1 GB memory limit.
+3. Keep Railway's PR Environments and Bot PR Environments toggles off.
+4. Create the `preview`-scoped project token and the GitHub Environment secrets above.
+
+Never point this workflow at production, apply `.railway/railway.ts` to `preview`, or use a workspace or account token for it. Preview `deployment_status` events start `production-smoke.yml`, which skips them because its `if:` requires the production environment URL.
 
 ## Commands
 
@@ -179,6 +202,25 @@ Logs are structured JSONL. Use `npm run --silent logs -- --player <id>` to merge
 - **`.env`:** an empty `.env` file must exist at the repo root (server startup uses `--env-file=.env`); create one with `touch .env` if missing.
 - **`canvas` native deps:** the `canvas` npm package needs Cairo, Pango, libjpeg, libgif, and librsvg dev headers installed on the system.
 - **Playwright browsers** (manual benchmarks only): install the browser required by that tool with `npx --no-install playwright install chromium`. Browser binaries are not needed for code-test validation. Preserve owned media and measurement outputs; these tools remain outside the gate.
+
+### Cloud sessions
+
+Claude Code cloud containers start on an image Node and without dependencies. When a session is rooted above the repository (multi-repo sessions), the repo's SessionStart hook does not run. Bootstrap from the repository root:
+
+```shell
+bash .cursor/install-app.sh        # canvas native libraries, Node 24 linked into ~/.local/bin, npm ci, .env
+bash .cursor/install-cloud-skills.sh
+node --version                     # v24.x
+npm run gate
+```
+
+For a brief manual smoke ([tests/AGENTS.md](../tests/AGENTS.md#basic-manual-browser-smoke)):
+
+1. Start `npm run dev` in the background.
+2. Wait for `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5173/` to return `200` and `curl http://127.0.0.1:3001/health` to answer.
+3. Invoke `/verify-ui` for the affected route ([Local UI verification](../AGENTS.md#local-ui-verification)). It owns the receipt, including console status and harness-attached screenshots.
+4. If `/verify-ui` cannot launch a browser because the repository's pinned Playwright expects a different browser revision than `/opt/pw-browsers`, use the image's preinstalled Playwright from a scratch directory, never as a package script. Record console and page errors, wait for the game canvas rather than a fixed delay, and capture desktop (1280×800) and mobile (390×844) screenshots. Attach both screenshots to the session; a container path is not evidence. The fallback still owes the full `/verify-ui` receipt: the affected route, the changed control actually exercised (render-only only for copy, style or asset changes), console status and a final status. Anything missing is not done.
+5. Stop with `npm run dev:kill`.
 
 ### Local playground
 

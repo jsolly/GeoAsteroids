@@ -29,7 +29,7 @@ imports and imports from defining modules. Canon: dotagents `rules/frontend-stac
 
 ## Deploy
 
-Astro static client and authoritative WebSocket server deploy independently from `main`. Before configuration or release work, read [deployment operations](docs/agent-operations.md#deploy) and [world operations](docs/persistent-world.md). Never use the retired geoasteroids hostnames. No automatic Vercel Preview deployments.
+Astro static client and authoritative WebSocket server deploy independently from `main`. Before configuration or release work, read [deployment operations](docs/agent-operations.md#deploy) and [world operations](docs/persistent-world.md). Never use the retired geoasteroids hostnames. No automatic Vercel Preview deployments: Vercel is production-only. An owner or member `/preview` PR comment deploys that PR's head to the single shared Railway `preview` environment, where the game server also serves the built client ([Railway preview](docs/agent-operations.md#railway-preview)). Agents never comment `/preview` or dispatch `Railway Preview` unless John asks. A preview is not release evidence. `railway-preview.yml` deliberately replaces the fleet `vercel-preview.yml` template (completion-matrix row 11) and reuses its matcher; never add `vercel-preview.yml` or `vercel-preview-workflow-contract.sh` here, or one comment would start two previews.
 
 ## CI
 
@@ -65,7 +65,11 @@ Read [tests/AGENTS.md](tests/AGENTS.md) for all testing instructions.
 
 ## Local development
 
-Node24 matches `.nvmrc`. Never attach to another checkout's services or kill listeners by port alone. Use `npm run dev`, `dev:check`, and `dev:kill` for this checkout's interactive session. Before provisioning native dependencies or running a smoke, read [local development](docs/agent-operations.md#local-development).
+Node24 matches `.nvmrc`. Never attach to another checkout's services or kill listeners by port alone. Use `npm run dev`, `dev:check`, and `dev:kill` for this checkout's interactive session. Before provisioning native dependencies or running a smoke, read [local development](docs/agent-operations.md#local-development). Before `npm run gate` or `npm run dev` in a Claude Code cloud session, run `bash .cursor/install-app.sh` ([cloud sessions](docs/agent-operations.md#cloud-sessions)).
+
+## Local UI verification
+
+Start `npm run dev`; verify at origin `http://127.0.0.1:5173/` (routes `/`, `/debug`, `/wiki`) with no auth, following `rules/frontend-verification.md` and `/verify-ui`. A `/preview` URL is verified the same way at its preview origin.
 
 ## Verified-tree CI
 

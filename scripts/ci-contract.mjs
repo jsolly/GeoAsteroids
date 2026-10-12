@@ -216,7 +216,7 @@ assert.match(
 );
 assert.equal(
   manifest.scripts['check:actions'],
-  'node --import tsx --test scripts/server-release-inputs.test.mjs scripts/production-smoke-scenario.test.mjs && node scripts/ci-contract.mjs && node --test scripts/gate-contract.test.mjs && node scripts/review-receipt-contract.mjs && bash scripts/check-actions.sh'
+  'node --import tsx --test scripts/server-release-inputs.test.mjs scripts/production-smoke-scenario.test.mjs && node scripts/ci-contract.mjs && node --test scripts/gate-contract.test.mjs && node scripts/review-receipt-contract.mjs && bash scripts/vercel-preview-comment-contract.sh && bash scripts/check-actions.sh'
 );
 assert.equal(
   manifest.scripts['smoke:production'],
@@ -263,6 +263,98 @@ assert.deepEqual(productionCommands, [
   'npm run smoke:scenario-contract',
   'npm run smoke:production',
 ]);
+
+// The opt-in Railway preview deploys only to the `preview` environment with an environment-scoped
+// project token that reaches one step, never runs PR code on the runner, and never touches
+// production configuration. Only real /preview requests join the single deploy slot.
+const previewSource = read('.github/workflows/railway-preview.yml');
+const preview = parse(previewSource);
+assert.deepEqual(Object.keys(preview.on), ['issue_comment', 'workflow_dispatch']);
+assert.deepEqual(preview.on.issue_comment.types, ['created']);
+assert.deepEqual(preview.permissions, { contents: 'read', 'pull-requests': 'write' });
+assert.equal(preview.concurrency, undefined, 'skipped comment runs must not join the slot');
+assert.deepEqual(Object.keys(preview.jobs), ['resolve', 'preview']);
+const { resolve: previewResolve, preview: previewJob } = preview.jobs;
+assert.match(
+  previewResolve.if,
+  /^\(github\.run_attempt == 1 \|\| github\.triggering_actor == github\.repository_owner\) &&/u,
+  'a re-run re-resolves the PR head, so only the owner may re-run'
+);
+assert.match(
+  previewResolve.if,
+  /github\.event_name == 'workflow_dispatch' && github\.actor == github\.repository_owner/u
+);
+assert.match(previewResolve.if, /github\.event\.comment\.user\.type == 'User'/u);
+assert.match(previewResolve.if, /author_association == 'OWNER'/u);
+assert.match(previewResolve.if, /author_association == 'MEMBER'/u);
+assert.doesNotMatch(previewResolve.if, /COLLABORATOR|CONTRIBUTOR/u);
+assert.equal(previewResolve.environment, undefined);
+assert.doesNotMatch(JSON.stringify(previewResolve), /secrets\./u);
+assert.deepEqual(
+  previewResolve.steps.filter((step) => step.uses).map((step) => [step.uses, step.with]),
+  [['actions/checkout@v7', { 'persist-credentials': false }]]
+);
+assert.match(previewResolve.steps[1].run, /\| bash scripts\/vercel-preview-comment\.sh/u);
+assert.match(previewResolve.steps[1].run, /head_repo" != "\$REPO"/u);
+assert.equal(previewJob.needs, 'resolve');
+assert.equal(
+  previewJob.if,
+  `\${{ (github.run_attempt == 1 || github.triggering_actor == github.repository_owner) && needs.resolve.outputs.skip == 'false' }}`,
+  "a re-run of the deploy job alone is the owner's too"
+);
+assert.equal(
+  previewResolve.steps.at(-1).if,
+  `\${{ (failure() || cancelled()) && steps.pr.outputs.pr_number != '' }}`
+);
+assert.equal(previewJob.environment, 'railway-preview');
+assert.deepEqual(previewJob.concurrency, { group: 'railway-preview', 'cancel-in-progress': false });
+assert.doesNotMatch(JSON.stringify(previewJob.env), /secrets\./u);
+assert.deepEqual(
+  previewJob.steps.map((step) => step.uses ?? step.name),
+  [
+    'actions/setup-node@v6',
+    'actions/checkout@v7',
+    'Deploy the PR head to the Railway preview environment',
+    'Report a failed preview deploy',
+  ]
+);
+const [previewNode, previewCheckout, previewDeploy, previewReport] = previewJob.steps;
+assert.deepEqual(previewNode.with, { 'node-version': 24, 'package-manager-cache': false });
+assert.deepEqual(previewCheckout.with, {
+  ref: `\${{ needs.resolve.outputs.head_sha }}`,
+  'persist-credentials': false,
+});
+assert.equal(previewDeploy.env.RAILWAY_TOKEN, `\${{ secrets.RAILWAY_TOKEN }}`);
+assert.equal(previewReport.if, `\${{ failure() || cancelled() }}`);
+assert.doesNotMatch(JSON.stringify(previewReport), /secrets\.|RAILWAY_/u);
+const previewRun = previewDeploy.run;
+assert.doesNotMatch(
+  previewRun,
+  /npm (?:ci|install|run)\b|npx |\b(?:node|tsx|sh|bash|source|make) |(?:^|\s)\.\/|scripts\//mu,
+  'the token-bearing step executes nothing from the PR tree'
+);
+assert.deepEqual(previewRun.match(/\brailway [a-z]+/gu), ['railway up']);
+assert.match(
+  previewRun,
+  /cd "\$RUNNER_TEMP"\n\s+timeout 900 npm exec --yes --package=@railway\/cli@5\.50\.2 -- \\\n\s+railway up /u
+);
+assert.deepEqual(previewRun.match(/(?:--environment|-e) \S+/gu), ['--environment preview']);
+const upload = previewRun.indexOf('railway up ');
+for (const [guard, reason] of [
+  ['[[ "$(git rev-parse HEAD)" != "$HEAD_SHA" ]]', 'upload only the resolved head'],
+  ['find "$GITHUB_WORKSPACE" -type l -print -quit', 'refuse symlinks before uploading'],
+  ['rm -rf "$GITHUB_WORKSPACE/.railway"', 'the production IaC never travels with a preview'],
+  [
+    `printf '%s\\n' "$HEAD_SHA" >"$GITHUB_WORKSPACE/public/preview-release.txt"`,
+    'stamp the uploaded commit',
+  ],
+]) {
+  const index = previewRun.indexOf(guard);
+  assert.ok(index >= 0 && index < upload, reason);
+}
+assert.match(previewRun, /"\$\{origin\}\/preview-release\.txt"/u);
+assert.match(previewRun, /\[\[ "\$served" == "\$HEAD_SHA" \]\]/u);
+assert.doesNotMatch(previewSource, /config apply|--include-variables|94d3de2f/u);
 
 // Execute the actual integration pipeline with coded runner/tee/receipt outcomes.
 // No app service or gameplay workload is started by these shell fixtures.

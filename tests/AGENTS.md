@@ -160,7 +160,9 @@ Open the affected page, try the changed control or a short join/steer/fire flow,
 and check obvious rendering and console errors. Use desktop and mobile widths
 when layout changes. Keep checks brief and report what was actually observed.
 Do not build a browser harness, long scenario matrix or multiplayer regression
-workflow. Deterministic code tests own regression coverage.
+workflow. Deterministic code tests own regression coverage. A `/preview` URL
+smoke is the same brief check; cloud-session mechanics live in
+[cloud sessions](../docs/agent-operations.md#cloud-sessions).
 
 ## Manual performance and media tools
 

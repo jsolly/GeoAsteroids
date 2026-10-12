@@ -9,6 +9,7 @@ test('an unconfigured server uses production defaults and port 3001', () => {
     port: 3001,
     nodeEnv: 'production',
     localPlayground: false,
+    previewClient: false,
   });
 });
 
@@ -17,6 +18,7 @@ test('configured server values select the listener and environment', () => {
     port: 8080,
     nodeEnv: 'development',
     localPlayground: false,
+    previewClient: false,
   });
   expect(readServerConfiguration({ PORT: '0' }).port).toBe(0);
   expect(readServerConfiguration({ PORT: '', NODE_ENV: '' })).toMatchObject({
@@ -34,6 +36,38 @@ test.each(['broken', '-1', '65536', '80.5', 'Infinity'])(
     );
   }
 );
+
+test.each([undefined, 'production', 'pr-12', 'Preview'])(
+  'the preview client flag refuses to start in Railway environment %s',
+  (environment) => {
+    expect(() =>
+      readServerConfiguration({
+        GEOROIDS_PREVIEW_CLIENT: '1',
+        ...(environment === undefined ? {} : { RAILWAY_ENVIRONMENT_NAME: environment }),
+      })
+    ).toThrow('GEOROIDS_PREVIEW_CLIENT requires RAILWAY_ENVIRONMENT_NAME=preview');
+  }
+);
+
+test('the preview environment serves its client and never the local playground', () => {
+  expect(
+    readServerConfiguration({
+      GEOROIDS_PREVIEW_CLIENT: '1',
+      RAILWAY_ENVIRONMENT_NAME: 'preview',
+    })
+  ).toEqual({ port: 3001, nodeEnv: 'production', localPlayground: false, previewClient: true });
+  expect(
+    readServerConfiguration({
+      GEOROIDS_PREVIEW_CLIENT: '1',
+      RAILWAY_ENVIRONMENT_NAME: 'preview',
+      NODE_ENV: 'development',
+      GEOROIDS_LOCAL_PLAYGROUND: '1',
+    }).localPlayground
+  ).toBe(false);
+  expect(readServerConfiguration({ RAILWAY_ENVIRONMENT_NAME: 'preview' }).previewClient).toBe(
+    false
+  );
+});
 
 test('deployed client build information uses the injected release identity', () => {
   vi.stubEnv('VITE_COMMIT_HASH', 'abc1234567890');
