@@ -5,6 +5,7 @@ import { TERRAIN } from '../../../shared/terrainConfig';
 import { applyTerrainSeed, ensureTerrain, getTerrainSeed } from '../../../shared/terrainField';
 import { WORLD } from '../../../shared/world';
 import { PALETTE, VISUAL } from '../../../src/constants';
+import * as contours from '../../../src/physics/terrain/contours';
 import { contourSegmentCount, extractIsoContours } from '../../../src/physics/terrain/contours';
 import {
   builtContourPatchCount,
@@ -214,7 +215,10 @@ test('a reconnect into a new room seed redraws contour patches from the new terr
 
   // The server's snapshot names a different room before the neighbor prefetch runs.
   applyTerrainSeed(TERRAIN.DEFAULT_SEED + 7);
+  const marches = vi.spyOn(contours, 'extractIsoContours');
   await vi.advanceTimersByTimeAsync(0);
+  // The pending prefetch must not march a neighbor from the replaced field.
+  expect(marches).not.toHaveBeenCalled();
   expect(builtContourPatchCount()).toBe(0);
   expect(peekBuiltContourPatch({ x: CONTOUR_REGION_STEP, y: 0 }, 800)).toBeUndefined();
 

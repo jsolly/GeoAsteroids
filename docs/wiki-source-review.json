@@ -415,7 +415,7 @@
     "tests/unit/systems/contour-cuts-preserve-the-shared-world-shape.test.ts": "sha256:05d332f79bf241fc0e6ba3ab3528e8cd2aab01e532a1013bc8a8e4c3999ecec0",
     "tests/unit/systems/contourLaser.test.ts": "sha256:643616f657e0c2356bfbfc8461ed8738c76a7a90e2c360c408104c1aa6eba79f",
     "tests/unit/systems/hudReadability.test.ts": "sha256:6e6b244dad8abbeea77f2eb93dfb9a96000f33ab4f2131d64240ede46e9dc2f7",
-    "tests/unit/systems/isoContourTerrain.test.ts": "sha256:7cf3a0ca9cdfcf5f1557fd3206ef595f04a6c86d21cfdeada87923a84e2ff269",
+    "tests/unit/systems/isoContourTerrain.test.ts": "sha256:2aa2c29b7f9d088eb56cd5e24cafa2146d5a56c761ab68cb2685915b37f684a2",
     "tests/unit/systems/lasers-ricochet-inside-world.test.ts": "sha256:ee8dc109344bdd51f01e99fa733b0e2af2c492060fb5fc213bb389cbed43392c",
     "tests/unit/systems/lootBlast.test.ts": "sha256:7d1342d66c5dbe1380e19fe6092bbf9069ad6cf6c8c6115841d166d3ade0e089",
     "tests/unit/systems/shipGrowth.test.ts": "sha256:633138c51b9abf1a3ba1cc896e9567539bf95a54a8831be5752f00a1a44a7633",
@@ -3881,6 +3881,13 @@
         "src/rendering/contourLaserRenderer.ts": "terrain",
         "src/wiki/articleSources.json": "field-manual"
       }
+    },
+    {
+      "note": "Subsequent scoped review: the PR2 reseed test now also asserts the pending neighbor prefetch marches nothing from the replaced field (test-only; rules and illustrations unchanged).",
+      "sources": ["tests/unit/systems/isoContourTerrain.test.ts"],
+      "topics": ["terrain"],
+      "media": [],
+      "owners": {}
     }
   ]
 }
