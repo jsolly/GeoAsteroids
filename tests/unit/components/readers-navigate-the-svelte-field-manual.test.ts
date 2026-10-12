@@ -1,9 +1,9 @@
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { readWikiArticles } from '../../../scripts/wiki-content';
+import { getShipKit, listShipKits } from '../../../shared/shipKits';
 import WikiShell from '../../../src/components/wiki/WikiShell.svelte';
 import { serializeKitHullSvg } from '../../../src/entities/ship/hullOutlines';
-import { getShipKit, listShipKits } from '../../../src/entities/ship/shipKits';
 import type { WikiArticle } from '../../../src/wiki/article';
 import { shipRatings } from '../../../src/wiki/shipScorecard';
 

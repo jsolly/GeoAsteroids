@@ -1,6 +1,6 @@
 <script lang="ts">
   import { GAME } from '../../../shared/constants/gameplay';
-  import { isShipKitId, listShipKits, SHIP_ABILITY } from '../../entities/ship/shipKits';
+  import { isShipKitId, listShipKits, SHIP_ABILITY } from '../../../shared/shipKits';
   import type { WikiArticle } from '../../wiki/article';
   import Table from '../ui/table/table.svelte';
   import TableBody from '../ui/table/table-body.svelte';

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { TerrainSpiderManager } from '../../../server/core/TerrainSpiderManager';
-import { SHIP_ABILITY } from '../../../src/entities/ship/shipKits';
+import { SHIP_ABILITY } from '../../../shared/shipKits';
 
 function pilot(scanning = false) {
   return {
