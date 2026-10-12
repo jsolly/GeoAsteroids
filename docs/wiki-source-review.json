@@ -494,7 +494,7 @@
     "src/components/ui/table/table-row.svelte": "sha256:2f5bb881c3b3c04855e50b6e6cfb04a51070924e570801bdde25bcc242027e03",
     "src/components/ui/table/table.svelte": "sha256:8323a611466d1730f05192a968e78b06225c51d2286ae7791769cc479a689cff",
     "src/components/wiki/ShipHull.svelte": "sha256:9c9578c26ff706ce87374808d06c72d9e9466e343c9caff80e886f49cdf6d17b",
-    "src/components/wiki/ShipScorecard.svelte": "sha256:cfc38fa74e39b78f54326621d2a781d304e17443f57356f1dc8e093ef612bae3",
+    "src/components/wiki/ShipScorecard.svelte": "sha256:ebd6235ac5016abe3b5ab56bff424afd7b0cbf36d68c4c804a788b09bb3626b1",
     "src/components/wiki/TopicCard.svelte": "sha256:8a9b045b3be8ef1565cb9278c57bc9397a994ae6f5350e6894db578e2653e28e",
     "src/components/wiki/WikiOverview.svelte": "sha256:eb2cffaad6bffa843949eb44e1d4055e714e19d5108e82a1cefc77d0473c6ca9",
     "shared/asteroidMotion.ts": "sha256:c43565f457f5d4179c602373398e503a5167b830c47b04a8132023b2d3e68ff4",
@@ -3986,6 +3986,15 @@
         "src/wiki/gameReference.ts": "field-manual",
         "src/wiki/media.ts": "field-manual",
         "src/wiki/shipScorecard.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Subsequent scoped review: whitespace-only Prettier reformat of ShipScorecard.svelte's script imports; rendering unchanged.",
+      "sources": ["src/components/wiki/ShipScorecard.svelte"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/components/wiki/ShipScorecard.svelte": "field-manual"
       }
     }
   ]
