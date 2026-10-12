@@ -201,6 +201,15 @@ export function identity(root, inputEnvironment = process.env) {
     // Selects TLS trust for every file-based Node child, so it stays in execution
     // and its value enters the digest; hosts such as Claude desktop set it.
     'NODE_USE_SYSTEM_CA',
+    // Claude Code cloud's egress proxy injects these into every session: extra
+    // trusted CAs, npm's user config and its proxy. Like NODE_USE_SYSTEM_CA they
+    // stay in execution and their values enter the digest; the selected npm user
+    // config file is also consumed below; the CA bundle's bytes are deliberately
+    // not, since the proxy rotates it and no validation stage depends on Node TLS.
+    // (The cloud image's NODE_PATH is removed from execution by canonicalEnvironment.)
+    'NODE_EXTRA_CA_CERTS',
+    'NPM_CONFIG_USERCONFIG',
+    'npm_config_https_proxy',
     'PATH',
     'HOME',
     'TMPDIR',
