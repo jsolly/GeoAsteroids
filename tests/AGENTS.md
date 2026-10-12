@@ -166,9 +166,10 @@ workflow. Deterministic code tests own regression coverage.
 
 Keep measurement fixtures under `benchmarks/`; production must not import them.
 Deterministic benchmark contract tests prove workload validation or cleanup, not
-elapsed-time thresholds or native browser comparisons. Browser benchmarks,
-frame measurements and Wiki media generation are manual tools outside the gate.
-Playwright is retained for them. Manual runner/frame measurements enter the
+elapsed-time thresholds or native browser comparisons. Browser benchmarks and
+frame measurements are manual tools outside the gate. Playwright is retained for
+them. Wiki media generation needs no browser; CI's `wiki-media` lane verifies its
+committed baseline ([Wiki maintenance](../docs/wiki-maintenance.md#generate-or-verify-gifs)). Manual runner/frame measurements enter the
 common-Git heavyweight queue and retain their complete outcome and cleanup evidence.
 
 Compare equivalent scenarios with a pinned harness and preserve raw samples,

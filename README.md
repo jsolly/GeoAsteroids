@@ -50,7 +50,7 @@ Repeatable client, server, snapshot codec and loopback transport measurements us
 the [benchmark framework](benchmarks/README.md). It documents clean committed
 harness requirements, revision isolation, paired comparisons and raw artifacts.
 The framework reports fixture timings, work counts and outcome equality; it does
-not claim a generic optimization or supported capacity. Browser benchmarks, frame measurements and Wiki media generation remain manual tools outside the test gate; Playwright is retained for them.
+not claim a generic optimization or supported capacity. Browser benchmarks and frame measurements remain manual tools outside the test gate; Playwright is retained for them. Wiki media needs no browser; CI's `wiki-media` lane verifies the committed baseline.
 
 ## Production
 

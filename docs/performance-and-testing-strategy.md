@@ -160,8 +160,8 @@ runner settings and basic manual smoke instructions live in
 [tests/AGENTS.md](../tests/AGENTS.md). Performance experiment guidance remains here.
 
 The required `CI / ci` status aggregates independent static validation, runner
-contracts and complete server/entity code integration. All three lanes must
-succeed. `npm run gate` owns static checks, contracts, units, build and integration.
+contracts, complete server/entity code integration and Wiki media verification.
+All four lanes must succeed. `npm run gate` owns static checks, contracts, units, build and integration.
 Manual performance measurements remain separate from correctness validation.
 
 ## Client optimization opportunities

@@ -4,7 +4,7 @@ Read root `AGENTS.md` for controls. This guide owns commands, deployment procedu
 
 ## Ship
 
-Run `npm run gate` before publication and again after review fixes. It includes static checks, runner contracts, the complete unit suite, production build and all server/entity integration tests. Code checks can overlap across worktrees; each checkout excludes overlapping validation. CI requires independent static, runner-contract and complete code-integration lanes to pass `CI / ci`. Browser suites and automatic frame-work/constrained-client gates are retired. Manual measurements remain outside the gate. Read [CI and local review](ci-and-local-review.md).
+Run `npm run gate` before publication and again after review fixes. It includes static checks, runner contracts, the complete unit suite, production build and all server/entity integration tests. Code checks can overlap across worktrees; each checkout excludes overlapping validation. CI requires independent static, runner-contract, complete code-integration and Wiki media lanes to pass `CI / ci`. Browser suites and automatic frame-work/constrained-client gates are retired. Manual measurements remain outside the gate. Read [CI and local review](ci-and-local-review.md).
 
 After merging, confirm Vercel's production Git deployment is READY at <https://www.georoids.com>. Classify server inputs with the classifier's `--changed` mode using the actual base and merge SHAs from the ship receipt. If the graph requires a server deployment, independently confirm Railway's production Git deployment succeeded; client success alone is insufficient. Successful host deployments establish the release. Do not compare served metadata or search bundle text for a commit SHA. Railway auto-deploys main. If deployment is absent or red, inspect the actual trigger and staged platform changes before any pinned-commit fallback; never upload an arbitrary local tree as a production release.
 
@@ -178,7 +178,7 @@ Logs are structured JSONL. Use `npm run --silent logs -- --player <id>` to merge
 - **Node:** `package.json` requires `^24.15.0` (jsdom's Node 24 floor); `.nvmrc` is `24`.
 - **`.env`:** an empty `.env` file must exist at the repo root (server startup uses `--env-file=.env`); create one with `touch .env` if missing.
 - **`canvas` native deps:** the `canvas` npm package needs Cairo, Pango, libjpeg, libgif, and librsvg dev headers installed on the system.
-- **Playwright browsers** (manual benchmarks and Wiki media only): install the browser required by that tool with `npx --no-install playwright install chromium`. Browser binaries are not needed for code-test validation. Preserve owned media and measurement outputs; these tools remain outside the gate.
+- **Playwright browsers** (manual benchmarks only): install the browser required by that tool with `npx --no-install playwright install chromium`. Browser binaries are not needed for code-test validation. Preserve owned media and measurement outputs; these tools remain outside the gate.
 
 ### Local playground
 

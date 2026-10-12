@@ -63,16 +63,16 @@ Article demonstrations autoplay their GIF when an article opens; there are no pl
 
 ## Generate or verify GIFs
 
-The generator uses the repository's Node `canvas` package and Python with Pillow pinned in `scripts/wiki-media-requirements.txt`. Set `WIKI_MEDIA_PYTHON` to that Python executable when it is not `python3`. Run from the checkout root:
+The committed demonstration baseline belongs to linux-x64: Ubuntu 24.04 on x86-64, as on the GitHub `ubuntu-24.04` runner and the Claude Code cloud container, which reproduce it byte for byte. Other platforms rasterize differently; arm64 Linux changes a few pixels and macOS differs more. The generator uses the repository's Node `canvas` package, Python with Pillow pinned in `scripts/wiki-media-requirements.txt`, and the Liberation Sans faces in `scripts/wiki-media-fonts/`. Liberation Sans is metric-compatible with Arial and answers every `Arial` request, and on Linux an empty fontconfig file hides the host's fonts. Set `WIKI_MEDIA_PYTHON` to the Pillow Python when it is not `python3`. On linux-x64, run from the checkout root:
 
 ```sh
 npm run wiki:media
 npm run wiki:media:check
 ```
 
-Generation renders each controlled scene twice and compares frame and GIF hashes before writing GIFs, PNG posters, and `public/wiki/media/manifest.json`. Verification checks reproducibility and compares regenerated output with the committed assets. The manifest records the fixed seed, dimensions, timing, encoder, and hashes. A generation or comparison failure exits unsuccessfully.
+Generation renders each controlled scene twice and compares frame and GIF hashes before writing GIFs, PNG posters, and `public/wiki/media/manifest.json`. Verification checks reproducibility and compares regenerated output with the committed assets. The manifest records the platform, fixed seed, dimensions, timing, encoder, and hashes. A generation or comparison failure exits unsuccessfully. Any other platform refuses to verify or to write `public/wiki/media`; `npm run wiki:media -- --output <dir>` still renders a local preview there.
 
-Use the pinned Node dependency installation and the same Pillow version for regeneration. Fonts and native rendering libraries can differ across operating systems; a cross-platform hash difference needs inspection, not automatic baseline acceptance.
+The required `wiki-media` CI lane runs the check on `ubuntu-24.04`, so a change that moves generator output cannot merge with a stale baseline. When the check fails, the lane renders the current baseline outside the checkout and uploads it as the `wiki-media-baseline-<run>-<attempt>` artifact. Without linux-x64, download that artifact from the failed run, copy its files into `public/wiki/media/`, inspect them, and record the review below.
 
 ## Source review gate
 
@@ -83,12 +83,12 @@ Run commands from `/Users/johnsolly/code/GeoRoids` or the root of its checkout.
 When a check fails:
 
 1. Inspect changed source files and identify affected rules and illustrations.
-2. Update relevant articles and source references; regenerate affected demonstrations.
-3. Inspect the resulting images and verify their behavior against the implementation. Run the media reproducibility check when the generator changes.
+2. Update relevant articles and source references; regenerate affected demonstrations on linux-x64, or take the `wiki-media` lane's candidate artifact ([Generate or verify GIFs](#generate-or-verify-gifs)).
+3. Inspect the resulting images and verify their behavior against the implementation. Run the media reproducibility check on linux-x64 when the generator changes; elsewhere CI's `wiki-media` lane runs it.
 4. Run lint, types, relevant gameplay tests, and desktop/mobile wiki checks.
 5. Record only the completed scope with `npm run wiki:review`: repeat `--source` for each reviewed changed path, `--topic` for every affected article, and `--media` for every affected demonstration, with a nonempty `--note`. Unmapped or deleted sources also need an explicit `--owner source/path=topic-id` using a selected real topic. Then run `npm run test` and `npm run build`, including the review-invalidation contract test. Commit the resulting `docs/wiki-source-review.json` with the change.
 
-Do not regenerate the baseline automatically in CI or as part of a build. The digest detects review work; it cannot write or validate the explanation for you. Review notes should describe actual completed checks. Explicit acceptance formats the ledger with the pinned Biome installation before replacing it atomically; a formatter failure leaves the previous review intact.
+CI and builds never write or accept the committed baseline; the `wiki-media` lane only offers a candidate after its check fails. The digest detects review work; it cannot write or validate the explanation for you. Review notes should describe actual completed checks. Explicit acceptance formats the ledger with the pinned Biome installation before replacing it atomically; a formatter failure leaves the previous review intact.
 
 Acceptance updates only the selected source hashes, adding or removing those keys as needed. It preserves unrelated pending hashes, the legacy review note and earlier review batches. A scoped acceptance can succeed while reporting other pending sources; the ordinary check still fails until those sources are reviewed. Unknown, duplicate or incomplete selectors fail before writing. Build and CI never accept a review automatically.
 

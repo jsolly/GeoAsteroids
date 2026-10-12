@@ -11,8 +11,23 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const ci = parse(read('.github/workflows/ci.yml'));
 const coverage = parse(read('.github/workflows/coverage.yml'));
 const required = ci.jobs.ci;
-assert.deepEqual(required.needs, ['static-checks', 'runner-contracts', 'integration-tests']);
-assert.match(required.if, /always\(\)/u);
+assert.deepEqual(required.needs, [
+  'static-checks',
+  'runner-contracts',
+  'integration-tests',
+  'wiki-media',
+]);
+// The required check runs whenever its lanes run, keeps the deferred name otherwise, and fails
+// when any of its steps fails.
+assert.equal(required.if, `always() && (${ci.jobs['static-checks'].if})`);
+assert.equal(required.name, ci.jobs['static-checks'].name.replaceAll('static-checks', 'ci'));
+assert.equal(required['continue-on-error'], undefined, 'ci must fail when it fails');
+assert.deepEqual(
+  required.steps
+    .filter((step) => step['continue-on-error'] !== undefined || step.if !== undefined)
+    .map((step) => step.name ?? step.uses),
+  []
+);
 for (const name of required.needs) {
   assert.equal(
     ci.jobs[name].needs,
@@ -20,9 +35,21 @@ for (const name of required.needs) {
     `${name} must start without waiting for another lane`
   );
   assert.ok(ci.jobs[name]['timeout-minutes'] <= 4);
-  assert.equal(ci.jobs[name]['runs-on'], 'ubuntu-24.04-arm');
+  // The committed Wiki media baseline belongs to linux-x64; every other lane runs on arm64.
+  assert.equal(
+    ci.jobs[name]['runs-on'],
+    name === 'wiki-media' ? 'ubuntu-24.04' : 'ubuntu-24.04-arm'
+  );
   assert.equal(ci.jobs[name].if, ci.jobs['static-checks'].if);
   assert.equal(ci.jobs[name].name, ci.jobs['static-checks'].name.replaceAll('static-checks', name));
+  // Only the reusable-tree lookup may fail without failing its lane.
+  assert.equal(ci.jobs[name]['continue-on-error'], undefined, `${name} must fail when it fails`);
+  assert.deepEqual(
+    ci.jobs[name].steps
+      .filter((step) => step['continue-on-error'] !== undefined)
+      .map((step) => step.id),
+    ['verified-tree']
+  );
 }
 // Secrets scan precedes reusable-tree decisions in each independently validated lane.
 for (const name of required.needs) {
@@ -59,6 +86,22 @@ assert.doesNotMatch(read('scripts/gate.mjs'), /pre-commit|npm.*gate/u);
 assert.equal(
   JSON.parse(read('package.json')).scripts['test:review'],
   'bash scripts/test-review.sh'
+);
+
+// The lanes' scan is the canonical `ci` step plus an x64 archive for the media lane: the same
+// release, arm64 pin and range logic, so a canonical bump cannot leave the lanes behind.
+const laneScan = ci.jobs['static-checks'].steps[1].run;
+const armPin = laneScan.match(
+  /^ {2}ARM64\) gitleaks_arch=arm64 gitleaks_sha256=([0-9a-f]{64}) ;;$/mu
+)?.[1];
+assert.ok(armPin, 'lane scan must pin the arm64 gitleaks archive');
+assert.match(laneScan, /^ {2}X64\) gitleaks_arch=x64 gitleaks_sha256=[0-9a-f]{64} ;;$/mu);
+assert.equal(
+  laneScan
+    .replace(/^case "\$RUNNER_ARCH" in\n[\s\S]*?^esac\n/mu, '')
+    .replace(/"(https:\S+)_\$\{gitleaks_arch\}\.tar\.gz"/u, '$1_arm64.tar.gz')
+    .replace('$gitleaks_sha256', armPin),
+  required.steps.find((step) => step.name === 'Secrets scan (range)').run
 );
 
 // Moving a check between lanes must neither remove nor duplicate a validation.
@@ -137,10 +180,16 @@ for (const job of Object.values(ci.jobs)) {
 const manifest = JSON.parse(read('package.json'));
 // Manual measurements are explicit user entrypoints, never hidden validation.
 const browserMeasurement =
-  /playwright|puppeteer|--benchmark-(?:client|load)|benchmark:(?:realtime|load)|measure-frame-work|wiki:media/u;
+  /playwright|puppeteer|--benchmark-(?:client|load)|benchmark:(?:realtime|load)|measure-frame-work/u;
 for (const [name, command] of Object.entries(manifest.scripts)) {
   if (/^(?:test(?::|$)|check:|gate$|fix$)/u.test(name)) {
     assert.doesNotMatch(command, browserMeasurement, `${name} must remain code-only validation`);
+    // Wiki media belongs to linux-x64 and its CI lane; local validation must pass on macOS too.
+    assert.doesNotMatch(
+      command,
+      /wiki:media|wiki-media\.ts/u,
+      `${name} must not render Wiki media`
+    );
   }
 }
 for (const file of ['.github/workflows/ci.yml', '.github/workflows/production-smoke.yml']) {
@@ -177,7 +226,7 @@ assert.equal(
   manifest.scripts['smoke:scenario-contract'],
   'node --import tsx --test scripts/server-release-inputs.test.mjs scripts/production-smoke-scenario.test.mjs'
 );
-assert.ok(manifest.devDependencies.playwright, 'Manual benchmarks and media still need Playwright');
+assert.ok(manifest.devDependencies.playwright, 'Manual benchmarks still need Playwright');
 assert.equal(manifest.scripts['benchmark:realtime'], './scripts/test-runner.sh --benchmark-client');
 assert.equal(manifest.scripts['benchmark:load'], './scripts/test-runner.sh --benchmark-load');
 for (const command of Object.keys(manifest.scripts)) {
@@ -272,36 +321,63 @@ try {
   rmSync(fixture, { recursive: true, force: true });
 }
 
-// Execute the actual aggregate step for all 64 GitHub dependency outcomes.
+// The media lane verifies the committed baseline. Only after that check fails does it render a
+// candidate outside the checkout and upload it for review; CI never writes the committed assets.
+assert.equal(manifest.scripts['wiki:media:check'], 'tsx scripts/wiki-media.ts --verify');
+assert.equal(manifest.scripts['wiki:media'], 'tsx scripts/wiki-media.ts');
+const mediaSteps = ci.jobs['wiki-media'].steps;
+assert.deepEqual(
+  mediaSteps.filter((step) => /^npm run /u.test(step.run ?? '')).map((step) => step.run),
+  ['npm run wiki:media:check', 'npm run wiki:media -- --output "$RUNNER_TEMP/wiki-media-baseline"']
+);
+const mediaCheck = mediaSteps.find((step) => step.run === 'npm run wiki:media:check');
+assert.equal(mediaCheck.id, 'wiki-media');
+assert.equal(mediaCheck.if, "steps.verified-tree.outputs.run_full != 'false'");
+const mediaCandidate = mediaSteps.filter(
+  (step) => step.if === "failure() && steps.wiki-media.outcome == 'failure'"
+);
+assert.deepEqual(
+  mediaCandidate.map((step) => step.run ?? step.uses),
+  [
+    'npm run wiki:media -- --output "$RUNNER_TEMP/wiki-media-baseline"',
+    'actions/upload-artifact@v7',
+  ]
+);
+assert.equal(mediaCandidate[1].with.path, `\${{ runner.temp }}/wiki-media-baseline`);
+
+// Execute the actual aggregate step for all 256 GitHub dependency outcomes.
 const aggregate = required.steps.find(
-  (step) => step.name === 'Require all three validation lanes to pass'
+  (step) => step.name === 'Require all four validation lanes to pass'
 );
 assert.ok(aggregate);
-assert.equal(aggregate.env.STATIC_RESULT, `\${{ needs.static-checks.result }}`);
-assert.equal(aggregate.env.RUNNER_RESULT, `\${{ needs.runner-contracts.result }}`);
-assert.equal(aggregate.env.INTEGRATION_RESULT, `\${{ needs.integration-tests.result }}`);
+const laneResults = {
+  STATIC_RESULT: 'static-checks',
+  RUNNER_RESULT: 'runner-contracts',
+  INTEGRATION_RESULT: 'integration-tests',
+  WIKI_MEDIA_RESULT: 'wiki-media',
+};
+for (const [variable, lane] of Object.entries(laneResults)) {
+  assert.equal(aggregate.env[variable], `\${{ needs.${lane}.result }}`);
+}
 const outcomes = ['success', 'failure', 'cancelled', 'skipped'];
-for (const staticResult of outcomes) {
-  for (const runnerResult of outcomes) {
-    for (const integrationResult of outcomes) {
-      const result = spawnSync('bash', ['-c', aggregate.run], {
-        env: {
-          ...process.env,
-          STATIC_RESULT: staticResult,
-          RUNNER_RESULT: runnerResult,
-          INTEGRATION_RESULT: integrationResult,
-        },
-        encoding: 'utf8',
-      });
-      assert.equal(result.error, undefined);
-      assert.equal(
-        result.status === 0,
-        staticResult === 'success' && runnerResult === 'success' && integrationResult === 'success'
-      );
-    }
-  }
+const combinations = Object.keys(laneResults).reduce(
+  (rows, variable) =>
+    rows.flatMap((row) => outcomes.map((outcome) => ({ ...row, [variable]: outcome }))),
+  [{}]
+);
+assert.equal(combinations.length, 256);
+for (const results of combinations) {
+  const result = spawnSync('bash', ['-c', aggregate.run], {
+    env: { ...process.env, ...results },
+    encoding: 'utf8',
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(
+    result.status === 0,
+    Object.values(results).every((outcome) => outcome === 'success')
+  );
 }
 
 process.stdout.write(
-  'CI contracts passed: three parallel lanes, exact command coverage, fail-closed aggregation, mandatory local tests, and failure propagation.\n'
+  'CI contracts passed: four parallel lanes, exact command coverage, fail-closed aggregation, mandatory local tests, and failure propagation.\n'
 );
