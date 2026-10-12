@@ -66,10 +66,12 @@ test('a clean counting proxy preserves raw bytes without scheduling or capping a
     expect(schedule).not.toHaveBeenCalled();
     expect((await stat(path)).mode & 0o777).toBe(0o600);
     const partial = createConnection(path);
+    // Closing the control server may end this socket with EOF (macOS) or a reset (Linux);
+    // either closes it, so wait for close itself rather than rejecting on the error event.
     partial.on('error', () => {});
     await once(partial, 'connect');
     partial.write('{');
-    const closed = once(partial, 'close');
+    const closed = new Promise<void>((resolve) => partial.once('close', () => resolve()));
     await closeControl();
     closeControl = undefined;
     await closed;

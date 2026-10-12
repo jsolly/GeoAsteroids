@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import process from 'node:process';
 import { expect, test } from 'vitest';
 import {
   createHeightfield,
@@ -178,7 +179,9 @@ test.each(gridCases())('$name preserves every shared height and both extrema', (
 });
 
 // Witnesses generated from the complete frozen terrain graph before this refactor.
-// Revision: 5cdaeedad8db22f5925dd4cdc176caa606bfc5be, Node 24.16.0.
+// Revision: 5cdaeedad8db22f5925dd4cdc176caa606bfc5be, Node 24.16.0 on darwin-arm64;
+// linux-x64 contour witnesses from the same revision; identical on Node 24.15.0, 24.16.0 and
+// 24.21.0, so the split follows the platform, not the Node version.
 // Original SHA-256 source identities:
 // heightfield.ts: f4136f2e44fe4d85585886ab31a144e84ee87694c4d177b21f7bbc89f32d2afe
 // passages.ts: 192ae113372181868e6e558667f998bbfbc639bcca2416ffe87ab6d028f13108
@@ -204,7 +207,14 @@ function orderedContourNumbers(levels: readonly ContourLevel[]): number[] {
   return values;
 }
 
-const contourWitnesses: (TerrainCase & { digest: string })[] = [
+// The default digest comes from the generation platform above (darwin-arm64). The same
+// frozen revision rounds rim contours differently on some platforms; platformDigests holds
+// witnesses regenerated there by running that revision's extractIsoContours on these cases,
+// never by copying what the refactored code prints.
+const contourWitnesses: (TerrainCase & {
+  digest: string;
+  platformDigests?: Partial<Record<string, string>>;
+})[] = [
   {
     name: 'normal spawn',
     seed: 42,
@@ -228,6 +238,9 @@ const contourWitnesses: (TerrainCase & { digest: string })[] = [
     gridSize: 96,
     bounds: { cx: 59392, cy: 0, radius: 2048 },
     digest: '5eae9c69a403976b1e480a4279e706a7adff0497a925485d7a1641ef6a6fe671',
+    platformDigests: {
+      'linux-x64': 'ec123d5b51b8e976f923453bce70dc0a70447320f1eb72d34a720d849785125d',
+    },
   },
   {
     name: 'diagonal rim',
@@ -252,6 +265,9 @@ const contourWitnesses: (TerrainCase & { digest: string })[] = [
     gridSize: 224,
     bounds: smallWorld,
     digest: '1d4e66fa2eb9bf1c53d8af37ef7308fefc579f4784c8dba9bbd548e3d174666f',
+    platformDigests: {
+      'linux-x64': 'b1763c8340f282e2087d7b85bb2e38b4fdcb054360e970f24c50a9c4d3ddf9ae',
+    },
   },
   {
     name: 'generated landmark',
@@ -271,7 +287,10 @@ test.each(contourWitnesses)('$name retains the original ordered contour geometry
     TERRAIN.CONTOUR_INTERVAL,
     scenario.bounds
   );
-  expect(numericDigest(orderedContourNumbers(levels))).toBe(scenario.digest);
+  const platform = `${process.platform}-${process.arch}`;
+  expect(numericDigest(orderedContourNumbers(levels))).toBe(
+    scenario.platformDigests?.[platform] ?? scenario.digest
+  );
 });
 
 const pointWitnesses = [
