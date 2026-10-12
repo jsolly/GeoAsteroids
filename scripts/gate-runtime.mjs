@@ -47,9 +47,13 @@ export function canonicalEnvironment(root, environment) {
     FLEET_DOC_FAST: '0',
   };
   delete env.GIT_PREFIX;
-  // These belong to the host's interactive REPL, not the owned file-based Node
-  // program. Remove them from execution itself instead of ignoring their digest.
+  // Host-only variables are removed from execution itself instead of ignoring
+  // their digest. NODE_PATH (Claude Code cloud images point it at global
+  // packages) would add host module directories to resolution, so a missing
+  // dependency could resolve outside the digested node_modules. The NODE_REPL_
+  // keys belong to the host's interactive REPL, not the owned file-based program.
   for (const key of [
+    'NODE_PATH',
     'NODE_REPL_NODE_MODULE_DIRS',
     'NODE_REPL_TRUSTED_CODE_PATHS',
     'NODE_REPL_TRUSTED_SERVICES',
