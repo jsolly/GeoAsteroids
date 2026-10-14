@@ -10,12 +10,13 @@ import {
   renameSync,
   writeFileSync,
 } from 'node:fs';
-import { join, relative as relativePath, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import process from 'node:process';
 import { receiptEnvironment } from './validation-admission.mjs';
 
 export const RECEIPT_VERSION = 2;
 export const STAGES = [
+  ['repository hook trust', 'check:repo-hooks'],
   ['lint policy', 'check:lint-policy'],
   ['lint', 'check:lint'],
   ['knip', 'check:knip'],
@@ -176,10 +177,33 @@ function executable(name, env) {
   for (const directory of (env.PATH ?? '').split(':')) {
     const path = join(directory, name);
     if (existsSync(path)) {
-      return realpathSync(path);
+      return resolve(path);
     }
   }
   throw new Error(`Missing runtime ${name}`);
+}
+function pythonRuntime(root, env) {
+  // Ask the execution launcher rather than duplicating its version/fallback policy.
+  const selected = spawnSync(
+    executable('bash', env),
+    [
+      join(root, 'scripts/repo-python.sh'),
+      '-c',
+      'import os, sys; print(os.path.realpath(sys.executable))',
+    ],
+    { cwd: root, env, encoding: 'utf8', timeout: 10_000, maxBuffer: 4096 }
+  );
+  const path = selected.stdout?.trim() ?? '';
+  if (
+    selected.status !== 0 ||
+    selected.error ||
+    selected.signal ||
+    !isAbsolute(path) ||
+    path.includes('\n')
+  ) {
+    throw new Error('Cannot identify supported Python runtime; run reviewed repository setup');
+  }
+  return realpathSync(path);
 }
 function consumedFile(path) {
   if (!present(path)) {
@@ -193,8 +217,20 @@ export function identity(root, inputEnvironment = process.env) {
   const source = sourceRows(root);
   const runtimes = ['node', 'npm', 'bash', 'git', 'uvx'].map((name) => {
     const path = executable(name, env);
-    return [name, path, fileRecord(path)];
+    const target = realpathSync(path);
+    return [name, path, fileRecord(path), target, fileRecord(target)];
   });
+  const python = pythonRuntime(root, env);
+  runtimes.push(['python', python, fileRecord(python)]);
+  // The actual npm lifecycle identifies the CLI and interpreter behind wrappers.
+  for (const name of ['npm_execpath', 'npm_node_execpath']) {
+    const value = env[name];
+    if (typeof value !== 'string' || !isAbsolute(value)) {
+      throw new Error('Missing actual npm runtime from validation lifecycle');
+    }
+    const path = realpathSync(value);
+    runtimes.push([name, path, fileRecord(path)]);
+  }
   const allowed = new Set([
     'NODE_ENV',
     'NODE_OPTIONS',
@@ -211,13 +247,14 @@ export function identity(root, inputEnvironment = process.env) {
     'NPM_CONFIG_USERCONFIG',
     'npm_config_https_proxy',
     'PATH',
+    'npm_execpath',
+    'npm_node_execpath',
     'HOME',
     'TMPDIR',
     'LANG',
     'LC_ALL',
     'CI',
     'GEOROIDS_SERVER_ENV_FILE',
-    'DOTAGENTS_GATE_LIB',
     'FLEET_DOC_FAST',
     'VERCEL_GIT_COMMIT_SHA',
     'RAILWAY_GIT_COMMIT_SHA',
@@ -261,8 +298,8 @@ export function identity(root, inputEnvironment = process.env) {
   // Ask the actual npm CLI for selected/default configuration homes, rather
   // than guessing a prefix from a separately installed Node executable.
   const npmConfig = spawnSync(
-    process.execPath,
-    [executable('npm', env), 'config', 'get', 'userconfig', 'globalconfig'],
+    executable('npm', env),
+    ['config', 'get', 'userconfig', 'globalconfig'],
     { cwd: root, env, encoding: 'utf8' }
   );
   if (npmConfig.status !== 0 || npmConfig.error || npmConfig.signal) {
