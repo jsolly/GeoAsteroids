@@ -12,6 +12,7 @@ import type { AsteroidData, AsteroidMaterial } from '../../../shared-types';
 import { serializeAsteroidMaterialSvg } from '../../../src/entities/roid/materialArt';
 import { Roid } from '../../../src/entities/roid/Roid';
 import { applyAsteroidKinematics } from '../../../src/network/services/asteroidFieldSync';
+import { asteroidRow } from '../../support/asteroid-row';
 
 function mineral(material: AsteroidMaterial, size = 36): AsteroidData {
   const offsets = [...MATERIAL_OUTLINES[material]];
@@ -40,7 +41,7 @@ describe('mineral asteroids break with distinct rewards', () => {
     expect(new Set(rocks.map((rock) => rock.size)).size).toBeGreaterThan(1);
     expect(rocks.every((rock) => rock.size >= 18 && rock.size <= 48)).toBe(true);
     for (const rock of rocks) {
-      const local = new Roid({ x: 0, y: 0 }, 1, rock.id);
+      const local = new Roid(asteroidRow({ x: 0, y: 0 }, 1, rock.id));
       applyAsteroidKinematics(local, rock);
       expect(local.material).toBe(rock.material);
       expect(local.maxHealth).toBe(rock.maxHealth);

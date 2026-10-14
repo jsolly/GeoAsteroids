@@ -2,7 +2,6 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { drawHullAssembly } from '../../../src/entities/ship/shipRenderer';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -37,7 +36,6 @@ test('accepted respawn starts assembly once and healthy snapshot repeats do not 
     id: 'pilot',
     name: 'Pilot',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   player.updateFromServer({ position: { x: 0, y: 0 }, health: 100, spawnProtectionTimer: 120 });
   expect(player.ship.hullAssemblyStartedAt).toBe(100);

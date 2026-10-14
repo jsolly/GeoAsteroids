@@ -36,7 +36,6 @@ media tools remain outside the gate.
 
 - `tests/integration/entities/input/keybindings.test.ts`
 - `tests/integration/entities/input/mouse.test.ts`
-- `tests/integration/server/asteroids-follow-debug-placement-policy.test.ts`
 - `tests/integration/server/fixture-waits-for-departed-pilots-before-resetting-world.test.ts`
 - `tests/integration/server/player-motion-cross-real-sockets.test.ts`
 - `tests/integration/server/server-parity.test.ts`

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { GameController } from '../../../src/core/gameController';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { getPressedKeysForPlayer, keys } from '../../../src/input/keybindings';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { getPressedKeysForPlayer } from '../../../src/input/keybindings';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { createGameRuntime, type GameRuntime } from '../../../src/runtime/gameRuntime';
 import { getOpenGameOverlay } from '../../../src/runtime/overlayState';
 import type { GamePresentation } from '../../../src/runtime/uiTypes';
@@ -47,7 +47,7 @@ beforeEach(async () => {
       disconnect() {}
     }
   );
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   vi.spyOn(network, 'connect').mockResolvedValue();
   vi.spyOn(network, 'joinAndWaitForWorld').mockResolvedValue(true);
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([]);
@@ -96,7 +96,6 @@ test('switching from map to inventory cancels held controls without releasing th
   }
   player.ship.spawnProtectionTimer = 0;
   player.ship.blinkCount = 0;
-  keys['Space'] = true;
   getPressedKeysForPlayer(player).add('KeyA');
   const shoot = vi.spyOn(player.ship, 'shoot').mockImplementation(() => {});
   runtime.commands.openUniverseMap();
@@ -109,7 +108,6 @@ test('switching from map to inventory cancels held controls without releasing th
   expect(ownedMapFrames).toHaveLength(1);
   expect(chrome).toHaveBeenCalledOnce();
   expect(player.ship.movementLocked).toBe(true);
-  expect(keys['Space']).toBe(false);
   expect(getPressedKeysForPlayer(player).size).toBe(0);
   document.dispatchEvent(
     new KeyboardEvent('keydown', { code: 'KeyV', bubbles: true, cancelable: true })

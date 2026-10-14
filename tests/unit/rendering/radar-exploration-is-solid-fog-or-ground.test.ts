@@ -3,7 +3,7 @@ import { cellWorldBounds, ExplorationMap, explorationCellAt } from '../../../sha
 import { WORLD } from '../../../shared/world';
 import { PALETTE } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { resetWorldExploration, setWorldExploration } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
@@ -48,7 +48,6 @@ test.each([1280, 390])(
       id: 'scout',
       name: 'Scout',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     const origin = { x: 10_000, y: 10_000 };
     player.ship.position = origin;
@@ -102,7 +101,6 @@ test.each([1280, 390])(
       id: 'scout',
       name: 'Scout',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.position = { x: 10000, y: 10000 };
     const position = { x: 10400, y: 10000 };

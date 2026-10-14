@@ -12,8 +12,8 @@ import type { AsteroidData } from '../../../shared-types';
 import { Sound, setSound } from '../../../src/audio/Sound';
 import { bindGameAudio, resetGameAudio } from '../../../src/audio/spatialAudio';
 import { clientPerformance } from '../../../src/diagnostics/performanceMetrics';
-import { entityFactory } from '../../../src/entities/EntityFactory';
 import { LootField } from '../../../src/entities/loot/LootField';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import type { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { Roid } from '../../../src/entities/roid/Roid';
@@ -24,9 +24,8 @@ import { resetControlSources } from '../../../src/input/controlSources';
 import { keyDown, keyUp } from '../../../src/input/keybindings';
 import { handleMouseDown, handleMouseUp } from '../../../src/input/mouse';
 import { setTouchHeading } from '../../../src/input/touchControls';
-import { NetworkManager } from '../../../src/network/networkManager';
 import {
-  applyAsteroidRowToBelt,
+  applyAsteroidKinematics,
   bindAsteroidFieldApply,
   unbindAsteroidFieldApply,
 } from '../../../src/network/services/asteroidFieldSync';
@@ -83,7 +82,7 @@ class Transport {
 }
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 
@@ -125,12 +124,13 @@ describe('actual ConnectionManager WebSocket message path', () => {
   }
 
   test('charge commands wait for server support and forget it on reconnect', async () => {
-    const player = entityFactory.createLocalPlayer(
-      'Runtime pilot',
-      { x: 0, y: 0 },
-      'scout',
-      manager.combatNetwork
-    );
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+      combatNetwork: manager.combatNetwork,
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
     let ws = await connect();
@@ -163,12 +163,13 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test.each([1, 7])('a returning pilot moves after its saved epoch %i restarts', async (epoch) => {
-    const player = entityFactory.createLocalPlayer(
-      'Runtime pilot',
-      { x: 0, y: 0 },
-      'scout',
-      manager.combatNetwork
-    );
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+      ...(manager.combatNetwork !== undefined ? { combatNetwork: manager.combatNetwork } : {}),
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
     let ws = await connect();
@@ -191,9 +192,9 @@ describe('actual ConnectionManager WebSocket message path', () => {
     pilot.playerMotion = { epoch: 1, mode: 'free', ack: 0 };
     pilot.position = { x: 2382, y: 2849 };
     ws.receive('snapshot', new SnapshotEncoder(frame).encode(1));
-    expect(manager.getPlayer(player.id)).toBe(player);
+    expect(manager.getAllPlayers().find((candidate) => candidate.id === player.id)).toBe(player);
     expect(player.ship).toBe(displayedShip);
-    const remote = manager.getPlayer(remoteId);
+    const remote = manager.getAllPlayers().find((candidate) => candidate.id === remoteId);
     assert.ok(remote);
     const sendShoot = vi.spyOn(manager, 'sendShootEvent').mockImplementation(() => undefined);
     remote.ship.fireLaser();
@@ -212,7 +213,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('nearby remote shots sound once, self echoes stay silent and collected loot is deduplicated', async () => {
-    const player = entityFactory.createLocalPlayer('Listening pilot', { x: 0, y: 0 }, 'scout');
+    const player = createPlayer({
+      name: 'Listening pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -454,7 +460,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('a surviving local hull hit has feedback; a zero-damage notification stays quiet', async () => {
-    const player = entityFactory.createLocalPlayer('Hull pilot', { x: 0, y: 0 }, 'scout');
+    const player = createPlayer({
+      name: 'Hull pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -484,7 +495,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   test.each([false, true])(
     'a coupling accepted without a visible latch confirms release; ignition: %s',
     async (ignited) => {
-      const player = entityFactory.createLocalPlayer('Hauler pilot', { x: 0, y: 0 }, 'hauler');
+      const player = createPlayer({
+        name: 'Hauler pilot',
+        type: 'local',
+        position: { x: 0, y: 0 },
+        kitId: 'hauler',
+      });
       vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
       const ws = await connect();
       acknowledge(ws);
@@ -524,7 +540,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
 
   test('tow ability events and following snapshots share one sound per transition', async () => {
     setSelectedShipKitId('hauler');
-    const player = entityFactory.createLocalPlayer('Tow audio pilot', { x: 0, y: 0 }, 'hauler');
+    const player = createPlayer({
+      name: 'Tow audio pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'hauler',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -584,12 +605,27 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('a warm reconnect silently hydrates destruction before later deaths sound normally', async () => {
-    const player = entityFactory.createLocalPlayer(
-      'Returning pilot',
-      { x: 0, y: 0 },
-      'scout',
-      manager.combatNetwork
-    );
+    const liveBelt = new Map<string, AsteroidData>();
+    bindAsteroidFieldApply({
+      readBelt: () => [...liveBelt.values()],
+      onCreated: (row) => {
+        liveBelt.set(row.id, row);
+      },
+      onUpdated: () => {},
+      onDestroyed: (event) => {
+        liveBelt.delete(event.asteroidId);
+      },
+      onReconciled: (id) => {
+        liveBelt.delete(id);
+      },
+    });
+    const player = createPlayer({
+      name: 'Returning pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+      ...(manager.combatNetwork !== undefined ? { combatNetwork: manager.combatNetwork } : {}),
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -630,12 +666,13 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('mineral scan waits for one accepted ability cue and unknown orbital pickups use event positions', async () => {
-    const player = entityFactory.createLocalPlayer(
-      'Survey pilot',
-      { x: 0, y: 0 },
-      'scout',
-      manager.combatNetwork
-    );
+    const player = createPlayer({
+      name: 'Survey pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+      ...(manager.combatNetwork !== undefined ? { combatNetwork: manager.combatNetwork } : {}),
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -682,7 +719,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('intentional disconnect clears movement recovery after retiring the socket', async () => {
-    const player = entityFactory.createLocalPlayer('Departing pilot', { x: 0, y: 0 }, 'hauler');
+    const player = createPlayer({
+      name: 'Departing pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'hauler',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
     const ws = await connect();
@@ -693,11 +735,16 @@ describe('actual ConnectionManager WebSocket message path', () => {
     expect(ws.close).toHaveBeenCalled();
     expect(player.ship.serverOwnsMotion).toBe(false);
     expect(player.ship.playerMotion).toBeUndefined();
-    expect(manager.isConnected()).toBe(false);
+    expect(manager.isConnected).toBe(false);
   });
 
   test('a new socket and join cannot reuse a departed session snapshot witness', async () => {
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 0, y: 0 }, 'scout');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
     const oldSocket = await connect();
@@ -780,7 +827,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
     'late Hauler snapshots preserve cruise across $source press and release',
     async ({ press, release }) => {
       const clock = vi.spyOn(Date, 'now').mockReturnValue(10_000);
-      const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'hauler');
+      const player = createPlayer({
+        name: 'Runtime pilot',
+        type: 'local',
+        position: { x: 500, y: 100 },
+        kitId: 'hauler',
+      });
       vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
       vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
       const ws = await connect();
@@ -838,12 +890,13 @@ describe('actual ConnectionManager WebSocket message path', () => {
   );
 
   test('cruise and held turn resume after authoritative respawn', async () => {
-    const player = entityFactory.createLocalPlayer(
-      'Returning pilot',
-      { x: 0, y: 0 },
-      'scout',
-      manager.combatNetwork
-    );
+    const player = createPlayer({
+      name: 'Returning pilot',
+      type: 'local',
+      position: { x: 0, y: 0 },
+      kitId: 'scout',
+      ...(manager.combatNetwork !== undefined ? { combatNetwork: manager.combatNetwork } : {}),
+    });
     const displayedShip = player.ship;
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
@@ -882,7 +935,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       position: { x: 400, y: 400 },
     });
     receive(3);
-    expect(manager.getPlayer(player.id)).toBe(player);
+    expect(manager.getAllPlayers().find((candidate) => candidate.id === player.id)).toBe(player);
     expect(player.ship).toBe(displayedShip);
     expect(player.ship.exploding).toBe(false);
     expect(player.ship.thrusting).toBe(true);
@@ -895,7 +948,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('applies authoritative local health damage and partial regeneration snapshots', async () => {
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 900, y: 700 }, 'scout');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 900, y: 700 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -960,7 +1018,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('an expired enhanced session replaces its cached identity before a fresh join', async () => {
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'scout');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     const oldId = manager.getClientId();
@@ -1012,7 +1075,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
     assert.ok(freshId, 'fresh client id');
     expect(freshId).not.toBe(oldId);
     expect(freshJoin.data).not.toHaveProperty('resumeToken');
-    expect(manager.getPlayer(oldId)).toBeUndefined();
+    expect(manager.getAllPlayers().find((candidate) => candidate.id === oldId)).toBeUndefined();
     expect(manager.getLocalPlayerId()).toBe(freshId);
     ws.receive('joined', {
       id: freshId,
@@ -1028,8 +1091,8 @@ describe('actual ConnectionManager WebSocket message path', () => {
     freshEntity.id = freshId;
     ws.receive('snapshot', new SnapshotEncoder(state).encode(1));
     expect(manager.getAllPlayers()).toEqual([player]);
-    expect(manager.getPlayer(freshId)).toBe(player);
-    expect(manager.getPlayer(oldId)).toBeUndefined();
+    expect(manager.getAllPlayers().find((candidate) => candidate.id === freshId)).toBe(player);
+    expect(manager.getAllPlayers().find((candidate) => candidate.id === oldId)).toBeUndefined();
     expect(player.id).toBe(freshId);
     expect(manager.getLocalPlayerId()).toBe(freshId);
   });
@@ -1060,10 +1123,10 @@ describe('actual ConnectionManager WebSocket message path', () => {
     expect(errorLog).toHaveBeenCalledWith(
       'NETWORK',
       'Failed to parse server message',
-      expect.any(SyntaxError)
+      expect.objectContaining({ name: 'SyntaxError' })
     );
     expect(ws.close).not.toHaveBeenCalled();
-    expect(manager.isConnected()).toBe(true);
+    expect(manager.isConnected).toBe(true);
   });
 
   test('an unknown typed envelope reaches dispatch without retiring the socket', async () => {
@@ -1076,7 +1139,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       type: 'futureServerEvent',
     });
     expect(ws.close).not.toHaveBeenCalled();
-    expect(manager.isConnected()).toBe(true);
+    expect(manager.isConnected).toBe(true);
   });
 
   test('a snapshot before the first join acknowledgment fails the current protocol', async () => {
@@ -1098,7 +1161,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       })
     );
     expect(ws.close).toHaveBeenCalled();
-    expect(manager.isConnected()).toBe(false);
+    expect(manager.isConnected).toBe(false);
     expect(manager.getAllPlayers()).toEqual([]);
     expect(ws.sent.filter((message) => message.type === 'snapshotAck')).toEqual([]);
   });
@@ -1108,11 +1171,18 @@ describe('actual ConnectionManager WebSocket message path', () => {
     const ws = await connect();
     acknowledge(ws);
     const removed: string[] = [];
+    const liveBelt = new Map<string, AsteroidData>();
     bindAsteroidFieldApply({
-      onCreated: () => {},
+      readBelt: () => [...liveBelt.values()],
+      onCreated: (row) => {
+        liveBelt.set(row.id, row);
+      },
       onUpdated: () => {},
       onDestroyed: () => {},
-      onReconciled: (id) => removed.push(id),
+      onReconciled: (id) => {
+        liveBelt.delete(id);
+        removed.push(id);
+      },
     });
     const first = captureSnapshot(snapshotFixture());
     const firstPilot = first.entities[1];
@@ -1122,7 +1192,9 @@ describe('actual ConnectionManager WebSocket message path', () => {
     firstPilot.name = 'Runtime pilot'; // Display names are not session identities.
     firstPilot.kitId = 'hauler';
     ws.receive('snapshot', new SnapshotEncoder(first).encode(1));
-    expect(manager.getPlayer('pilot-1')?.ship.harpoonTargetId).toBe('asteroid-1');
+    expect(
+      manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.ship.harpoonTargetId
+    ).toBe('asteroid-1');
     expect(ws.sent.filter((message) => message.type === 'snapshotAck')).toEqual([
       { type: 'snapshotAck', data: { sequence: 1 } },
     ]);
@@ -1153,10 +1225,18 @@ describe('actual ConnectionManager WebSocket message path', () => {
     );
     ws.receive('snapshot', delta);
     expect(manager.getAllPlayers()).toHaveLength(9);
-    expect(manager.getPlayer('pilot-1')?.ship.harpoonTargetId).toBeNull();
-    expect(manager.getPlayer('pilot-1')?.ship.harpoonLatchPos).toBeUndefined();
-    expect(manager.getPlayer('pilot-1')?.ship.kitId).toBe('scout');
-    expect(manager.getPlayer('pilot-1')?.name).toBe('Renamed pilot');
+    expect(
+      manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.ship.harpoonTargetId
+    ).toBeNull();
+    expect(
+      manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.ship.harpoonLatchPos
+    ).toBeUndefined();
+    expect(
+      manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.ship.kitId
+    ).toBe('scout');
+    expect(manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.name).toBe(
+      'Renamed pilot'
+    );
     expect(removed).toHaveLength(80);
     expect(LootField.getInstance().getAll()).toEqual([]);
     expect(ws.sent.filter((message) => message.type === 'snapshotAck')).toEqual([
@@ -1179,6 +1259,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
     const first = captureSnapshot(snapshotFixture());
     ws.receive('snapshot', new SnapshotEncoder(first).encode(1));
     bindAsteroidFieldApply({
+      readBelt: () => first.asteroids,
       onCreated: () => {},
       onUpdated: () => {},
       onDestroyed: () => {},
@@ -1204,12 +1285,16 @@ describe('actual ConnectionManager WebSocket message path', () => {
   test('join snapshots replace cold, warm and restarted asteroid fields without initialization requests', async () => {
     const belt = new Map<string, Roid>();
     function create(row: AsteroidData) {
-      belt.set(row.id, new Roid({ ...row.position }, row.size, row.id));
+      belt.set(row.id, new Roid(row));
     }
     bindAsteroidFieldApply({
+      readBelt: () => [...belt.values()],
       onCreated: create,
-      onUpdated: (id, row, complete) => {
-        applyAsteroidRowToBelt((key) => belt.get(key), id, row, create, complete);
+      onUpdated: (id, row) => {
+        const rock = belt.get(id);
+        if (rock) {
+          applyAsteroidKinematics(rock, row);
+        }
       },
       onDestroyed: (event) => belt.delete(event.asteroidId),
       onReconciled: (id) => belt.delete(id),
@@ -1223,11 +1308,15 @@ describe('actual ConnectionManager WebSocket message path', () => {
     ws.receive('snapshot', new SnapshotEncoder(first).encode(1));
     expect([...belt.keys()]).toEqual([firstRock.id]);
     const warmRock = belt.get(firstRock.id);
+    const retainedPickup = SatellitePickupManager.getInstance().getAll()[0];
+    const retainedLoot = LootField.getInstance().getAll();
 
     ws.close();
     ws = await connect();
     acknowledge(ws);
     expect(belt.get(firstRock.id)).toBe(warmRock);
+    expect(SatellitePickupManager.getInstance().getAll()[0]).toBe(retainedPickup);
+    expect(LootField.getInstance().getAll()).toEqual(retainedLoot);
     const moved = captureSnapshot(first);
     const movedRock = moved.asteroids[0];
     assert.ok(movedRock);
@@ -1258,24 +1347,64 @@ describe('actual ConnectionManager WebSocket message path', () => {
     ]);
   });
 
+  test('create batches reject incomplete and invalid rows before constructing fragments', async () => {
+    const ws = await connect();
+    acknowledge(ws);
+    const created = vi.fn();
+    bindAsteroidFieldApply({
+      readBelt: () => [],
+      onCreated: created,
+      onUpdated: () => {},
+      onDestroyed: () => {},
+      onReconciled: () => {},
+    });
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const fragment = snapshotFixture().asteroids[0];
+    assert.ok(fragment);
+    const complete = { ...fragment, id: 'fragment', ore: 'metal', surveyedBy: ['scout'] };
+    ws.receive('asteroidCreateBatch', {
+      asteroids: [
+        { id: 'incomplete' },
+        { ...fragment, id: 'invalid', material: 'plasma' },
+        complete,
+      ],
+    });
+    expect(created).toHaveBeenCalledExactlyOnceWith(complete);
+    expect(error).toHaveBeenCalledWith(
+      'NETWORK',
+      'Rejected invalid asteroid create row',
+      undefined,
+      { asteroidId: 'incomplete' }
+    );
+    expect(error).toHaveBeenCalledWith(
+      'NETWORK',
+      'Rejected invalid asteroid create row',
+      undefined,
+      { asteroidId: 'invalid' }
+    );
+    LootField.getInstance().applySnapshot(snapshotFixture().loot);
+    SatellitePickupManager.getInstance().syncFromServer(snapshotFixture().satellitePickups ?? []);
+    manager.disconnect({ newSession: true });
+    expect(LootField.getInstance().getAll()).toEqual([]);
+    expect(SatellitePickupManager.getInstance().getAll()).toEqual([]);
+  });
+
   test('pickup ownership and asteroid metadata reconcile in real managers', async () => {
     const ws = await connect();
     acknowledge(ws);
     const belt = new Map<string, Roid>();
     function create(row: AsteroidData) {
-      const roid = new Roid({ ...row.position }, row.size, row.id);
-      Object.assign(roid, {
-        material: row.material,
-        offsets: [...row.offsets],
-        vertices: row.vertices,
-        jaggedness: row.jaggedness,
-      });
+      const roid = new Roid(row);
       belt.set(row.id, roid);
     }
     bindAsteroidFieldApply({
+      readBelt: () => [...belt.values()],
       onCreated: create,
-      onUpdated: (id, row, complete) => {
-        applyAsteroidRowToBelt((key) => belt.get(key), id, row, create, complete);
+      onUpdated: (id, row) => {
+        const rock = belt.get(id);
+        if (rock) {
+          applyAsteroidKinematics(rock, row);
+        }
       },
       onDestroyed: (event) => {
         belt.delete(event.asteroidId);
@@ -1318,7 +1447,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
 
   test('local Hauler prediction follows authoritative attach and release snapshots', async () => {
     setSelectedShipKitId('hauler');
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'hauler');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'hauler',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -1363,7 +1497,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('a stale snapshot does not clear a predicted Mineral Scan cooldown', async () => {
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'scout');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -1391,7 +1530,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('a probe miss snapshot keeps the Scout ability ready', async () => {
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'scout');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -1416,7 +1560,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
 
   test('unacked Hauler tow survives an empty-belt snapshot while the held rock remains', async () => {
     setSelectedShipKitId('hauler');
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'hauler');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'hauler',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
@@ -1442,7 +1591,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
   });
 
   test('socket closure releases the contour and resume stays unlocked', async () => {
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'scout');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'scout',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
     let ws = await connect();
@@ -1469,7 +1623,12 @@ describe('actual ConnectionManager WebSocket message path', () => {
 
   test('socket-flap Hauler visuals clear on an authoritative release', async () => {
     setSelectedShipKitId('hauler');
-    const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 500, y: 100 }, 'hauler');
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 500, y: 100 },
+      kitId: 'hauler',
+    });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     let ws = await connect();
     acknowledge(ws);
@@ -1527,7 +1686,9 @@ describe('actual ConnectionManager WebSocket message path', () => {
     queuedPilot.health = 23;
     ws.receive('snapshot', new SnapshotEncoder(queued).encode(16, { sequence: 15, state }));
     expect(ws.close).not.toHaveBeenCalled();
-    expect(manager.getPlayer('pilot-1')?.ship.health).toBe(23);
+    expect(
+      manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.ship.health
+    ).toBe(23);
     expect(ws.sent.filter((message) => message.type === 'snapshotAck').at(-1)).toEqual({
       type: 'snapshotAck',
       data: { sequence: 16 },
@@ -1537,7 +1698,9 @@ describe('actual ConnectionManager WebSocket message path', () => {
     ws.receive('snapshot', new SnapshotEncoder(state).encode(17));
     const statePilot = state.entities[1];
     assert.ok(statePilot, 'state pilot entity');
-    expect(manager.getPlayer('pilot-1')?.ship.health).toBe(statePilot.health);
+    expect(
+      manager.getAllPlayers().find((candidate) => candidate.id === 'pilot-1')?.ship.health
+    ).toBe(statePilot.health);
     expect(ws.close).not.toHaveBeenCalled();
     expect(ws.sent.filter((message) => message.type === 'snapshotAck').at(-1)).toEqual({
       type: 'snapshotAck',
@@ -1596,7 +1759,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       resumeToken: 'a'.repeat(64),
     });
     acknowledge(ws);
-    expect(manager.isConnected()).toBe(true);
+    expect(manager.isConnected).toBe(true);
     expect(manager.getClientId()).toBe(id);
   });
 
@@ -1652,7 +1815,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       ...ack,
     });
     expect(ws.close).toHaveBeenCalled();
-    expect(manager.isConnected()).toBe(false);
+    expect(manager.isConnected).toBe(false);
   });
 });
 

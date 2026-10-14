@@ -135,6 +135,23 @@ test('active articles own their chart and animation and release charts and timer
   expect(window.scrollTo).toHaveBeenCalledTimes(scrolls);
 });
 
+test('overview never mounts inactive radars and same-hash navigation retains the active chart', async () => {
+  await start();
+  expect(charts.mount).not.toHaveBeenCalled();
+  await show('#hauler');
+  const radar = document.querySelector('#hauler .ship-radar');
+  await show('#hauler');
+  expect(document.querySelector('#hauler .ship-radar')).toBe(radar);
+  expect(charts.mount).toHaveBeenCalledExactlyOnceWith(radar, 'hauler');
+  expect(charts.dispose).not.toHaveBeenCalled();
+  if (!shell) {
+    throw new Error('Manual is not mounted');
+  }
+  await unmount(shell);
+  shell = undefined;
+  expect(charts.dispose).toHaveBeenCalledTimes(1);
+});
+
 test('a reader opening the manual sees the hangar, the ship comparison and every field-note topic', async () => {
   await start();
   const overview = document.querySelector('[data-panel="overview"]');

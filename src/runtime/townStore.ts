@@ -1,11 +1,10 @@
 import { TOWN_HEARTH } from '../../shared/furnaces';
 import { litTravelDestinations, nearestTravelFurnace } from '../../shared/furnaceTravel';
 import { insideTownStore, STORE_OFFERS, storeOffer } from '../../shared/townStore';
-import { playFeedback } from '../audio/feedbackSounds';
 import { PlayerManager } from '../entities/player/PlayerManager';
-import { NetworkManager } from '../network/networkManager';
+import { ConnectionManager } from '../network/services/ConnectionManager';
 import { getSettlement, worldFurnaces } from '../network/worldExploration';
-import { travelCameraRotation } from '../rendering/travelCamera';
+import { isPlayViewOn } from '../ui/uiUtils';
 import {
   closeGameOverlay,
   getOpenGameOverlay,
@@ -68,7 +67,7 @@ export function subscribeTownStore(listener: () => void): () => void {
 }
 
 export function canEnterTownStore(): boolean {
-  if (typeof document === 'undefined' || !document.body.classList.contains('in-play')) {
+  if (!isPlayViewOn()) {
     return false;
   }
   const player = PlayerManager.getInstance().getLocalPlayer();
@@ -96,7 +95,6 @@ export function readTownTravelMap() {
   return {
     source,
     destinations: source ? litTravelDestinations(source.id, worldFurnaces) : [],
-    rotation: player ? travelCameraRotation(player.ship) : 0,
   };
 }
 
@@ -113,7 +111,7 @@ export function readTownStoreView(): TownStoreView {
     atTown &&
     player !== null &&
     insideTownStore(player.ship.position) &&
-    NetworkManager.getInstance().isConnected;
+    ConnectionManager.getInstance().isConnected;
   return Object.freeze({
     mode,
     title: mode === 'entry' ? 'Town Square' : mode === 'store' ? 'Store' : 'Furnace travel',
@@ -157,7 +155,6 @@ export function openTownStore(): boolean {
   reset();
   view = isAtTownSquare() ? 'entry' : 'travel';
   openGameOverlay('town-store');
-  playFeedback('interface');
   publish();
   return true;
 }
@@ -168,13 +165,12 @@ export function closeTownStore(): void {
   }
   closeGameOverlay('town-store');
   reset();
-  playFeedback('interface');
   publish();
 }
 
 export function purchaseTownOffer(id: string): void {
   const player = PlayerManager.getInstance().getLocalPlayer();
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   const offer = storeOffer(id);
   if (
     !player ||
@@ -194,7 +190,7 @@ export function purchaseTownOffer(id: string): void {
 
 export function requestFurnaceTravel(id: string): void {
   const player = PlayerManager.getInstance().getLocalPlayer();
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   if (!player || !network.isConnected || !isGameOverlayOpen('town-store') || !canEnterTownStore()) {
     return;
   }
@@ -209,11 +205,9 @@ export function requestFurnaceTravel(id: string): void {
 
 export function applyTownStoreResult(data: unknown): void {
   status = (
-    typeof data === 'string'
-      ? data
-      : data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-        ? data.message
-        : ''
+    data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+      ? data.message
+      : ''
   ).slice(0, 500);
   const player = PlayerManager.getInstance().getLocalPlayer();
   if (player && data && typeof data === 'object') {

@@ -3,10 +3,9 @@ import { SHIP } from '../../../shared/constants/gameplay';
 import { Laser } from '../../../src/entities/laser/Laser';
 import { Player } from '../../../src/entities/player/Player';
 import { advanceRemotePlayerShips } from '../../../src/entities/player/remoteLasers';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 function makePlayer(type: 'local' | 'remote'): Player {
-  return new Player({ id: type, name: type, type, input: new MockPlayerInput() });
+  return new Player({ id: type, name: type, type });
 }
 
 test('ticks lifecycle and lasers only for remote players', () => {

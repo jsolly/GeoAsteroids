@@ -1,18 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { WORLD } from '../../../shared/world';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { setWorldMapAssets } from '../../../src/network/worldExploration';
 import {
   FURNACE_MAP_CAMPFIRE_ZOOM,
   FURNACE_MAP_FAR_ZOOM,
 } from '../../../src/rendering/hud/furnaceMapMark';
 import {
-  clampUniverseMapZoom,
   drawSpawnChart,
   mapScreenDeltaToWorld,
-  mapWorldToCanvas,
   mountUniverseMap,
   UNIVERSE_MAP_ZOOM,
   type UniverseMapChrome,
@@ -28,7 +26,7 @@ const published = vi.fn<(chrome: UniverseMapChrome) => void>();
 const disconnect = vi.fn();
 
 beforeEach(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([]);
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -82,39 +80,22 @@ function key(code: string) {
 
 describe('a mounted universe chart', () => {
   test('keeps zoom bounded and projects world coordinates from the active view', () => {
-    expect(clampUniverseMapZoom(0)).toBe(UNIVERSE_MAP_ZOOM.min);
-    expect(clampUniverseMapZoom(Number.POSITIVE_INFINITY)).toBe(UNIVERSE_MAP_ZOOM.max);
     expect(FURNACE_MAP_CAMPFIRE_ZOOM).toBe(UNIVERSE_MAP_ZOOM.initial);
     expect(FURNACE_MAP_FAR_ZOOM).toBe(UNIVERSE_MAP_ZOOM.min);
-    expect(
-      mapWorldToCanvas({ x: 100, y: -50 }, { x: 0, y: 0 }, { x: 20, y: 30, size: 400, scale: 2 })
-    ).toEqual({ x: 420, y: 130 });
   });
 
-  test('supports rotated chart projections while the live north-up compass stays fixed', () => {
-    const projection = { x: 20, y: 30, size: 400, scale: 2 };
-    const heading = -Math.PI / 2;
-    expect(mapWorldToCanvas({ x: 100, y: 0 }, { x: 0, y: 0 }, projection, heading)).toEqual({
-      x: 220,
-      y: 30,
-    });
-    const north = mapWorldToCanvas({ x: 0, y: -100 }, { x: 0, y: 0 }, projection, heading);
-    expect(north.x).toBeCloseTo(20);
-    expect(north.y).toBeCloseTo(230);
-    const pan = mapScreenDeltaToWorld(0, -40, 2, heading);
-    expect(pan.x).toBeCloseTo(20);
-    expect(pan.y).toBeCloseTo(0);
+  test('north-up chart pan preserves world bearings', () => {
+    const pan = mapScreenDeltaToWorld(0, -40, 2);
+    expect(pan).toEqual({ x: 0, y: -20 });
     const pilot = new Player({
       id: 'heading-pilot',
       name: 'Heading Pilot',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     pilot.ship.angle = Math.PI / 2;
     pilot.ship.velocity = { x: 4, y: 0 };
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
     start();
-    expect(latest.heading).toBe(0);
   });
 
   test('Home and Locate restore the nearby ship view after pan and zoom, and gameplay keys are consumed', () => {
@@ -122,10 +103,20 @@ describe('a mounted universe chart', () => {
       id: 'map-pilot',
       name: 'Map Pilot',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     pilot.ship.position = { x: 4000, y: 0 };
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
+    vi.mocked(HTMLCanvasElement.prototype.getContext).mockRestore();
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Canvas context unavailable');
+    }
+    const scale = vi.spyOn(context, 'scale');
+    const expectZoom = (zoom: number) => {
+      const expected = (latest.frame.size / (WORLD.radius * 2)) * zoom;
+      expect(scale.mock.calls[0]?.[0]).toBeCloseTo(expected, 12);
+      expect(scale.mock.calls[0]?.[1]).toBeCloseTo(expected, 12);
+    };
     const controller = start();
     expect(latest.centered).toBe(true);
     expect(key('Equal').defaultPrevented).toBe(true);
@@ -143,22 +134,25 @@ describe('a mounted universe chart', () => {
     for (const code of ['Space', 'KeyE', 'KeyA', 'KeyD', 'ShiftLeft', 'ShiftRight']) {
       expect(key(code).defaultPrevented).toBe(true);
     }
+    scale.mockClear();
     controller.zoomBy(0.0001);
     frame();
-    expect(latest.zoom).toBe(1);
+    expectZoom(1);
+    scale.mockClear();
     controller.zoomBy(1000);
     frame();
-    expect(latest.zoom).toBe(48);
+    expectZoom(48);
     const wheel = new WheelEvent('wheel', {
       deltaY: 1,
       clientX: 200,
       clientY: 200,
       cancelable: true,
     });
+    scale.mockClear();
     canvas.dispatchEvent(wheel);
     frame();
     expect(wheel.defaultPrevented).toBe(true);
-    expect(latest.zoom).toBeCloseTo(48 / UNIVERSE_MAP_ZOOM.step);
+    expectZoom(48 / UNIVERSE_MAP_ZOOM.step);
   });
 
   test('publishes at most ten chrome updates per second and every location remains reachable by page', () => {
@@ -235,7 +229,7 @@ describe('a mounted universe chart', () => {
     expect(key('Space').defaultPrevented).toBe(false);
     document.body.append(canvas);
     start();
-    expect(latest.zoom).toBe(24);
+    expect(latest.centered).toBe(true);
   });
 
   test('spawn chart painting stays usable without mounting any map DOM', () => {

@@ -1,16 +1,18 @@
-import { validExploration } from '../../../shared/exploration';
 import { releaseField } from '../../../shared/releaseId';
 import { setScoutUtilityOnHost } from '../../../shared/shipAbilities';
-import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID, getShipKit } from '../../../shared/shipKits';
+import { applyShipKitToShip, DEFAULT_SHIP_KIT_ID } from '../../../shared/shipKits';
 import { isTowCableUtility, scoutUtilityOf } from '../../../shared/shipUtilities';
-import { isLootKind } from '../../../shared/snapshotDto';
+import { isAsteroidDto, isLootKind } from '../../../shared/snapshotDto';
 import {
   ASTEROID_INTERACTIONS_CAPABILITY,
   SNAPSHOT_VERSION,
   SnapshotDecoder,
   type SnapshotMetadata,
 } from '../../../shared/snapshotProtocol';
-import { captureDiagnosticActorState } from '../../../shared/stateDiagnostics';
+import {
+  boundedDiagnosticError,
+  captureDiagnosticActorState,
+} from '../../../shared/stateDiagnostics';
 import { applyTerrainSeed } from '../../../shared/terrainField';
 import type {
   AbilityUsedEvent,
@@ -48,10 +50,10 @@ import {
   resetDebugHudSession,
 } from '../../diagnostics/debugHudMetrics';
 import { clientPerformance } from '../../diagnostics/performanceMetrics';
-import { entityFactory } from '../../entities/EntityFactory';
 import { AuthoritativeProjectileField } from '../../entities/laser/AuthoritativeProjectileField';
 import type { Laser } from '../../entities/laser/Laser';
 import { LootField } from '../../entities/loot/LootField';
+import { createPlayer } from '../../entities/player/createPlayer';
 import type { Player } from '../../entities/player/Player';
 import { PlayerManager } from '../../entities/player/PlayerManager';
 import { SatellitePickupManager } from '../../entities/satellitePickup/SatellitePickupManager';
@@ -81,7 +83,7 @@ import {
   createAsteroidFieldSyncScratch,
   notifyAsteroidDestroyed,
   partitionAsteroidSnapshot,
-  shouldPreserveSeenAsteroidsOnJoin,
+  readAsteroidBelt,
 } from './asteroidFieldSync';
 import { readOrCreateClientId, replaceStoredClientId } from './clientIdentity';
 import {
@@ -95,7 +97,12 @@ import { nextReconnectDelayMs } from './connectionReconnect';
 import { PlayerMotionReconciliation } from './PlayerMotionReconciliation';
 import { publishPlayerIdentity } from './playerIdentityEvents';
 import { PlayerListCache } from './playerListCache';
-import { bindPageHideDisconnect, fillSnapshotEntityIds, isLocalGameEntity } from './playerPresence';
+import {
+  bindPageHideDisconnect,
+  fillSnapshotEntityIds,
+  isLocalGameEntity,
+  pruneStaleRemotePlayers,
+} from './playerPresence';
 import {
   clearResumeCredential,
   isValidResumeToken,
@@ -164,7 +171,21 @@ function isLootCollectedEvent(value: unknown): value is LootCollected {
   );
 }
 
-const MAX_PLAYED_LOOT_COLLECTION_IDS = 256;
+const MAX_PLAYED_EVENT_IDS = 256;
+
+function rememberOnce(ids: Set<string>, id: string): boolean {
+  if (ids.has(id)) {
+    return false;
+  }
+  if (ids.size >= MAX_PLAYED_EVENT_IDS) {
+    const oldest = ids.values().next().value;
+    if (oldest !== undefined) {
+      ids.delete(oldest);
+    }
+  }
+  ids.add(id);
+  return true;
+}
 
 function captureClientPlayerState(player: Player) {
   return captureDiagnosticActorState({
@@ -196,7 +217,6 @@ export class ConnectionManager {
   private localPlayerName: string = '';
   private localPlayerId: string = '';
   private allPlayers: Map<string, Player> = new Map();
-  private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
   private readonly playerListCache = new PlayerListCache<Player>();
   private readonly snapshotEntityIds = new Set<string>();
   private cargoDepositBaseline: { cargo: number; banked: number } | null = null;
@@ -236,7 +256,7 @@ export class ConnectionManager {
     const connection = this;
     this.combatNetwork = {
       get isConnected() {
-        return connection.isConnected();
+        return connection.isConnected;
       },
       sendCharge: (action) =>
         this.chargedWeapons &&
@@ -279,7 +299,7 @@ export class ConnectionManager {
     return this.clientId;
   }
 
-  isConnected(): boolean {
+  get isConnected(): boolean {
     return this.state.isConnected;
   }
 
@@ -440,11 +460,7 @@ export class ConnectionManager {
             logger.error(
               'NETWORK',
               'Failed to parse server message',
-              error instanceof Error
-                ? error
-                : new Error(typeof error === 'string' ? error : JSON.stringify(error), {
-                    cause: error,
-                  })
+              boundedDiagnosticError(error, 'Unknown server message failure')
             );
             clientPerformance.count('messageFailures');
           } finally {
@@ -458,11 +474,7 @@ export class ConnectionManager {
           }
         };
       } catch (cause) {
-        finish(
-          cause instanceof Error
-            ? cause
-            : new Error(typeof cause === 'string' ? cause : JSON.stringify(cause), { cause })
-        );
+        finish(boundedDiagnosticError(cause, 'Unknown WebSocket setup failure'));
         if (this.state.socket) {
           this.retireSocket(this.state.socket);
         }
@@ -520,9 +532,7 @@ export class ConnectionManager {
       logger.error(
         'NETWORK',
         'Failed to close retired WebSocket',
-        error instanceof Error
-          ? error
-          : new Error(typeof error === 'string' ? error : JSON.stringify(error), { cause: error })
+        boundedDiagnosticError(error, 'Unknown WebSocket close failure')
       );
     }
   }
@@ -540,9 +550,7 @@ export class ConnectionManager {
       logger.error(
         'NETWORK',
         'Failed to send gameplay message',
-        error instanceof Error
-          ? error
-          : new Error(typeof error === 'string' ? error : JSON.stringify(error), { cause: error })
+        boundedDiagnosticError(error, 'Unknown WebSocket send failure')
       );
       this.retireSocket(socket);
       return false;
@@ -580,7 +588,7 @@ export class ConnectionManager {
     this.state.socket = null;
     this.allPlayers.clear();
     this.playerListCache.invalidate();
-    this.seenAsteroidIds.clear();
+    this.applyAuthoritativeAsteroids([], true);
     LootField.getInstance().clear();
     SatellitePickupManager.getInstance().clear();
     this.localPlayerId = '';
@@ -615,11 +623,6 @@ export class ConnectionManager {
         observedAt: Date.now(),
         attempts: this.reconnectAttempt,
       });
-      window.dispatchEvent(
-        new CustomEvent('networkDisconnected', {
-          detail: { reason: 'Reconnect exhausted' },
-        })
-      );
       window.dispatchEvent(
         new CustomEvent('networkPermanentlyDisconnected', {
           detail: { reason: 'Reconnect exhausted' },
@@ -752,10 +755,6 @@ export class ConnectionManager {
     this.localPlayerName = name;
   }
 
-  getLocalPlayerName(): string {
-    return this.localPlayerName;
-  }
-
   getServerReleaseId(): string | undefined {
     return this.serverReleaseId;
   }
@@ -795,8 +794,8 @@ export class ConnectionManager {
     }
   }
 
-  getPlayer(playerId: string): Player | undefined {
-    return this.allPlayers.get(playerId);
+  updatePlayerState(state: Omit<PlayerUpdate, 'id'>): void {
+    this.sendPlayerState({ id: this.getLocalPlayerId(), ...state });
   }
 
   // Send player state to server
@@ -1103,7 +1102,6 @@ export class ConnectionManager {
     this.snapshotResyncPending = false;
     this.lastAcceptedSnapshotSequence = 0;
     delete this.serverReleaseId;
-    clientPerformance.serverReleaseId = undefined;
     resetDebugHudSession();
   }
 
@@ -1152,7 +1150,7 @@ export class ConnectionManager {
     }
   }
 
-  private sendSnapshotResync(): boolean {
+  sendSnapshotResync(): boolean {
     if (!this.currentProtocolReady || this.snapshotResyncPending) {
       return false;
     }
@@ -1249,7 +1247,7 @@ export class ConnectionManager {
     if (!entity) {
       return;
     }
-    const abilityId = getShipKit(data.kitId ?? entity.ship.kitId).abilityId;
+    const abilityId = data.abilityId;
     const isHarpoonRelease =
       abilityId === 'harpoon' &&
       data.harpoonTargetId === null &&
@@ -1299,9 +1297,7 @@ export class ConnectionManager {
     setWorldMapAssets(data.mapAssets);
     setSettlement(data.settlement);
     worldFurnaces.replaceLit(data.civicModules ?? []);
-    if (validExploration(data.exploration)) {
-      setWorldExploration(data.exploration);
-    }
+    setWorldExploration(data.exploration);
 
     // Update local game state from server using unified entity system
     if (data.entities) {
@@ -1313,7 +1309,6 @@ export class ConnectionManager {
         const isLocalPlayer = isLocalGameEntity(entityData, {
           clientId: this.clientId,
           localPlayerId: this.localPlayerId,
-          localPlayerName: '',
         });
 
         let entity = this.allPlayers.get(entityData.id);
@@ -1338,7 +1333,7 @@ export class ConnectionManager {
             }
           }
 
-          entity ??= entityFactory.createPlayer({
+          entity ??= createPlayer({
             combatNetwork: this.combatNetwork,
             id: entityData.id,
             name: entityData.name,
@@ -1364,7 +1359,7 @@ export class ConnectionManager {
         }
 
         // Apply the parsed entity directly — no per-tick snapshot wrapper.
-        // Kit / ability / deathCause / mass stay on the row.
+        // Kit / ability / mass stay on the row.
         entityData.spawnProtectionTimer ??= 0;
         if (entityData.playerMotion !== undefined) {
           entity.ship.playerMotion = entityData.playerMotion;
@@ -1398,9 +1393,6 @@ export class ConnectionManager {
           ? 0
           : (entityData.abilityActiveFrames ?? 0);
 
-        if (!entityData.deathCause && !entityData.exploding && entityData.health > 0) {
-          delete entity.deathCause;
-        }
         if (data.serverTime !== undefined) {
           entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
         }
@@ -1431,18 +1423,10 @@ export class ConnectionManager {
           // authority and prediction, including death and respawn in either protocol.
           reconcilePlayerInput(entity);
         }
-
-        if (isLocalPlayer && localPlayer && localPlayer !== entity) {
-          localPlayer.updateFromServer(entityData);
-        }
       }
 
-      // Drop remotes that vanished from the snapshot so a closed tab leaves
-      // the leaderboard even if `playerLeft` was missed.
-      for (const [id, entity] of this.allPlayers) {
-        if (entity.type !== 'local' && !this.snapshotEntityIds.has(id)) {
-          this.forgetPlayer(id);
-        }
+      if (pruneStaleRemotePlayers(this.allPlayers, this.snapshotEntityIds) > 0) {
+        this.playerListCache.invalidate();
       }
     }
 
@@ -1474,17 +1458,11 @@ export class ConnectionManager {
       !data.lootId ||
       !isFinitePosition(data.position) ||
       !Number.isFinite(data.radius) ||
-      this.playedLootExplosionIds.has(data.lootId)
+      !rememberOnce(this.playedLootExplosionIds, data.lootId)
     ) {
       return;
     }
-    if (this.playedLootExplosionIds.size >= MAX_PLAYED_LOOT_COLLECTION_IDS) {
-      const oldest = this.playedLootExplosionIds.values().next().value;
-      if (oldest !== undefined) {
-        this.playedLootExplosionIds.delete(oldest);
-      }
-    }
-    this.playedLootExplosionIds.add(data.lootId);
+
     LootField.getInstance().remove(data.lootId);
     playDestructionSound('loot', data.position);
     LootField.getInstance().noteBlast(data.position, data.radius);
@@ -1503,16 +1481,10 @@ export class ConnectionManager {
     ) {
       return;
     }
-    if (this.playedTapEjectionIds.has(data.lootId)) {
+    if (!rememberOnce(this.playedTapEjectionIds, data.lootId)) {
       return;
     }
-    if (this.playedTapEjectionIds.size >= MAX_PLAYED_LOOT_COLLECTION_IDS) {
-      const oldest = this.playedTapEjectionIds.values().next().value;
-      if (oldest !== undefined) {
-        this.playedTapEjectionIds.delete(oldest);
-      }
-    }
-    this.playedTapEjectionIds.add(data.lootId);
+
     playTapEjection(data.position);
   }
 
@@ -1524,16 +1496,10 @@ export class ConnectionManager {
     const collectionId = data.eventId
       ? `event:${data.eventId}`
       : `legacy:${data.lootId}:${data.collectorId}`;
-    if (this.playedLootCollectionIds.has(collectionId)) {
+    if (!rememberOnce(this.playedLootCollectionIds, collectionId)) {
       return;
     }
-    if (this.playedLootCollectionIds.size >= MAX_PLAYED_LOOT_COLLECTION_IDS) {
-      const oldestId = this.playedLootCollectionIds.values().next().value;
-      if (typeof oldestId === 'string') {
-        this.playedLootCollectionIds.delete(oldestId);
-      }
-    }
-    this.playedLootCollectionIds.add(collectionId);
+
     playLootPickup(data.position);
     playLocalHaptic(isLocal, 'pickup');
   }
@@ -1550,8 +1516,7 @@ export class ConnectionManager {
       setHoldEmptyHarpoonField(false);
     }
     applyAsteroidFieldPartition(
-      partitionAsteroidSnapshot(asteroids, this.seenAsteroidIds, this.asteroidScratch, complete),
-      complete
+      partitionAsteroidSnapshot(asteroids, readAsteroidBelt(), this.asteroidScratch, complete)
     );
   }
 
@@ -1589,10 +1554,8 @@ export class ConnectionManager {
     });
     if (data.serverReleaseId) {
       this.serverReleaseId = data.serverReleaseId;
-      clientPerformance.serverReleaseId = data.serverReleaseId;
     } else {
       delete this.serverReleaseId;
-      clientPerformance.serverReleaseId = undefined;
     }
     this.lastDamageStateLogAt = 0;
     setClientLogContext({ playerId: data.id, connectionId: this.connectionId });
@@ -1610,9 +1573,8 @@ export class ConnectionManager {
       ...(data.scoreUpdatedAt !== undefined ? { scoreUpdatedAt: data.scoreUpdatedAt } : {}),
     });
 
-    const keepField = shouldPreserveSeenAsteroidsOnJoin(this.seenAsteroidIds.size);
+    const keepField = readAsteroidBelt().length > 0;
     if (!keepField) {
-      this.seenAsteroidIds.clear();
       LootField.getInstance().clear();
       SatellitePickupManager.getInstance().clear();
     }
@@ -1675,10 +1637,22 @@ export class ConnectionManager {
     }
   }
 
-  private handleAsteroidCreateBatch(data: { asteroids: AsteroidData[] }): void {
-    if (data.asteroids && Array.isArray(data.asteroids)) {
-      this.applyAuthoritativeAsteroids(data.asteroids);
+  private handleAsteroidCreateBatch(data: { asteroids?: unknown }): void {
+    if (!Array.isArray(data.asteroids)) {
+      return;
     }
+    const valid: AsteroidData[] = [];
+    for (const row of data.asteroids) {
+      if (isAsteroidDto(row)) {
+        valid.push(row);
+      } else {
+        logger.error('NETWORK', 'Rejected invalid asteroid create row', undefined, {
+          asteroidId:
+            row && typeof row === 'object' && typeof row.id === 'string' ? row.id : '<unknown>',
+        });
+      }
+    }
+    this.applyAuthoritativeAsteroids(valid);
   }
 
   private handleAsteroidDestroyed(data: AsteroidDestroyEvent): void {
@@ -1736,19 +1710,12 @@ export class ConnectionManager {
       return;
     }
 
-    if (data.attackerId) {
-      targetPlayer.deathCause = data.attackerId;
-    }
-
-    if (data.isDestroyed) {
-      targetPlayer.reportDeath();
-    }
     this.applyDamageToLocalPlayerIfTarget(data);
 
     this.applyAuthoritativeDamageHealth(targetPlayer, data.remainingHealth, data.isDestroyed);
 
     if (data.remainingHealth > 0 && data.damage > 0) {
-      targetPlayer.ship.takeDamage(0, data.attackerId);
+      targetPlayer.ship.takeDamage(0);
       if (isLocalTarget && beforeHealth !== undefined && data.remainingHealth < beforeHealth) {
         playFeedback('hullDamage');
         playLocalHaptic(true, 'hit');
@@ -1756,7 +1723,7 @@ export class ConnectionManager {
     }
 
     if (data.isDestroyed && !targetPlayer.ship.exploding) {
-      targetPlayer.ship.explode(data.attackerId);
+      targetPlayer.ship.explode();
     }
 
     if (isLocalTarget) {
@@ -1795,11 +1762,8 @@ export class ConnectionManager {
     }
 
     this.applyAuthoritativeDamageHealth(localPlayer, data.remainingHealth, data.isDestroyed);
-    if (data.attackerId) {
-      localPlayer.deathCause = data.attackerId;
-    }
     if (data.isDestroyed && !localPlayer.ship.exploding) {
-      localPlayer.ship.explode(data.attackerId);
+      localPlayer.ship.explode();
     }
   }
 

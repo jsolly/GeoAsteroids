@@ -1,13 +1,4 @@
-/**
- * Cached snapshots of the live player map.
- *
- * `handleGameState` mutates players in place ~30x/sec. The game loop and
- * canvas read the same map every frame via `getAllPlayers()` /
- * `getRemotePlayers()`, which used to allocate a new array (and a filter
- * array) on every call. Rebuild the lists only when the map gains or loses
- * an entry — in-place field updates stay visible because the cached arrays
- * hold the same Player references.
- */
+/** Rebuild cached arrays only when map membership changes; in-place updates share Player references. */
 
 export class PlayerListCache<T extends { type: string }> {
   private all: T[] | null = null;

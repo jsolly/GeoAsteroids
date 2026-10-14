@@ -81,8 +81,7 @@ second correlator. Filter Railway logs with the pasted value:
 The debug route defaults to Info. Add `?log-level=debug`, `?log-level=info`,
 or `?log-level=warn` to override that visit. Unsupported values fall back to
 Info. Returning to `/` turns diagnostics off and restores Info, regardless of
-old saved preferences. Server-side `DEBUG.*` world overrides stay compile-time
-so one player cannot reshape the shared world.
+old saved preferences.
 
 The optional page session ID on that same Debug panel is the `sessionId` used
 for forwarded client records:

@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { civicLot } from '../../../shared/furnaces';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import {
   readAbilityChrome,
   touchAbilityLabel,
@@ -153,7 +153,7 @@ test('touch E routes through the live ship action', () => {
     id: 'touch-scout',
     name: 'Touch Scout',
     type: 'local',
-    input: new MockPlayerInput(),
+
     kitId: 'scout',
   });
   expect(triggerTouchAbility(scout)).toBe(true);

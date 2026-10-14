@@ -4,12 +4,9 @@ import { GAME, LASER } from '../../../shared/constants/gameplay';
 import { findLaserSurfaceImpact } from '../../../shared/laserSurface';
 import type { Position, Velocity } from '../../../shared-types';
 import {
-  getHitSound,
-  getLaserSound,
   playHitSound as playHitSoundAt,
   playLaserSound as playLaserSoundAt,
 } from '../../audio/gameSounds';
-import type { Sound } from '../../audio/Sound';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
 
 interface LaserData {
@@ -26,12 +23,7 @@ export class Laser implements LaserData {
   serverId?: string;
   bounceCount = 0;
   energy = 1;
-  static get fxLaser(): Sound {
-    return getLaserSound();
-  }
-  static get fxHit(): Sound {
-    return getHitSound();
-  }
+
   prevPosition: Position;
 
   constructor(

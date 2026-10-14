@@ -2,13 +2,14 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { ExplorationMap } from '../../../shared/exploration';
 import { CIVIC_LOTS, civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   setWorldExploration,
   setWorldMapAssets,
   worldFurnaces,
 } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
+import { setPlayView } from '../../../src/ui/uiUtils';
 import {
   mountUniverseMap as mountMap,
   type UniverseMapChrome,
@@ -30,7 +31,7 @@ afterEach(() => {
   worldFurnaces.replaceLit([]);
   setWorldMapAssets([]);
   setWorldExploration([]);
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -46,7 +47,7 @@ function mountUniverseMap() {
   vi.stubGlobal('requestAnimationFrame', () => 1);
   vi.stubGlobal('cancelAnimationFrame', () => {});
   vi.spyOn(performance, 'now').mockImplementation(() => clock);
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([]);
   const canvas = document.createElement('canvas');

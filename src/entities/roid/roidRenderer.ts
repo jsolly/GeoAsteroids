@@ -91,17 +91,6 @@ export function recordAsteroidShatter(
   }
 }
 
-/** Furnace delivery retags an in-flight shatter so intake reads as fire, not a laser break. */
-export function markFurnaceAsteroidShatter(asteroidId: string): void {
-  for (let i = shatterBursts.length - 1; i >= 0; i--) {
-    const burst = shatterBursts[i];
-    if (burst?.roid.id === asteroidId) {
-      burst.kind = 'furnace';
-      return;
-    }
-  }
-}
-
 export function clearAsteroidShatters(): void {
   shatterBursts.length = 0;
   latchShudders.clear();
@@ -271,23 +260,10 @@ function drawCachedRoidSilhouette(
       // is already in use this frame. Crowded scenes must not repaint the cache.
       drawRoidSilhouette(
         ctx,
-        roidOutline(
-          screen,
-          radius,
-          roid.angle + canvasManager.getCameraRotation(),
-          vertices,
-          offsets
-        ),
+        roidOutline(screen, radius, roid.angle, vertices, offsets),
         roid.r,
         inner
-          ? roidOutline(
-              screen,
-              radius,
-              roid.angle + canvasManager.getCameraRotation(),
-              vertices,
-              offsets,
-              VISUAL.ROID_INNER_SCALE
-            )
+          ? roidOutline(screen, radius, roid.angle, vertices, offsets, VISUAL.ROID_INNER_SCALE)
           : null
       );
       return;
@@ -331,7 +307,7 @@ function drawCachedRoidSilhouette(
   sprite.lastUsedFrame = cache.frame;
   ctx.save();
   ctx.translate(screen.x, screen.y);
-  ctx.rotate(roid.angle + canvasManager.getCameraRotation());
+  ctx.rotate(roid.angle);
   ctx.shadowBlur = 0;
   ctx.drawImage(
     sprite.canvas,
@@ -412,7 +388,7 @@ function drawAsteroidBoost(
   }
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(canvasManager.getCameraRotation() - boost.angle);
+  ctx.rotate(-boost.angle);
   ctx.lineWidth = 1.3;
   ctx.strokeStyle = PALETTE.LOOT;
   ctx.shadowColor = PALETTE.LOOT;
@@ -538,16 +514,15 @@ function drawRoidShatter(
 
 export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
   const ctx = canvasManager.getContext();
-  const cvs = canvasManager.getCanvas();
   if (!ctx) {
     return;
   }
 
   const scale = canvasManager.getPlayfieldScale();
   const silhouettes = prepareRoidSilhouetteSprites(ctx, scale);
-  const viewport = cvs ? canvasManager.getViewportSize() : undefined;
-  const viewW = viewport?.width ?? Number.POSITIVE_INFINITY;
-  const viewH = viewport?.height ?? Number.POSITIVE_INFINITY;
+  const viewport = canvasManager.getViewportSize();
+  const viewW = viewport.width;
+  const viewH = viewport.height;
 
   const now = performance.now();
   for (const [id, startedAt] of latchShudders) {
@@ -607,7 +582,7 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
         screenPos.x,
         screenPos.y,
         r,
-        roid.angle + canvasManager.getCameraRotation(),
+        roid.angle,
         roid.health / roid.maxHealth
       );
     }
@@ -647,15 +622,14 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
 /** Paint in-flight breaks after hearths so a last-rock furnace poof stays readable. */
 export function drawAsteroidShatterBursts(ship: Ship): void {
   const ctx = canvasManager.getContext();
-  const cvs = canvasManager.getCanvas();
   if (!ctx) {
     return;
   }
 
   const scale = canvasManager.getPlayfieldScale();
-  const viewport = cvs ? canvasManager.getViewportSize() : undefined;
-  const viewW = viewport?.width ?? Number.POSITIVE_INFINITY;
-  const viewH = viewport?.height ?? Number.POSITIVE_INFINITY;
+  const viewport = canvasManager.getViewportSize();
+  const viewW = viewport.width;
+  const viewH = viewport.height;
   const now = performance.now();
 
   for (let i = shatterBursts.length - 1; i >= 0; i--) {
@@ -685,7 +659,7 @@ export function drawAsteroidShatterBursts(ship: Ship): void {
     const outline = roidOutline(
       screen,
       radius,
-      rock.angle + canvasManager.getCameraRotation(),
+      rock.angle,
       rock.vertices,
       drawingOffsets(rock.offsets)
     );

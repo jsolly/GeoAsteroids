@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import {
   type AbilityHost,
   activateAbilityOnHost,
@@ -9,18 +9,6 @@ import { DEFAULT_SCOUT_UTILITY, scoutUtilityOf } from '../../../shared/shipUtili
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
 import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
-import {
-  preferredScoutUtility,
-  rememberScoutUtility,
-  SCOUT_UTILITY_STORAGE_KEY,
-} from '../../../src/entities/ship/scoutUtility';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
-import {
-  getStoredItem,
-  removeStoredItem,
-  resetSafeStorage,
-  setStoredItem,
-} from '../../../src/utils/safeStorage';
 
 function host(kitId: AbilityHost['kitId'] = 'scout'): AbilityHost {
   return {
@@ -36,17 +24,9 @@ function host(kitId: AbilityHost['kitId'] = 'scout'): AbilityHost {
   };
 }
 
-afterEach(() => {
-  removeStoredItem(SCOUT_UTILITY_STORAGE_KEY);
-  resetSafeStorage();
-});
-
-test('a new Scout starts with Mineral Scan and remembers a selected probe across reconnects', () => {
+test('a Scout without an owned selection uses Mineral Scan', () => {
   expect(DEFAULT_SCOUT_UTILITY).toBe('mineral_scan');
-  expect(preferredScoutUtility()).toBe('mineral_scan');
 
-  rememberScoutUtility('survey_probe');
-  expect(preferredScoutUtility()).toBe('survey_probe');
   expect(scoutUtilityOf({ kitId: 'scout' })).toBe('mineral_scan');
   expect(scoutUtilityOf({ kitId: 'scout', scoutUtility: 'stale' })).toBe('mineral_scan');
   expect(scoutUtilityOf({ kitId: 'hauler', scoutUtility: 'survey_probe' })).toBe('mineral_scan');
@@ -114,7 +94,7 @@ test('a stale snapshot cannot replace the local probe preference while remotes f
     id: 'local',
     name: 'Local',
     type: 'local',
-    input: new MockPlayerInput(),
+
     kitId: 'scout',
   });
   local.ship.scoutUtility = 'survey_probe';
@@ -125,30 +105,9 @@ test('a stale snapshot cannot replace the local probe preference while remotes f
     id: 'remote',
     name: 'Remote',
     type: 'remote',
-    input: new MockPlayerInput(),
+
     kitId: 'scout',
   });
   remote.updateFromServer({ kitId: 'scout', scoutUtility: 'survey_probe' });
   expect(remote.ship.scoutUtility).toBe('survey_probe');
-});
-
-test('a returning pilot keeps their old tool choice under the Scout preference key', () => {
-  setStoredItem('georoids.surveyorUtility', 'survey_probe');
-  expect(preferredScoutUtility()).toBe('survey_probe');
-  expect(getStoredItem(SCOUT_UTILITY_STORAGE_KEY)).toBe('survey_probe');
-  expect(getStoredItem('georoids.surveyorUtility')).toBeNull();
-  rememberScoutUtility('mineral_scan');
-  setStoredItem('georoids.surveyorUtility', 'survey_probe');
-  expect(preferredScoutUtility()).toBe('mineral_scan');
-  expect(getStoredItem('georoids.surveyorUtility')).toBeNull();
-});
-
-test('a retired furnace preference resolves to Mineral Scan and removes the old key', () => {
-  setStoredItem('georoids.surveyorUtility', 'build_furnace');
-  expect(preferredScoutUtility()).toBe('mineral_scan');
-  expect(getStoredItem('georoids.surveyorUtility')).toBeNull();
-  expect(getStoredItem(SCOUT_UTILITY_STORAGE_KEY)).toBeNull();
-
-  setStoredItem(SCOUT_UTILITY_STORAGE_KEY, 'build_furnace');
-  expect(preferredScoutUtility()).toBe('mineral_scan');
 });

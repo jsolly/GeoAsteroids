@@ -17,5 +17,5 @@ const feedback = {
 };
 
 export function playFeedback(cue: keyof typeof feedback, position?: Position): void {
-  playWorldSound(feedback[cue], position, { requireViewport: true });
+  playWorldSound(feedback[cue], position);
 }

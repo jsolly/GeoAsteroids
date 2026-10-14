@@ -28,13 +28,12 @@ function mountMap(
   container: HTMLElement,
   source: FurnaceSite,
   destinations: readonly FurnaceSite[],
-  ontravel: (id: string) => void,
-  rotation = 0
+  ontravel: (id: string) => void
 ) {
   document.body.append(container);
   const component = mount(FurnaceTravelMap, {
     target: container,
-    props: { view: { source, destinations, rotation }, ontravel },
+    props: { view: { source, destinations }, ontravel },
   });
   mounted.add(component);
   flushSync();
@@ -112,28 +111,24 @@ test('an isolated source remains visible with an explanation instead of an empty
   expect(container.querySelector('[data-furnace-id]')).toBeNull();
 });
 
-test('pilots see a destination along their course above them with pipes attached', () => {
+test('pilots see an eastern destination to the right with pipes attached', () => {
   const container = document.createElement('div');
   const east = CIVIC_LOTS.find((site) => site.id === 'street-1-0');
   if (!east) {
     throw new Error('Missing east street');
   }
-  const course = Math.atan2(
-    -(east.position.y - TOWN_HEARTH.position.y),
-    east.position.x - TOWN_HEARTH.position.x
-  );
-  mountMap(container, TOWN_HEARTH, [east], vi.fn(), course - Math.PI / 2);
+  mountMap(container, TOWN_HEARTH, [east], vi.fn());
   const current = container.querySelector<HTMLElement>('[aria-current="location"]');
   const destination = container.querySelector<HTMLElement>('[data-furnace-id="street-1-0"]');
   if (!current || !destination) {
     throw new Error('Missing furnace marker');
   }
-  expect(Number.parseFloat(destination.style.left)).toBeCloseTo(
+  expect(Number.parseFloat(destination.style.left)).toBeGreaterThan(
     Number.parseFloat(current.style.left)
   );
-  expect(Number.parseFloat(destination.style.top)).toBeLessThan(
-    Number.parseFloat(current.style.top)
-  );
+  const dx = Number.parseFloat(destination.style.left) - Number.parseFloat(current.style.left);
+  const dy = Number.parseFloat(destination.style.top) - Number.parseFloat(current.style.top);
+  expect(dy / dx).toBeCloseTo(east.position.y / east.position.x);
   const points = [...container.querySelectorAll('polyline')].flatMap((line) =>
     (line.getAttribute('points') ?? '').split(' ')
   );

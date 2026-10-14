@@ -1,13 +1,11 @@
 import { expect, test } from 'vitest';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 function localPilot(): Player {
   return new Player({
     id: 'local',
     name: 'Local',
     type: 'local',
-    input: new MockPlayerInput(),
   });
 }
 

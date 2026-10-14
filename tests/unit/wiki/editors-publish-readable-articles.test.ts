@@ -128,3 +128,24 @@ test('an editor cannot replace a reserved route or remove a required manual entr
   rmSync(join(root, 'content/wiki/field-manual.md'));
   expect(() => readWikiArticles(root)).toThrow(REQUIRED_WIKI_ARTICLE_PATTERN);
 });
+
+test('editor Markdown tables retain alignment and one named keyboard scroll region', () => {
+  const root = fixture();
+  addArticle(root, '| Ship | Ore |\n| :--- | ---: |\n| Scout | 42 |');
+  const article = readWikiArticles(root).find((entry) => entry.id === 'practice');
+  if (!article) {
+    throw new Error('Practice article missing');
+  }
+  expect(article.html).toContain('class="table-scroll relative w-full overflow-x-auto"');
+  expect(article.html.match(/data-slot="table-container"/gu)).toHaveLength(1);
+  expect(article.html).toContain('role="region" aria-label="Article table" tabindex="0"');
+  expect(article.html).toContain('data-slot="table" class="w-full caption-bottom text-sm"');
+  expect(article.html).toContain('data-slot="table-header"');
+  expect(article.html).toContain('data-slot="table-body"');
+  expect(article.html).toContain('data-slot="table-row"');
+  expect(article.html).toContain('scope="col"');
+  expect(article.html).toContain('style="text-align:right"');
+  expect(article.html).toContain(
+    'data-slot="table-cell" class="p-2 align-middle whitespace-nowrap [&amp;:has([role=checkbox])]:pr-0"'
+  );
+});

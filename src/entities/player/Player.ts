@@ -1,5 +1,6 @@
 import { canEquipUtility } from '../../../shared/equipment';
-import { applyShipKitToShip, hullRadiusForKit } from '../../../shared/shipKits';
+import { applyShipKitToShip } from '../../../shared/shipKits';
+import { DEFAULT_HAULER_UTILITY, DEFAULT_SCOUT_UTILITY } from '../../../shared/shipUtilities';
 import { purchasedHullColor } from '../../../shared/townStore';
 import type {
   ContourLockState,
@@ -19,9 +20,7 @@ import {
   playRespawn,
 } from '../../audio/interactionSounds';
 import { playLocalHaptic } from '../../fx/haptics';
-import type { PlayerInput } from '../../input/PlayerInput';
 import { getPlayerColor } from '../../utils/colorUtils';
-import { preferDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { recordAsteroidLatch } from '../roid/roidRenderer';
 import { applySharedHarpoonLatch } from '../ship/harpoonField';
@@ -30,9 +29,7 @@ import type { ShipCombatNetwork } from '../ship/shipCombatNetwork';
 import {
   applySharedShipExplodingFlag,
   applySharedShipRespawnCue,
-  applyShipSpawnProtection,
   isServerRespawnActive,
-  resolveCombatDeathCause,
 } from '../ship/shipUtils';
 
 function copyVec2(dest: { x: number; y: number }, src: { x: number; y: number }): void {
@@ -47,35 +44,22 @@ export class Player {
   ship: Ship;
   score: number = 0;
   silk = 0;
-  lastUpdate: number = Date.now();
   get cargo(): number {
     return this.ship.cargo;
   }
   set cargo(value: number) {
     this.ship.cargo = value;
   }
+
   bankedCargo = 0;
   purchases: string[] = [];
   color: string; // Player's unique color for lasers and other visual elements
-  deathCause?: string; // Environmental death cause
-  input: PlayerInput; // Unified input system for all player types
 
   // For the local player: from the moment it dies until it is confirmed alive
   // again, trust the server for position (so the respawn point is adopted).
   // While alive it predicts locally and ignores the lagging server echo.
   private adoptServerPosition = false;
-  private reportedDeath = false;
   private observedAuthoritativePose = false;
-
-  reportDeath(): void {
-    if (this.type !== 'local' || this.reportedDeath) {
-      return;
-    }
-    this.reportedDeath = true;
-    window.dispatchEvent(
-      new CustomEvent('playerDied', { detail: { playerId: this.id, deathCause: this.deathCause } })
-    );
-  }
 
   /** Ship position when death forced server-authoritative movement (respawn latch). */
   private respawnLatchOrigin: Position | null = null;
@@ -101,14 +85,12 @@ export class Player {
     id: string;
     name: string;
     type: 'local' | 'remote';
-    input: PlayerInput;
     kitId?: ShipKitId;
     combatNetwork?: ShipCombatNetwork;
   }) {
     this.id = params.id;
     this.name = params.name;
     this.type = params.type;
-    this.input = params.input;
     this.color = getPlayerColor(this.type);
 
     this.ship = new Ship({
@@ -149,7 +131,6 @@ export class Player {
     thrusting?: boolean;
     contourLock?: ContourLockState;
     color?: string;
-    deathCause?: string;
     health?: number;
     maxHealth?: number;
 
@@ -195,10 +176,10 @@ export class Player {
     if (data.equipment !== undefined) {
       this.ship.equipment = [...data.equipment];
       if (!canEquipUtility(this.ship, this.ship.haulerUtility)) {
-        this.ship.haulerUtility = 'tow_cable';
+        this.ship.haulerUtility = DEFAULT_HAULER_UTILITY;
       }
       if (!canEquipUtility(this.ship, this.ship.scoutUtility)) {
-        this.ship.scoutUtility = 'mineral_scan';
+        this.ship.scoutUtility = DEFAULT_SCOUT_UTILITY;
       }
     }
     if (data.silk !== undefined) {
@@ -238,13 +219,6 @@ export class Player {
     const acceptServerTransform =
       !isLocal || this.adoptServerPosition || wasInTransit || this.ship.furnaceTransit !== null;
 
-    // Infer wall from the pre-echo pose. Adopting a lagged inside position
-    // first is what turned a wall death into a generic overlay.
-    const inferenceShip = {
-      position: { x: this.ship.position.x, y: this.ship.position.y },
-      r: this.ship.r,
-    };
-
     if (data.position && acceptServerTransform) {
       copyVec2(this.ship.position, data.position);
     }
@@ -258,27 +232,9 @@ export class Player {
     if (data.mass !== undefined) {
       this.ship.mass = data.mass;
     }
-    this.ship.r = hullRadiusForKit(this.ship.kitId);
 
-    if (data.deathCause) {
-      this.deathCause = preferDeathCause(data.deathCause, this.deathCause) ?? data.deathCause;
-    }
-    const knownCause = preferDeathCause(
-      this.deathCause,
-      data.deathCause,
-      this.ship.lastExplodeCause
-    );
-    const explodeCause = resolveCombatDeathCause(knownCause, inferenceShip);
-    applySharedShipExplodingFlag(this.ship, data.exploding, explodeCause);
-    if (data.exploding === true || data.health === 0) {
-      this.deathCause = preferDeathCause(explodeCause, this.deathCause) ?? explodeCause;
-    }
+    applySharedShipExplodingFlag(this.ship, data.exploding);
 
-    if (data.exploding === true || data.health === 0) {
-      if (!this.ship.downedUntil) {
-        this.reportDeath();
-      }
-    }
     if (data.score !== undefined) {
       this.score = data.score;
     }
@@ -311,7 +267,6 @@ export class Player {
       this.ship.color = color;
     }
     if (data.health !== undefined) {
-      this.ship.serverOwnsHealth = true;
       {
         const wasDead = this.ship.health <= 0;
         const wasExploding = this.ship.exploding;
@@ -354,7 +309,7 @@ export class Player {
             newHealth: this.ship.health,
             type: this.type,
           });
-          this.ship.explode(explodeCause);
+          this.ship.explode();
         }
 
         applySharedShipRespawnCue(this.ship, wasDead || wasExploding, data.spawnProtectionTimer);
@@ -363,32 +318,10 @@ export class Player {
           this.ship.health > 0 &&
           (data.health === undefined || data.health > 0)
         ) {
-          this.reportedDeath = false;
           this.ship.beginHullAssembly();
+
           playRespawn(this.ship.position);
           playLocalHaptic(this.type === 'local', 'pickup');
-          delete this.ship.lastExplodeCause;
-          delete this.deathCause;
-        }
-        if (
-          this.ship.health > 0 &&
-          this.ship.blinkCount <= 0 &&
-          (data.spawnProtectionTimer === undefined || data.spawnProtectionTimer <= 0) &&
-          this.type === 'local'
-        ) {
-          logger.debug(
-            'HEALTH_UPDATE_LOCAL',
-            'Local player health update without respawn protection',
-            {
-              playerId: this.id,
-              oldHealth,
-              newHealth: data.health,
-              wasDead,
-              wasExploding,
-              exploding: this.ship.exploding,
-              condition: `wasDead: ${wasDead}, wasExploding: ${wasExploding}, health > 0: ${this.ship.health > 0}`,
-            }
-          );
         }
       }
     }
@@ -419,22 +352,6 @@ export class Player {
     if (data.scoutUtility !== undefined && this.type !== 'local') {
       this.ship.scoutUtility = data.scoutUtility;
     }
-    // Handle respawn timer from server
-    if (data.respawnTimer !== undefined) {
-      // When respawnTimer is 0, the server has finished the countdown. Remote
-      // entities still need local visual reset; the local player must wait for
-      // authoritative health + position in the snapshot (calling respawn() here
-      // would mark the ship alive at the death location before reposition).
-      if (data.respawnTimer === 0 && this.ship.health <= 0 && !isLocal) {
-        logger.debug('RESPAWN', 'Player respawned by server', {
-          playerId: this.id,
-          newHealth: data.health,
-          newPosition: data.position,
-        });
-        this.respawn();
-      }
-    }
-
     // Resume local prediction after adopting a live server transform.
     // Nearby respawns stay inside 75px of the death pose — spawn protection
     // on this snapshot means we already wrote the new spawn, so release.
@@ -474,8 +391,6 @@ export class Player {
     }
     this.soundedTowOutbound = outgoingTow;
     this.soundedHarpoonTarget = target;
-
-    this.lastUpdate = Date.now();
   }
 
   /**
@@ -493,68 +408,6 @@ export class Player {
 
     this.ship.velocity.x = 0;
     this.ship.velocity.y = 0;
-  }
-
-  // Respawn method implementation
-  respawn(): void {
-    const wasDeadOrExploding = this.ship.health <= 0 || this.ship.exploding;
-    logger.debug('RESPAWN', 'Player respawn method called', {
-      playerId: this.id,
-      currentHealth: this.ship.health,
-      currentPosition: this.ship.position,
-    });
-
-    // Reset health to full
-    this.ship.health = this.ship.maxHealth;
-
-    // Reset explosion state
-    this.ship.exploding = false;
-    this.ship.explodeTime = 0;
-
-    // Keep the existing velocity object so network aliases stay valid.
-    this.ship.velocity.x = 0;
-    this.ship.velocity.y = 0;
-
-    delete this.deathCause;
-    delete this.ship.lastExplodeCause;
-    applyShipSpawnProtection(this.ship);
-
-    if (wasDeadOrExploding) {
-      playRespawn(this.ship.position);
-      playLocalHaptic(this.type === 'local', 'pickup');
-    }
-
-    logger.debug('RESPAWN', 'Player respawn completed', {
-      playerId: this.id,
-      newHealth: this.ship.health,
-      spawnProtection: this.ship.blinkCount,
-    });
-  }
-
-  // Getter for spawn protection status
-  get spawnProtectedUntil(): number {
-    return this.ship.spawnProtectionTimer;
-  }
-
-  // Getter for death status
-  get isDead(): boolean {
-    return this.ship.health <= 0;
-  }
-
-  // Handle ship explosion event
-  onShipExploded(detail?: { cause?: string }): void {
-    logger.debug('SHIP_EXPLODED', 'Player ship exploded', {
-      playerId: this.id,
-      cause: detail?.cause,
-      health: this.ship.health,
-    });
-
-    if (detail?.cause) {
-      this.deathCause = preferDeathCause(detail.cause, this.deathCause) ?? detail.cause;
-    }
-
-    // The respawn will be handled by the server
-    // Client just needs to wait for server updates
   }
 
   // Get current state for network transmission

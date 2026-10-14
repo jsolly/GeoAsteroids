@@ -1,17 +1,17 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { PALETTE, VISUAL } from '../../../src/constants';
-import { entityFactory } from '../../../src/entities/EntityFactory';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
 import {
   clearAsteroidShatters,
   drawAsteroidShatterBursts,
-  markFurnaceAsteroidShatter,
   recordAsteroidShatter,
 } from '../../../src/entities/roid/roidRenderer';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { drawGame } from '../../../src/rendering/canvas';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
+import { asteroidRow } from '../../support/asteroid-row';
 import { TestPath2D } from '../../support/TestPath2D';
 import { setWindowViewport } from '../../support/viewport';
 
@@ -49,7 +49,7 @@ function asteroidScene() {
   restoreViewport = setWindowViewport(800, 600);
   canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'));
   const ctx = canvasManager.requireContext();
-  const pilot = entityFactory.createPlayer({
+  const pilot = createPlayer({
     id: 'observer',
     name: 'Observer',
     type: 'remote',
@@ -119,7 +119,7 @@ function recordStrokes(ctx: CanvasRenderingContext2D) {
 }
 
 function consumedRock() {
-  const pending = new Roid({ x: 100, y: 60 }, 14, 'furnace-consumed');
+  const pending = new Roid(asteroidRow({ x: 100, y: 60 }, 14, 'furnace-consumed'));
   pending.angle = 0;
   pending.vertices = 4;
   pending.offsets = [1, 1, 1, 1];
@@ -156,41 +156,8 @@ test('furnace intake shatters the rock in danger-red with a short smoke poof ins
   expect(fill).not.toHaveBeenCalled();
 });
 
-test('a furnace delivery retags an in-flight shatter so the outline goes red and smoke rises', () => {
-  vi.spyOn(performance, 'now').mockReturnValue(2000);
-  const { ctx, pilot } = asteroidScene();
-  const pending = consumedRock();
-  recordAsteroidShatter(pending, 2000);
-  const strokes = recordStrokes(ctx);
-
-  drawAsteroidShatterBursts(pilot.ship);
-
-  ctx.strokeStyle = PALETTE.ROID;
-  const slate = ctx.strokeStyle;
-  const firstBreak = strokes.filter((path) => !path.closed);
-  expect(firstBreak).toHaveLength(2);
-  expect(firstBreak.map((path) => path.commands)).toEqual([
-    Array.from({ length: 4 }, () => ['move', 'line']).flat(),
-    Array.from({ length: VISUAL.LASER_HIT_TICKS }, () => ['move', 'line']).flat(),
-  ]);
-  expect(firstBreak.every((path) => path.style === slate && path.arcs.length === 0)).toBe(true);
-
-  markFurnaceAsteroidShatter(pending.id);
-  strokes.length = 0;
-  drawAsteroidShatterBursts(pilot.ship);
-
-  ctx.strokeStyle = PALETTE.DANGER;
-  const danger = ctx.strokeStyle;
-  const edges = strokes.filter((path) => !path.closed && path.arcs.length === 0);
-  const wisps = strokes.filter((path) => path.arcs.length === 1);
-  expect(edges).toHaveLength(1);
-  expect(edges.map((path) => path.style)).toEqual([danger]);
-  expect(edges[0]?.commands).toEqual(Array.from({ length: 4 }, () => ['move', 'line']).flat());
-  expect(wisps).toHaveLength(VISUAL.ROID_FURNACE_SMOKE_WISPS);
-});
-
 test('the playfield still paints a furnace poof after the last rock leaves the belt', () => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   vi.stubGlobal('Path2D', TestPath2D);
   vi.spyOn(performance, 'now').mockReturnValue(2000);
@@ -198,7 +165,7 @@ test('the playfield still paints a furnace poof after the last rock leaves the b
   recordAsteroidShatter(consumedRock(), 2000, 'furnace');
   const strokes = recordStrokes(ctx);
 
-  drawGame(pilot, new RoidBelt(), 0, 0, '', [pilot]);
+  drawGame(pilot, new RoidBelt(), [pilot]);
 
   ctx.strokeStyle = PALETTE.DANGER;
   const danger = ctx.strokeStyle;

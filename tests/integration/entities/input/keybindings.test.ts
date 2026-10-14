@@ -3,7 +3,6 @@ import { GAME } from '../../../../shared/constants/gameplay';
 import { Player } from '../../../../src/entities/player/Player';
 import { resetControlSources } from '../../../../src/input/controlSources';
 import { keyDown, keyUp, reconcilePlayerInput } from '../../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
 
 let player: Player;
 const turn = (540 * Math.PI) / (180 * GAME.FPS);
@@ -16,7 +15,6 @@ beforeEach(() => {
     id: 'keyboard-pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   reconcilePlayerInput(player);
 });

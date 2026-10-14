@@ -2,7 +2,8 @@ import { expect, test } from 'vitest';
 import { stepAsteroidMotionInto } from '../../../shared/asteroidMotion';
 import type { AsteroidData } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+import { Roid } from '../../../src/entities/roid/Roid';
+
 import {
   applyAsteroidKinematics,
   createAsteroidFieldSyncScratch,
@@ -38,23 +39,14 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
   const cache = new PlayerListCache<Player>();
   const snapshotIds = new Set<string>();
   const scratch = createAsteroidFieldSyncScratch();
-  const seen = new Set<string>();
+  const belt: { id: string }[] = [];
   const remote = new Player({
     id: 'remote',
     name: 'Castle',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   const players = new Map<string, Player>([['remote', remote]]);
-  const localRoid = {
-    position: { x: 1, y: 2 },
-    velocity: { x: 0, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    health: 10,
-    maxHealth: 10,
-    r: 20,
-  };
+  const localRoid = new Roid({ ...roid('server-asteroid-0', 1, 2), velocity: { x: 0, y: 0 } });
 
   const firstList = cache.allPlayers(players);
   const firstPosition = remote.ship.position;
@@ -75,9 +67,10 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
     expect(cache.allPlayers(players)).toBe(firstList);
 
     const live = roid('server-asteroid-0', tick, -tick);
-    const partitioned = partitionAsteroidSnapshot([live], seen, scratch);
+    const partitioned = partitionAsteroidSnapshot([live], belt, scratch);
     if (tick === 0) {
       expect(partitioned.created).toHaveLength(1);
+      belt.push({ id: live.id });
     } else {
       expect(partitioned.updated).toHaveLength(1);
       applyAsteroidKinematics(localRoid, live, { snapPosition: true });

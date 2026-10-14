@@ -3,7 +3,7 @@ import { LOCAL_STORAGE_KEYS } from '../../../../src/constants/user-preferences';
 import { Player } from '../../../../src/entities/player/Player';
 import { resetControlSources } from '../../../../src/input/controlSources';
 import { reconcilePlayerInput } from '../../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
+
 import {
   handleMouseDown,
   handleMouseMove,
@@ -25,7 +25,7 @@ beforeEach(() => {
   canvasManager.initialize(testCanvas);
   vi.spyOn(testCanvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
 
-  player = new Player({ id: 'p1', name: 'Tester', type: 'local', input: new MockPlayerInput() });
+  player = new Player({ id: 'p1', name: 'Tester', type: 'local' });
   reconcilePlayerInput(player);
 });
 

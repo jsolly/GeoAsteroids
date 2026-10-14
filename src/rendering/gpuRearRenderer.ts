@@ -21,8 +21,7 @@ type GpuRearScene = {
   dpr: number;
   scale: number;
   zoom: number;
-  rotation: number;
-  contourTransform?: { a: number; b: number; c: number; d: number };
+  contourTransform: { a: number; b: number; c: number; d: number };
   contours: readonly GpuContourLayer[];
   rearSource: HTMLCanvasElement;
   nativeStars: number;
@@ -41,7 +40,6 @@ type Batch = {
 
 type CameraUniforms = {
   camera: WebGLUniformLocation;
-  rotation: WebGLUniformLocation;
   size: WebGLUniformLocation;
   view: WebGLUniformLocation;
   scale: WebGLUniformLocation;
@@ -77,7 +75,7 @@ type GpuState =
 
 type ContourPainter =
   | { contourMode: 'none' | 'gpu-capsules'; contourReason: 'none' }
-  | { contourMode: 'canvas-path'; contourReason: 'hairline' | 'rotated-path-coverage' };
+  | { contourMode: 'canvas-path'; contourReason: 'hairline' };
 
 export type GpuFrameStats = ContourPainter & {
   state: GpuState['kind'];
@@ -205,6 +203,10 @@ export class GpuRearRenderer {
     return this.state.kind === 'ready';
   }
 
+  usesNativeContours(): boolean {
+    return this.contourPainter.contourMode === 'canvas-path';
+  }
+
   /** Detached observation. No GL calls, and never invoked by a timed drawing loop. */
   getStats(): GpuFrameStats {
     return { state: this.state.kind, ...this.stats, ...this.contourPainter };
@@ -265,13 +267,7 @@ export class GpuRearRenderer {
       this.drawNativeRear(scene, resources);
       // Skia switches thin strokes to a modulated hairline, with different
       // endpoint support and rounding. Preserve that native painter exactly.
-      const scale = Math.fround(scene.zoom * scene.dpr * scene.scale);
-      const matrix = scene.contourTransform ?? {
-        a: Math.fround(scale * Math.cos(scene.rotation)),
-        b: Math.fround(scale * Math.sin(scene.rotation)),
-        c: Math.fround(-scale * Math.sin(scene.rotation)),
-        d: Math.fround(scale * Math.cos(scene.rotation)),
-      };
+      const matrix = scene.contourTransform;
       const width = Math.fround(VISUAL.CONTOUR_STROKE_WIDTH / scene.scale);
       const fastLength = (x: number, y: number) => {
         const dx = Math.abs(Math.fround(width * x));
@@ -283,9 +279,7 @@ export class GpuRearRenderer {
       this.contourPainter =
         fastLength(matrix.a, matrix.b) <= 1 && fastLength(matrix.c, matrix.d) <= 1
           ? { contourMode: 'canvas-path', contourReason: 'hairline' }
-          : scene.rotation !== 0
-            ? { contourMode: 'canvas-path', contourReason: 'rotated-path-coverage' }
-            : { contourMode: 'gpu-capsules', contourReason: 'none' };
+          : { contourMode: 'gpu-capsules', contourReason: 'none' };
       if (this.contourPainter.contourMode === 'gpu-capsules') {
         this.drawContours(scene, resources);
       }
@@ -386,7 +380,6 @@ export class GpuRearRenderer {
       const cameraUniforms = (program: WebGLProgram): CameraProgram => ({
         program,
         camera: owner.uniform(program, 'u_camera'),
-        rotation: owner.uniform(program, 'u_rotation'),
         size: owner.uniform(program, 'u_size'),
         view: owner.uniform(program, 'u_view'),
         scale: owner.uniform(program, 'u_scale'),
@@ -476,7 +469,6 @@ export class GpuRearRenderer {
       scene.position.x - batch.anchorX,
       scene.position.y - batch.anchorY
     );
-    gl.uniform2f(program.rotation, Math.cos(scene.rotation), Math.sin(scene.rotation));
     gl.uniform2f(program.size, this.canvas.width, this.canvas.height);
     gl.uniform2f(program.view, scene.width * scene.dpr, scene.height * scene.dpr);
     gl.uniform1f(program.scale, scale);

@@ -19,7 +19,6 @@ import {
   projectWorldToScreenInto,
 } from './playfieldCamera';
 import { configureRenderQuality } from './renderQuality';
-import { rotateVectorInto, travelCameraRotation } from './travelCamera';
 
 /** Placement values only; the shell owns all surrounding DOM styles. */
 export interface PlayfieldGeometry {
@@ -30,7 +29,6 @@ export interface PlayfieldGeometry {
   readonly mapX: number;
   readonly mapY: number;
   readonly schematicY: number;
-  readonly storeY: number;
 }
 
 const TOGGLE_STEP_PX = 52;
@@ -38,25 +36,23 @@ const TOGGLE_STEP_PX = 52;
 const CAMERA_ZOOM_OUT_SECONDS = 0.14;
 const CAMERA_ZOOM_IN_SECONDS = 0.2;
 
-/** Map, Inventory, and Store tops. Short touch screens keep Inventory under the radar. */
+/** Map and Inventory tops. Short touch screens keep Inventory under the radar. */
 export function playfieldToggleOffsets(
   miniMap: { y: number; size: number },
   touchControls: boolean,
   height: number
-): { mapY: number; schematicY: number; storeY: number } {
+): { mapY: number; schematicY: number } {
   if (touchControls && height < 500) {
     const schematicY = miniMap.y + miniMap.size + 8;
     return {
       mapY: schematicY + TOGGLE_STEP_PX,
       schematicY,
-      storeY: schematicY + TOGGLE_STEP_PX * 2,
     };
   }
   const mapY = miniMap.y - 84;
   return {
     mapY,
     schematicY: mapY - TOGGLE_STEP_PX,
-    storeY: mapY - TOGGLE_STEP_PX * 2,
   };
 }
 
@@ -70,7 +66,6 @@ class CanvasManager {
   private stopDevicePixelRatioWatcher: (() => void) | null = null;
   private readonly viewport = { width: 1, height: 1 };
   private devicePixelRatio = 1;
-  private cameraRotation = 0;
   private zoom = 1;
   private zoomUpdatedAt: number | null = null;
   private readonly screenViewport = { width: 1, height: 1 };
@@ -101,56 +96,54 @@ class CanvasManager {
       throw new Error('A canvas rendering context is unavailable.');
     }
 
-    if (this.canvas && this.context) {
-      if (gpuRequested) {
-        try {
-          this.gpuRenderer = GpuRearRenderer.create(this.canvas, () => {
-            if (!this.gpuRenderer?.available()) {
-              this.gpuFrameActive = false;
-            }
-          });
-        } catch (error) {
-          this.gpuRenderer = null;
-          logger.error(
-            'RENDER',
-            'GPU creation failed; using Canvas',
-            boundedDiagnosticError(error, 'Unknown browser failure')
-          );
-        }
-      }
-      this.resizeHandler = () => {
-        if (this.resizeFrame !== null) {
-          return;
-        }
-        if (typeof window.requestAnimationFrame !== 'function') {
-          this.handleCanvasResize();
-          return;
-        }
-        this.resizeFrame = window.requestAnimationFrame(() => {
-          this.resizeFrame = null;
-          this.handleCanvasResize();
+    if (gpuRequested) {
+      try {
+        this.gpuRenderer = GpuRearRenderer.create(this.canvas, () => {
+          if (!this.gpuRenderer?.available()) {
+            this.gpuFrameActive = false;
+          }
         });
-      };
-      window.addEventListener('resize', this.resizeHandler);
-      window.visualViewport?.addEventListener('resize', this.resizeHandler);
-      window.visualViewport?.addEventListener('scroll', this.resizeHandler);
-      const onResize = this.resizeHandler;
-      this.inputMediaQueries = ['(pointer: coarse)', '(hover: none)'].map((query) => {
-        const media = window.matchMedia(query);
-        media.addEventListener('change', onResize);
-        return media;
-      });
-
-      this.stopDevicePixelRatioWatcher = watchDevicePixelRatio(() => {
+      } catch (error) {
+        this.gpuRenderer = null;
+        logger.error(
+          'RENDER',
+          'GPU creation failed; using Canvas',
+          boundedDiagnosticError(error, 'Unknown browser failure')
+        );
+      }
+    }
+    this.resizeHandler = () => {
+      if (this.resizeFrame !== null) {
+        return;
+      }
+      if (typeof window.requestAnimationFrame !== 'function') {
+        this.handleCanvasResize();
+        return;
+      }
+      this.resizeFrame = window.requestAnimationFrame(() => {
+        this.resizeFrame = null;
         this.handleCanvasResize();
       });
+    };
+    window.addEventListener('resize', this.resizeHandler);
+    window.visualViewport?.addEventListener('resize', this.resizeHandler);
+    window.visualViewport?.addEventListener('scroll', this.resizeHandler);
+    const onResize = this.resizeHandler;
+    this.inputMediaQueries = ['(pointer: coarse)', '(hover: none)'].map((query) => {
+      const media = window.matchMedia(query);
+      media.addEventListener('change', onResize);
+      return media;
+    });
 
+    this.stopDevicePixelRatioWatcher = watchDevicePixelRatio(() => {
       this.handleCanvasResize();
-      clientPerformance.setRendererObservation(gpuRequested ? 'webgl2' : 'canvas', () => ({
-        backend: this.getRendererBackend(),
-        gpuStats: this.getGpuFrameStats(),
-      }));
-    }
+    });
+
+    this.handleCanvasResize();
+    clientPerformance.setRendererObservation(gpuRequested ? 'webgl2' : 'canvas', () => ({
+      backend: this.getRendererBackend(),
+      gpuStats: this.getGpuFrameStats(),
+    }));
   }
 
   private viewportSize(): { width: number; height: number } {
@@ -283,7 +276,6 @@ class CanvasManager {
     this.viewport.width = 1;
     this.viewport.height = 1;
     this.devicePixelRatio = 1;
-    this.cameraRotation = 0;
     this.zoom = 1;
     this.zoomUpdatedAt = null;
     this.worldLayersZoomed = false;
@@ -325,8 +317,7 @@ class CanvasManager {
       scene.starTiles,
       scene.position,
       this.viewport,
-      PLAYFIELD_CLOSE_SCALE,
-      this.cameraRotation
+      PLAYFIELD_CLOSE_SCALE
     );
     const drawn =
       this.gpuRenderer?.draw({
@@ -339,7 +330,6 @@ class CanvasManager {
         dpr: this.devicePixelRatio,
         scale: PLAYFIELD_CLOSE_SCALE,
         zoom: this.zoom,
-        rotation: this.cameraRotation,
         contourTransform: {
           a: contourTransform.a,
           b: contourTransform.b,
@@ -370,7 +360,7 @@ class CanvasManager {
   }
 
   requiresNativeGpuContours(): boolean {
-    return this.gpuFrameActive && this.gpuRenderer?.getStats().contourMode === 'canvas-path';
+    return this.gpuFrameActive && this.gpuRenderer?.usesNativeContours() === true;
   }
 
   recordNativeGpuContours(segments: number): void {
@@ -414,20 +404,11 @@ class CanvasManager {
     return this.context;
   }
 
-  followTravel(ship: Parameters<typeof travelCameraRotation>[0]): void {
-    this.cameraRotation = travelCameraRotation(ship);
-  }
-
-  getCameraRotation(): number {
-    return this.cameraRotation;
-  }
-
   /** Apply the same projection to painters that retain paths in world coordinates. */
   applyWorldTransform(ctx: CanvasRenderingContext2D, center: Position): void {
     const viewport = this.getViewportSize();
     const scale = this.getPlayfieldScale();
     ctx.translate(viewport.width / 2, viewport.height / 2);
-    ctx.rotate(this.cameraRotation);
     ctx.scale(scale, scale);
     ctx.translate(-center.x, -center.y);
   }
@@ -492,36 +473,12 @@ class CanvasManager {
     shipPos: Position
   ): { x: number; y: number } {
     const scale = PLAYFIELD_CLOSE_SCALE;
-    if (!this.canvas) {
-      rotateVectorInto(out, worldPos.x - shipPos.x, worldPos.y - shipPos.y, this.cameraRotation);
-      out.x *= scale;
-      out.y *= scale;
-      return out;
-    }
-    return projectWorldToScreenInto(
-      out,
-      worldPos,
-      shipPos,
-      this.viewport,
-      scale,
-      this.cameraRotation
-    );
+    return projectWorldToScreenInto(out, worldPos, shipPos, this.viewport, scale);
   }
 
   worldToScreen(worldPos: Position, shipPos: Position): Point {
     const pos = this.worldToScreenInto(this.screenPos, worldPos, shipPos);
     return new Point(pos.x, pos.y);
-  }
-
-  screenToWorld(screenPos: Point, shipPos: Position): Position {
-    const scale = PLAYFIELD_CLOSE_SCALE;
-    const offset = rotateVectorInto(
-      { x: 0, y: 0 },
-      (screenPos.x - (this.canvas ? this.viewport.width / 2 : 0)) / scale,
-      (screenPos.y - (this.canvas ? this.viewport.height / 2 : 0)) / scale,
-      -this.cameraRotation
-    );
-    return { x: offset.x + shipPos.x, y: offset.y + shipPos.y };
   }
 }
 

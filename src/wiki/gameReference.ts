@@ -3,7 +3,7 @@ import { ASTEROID_BOOST } from '../../shared/asteroidBoost';
 import { ASTEROID_INTERACTIONS } from '../../shared/asteroidPhenomena';
 import { colossalMiningHealth } from '../../shared/asteroidScale';
 import { BELT_CRAWLER } from '../../shared/beltCrawler';
-import { getGameBoundary } from '../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../shared/boundary';
 import { CHARGED_WEAPON } from '../../shared/chargedWeapon';
 import {
   DAMAGE,
@@ -214,7 +214,7 @@ export const gameReference: Record<string, { heading: string; paragraphs: string
     {
       heading: 'Boundary values',
       paragraphs: [
-        `The lethal boundary radius is ${getGameBoundary().radius.toLocaleString('en-US')} units. The asteroid field radius is ${ROID.FIELD_RADIUS} units and boundary contact destroys a vulnerable ship regardless of hull health. Asteroids and lasers bounce inward; after a bounce, a laser damages any live ship it hits.`,
+        `The lethal boundary radius is ${WORLD_BOUNDARY.radius.toLocaleString('en-US')} units. The asteroid field radius is ${WORLD.radius} units and boundary contact destroys a vulnerable ship regardless of hull health. Asteroids and lasers bounce inward; after a bounce, a laser damages any live ship it hits.`,
         `A terrain spider has ${SPIDER.MAX_HEALTH} health. One ordinary hit, including a ricochet, removes the spider.`,
         `Nests spawn ${SPIDER.NEST_GUARDS} guards that patrol within ${SPIDER.NEST_PATROL_RADIUS} units, notice prey within ${SPIDER.NEST_ACQUIRE_DISTANCE}, chase for at most ${SPIDER.NEST_CHASE_FRAMES / GAME.FPS} seconds, and turn back at ${SPIDER.NEST_LEASH_DISTANCE} units from home. Up to ${SPIDER.MAX_ROAMERS} roaming hunter${SPIDER.MAX_ROAMERS === 1 ? '' : 's'} appear${SPIDER.MAX_ROAMERS === 1 ? 's' : ''} at a time, noticing prey within ${SPIDER.HUNT_ACQUIRE_DISTANCE} units and giving up past ${SPIDER.HUNT_RELEASE_DISTANCE}. A towed spider draws up to ${SPIDER.MAX_RESCUE_ROAMERS} rescuers, one every ${SPIDER.RESCUE_SPAWN_INTERVAL_FRAMES / GAME.FPS} seconds. A bite reaches ${SPIDER.BITE_DISTANCE} units. Spiders avoid ${SPIDER.FURNACE_SAFE_RADIUS} units around a lit furnace and ${SPIDER.STARTER_SAFE_RADIUS} around Town Square. Tapping a spider yields ${SPIDER.SILK_BURSTS} silk.`,
       ],

@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { RoidBelt } from '../../../src/entities/roid/Roid';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import * as terrain from '../../../src/physics/terrain/terrainSession';
 import { drawGame, scanCameraZoom } from '../../../src/rendering/canvas';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
@@ -28,7 +28,7 @@ test('a failed terrain stroke during Scout scan restores flight coordinates and 
       segments: [{ ax: -100, ay: 100, bx: 100, by: 100 }],
     },
   ]);
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   const players = PlayerManager.getInstance({
     networkPort: network,
     combatNetwork: network.combatNetwork,
@@ -96,7 +96,7 @@ test('a failed terrain stroke during Scout scan restores flight coordinates and 
     }
     Reflect.apply(nativeFillText, ctx, args);
   });
-  const draw = () => drawGame(pilot, new RoidBelt(), 123, 0, '', [pilot]);
+  const draw = () => drawGame(pilot, new RoidBelt(), [pilot]);
   const baseTransform = { a: 2, b: 0, c: 0, d: 2, e: 0, f: 0 };
 
   expect(draw).toThrow(failure);

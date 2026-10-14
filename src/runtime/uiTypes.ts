@@ -49,7 +49,6 @@ export interface GameCommands {
   join(name: string): void;
   selectShip(kit: ShipKitId): void;
   setPreference(kind: GamePreference, enabled: boolean): void;
-  openTownStore(): void;
   closeTownStore(): void;
   selectTownView(mode: TownView): void;
   purchaseTownOffer(id: string): void;

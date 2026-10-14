@@ -4,7 +4,6 @@ import { bindGameAudio, resetGameAudio } from '../../../src/audio/spatialAudio';
 import { LOCAL_STORAGE_KEYS } from '../../../src/constants/user-preferences';
 import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 const listener = { x: 400, y: 300 };
 
@@ -89,7 +88,7 @@ test('tow snapshots sound launch, attachment and disengagement once even when re
     id: 'tow-audio',
     name: 'Hauler',
     type: 'local',
-    input: new MockPlayerInput(),
+
     kitId: 'hauler',
   });
   player.ship.position = { ...listener };
@@ -130,7 +129,7 @@ test('recalling or losing an outgoing tow sounds disengagement without a false a
     id: 'recall-audio',
     name: 'Hauler',
     type: 'local',
-    input: new MockPlayerInput(),
+
     kitId: 'hauler',
   });
   player.ship.position = { ...listener };
@@ -159,7 +158,7 @@ test.each([false, true])(
       id: 'death-tow',
       name: 'Hauler',
       type: 'local',
-      input: new MockPlayerInput(),
+
       kitId: 'hauler',
     });
     player.ship.position = { ...listener };

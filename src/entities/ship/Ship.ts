@@ -1,9 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
 import { GAME, SHIP } from '../../../shared/constants/gameplay';
-import {
-  calculateHealthRegenDelayFrames,
-  calculateHealthRegenPerFrame,
-} from '../../../shared/constants/health';
 import { CONTOUR_BRIDGE, contourDraftMultiplier } from '../../../shared/contourBridge';
 import {
   acceleratedContourVelocity,
@@ -29,6 +24,7 @@ import { GROWTH, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import {
   applyShipKitToShip,
   DEFAULT_SHIP_KIT_ID,
+  getShipKit,
   hullRadiusForKit,
   SHIP_ABILITY,
 } from '../../../shared/shipKits';
@@ -53,7 +49,6 @@ import { PALETTE } from '../../constants';
 import { playLocalHaptic } from '../../fx/haptics';
 import { worldFurnaces } from '../../network/worldExploration';
 import { findContourCapture, findContourHop } from '../../physics/terrain/contourCapture';
-import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity } from '../../utils/mathUtils';
 import { AuthoritativeProjectileField } from '../laser/AuthoritativeProjectileField';
@@ -66,13 +61,11 @@ import {
   applyShipSpawnProtection,
   applyThrustOrFriction,
   calculateHealthAfterDamage,
-  calculateHealthAfterHeal,
-  shouldStartHealthRegeneration,
   tickShipImpactFlash,
 } from './shipUtils';
 
 class Ship {
-  id: string = uuidv4(); // Unique identifier for event handling
+  id: string = crypto.randomUUID(); // Unique identifier for event handling
   position: Position = { x: 0, y: 0 };
   velocity: Velocity = { x: 0, y: 0 };
   /** Granted only by an authoritative motion rebase after an external impulse. */
@@ -156,7 +149,6 @@ class Ship {
   health: number = SHIP.MAX_HEALTH;
   maxHealth: number = SHIP.MAX_HEALTH;
 
-  healthRegenTimer: number = 0;
   impactFlashFrames: number = 0;
   blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
@@ -175,7 +167,7 @@ class Ship {
   kitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
   thrust: number = SHIP.THRUST;
   maxVelocity: number = SHIP.MAX_VELOCITY;
-  turnSpeed: number = SHIP.TURN_SPEED;
+  turnSpeed: number = getShipKit(DEFAULT_SHIP_KIT_ID).turnSpeed;
   abilityCooldownFrames: number = 0;
   abilityActiveFrames: number = 0;
 
@@ -189,15 +181,12 @@ class Ship {
   scoutUtility?: ScoutUtilityId;
   tapExtractFrames?: number;
   tapExtractCompleted?: boolean;
-  /** Last specific environmental cause (boundary, asteroid, or ricochet). */
-  lastExplodeCause?: string;
 
   private readonly combatNetwork: ShipCombatNetwork | undefined;
 
   constructor(options?: {
     combatNetwork?: ShipCombatNetwork;
     position?: Position;
-    shotCooldown?: number;
     color?: string;
     isLocalPlayer?: boolean;
     frictionCoefficient?: number;
@@ -223,12 +212,6 @@ class Ship {
     if (options?.position) {
       this.position = options.position;
     }
-    if (options?.shotCooldown !== undefined) {
-      this.shotCooldown = options.shotCooldown;
-    }
-    if (options?.color) {
-      this.color = options.color;
-    }
     if (options?.isLocalPlayer !== undefined) {
       this.isLocalPlayer = options.isLocalPlayer;
     }
@@ -237,9 +220,6 @@ class Ship {
     }
 
     applyShipKitToShip(this, options?.kitId ?? DEFAULT_SHIP_KIT_ID);
-    if (options?.shotCooldown !== undefined) {
-      this.shotCooldown = options.shotCooldown;
-    }
     if (options?.color) {
       this.color = options.color;
     }
@@ -249,17 +229,12 @@ class Ship {
     this.blinkOn = this.blinkCount % 2 === 0;
   }
 
-  explode(cause?: string): void {
+  explode(): void {
     this.finishWeaponCharge(false);
+
     this.utilityFlight = null;
     if (this.exploding) {
       return;
-    }
-
-    if (cause && !isGenericDeathCause(cause)) {
-      this.lastExplodeCause = cause;
-    } else if (cause && !this.lastExplodeCause) {
-      this.lastExplodeCause = cause;
     }
 
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
@@ -269,17 +244,6 @@ class Ship {
     this.angularVelocity = 0;
     playExplosionSound(this.position);
     playLocalHaptic(this.isLocalPlayer, 'boom');
-
-    // Dispatch event to notify that ship has exploded with cause information
-    window.dispatchEvent(
-      new CustomEvent('shipExploded', {
-        detail: {
-          shipId: this.id,
-          position: { x: this.position.x, y: this.position.y },
-          cause,
-        },
-      })
-    );
   }
 
   canShootAgain(): boolean {
@@ -503,46 +467,17 @@ class Ship {
     }
   }
 
-  takeDamage(amount: number, cause?: string): void {
+  takeDamage(amount: number): void {
     this.releaseContourLock();
     if (this.exploding || this.movementLocked) {
       return;
     }
 
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
-    this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
     if (this.health <= 0) {
       this.health = 0;
-      this.explode(cause);
-    }
-  }
-
-  heal(amount: number): void {
-    if (this.exploding) {
-      return;
-    }
-
-    this.health = calculateHealthAfterHeal(this.health, amount, this.maxHealth);
-  }
-
-  /** Once a server snapshot owns health, only authoritative echoes may heal it. */
-  serverOwnsHealth = false;
-
-  updateHealth(): void {
-    if (this.serverOwnsHealth) {
-      return;
-    }
-    // Predict the same five-second countdown and proportional rate as the server.
-    if (this.exploding || this.health <= 0) {
-      return;
-    }
-    if (this.healthRegenTimer > 0) {
-      this.healthRegenTimer--;
-      return;
-    }
-    if (shouldStartHealthRegeneration(this.healthRegenTimer, this.health, this.maxHealth)) {
-      this.heal(calculateHealthRegenPerFrame(this.maxHealth));
+      this.explode();
     }
   }
 
@@ -562,13 +497,6 @@ class Ship {
         this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
         this.setBlinkOn();
       }
-    } else if (this.isLocalPlayer) {
-      // Debug logging when spawn protection is complete
-      logger.debug('SPAWN_PROTECTION', 'Spawn protection complete', {
-        shipId: this.id,
-        blinkCount: this.blinkCount,
-        canCollide: true,
-      });
     }
   }
 
@@ -597,7 +525,6 @@ class Ship {
       if (!this.combatNetwork?.isConnected) {
         tickTowLine(this, getHarpoonField());
       }
-      this.updateHealth();
     }
   }
 

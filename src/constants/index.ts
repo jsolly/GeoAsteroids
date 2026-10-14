@@ -4,12 +4,6 @@
  */
 
 // ============================================================================
-// CAMERA
-// ============================================================================
-/** Keep north fixed across flight and navigation maps by default. */
-export const CAMERA = { FOLLOW_TRAVEL: false };
-
-// ============================================================================
 // TOUCH CONTROLS
 // ============================================================================
 export const TOUCH = {
@@ -149,7 +143,6 @@ export const AUDIO = {
   HARPOON_LAUNCH: ['/sounds/harpoon-launch.m4a', 4, 0.04],
   HARPOON_LATCH: ['/sounds/harpoon-latch.m4a', 4, 0.045],
   HARPOON_RELEASE: ['/sounds/harpoon-release.m4a', 3, 0.035],
-  ORBITAL_FIRE: ['/sounds/orbital-fire.m4a', 6, 0.032],
   ORBITAL_PICKUP: ['/sounds/orbital-pickup.m4a', 4, 0.04],
   TAP_EJECT: ['/sounds/tap-eject.m4a', 4, 0.055],
   LOOT_PICKUP: ['/sounds/loot-pickup.m4a', 8, 0.065],
@@ -158,16 +151,10 @@ export const AUDIO = {
   ASTEROID_EXPLODE: ['/sounds/asteroid-explode.m4a', 5, 0.045],
   SATELLITE_EXPLODE: ['/sounds/satellite-explode.m4a', 4, 0.045],
   LOOT_EXPLODE: ['/sounds/loot-explode.m4a', 4, 0.04],
-  EXPLOSION_PATH: 'sounds/explode.m4a',
-  LASER_PATH: 'sounds/laser.m4a',
-  HIT_PATH: 'sounds/hit.m4a',
-  EXPLOSION_MAX_STREAMS: 5,
-  LASER_MAX_STREAMS: 5,
-  HIT_MAX_STREAMS: 5,
   // Quiet effects keep repeated combat cues comfortable.
-  EXPLOSION_VOLUME: 0.055,
-  LASER_VOLUME: 0.04,
-  HIT_VOLUME: 0.035,
+  EXPLOSION: ['/sounds/explode.m4a', 5, 0.055],
+  LASER: ['/sounds/laser.m4a', 5, 0.04],
+  HIT: ['/sounds/hit.m4a', 5, 0.035],
   // Soft looping beds sit under cues; never drown crystalline SFX.
   MENU_BED_VOLUME: 0.014,
   IN_GAME_BED_VOLUME: 0.012,
@@ -176,7 +163,7 @@ export const AUDIO = {
   DANGER_FALLBACK_VOLUME: 0.018,
   DANGER_FALLBACK_RATE: 1.07,
   BED_CROSSFADE_MS: 1600,
-  // Used when the canvas size is unknown (matches PlayerNetwork nearby radius).
+  // Audible radius used when the viewport size is unknown.
   FALLBACK_MAX_DISTANCE: 1200,
   // Floor so an on-screen source at the viewport edge stays a soft blush, not silent.
   MIN_IN_VIEWPORT_VOLUME: 0.2,
@@ -189,11 +176,6 @@ export const LOG_LEVEL_NAMES = ['error', 'warn', 'info', 'debug'] as const;
 export type LogLevelName = (typeof LOG_LEVEL_NAMES)[number];
 
 export const LOGGING = {
-  // Opt in to `debug` locally when chasing a bug. Production must stay
-  // `info` or quieter — per-frame `logger.debug` at 60 FPS stalls the
-  // main thread, misses heartbeats, and disconnects both tabs.
-  GLOBAL_LOG_LEVEL: 'info' as LogLevelName,
-
   // Forward warnings/errors and selected STATE info events to the server.
   FORWARD_TO_SERVER: true,
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, type Snippet, tick } from 'svelte';
+  import { focusReturnTarget, isExternalFocusTarget } from '../../ui/focusReturn';
   import Button from '../ui/button/button.svelte';
   import Dialog from '../ui/dialog/dialog.svelte';
   import DialogClose from '../ui/dialog/dialog-close.svelte';
@@ -42,32 +43,6 @@
     }
   }
 
-  function usableFocusTarget(target: HTMLElement | null | undefined): target is HTMLElement {
-    if (
-      !target?.isConnected ||
-      target === document.body ||
-      target.matches(':disabled, [aria-disabled="true"]')
-    ) {
-      return false;
-    }
-    for (let ancestor: HTMLElement | null = target; ancestor; ancestor = ancestor.parentElement) {
-      const style = window.getComputedStyle(ancestor);
-      if (
-        ancestor.hidden ||
-        ancestor.hasAttribute('inert') ||
-        style.display === 'none' ||
-        style.visibility === 'hidden'
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function externalOpener(target: HTMLElement | null | undefined): target is HTMLElement {
-    return usableFocusTarget(target) && !target.closest('[role="dialog"], dialog');
-  }
-
   function openFocus(event: Event) {
     if (switchingFocus !== null) {
       event.preventDefault();
@@ -81,7 +56,7 @@
       });
     } else if (
       document.activeElement instanceof HTMLElement &&
-      externalOpener(document.activeElement)
+      isExternalFocusTarget(document.activeElement)
     ) {
       opener = document.activeElement;
     }
@@ -90,13 +65,8 @@
   function closeFocus(event: Event) {
     event.preventDefault();
     if (!open && restoreFocus) {
-      const explicit = closeFocusTarget?.();
-      const target = usableFocusTarget(explicit)
-        ? explicit
-        : externalOpener(opener)
-          ? opener
-          : fallbackFocusTarget?.();
-      if (usableFocusTarget(target)) {
+      const target = focusReturnTarget(closeFocusTarget?.(), opener, fallbackFocusTarget?.());
+      if (target) {
         target.focus();
       }
     }

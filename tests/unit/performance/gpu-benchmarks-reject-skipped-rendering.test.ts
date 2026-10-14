@@ -56,10 +56,9 @@ test('each measured GPU frame must record native stars, one source upload and op
     nativeContourSegments: 200,
   };
   expect(observeGpuRenderedFrame(500, native).contourMode).toBe('canvas-path');
-  expect(
+  expect(() =>
     observeGpuRenderedFrame(500, { ...native, contourReason: 'rotated-path-coverage' })
-      .contourReason
-  ).toBe('rotated-path-coverage');
+  ).toThrow();
   for (const invalid of [
     { ...gpu, drawCalls: 0 },
     { ...gpu, submittedStars: 1 },

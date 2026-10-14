@@ -6,7 +6,6 @@ import { ensureTerrain } from '../../../shared/terrainField';
 import type { WeaponChargeAction } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
 import { keyDown, keyUp } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -17,7 +16,7 @@ test('holding F charges once, suppresses ordinary shots, then releases; death ca
     id: 'pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
+
     combatNetwork: { isConnected: true, sendCharge, sendShoot, sendAbility: () => true },
   });
   keyDown(new KeyboardEvent('keydown', { code: 'KeyF' }), player);
@@ -29,7 +28,7 @@ test('holding F charges once, suppresses ordinary shots, then releases; death ca
   keyUp(new KeyboardEvent('keyup', { code: 'KeyF' }), player);
   expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
   keyDown(new KeyboardEvent('keydown', { code: 'KeyF' }), player);
-  player.ship.explode('boundary');
+  player.ship.explode();
   keyUp(new KeyboardEvent('keyup', { code: 'KeyF' }), player);
   expect(sendCharge.mock.calls).toEqual([['start'], ['release'], ['start'], ['cancel']]);
 });
@@ -39,7 +38,7 @@ test('bracket keys use the same adjacent contour hop as touch without repeating 
     id: 'pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
+
     combatNetwork: {
       isConnected: true,
       sendCharge: () => true,

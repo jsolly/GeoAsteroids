@@ -66,7 +66,10 @@ test('a normal pilot never sees diagnostics despite old saved debug preferences'
   start('/?log-level=debug');
   expect(model?.read(false)).toBeNull();
   expect(target?.querySelector('#debug-identity')).toBeNull();
-  expect(logger.getLogLevel()).toBe(LogLevel.INFO);
+  const debug = vi.spyOn(console, 'debug').mockImplementation(() => {});
+  logger.debug('TEST', 'normal route suppresses debug');
+  expect(debug).not.toHaveBeenCalled();
+  debug.mockRestore();
 });
 
 test.each([
@@ -78,7 +81,18 @@ test.each([
   ['/debug-other?log-level=debug', LogLevel.INFO],
 ] as const)('a pilot visiting %s receives the supported route log level', (path, level) => {
   start(path);
-  expect(logger.getLogLevel()).toBe(level);
+  const debug = vi.spyOn(console, 'debug').mockImplementation(() => {});
+  const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  logger.debug('TEST', 'route debug');
+  logger.info('TEST', 'route info');
+  logger.warn('TEST', 'route warning');
+  expect(debug).toHaveBeenCalledTimes(level === LogLevel.DEBUG ? 1 : 0);
+  expect(info).toHaveBeenCalledTimes(level >= LogLevel.INFO ? 1 : 0);
+  expect(warn).toHaveBeenCalledOnce();
+  debug.mockRestore();
+  info.mockRestore();
+  warn.mockRestore();
 });
 
 test('a debug pilot sees its page identity before joining and copies its accepted player identity', async () => {

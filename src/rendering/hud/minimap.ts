@@ -1,5 +1,5 @@
 import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
-import { oreResource } from '../../../shared/economy';
+import { oreResource, RESOURCES } from '../../../shared/economy';
 import {
   cellWorldBounds,
   explorationCellAt,
@@ -25,20 +25,21 @@ import type { Roid } from '../../entities/roid/Roid';
 import type { SatellitePickup } from '../../entities/satellitePickup/SatellitePickup';
 import { getKitHullOutline, projectHullPolyline } from '../../entities/ship/hullOutlines';
 import type { Ship } from '../../entities/ship/Ship';
-import { strokePhosphorPolyline } from '../../entities/ship/shipRenderer';
 import {
   getWorldExploration,
   getWorldMapAssets,
   worldFurnaces,
 } from '../../network/worldExploration';
+
 import { getSpiderField } from '../../physics/terrain/spiderSession';
+import { formatMapCoordinate } from '../../ui/mapCoordinates';
 import { hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { strokeFurnaceFireTrail } from '../furnaceRenderer';
 import { drawRemainsMark, isRemains } from '../remainsRenderer';
 import { resolveGlow } from '../renderQuality';
 import { drawCourtMapMark } from '../ricochetCourtRenderer';
-import { travelCameraRotation } from '../travelCamera';
+import { strokePhosphorPolyline } from '../vectorJuice';
 import {
   drawFoundationMapMark,
   drawFurnaceMapMark,
@@ -201,6 +202,8 @@ function strokeRadarHull(
     ctx,
     projectHullPolyline(x, y, size, heading, outline.hull),
     color,
+    VISUAL.SHIP_STROKE_WIDTH,
+    VISUAL.SHIP_GLOW,
     outline.hull.closed
   );
   for (const extra of outline.extras) {
@@ -208,6 +211,8 @@ function strokeRadarHull(
       ctx,
       projectHullPolyline(x, y, size, heading, extra),
       color,
+      VISUAL.SHIP_STROKE_WIDTH,
+      VISUAL.SHIP_GLOW,
       extra.closed
     );
   }
@@ -634,11 +639,6 @@ function drawFurnaceMarks(ctx: CanvasRenderingContext2D, geometry: MiniMapGeomet
   ctx.restore();
 }
 
-function formatCoordinate(value: number): string {
-  const rounded = Math.round(value);
-  return `${rounded >= 0 ? '+' : ''}${rounded}`;
-}
-
 function drawRadarReadout(ctx: CanvasRenderingContext2D, geometry: MiniMapGeometry): void {
   const width = Math.min(geometry.size, 112);
   const x = geometry.x + geometry.size / 2;
@@ -651,9 +651,9 @@ function drawRadarReadout(ctx: CanvasRenderingContext2D, geometry: MiniMapGeomet
   ctx.font = '8px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillText(`X ${formatCoordinate(geometry.center.x)}`, x, y);
+  ctx.fillText(`X ${formatMapCoordinate(geometry.center.x)}`, x, y);
   ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.9);
-  ctx.fillText(`Y ${formatCoordinate(geometry.center.y)}`, x, y + 11);
+  ctx.fillText(`Y ${formatMapCoordinate(geometry.center.y)}`, x, y + 11);
   ctx.restore();
 }
 
@@ -690,7 +690,7 @@ export function drawMiniMap(
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     const legendX = miniMapX >= 70 ? miniMapX - 64 : miniMapX + miniMapSize + 6;
-    for (const [index, material] of (['ice', 'metal', 'rubble'] as const).entries()) {
+    for (const [index, material] of RESOURCES.entries()) {
       drawResourceMapMark(
         ctx,
         'asteroid',
@@ -717,7 +717,6 @@ export function drawMiniMap(
   ctx.clip();
 
   ctx.translate(centerX, centerY);
-  ctx.rotate(travelCameraRotation(ship));
   ctx.translate(-centerX, -centerY);
 
   try {

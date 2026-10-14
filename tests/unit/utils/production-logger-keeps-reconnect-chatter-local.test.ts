@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 
 const forwarding = vi.hoisted(() => ({ send: vi.fn() }));
 
@@ -30,8 +30,12 @@ vi.mock('../../../src/constants', async (importOriginal) => {
 import { logger } from '../../../src/utils/Logger';
 
 logger.attachRuntime();
+afterEach(() => vi.unstubAllEnvs());
 
 test('the production logger keeps reconnect chatter off the log socket', async () => {
+  const release = '0123456789abcdef0123456789abcdef01234567';
+  vi.stubEnv('VITE_COMMIT_SHA', release);
+  vi.stubEnv('VITE_COMMIT_HASH', release.slice(0, 7));
   for (const message of [
     'reconnect_scheduled',
     'transport_closed',
@@ -54,4 +58,5 @@ test('the production logger keeps reconnect chatter off the log socket', async (
   expect(forwarded.some((line) => line.includes('player_respawned'))).toBe(true);
   expect(forwarded.some((line) => line.includes('WebSocket connection closed'))).toBe(true);
   expect(forwarded.some((line) => line.includes('reconnect_scheduled'))).toBe(false);
+  expect(forwarded.map((line) => JSON.parse(line).releaseId)).toEqual([release, release, release]);
 });
