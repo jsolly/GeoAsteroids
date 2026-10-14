@@ -68,13 +68,14 @@ intended deployment and exact-release smoke when the repository requires them.
 ## Infrastructure and access
 
 Use existing scoped identities. Agents do not recover credentials, broaden grants
-or run destructive infrastructure/database operations. Keep read-only checks on
-the read-only role, including the repo-owned credential-isolation wrapper.
-`check:infra-pending` reports merged infrastructure inputs not yet deployed; AWS
-CloudFormation drift detection separately reports manual live-resource changes.
-Infrastructure apply and protection changes remain a concrete handoff to the
-human owner, with exact repository commands. A successful code deploy does not
-prove infrastructure adoption. Never bypass a dirty-infrastructure deploy refusal.
+or run destructive infrastructure/database operations. Review Railway's complete
+redacted live configuration and plan before any production configuration apply;
+preserve unrelated staged dashboard changes. Follow the repository's
+[deployment operations](agent-operations.md#deploy) and
+[Railway plan procedure](../.railway/README.md). Production configuration, data
+changes and protection changes remain a concrete handoff to the human owner with
+the exact reviewed repository commands. A successful code deploy does not prove
+infrastructure adoption.
 
 Repository instructions and access rules are maintained here. Personal home
 configuration and optional global skills remain separate and are not installed,

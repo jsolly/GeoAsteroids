@@ -5,6 +5,7 @@
 @source not "../../content";
 @source "../components";
 @source "../pages";
+@source "../../scripts/wiki-content.ts";
 
 @layer base {
   :root {
