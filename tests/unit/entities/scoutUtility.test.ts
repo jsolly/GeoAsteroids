@@ -84,6 +84,7 @@ test('a connected Scout predicts probe cooldown without a local world effect', (
   const combatNetwork = {
     isConnected: true,
     sendShoot: () => undefined,
+    sendCharge: () => true,
     sendAbility: () => {
       sent += 1;
       return true;

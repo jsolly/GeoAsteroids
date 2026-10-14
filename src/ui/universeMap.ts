@@ -3,6 +3,7 @@ import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { oreResource } from '../../shared/economy';
 import { explorationCellAt, isCellExplored } from '../../shared/exploration';
 import { CIVIC_LOTS, pipeHopToParent } from '../../shared/furnaces';
+import { isAsteroidLit } from '../../shared/glowtoy';
 import { RICOCHET_COURT } from '../../shared/ricochetCourt';
 import { activeScanners, scannedMaterial } from '../../shared/surveyScan';
 import { WORLD } from '../../shared/world';
@@ -23,6 +24,7 @@ import {
   universeMapMarkScreenSize,
 } from '../rendering/hud/furnaceMapMark';
 import { asteroidMapInk, drawResourceMapMark } from '../rendering/hud/resourceMapMark';
+import { drawRemainsMark } from '../rendering/remainsRenderer';
 import { drawCourtMapMark } from '../rendering/ricochetCourtRenderer';
 import { travelCameraRotation } from '../rendering/travelCamera';
 import { hexToRgba } from '../utils/colorUtils';
@@ -60,6 +62,7 @@ const RASTER_CELL_SIZE = MAP_RASTER_SIZE / EXPLORATION_GRID_SIZE;
 const BLOCKED_GAMEPLAY_KEYS = new Set([
   'Space',
   'KeyE',
+  'KeyF',
   'KeyA',
   'KeyD',
   'ArrowLeft',
@@ -418,6 +421,10 @@ function drawMapAsset(
     context.scale(1 / frame.scale, 1 / frame.scale);
     drawFoundationMapMark(context, 0, 0, screen * 0.7);
     context.restore();
+  } else if (asset.kind === 'ship-remains' || asset.kind === 'nest-remains') {
+    context.scale(1 / frame.scale, 1 / frame.scale);
+    drawRemainsMark(context, 0, 0, screen, asset.kind === 'nest-remains');
+    context.scale(frame.scale, frame.scale);
   } else {
     const color = asset.kind === 'satellite' ? WIRE_PALETTE.SATELLITE : PALETTE.LOOT;
     context.scale(1 / frame.scale, 1 / frame.scale);
@@ -457,6 +464,7 @@ function drawNearbyResources(
   context.scale(1 / frame.scale, 1 / frame.scale);
   for (const roid of readMapRoids()) {
     if (
+      !isAsteroidLit(roid) ||
       roid.health <= 0 ||
       !isFiniteMapPosition(roid.position) ||
       !isRevealed(roid.position, exploration)

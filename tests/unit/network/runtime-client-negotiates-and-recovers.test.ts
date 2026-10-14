@@ -124,6 +124,44 @@ describe('actual ConnectionManager WebSocket message path', () => {
     });
   }
 
+  test('charge commands wait for server support and forget it on reconnect', async () => {
+    const player = entityFactory.createLocalPlayer(
+      'Runtime pilot',
+      { x: 0, y: 0 },
+      'scout',
+      manager.combatNetwork
+    );
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
+    let ws = await connect();
+    acknowledge(ws);
+    expect(ws.sent.find((row) => row.type === 'join')?.data?.['worldRemains']).toBe(1);
+    expect(manager.combatNetwork.sendCharge('start')).toBe(false);
+    expect(ws.sent.some((row) => row.type === 'chargeWeapon')).toBe(false);
+    ws.receive('joined', {
+      id: manager.getClientId(),
+      name: 'Runtime pilot',
+      position: { x: 0, y: 0 },
+      color: '#fff',
+      snapshotVersion: SNAPSHOT_VERSION,
+      asteroidInteractions: 1,
+      terrainSeed: 7,
+      resumeToken: 'a'.repeat(64),
+      chargedWeapons: 1,
+    });
+    player.ship.beginWeaponCharge();
+    expect(player.ship.weaponChargeStartedAt).not.toBeNull();
+    expect(ws.sent.filter((row) => row.type === 'chargeWeapon')).toHaveLength(1);
+    ws.close();
+    expect(player.ship.weaponChargeStartedAt).toBeNull();
+    expect(player.ship.weaponChargeFrames).toBe(0);
+    ws = await connect();
+    expect(manager.combatNetwork.sendCharge('release')).toBe(false);
+    acknowledge(ws);
+    expect(manager.combatNetwork.sendCharge('start')).toBe(false);
+    expect(ws.sent.some((row) => row.type === 'chargeWeapon')).toBe(false);
+  });
+
   test.each([1, 7])('a returning pilot moves after its saved epoch %i restarts', async (epoch) => {
     const player = entityFactory.createLocalPlayer(
       'Runtime pilot',

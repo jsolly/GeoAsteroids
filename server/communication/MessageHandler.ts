@@ -141,6 +141,16 @@ export class MessageHandler {
           this.handlePlayerUpdate(ws, command);
           break;
 
+        case 'chargeWeapon': {
+          const pilot = this.gameEngine.getPlayerBySocket(ws);
+          if (pilot?.id === command.id) {
+            const laser = this.gameEngine.chargeWeapon(pilot.id, command.action);
+            if (laser) {
+              this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits(laser.id));
+            }
+          }
+          break;
+        }
         case 'shoot':
           this.handlePlayerShoot(ws, command);
           break;
@@ -255,7 +265,7 @@ export class MessageHandler {
       this.gameEngine.seedAsteroidInteractions();
     }
 
-    const snapshotVersion = this.broadcaster.negotiateSnapshot(ws);
+    const snapshotVersion = this.broadcaster.negotiateSnapshot(ws, command.worldRemains === 1);
     const provenance = this.gameEngine.getPilotReleaseProvenance(id);
 
     // Send confirmation to the joining player
@@ -268,6 +278,7 @@ export class MessageHandler {
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
         shotAcknowledgements: true,
+        chargedWeapons: 1,
         color: player.color,
         kitId: player.kitId,
         terrainSeed: this.gameEngine.getTerrainSeed(),

@@ -141,6 +141,8 @@ export function writeAsteroidKinematicUpdates(
   writeOptionalField(into, 'size', asteroid.size);
   writeOptionalField(into, 'miningContributors', asteroid.miningContributors);
   writeOptionalField(into, 'phenomenon', asteroid.phenomenon);
+  writeOptionalField(into, 'glowtoy', asteroid.glowtoy);
+  writeOptionalField(into, 'contourRider', asteroid.contourRider);
   writeOptionalField(into, 'boost', asteroid.boost);
   writeOptionalField(into, 'probe', asteroid.probe);
   if (asteroid.material === undefined || isAsteroidMaterial(asteroid.material)) {
@@ -204,6 +206,8 @@ export interface AsteroidKinematicTarget {
   vertices?: number;
   jaggedness?: number;
   phenomenon?: AsteroidData['phenomenon'];
+  glowtoy?: AsteroidData['glowtoy'];
+  contourRider?: AsteroidData['contourRider'];
   boost?: AsteroidData['boost'];
   probe?: AsteroidData['probe'];
 }
@@ -300,6 +304,12 @@ export function applyAsteroidKinematics(
     } else {
       delete roid.miningContributors;
     }
+  }
+  if (options.complete || 'contourRider' in updates) {
+    roid.contourRider = updates.contourRider;
+  }
+  if (options.complete || 'glowtoy' in updates) {
+    roid.glowtoy = updates.glowtoy;
   }
   if ('phenomenon' in updates) {
     roid.phenomenon = updates.phenomenon;

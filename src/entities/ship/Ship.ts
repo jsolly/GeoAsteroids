@@ -4,6 +4,7 @@ import {
   calculateHealthRegenDelayFrames,
   calculateHealthRegenPerFrame,
 } from '../../../shared/constants/health';
+import { CONTOUR_BRIDGE, contourDraftMultiplier } from '../../../shared/contourBridge';
 import {
   acceleratedContourVelocity,
   canReachContour,
@@ -11,6 +12,7 @@ import {
 } from '../../../shared/contourLock';
 import { onDarkFurnaceFootprint } from '../../../shared/furnaceField';
 import { furnaceTravelPose } from '../../../shared/furnaceTravel';
+import { navigationCaptureRadius } from '../../../shared/navigationSalvage';
 import { PLAYER_MOTION } from '../../../shared/playerMotion';
 import {
   type AbilityWorld,
@@ -75,6 +77,46 @@ class Ship {
   r: number = hullRadiusForKit(DEFAULT_SHIP_KIT_ID);
   mass: number = GROWTH.BASE_MASS;
   angle: number = (90 / 180) * Math.PI;
+  weaponChargeStartedAt: number | null = null;
+  weaponChargeFrames = 0;
+  navigationAssistFrames = 0;
+  contourDraftFrames = 0;
+  private contourHopCount = 0;
+  private contourHopAt = -Infinity;
+
+  beginWeaponCharge(): void {
+    if (
+      this.weaponChargeStartedAt !== null ||
+      this.health <= 0 ||
+      this.exploding ||
+      this.furnaceTransit
+    ) {
+      return;
+    }
+    if (this.combatNetwork?.sendCharge('start')) {
+      this.weaponChargeStartedAt = performance.now();
+    }
+  }
+
+  finishWeaponCharge(release: boolean): void {
+    const wasCharging = this.weaponChargeStartedAt !== null;
+    this.weaponChargeStartedAt = null;
+    this.weaponChargeFrames = 0;
+    if (!wasCharging) {
+      return;
+    }
+    this.combatNetwork?.sendCharge(
+      release && this.health > 0 && !this.exploding ? 'release' : 'cancel'
+    );
+  }
+
+  /** Presentation clock only; authoritative flight remains active during assembly. */
+  hullAssemblyStartedAt = Number.NEGATIVE_INFINITY;
+
+  beginHullAssembly(): void {
+    this.hullAssemblyStartedAt = performance.now();
+  }
+
   blinkCount: number = 0;
   spawnProtectionTimer: number = 0;
   canShoot: boolean = true;
@@ -201,6 +243,7 @@ class Ship {
   }
 
   explode(cause?: string): void {
+    this.finishWeaponCharge(false);
     this.utilityFlight = null;
     if (this.exploding) {
       return;
@@ -248,7 +291,7 @@ class Ship {
   }
 
   shoot(): void {
-    if (this.furnaceTransit) {
+    if (this.furnaceTransit || this.weaponChargeStartedAt !== null) {
       return;
     }
 
@@ -295,7 +338,11 @@ class Ship {
       this.health > 0 &&
       !this.movementLocked &&
       this.knockbackVelocityLimit <= cruiseSpeed(this.mass, this.maxVelocity) &&
-      findContourCapture(this.position, this.angle) !== null
+      findContourCapture(
+        this.position,
+        this.angle,
+        navigationCaptureRadius(this.navigationAssistFrames)
+      ) !== null
     );
   }
 
@@ -307,27 +354,52 @@ class Ship {
     if (!this.canLockContour()) {
       return false;
     }
-    const capture = findContourCapture(this.position, this.angle);
+    const capture = findContourCapture(
+      this.position,
+      this.angle,
+      navigationCaptureRadius(this.navigationAssistFrames)
+    );
     return capture ? this.acquireContour(capture) : false;
   }
 
-  hopContour(flick: Position): boolean {
+  hopContour(flick: Position, preserveDirection = false): boolean {
     if (!this.contourLock || !this.canLockContour()) {
       return false;
     }
+    const now = performance.now();
     const capture = findContourHop(this.position, this.contourLock, flick);
+    if (capture && preserveDirection) {
+      capture.direction = this.contourLock.direction;
+    }
+    if (
+      capture?.height !== this.contourLock.height &&
+      this.contourHopCount >= CONTOUR_BRIDGE.hopLimit &&
+      now - this.contourHopAt < CONTOUR_BRIDGE.comboWindowMs
+    ) {
+      return false;
+    }
     const cruise = cruiseSpeed(this.mass, this.maxVelocity);
     const acceleration = (this.thrust * thrustScaleFromMass(this.mass)) / GAME.FPS;
-    return capture &&
-      canReachContour(
+    if (
+      !capture ||
+      !canReachContour(
         this.position,
         capture,
         cruise,
         Math.hypot(this.velocity.x, this.velocity.y),
         acceleration
       )
-      ? this.acquireContour(capture)
-      : false;
+    ) {
+      return false;
+    }
+    const changedRail = capture.height !== this.contourLock.height;
+    const accepted = this.acquireContour(capture);
+    if (accepted && changedRail) {
+      this.contourHopCount =
+        now - this.contourHopAt < CONTOUR_BRIDGE.comboWindowMs ? this.contourHopCount + 1 : 1;
+      this.contourHopAt = now;
+    }
+    return accepted;
   }
 
   private acquireContour(capture: ContourLockState): boolean {
@@ -567,6 +639,8 @@ class Ship {
       this.knockbackVelocityLimit = 0;
       return;
     }
+    this.navigationAssistFrames = Math.max(0, this.navigationAssistFrames - 1);
+    this.contourDraftFrames = Math.max(0, this.contourDraftFrames - 1);
     this.angle += this.angularVelocity;
     const speed = cruiseSpeed(this.mass, this.maxVelocity);
     if (this.knockbackVelocityLimit > speed) {
@@ -576,7 +650,7 @@ class Ship {
       const target = acceleratedContourVelocity(
         this.position,
         this.contourLock,
-        speed,
+        speed * contourDraftMultiplier(this.contourDraftFrames),
         Math.hypot(this.velocity.x, this.velocity.y),
         (this.thrust * thrustScaleFromMass(this.mass)) / GAME.FPS
       );

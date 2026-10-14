@@ -96,7 +96,11 @@
     "src/components/game/GameOverlay.svelte",
     "src/components/game/InventoryPanel.svelte",
     "src/components/game/TownPanel.svelte",
-    "src/runtime/inventoryOverlay.ts"
+    "src/runtime/inventoryOverlay.ts",
+    "shared/chargedWeapon.ts",
+    "src/audio/routeMusic.ts",
+    "tests/unit/input/desktop-pilots-charge-and-release-a-beam.test.ts",
+    "shared/contourBridge.ts"
   ],
   "hauler": [
     "shared/shipKits.ts",
@@ -157,7 +161,9 @@
     "shared/utilityFlight.ts",
     "shared/toolFlightContact.ts",
     "server/world/AsteroidSpatialIndex.ts",
-    "tests/unit/entities/launched-tools-hit-or-return.test.ts"
+    "tests/unit/entities/launched-tools-hit-or-return.test.ts",
+    "shared/navigationSalvage.ts",
+    "tests/unit/server/material-salvage-grants-bounded-navigation-and-repairs.test.ts"
   ],
   "asteroids": [
     "server/core/AsteroidManager.ts",
@@ -195,7 +201,12 @@
     "shared/asteroidBelt.ts",
     "shared/beltCrawler.ts",
     "server/core/BeltCrawlerManager.ts",
-    "src/rendering/beltRenderer.ts"
+    "src/rendering/beltRenderer.ts",
+    "shared/glowtoy.ts",
+    "server/core/GlowtoyManager.ts",
+    "src/rendering/shipLighting.ts",
+    "tests/unit/server/glowtoys-store-light-and-reveal-one-cache.test.ts",
+    "tests/unit/rendering/ship-light-casts-wreck-shadows-and-colors-speed.test.ts"
   ],
   "satellites": [
     "shared/eoSatellites.ts",
@@ -276,7 +287,32 @@
     "tests/unit/server/pilots-bank-shots-at-the-central-court.test.ts",
     "tests/unit/server/towed-spiders-bite-ships-within-reach.test.ts",
     "shared/passages.ts",
-    "tests/unit/systems/contour-cuts-preserve-the-shared-world-shape.test.ts"
+    "tests/unit/systems/contour-cuts-preserve-the-shared-world-shape.test.ts",
+    "shared/rolyPoly.ts",
+    "server/core/RolyPolyManager.ts",
+    "src/physics/terrain/rolyPolySession.ts",
+    "src/rendering/rolyPolyRenderer.ts",
+    "shared/travelRoutes.ts",
+    "src/audio/routeMusic.ts",
+    "src/rendering/routeWaypoints.ts",
+    "src/audio/musicBeds.ts",
+    "src/audio/musicCatalog.ts",
+    "shared/glowtoy.ts",
+    "src/rendering/shipLighting.ts",
+    "tests/unit/server/neutral-wildlife-curls-rolls-and-stays-local.test.ts",
+    "tests/unit/rendering/neutral-wildlife-has-walking-and-curled-silhouettes.test.ts",
+    "tests/unit/audio/travel-route-music-requires-moving-through-a-real-passage.test.ts",
+    "tests/unit/audio/title-and-play-loop-music-beds.test.ts",
+    "public/music/route-bed.ogg",
+    "public/music/route-bed.mp3",
+    "public/music/README.md",
+    "shared/contourBridge.ts",
+    "shared/contourAsteroid.ts",
+    "shared/navigationSalvage.ts",
+    "server/core/CooperativeContourBridges.ts",
+    "src/physics/terrain/contourBridgeSession.ts",
+    "src/rendering/contourBridgeRenderer.ts",
+    "tests/unit/server/contour-riding-rocks-drop-navigation-crystals.test.ts"
   ],
   "combat-survival": [
     "src/constants/index.ts",
@@ -324,7 +360,10 @@
     "shared/economy.ts",
     "tests/unit/server/pilots-haul-bank-die-and-build-a-settlement.test.ts",
     "shared/constants/health.ts",
-    "tests/unit/server/health-regeneration.test.ts"
+    "tests/unit/server/health-regeneration.test.ts",
+    "shared/chargedWeapon.ts",
+    "tests/unit/server/charged-beams-use-server-time-and-cancel-on-death.test.ts",
+    "tests/unit/rendering/ship-deployment-assembles-existing-hull-parts.test.ts"
   ],
   "hud-network": [
     "shared/gameClock.ts",
@@ -427,7 +466,12 @@
     "tests/unit/server/pilots-haul-bank-die-and-build-a-settlement.test.ts",
     "src/rendering/travelCamera.ts",
     "src/components/game/Preferences.svelte",
-    "src/components/game/GameShell.svelte"
+    "src/components/game/GameShell.svelte",
+    "server/world/WorldRemains.ts",
+    "src/rendering/remainsRenderer.ts",
+    "tests/unit/server/remains-stay-local-and-expire-without-awarding-loot.test.ts",
+    "tests/unit/rendering/remains-draw-broken-ribs-without-solid-hulls.test.ts",
+    "tests/unit/rendering/crew-health-remains-visible-while-healthy.test.ts"
   ],
   "scout": [
     "shared/shipKits.ts",
@@ -514,7 +558,9 @@
     "src/rendering/cargoOffloadRenderer.ts",
     "tests/unit/server/cargo-spills-protect-hulls-without-losing-points.test.ts",
     "tests/unit/rendering/a-cargo-deposit-finishes-even-when-the-pilot-spends-their-bank.test.ts",
-    "tests/unit/rendering/ship-cargo-bays-fill-with-crates-as-the-hold-fills.test.ts"
+    "tests/unit/rendering/ship-cargo-bays-fill-with-crates-as-the-hold-fills.test.ts",
+    "shared/navigationSalvage.ts",
+    "tests/unit/server/material-salvage-grants-bounded-navigation-and-repairs.test.ts"
   ],
   "teamwork": [
     "shared-types.ts",
@@ -584,6 +630,8 @@
     "src/rendering/ricochetCourtRenderer.ts",
     "tests/unit/server/pilots-bank-shots-at-the-central-court.test.ts",
     "shared/economy.ts",
-    "tests/unit/server/pilots-haul-bank-die-and-build-a-settlement.test.ts"
+    "tests/unit/server/pilots-haul-bank-die-and-build-a-settlement.test.ts",
+    "shared/contourBridge.ts",
+    "server/core/CooperativeContourBridges.ts"
   ]
 }

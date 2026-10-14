@@ -48,3 +48,7 @@ Crawlers cannot be tapped, probed, towed directly, or repelled by Mineral Scan. 
 ## Ore and refining
 
 Many asteroids are barren. Scouts and equipped satellites reveal ore on the crew radar: ice, metal, rubble, or crystal. Bring ore-bearing rocks to a furnace using a tow cable or Boost Coupling to refine them into shared materials and banked rewards for delivery contributors; barren rocks still pay a token reward but add no material. Probes also reveal ore. Mining produces point loot to haul home. Fragmenting a rock reduces its total recoverable ore.
+
+## Glowtoys
+
+Shine your headlights or engine light on a hidden phosphorescent crystal, or shoot it to charge it without breaking it. Its afterglow fades after you leave the light; a bright crystal draws a dotted trail toward a hidden cache, which releases cargo once you tow the crystal close enough. Bright crystals also attract wandering spiders, so keeping one charged works best with another pilot watching your approach.

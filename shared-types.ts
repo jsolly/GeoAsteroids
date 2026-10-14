@@ -113,6 +113,8 @@ export interface PlayerJoin {
   /** Required current-protocol acknowledgement. */
   snapshotVersion: 3;
   asteroidInteractions: 1;
+  /** This server accepts start/release/cancel charge commands. */
+  chargedWeapons?: 1;
   /**
    * Retired: clients always track shot receipts. Still sent because cached
    * pre-receipt bundles read it and the production smoke's join admission
@@ -232,6 +234,9 @@ export interface AsteroidData {
   /** Pilots who have mined this deposit; persisted until the deposit is destroyed. */
   miningContributors?: string[];
   phenomenon?: AsteroidPhenomenon;
+  contourRider?: ContourLockState | null;
+  /** Server-owned phosphorescent charge and one-time nearby hidden cache. */
+  glowtoy?: { charge: number; cachePosition: Position; cacheRevealed: boolean };
   boost?: AsteroidBoost | null;
   /** Explicit null clears a previously rendered probe from client state. */
   probe?: AsteroidProbe | null;
@@ -268,6 +273,7 @@ export interface SavedPointLoot {
 }
 
 export interface LootData {
+  salvage?: AsteroidMaterial;
   points?: number;
   id: string;
   position: Position;
@@ -323,6 +329,24 @@ export interface CivicModule {
   builderId?: string;
 }
 
+/** Neutral wildlife; it never participates in combat damage or loot. */
+export interface RolyPolyState {
+  id: string;
+  position: Position;
+  velocity: Velocity;
+  phase: 'walking' | 'curled' | 'rolling';
+}
+
+export interface ContourBridge {
+  id: string;
+  ownerId: string;
+  from: Position;
+  to: Position;
+  source: ContourLockState;
+  target: ContourLockState;
+  charged: boolean;
+  framesLeft: number;
+}
 export interface ServerGameState {
   /** Epoch milliseconds for client animation clocks. */
   serverTime?: number;
@@ -331,6 +355,8 @@ export interface ServerGameState {
   civicModules?: CivicModule[];
   /** Server-owned terrain predators, pursuit targets, and remaining health. */
   spiderField?: SpiderFieldState;
+  rolyPolys?: RolyPolyState[];
+  contourBridges?: ContourBridge[];
   beltRecovery?: import('./shared/asteroidBelt').BeltRecoveryWarning[];
   /** Shared explored minimap cells, encoded as a fixed-width hexadecimal bitset. */
   exploration: ExplorationTile[];
@@ -349,7 +375,7 @@ export interface ServerGameState {
 export interface MapAsset {
   id: string;
   /** Snapshots call surviving point-cargo markers `wreckage`. */
-  kind: 'furnace' | 'foundation' | 'wreckage' | 'satellite';
+  kind: 'furnace' | 'foundation' | 'wreckage' | 'satellite' | 'ship-remains' | 'nest-remains';
   position: Position;
   name: string;
 }
@@ -391,6 +417,9 @@ export interface ServerEntityData {
   cargo: number;
   /** Session cumulative accepted cargo deposits; independent of bank spending. */
   bankedCargo?: number;
+  weaponChargeFrames?: number;
+  navigationAssistFrames?: number;
+  contourDraftFrames?: number;
   purchases: string[];
   score: number;
   health: number;
@@ -424,6 +453,8 @@ export interface PingMessage {
 type EmptyData = Record<string, never>;
 
 /** Every frame the gameplay client sends on `/ws`; the server still decodes each as untrusted. */
+export type WeaponChargeAction = 'start' | 'release' | 'cancel';
+
 export type ClientWireMessage =
   | {
       type: 'join';
@@ -434,6 +465,7 @@ export type ClientWireMessage =
         kitId: ShipKitId;
         snapshotVersion: 3;
         asteroidInteractions: 1;
+        worldRemains?: 1;
         clientReleaseId: string;
         resumeToken?: string;
       };
@@ -448,6 +480,7 @@ export type ClientWireMessage =
   | { type: 'snapshotResync'; data: EmptyData }
   | { type: 'leave'; data: EmptyData }
   | { type: 'useAbility'; id: string; data: EmptyData }
+  | { type: 'chargeWeapon'; id: string; data: { action: WeaponChargeAction } }
   | { type: 'setHaulerUtility'; id: string; data: { utilityId: HaulerUtilityId } }
   | { type: 'setScoutUtility'; id: string; data: { utilityId: ScoutUtilityId } }
   | { type: 'equipSatellite'; id: string; data: { pickupId: string } }
@@ -462,6 +495,7 @@ export type ClientGameplayMessage = Extract<
   {
     type:
       | 'useAbility'
+      | 'chargeWeapon'
       | 'setHaulerUtility'
       | 'setScoutUtility'
       | 'equipSatellite'
@@ -473,7 +507,9 @@ export type ClientGameplayMessage = Extract<
 >;
 
 /** One newly accepted ship shot; snapshots remain silent on join/reconnect. */
-export type PlayerShotFired = Pick<PlayerProjectileState, 'id' | 'ownerId' | 'position'>;
+export type PlayerShotFired = Pick<PlayerProjectileState, 'id' | 'ownerId' | 'position'> & {
+  charged?: boolean;
+};
 
 /** One authoritative delivery, including the same full reward for each contributor. */
 export interface FurnaceDelivery {

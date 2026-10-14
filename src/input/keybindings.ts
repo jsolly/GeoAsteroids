@@ -1,4 +1,6 @@
 import { GAME } from '../../shared/constants/gameplay';
+import { sampleGradient } from '../../shared/heightfield';
+import { getTerrainField } from '../../shared/terrainField';
 import type { Player } from '../entities/player/Player';
 import { worldFurnaces } from '../network/worldExploration';
 import { canvasManager } from '../rendering/canvasSurface';
@@ -150,6 +152,24 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
     // Record pressed key for this player
     getPressedKeysForPlayer(player).add(ev.code);
     switch (ev.code) {
+      case 'KeyF':
+        if (!ev.repeat) {
+          player.ship.beginWeaponCharge();
+        }
+        break;
+      case 'BracketLeft':
+      case 'BracketRight': {
+        if (!ev.repeat && player.ship.contourLock) {
+          const gradient = sampleGradient(
+            getTerrainField(),
+            player.ship.position.x,
+            player.ship.position.y
+          );
+          const side = ev.code === 'BracketLeft' ? -1 : 1;
+          player.ship.hopContour({ x: gradient.x * side, y: gradient.y * side }, true);
+        }
+        break;
+      }
       case 'Space':
         // Space fires while automatic cruise continues.
         if (getOpenGameOverlay() === null) {
@@ -182,6 +202,9 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
 }
 
 export function keyUp(ev: KeyboardEvent, player: Player): void {
+  if (ev.code === 'KeyF') {
+    player.ship.finishWeaponCharge(getOpenGameOverlay() === null);
+  }
   // Always update keys state first
   if (ev.code in keys) {
     keys[ev.code] = false;

@@ -24,12 +24,14 @@ import type {
 import type { BeltRecoveryWarning } from './asteroidBelt';
 import { ASTEROID_BELT } from './asteroidBelt';
 import { BELT_CRAWLER } from './beltCrawler';
+import { CONTOUR_BRIDGE } from './contourBridge';
 import { isContourLockState } from './contourLock';
 import { validSettlement } from './economy';
 import { validEquipment } from './equipment';
 import { validExploration } from './exploration';
 import { civicLot, TOWN_HEARTH, validCivicModules } from './furnaces';
 import { FURNACE_TRAVEL } from './furnaceTravel';
+import { ROLY_POLY } from './rolyPoly';
 import { isHaulerUtilityId, isScoutUtilityId } from './shipUtilities';
 import { SPIDER } from './terrainSpider';
 import { WORLD } from './world';
@@ -159,6 +161,9 @@ const entity = shape<ServerEntityData>({
   color: string,
   cargo: counter,
   bankedCargo: optional(counter),
+  weaponChargeFrames: optional(counter),
+  navigationAssistFrames: optional(counter),
+  contourDraftFrames: optional(counter),
   purchases: array(string),
   score: number,
   health: number,
@@ -230,6 +235,14 @@ const asteroidShape = shape<AsteroidData>({
   surveyedBy: optional(array(string)),
   miningContributors: optional(array(string)),
   phenomenon: optional(reflective),
+  contourRider: optional((value) => value === null || isContourLockState(value)),
+  glowtoy: optional(
+    shape({
+      charge: (value) => number(value) && (value as number) >= 0 && (value as number) <= 1,
+      cachePosition: position,
+      cacheRevealed: boolean,
+    })
+  ),
   boost: optional((value) => value === null || armedBoost(value) || burningBoost(value)),
   probe: optional((value) => value === null || probe(value)),
 });
@@ -249,6 +262,7 @@ const asteroid: Rule = (value) => {
   );
 };
 const loot = shape<LootData>({
+  salvage: optional(material),
   points: optional(counter),
   id: string,
   position,
@@ -295,7 +309,7 @@ const playerProjectile = shape<PlayerProjectileState>({
 });
 const mapAsset = shape<MapAsset>({
   id: string,
-  kind: choice('furnace', 'foundation', 'wreckage', 'satellite'),
+  kind: choice('furnace', 'foundation', 'wreckage', 'satellite', 'ship-remains', 'nest-remains'),
   position,
   name: string,
 });
@@ -360,6 +374,32 @@ const worldRules = {
   settlement: validSettlement,
   civicModules: optional(validCivicModules),
   spiderField: optional(spiderField),
+  contourBridges: optional(
+    uniqueRows(
+      shape({
+        id: string,
+        ownerId: string,
+        from: position,
+        to: position,
+        source: isContourLockState,
+        target: isContourLockState,
+        charged: boolean,
+        framesLeft: counter,
+      }),
+      CONTOUR_BRIDGE.maximum
+    )
+  ),
+  rolyPolys: optional(
+    uniqueRows(
+      shape({
+        id: string,
+        position,
+        velocity: position,
+        phase: choice('walking', 'curled', 'rolling'),
+      }),
+      ROLY_POLY.maximumActive
+    )
+  ),
   beltRecovery: optional(
     (value) =>
       Array.isArray(value) &&

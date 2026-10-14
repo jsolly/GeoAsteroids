@@ -370,3 +370,23 @@ test('a probe follows complete asteroid snapshots and disappears when the server
   applyAsteroidKinematics(local, {}, { complete: true });
   expect(local.probe).toBeNull();
 });
+
+test('a complete older-server asteroid row clears glow and contour metadata retained before reconnect', () => {
+  const rock: AsteroidKinematicTarget = {
+    position: { x: 0, y: 0 },
+    velocity: { x: 0, y: 0 },
+    angle: 0,
+    angularVelocity: 0,
+    r: 20,
+    health: 40,
+    maxHealth: 40,
+    glowtoy: { charge: 0.8, cachePosition: { x: 200, y: 0 }, cacheRevealed: false },
+    contourRider: { height: 0, direction: 1 },
+  };
+  applyAsteroidKinematics(rock, { health: 20 });
+  expect(rock.glowtoy?.charge).toBe(0.8);
+  expect(rock.contourRider?.height).toBe(0);
+  applyAsteroidKinematics(rock, { health: 40 }, { complete: true });
+  expect(rock.glowtoy).toBeUndefined();
+  expect(rock.contourRider).toBeUndefined();
+});

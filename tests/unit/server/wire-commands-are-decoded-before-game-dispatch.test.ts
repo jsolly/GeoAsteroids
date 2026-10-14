@@ -42,6 +42,7 @@ const clientFrames: { [K in ClientWireMessage['type']]: Extract<ClientWireMessag
     snapshotAck: { type: 'snapshotAck', data: { sequence: 1 } },
     snapshotResync: { type: 'snapshotResync', data: {} },
     leave: { type: 'leave', data: {} },
+    chargeWeapon: { type: 'chargeWeapon', id: 'pilot', data: { action: 'start' } },
     useAbility: { type: 'useAbility', id: 'pilot', data: {} },
     setHaulerUtility: { type: 'setHaulerUtility', id: 'pilot', data: { utilityId: 'tow_cable' } },
     setScoutUtility: { type: 'setScoutUtility', id: 'pilot', data: { utilityId: 'mineral_scan' } },
@@ -369,4 +370,23 @@ test('pose updates may latch overlay hold without extra pose keys', () => {
       motionSequence: 1,
     },
   });
+});
+
+test('world remains negotiation is additive and rejects malformed offers', () => {
+  const join = {
+    type: 'join',
+    id: 'pilot',
+    name: 'Pilot',
+    data: {
+      position: { x: 0, y: 0 },
+      snapshotVersion: 3,
+      asteroidInteractions: 1,
+    },
+  };
+  expect(decodeClientCommand(join).ok).toBe(true);
+  const current = decodeClientCommand({ ...join, data: { ...join.data, worldRemains: 1 } });
+  expect(current).toMatchObject({ ok: true, command: { worldRemains: 1 } });
+  for (const worldRemains of [2, '1', true, {}]) {
+    expect(decodeClientCommand({ ...join, data: { ...join.data, worldRemains } }).ok).toBe(false);
+  }
 });

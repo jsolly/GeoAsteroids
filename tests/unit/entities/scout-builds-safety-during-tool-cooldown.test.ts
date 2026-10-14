@@ -18,6 +18,7 @@ test('a Scout sends an escape-furnace build during tool cooldown without resetti
     isConnected: true,
     sendShoot: () => undefined,
     sendAbility,
+    sendCharge: () => true,
   };
   const ship = new Ship({ combatNetwork });
   ship.kitId = 'scout';

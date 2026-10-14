@@ -32,6 +32,7 @@ interface SnapshotSubmission extends SnapshotFlight {
 }
 
 interface SnapshotRecipient {
+  worldRemains: boolean;
   baseline?: SnapshotBaseline;
   sequence: number;
   pending?: SnapshotSubmission;
@@ -155,7 +156,10 @@ export class GameStateBroadcaster {
       this.broadcastToAll({ type: 'furnaceDelivery', data: delivery, timestamp: Date.now() });
     }
     for (const data of this.gameEngine.drainShotSounds()) {
-      this.broadcastToAll({ type: 'playerShotFired', data, timestamp: Date.now() }, data.ownerId);
+      this.broadcastToAll(
+        { type: 'playerShotFired', data, timestamp: Date.now() },
+        data.charged ? undefined : data.ownerId
+      );
     }
     for (const data of this.gameEngine.drainTapEjections()) {
       this.broadcastToAll({ type: 'tapEjected', data, timestamp: Date.now() });
@@ -223,6 +227,15 @@ export class GameStateBroadcaster {
         const canonical = new SnapshotEncoder(
           {
             ...gameState,
+            contourBridges: (gameState.contourBridges ?? []).filter((bridge) =>
+              isWithinWorldInterest(bridge.from, player.position)
+            ),
+            rolyPolys: nearbyWorldRows(gameState.rolyPolys ?? [], player.position),
+            mapAssets: gameState.mapAssets.filter(
+              (asset) =>
+                (asset.kind !== 'ship-remains' && asset.kind !== 'nest-remains') ||
+                (recipient.worldRemains && isWithinWorldInterest(asset.position, player.position))
+            ),
             entities: gameState.entities.map((entity) =>
               entity.id === player.id ||
               !entity.utilityFlight ||
@@ -455,11 +468,12 @@ export class GameStateBroadcaster {
   }
 
   /** Register the current snapshot-v3 recipient before the join acknowledgment. */
-  public negotiateSnapshot(ws: WebSocket): typeof SNAPSHOT_VERSION {
+  public negotiateSnapshot(ws: WebSocket, worldRemains = false): typeof SNAPSHOT_VERSION {
     const existing = this.snapshotRecipients.get(ws);
     if (existing) {
       // Same-socket rejoin never reuses a sent sequence or forgets TCP debt.
       existing.generation++;
+      existing.worldRemains = worldRemains;
       delete existing.baseline;
       existing.needsKeyframe = true;
       // A queued decode-recovery request still owns this socket's single
@@ -467,6 +481,7 @@ export class GameStateBroadcaster {
       return SNAPSHOT_VERSION;
     }
     this.snapshotRecipients.set(ws, {
+      worldRemains,
       sequence: 0,
       needsKeyframe: true,
       generation: 0,

@@ -25,6 +25,14 @@ import type { RNGService } from './RNGService';
 
 /** Authoritative live ship state; GameEngine owns persisted pilot progress. */
 export interface GameEntity {
+  navigationAssistFrames?: number;
+  contourDraftFrames?: number;
+  contourTransit?: {
+    from: Position;
+    to: Position;
+    target: import('../../shared-types').ContourLockState;
+    frame: number;
+  };
   furnaceTransit?: FurnaceTransit | null;
   silk?: number;
   equipment?: EquipmentId[];

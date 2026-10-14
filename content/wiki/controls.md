@@ -19,7 +19,7 @@ The viewport and maps keep north at the top while your ship turns. Point or drag
 
 ## Keyboard
 
-Steer with A/D or Left/Right, hold Space to fire, and press E for your equipped tool. Thrust is automatic; reaching a lit furnace ring with cargo stops either ship to [offload](/wiki/#loot-growth) until the hold empties or you steer away. Shift toggles Contour Lock.
+Steer with A/D or Left/Right, hold Space to fire, hold F and release for a charged beam, and press E for your equipped tool. Thrust is automatic; reaching a lit furnace ring with cargo stops either ship to [offload](/wiki/#loot-growth) until the hold empties or you steer away. Shift toggles Contour Lock; [ and ] hop toward lower and higher neighboring contours while settled on a line.
 
 ## Mouse
 
@@ -27,7 +27,7 @@ Move the pointer to steer toward it, click to fire (each click is one shot; hold
 
 ## Touch
 
-Hold or drag one finger to steer; release to keep your heading. A quick tap fires once, or hold a second finger to fire continuously while steering. Use the on-screen ability and Contour Lock buttons for tools and contour travel. Leaving the tab or app releases every held control.
+Hold or drag one finger to steer; release to keep your heading. A quick tap fires once, or hold two fingers on the playfield to charge a large beam while the first keeps steering; lifting either finger releases it. Use the on-screen ability and Contour Lock buttons for tools and contour travel. Leaving the tab or app releases every held control.
 
 ## Contour Lock
 
@@ -35,7 +35,7 @@ Near a visible contour, tap Contour Lock to catch it and follow its curves at ex
 
 ## Mobile contour hopping
 
-While settled in Contour Lock, flick back along your line to reverse, or flick toward an adjacent line to glide onto it; a diagonal flick chooses your new travel direction. Use one finger, move at least 24 screen pixels within 220 milliseconds, and release briskly. A rising chime confirms a successful change and a softer falling chime marks a blocked attempt; flicks reach a little farther than ordinary lock pickup, but unreachable lines and flicks made while still joining a line leave your route unchanged.
+While settled in Contour Lock, flick back along your line to reverse, or flick toward an adjacent line to glide onto it; a diagonal flick chooses your new travel direction. Use one finger, move at least 24 screen pixels within 220 milliseconds, and release briskly. Make at most three adjacent hops without a two-second pause; the third leaves a [crew bridge](/wiki/#terrain). A rising chime confirms a successful change and a softer falling chime marks a blocked attempt; flicks reach a little farther than ordinary lock pickup, but unreachable lines and flicks made while still joining a line leave your route unchanged.
 
 ## Contour travel
 

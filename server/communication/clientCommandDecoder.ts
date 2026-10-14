@@ -14,6 +14,7 @@ import type {
   ShipKitId,
   SnapshotAcknowledgement,
   Velocity,
+  WeaponChargeAction,
 } from '../../shared-types';
 
 type WireRecord = Record<string, unknown>;
@@ -37,6 +38,7 @@ export type ClientCommand =
       position: Position;
       kitId?: ShipKitId;
       resumeRequested: boolean;
+      worldRemains?: 1;
       resumeToken?: string;
       clientReleaseId?: string;
     }
@@ -46,6 +48,7 @@ export type ClientCommand =
   | { type: 'snapshotResync' }
   | ({ type: 'snapshotAck' } & SnapshotAcknowledgement)
   | { type: 'useAbility'; id: string }
+  | { type: 'chargeWeapon'; id: string; action: WeaponChargeAction }
   | {
       type: 'setHaulerUtility';
       id: string;
@@ -224,6 +227,10 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
       const snapshotOffer = message['snapshotVersion'] ?? payload['snapshotVersion'];
       const asteroidInteractionsOffer =
         message['asteroidInteractions'] ?? payload['asteroidInteractions'];
+      const remainsOffer = message['worldRemains'] ?? payload['worldRemains'];
+      if (remainsOffer !== undefined && remainsOffer !== 1) {
+        return invalid(type, 'Invalid world remains capability');
+      }
       const rawToken = message['resumeToken'] ?? payload['resumeToken'];
       if (
         snapshotOffer !== SNAPSHOT_VERSION ||
@@ -247,6 +254,7 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
           position,
           ...(isShipKitId(kitOffer) ? { kitId: kitOffer } : {}),
           resumeRequested: rawToken !== undefined,
+          ...(remainsOffer === 1 ? { worldRemains: 1 } : {}),
           ...(typeof rawToken === 'string' ? { resumeToken: rawToken } : {}),
           ...(clientReleaseId ? { clientReleaseId } : {}),
         },
@@ -275,6 +283,12 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
       return decodeUpdate(id, fields);
     case 'useAbility':
       return decodeUseAbility(id);
+    case 'chargeWeapon': {
+      const action = fields['action'];
+      return id && (action === 'start' || action === 'release' || action === 'cancel')
+        ? { ok: true, command: { type, id, action } }
+        : invalid(type, 'Invalid charge action');
+    }
     case 'travelFurnace': {
       const destinationId = fields['destinationId'];
       return id &&

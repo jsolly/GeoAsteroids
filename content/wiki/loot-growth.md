@@ -17,7 +17,7 @@ media:
 
 ## Collecting loot
 
-Mined rocks leave point drops, the main source of cargo; they pull toward any ship and expire after two minutes. Shards and Tap canisters add smaller amounts, and Tap canisters and silk pull toward Haulers while one is flying. Pickups leave your ship’s mass, health, hull size, and flight speed unchanged, and collecting loot keeps Contour Lock engaged.
+Mined rocks leave point drops, the main source of cargo; they pull toward any ship and expire after two minutes. Shards and metal Tap canisters add smaller amounts; other [Tap salvage](/wiki/#hauler) repairs damage or supplies materials and navigation help. Tap canisters and silk pull toward Haulers while one is flying, and collecting loot keeps Contour Lock engaged.
 
 Shards, Tap canisters, and silk normally expire quickly; nest caches last longer, with lifetimes in the reference below. A Scout can collect Tap canisters and silk by touching them even when their attraction favors a nearby Hauler.
 
@@ -33,7 +33,7 @@ Shoot a shard, Tap canister, or silk drop from nearby to detonate it and push sm
 
 ## Spider silk
 
-Tap a spider and collect its silk into your material inventory. Silk adds no score and has no crafting use yet.
+Tap a spider for silk, or a rubble rock for salvaged fiber, and collect it into your material inventory. Silk adds no score and has no crafting use yet.
 
 ## Pickup melody
 

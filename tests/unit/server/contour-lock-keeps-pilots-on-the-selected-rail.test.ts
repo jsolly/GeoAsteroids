@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { decodeClientCommand } from '../../../server/communication/clientCommandDecoder';
+import { CooperativeContourBridges } from '../../../server/core/CooperativeContourBridges';
+import { CONTOUR_BRIDGE } from '../../../shared/contourBridge';
 import {
   CONTOUR_LOCK,
   contourLockDistance,
@@ -8,12 +10,16 @@ import {
 import { sampleGradient, sampleHeight } from '../../../shared/heightfield';
 import { cruiseSpeed } from '../../../shared/shipFlight';
 import { getShipKit } from '../../../shared/shipKits';
+import { validateSnapshotDto } from '../../../shared/snapshotDto';
 import { SnapshotEncoder } from '../../../shared/snapshotProtocol';
 import { TERRAIN } from '../../../shared/terrainConfig';
 import { getTerrainField } from '../../../shared/terrainField';
 import { terrainCruiseVelocity } from '../../../shared/terrainTravel';
 import type { ContourLockState, Position } from '../../../shared-types';
+import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
+import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+import { PlayerMotionReconciliation } from '../../../src/network/services/PlayerMotionReconciliation';
 import { RecordingSocket } from '../../support/recordingSocket';
 import { GameServerWorld, useQuietServerConsole } from '../scenarios/support/gameServerWorld';
 
@@ -686,4 +692,236 @@ test('a departing locked pilot releases its contour before ownership is removed'
 
   expect(actor.contourLock).toBeNull();
   expect(world.engine.getPlayer(actor.id)).toBeUndefined();
+});
+
+function crewBridge() {
+  const { actor, pilot, state, pose, now } = railPilot();
+  const ship = new Ship({ kitId: actor.kitId, position: { ...actor.position } });
+  ship.contourLock = state;
+  expect(pose(0).ok).toBe(true);
+  let elapsed = 0;
+  const performanceOrigin = performance.now();
+  vi.spyOn(performance, 'now').mockImplementation(() => performanceOrigin + elapsed);
+  const hop = () => {
+    const gradient = sampleGradient(getTerrainField(), ship.position.x, ship.position.y);
+    return ship.hopContour({ x: -gradient.x, y: -gradient.y }) || ship.hopContour(gradient);
+  };
+  for (let count = 1; count <= 3; count++) {
+    expect(hop(), `hop ${count}`).toBe(true);
+    elapsed += 1;
+    expect(pose(elapsed, ship.contourLock, ship.position, ship.velocity).ok).toBe(true);
+    for (let frame = 0; frame < 60; frame++) {
+      elapsed += 1000 / 60;
+      ship.update();
+      expect(pose(elapsed, ship.contourLock, ship.position, ship.velocity).ok).toBe(true);
+    }
+  }
+  const bridges = world.engine.getSnapshotState().contourBridges ?? [];
+  expect(bridges).toHaveLength(3);
+  const charged = bridges.find((bridge) => bridge.charged);
+  if (!charged) {
+    throw new Error('Third accepted hop did not create a charged bridge');
+  }
+  return { actor, pilot, ship, hop, pose, now, elapsed, charged };
+}
+
+test('three accepted adjacent hops charge one crew bridge, followers glide across once, and a fourth hop cannot refill the combo', () => {
+  const { pilot, ship, hop, pose, now, elapsed, charged } = crewBridge();
+  expect(charged.ownerId).toBe(pilot.id);
+  const remote = world.join('Remote pilot', { x: 0, y: 0 });
+  world.entity(remote).position = { x: 20000, y: 20000 };
+  world.broadcastGameState();
+  const snapshot = world.snapshot(pilot);
+  validateSnapshotDto(snapshot);
+  expect(snapshot.contourBridges).toHaveLength(3);
+  expect(world.snapshot(remote).contourBridges).toEqual([]);
+  expect(() =>
+    validateSnapshotDto({
+      ...snapshot,
+      contourBridges: [{ ...charged, target: { ...charged.target, direction: 0 } }],
+    })
+  ).toThrow();
+  expect(hop()).toBe(false);
+  const forbidden = {
+    ...ship.contourLock,
+    height: (ship.contourLock?.height ?? 0) + TERRAIN.CONTOUR_INTERVAL,
+    direction: 1 as const,
+  };
+  expect(pose(elapsed + 1, forbidden, ship.position, ship.velocity).ok).toBe(false);
+  expect(world.engine.getSnapshotState().contourBridges).toHaveLength(3);
+
+  const follower = world.join('Following pilot', { x: 0, y: 0 });
+  const followerActor = world.entity(follower);
+  world.engine.playerMotion.placeActorForTesting(follower.id, charged.from, now);
+  followerActor.contourLock = charged.source;
+  followerActor.abilityCooldownFrames = 1000;
+  const epoch = followerActor.playerMotion?.epoch;
+  for (let frame = 0; frame < 12; frame++) {
+    world.engine.advanceOneFrame();
+  }
+  expect(followerActor.contourTransit).toBeUndefined();
+  expect(followerActor.contourLock).toEqual(charged.target);
+  expect(followerActor.position.x).toBeCloseTo(charged.to.x);
+  expect(followerActor.position.y).toBeCloseTo(charged.to.y);
+  expect(followerActor.contourDraftFrames).toBeGreaterThan(0);
+  expect(followerActor.playerMotion?.epoch).toBeGreaterThan(epoch ?? 0);
+  expect(followerActor.abilityCooldownFrames).toBe(988);
+  expect(followerActor.playerMotion?.mode).toBe('free');
+  const followerClient = new Player({
+    id: follower.id,
+    name: follower.name,
+    type: 'local',
+    input: new MockPlayerInput({ thrusting: true }),
+  });
+  const prediction = new PlayerMotionReconciliation();
+  let followerNow = world.engine.getServerTime();
+  vi.spyOn(world.engine, 'getServerTime').mockImplementation(() => followerNow);
+  const reconcile = () => {
+    world.broadcastGameState();
+    const row = world.snapshot(follower).entities.find((entity) => entity.id === follower.id);
+    if (!row) {
+      throw new Error('Follower missing from destination snapshot');
+    }
+    followerClient.updateFromServer(row);
+    expect(prediction.rebase(row, followerClient.ship, followerNow)).toBe(true);
+    followerClient.ship.serverOwnsMotion = prediction.shouldSuppressShipMove();
+  };
+  reconcile();
+  expect(prediction.shouldSuppressPose()).toBe(false);
+  expect(followerClient.ship.contourLock).toEqual(charged.target);
+  const boostedSpeed = Math.hypot(followerClient.ship.velocity.x, followerClient.ship.velocity.y);
+  for (let frame = 0; frame < CONTOUR_BRIDGE.draftFrames + 30; frame++) {
+    followerNow += 1000 / 60;
+    followerClient.ship.update();
+    const outgoing = prediction.buildHandoffPose(followerClient.ship);
+    if (!outgoing) {
+      throw new Error('Follower cannot send a pose after bridge');
+    }
+    const accepted = world.engine.playerMotion.acceptFreePose(
+      follower.socket,
+      {
+        epoch: outgoing.motionEpoch,
+        sequence: outgoing.motionSequence,
+        position: outgoing.position,
+        velocity: outgoing.velocity,
+        angle: outgoing.angle,
+        thrusting: outgoing.thrusting,
+        contourLock: outgoing.contourLock,
+      },
+      followerNow
+    );
+    expect(accepted.ok, JSON.stringify({ frame, accepted })).toBe(true);
+    world.engine.advanceOneFrame(followerNow);
+    reconcile();
+  }
+  expect(followerActor.contourDraftFrames).toBe(0);
+  expect(followerClient.ship.contourDraftFrames).toBe(0);
+  expect(followerActor.playerMotion?.mode).toBe('free');
+  expect(Math.hypot(followerActor.velocity.x, followerActor.velocity.y)).toBeLessThan(boostedSpeed);
+  followerActor.position = { ...charged.from };
+  followerActor.contourLock = charged.source;
+  world.engine.advanceOneFrame();
+  expect(followerActor.contourTransit).toBeUndefined();
+});
+
+test.each(['damage', 'protected contact', 'impulse', 'disconnect'] as const)(
+  'a bridge glide gives up motion when interrupted by %s',
+  (cause) => {
+    const { charged } = crewBridge();
+    const follower = world.join('Interrupted follower', { x: 0, y: 0 });
+    const actor = world.entity(follower);
+    world.engine.playerMotion.placeActorForTesting(
+      actor.id,
+      charged.from,
+      world.engine.getServerTime()
+    );
+    actor.contourLock = charged.source;
+    actor.spawnProtectionTimer = cause === 'protected contact' ? 180 : 0;
+    world.engine.advanceOneFrame();
+    expect(actor.contourTransit).toBeDefined();
+    if (cause === 'damage') {
+      expect(world.engine.handleShipDamage(actor.id, 'asteroid', 25).applied).toBe(true);
+    } else if (cause === 'impulse') {
+      actor.position.x += 50;
+      actor.velocity = { x: 2, y: 0 };
+      world.engine.playerMotion.applyExternalImpulse(actor.id, world.engine.getServerTime());
+    } else if (cause === 'disconnect') {
+      expect(world.engine.transportClosed(follower.socket)).toBe(true);
+      const resumed = world.resume(follower);
+      expect(resumed.id).toBe(actor.id);
+      expect(actor.playerMotion?.anchor).toEqual(actor.position);
+    } else {
+      world.hitAsteroid(follower);
+      expect(actor.health).toBe(100);
+    }
+    expect(actor.contourTransit).toBeUndefined();
+    const interrupted = { ...actor.position };
+    for (let frame = 0; frame < CONTOUR_BRIDGE.transitFrames; frame++) {
+      world.engine.advanceOneFrame();
+    }
+    expect(actor.contourLock).toBeNull();
+    expect(actor.contourDraftFrames ?? 0).toBe(0);
+    expect(actor.position).not.toEqual(charged.to);
+    expect(
+      Math.hypot(actor.position.x - interrupted.x, actor.position.y - interrupted.y)
+    ).toBeLessThan(50);
+  }
+);
+
+test.each([0, 1200])(
+  'navigation salvage widens authoritative acquisition only while its %s-frame timer is active',
+  (frames) => {
+    const { actor, state, pose, now } = railPilot();
+    const field = getTerrainField();
+    const gradient = sampleGradient(field, actor.position.x, actor.position.y, 0.25);
+    const magnitude = Math.hypot(gradient.x, gradient.y);
+    const origin = { ...actor.position };
+    let low = 0;
+    let high = 54;
+    for (let step = 0; step < 30; step++) {
+      const distance = (low + high) / 2;
+      actor.position = {
+        x: origin.x + (gradient.x / magnitude) * distance,
+        y: origin.y + (gradient.y / magnitude) * distance,
+      };
+      if (contourLockDistance(actor.position, state) > 54) {
+        high = distance;
+      } else {
+        low = distance;
+      }
+    }
+    expect(contourLockDistance(actor.position, state)).toBeGreaterThan(CONTOUR_LOCK.captureRadius);
+    expect(contourLockDistance(actor.position, state)).toBeLessThan(60);
+    world.engine.playerMotion.placeActorForTesting(actor.id, actor.position, now);
+    actor.navigationAssistFrames = frames;
+    expect(pose(0, state).ok).toBe(frames > 0);
+  }
+);
+
+test('crew bridges cap population, refuse their owner, refresh for different followers and expire at a fixed maximum', () => {
+  const { actor, state } = railPilot();
+  const bridges = new CooperativeContourBridges();
+  const target = { ...state, height: state.height - TERRAIN.CONTOUR_INTERVAL };
+  bridges.noteHop(actor.id, actor.position, state, target, 3, 0);
+  const bridge = bridges.snapshot(0)[0];
+  if (!bridge) {
+    throw new Error('Missing bridge fixture');
+  }
+  actor.contourLock = state;
+  expect(bridges.catch(actor, 1)).toBeUndefined();
+  for (const [index, frame] of [400, 800, 1100].entries()) {
+    const follower = world.entity(world.join(`Crew ${index}`, { x: 0, y: 0 }));
+    follower.position = { ...bridge.from };
+    follower.contourLock = state;
+    expect(bridges.catch(follower, frame)?.id).toBe(bridge.id);
+    expect(bridges.catch(follower, frame)).toBeUndefined();
+  }
+  expect(bridges.snapshot(1199)[0]?.framesLeft).toBe(1);
+  expect(bridges.snapshot(1200)).toEqual([]);
+  for (let i = 0; i < CONTOUR_BRIDGE.maximum + 10; i++) {
+    bridges.noteHop(actor.id, actor.position, state, target, 3, 1200);
+  }
+  expect(bridges.snapshot(1200)).toHaveLength(CONTOUR_BRIDGE.maximum);
+  bridges.clear();
+  expect(bridges.snapshot(1200)).toEqual([]);
 });

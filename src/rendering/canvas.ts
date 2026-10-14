@@ -28,6 +28,7 @@ import { paintOpaqueBackground } from './canvasBackground';
 import { canvasManager } from './canvasSurface';
 import { drawCargoHolds } from './cargoHoldRenderer';
 import { drawCargoOffloads } from './cargoOffloadRenderer';
+import { drawContourBridges } from './contourBridgeRenderer';
 import {
   drawContourLaserTicks,
   type LiveLaserSource,
@@ -46,7 +47,11 @@ import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo
 import { hudLayoutForCanvas } from './hud/hudLayout';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawMiniMap } from './hud/minimap';
+import { drawWorldRemains } from './remainsRenderer';
 import { drawRicochetCourt } from './ricochetCourtRenderer';
+import { drawRolyPolys } from './rolyPolyRenderer';
+import { drawRouteWaypoints } from './routeWaypoints';
+import { drawShipLighting } from './shipLighting';
 import { drawTerrainSpiders } from './spiderRenderer';
 import { drawStarfield, visibleStarTiles } from './starfield';
 
@@ -107,6 +112,14 @@ function drawWorldLayers(
   if (!currShip.exploding && currShip.health > 0 && !currShip.furnaceTransit) {
     drawContourTrack(currShip.position, currShip.angle, currShip.contourLock);
   }
+  drawShipLighting(
+    currShip.position,
+    allPlayers.map((player) => player.ship)
+  );
+  drawRouteWaypoints(currShip.position);
+  drawContourBridges(currShip.position);
+  drawWorldRemains(currShip.position);
+  drawRolyPolys(currShip.position);
   drawRicochetCourt(currShip.position);
   drawTerrainSpiders(currShip.position, currPlayer.id, currShip.health > 0 && !currShip.exploding);
 
