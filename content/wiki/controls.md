@@ -65,4 +65,4 @@ Your device's reduced-motion setting skips the opening camera dive, steadies pro
 
 ## Campaign controls
 
-Use Help here or Nest here to signal nearby crew; Shift-click Map on desktop, or tap without dragging on touch, to place a help signal. Hold Revive near a downed pilot, or activate it with a keyboard or assistive control to start or cancel; see [rescue rules](/wiki/#combat-survival). At a stocked furnace, a Hauler with Tow Cable can choose Tow supply for [frontier restoration](/wiki/#teamwork).
+Use Help here or Nest here to signal nearby crew; Shift-click Map on desktop or tap without dragging on touch to place a help signal. With a keyboard, pan with the arrow keys, then choose Signal help at center or press Shift+Enter on the chart; signals reach nearby crew only. Hold Revive near a downed pilot, or activate it with a keyboard or assistive control to start or cancel; see [rescue rules](/wiki/#combat-survival). At a stocked furnace, a Hauler with Tow Cable can choose Tow supply for [frontier restoration](/wiki/#teamwork).

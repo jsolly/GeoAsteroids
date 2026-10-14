@@ -6,6 +6,7 @@ import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
 import {
   clearAsteroidShatters,
   drawAsteroidShatterBursts,
+  drawRoidsRelative,
   recordAsteroidShatter,
 } from '../../../src/entities/roid/roidRenderer';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
@@ -189,4 +190,24 @@ test('the playfield still paints a furnace poof after the last rock leaves the b
   ]);
   expect(edges[0]?.commands).toEqual(Array.from({ length: 4 }, () => ['move', 'line']).flat());
   expect(wisps.every((path) => (path.arcs[0]?.[1] ?? 330) < 330)).toBe(true);
+});
+
+test('playfield hides an unlit glow crystal and shows its charged silhouette beside ordinary rock', () => {
+  const { ctx, pilot } = asteroidScene();
+  const ordinary = new Roid(asteroidRow({ x: 100, y: 60 }, 14, 'visible-control'));
+  const crystal = new Roid(asteroidRow({ x: 200, y: 90 }, 14, 'glow-visibility'));
+  crystal.glowtoy = { charge: 0, cachePosition: { x: 220, y: 90 }, cacheRevealed: true };
+  const paint = (rocks: Roid[]) => {
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    drawRoidsRelative(pilot.ship, rocks);
+    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data;
+  };
+  const empty = paint([]);
+  const control = paint([ordinary]);
+  expect(control.some((value, i) => value !== empty[i])).toBe(true);
+  const unlit = paint([ordinary, crystal]);
+  expect(unlit.every((value, i) => value === control[i])).toBe(true);
+  crystal.glowtoy.charge = 0.8;
+  const lit = paint([ordinary, crystal]);
+  expect(lit.some((value, i) => value !== control[i])).toBe(true);
 });

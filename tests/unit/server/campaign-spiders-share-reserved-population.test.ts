@@ -18,6 +18,7 @@ import { InlineWorldPersistence } from '../../../server/world/InlineWorldPersist
 import { WorldStore } from '../../../server/world/WorldStore';
 import type { AsteroidData } from '../../../shared-types';
 import { RecordingSocket } from '../../support/recordingSocket';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 
 function hosts(): AsteroidData[] {
   return Array.from({ length: 100 }, (_, i) => ({
@@ -110,10 +111,12 @@ test.each(['travel', 'suspend'] as const)(
       if (mode === 'suspend') {
         spiders.suspend();
       } else {
-        spiders.advance({
-          nowFrame: 1,
-          players: [{ ...pilot, position: { x: -15000, y: -15000 }, radius: 18 }],
-        });
+        spiders.advance(
+          spiderAdvanceFixture({
+            nowFrame: 1,
+            players: [{ ...pilot, position: { x: -15000, y: -15000 }, radius: 18 }],
+          })
+        );
       }
       expect(spiders.snapshot().spiders).toHaveLength(0);
       for (let i = 0; i < 48; i++) {

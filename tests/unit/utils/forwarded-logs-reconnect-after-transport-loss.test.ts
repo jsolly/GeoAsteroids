@@ -1,5 +1,9 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { createLogRecord, stringifyLogRecord } from '../../../shared/logRecords';
+import {
+  createLogRecord,
+  LOG_LINE_MAX_BYTES,
+  stringifyLogRecord,
+} from '../../../shared/logRecords';
 
 vi.mock('../../../src/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../src/constants')>();
@@ -52,6 +56,7 @@ const originalGlobalWebSocket = globalThis.WebSocket;
 const originalWindowWebSocket = window.WebSocket;
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.useRealTimers();
   Object.defineProperty(globalThis, 'WebSocket', {
     configurable: true,
@@ -381,6 +386,8 @@ test('a stalled handshake reconnects and delivers the original queued record', a
 });
 
 test('browser queue overflow is bounded and reported before retained records', async () => {
+  vi.stubEnv('VITE_COMMIT_SHA', 'abc123def456abc123def456abc123def456abc1');
+  vi.stubEnv('VITE_COMMIT_HASH', 'retired-label');
   FakeWebSocket.instances = [];
   Object.defineProperty(globalThis, 'WebSocket', {
     configurable: true,
@@ -424,11 +431,49 @@ test('browser queue overflow is bounded and reported before retained records', a
       level: 'error',
       category: 'STATE',
       message: 'Client log records dropped before delivery',
+      releaseId: 'abc123def456abc123def456abc123def456abc1',
     });
     expect(lossRecord.context?.droppedSinceLastReport).toBeGreaterThan(0);
     expect(socket.sent.length).toBeLessThan(200);
   } finally {
     stopClientLogForwarder();
     failure.mockRestore();
+  }
+});
+
+test('oversized unstructured logs retain the published release identity', async () => {
+  vi.stubEnv('VITE_COMMIT_SHA', 'abc123def456abc123def456abc123def456abc1');
+  vi.stubEnv('VITE_COMMIT_HASH', 'retired-label');
+  FakeWebSocket.instances = [];
+  Object.defineProperty(globalThis, 'WebSocket', {
+    configurable: true,
+    writable: true,
+    value: FakeWebSocket,
+  });
+  Object.defineProperty(window, 'WebSocket', {
+    configurable: true,
+    writable: true,
+    value: FakeWebSocket,
+  });
+  const { forwardLogToServer, startClientLogForwarder, stopClientLogForwarder } = await import(
+    '../../../src/utils/logForwarder'
+  );
+  try {
+    startClientLogForwarder();
+    const socket = FakeWebSocket.instances[0];
+    if (!socket) {
+      throw new Error('Expected log socket');
+    }
+    socket.readyState = FakeWebSocket.OPEN;
+    socket.onopen?.();
+    forwardLogToServer('x'.repeat(LOG_LINE_MAX_BYTES + 1));
+    const wire = JSON.parse(socket.sent.at(-1) ?? '{}');
+    expect(JSON.parse(wire.data?.line ?? '{}')).toMatchObject({
+      releaseId: 'abc123def456abc123def456abc123def456abc1',
+      message: 'Oversized client log record',
+      context: { truncated: true },
+    });
+  } finally {
+    stopClientLogForwarder();
   }
 });

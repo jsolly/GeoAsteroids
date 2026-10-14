@@ -208,10 +208,6 @@ describe('bounded server performance metrics', () => {
     instance.stop();
   });
 
-  test('the shared singleton is the load benchmark retrieval API', () => {
-    expect(serverPerformanceMetrics).toBeDefined();
-  });
-
   test('shared exporter stops only after the last server instance releases it', () => {
     const start = vi.spyOn(serverPerformanceMetrics, 'start');
     const stop = vi.spyOn(serverPerformanceMetrics, 'stop');

@@ -8,7 +8,8 @@ import {
   SNAPSHOT_VERSION,
   SnapshotEncoder,
 } from '../../../shared/snapshotProtocol';
-import type { AsteroidData } from '../../../shared-types';
+import { TERRAIN } from '../../../shared/terrainConfig';
+import type { AsteroidData, ContourBridge, RolyPolyState } from '../../../shared-types';
 import { Sound, setSound } from '../../../src/audio/Sound';
 import { bindGameAudio, resetGameAudio } from '../../../src/audio/spatialAudio';
 import { clientPerformance } from '../../../src/diagnostics/performanceMetrics';
@@ -30,7 +31,13 @@ import {
   unbindAsteroidFieldApply,
 } from '../../../src/network/services/asteroidFieldSync';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
+import { cooperativeActive, getWorldCampaign } from '../../../src/network/worldCampaign';
+import { worldFurnaces } from '../../../src/network/worldExploration';
+import { getContourBridges } from '../../../src/physics/terrain/contourBridgeSession';
+import { getRolyPolys } from '../../../src/physics/terrain/rolyPolySession';
+import { sendCrewAction } from '../../../src/runtime/crewRescue';
 import { setSelectedShipKitId } from '../../../src/runtime/shipSelection';
+import { logger } from '../../../src/utils/Logger';
 import { snapshotFixture } from './snapshotFixture';
 
 const LASER_SOUND_PATH_PATTERN = /sounds\/laser\.m4a$/u;
@@ -122,6 +129,345 @@ describe('actual ConnectionManager WebSocket message path', () => {
       resumeToken,
     });
   }
+
+  test('ability events preserve active effect timers and complete snapshots clear absent timers', async () => {
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      type: 'local',
+      position: { x: 900, y: 700 },
+      kitId: 'scout',
+      combatNetwork: manager.combatNetwork,
+    });
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+    const ws = await connect();
+    acknowledge(ws);
+    const active = captureSnapshot(snapshotFixture());
+    const local = active.entities[0];
+    assert.ok(local);
+    Object.assign(local, {
+      id: manager.getClientId(),
+      name: player.name,
+      kitId: 'scout',
+      weaponChargeFrames: 60,
+      navigationAssistFrames: 1200,
+      contourDraftFrames: 120,
+    });
+    const remote = { ...structuredClone(local), id: 'effect-crew', name: 'Effect crew' };
+    active.entities = [local, remote];
+    ws.receive('snapshot', new SnapshotEncoder(active).encode(1));
+    const crew = manager.getAllPlayers().find((pilot) => pilot.id === remote.id);
+    assert.ok(crew);
+    const timers = (pilot: Player) => [
+      pilot.ship.weaponChargeFrames,
+      pilot.ship.navigationAssistFrames,
+      pilot.ship.contourDraftFrames,
+    ];
+    for (const pilot of [player, crew]) {
+      expect(timers(pilot)).toEqual([60, 1200, 120]);
+      ws.receive('abilityUsed', {
+        id: pilot.id,
+        kitId: 'scout',
+        abilityActiveFrames: 0,
+        harpoonTargetId: null,
+      });
+      expect(timers(pilot)).toEqual([60, 1200, 120]);
+    }
+    const cleared = structuredClone(active);
+    for (const row of cleared.entities) {
+      row.weaponChargeFrames = 0;
+      row.navigationAssistFrames = 0;
+      row.contourDraftFrames = 0;
+    }
+    ws.receive('snapshot', new SnapshotEncoder(cleared).encode(2, { sequence: 1, state: active }));
+    expect(timers(player)).toEqual([0, 0, 0]);
+    expect(timers(crew)).toEqual([0, 0, 0]);
+    ws.receive('snapshot', new SnapshotEncoder(active).encode(3));
+    const absent = structuredClone(active);
+    for (const row of absent.entities) {
+      delete row.weaponChargeFrames;
+      delete row.navigationAssistFrames;
+      delete row.contourDraftFrames;
+    }
+    ws.receive('snapshot', new SnapshotEncoder(absent).encode(4, { sequence: 3, state: active }));
+    expect(timers(player)).toEqual([0, 0, 0]);
+    expect(timers(crew)).toEqual([0, 0, 0]);
+  });
+
+  test.each(['disconnect', 'sessionExpired'] as const)(
+    'encoded wildlife and bridge snapshots update, remove and clear across %s',
+    async (lifetime) => {
+      let ws = await connect();
+      acknowledge(ws);
+      const animal: RolyPolyState = {
+        id: 'animal-one',
+        position: { x: 50, y: 50 },
+        velocity: { x: 0.15, y: 0 },
+        phase: 'walking',
+      };
+      const bridge: ContourBridge = {
+        id: 'bridge-one',
+        ownerId: 'crew-one',
+        from: { x: 10, y: 20 },
+        to: { x: 40, y: 50 },
+        source: { height: 0, direction: 1 },
+        target: { height: TERRAIN.CONTOUR_INTERVAL, direction: 1 },
+        charged: true,
+        framesLeft: 180,
+      };
+      const initial = captureSnapshot(snapshotFixture());
+      initial.rolyPolys = [animal];
+      initial.contourBridges = [bridge];
+      ws.receive('snapshot', new SnapshotEncoder(initial).encode(1));
+      expect(getRolyPolys()).toEqual([animal]);
+      expect(getContourBridges()).toEqual([bridge]);
+      const updated = structuredClone(initial);
+      updated.rolyPolys = [{ ...animal, phase: 'curled', position: { x: 75, y: 50 } }];
+      updated.contourBridges = [{ ...bridge, charged: false, framesLeft: 90 }];
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(updated).encode(2, { sequence: 1, state: initial })
+      );
+      expect(getRolyPolys()).toEqual(updated.rolyPolys);
+      expect(getContourBridges()).toEqual(updated.contourBridges);
+      const removed = structuredClone(updated);
+      delete removed.rolyPolys;
+      delete removed.contourBridges;
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(removed).encode(3, { sequence: 2, state: updated })
+      );
+      expect(getRolyPolys()).toEqual([]);
+      expect(getContourBridges()).toEqual([]);
+      ws.receive('snapshot', new SnapshotEncoder(initial).encode(4));
+      expect(getRolyPolys()).toHaveLength(1);
+      expect(getContourBridges()).toHaveLength(1);
+      if (lifetime === 'disconnect') {
+        manager.disconnect();
+      } else {
+        ws.receive('sessionExpired', { reason: 'expired' });
+      }
+      expect(getRolyPolys()).toEqual([]);
+      expect(getContourBridges()).toEqual([]);
+      if (lifetime === 'disconnect') {
+        ws = await connect();
+      }
+      acknowledge(ws);
+      const fresh = captureSnapshot(snapshotFixture());
+      fresh.rolyPolys = [{ ...animal, id: 'animal-new' }];
+      fresh.contourBridges = [{ ...bridge, id: 'bridge-new' }];
+      ws.receive('snapshot', new SnapshotEncoder(fresh).encode(1));
+      expect(getRolyPolys()).toEqual(fresh.rolyPolys);
+      expect(getContourBridges()).toEqual(fresh.contourBridges);
+    }
+  );
+
+  test.each(['disconnect', 'sessionExpired'] as const)(
+    'encoded campaign and crew state reconciles supplies, clears and a fresh session after %s',
+    async (lifetime) => {
+      const player = createPlayer({
+        name: 'Runtime pilot',
+        position: { x: 0, y: 0 },
+        type: 'local',
+        kitId: 'hauler',
+      });
+      vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+      vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
+      const belt = new Map<string, Roid>();
+      const create = (row: AsteroidData) => {
+        const rock = new Roid(row);
+        belt.set(row.id, rock);
+      };
+      bindAsteroidFieldApply({
+        readBelt: () => [...belt.values()],
+        onCreated: create,
+        onUpdated: (id, row) => {
+          const rock = belt.get(id);
+          if (rock) {
+            applyAsteroidKinematics(rock, row);
+          }
+        },
+        onDestroyed: (event) => belt.delete(event.asteroidId),
+        onReconciled: (id) => belt.delete(id),
+      });
+      let ws = await connect();
+      acknowledge(ws);
+      const initial = captureSnapshot(snapshotFixture());
+      const local = initial.entities[0];
+      const rock = initial.asteroids[0];
+      assert.ok(local && rock);
+      Object.assign(local, {
+        id: manager.getClientId(),
+        name: player.name,
+        kitId: 'hauler',
+        health: 0,
+        downedUntil: 30_000,
+        rescue: { targetId: 'rescue-crew', completesAt: 3_000 },
+        crewSignal: { kind: 'help', position: { x: 100, y: 0 }, expiresAt: 30_000 },
+      });
+      const remote = { ...structuredClone(local), id: 'rescue-crew', name: 'Rescue crew' };
+      initial.entities = [local, remote];
+      rock.supply = { sourceId: 'town-square', value: 1_000 };
+      initial.asteroids = [rock];
+      initial.cooperativeActive = true;
+      initial.campaign = {
+        projectValue: 4_000,
+        supplies: [{ id: 'town-square', value: 2_000 }],
+        hives: [],
+        cleared: ['frontier:2,0'],
+        commissioned: ['frontier:2,0'],
+        hazard: { phase: 'warning', kind: 'swarm', startsAt: 100_000, endsAt: 180_000 },
+        meteors: [{ id: 'meteor-old', position: { x: 40, y: 50 } }],
+      };
+      ws.receive('snapshot', new SnapshotEncoder(initial).encode(1));
+      const crew = manager.getAllPlayers().find((pilot) => pilot.id === remote.id);
+      assert.ok(crew);
+      expect(cooperativeActive()).toBe(true);
+      expect(getWorldCampaign()).toEqual(initial.campaign);
+      expect(worldFurnaces.isLit('frontier:2,0')).toBe(true);
+      for (const pilot of [player, crew]) {
+        expect(pilot.ship).toMatchObject({
+          health: 0,
+          downedUntil: 30_000,
+          rescue: local.rescue,
+          crewSignal: local.crewSignal,
+          exploding: false,
+        });
+      }
+      const physicalShipment = belt.get(rock.id);
+      assert.ok(physicalShipment);
+      expect(physicalShipment.supply).toEqual({ sourceId: 'town-square', value: 1_000 });
+      const updated = structuredClone(initial);
+      assert.ok(updated.campaign && updated.asteroids[0]);
+      updated.campaign.projectValue = 5_000;
+      updated.campaign.commissioned = [];
+      updated.campaign.meteors = [];
+      delete updated.asteroids[0].supply;
+      for (const row of updated.entities) {
+        row.health = 49;
+        row.downedUntil = null;
+        row.rescue = null;
+        row.crewSignal = null;
+      }
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(updated).encode(2, { sequence: 1, state: initial })
+      );
+      expect(getWorldCampaign()).toEqual(updated.campaign);
+      expect(worldFurnaces.isLit('frontier:2,0')).toBe(false);
+      expect(belt.get(rock.id)).toBe(physicalShipment);
+      expect(physicalShipment.supply).toBeUndefined();
+      for (const pilot of [player, crew]) {
+        expect(pilot.ship).toMatchObject({
+          health: 49,
+          downedUntil: null,
+          rescue: null,
+          crewSignal: null,
+        });
+      }
+      const cleared = structuredClone(updated);
+      delete cleared.cooperativeActive;
+      delete cleared.campaign;
+      cleared.asteroids = [];
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(cleared).encode(3, { sequence: 2, state: updated })
+      );
+      expect(cooperativeActive()).toBe(false);
+      expect(getWorldCampaign()).toBeUndefined();
+      expect(belt.size).toBe(0);
+      ws.receive('snapshot', new SnapshotEncoder(initial).encode(4));
+      expect(worldFurnaces.isLit('frontier:2,0')).toBe(true);
+      if (lifetime === 'disconnect') {
+        manager.disconnect();
+      } else {
+        ws.receive('sessionExpired', { reason: 'expired' });
+      }
+      expect(cooperativeActive()).toBe(false);
+      expect(getWorldCampaign()).toBeUndefined();
+      expect(worldFurnaces.isLit('frontier:2,0')).toBe(false);
+      if (lifetime === 'disconnect') {
+        ws = await connect();
+      }
+      acknowledge(ws);
+      const fresh = structuredClone(updated);
+      const freshLocal = fresh.entities[0];
+      assert.ok(freshLocal && fresh.campaign);
+      freshLocal.id = manager.getClientId();
+      fresh.campaign.projectValue = 700;
+      fresh.campaign.cleared = [];
+      fresh.entities = [freshLocal];
+      fresh.asteroids = [{ ...rock }];
+      delete fresh.asteroids[0]?.supply;
+      ws.receive('snapshot', new SnapshotEncoder(fresh).encode(1));
+      expect(getWorldCampaign()?.projectValue).toBe(700);
+      expect(player.ship).toMatchObject({
+        health: 49,
+        downedUntil: null,
+        rescue: null,
+        crewSignal: null,
+      });
+      expect(manager.getAllPlayers().find((pilot) => pilot.id === remote.id)).toBeUndefined();
+      expect(belt.get(rock.id)?.supply).toBeUndefined();
+    }
+  );
+
+  test('owned revive and release commands predict a stop and reconcile authoritative rescue state', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(100_000);
+    const player = createPlayer({
+      name: 'Runtime pilot',
+      position: { x: 0, y: 0 },
+      type: 'local',
+      kitId: 'hauler',
+    });
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
+    const ws = await connect();
+    acknowledge(ws);
+    const initial = captureSnapshot(snapshotFixture());
+    initial.serverTime = 4_000;
+    const local = initial.entities[0];
+    assert.ok(local);
+    Object.assign(local, { id: manager.getClientId(), kitId: 'hauler', rescue: null });
+    initial.entities = [local];
+    initial.cooperativeActive = true;
+    ws.receive('snapshot', new SnapshotEncoder(initial).encode(1));
+    player.ship.velocity = { x: 4, y: -2 };
+    player.ship.thrusting = true;
+    player.ship.contourLock = { height: 0, direction: 1 };
+    sendCrewAction({ kind: 'revive', targetId: 'downed-friend' });
+    expect(player.ship.rescue).toEqual({ targetId: 'downed-friend', completesAt: 7_000 });
+    expect(player.ship.velocity).toEqual({ x: 0, y: 0 });
+    expect(player.ship.thrusting).toBe(false);
+    expect(player.ship.contourLock).toBeNull();
+    expect(ws.sent.filter((row) => row.type === 'crewAction')).toEqual([
+      { type: 'crewAction', id: player.id, data: { kind: 'revive', targetId: 'downed-friend' } },
+    ]);
+    const accepted = structuredClone(initial);
+    const acceptedLocal = accepted.entities[0];
+    assert.ok(acceptedLocal);
+    acceptedLocal.rescue = { targetId: 'downed-friend', completesAt: 7_200 };
+    ws.receive(
+      'snapshot',
+      new SnapshotEncoder(accepted).encode(2, { sequence: 1, state: initial })
+    );
+    expect(player.ship.rescue).toEqual(acceptedLocal.rescue);
+    sendCrewAction({ kind: 'release' });
+    expect(player.ship.rescue).toBeNull();
+    expect(ws.sent.filter((row) => row.type === 'crewAction').at(-1)).toEqual({
+      type: 'crewAction',
+      id: player.id,
+      data: { kind: 'release' },
+    });
+    const released = structuredClone(accepted);
+    const releasedLocal = released.entities[0];
+    assert.ok(releasedLocal);
+    releasedLocal.rescue = null;
+    ws.receive(
+      'snapshot',
+      new SnapshotEncoder(released).encode(3, { sequence: 2, state: accepted })
+    );
+    expect(player.ship.rescue).toBeNull();
+  });
 
   test('charge commands wait for server support and forget it on reconnect', async () => {
     const player = createPlayer({
@@ -1818,5 +2164,3 @@ describe('actual ConnectionManager WebSocket message path', () => {
     expect(manager.isConnected).toBe(false);
   });
 });
-
-import { logger } from '../../../src/utils/Logger';

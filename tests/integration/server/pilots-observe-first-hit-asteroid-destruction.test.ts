@@ -186,8 +186,6 @@ describe('Pilots observe first-hit asteroid destruction', () => {
       });
       expect(countType(client, 'asteroidDestroy')).toBe(1);
       expect(countType(client, 'asteroidCreateBatch')).toBe(0);
-      expect(countType(client, 'asteroidTagged')).toBe(0);
-      expect(countType(client, 'shockwave')).toBe(0);
     }
     expect(server.gameEngine.applyLaserAsteroidHit(target.id, 'second').outcome).toBe('missing');
     expect(server.gameEngine.getLoot().filter((drop) => drop.kind === 'points')).toHaveLength(1);

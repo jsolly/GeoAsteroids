@@ -1,4 +1,9 @@
-import { createLogRecord, parseLogRecord, stringifyLogRecord } from '../../shared/logRecords';
+import {
+  createLogRecord,
+  LOG_LINE_MAX_BYTES,
+  parseLogRecord,
+  stringifyLogRecord,
+} from '../../shared/logRecords';
 import { getClientReleaseId } from './buildInfo';
 import { getClientLogContext } from './clientLogContext';
 import { logsWebSocketUrlFromGameplay } from './logsWebSocketUrl';
@@ -25,11 +30,31 @@ function byteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function queuedLine(line: string): QueuedLine {
-  return { line, bytes: byteLength(line) };
+function normalizeLine(line: string): QueuedLine {
+  let normalized = line;
+  if (byteLength(normalized) > LOG_LINE_MAX_BYTES) {
+    const parsed = parseLogRecord(line);
+    normalized = stringifyLogRecord(
+      createLogRecord({
+        timestamp: parsed?.timestamp ?? new Date().toISOString(),
+        source: 'client',
+        level: parsed?.level ?? 'warn',
+        releaseId: parsed?.releaseId ?? getClientReleaseId(),
+        category: parsed?.category ?? 'LOG_FORWARD',
+        message: parsed?.message ?? 'Oversized client log record',
+        context: { truncated: true },
+        ...getClientLogContext(),
+      })
+    );
+  }
+  return { line: normalized, bytes: byteLength(normalized) };
 }
 
 function enqueue(item: QueuedLine): void {
+  if (item.bytes > MAX_QUEUE_BYTES) {
+    droppedMessageCount++;
+    return;
+  }
   while (queuedBytes + item.bytes > MAX_QUEUE_BYTES && messageQueue.length > 0) {
     const dropped = messageQueue.shift();
     queuedBytes -= dropped?.bytes ?? 0;
@@ -156,7 +181,7 @@ function sendLossTelemetry(socket: WebSocket): boolean {
   if (droppedMessageCount === reportedDroppedMessageCount) {
     return true;
   }
-  const item = queuedLine(
+  const item = normalizeLine(
     stringifyLogRecord(
       createLogRecord({
         timestamp: new Date().toISOString(),
@@ -292,7 +317,7 @@ export function stopClientLogForwarder(): void {
 }
 
 export function forwardLogToServer(line: string): void {
-  const item = queuedLine(line);
+  const item = normalizeLine(line);
   if (ws?.readyState === WebSocket.OPEN && trySend(ws, item)) {
     return;
   }

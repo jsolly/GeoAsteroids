@@ -1767,7 +1767,7 @@ export class GameEngine {
   }
 
   /** Seed phenomena on a fixture field once; the managed regional field seeds its own sectors. */
-  public seedAsteroidInteractions(): void {
+  private seedAsteroidInteractions(): void {
     if (this.managedField) {
       return;
     }
@@ -1838,6 +1838,7 @@ export class GameEngine {
       return [];
     }
     if (!this.managedField) {
+      this.seedAsteroidInteractions();
       return [];
     }
     return this.regionalField.update(

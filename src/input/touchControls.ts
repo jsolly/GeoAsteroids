@@ -445,14 +445,14 @@ function shouldIgnoreLostCapture(ev: PointerEvent): boolean {
 }
 
 function onPlayfieldPointerUp(ev: PointerEvent): void {
+  if (shouldIgnoreLostCapture(ev) && ev.pointerId === steerPointerId) {
+    return;
+  }
   if (ev.pointerId === steerPointerId || ev.pointerId === firePointerId) {
     localPlayer()?.ship.finishWeaponCharge(ev.type === 'pointerup');
   }
   if (ev.pointerId === firePointerId) {
     onFirePointerUp(ev);
-    return;
-  }
-  if (shouldIgnoreLostCapture(ev) && ev.pointerId === steerPointerId) {
     return;
   }
   if (ev.pointerId !== steerPointerId) {

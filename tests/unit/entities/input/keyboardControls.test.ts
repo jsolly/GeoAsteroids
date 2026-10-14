@@ -29,18 +29,6 @@ afterEach(() => {
   publishHarpoonField([]);
 });
 
-test('KeyA turns left and KeyD turns right', () => {
-  press('KeyA');
-  expect(player.ship.angularVelocity).toBeCloseTo(TURN, 10);
-  release('KeyA');
-  expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
-
-  press('KeyD');
-  expect(player.ship.angularVelocity).toBeCloseTo(-TURN, 10);
-  release('KeyD');
-  expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
-});
-
 test('KeyE activates the ship kit ability', () => {
   const activateSpy = vi.spyOn(player.ship, 'activateAbility');
   press('KeyE');
@@ -80,15 +68,6 @@ test('KeyE preserves the joined Scout when the title menu has a stale Hauler sel
   expect(player.ship.health).toBe(health);
   expect(player.ship.maxVelocity).toBe(speed);
   expect(player.ship.harpoonTargetId).toBeNull();
-});
-
-test('WASD is ignored while dead', () => {
-  player.ship.health = 0;
-  reconcilePlayerInput(player);
-  press('KeyW');
-  press('KeyA');
-  expect(player.ship.thrusting).toBe(false);
-  expect(player.ship.angularVelocity).toBeCloseTo(0, 10);
 });
 
 test('a cargo pilot hovers on a furnace, steering releases that visit and an empty hold resumes cruise', () => {
@@ -154,3 +133,56 @@ test.each(['scout', 'hauler'] as const)(
     expect(player.ship.cargoHover).toBe(false);
   }
 );
+
+test('opposing turn keys cancel and releasing either resumes the other turn', () => {
+  press('ArrowLeft');
+  expect(player.ship.angularVelocity).toBeCloseTo(TURN);
+  press('KeyD');
+  expect(player.ship.angularVelocity).toBe(0);
+  release('ArrowLeft');
+  expect(player.ship.angularVelocity).toBeCloseTo(-TURN);
+  press('KeyA');
+  expect(player.ship.angularVelocity).toBe(0);
+  release('KeyD');
+  expect(player.ship.angularVelocity).toBeCloseTo(TURN);
+  release('KeyA');
+  expect(player.ship.angularVelocity).toBe(0);
+  expect(player.ship.thrusting).toBe(true);
+});
+
+test('Space fires and release re-arms without interrupting automatic thrust', () => {
+  const shoot = vi.spyOn(player.ship, 'shoot');
+  expect(player.ship.lasers).toHaveLength(0);
+  press('Space');
+  expect(shoot).toHaveBeenCalledOnce();
+  expect(player.ship.lasers).toHaveLength(1);
+  expect(player.ship.thrusting).toBe(true);
+  expect(player.ship.canShoot).toBe(false);
+  release('Space');
+  expect(player.ship.canShoot).toBe(true);
+  expect(player.ship.thrusting).toBe(true);
+});
+
+test.each(['ArrowUp', 'KeyW', 'KeyZ'])(
+  '%s is unbound and cannot change cruise or steering',
+  (code) => {
+    press('ArrowLeft');
+    press(code);
+    expect(player.ship.angularVelocity).toBeCloseTo(TURN);
+    expect(player.ship.thrusting).toBe(true);
+    release(code);
+    expect(player.ship.angularVelocity).toBeCloseTo(TURN);
+    expect(player.ship.thrusting).toBe(true);
+  }
+);
+
+test('a dead pilot cannot restart thrust, turn, or fire', () => {
+  player.ship.health = 0;
+  reconcilePlayerInput(player);
+  const shoot = vi.spyOn(player.ship, 'shoot');
+  press('ArrowLeft');
+  press('Space');
+  expect(shoot).not.toHaveBeenCalled();
+  expect(player.ship.angularVelocity).toBe(0);
+  expect(player.ship.thrusting).toBe(false);
+});

@@ -415,6 +415,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         if (disposed || !isGameOverlayOpen('universe-map')) {
           return {
             center() {},
+            signalHelpAtCenter() {},
             zoomBy() {},
             keydown() {},
             setLocationPage() {},
@@ -426,6 +427,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         mapControllers.add(map);
         return {
           center: map.center,
+          signalHelpAtCenter: map.signalHelpAtCenter,
           zoomBy: map.zoomBy,
           keydown: map.keydown,
           setLocationPage: map.setLocationPage,

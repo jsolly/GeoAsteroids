@@ -7,9 +7,12 @@ import { ClientLogger } from '../../../server/services/ClientLogger';
 import { logger } from '../../../setup/serverLogger';
 import { createLogRecord, stringifyLogRecord } from '../../../shared/logRecords';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
+import { closePlayerMotionScenario } from '../../support/playerMotionCleanup';
+import { WireClient } from '../../support/wireClient';
 
 let server: ReturnType<typeof createServerInstance> | undefined;
-const sockets: WebSocket[] = [];
+const clients = new Map<WebSocket, WireClient>();
+const negativeSockets = new Set<WebSocket>();
 
 async function connect(path: string): Promise<WebSocket> {
   if (!server) {
@@ -21,9 +24,9 @@ async function connect(path: string): Promise<WebSocket> {
     url.searchParams.set('asteroidInteractions', '1');
   }
   const socket = new WebSocket(url);
-  socket.on('error', () => undefined);
-  sockets.push(socket);
-  await once(socket, 'open');
+  const client = new WireClient(socket);
+  clients.set(socket, client);
+  await client.open();
   return socket;
 }
 
@@ -48,19 +51,30 @@ async function drainDeferredFrames(): Promise<void> {
 }
 
 afterEach(async () => {
-  for (const socket of sockets.splice(0)) {
-    if (socket.readyState !== WebSocket.CLOSED) {
-      socket.terminate();
-    }
+  try {
+    await closePlayerMotionScenario({
+      clients: [...clients].map(([socket, client]) => ({
+        async close() {
+          await client.close();
+          if (!negativeSockets.has(socket)) {
+            client.assertHealthy();
+          }
+        },
+      })),
+      server,
+    });
+  } finally {
+    clients.clear();
+    negativeSockets.clear();
+    server = undefined;
   }
-  await server?.close();
-  server = undefined;
 });
 
 test('public WebSockets reject inbound frames larger than 64 KiB', async () => {
   server = createServerInstance({ port: 0, nodeEnv: 'test' });
   const logs = await connect('/logs');
-  const closed = once(logs, 'close');
+  negativeSockets.add(logs);
+  const closed = once(logs, 'close', { signal: AbortSignal.timeout(2000) });
 
   logs.send(
     JSON.stringify({
@@ -97,7 +111,7 @@ test('/logs accepts structured records through the real ingress', async () => {
   const before = ClientLogger.getDiagnostics();
   const valid = await connect('/logs');
   valid.send(structuredLogFrame());
-  const pong = once(valid, 'pong');
+  const pong = once(valid, 'pong', { signal: AbortSignal.timeout(2000) });
   valid.ping();
   await pong;
   expect(valid.readyState).toBe(WebSocket.OPEN);
@@ -115,7 +129,7 @@ test('the gameplay socket rejects log telemetry because /logs is the only log in
     gameplay.on('message', (raw) => received.push(JSON.parse(String(raw))));
     gameplay.send(structuredLogFrame());
     // The server handles the text frame before answering the following ping.
-    const pong = once(gameplay, 'pong');
+    const pong = once(gameplay, 'pong', { signal: AbortSignal.timeout(2000) });
     gameplay.ping();
     await pong;
     expect(received).toContainEqual(
@@ -136,7 +150,8 @@ test('the log route closes retired plaintext and invalid record schemas', async 
     { level: 'TRACE', line: 'not allowed', sessionId: 'wire-session' },
   ]) {
     const invalid = await connect('/logs');
-    const closed = once(invalid, 'close');
+    negativeSockets.add(invalid);
+    const closed = once(invalid, 'close', { signal: AbortSignal.timeout(2000) });
     invalid.send(JSON.stringify({ type: 'clientLog', data }));
     const [code] = await closed;
     expect(code).toBe(1006);
@@ -153,7 +168,8 @@ test('a bad log frame ends the socket so a following frame is not parsed', async
       JSON.stringify({ type: 'unexpected', data: { message: 'discard this' } }),
     ]) {
       const socket = await connect('/logs');
-      const closed = once(socket, 'close');
+      negativeSockets.add(socket);
+      const closed = once(socket, 'close', { signal: AbortSignal.timeout(2000) });
       sendOneChunk(socket, [frame, frame]);
       expect((await closed)[0]).toBe(1006);
       await drainDeferredFrames();

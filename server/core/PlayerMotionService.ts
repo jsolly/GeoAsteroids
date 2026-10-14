@@ -684,16 +684,7 @@ export class PlayerMotionService {
     session.actor.contourLock = null;
     const speed = Math.hypot(session.actor.velocity.x, session.actor.velocity.y);
     session.knockback = { speed, at: now };
-    session.epoch += 1;
-    session.mode = 'free';
-    session.ack = 0;
-    session.poseSequence = -1;
-    session.anchor = undefined;
-    session.poseAt = now;
-    session.anchorAt = now;
-    session.poseCredit = this.maximumTravelSpeed(session.actor, now) * PLAYER_MOTION.poseLeadFrames;
-    session.burstCredit = 0;
-    session.burstAt = now;
+    this.beginFreeEpoch(session, now);
     this.publish(session);
   }
 
@@ -712,17 +703,8 @@ export class PlayerMotionService {
     if (!session) {
       return;
     }
-    session.epoch++;
-    session.mode = 'free';
-    session.ack = 0;
-    session.poseSequence = -1;
-    session.anchor = undefined;
-    session.anchorAt = now;
-    session.poseAt = now;
     session.contourLockAt = now;
-    session.poseCredit = this.maximumTravelSpeed(session.actor, now) * PLAYER_MOTION.poseLeadFrames;
-    session.burstCredit = 0;
-    session.burstAt = now;
+    this.beginFreeEpoch(session, now);
     delete session.knockback;
     this.publish(session);
   }
@@ -741,7 +723,7 @@ export class PlayerMotionService {
     return this.placeFixtureSession(session, position, now);
   }
 
-  private placeFixtureSession(session: Session, position: Position, now: number): boolean {
+  private beginFreeEpoch(session: Session, now: number): void {
     session.epoch += 1;
     session.mode = 'free';
     session.ack = 0;
@@ -752,6 +734,10 @@ export class PlayerMotionService {
     session.poseCredit = this.maximumTravelSpeed(session.actor, now) * PLAYER_MOTION.poseLeadFrames;
     session.burstCredit = 0;
     session.burstAt = now;
+  }
+
+  private placeFixtureSession(session: Session, position: Position, now: number): boolean {
+    this.beginFreeEpoch(session, now);
     session.actor.contourLock = null;
     session.actor.position = { ...position };
     session.actor.velocity = { x: 0, y: 0 };

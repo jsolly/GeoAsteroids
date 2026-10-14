@@ -236,7 +236,7 @@ function signalCommand(command, signal, kind) {
     inspect(group)?.start ===
       command.start, 'Cannot authenticate validation command group for cancellation');
   try {
-    // The runner owns graceful INT/TERM cleanup. Its coordinator may already be
+    // The runner owns graceful INT/TERM cleanup. Its runner may already be
     // stopping, so even our first group signal could kill its inspection helpers.
     // HUP has no runner cleanup trap; preserve its existing group cancellation.
     const gracefulRunner = kind === 'runner' && (signal === 'SIGINT' || signal === 'SIGTERM');
@@ -263,7 +263,7 @@ async function awaitGroup(command, cancellationFailure) {
   }
   command.retired = true;
 }
-function legacyBusy(home) {
+function runnerLockBlocks(home) {
   const directory = join(home.common, 'georoids-test-runner.lock');
   if (!existsSync(directory)) {
     return false;
@@ -384,7 +384,7 @@ async function acquireHeavy(home, owner, cancelled) {
           }
         }
         if (!blocked) {
-          blocked = legacyBusy(home);
+          blocked = runnerLockBlocks(home);
         }
       } catch (error) {
         if (!(error instanceof InspectionTimeout)) {

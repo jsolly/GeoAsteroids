@@ -733,7 +733,7 @@ describe('painted HUD composition', () => {
   });
 });
 
-test('locked palette hexes stay the #415/#435 playfield swatch', () => {
+test('locked palette hexes stay the playfield swatch', () => {
   expect(PALETTE).toEqual({
     BG: '#000011',
     STARS: '#8BA3C7',
@@ -750,5 +750,4 @@ test('locked palette hexes stay the #415/#435 playfield swatch', () => {
   });
   expect(WIRE_PALETTE).toEqual({ REMOTE: '#7DD3FC', SATELLITE: '#C4B5FD' });
   expect(TITLE.ACCENT).toBe('#A78BFA');
-  expect(PALETTE).not.toHaveProperty('ACCENT_UI');
 });

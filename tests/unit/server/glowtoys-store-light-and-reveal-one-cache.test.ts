@@ -11,6 +11,7 @@ import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { validateAsteroidDto } from '../../../shared/snapshotDto';
 import type { AsteroidData } from '../../../shared-types';
 import { RecordingSocket } from '../../support/recordingSocket';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 
 function rock(): AsteroidData {
   return {
@@ -96,13 +97,15 @@ test('bright rocks draw neutral roaming spiders without inventing an attack targ
     throw new Error('Expected roamer');
   }
   const lightPosition = { x: 8300, y: 8000 };
-  manager.advance({
-    nowFrame: 1,
-    players: [
-      { id: 'pilot', position: { x: 9000, y: 8500 }, health: 100, exploding: false, radius: 20 },
-    ],
-    lightSources: [lightPosition],
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      nowFrame: 1,
+      players: [
+        { id: 'pilot', position: { x: 9000, y: 8500 }, health: 100, exploding: false, radius: 20 },
+      ],
+      lightSources: [lightPosition],
+    })
+  );
   const attracted = manager.getBodies().find((row) => row.id === spider.id);
   expect(attracted?.position.x).toBeGreaterThan(8000);
   expect(attracted?.targetId).toBeNull();
@@ -114,20 +117,22 @@ test('a scanner at the edge of its reach still repels a spider despite a nearby 
   if (!spider) {
     throw new Error('Expected roamer');
   }
-  manager.advance({
-    nowFrame: 1,
-    players: [
-      {
-        id: 'scanner',
-        position: { x: 8000 - SHIP_ABILITY.SCAN_RANGE + 0.1, y: 8000 },
-        health: 100,
-        exploding: false,
-        radius: 20,
-        scanning: true,
-      },
-    ],
-    lightSources: [{ x: 7900, y: 8000 }],
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      nowFrame: 1,
+      players: [
+        {
+          id: 'scanner',
+          position: { x: 8000 - SHIP_ABILITY.SCAN_RANGE + 0.1, y: 8000 },
+          health: 100,
+          exploding: false,
+          radius: 20,
+          scanning: true,
+        },
+      ],
+      lightSources: [{ x: 7900, y: 8000 }],
+    })
+  );
   expect(manager.getBodies().find((row) => row.id === spider.id)?.position.x).toBeGreaterThan(8000);
 });
 

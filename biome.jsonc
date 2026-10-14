@@ -156,8 +156,7 @@
         "noPlaywrightUselessAwait": "error",
         "noPlaywrightWaitForNavigation": "error",
         "noPlaywrightWaitForSelector": "error",
-        // HOLD: duration-based stability assertions are not locator waits.
-        "noPlaywrightWaitForTimeout": "off",
+        "noPlaywrightWaitForTimeout": "error",
         "noReturnInFinally": "error",
         "noThisOutsideOfClass": "error",
         "noUndeclaredClasses": "error",
@@ -330,19 +329,12 @@
       }
     },
     {
-      "includes": ["tests/**", "scripts/*.ts"],
+      "includes": ["tests/**"],
       "linter": {
         "rules": {
           "performance": {
             // Vitest spies on modules via `import * as ns`.
             "noNamespaceImport": "off"
-          },
-          "suspicious": {
-            "noExplicitAny": "error",
-            "noConsole": {
-              "level": "error",
-              "options": { "allow": ["log", "debug", "info", "warn", "error"] }
-            }
           }
         }
       }
@@ -363,7 +355,6 @@
       "linter": {
         "rules": {
           "nursery": {
-            "noConditionalExpect": "off",
             "useConsistentTestIt": "off",
             "useExpect": "off",
             "useTestHooksInOrder": "off",

@@ -984,6 +984,7 @@ export class ConnectionManager {
         break;
       case 'sessionExpired': {
         setSpiderField(undefined);
+        setWorldCampaign();
         setRolyPolys();
         setContourBridges();
         resetRouteMusic();
@@ -1296,7 +1297,7 @@ export class ConnectionManager {
     applyTerrainSeed(data.terrainSeed);
     setWorldMapAssets(data.mapAssets);
     setSettlement(data.settlement);
-    worldFurnaces.replaceLit(data.civicModules ?? []);
+    worldFurnaces.replaceLit(data.civicModules);
     setWorldExploration(data.exploration);
 
     // Update local game state from server using unified entity system
@@ -1361,6 +1362,9 @@ export class ConnectionManager {
         // Apply the parsed entity directly — no per-tick snapshot wrapper.
         // Kit / ability / mass stay on the row.
         entityData.spawnProtectionTimer ??= 0;
+        entityData.weaponChargeFrames ??= 0;
+        entityData.navigationAssistFrames ??= 0;
+        entityData.contourDraftFrames ??= 0;
         if (entityData.playerMotion !== undefined) {
           entity.ship.playerMotion = entityData.playerMotion;
         } else {
@@ -1393,9 +1397,7 @@ export class ConnectionManager {
           ? 0
           : (entityData.abilityActiveFrames ?? 0);
 
-        if (data.serverTime !== undefined) {
-          entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
-        }
+        entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
         if (isLocalPlayer && entityData.bankedCargo !== undefined) {
           const previous = this.cargoDepositBaseline;
           const banked = entityData.bankedCargo;

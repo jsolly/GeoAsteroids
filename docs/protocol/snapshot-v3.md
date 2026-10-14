@@ -53,6 +53,12 @@ omitted field is unchanged, and omitted operation lists are empty. Unknown
 valid JSON fields still use ordinary replacement patches. Complete empty
 arrays represent complete empty collections.
 
+Every complete world includes finite `serverTime`, `civicModules`, `spiderField`,
+and `beltRecovery`. Empty collections are explicit; deleting one of these fields
+with a delta `clear` rejects that frame and requests a complete keyframe. Current
+servers already emit all four, so this validation change adds no capability flag
+or snapshot version. Cached spider fields remain immutable during rounding.
+
 A keyed collection patch may contain `add` (complete rows), `update`, `motion`,
 `remove` and `order`. Updates and removals address the zero-based row index in that
 recipient's immediate baseline, rather than repeating the row ID. Explicit

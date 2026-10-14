@@ -1,5 +1,6 @@
 import { beltSlotPosition, beltSlots } from '../../shared/asteroidBelt';
 import { WIRE_PALETTE } from '../../shared/constants/gameplay';
+import { COOPERATIVE } from '../../shared/cooperativeRules';
 import { oreResource } from '../../shared/economy';
 import {
   cellWorldBounds,
@@ -99,6 +100,7 @@ export type UniverseMapChrome = Readonly<{
 /** Occlusions are canvas-relative CSS pixel rectangles measured by the Svelte owner. */
 export type UniverseMapController = {
   center(): void;
+  signalHelpAtCenter(): void;
   zoomBy(factor: number): void;
   keydown(event: KeyboardEvent): void;
   setLocationPage(page: number): void;
@@ -448,7 +450,7 @@ function drawNearbyResources(
   context.restore();
 }
 
-const frontierChartSites = frontierSitesNear({ x: 0, y: 0 }, 57_500);
+const frontierChartSites = frontierSitesNear({ x: 0, y: 0 }, COOPERATIVE.expandedOuterRadius);
 
 function drawNestMarks(
   context: CanvasRenderingContext2D,
@@ -473,7 +475,7 @@ function drawNestMarks(
       }
       if (
         cleared.has(site.id) ||
-        (site.frontier === 'expanded' && campaign.projectValue < 10_000)
+        (site.frontier === 'expanded' && campaign.projectValue < COOPERATIVE.scannerValue)
       ) {
         continue;
       }
@@ -953,6 +955,12 @@ export function mountUniverseMap(
     }
   }
 
+  function signalHelpAtCenter(): void {
+    if (!disposed) {
+      sendCrewAction({ kind: 'signal', signal: 'help', position: { ...view.center } });
+    }
+  }
+
   function handleMapKeydown(ev: KeyboardEvent): void {
     if (disposed) {
       return;
@@ -965,6 +973,15 @@ export function mountUniverseMap(
     }
     if (ev.target instanceof HTMLButtonElement) {
       ev.stopPropagation();
+      return;
+    }
+
+    if (ev.shiftKey && ev.code === 'Enter') {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (!ev.repeat) {
+        signalHelpAtCenter();
+      }
       return;
     }
 
@@ -1158,6 +1175,7 @@ export function mountUniverseMap(
         setViewZoom(view.zoom * factor);
       }
     },
+    signalHelpAtCenter,
     keydown: handleMapKeydown,
     setLocationPage(page) {
       if (!disposed) {

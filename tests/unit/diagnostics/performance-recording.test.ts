@@ -312,3 +312,14 @@ test('a phone recording owns destructive drains while inspection remains availab
   recorder.releaseDrain('phone');
   expect(() => recorder.read(true)).not.toThrow();
 });
+
+test('performance receipts use the full published client release identity', () => {
+  const releaseId = 'abc123def456abc123def456abc123def456abc1';
+  vi.stubEnv('VITE_COMMIT_SHA', releaseId);
+  vi.stubEnv('VITE_COMMIT_HASH', 'retired-label');
+  try {
+    expect(new ClientPerformanceMetrics(true).read().clientReleaseId).toBe(releaseId);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

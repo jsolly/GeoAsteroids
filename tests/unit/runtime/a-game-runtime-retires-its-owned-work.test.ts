@@ -20,7 +20,6 @@ import {
 import { getOpenGameOverlay } from '../../../src/runtime/overlayState';
 import type { GamePresentation } from '../../../src/runtime/uiTypes';
 import { setPlayView } from '../../../src/ui/uiUtils';
-import { logger } from '../../../src/utils/Logger';
 import { snapshotFixture } from '../network/snapshotFixture';
 
 // Logging transport is external to the gameplay runtime under test.
@@ -92,6 +91,12 @@ function keyboard(code: string, target: EventTarget = document, repeat = false):
   const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, repeat });
   target.dispatchEvent(event);
   return event;
+}
+
+function canvasContextMenuIsPrevented(): boolean {
+  const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+  hosts.canvas.dispatchEvent(event);
+  return event.defaultPrevented;
 }
 
 async function joinWithAcceptedWorld(): Promise<void> {
@@ -181,19 +186,24 @@ test('a failed child input initializer retires partial handlers before the pilot
   current.commands.join('Retry Pilot');
   await settle();
   expect(GameController.getInstance().getIsGameRunning()).toBe(false);
-  const warning = vi.spyOn(logger, 'warn');
-  document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
-  expect(warning).not.toHaveBeenCalled();
+  expect(canvasContextMenuIsPrevented()).toBe(false);
   current.commands.join('Retry Pilot');
   await settle();
   expect(initialize).toHaveBeenCalledTimes(2);
   expect(GameController.getInstance().getIsGameRunning()).toBe(true);
-  document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
-  expect(GameController.getInstance().getCurrPlayer()?.ship.lasers).toHaveLength(1);
+  expect(canvasContextMenuIsPrevented()).toBe(true);
+  const pilot = GameController.getInstance().getCurrPlayer();
+  if (!pilot) {
+    throw new Error('Missing retry pilot');
+  }
+  const shoot = vi.spyOn(pilot.ship, 'shoot');
+  keyboard('Space');
+  expect(shoot).toHaveBeenCalledOnce();
+  expect(pilot.ship.lasers).toHaveLength(1);
   current.dispose();
-  warning.mockClear();
-  document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
-  expect(warning).not.toHaveBeenCalled();
+  expect(canvasContextMenuIsPrevented()).toBe(false);
+  keyboard('Space');
+  expect(shoot).toHaveBeenCalledOnce();
 });
 
 class RecordingTransport {
@@ -248,6 +258,7 @@ async function joinThroughTransport(name: string): Promise<RecordingTransport> {
   local.id = id;
   local.name = name;
   local.position = { x: 500, y: 600 };
+  local.playerMotion = { epoch: 1, mode: 'free', ack: 0 };
   socket.receive('snapshot', new SnapshotEncoder(state).encode(1));
   expect(clientPerformance.read().serverReleaseId).toBe('7'.repeat(40));
   await settle();
@@ -284,19 +295,27 @@ test('a real transport join can retire and rejoin with one input and network own
   expect(first.onopen).toBeNull();
   expect(vi.getTimerCount()).toBe(0);
   expect(frames.size).toBe(0);
+  expect(canvasContextMenuIsPrevented()).toBe(false);
   current = mountRuntime(new AbortController().signal);
   const second = await joinThroughTransport('Second Pilot');
   expect(second).not.toBe(first);
   expect(RecordingTransport.created).toHaveLength(2);
   expect(frames.size).toBe(2);
-  document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
-  expect(GameController.getInstance().getCurrPlayer()?.ship.lasers).toHaveLength(1);
+  expect(canvasContextMenuIsPrevented()).toBe(true);
+  const pilot = GameController.getInstance().getCurrPlayer();
+  if (!pilot) {
+    throw new Error('Missing rejoined pilot');
+  }
+  const shoot = vi.spyOn(pilot.ship, 'shoot');
+  keyboard('Space');
+  expect(shoot).toHaveBeenCalledOnce();
+  expect(pilot.ship.lasers).toHaveLength(1);
   // The accepted key skips the spawn fly-in; the single game loop remains.
   expect(frames.size).toBe(1);
   current.dispose();
-  const warning = vi.spyOn(logger, 'warn');
-  document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
-  expect(warning).not.toHaveBeenCalled();
+  expect(canvasContextMenuIsPrevented()).toBe(false);
+  keyboard('Space');
+  expect(shoot).toHaveBeenCalledOnce();
   expect(second.close).toHaveBeenCalledOnce();
   expect(vi.getTimerCount()).toBe(0);
   await vi.advanceTimersByTimeAsync(30_000);
@@ -341,6 +360,72 @@ test('changing the title ship plays one interface cue and repeating the same sel
   expect(views.at(-1)?.menu.selectedKit).toBe(initial);
   expect(feedback.mock.calls).toEqual([['interface'], ['interface']]);
   unsubscribe();
+});
+
+test('the travel presentation follows living crew snapshots without changing earlier views', async () => {
+  RecordingTransport.created = [];
+  vi.stubGlobal('WebSocket', RecordingTransport);
+  const runtime = mountRuntime(scope.signal);
+  current = runtime;
+  const socket = await joinThroughTransport('Travel Pilot');
+  // This scenario exercises snapshot delivery and DOM presentation, outside canvas painting.
+  vi.spyOn(GameController.getInstance(), 'renderGame').mockImplementation(() => {});
+  const local = GameController.getInstance().getCurrPlayer();
+  const state = snapshotFixture();
+  const template = state.entities[0];
+  if (!local || !template) {
+    throw new Error('Missing travel pilot fixture');
+  }
+  template.playerMotion = { epoch: 1, mode: 'free', ack: 0 };
+  template.velocity = { x: 0, y: 0 };
+  template.thrusting = false;
+  local.ship.position = { x: 40, y: 0 };
+  state.entities = [
+    { ...template, id: local.id, name: 'Travel Pilot', position: { x: 40, y: 0 } },
+    { ...template, id: 'crew', name: 'Ada', position: { x: 900, y: 300 } },
+    { ...template, id: 'dead', name: 'Dead pilot', health: 0 },
+    { ...template, id: 'exploding', name: 'Exploding pilot', health: 0, exploding: true },
+  ];
+  socket.receive('snapshot', new SnapshotEncoder(state).encode(2));
+  await settle();
+  const views: GamePresentation[] = [];
+  runtime.subscribe((view) => views.push(view));
+  keyboard('KeyB');
+  runtime.commands.selectTownView('travel');
+  const first = views.at(-1)?.townTravel;
+  if (!first) {
+    throw new Error('Expected the runtime to publish furnace travel');
+  }
+  expect(first.pilots).toEqual([
+    { id: local.id, name: 'Travel Pilot', position: { x: 40, y: 0 }, local: true },
+    { id: 'crew', name: 'Ada', position: { x: 900, y: 300 }, local: false },
+  ]);
+
+  const updated = structuredClone(state);
+  const crew = updated.entities[1];
+  if (!crew) {
+    throw new Error('Missing crew snapshot');
+  }
+  crew.name = 'Ada North';
+  crew.position = { x: 1200, y: 450 };
+  socket.receive('snapshot', new SnapshotEncoder(updated).encode(3));
+  await settle();
+  const frame = [...frames.entries()].at(-1);
+  if (!frame) {
+    throw new Error('Missing runtime presentation frame');
+  }
+  frames.delete(frame[0]);
+  frame[1](performance.now() + 200);
+  expect(views.at(-1)?.townTravel?.pilots).toContainEqual({
+    id: 'crew',
+    name: 'Ada North',
+    position: { x: 1200, y: 450 },
+    local: false,
+  });
+  expect(first.pilots).toEqual([
+    { id: local.id, name: 'Travel Pilot', position: { x: 40, y: 0 }, local: true },
+    { id: 'crew', name: 'Ada', position: { x: 900, y: 300 }, local: false },
+  ]);
 });
 
 test('foreign pickup churn does not flush sampled local inventory values between presentation ticks', async () => {
@@ -588,21 +673,37 @@ test('a failed rendered frame closes an open map and publishes a restart notice 
 });
 
 test('wall-clock pose updates continue without render frames and stop with the runtime', async () => {
-  await joinWithAcceptedWorld();
-  const update = vi.spyOn(ConnectionManager.getInstance(), 'updatePlayerState');
+  RecordingTransport.created = [];
+  vi.stubGlobal('WebSocket', RecordingTransport);
+  current = mountRuntime(scope.signal);
+  const socket = await joinThroughTransport('Pose Pilot');
   const player = GameController.getInstance().getCurrPlayer();
   if (!player || !current) {
     throw new Error('Missing runtime pilot');
   }
-  player.ship.position = { x: 120, y: -45 };
+  const acceptedId = ConnectionManager.getInstance().getLocalPlayerId();
+  expect(player.id).toBe(acceptedId);
+  const pose = { position: { x: 120, y: -45 }, velocity: { x: 2, y: -3 }, angle: 0.75 };
+  Object.assign(player.ship, pose);
+  socket.send.mockClear();
+  const updates = () =>
+    socket.send.mock.calls
+      .map(([text]) => JSON.parse(text))
+      .filter((message) => message.type === 'update');
   await vi.advanceTimersByTimeAsync(50);
-  expect(update).toHaveBeenCalledTimes(3);
-  expect(update).toHaveBeenLastCalledWith(
-    expect.objectContaining({ position: { x: 120, y: -45 } })
+  expect(updates()).toEqual(
+    Array.from({ length: 3 }, () =>
+      expect.objectContaining({
+        type: 'update',
+        data: expect.objectContaining({ id: acceptedId, ...pose }),
+      })
+    )
   );
   GameController.getInstance().stopAfterFrameFailure();
   await vi.advanceTimersByTimeAsync(100);
-  expect(update).toHaveBeenCalledTimes(3);
+  expect(updates()).toHaveLength(3);
   current.dispose();
   expect(vi.getTimerCount()).toBe(0);
+  await vi.advanceTimersByTimeAsync(100);
+  expect(updates()).toHaveLength(3);
 });

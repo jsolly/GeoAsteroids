@@ -80,3 +80,20 @@ test('copied diagnostics retain only 80 detached and redacted recent records', (
     logger.applyConfiguredLogLevel();
   }
 });
+
+test('diagnostic records use the full published release identity', () => {
+  const releaseId = 'abc123def456abc123def456abc123def456abc1';
+  vi.stubEnv('VITE_COMMIT_SHA', releaseId);
+  vi.stubEnv('VITE_COMMIT_HASH', 'retired-label');
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    logger.warn('STATE', 'release-correlated incident');
+    expect(JSON.parse(logger.getRecentDiagnostics().at(-1) ?? '{}')).toMatchObject({
+      message: 'release-correlated incident',
+      releaseId,
+    });
+  } finally {
+    warning.mockRestore();
+    vi.unstubAllEnvs();
+  }
+});

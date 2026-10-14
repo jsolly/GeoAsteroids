@@ -7,6 +7,7 @@ import {
   WorldRemains,
 } from '../../../server/world/WorldRemains';
 import { FurnaceField } from '../../../shared/furnaceField';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 import { GameServerWorld } from '../scenarios/support/gameServerWorld';
 
 test('authoritative death leaves nearby decorative remains with no new collectible reward', () => {
@@ -50,13 +51,15 @@ test('only the final dead guard leaves nest ruins; sleeping and replayed removal
     (nestPosition) => remains.add('nest-remains', nestPosition, 1)
   );
   const position = { x: 15000, y: 5000 };
-  manager.advance({
-    nowFrame: 1,
-    players: [
-      { id: 'pilot', position: { x: 13000, y: 5000 }, health: 100, exploding: false, radius: 0 },
-    ],
-    resources: () => [{ id: 'ore', position, value: 1 }],
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      nowFrame: 1,
+      players: [
+        { id: 'pilot', position: { x: 13000, y: 5000 }, health: 100, exploding: false, radius: 0 },
+      ],
+      resources: () => [{ id: 'ore', position, value: 1 }],
+    })
+  );
   const guards = manager.snapshot().spiders;
   expect(guards.length).toBeGreaterThan(1);
   for (const guard of guards.slice(0, -1)) {
