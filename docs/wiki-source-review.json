@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:dcd78b7f195ae4e0c60df142837d05e7fbf599bfed9d370d40e1931f95ee51dd",
     "docs/sounds.md": "sha256:88bd06e26a7688c6b348dc635c1badffa83635a0413abd033eb63843f5975eb8",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:58a96619ca8787e6d070ad3ce5e75416b620466dcfe5592d779b1aa5ddfbc853",
+    "package.json": "sha256:64148c230ec106bd547a89066c760017dc596db50cc7273b2c23ff2ffde0a538",
     "public/music/README.md": "sha256:bc37faf582c661603145329bc3759822344b5a49865dc2433b6a8451eca22f9e",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -4166,6 +4166,15 @@
         "tests/unit/server/pilots-observe-first-hit-asteroid-destruction.test.ts": "field-manual",
         "tests/unit/server/satellite-pickup-scoring.test.ts": "field-manual",
         "tests/unit/ui/equip-hint-stays-hidden-until-a-pickup.test.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed package.json tooling-only changes: repository-owned worktree setup and hook-trust test command; dependencies, gameplay, Wiki content and demonstrations are unchanged. Lint, types and all 1969 unit tests passed. Checked the existing production Wiki at 1280x900 and 390x844, exercised search and mobile navigation, and observed no browser errors. No article or media update is needed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
       }
     }
   ]

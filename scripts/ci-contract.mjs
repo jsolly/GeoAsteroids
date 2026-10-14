@@ -106,6 +106,7 @@ assert.equal(
 
 // Moving a check between lanes must neither remove nor duplicate a validation.
 const originalStaticCommands = [
+  'npm run check:repo-hooks',
   'npm run check:actions',
   'npm run check:lint-policy',
   'npm run check:lint',
