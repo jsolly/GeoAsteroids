@@ -12,6 +12,8 @@ import type { Measurement } from './results';
 import { assertSelectedSnapshotState, SELECTED_SNAPSHOT_CONTRACT } from './snapshot-state';
 
 const FULL_FIXTURE_FIELDS = {
+  cooperativeActive: false,
+  campaign: false,
   asteroids: true,
   beltRecovery: false,
   civicModules: false,

@@ -57,3 +57,7 @@ Visit `/debug` for player and page session IDs, frame rate, and connection healt
 ## Graphics option
 
 Try the [experimental WebGL version](https://www.georoids.com/?renderer=webgl2) to compare graphics performance on your device. It uses the same scene and controls and falls back automatically if the renderer is unavailable. Reload the [standard version](https://www.georoids.com/) to return to the default renderer.
+
+## Campaign status
+
+Campaign-enabled servers show the shared Deep Scanner ore total and UTC hazard warnings above the playfield. Crew signals and downed beacons appear nearby, at the playfield edge and on the chart; rescue and sac countdowns use the server clock. Downed deadlines and permanent frontier progress survive reconnects and server restarts, subject to the normal last-checkpoint crash window.

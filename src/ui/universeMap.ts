@@ -2,6 +2,7 @@ import { beltSlotPosition, beltSlots } from '../../shared/asteroidBelt';
 import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { oreResource } from '../../shared/economy';
 import { explorationCellAt, isCellExplored } from '../../shared/exploration';
+import { frontierSitesNear } from '../../shared/frontier';
 import { CIVIC_LOTS, pipeHopToParent } from '../../shared/furnaces';
 import { isAsteroidLit } from '../../shared/glowtoy';
 import { RICOCHET_COURT } from '../../shared/ricochetCourt';
@@ -13,6 +14,7 @@ import { LootField } from '../entities/loot/LootField';
 import { PlayerManager } from '../entities/player/PlayerManager';
 import type { Roid } from '../entities/roid/Roid';
 import { getKitHullOutline, projectHullPolyline } from '../entities/ship/hullOutlines';
+import { getWorldCampaign } from '../network/worldCampaign';
 import { getWorldExploration, getWorldMapAssets, worldFurnaces } from '../network/worldExploration';
 import { getSpiderField } from '../physics/terrain/spiderSession';
 import { strokeFurnaceFireTrail } from '../rendering/furnaceRenderer';
@@ -27,6 +29,7 @@ import { asteroidMapInk, drawResourceMapMark } from '../rendering/hud/resourceMa
 import { drawRemainsMark } from '../rendering/remainsRenderer';
 import { drawCourtMapMark } from '../rendering/ricochetCourtRenderer';
 import { travelCameraRotation } from '../rendering/travelCamera';
+import { sendCrewAction } from '../runtime/crewRescue';
 import { hexToRgba } from '../utils/colorUtils';
 import {
   canPlaceMapAssetLabel,
@@ -508,6 +511,8 @@ function drawNearbyResources(
   context.restore();
 }
 
+const frontierChartSites = frontierSitesNear({ x: 0, y: 0 }, 57_500);
+
 function drawNestMarks(
   context: CanvasRenderingContext2D,
   frame: MapFrame,
@@ -515,6 +520,36 @@ function drawNestMarks(
 ): void {
   context.save();
   context.scale(1 / frame.scale, 1 / frame.scale);
+  const campaign = getWorldCampaign();
+  if (campaign) {
+    const cleared = new Set(campaign.cleared);
+    for (const site of frontierChartSites) {
+      if (cleared.has(site.id) && !campaign.commissioned.includes(site.id)) {
+        const size = universeMapMarkScreenSize(UNIVERSE_MAP_LANDMARK_SIZE, frame.zoom);
+        context.strokeStyle = PALETTE.CLEARED_NEST;
+        context.strokeRect(
+          site.position.x * frame.scale - size / 2,
+          site.position.y * frame.scale - size / 2,
+          size,
+          size
+        );
+      }
+      if (
+        cleared.has(site.id) ||
+        (site.frontier === 'expanded' && campaign.projectValue < 10_000)
+      ) {
+        continue;
+      }
+      drawResourceMapMark(
+        context,
+        'nest',
+        site.position.x * frame.scale,
+        site.position.y * frame.scale,
+        universeMapMarkScreenSize(UNIVERSE_MAP_LANDMARK_SIZE, frame.zoom),
+        PALETTE.DANGER
+      );
+    }
+  }
   for (const nest of getSpiderField().nests) {
     if (!isFiniteMapPosition(nest.position) || !isRevealed(nest.position, exploration)) {
       continue;
@@ -564,6 +599,17 @@ function drawCrew(
   const crew = PlayerManager.getInstance().getNonLocalPlayers();
   const players = local ? [local, ...crew] : crew;
   for (const player of players) {
+    const signal = player.ship.crewSignal;
+    const beacon = player.ship.downedUntil ? player.ship.position : signal?.position;
+    if (beacon) {
+      context.save();
+      context.strokeStyle = '#ffbd69';
+      context.lineWidth = 2 / frame.scale;
+      context.beginPath();
+      context.arc(beacon.x, beacon.y, 10 / frame.scale, 0, Math.PI * 2);
+      context.stroke();
+      context.restore();
+    }
     const position = player.ship.position;
     if (!isFiniteMapPosition(position)) {
       continue;
@@ -1083,6 +1129,7 @@ export function mountUniverseMap(
       : { center: first, distance: 0 };
   }
 
+  let touchSignal: { id: number; point: Position; at: number } | null = null;
   function onPointerDown(ev: PointerEvent): void {
     if (disposed || (ev.button !== 0 && ev.pointerType !== 'touch')) {
       return;
@@ -1091,6 +1138,20 @@ export function mountUniverseMap(
     if (!point) {
       return;
     }
+    if (ev.shiftKey) {
+      const frame = mapFrameFor(dimensions.width, dimensions.height, view.zoom);
+      sendCrewAction({
+        kind: 'signal',
+        signal: 'help',
+        position: mapCanvasToWorld(point.x, point.y, frame, chartHeadingRotation()),
+      });
+      ev.preventDefault();
+      return;
+    }
+    touchSignal =
+      ev.pointerType === 'touch' && mapPointers.size === 0
+        ? { id: ev.pointerId, point, at: Date.now() }
+        : null;
     mapPointers.set(ev.pointerId, point);
     canvas.setPointerCapture?.(ev.pointerId);
     ev.preventDefault();
@@ -1104,6 +1165,12 @@ export function mountUniverseMap(
     const before = mapGesture();
     if (!point || !before) {
       return;
+    }
+    if (
+      touchSignal &&
+      Math.hypot(point.x - touchSignal.point.x, point.y - touchSignal.point.y) > 8
+    ) {
+      touchSignal = null;
     }
     mapPointers.set(ev.pointerId, point);
     const after = mapGesture();
@@ -1128,6 +1195,24 @@ export function mountUniverseMap(
     if (disposed || !mapPointers.delete(ev.pointerId)) {
       return;
     }
+    if (
+      ev.type === 'pointerup' &&
+      touchSignal?.id === ev.pointerId &&
+      Date.now() - touchSignal.at < 500
+    ) {
+      const frame = mapFrameFor(dimensions.width, dimensions.height, view.zoom);
+      sendCrewAction({
+        kind: 'signal',
+        signal: 'help',
+        position: mapCanvasToWorld(
+          touchSignal.point.x,
+          touchSignal.point.y,
+          frame,
+          chartHeadingRotation()
+        ),
+      });
+    }
+    touchSignal = null;
     if (canvas.hasPointerCapture?.(ev.pointerId)) {
       canvas.releasePointerCapture(ev.pointerId);
     }

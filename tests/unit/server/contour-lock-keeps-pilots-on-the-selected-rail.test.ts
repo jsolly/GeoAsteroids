@@ -7,6 +7,7 @@ import {
   contourLockDistance,
   contourLockVelocity,
 } from '../../../shared/contourLock';
+import { cargoCapacity } from '../../../shared/economy';
 import { sampleGradient, sampleHeight } from '../../../shared/heightfield';
 import { cruiseSpeed } from '../../../shared/shipFlight';
 import { getShipKit } from '../../../shared/shipKits';
@@ -61,7 +62,7 @@ function railPilot() {
     actor.position,
     world.engine.getServerTime()
   );
-  const cruise = cruiseSpeed(actor.mass, getShipKit(actor.kitId).maxVelocity);
+  const cruise = cruiseSpeed(actor.mass, getShipKit(actor.kitId).maxVelocity, 0, 1);
   const now = world.engine.getServerTime();
   let sequence = 0;
   const pose = (
@@ -239,7 +240,7 @@ test.each([1, 3])(
       ship.velocity = terrainCruiseVelocity(
         ship.position,
         ship.angle,
-        cruiseSpeed(ship.mass, ship.maxVelocity)
+        cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1)
       );
       world.engine.playerMotion.placeActorForTesting(actor.id, ship.position, now);
       actor.velocity = { ...ship.velocity };
@@ -924,4 +925,32 @@ test('crew bridges cap population, refuse their owner, refresh for different fol
   expect(bridges.snapshot(1200)).toHaveLength(CONTOUR_BRIDGE.maximum);
   bridges.clear();
   expect(bridges.snapshot(1200)).toEqual([]);
+});
+
+test('a loaded follower leaves a crew bridge inside the cargo-adjusted draft envelope', () => {
+  const { now, charged } = crewBridge();
+  const follower = world.join('Loaded follower', { x: 0, y: 0 }, { kitId: 'hauler' });
+  const actor = world.entity(follower);
+  actor.cargo = cargoCapacity(actor.kitId);
+  world.engine.playerMotion.placeActorForTesting(actor.id, charged.from, now);
+  actor.contourLock = charged.source;
+  for (let frame = 0; frame < CONTOUR_BRIDGE.transitFrames; frame++) {
+    world.engine.advanceOneFrame();
+  }
+  expect(actor.contourTransit).toBeUndefined();
+  expect(actor.contourLock).toEqual(charged.target);
+  const speed = cruiseSpeed(
+    actor.mass,
+    getShipKit(actor.kitId).maxVelocity,
+    actor.cargo,
+    cargoCapacity(actor.kitId)
+  );
+  const expected = contourLockVelocity(
+    actor.position,
+    charged.target,
+    speed * CONTOUR_BRIDGE.draftMultiplier
+  );
+  expect(expected).not.toBeNull();
+  expect(actor.velocity.x).toBeCloseTo(expected?.x ?? NaN);
+  expect(actor.velocity.y).toBeCloseTo(expected?.y ?? NaN);
 });

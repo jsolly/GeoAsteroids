@@ -124,15 +124,32 @@ function nearestDistance(edges: readonly Edge[], target: Position): number {
 /** Sparse surface predators pursue across nearby rocks with short, unobstructed hops. */
 export class BeltCrawlerManager {
   private readonly bodies = new Map<string, Crawler>();
+  private populationLimit: number = BELT_CRAWLER.MAX_ACTIVE;
   private spatial = new AsteroidSpatialIndex([]);
   private players: readonly Actor[] = [];
 
   public constructor(private readonly liveHost?: (id: string) => AsteroidData | undefined) {}
 
   public clear(): void {
+    this.populationLimit = BELT_CRAWLER.MAX_ACTIVE;
     this.bodies.clear();
     this.spatial = new AsteroidSpatialIndex([]);
     this.players = [];
+  }
+
+  public get population(): number {
+    return this.bodies.size;
+  }
+
+  /** Sleeping occupants keep their persisted host identity and wounds. */
+  public setPopulationLimit(limit: number): void {
+    this.populationLimit = Math.max(0, Math.min(BELT_CRAWLER.MAX_ACTIVE, limit));
+    for (const id of [...this.bodies.keys()].reverse()) {
+      if (this.bodies.size <= this.populationLimit) {
+        break;
+      }
+      this.bodies.delete(id);
+    }
   }
 
   public getBody(id: string): TerrainSpider | undefined {
@@ -199,7 +216,7 @@ export class BeltCrawlerManager {
         processed.add(id);
         let body = this.bodies.get(id);
         if (!body) {
-          if (this.bodies.size >= BELT_CRAWLER.MAX_ACTIVE) {
+          if (this.bodies.size >= this.populationLimit) {
             continue;
           }
           body = {

@@ -54,6 +54,7 @@ export function setWorldExploration(value: ExplorationTile[]): void {
 
 export function resetWorldExploration(): void {
   worldFurnaces.replaceLit([]);
+  worldFurnaces.replaceFrontier([]);
   settlement = emptySettlement();
   mapAssets = [];
   remains = [];

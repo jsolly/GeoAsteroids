@@ -6,6 +6,7 @@ import {
   isShipCollisionImmune,
 } from '../entities/ship/shipUtils';
 import { NetworkManager } from '../network/networkManager';
+import { cooperativeActive } from '../network/worldCampaign';
 import { logger } from '../utils/Logger';
 
 export class CollisionManager {
@@ -53,7 +54,7 @@ export class CollisionManager {
     });
 
     // Show a wall flash immediately; cargo protection and residual damage come from the server.
-    if (cargo > 0) {
+    if (cargo > 0 || cooperativeActive()) {
       applyShipImpactFlash(ship);
     } else {
       applyShipBoundaryDeath(ship);

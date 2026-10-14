@@ -7,6 +7,7 @@
   import type { GamePreference, GamePresentation } from '../../runtime/uiTypes';
   import Button from '../ui/button/button.svelte';
   import ActionControls from './ActionControls.svelte';
+  import CrewControls from './CrewControls.svelte';
   import DebugPanel from './DebugPanel.svelte';
   import FieldHints from './FieldHints.svelte';
   import GameOverlay from './GameOverlay.svelte';
@@ -227,6 +228,13 @@
     <canvas id="spawn-fly-in" bind:this={spawnCanvas} hidden={!view.spawnActive} aria-hidden="true"
     ></canvas>
     {#if startup.kind === 'ready'}
+      {#if view.inPlay && view.overlay === null && view.crew?.active}
+        <CrewControls
+          view={view.crew}
+          act={startup.runtime.commands.crewAction}
+          signal={startup.runtime.commands.signalHere}
+        />
+      {/if}
       <ActionControls
         view={view.controls}
         mountActions={startup.runtime.commands.mountTouchActions}

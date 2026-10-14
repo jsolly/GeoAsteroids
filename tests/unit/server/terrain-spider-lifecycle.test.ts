@@ -206,3 +206,17 @@ test('a dark furnace foundation does not break a spider chase', () => {
   manager.advance({ players: [pilot], nowFrame: 2 });
   expect(manager.snapshot().spiders.find((row) => row.id === spider?.id)?.targetId).toBe(pilot.id);
 });
+
+test('eligible loaded carriers take priority over nearer empty pilots, but sanctuary stays safe', () => {
+  const manager = new TerrainSpiderManager(() => 0.5);
+  manager.spawnSpider({ x: 2200, y: 2200 });
+  const empty = { ...actorAt({ x: 2240, y: 2200 }), id: 'empty', cargo: 0 };
+  const loaded = { ...actorAt({ x: 2500, y: 2200 }), id: 'loaded', cargo: 1500 };
+  manager.advance({ players: [empty, loaded], nowFrame: 1 });
+  expect(manager.snapshot().spiders[0]?.targetId).toBe('loaded');
+  loaded.position = { x: 0, y: 0 };
+  manager.advance({ players: [empty, loaded], nowFrame: 2 });
+  expect(manager.snapshot().spiders[0]?.targetId).toBeNull();
+  manager.advance({ players: [empty, loaded], nowFrame: 3 });
+  expect(manager.snapshot().spiders[0]?.targetId).toBe('empty');
+});

@@ -46,6 +46,8 @@ Guards chase briefly and return home, while rare roaming hunters pursue farther.
 
 ## Survive a hunt
 
+Spiders prefer the most loaded eligible pilot, then the nearest pilot. Furnace refuge, Mineral Scan and guard leashes still limit their hunts.
+
 One bite kills, and one ordinary laser hit kills the spider; otherwise escape its range or reach a lit furnace's safe area; Town Square has a larger sanctuary where spiders will not hunt. Mineral Scan makes spiders in range flee only during its short pulse, then they can return; probes and dark foundations offer no protection.
 
 ## Spider tools
@@ -55,6 +57,18 @@ Haulers can extract silk or tow a living spider, but the captive can still bite 
 ## Belt crawlers
 
 The eastern belt also has spiders that cling to rocks and hop between them. Their attacks and tool limits differ from terrain spiders; see [Belt spiders](/wiki/#asteroids).
+
+## Frontier queens
+
+Campaign hive queens have shields: pin one with a Hauler Tow Cable, or coordinate shots from opposite sides to expose her. Living queens regularly birth children while nearby crew keep the encounter awake; defeating a queen permanently clears her hive and exposes its furnace ruin. Ordinary resource nests elsewhere retain their separate patrol rules.
+
+## Timed egg sacs
+
+Destroy every sac around a hive before the countdown from the first pop expires. Failed attempts regrow the sacs; a completed set stays destroyed through travel and restarts. One pilot can complete the challenge.
+
+## Scheduled hazards
+
+Meteor showers and spider swarms alternate on UTC half-hours, with a warning followed by a short active window. They threaten nearby ships and cargo; built furnaces, shared discoveries and campaign progress remain intact. See [network and HUD](/wiki/#hud-network) for the shared countdown.
 
 ## Roly-polys
 

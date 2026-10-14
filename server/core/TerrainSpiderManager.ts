@@ -19,6 +19,7 @@ interface SpiderActor {
   spawnProtectionTimer?: number;
   radius: number;
   scanning?: boolean;
+  cargo?: number;
 }
 
 interface SpiderAdvanceOptions {
@@ -147,6 +148,9 @@ export class TerrainSpiderManager {
   private readonly nests = new Map<string, SpiderNest>();
   private nestMarkers: SpiderFieldState['nests'] = [];
   private spawnTargetIndex = 0;
+  private readonly reservedSpiders = new Set<string>();
+  private populationLimit: number = SPIDER.MAX_ACTIVE;
+  private totalLimit: number = SPIDER.MAX_ACTIVE;
 
   public constructor(
     private readonly random: () => number = Math.random,
@@ -176,7 +180,10 @@ export class TerrainSpiderManager {
   }
 
   public clear(): void {
+    this.populationLimit = SPIDER.MAX_ACTIVE;
+    this.totalLimit = SPIDER.MAX_ACTIVE;
     this.spiders.clear();
+    this.reservedSpiders.clear();
     this.nextSpawnFrame = null;
     this.nextRescueFrame = null;
     this.nextNestFrame = 0;
@@ -186,9 +193,10 @@ export class TerrainSpiderManager {
   }
 
   /** Deterministic arrangement hook used by server scenarios and diagnostics. */
-  public spawnSpider(position: Position, angle = 0): TerrainSpider | null {
+  public spawnSpider(position: Position, angle = 0, reserved = false): TerrainSpider | null {
     if (
-      this.spiders.size >= SPIDER.MAX_ACTIVE ||
+      this.spiders.size >= this.totalLimit ||
+      (!reserved && this.ordinaryCount() >= this.populationLimit) ||
       !Number.isFinite(position.x) ||
       !Number.isFinite(position.y) ||
       !Number.isFinite(angle) ||
@@ -215,7 +223,34 @@ export class TerrainSpiderManager {
       territory: { kind: 'roaming' },
     };
     this.spiders.set(spider.id, spider);
+    if (reserved) {
+      this.reservedSpiders.add(spider.id);
+    }
     return copySpider(spider);
+  }
+
+  public ordinaryCount(): number {
+    return this.spiders.size - this.reservedSpiders.size;
+  }
+
+  public setPopulationLimit(ordinary: number, total: number): void {
+    this.populationLimit = Math.max(0, ordinary);
+    this.totalLimit = Math.max(this.populationLimit, total);
+    for (const id of [...this.spiders.keys()].reverse()) {
+      if (this.ordinaryCount() <= this.populationLimit) {
+        break;
+      }
+      if (!this.reservedSpiders.has(id)) {
+        this.removeSpider(id);
+      }
+    }
+    while (this.spiders.size > this.totalLimit) {
+      const id = [...this.spiders.keys()].pop();
+      if (!id) {
+        break;
+      }
+      this.removeSpider(id);
+    }
   }
 
   public getBody(id: string): RuntimeSpider | undefined {
@@ -266,6 +301,11 @@ export class TerrainSpiderManager {
         }
       }
     }
+    return this.removeLiveBody(spiderId);
+  }
+
+  private removeLiveBody(spiderId: string): boolean {
+    this.reservedSpiders.delete(spiderId);
     return this.spiders.delete(spiderId);
   }
 
@@ -371,7 +411,7 @@ export class TerrainSpiderManager {
       const roamers = [...this.spiders.values()].filter(
         (spider) => spider.territory.kind === 'roaming'
       );
-      if (roamers.length < SPIDER.MAX_ROAMERS && this.spiders.size < SPIDER.MAX_ACTIVE) {
+      if (roamers.length < SPIDER.MAX_ROAMERS && this.ordinaryCount() < this.populationLimit) {
         this.spawnNearPlayers(players);
       }
       // Failed attempts consume the interval too; never retry spawning every frame.
@@ -453,7 +493,7 @@ export class TerrainSpiderManager {
         spider.territory.kind === 'guard' ? SPIDER.NEST_WAKE_DISTANCE : SPIDER.DESPAWN_DISTANCE;
       if (nearest > limit && !spider.probe) {
         // Sleeping guards retain their health and identity. Death uses removeSpider.
-        this.spiders.delete(spider.id);
+        this.removeLiveBody(spider.id);
         spider.targetId = null;
         spider.phase = 'scuttling';
         if (spider.territory.kind === 'guard') {
@@ -523,7 +563,7 @@ export class TerrainSpiderManager {
     }
     for (const [id, resource] of candidates) {
       const count = SPIDER.NEST_GUARDS;
-      if (this.spiders.size + count > SPIDER.MAX_ACTIVE) {
+      if (this.ordinaryCount() + count > this.populationLimit) {
         continue;
       }
       const home = copyPosition(resource.position);
@@ -590,7 +630,7 @@ export class TerrainSpiderManager {
             continue;
           }
           for (const guard of nest.guards) {
-            if (this.spiders.size >= SPIDER.MAX_ACTIVE) {
+            if (this.ordinaryCount() >= this.populationLimit) {
               break;
             }
             if (
@@ -777,8 +817,10 @@ export class TerrainSpiderManager {
       )
       .sort(
         (a, b) =>
+          (b.cargo ?? 0) - (a.cargo ?? 0) ||
           distanceBetween(a.position, spider.position) -
-            distanceBetween(b.position, spider.position) || a.id.localeCompare(b.id)
+            distanceBetween(b.position, spider.position) ||
+          a.id.localeCompare(b.id)
       )[0];
     if (!target) {
       return;
@@ -979,8 +1021,10 @@ export class TerrainSpiderManager {
       )
       .sort(
         (a, b) =>
+          (b.cargo ?? 0) - (a.cargo ?? 0) ||
           distanceBetween(a.position, spider.position) -
-            distanceBetween(b.position, spider.position) || a.id.localeCompare(b.id)
+            distanceBetween(b.position, spider.position) ||
+          a.id.localeCompare(b.id)
       )[0];
   }
 

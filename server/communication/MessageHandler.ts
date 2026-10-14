@@ -113,6 +113,13 @@ export class MessageHandler {
           break;
         }
 
+        case 'crewAction': {
+          const owner = this.gameEngine.getPlayerBySocket(ws);
+          if (owner?.id === command.id) {
+            this.gameEngine.crewAction(owner.id, command.action);
+          }
+          break;
+        }
         case 'useAbility':
           this.handleUseAbility(ws, command);
           break;
@@ -193,6 +200,10 @@ export class MessageHandler {
       return;
     }
 
+    if (this.gameEngine.cooperativeEnabled() && command.cooperativeVersion !== 1) {
+      this.broadcaster.sendError(ws, 'Refresh this client to join the cooperative campaign');
+      return;
+    }
     name = sanitizePlayerName(name);
     if (!name) {
       this.broadcaster.sendError(ws, 'Player ID or name is missing or invalid');
@@ -330,6 +341,9 @@ export class MessageHandler {
       return;
     }
 
+    if (command.motionEpoch === socketPlayer.playerMotion?.epoch) {
+      this.gameEngine.cancelRescueOnMovement(id, update.position, update.velocity, update.angle);
+    }
     this.gameEngine.setOverlayHold(id, update.overlayHold === true);
 
     // Ignore movement updates while the player is dead, exploding, or waiting to

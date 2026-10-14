@@ -69,6 +69,7 @@ import { getSelectedShipKitId } from '../../runtime/shipSelection';
 import { getClientReleaseId } from '../../utils/buildInfo';
 import { setClientLogContext } from '../../utils/clientLogContext';
 import { logger } from '../../utils/Logger';
+import { setWorldCampaign } from '../worldCampaign';
 import {
   resetWorldExploration,
   setWorldExploration,
@@ -550,6 +551,7 @@ export class ConnectionManager {
 
   disconnect(options?: { newSession?: boolean; reason?: 'requested' | 'join-failed' }): void {
     this.disconnectReason = options?.reason ?? 'requested';
+    setWorldCampaign();
     clientPerformance.joinFailed();
     clientPerformance.cancelRecovery();
     this.clearJoinCompletionTimer();
@@ -907,7 +909,9 @@ export class ConnectionManager {
         kitId: localPlayer?.ship.kitId ?? getSelectedShipKitId(),
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        cooperativeVersion: 1,
         worldRemains: 1,
+
         clientReleaseId: getClientReleaseId(),
         ...(this.resumeToken ? { resumeToken: this.resumeToken } : {}),
       },
@@ -1286,6 +1290,7 @@ export class ConnectionManager {
   }
 
   private handleSnapshotState(data: ServerGameSnapshot): void {
+    setWorldCampaign(data.cooperativeActive, data.campaign);
     setSpiderField(data.spiderField);
     setRolyPolys(data.rolyPolys);
     setContourBridges(data.contourBridges);

@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import { frontierSite } from '../../../shared/frontier';
 import { civicLot } from '../../../shared/furnaces';
 import { worldFurnaces } from '../../../src/network/worldExploration';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
@@ -7,6 +8,7 @@ import { setWindowViewport } from '../../support/viewport';
 
 afterEach(() => {
   worldFurnaces.replaceLit([]);
+  worldFurnaces.replaceFrontier([]);
   canvasManager.destroy();
   document.querySelector('#gameCanvas')?.remove();
   vi.restoreAllMocks();
@@ -101,5 +103,20 @@ test('a lit furnace draws a right-angle fire trail toward Town Square', () => {
         Math.abs((previous?.y ?? 0) - (point?.y ?? 0)) < 0.001
     ).toBe(true);
   }
+  recorded.restoreViewport();
+});
+
+test('a commissioned outer furnace paints only nearby pipe segments, not fifty thousand units of embers', () => {
+  const site = frontierSite('frontier:10,0');
+  if (!site) {
+    throw new Error('Missing frontier site');
+  }
+  worldFurnaces.replaceFrontier([site.id]);
+  const recorded = recordStrokes();
+  drawFurnacePipes(site.position, 1000);
+  expect(recorded.strokes).toHaveLength(3);
+  const points = recorded.strokes.flatMap((stroke) => stroke.points);
+  expect(points.some((point) => point.x < 0)).toBe(true);
+  expect(points.every((point) => Math.abs(point.x) < 2000 && Math.abs(point.y) < 2000)).toBe(true);
   recorded.restoreViewport();
 });

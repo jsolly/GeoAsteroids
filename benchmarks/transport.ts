@@ -224,6 +224,7 @@ export async function runTransportSample(options = DEFAULT_TRANSPORT_SAMPLE_OPTI
           position: { x: Math.cos(angle) * 600, y: Math.sin(angle) * 600 },
           kitId: 'scout',
           asteroidInteractions: 1,
+          cooperativeVersion: 1,
           snapshotVersion: SNAPSHOT_VERSION,
         },
       });

@@ -11,11 +11,13 @@ import { applyShipMass, GROWTH, resetShipMass } from '../../shared/shipGrowth';
 import { applyShipKitStats, DEFAULT_SHIP_KIT_ID } from '../../shared/shipKits';
 import type {
   ContourLockState,
+  CrewSignal,
   EquipmentId,
   FurnaceTransit,
   HaulerUtilityId,
   PlayerMotionState,
   Position,
+  RescueState,
   ScoutUtilityId,
   ShipKitId,
   UtilityFlight,
@@ -25,6 +27,9 @@ import type { RNGService } from './RNGService';
 
 /** Authoritative live ship state; GameEngine owns persisted pilot progress. */
 export interface GameEntity {
+  downedUntil?: number | null;
+  rescue?: RescueState | null;
+  crewSignal?: CrewSignal | null;
   navigationAssistFrames?: number;
   contourDraftFrames?: number;
   contourTransit?: {
@@ -33,6 +38,7 @@ export interface GameEntity {
     target: import('../../shared-types').ContourLockState;
     frame: number;
   };
+
   furnaceTransit?: FurnaceTransit | null;
   silk?: number;
   equipment?: EquipmentId[];

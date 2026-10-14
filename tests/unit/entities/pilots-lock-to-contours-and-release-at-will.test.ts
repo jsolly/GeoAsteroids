@@ -31,7 +31,7 @@ test.each(['scout', 'hauler'] as const)(
   (kitId) => {
     const ship = pilot(kitId);
     const start = { ...ship.position };
-    const baseline = cruiseSpeed(ship.mass, ship.maxVelocity);
+    const baseline = cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1);
     expect(ship.toggleContourLock()).toBe(true);
     const lock = ship.contourLock;
     if (!lock) {
@@ -114,7 +114,7 @@ test('a diagonal flick takes the reachable reverse route around an adjacent bend
   const velocity = contourLockVelocity(
     ship.position,
     original,
-    cruiseSpeed(ship.mass, ship.maxVelocity)
+    cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1)
   );
   if (!velocity) {
     throw new Error('Missing fixture guidance');

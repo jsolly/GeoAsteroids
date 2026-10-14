@@ -150,6 +150,7 @@ function codedSocket(outcome = 'accepted') {
         id = message.id;
         assert.equal(message.data.snapshotVersion, 3);
         assert.equal(message.data.asteroidInteractions, 1);
+        assert.equal(message.data.cooperativeVersion, 1);
         assert.equal(message.data.clientReleaseId, release);
         assert.equal(message.data.resumeToken, undefined);
         player = {

@@ -210,6 +210,7 @@ export interface AsteroidProbe {
 }
 
 export interface AsteroidData {
+  supply?: { sourceId: string; value: number };
   id: string;
   position: Position;
   velocity: Velocity;
@@ -348,6 +349,8 @@ export interface ContourBridge {
   framesLeft: number;
 }
 export interface ServerGameState {
+  cooperativeActive?: boolean;
+  campaign?: CampaignSnapshot;
   /** Epoch milliseconds for client animation clocks. */
   serverTime?: number;
   settlement: SettlementState;
@@ -397,7 +400,26 @@ export interface FurnaceTransit {
   durationMs: number;
 }
 
+export interface CrewSignal {
+  kind: 'help' | 'nest';
+  position: Position;
+  expiresAt: number;
+}
+export type CrewAction =
+  | { kind: 'revive'; targetId: string }
+  | { kind: 'release' }
+  | { kind: 'give-up' }
+  | { kind: 'withdraw-supply' }
+  | { kind: 'signal'; signal: 'help' | 'nest'; position: Position };
+export interface RescueState {
+  targetId: string;
+  completesAt: number;
+}
+
 export interface ServerEntityData {
+  downedUntil?: number | null;
+  rescue?: RescueState | null;
+  crewSignal?: CrewSignal | null;
   furnaceTransit?: FurnaceTransit | null;
   /** Stored spider silk, retained across flights. */
   silk?: number;
@@ -465,7 +487,9 @@ export type ClientWireMessage =
         kitId: ShipKitId;
         snapshotVersion: 3;
         asteroidInteractions: 1;
+        cooperativeVersion?: 1;
         worldRemains?: 1;
+
         clientReleaseId: string;
         resumeToken?: string;
       };
@@ -479,6 +503,7 @@ export type ClientWireMessage =
   | { type: 'snapshotAck'; data: SnapshotAcknowledgement }
   | { type: 'snapshotResync'; data: EmptyData }
   | { type: 'leave'; data: EmptyData }
+  | { type: 'crewAction'; id: string; data: CrewAction }
   | { type: 'useAbility'; id: string; data: EmptyData }
   | { type: 'chargeWeapon'; id: string; data: { action: WeaponChargeAction } }
   | { type: 'setHaulerUtility'; id: string; data: { utilityId: HaulerUtilityId } }
@@ -494,6 +519,7 @@ export type ClientGameplayMessage = Extract<
   ClientWireMessage,
   {
     type:
+      | 'crewAction'
       | 'useAbility'
       | 'chargeWeapon'
       | 'setHaulerUtility'
@@ -524,4 +550,54 @@ export interface FurnaceDelivery {
 export interface ExplorationTile {
   id: string;
   bits: string;
+}
+
+/** Additive campaign state. IDs are stable across sector sleep and server restart. */
+export type CooperativeRecord =
+  | { kind: 'supply'; id: string; availableValue: number; nextShipment: number }
+  | {
+      kind: 'hive';
+      id: string;
+      position: Position;
+      frontier: 'initial' | 'expanded';
+      queenHealth: number;
+      /** Active simulation frames until the next birth; offline time never births children. */
+      birthFramesLeft: number;
+      clearedAt: number | null;
+      sacs: number[];
+      sacDeadline: number | null;
+      sacsCompletedAt: number | null;
+      restoredValue: number;
+      contributors: string[];
+      commissionedAt: number | null;
+    }
+  | { kind: 'project'; id: 'deep-scanner'; deliveredValue: number; completedAt: number | null }
+  | {
+      kind: 'downed';
+      id: string;
+      position: Position;
+      deadline: number;
+      cause: string;
+    };
+
+export interface CooperativeWorld {
+  schemaVersion: 1;
+  activated: boolean;
+  records: CooperativeRecord[];
+}
+
+export interface HazardPhase {
+  phase: 'quiet' | 'warning' | 'active';
+  kind: 'swarm' | 'meteors';
+  startsAt: number;
+  endsAt: number;
+}
+export interface CampaignSnapshot {
+  projectValue: number;
+  supplies: { id: string; value: number }[];
+  hives: (Extract<CooperativeRecord, { kind: 'hive' }> & { shieldOpen: boolean })[];
+  commissioned: string[];
+  cleared: string[];
+  hazard: HazardPhase;
+  meteors: { id: string; position: Position }[];
 }

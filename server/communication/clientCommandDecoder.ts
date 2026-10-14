@@ -7,6 +7,7 @@ import { storeOffer } from '../../shared/townStore';
 import { WORLD } from '../../shared/world';
 import type {
   ContourLockState,
+  CrewAction,
   HaulerUtilityId,
   PingMessage,
   Position,
@@ -38,7 +39,9 @@ export type ClientCommand =
       position: Position;
       kitId?: ShipKitId;
       resumeRequested: boolean;
+      cooperativeVersion?: 1;
       worldRemains?: 1;
+
       resumeToken?: string;
       clientReleaseId?: string;
     }
@@ -47,6 +50,7 @@ export type ClientCommand =
   | { type: 'leave' }
   | { type: 'snapshotResync' }
   | ({ type: 'snapshotAck' } & SnapshotAcknowledgement)
+  | { type: 'crewAction'; id: string; action: CrewAction }
   | { type: 'useAbility'; id: string }
   | { type: 'chargeWeapon'; id: string; action: WeaponChargeAction }
   | {
@@ -254,7 +258,9 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
           position,
           ...(isShipKitId(kitOffer) ? { kitId: kitOffer } : {}),
           resumeRequested: rawToken !== undefined,
+          ...(payload['cooperativeVersion'] === 1 ? { cooperativeVersion: 1 as const } : {}),
           ...(remainsOffer === 1 ? { worldRemains: 1 } : {}),
+
           ...(typeof rawToken === 'string' ? { resumeToken: rawToken } : {}),
           ...(clientReleaseId ? { clientReleaseId } : {}),
         },
@@ -281,6 +287,29 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
     }
     case 'update':
       return decodeUpdate(id, fields);
+    case 'crewAction': {
+      if (!id) {
+        return invalid(type, 'Missing crew action owner');
+      }
+      const kind = fields['kind'];
+      if (kind === 'release' || kind === 'give-up' || kind === 'withdraw-supply') {
+        return { ok: true, command: { type, id, action: { kind } } };
+      }
+      if (kind === 'revive') {
+        const targetId = readNonEmptyString(fields['targetId']);
+        return targetId && targetId.length <= 128
+          ? { ok: true, command: { type, id, action: { kind, targetId } } }
+          : invalid(type, 'Invalid rescue target');
+      }
+      const signal = fields['signal'];
+      const position = readFinitePosition(fields['position']);
+      return kind === 'signal' &&
+        (signal === 'help' || signal === 'nest') &&
+        position &&
+        Math.hypot(position.x, position.y) <= WORLD.radius
+        ? { ok: true, command: { type, id, action: { kind, signal, position } } }
+        : invalid(type, 'Invalid crew signal');
+    }
     case 'useAbility':
       return decodeUseAbility(id);
     case 'chargeWeapon': {

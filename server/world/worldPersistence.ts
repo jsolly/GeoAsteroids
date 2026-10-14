@@ -1,8 +1,9 @@
-import type { AsteroidData } from '../../shared-types';
+import type { AsteroidData, CooperativeRecord, CooperativeWorld } from '../../shared-types';
 import type { PersistentPilot, SavedEconomy, SavedWorld } from './WorldStore';
 
 /** Everything the engine changed since the last flush, handed over as one transaction. */
 export interface WorldCheckpoint {
+  cooperative?: { records: readonly CooperativeRecord[]; removed: readonly string[] };
   economy?: SavedEconomy;
   /** The world row, only when something in it changed since the last flush. */
   world?: SavedWorld;
@@ -12,6 +13,7 @@ export interface WorldCheckpoint {
 
 /** The saved world, parsed and validated once before the loop starts. */
 export interface LoadedWorld {
+  cooperative?: CooperativeWorld;
   economy?: SavedEconomy;
   world: SavedWorld | undefined;
   sectors: Map<string, AsteroidData[]>;

@@ -11,8 +11,8 @@ transport, disabled-offer build, or legacy-client mode.
 Merge through the CI-gated PR flow. Vercel publishes the client through Git and
 Railway publishes the server independently. Version 3 removes cooperative tags
 and split effects with a clean break: no version-2 decoder, negotiation bridge,
-rollout flag or protocol rollback mode remains. World persistence, diagnostic log envelopes and player-motion epochs
-keep their existing schemas.
+rollout flag or protocol rollback mode remains. Diagnostic log envelopes and player-motion epochs keep their existing schemas.
+Campaign persistence uses a separately reviewed additive migration.
 
 Publish the matching client and server revisions close together. Either deployment
 order has a temporary mismatch window: a version-2 tab cannot join a version-3
@@ -405,3 +405,27 @@ and `anchor` identify the destination, while `position` follows the visible leap
 This phase covers both pursuit hops between living rocks and escapes from a
 destroyed host. The client folds the legs instead of drawing feet attached across
 the gap.
+
+## Activated cooperative campaign
+
+Snapshot version stays 3. An activated campaign additionally requires
+`cooperativeVersion: 1` in the join body; older clients are refused before an
+actor is created. The shipped client, benchmark pilots and production smoke
+advertise this capability. It is not a client-controlled activation switch:
+the authoritative world must already have its reviewed additive schema activated.
+
+Snapshots advertise `cooperativeActive` and an optional `campaign` containing
+shared project progress, nearby hive states, commissioned/cleared identities,
+nearby supply stock, current UTC hazard phase and nearby meteors. Hive and meteor
+rows are filtered for each recipient's existing world-interest area. Campaign
+objects use ordinary v3 replacement/clear patches. Ship rows carry nullable
+`downedUntil`, `rescue` and `crewSignal`; identified physical asteroids may carry
+`supply` provenance/value. All fields pass the public DTO validator and survive
+keyframes, deltas and clears.
+
+`crewAction` is distinct from heartbeat `ping`: its authenticated owner can place
+a bounded help/nest signal, hold/release a revive, give up while downed or withdraw
+a physical supply shipment while eligible inside a stocked lit furnace. Clients
+cannot send restoration totals, project totals, clear flags or hazard damage.
+Restart reloads the persisted world state; reconnect uses the existing private
+resume-token path. See [migration operations](../cooperative-migration.md).

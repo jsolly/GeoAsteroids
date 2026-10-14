@@ -25,6 +25,7 @@ class Roid {
   maxHealth: number;
   material?: AsteroidMaterial;
   ore?: AsteroidMaterial | null;
+  supply?: AsteroidData['supply'];
   surveyedBy?: string[];
   miningContributors?: string[];
   /** Optional server-owned reflection metadata. */

@@ -42,7 +42,9 @@ const clientFrames: { [K in ClientWireMessage['type']]: Extract<ClientWireMessag
     snapshotAck: { type: 'snapshotAck', data: { sequence: 1 } },
     snapshotResync: { type: 'snapshotResync', data: {} },
     leave: { type: 'leave', data: {} },
+    crewAction: { type: 'crewAction', id: 'pilot', data: { kind: 'release' } },
     chargeWeapon: { type: 'chargeWeapon', id: 'pilot', data: { action: 'start' } },
+
     useAbility: { type: 'useAbility', id: 'pilot', data: {} },
     setHaulerUtility: { type: 'setHaulerUtility', id: 'pilot', data: { utilityId: 'tow_cable' } },
     setScoutUtility: { type: 'setScoutUtility', id: 'pilot', data: { utilityId: 'mineral_scan' } },
@@ -65,6 +67,35 @@ test('every frame the gameplay client sends decodes to the matching server comma
     const decoded = decodeClientCommand(frame);
     expect(decoded.ok ? decoded.command.type : decoded).toBe(type);
   }
+});
+
+test('crew signals reject non-finite or outside-world coordinates and unknown actions', () => {
+  for (const data of [
+    { kind: 'signal', signal: 'help', position: { x: Infinity, y: 0 } },
+    { kind: 'signal', signal: 'nest', position: { x: 0, y: NaN } },
+    { kind: 'signal', signal: 'help', position: { x: 1_000_000, y: 0 } },
+    { kind: 'signal', signal: 'unknown', position: { x: 0, y: 0 } },
+    { kind: 'signal', signal: 'help', position: { x: '0', y: 0 } },
+    { kind: 'revive', targetId: '' },
+    { kind: 'revive', targetId: 'x'.repeat(129) },
+    { kind: 'activate-project' },
+  ]) {
+    expect(decodeClientCommand({ type: 'crewAction', id: 'pilot', data }).ok).toBe(false);
+  }
+  expect(
+    decodeClientCommand({
+      type: 'crewAction',
+      id: 'pilot',
+      data: { kind: 'signal', signal: 'nest', position: { x: 1200, y: -800 } },
+    })
+  ).toEqual({
+    ok: true,
+    command: {
+      type: 'crewAction',
+      id: 'pilot',
+      action: { kind: 'signal', signal: 'nest', position: { x: 1200, y: -800 } },
+    },
+  });
 });
 
 test('applied-world acknowledgments require a positive safe sequence at the wire boundary', () => {

@@ -26,9 +26,12 @@ import { ASTEROID_BELT } from './asteroidBelt';
 import { BELT_CRAWLER } from './beltCrawler';
 import { CONTOUR_BRIDGE } from './contourBridge';
 import { isContourLockState } from './contourLock';
+import { COOPERATIVE } from './cooperativeRules';
+import { validCooperativeRecord } from './cooperativeWorld';
 import { validSettlement } from './economy';
 import { validEquipment } from './equipment';
 import { validExploration } from './exploration';
+import { frontierSite } from './frontier';
 import { civicLot, TOWN_HEARTH, validCivicModules } from './furnaces';
 import { FURNACE_TRAVEL } from './furnaceTravel';
 import { ROLY_POLY } from './rolyPoly';
@@ -125,7 +128,8 @@ const reflective = shape<Extract<AsteroidPhenomenon, { kind: 'reflective' }>>({
   maxEnergy: energy,
 });
 const hearthId: Rule = (value) =>
-  typeof value === 'string' && (value === TOWN_HEARTH.id || civicLot(value) !== undefined);
+  typeof value === 'string' &&
+  (value === TOWN_HEARTH.id || civicLot(value) !== undefined || frontierSite(value) !== undefined);
 const transit = shape<FurnaceTransit>({
   sourceId: hearthId,
   destinationId: hearthId,
@@ -137,6 +141,14 @@ const transit = shape<FurnaceTransit>({
     value <= FURNACE_TRAVEL.MAX_DURATION_MS,
 });
 const entity = shape<ServerEntityData>({
+  downedUntil: optional((value) => value === null || counter(value)),
+  rescue: optional(
+    (value) => value === null || shape({ targetId: string, completesAt: counter })(value)
+  ),
+  crewSignal: optional(
+    (value) =>
+      value === null || shape({ kind: choice('help', 'nest'), position, expiresAt: counter })(value)
+  ),
   furnaceTransit: optional(
     (value) =>
       value === null ||
@@ -207,6 +219,16 @@ const probe = shape<AsteroidProbe>({
   radialOffset: number,
 });
 const asteroidShape = shape<AsteroidData>({
+  supply: optional(
+    shape({
+      sourceId: hearthId,
+      value: (value) =>
+        typeof value === 'number' &&
+        Number.isSafeInteger(value) &&
+        value > 0 &&
+        value <= COOPERATIVE.shipmentValue,
+    })
+  ),
   beltCrawlerIds: optional(
     (value) =>
       Array.isArray(value) && value.length <= BELT_CRAWLER.MAX_ACTIVE && value.every(string)
@@ -370,6 +392,43 @@ const spiderField = shape<SpiderFieldState>({
   nests: uniqueRows(nest, (2 * Math.ceil(WORLD.radius / SPIDER.NEST_SPACING)) ** 2),
 });
 const worldRules = {
+  cooperativeActive: optional(boolean),
+  campaign: optional(
+    shape({
+      projectValue: (value) =>
+        counter(value) && typeof value === 'number' && value <= COOPERATIVE.scannerValue,
+      supplies: (value) =>
+        Array.isArray(value) &&
+        value.length <= 512 &&
+        value.every(shape({ id: hearthId, value: counter })),
+      hives: (value) =>
+        Array.isArray(value) &&
+        value.length <= 512 &&
+        value.every(
+          (row: unknown) =>
+            validCooperativeRecord(row) &&
+            row.kind === 'hive' &&
+            'shieldOpen' in row &&
+            typeof row.shieldOpen === 'boolean'
+        ),
+      commissioned: (value) =>
+        Array.isArray(value) &&
+        value.length <= 512 &&
+        value.every((id: unknown) => typeof id === 'string' && frontierSite(id)),
+      cleared: (value) =>
+        Array.isArray(value) &&
+        value.length <= 512 &&
+        value.every((id: unknown) => typeof id === 'string' && frontierSite(id)),
+      hazard: shape({
+        phase: choice('quiet', 'warning', 'active'),
+        kind: choice('swarm', 'meteors'),
+        startsAt: counter,
+        endsAt: counter,
+      }),
+      meteors: (value) =>
+        Array.isArray(value) && value.length <= 12 && value.every(shape({ id: string, position })),
+    })
+  ),
   serverTime: optional(number),
   settlement: validSettlement,
   civicModules: optional(validCivicModules),

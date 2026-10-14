@@ -99,6 +99,8 @@ beforeEach(async () => {
   teardownOrder = [];
   runtime = {
     commands: {
+      crewAction: vi.fn(),
+      signalHere: vi.fn(),
       join: vi.fn(),
       selectShip: vi.fn(),
       setPreference: vi.fn(),

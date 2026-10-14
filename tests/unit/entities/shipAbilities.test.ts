@@ -13,6 +13,7 @@ import {
 } from '../../../shared/shipAbilities';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { attachTowCable, tickTowCable } from '../../../shared/towCable';
+import { UTILITY_FLIGHT } from '../../../shared/utilityFlight';
 import {
   applySharedHarpoonLatch,
   bindHarpoonFieldSource,
@@ -145,10 +146,17 @@ test('Hauler harpoon whiffs without a rock in range', () => {
   const result = activateAbilityOnHost(hauler, { asteroids: [] });
   expect(result.activated).toBe(true);
   expect(hauler.abilityCooldownFrames).toBe(180);
-  for (let i = 0; i < 40; i++) {
+  expect(hauler.utilityFlight?.phase).toBe('outbound');
+  const outboundFrames = Math.ceil(SHIP_ABILITY.HARPOON_RANGE / UTILITY_FLIGHT.TOW_SPEED);
+  for (let i = 0; i <= outboundFrames; i++) {
     tickTowLine(hauler, []);
   }
   expect(hauler.utilityFlight?.phase).toBe('reeling');
+  expect(hauler.harpoonTargetId).toBeNull();
+  for (let i = 0; i < UTILITY_FLIGHT.REEL_MAX_FRAMES; i++) {
+    tickTowLine(hauler, []);
+  }
+  expect(hauler.utilityFlight).toBeNull();
   expect(hauler.harpoonTargetId).toBeNull();
 });
 
