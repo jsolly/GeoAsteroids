@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:cc3a4b20b890ac07fad8a75816d23ec84010fee26123aabb6bf6e438954411ab",
     "docs/sounds.md": "sha256:88bd06e26a7688c6b348dc635c1badffa83635a0413abd033eb63843f5975eb8",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:bafbcf487cbe832b7c54cade3d4c462287bd8793782d16dc7c75ef9143e38121",
+    "package.json": "sha256:9fdd13f5f1595862b6644b906a2a4f2705ea094198d029633b4b6471103f2caf",
     "public/music/README.md": "sha256:bc37faf582c661603145329bc3759822344b5a49865dc2433b6a8451eca22f9e",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -4070,6 +4070,15 @@
       "topics": ["field-manual", "scout", "teamwork"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Reviewed the bundled tsx 4.23.15, ws 8.22.0 and types, Node types 26.6.5, Vitest and matching coverage-v8 5.0.3, and jsdom 30.1.2 upgrades against upstream notes and actual consumers. All 1997 unit cases, static checks, runner contracts, and types passed on the combined dependencies; the coverage provider also instrumented the existing nickname scenario. All eleven articles were inspected; player rules, interfaces, generated references, and demonstration sources/assets are unchanged, so no article or media edit is needed. Linux media verification remains the required CI lane.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
     }
   ]
 }
