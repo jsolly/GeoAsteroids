@@ -23,13 +23,11 @@ describe('Satellite pickups', () => {
   let gameEngine: GameEngine;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     gameEngine = new GameEngine(12345);
   });
 
   afterEach(() => {
     gameEngine.stopGameLoop();
-    vi.clearAllMocks();
   });
 
   function addPilot(id = 'pilot', position = { x: 0, y: 0 }, kitId: 'scout' | 'hauler' = 'scout') {

@@ -34,7 +34,6 @@ describe('Boundary collision immunity', () => {
   let ship: Ship;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     collisionManager = CollisionManager.getInstance();
     ship = new Ship({ isLocalPlayer: false });
     ship.health = 100;
@@ -43,9 +42,7 @@ describe('Boundary collision immunity', () => {
     ship.position = { x: 3200, y: 0 };
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
+  afterEach(() => {});
 
   test('sends boundary damage for a vulnerable ship', () => {
     ship.health = 400;

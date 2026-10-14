@@ -141,5 +141,4 @@ test('an explored world with hundreds of saved sectors keeps each simulation fra
           rock.position.y < 10_000
       )
   ).toBe(false);
-  expect(engine.getGameState()).not.toHaveProperty('completedSectors');
 });

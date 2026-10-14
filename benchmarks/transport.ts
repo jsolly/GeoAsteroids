@@ -11,7 +11,11 @@ function isClosed(socket: WebSocket): boolean {
 }
 
 import process from 'node:process';
-import { SNAPSHOT_VERSION, SnapshotDecoder } from '../shared/snapshotProtocol';
+import {
+  ASTEROID_INTERACTIONS_CAPABILITY,
+  SNAPSHOT_VERSION,
+  SnapshotDecoder,
+} from '../shared/snapshotProtocol';
 import type { Measurement } from './results';
 
 export const DEFAULT_TRANSPORT_SAMPLE_OPTIONS = { durationMs: 2_000, seed: 42 };
@@ -88,7 +92,7 @@ export async function runTransportSample(options = DEFAULT_TRANSPORT_SAMPLE_OPTI
   const ids = [0, 1].map((index) => `benchmark-transport-${seed.toString(36)}-${index}`);
   function connect(id: string, port: number) {
     const socket = new WebSocket(
-      `ws://127.0.0.1:${port}/ws?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=1`
+      `ws://127.0.0.1:${port}/ws?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=${ASTEROID_INTERACTIONS_CAPABILITY}`
     );
     const decoder = new SnapshotDecoder();
     const state = {
@@ -160,7 +164,7 @@ export async function runTransportSample(options = DEFAULT_TRANSPORT_SAMPLE_OPTI
                 );
                 assert(
                   data['snapshotVersion'] === SNAPSHOT_VERSION &&
-                    data['asteroidInteractions'] === 1,
+                    data['asteroidInteractions'] === ASTEROID_INTERACTIONS_CAPABILITY,
                   'Server did not negotiate enhanced snapshots'
                 );
                 state.joined = true;
@@ -223,7 +227,7 @@ export async function runTransportSample(options = DEFAULT_TRANSPORT_SAMPLE_OPTI
           name: `Transport Pilot ${index}`,
           position: { x: Math.cos(angle) * 600, y: Math.sin(angle) * 600 },
           kitId: 'scout',
-          asteroidInteractions: 1,
+          asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
           snapshotVersion: SNAPSHOT_VERSION,
         },
       });

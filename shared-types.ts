@@ -113,12 +113,6 @@ export interface PlayerJoin {
   /** Required current-protocol acknowledgement. */
   snapshotVersion: 3;
   asteroidInteractions: 1;
-  /**
-   * Retired: clients always track shot receipts. Still sent because cached
-   * pre-receipt bundles read it and the production smoke's join admission
-   * requires it; remove all three together.
-   */
-  shotAcknowledgements?: true;
   /** Private to the joined socket; never included in world snapshots. */
   resumeToken: string;
   /** Private server build identifier for correlating client and server diagnostics. */
@@ -323,13 +317,13 @@ export interface CivicModule {
 
 export interface ServerGameState {
   /** Epoch milliseconds for client animation clocks. */
-  serverTime?: number;
+  serverTime: number;
   settlement: SettlementState;
   /** Furnaces the crew has lit, named for the Scout who paid. */
-  civicModules?: CivicModule[];
+  civicModules: CivicModule[];
   /** Server-owned terrain predators, pursuit targets, and remaining health. */
-  spiderField?: SpiderFieldState;
-  beltRecovery?: import('./shared/asteroidBelt').BeltRecoveryWarning[];
+  spiderField: SpiderFieldState;
+  beltRecovery: import('./shared/asteroidBelt').BeltRecoveryWarning[];
   /** Shared explored minimap cells, encoded as a fixed-width hexadecimal bitset. */
   exploration: ExplorationTile[];
   /** Revealed landmarks and valuable drops, independent of local simulation visibility. */

@@ -15,7 +15,7 @@ function arena() {
   const ws = new RecordingSocket();
   const pilot = engine.addPlayer('pilot', 'Pilot', ws, { x: -500, y: 0 }, 'scout');
   delete pilot.spawnProtectionTimer;
-  engine.seedAsteroidInteractions();
+  engine.ensureAsteroidField();
   for (const rock of engine.getAllAsteroids()) {
     engine.removeAsteroid(rock.id);
   }

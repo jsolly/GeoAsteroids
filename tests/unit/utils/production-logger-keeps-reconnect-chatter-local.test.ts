@@ -44,7 +44,6 @@ test('the production logger keeps reconnect chatter off the log socket', async (
   }
   await Promise.resolve();
   expect(forwarding.send).not.toHaveBeenCalled();
-
   logger.info('STATE', 'player_died');
   logger.info('STATE', 'player_respawned');
   logger.warn('NETWORK', 'WebSocket connection closed');

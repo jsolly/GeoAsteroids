@@ -3,6 +3,7 @@ import { TerrainSpiderManager } from '../../../server/core/TerrainSpiderManager'
 import { FurnaceField } from '../../../shared/furnaceField';
 import { civicLot } from '../../../shared/furnaces';
 import { SPIDER } from '../../../shared/terrainSpider';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 import { useQuietServerConsole } from '../scenarios/support/gameServerWorld';
 
 useQuietServerConsole();
@@ -33,7 +34,7 @@ function arrange(furnaces = new FurnaceField()) {
 test('a captive bites the nearest ship once per cooldown without chasing or dropping the tow', () => {
   const { manager, spider, owner, passer, options } = arrange();
   owner.position = { x: 6970, y: 3000 };
-  const attacks = manager.advance({ ...options, nowFrame: 1 });
+  const attacks = manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 }));
   expect(attacks).toEqual([{ spiderId: spider.id, targetId: owner.id, attackerId: 'spider' }]);
   const attack = attacks[0];
   if (!attack) {
@@ -42,55 +43,75 @@ test('a captive bites the nearest ship once per cooldown without chasing or drop
   expect(manager.isAttackActive(attack)).toBe(true);
   expect(spider.position).toEqual({ x: 7000, y: 3000 });
   owner.position.x = 6800;
-  expect(manager.advance({ ...options, nowFrame: SPIDER.BITE_COOLDOWN_FRAMES })).toEqual([]);
-  expect(manager.advance({ ...options, nowFrame: 1 + SPIDER.BITE_COOLDOWN_FRAMES })).toEqual([
-    { spiderId: spider.id, targetId: passer.id, attackerId: 'spider' },
-  ]);
+  expect(
+    manager.advance(spiderAdvanceFixture({ ...options, nowFrame: SPIDER.BITE_COOLDOWN_FRAMES }))
+  ).toEqual([]);
+  expect(
+    manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 + SPIDER.BITE_COOLDOWN_FRAMES }))
+  ).toEqual([{ spiderId: spider.id, targetId: passer.id, attackerId: 'spider' }]);
   expect(options.towedIds.has(spider.id)).toBe(true);
 });
 
 test('crossing the cable or staying just outside bite range is safe', () => {
   const { manager, passer, options } = arrange();
   passer.position = { x: 6900, y: 3000 };
-  expect(manager.advance({ ...options, nowFrame: 1 })).toEqual([]);
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 }))).toEqual([]);
   passer.position = { x: 7000, y: 3000 + SPIDER.BITE_DISTANCE + 0.01 };
-  expect(manager.advance({ ...options, nowFrame: 2 })).toEqual([]);
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 2 }))).toEqual([]);
   passer.position.y = 3000 + SPIDER.BITE_DISTANCE;
-  expect(manager.advance({ ...options, nowFrame: 3 })).toHaveLength(1);
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 3 }))).toHaveLength(1);
 });
 
 test('a moving captive checks bite range at its new position', () => {
   const { manager, spider, passer, options } = arrange();
   passer.position = { x: 7060, y: 3000 };
   spider.velocity = { x: 20, y: 0 };
-  expect(manager.advance({ ...options, nowFrame: 1 })).toHaveLength(1);
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 }))).toHaveLength(1);
   expect(spider.position).toEqual({ x: 7020, y: 3000 });
 });
 
 test('a scan suppresses captive bites and dead or respawning ships are ignored', () => {
   const { manager, owner, passer, options } = arrange();
   expect(
-    manager.advance({ ...options, players: [{ ...owner, scanning: true }, passer], nowFrame: 1 })
+    manager.advance(
+      spiderAdvanceFixture({
+        ...options,
+        players: [{ ...owner, scanning: true }, passer],
+        nowFrame: 1,
+      })
+    )
   ).toEqual([]);
   expect(
-    manager.advance({ ...options, players: [owner, { ...passer, health: 0 }], nowFrame: 2 })
+    manager.advance(
+      spiderAdvanceFixture({ ...options, players: [owner, { ...passer, health: 0 }], nowFrame: 2 })
+    )
   ).toEqual([]);
   expect(
-    manager.advance({ ...options, players: [owner, { ...passer, respawnTimer: 1 }], nowFrame: 3 })
+    manager.advance(
+      spiderAdvanceFixture({
+        ...options,
+        players: [owner, { ...passer, respawnTimer: 1 }],
+        nowFrame: 3,
+      })
+    )
   ).toEqual([]);
-  expect(manager.advance({ ...options, nowFrame: 4 })).toHaveLength(1);
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 4 }))).toHaveLength(1);
 });
 
 test('a captive inside starter protection cannot bite, and a protected hull outside it is safe', () => {
   const { manager, spider, owner, options } = arrange();
   spider.position = { x: SPIDER.STARTER_SAFE_RADIUS + SPIDER.HIT_RADIUS - 1, y: 0 };
   owner.position = { x: spider.position.x + 40, y: 0 };
-  expect(manager.advance({ ...options, players: [owner], nowFrame: 1 })).toEqual([]);
+  expect(
+    manager.advance(spiderAdvanceFixture({ ...options, players: [owner], nowFrame: 1 }))
+  ).toEqual([]);
   spider.position = { x: SPIDER.STARTER_SAFE_RADIUS + SPIDER.HIT_RADIUS + 1, y: 0 };
   owner.position = { x: SPIDER.STARTER_SAFE_RADIUS + 10, y: 0 };
-  expect(manager.advance({ ...options, players: [{ ...owner, radius: 20 }], nowFrame: 2 })).toEqual(
-    []
-  );
+  expect(
+    manager.advance(
+      spiderAdvanceFixture({ ...options, players: [{ ...owner, radius: 20 }], nowFrame: 2 })
+    )
+  ).toEqual([]);
 });
 
 test('a towed nest guard can bite far from its old nest and cannot reset its cooldown by relatching', () => {
@@ -102,15 +123,15 @@ test('a towed nest guard can bite far from its old nest and cannot reset its coo
     activity: 'returning',
     chaseUntil: 0,
   };
-  expect(manager.advance({ ...options, nowFrame: 1 })).toHaveLength(1);
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 }))).toHaveLength(1);
   options.towedIds.clear();
-  manager.advance({ ...options, nowFrame: 2 });
+  manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 2 }));
   options.towedIds.add(spider.id);
   passer.position = { ...spider.position };
-  expect(manager.advance({ ...options, nowFrame: 3 })).toEqual([]);
-  expect(manager.advance({ ...options, nowFrame: 1 + SPIDER.BITE_COOLDOWN_FRAMES })).toHaveLength(
-    1
-  );
+  expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 3 }))).toEqual([]);
+  expect(
+    manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 + SPIDER.BITE_COOLDOWN_FRAMES }))
+  ).toHaveLength(1);
 });
 
 test('a lit street furnace suppresses captive bites without consuming it', () => {
@@ -123,11 +144,15 @@ test('a lit street furnace suppresses captive bites without consuming it', () =>
   const { manager, spider, owner, options } = arrange(furnaces);
   spider.position = { x: lot.position.x + 200, y: lot.position.y };
   owner.position = { ...spider.position };
-  expect(manager.advance({ ...options, players: [owner], nowFrame: 1 })).toEqual([]);
+  expect(
+    manager.advance(spiderAdvanceFixture({ ...options, players: [owner], nowFrame: 1 }))
+  ).toEqual([]);
   expect(manager.getBody(spider.id)).toBeDefined();
   spider.velocity = { x: -200, y: 0 };
   owner.position = { ...lot.position };
-  expect(manager.advance({ ...options, players: [owner], nowFrame: 2 })).toEqual([]);
+  expect(
+    manager.advance(spiderAdvanceFixture({ ...options, players: [owner], nowFrame: 2 }))
+  ).toEqual([]);
   expect(manager.getBody(spider.id)).toBe(spider);
   expect(spider.health).toBeGreaterThan(0);
 });

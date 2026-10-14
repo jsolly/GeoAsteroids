@@ -4,6 +4,7 @@ import { DAMAGE } from '../../../shared/constants/gameplay';
 import { FurnaceField } from '../../../shared/furnaceField';
 import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { SPIDER } from '../../../shared/terrainSpider';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 
 function actorAt(position: { x: number; y: number }) {
   return { id: 'pilot', position, health: 100, exploding: false, radius: 20 };
@@ -13,15 +14,15 @@ test('a spider pursues and bites nearby prey then releases a pilot who escapes',
   const manager = new TerrainSpiderManager(() => 0.5);
   const spider = manager.spawnSpider({ x: 2200, y: 2200 });
   const pilot = actorAt({ x: 2425, y: 2325 });
-  manager.advance({ players: [pilot], nowFrame: 1 });
+  manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 1 }));
   expect(manager.snapshot().spiders[0]?.phase).toBe('hunting');
   let bites = 0;
   for (let frame = 2; frame < 160; frame++) {
-    bites += manager.advance({ players: [pilot], nowFrame: frame }).length;
+    bites += manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: frame })).length;
   }
   expect(bites).toBeGreaterThan(0);
   pilot.position.x += SPIDER.HUNT_RELEASE_DISTANCE + 1;
-  manager.advance({ players: [pilot], nowFrame: 160 });
+  manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 160 }));
   expect(manager.snapshot().spiders.find((row) => row.id === spider?.id)?.targetId).toBeNull();
 });
 
@@ -29,8 +30,8 @@ test('one regular laser hit kills a spider and cancels its pending bite', () => 
   const manager = new TerrainSpiderManager(() => 0.5);
   manager.spawnSpider({ x: 2200, y: 2200 });
   const pilot = actorAt({ x: 2200, y: 2200 });
-  manager.advance({ players: [pilot], nowFrame: 1 });
-  const [bite] = manager.advance({ players: [pilot], nowFrame: 2 });
+  manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 1 }));
+  const [bite] = manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 2 }));
   expect(bite).toBeDefined();
   const start = { x: 2100, y: 2200 };
   const end = { x: 2300, y: 2200 };
@@ -44,15 +45,15 @@ test('one regular laser hit kills a spider and cancels its pending bite', () => 
 test('roamers wait minutes even on the first arrival and postpone new attacks during a hunt', () => {
   const manager = new TerrainSpiderManager(() => 0.5);
   const players = [actorAt({ x: 7_000, y: 3_000 })];
-  manager.advance({ players, nowFrame: 1 });
-  manager.advance({ players, nowFrame: 1801 });
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: 1 }));
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: 1801 }));
   expect(manager.snapshot().spiders).toEqual([]);
   const interval = (SPIDER.SPAWN_INTERVAL_FRAMES + SPIDER.SPAWN_INTERVAL_MAX_FRAMES) / 2;
-  manager.advance({ players, nowFrame: interval });
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: interval }));
   expect(manager.snapshot().spiders).toEqual([]);
-  manager.advance({ players, nowFrame: interval + 1 });
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: interval + 1 }));
   expect(manager.snapshot().spiders).toHaveLength(1);
-  manager.advance({ players, nowFrame: interval * 2 + 1 });
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: interval * 2 + 1 }));
   expect(manager.snapshot().spiders).toHaveLength(SPIDER.MAX_ROAMERS);
 });
 
@@ -60,13 +61,15 @@ test('failed roaming attempts wait another full interval instead of ambushing on
   const manager = new TerrainSpiderManager(() => 0);
   const pilot = actorAt({ x: 100, y: 100 });
   const options = { players: [pilot] };
-  manager.advance({ ...options, nowFrame: 1 });
-  manager.advance({ ...options, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES + 1 });
+  manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 }));
+  manager.advance(spiderAdvanceFixture({ ...options, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES + 1 }));
   expect(manager.snapshot().spiders).toEqual([]);
   pilot.position = { x: 7_000, y: 3_000 };
-  manager.advance({ ...options, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES + 2 });
+  manager.advance(spiderAdvanceFixture({ ...options, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES + 2 }));
   expect(manager.snapshot().spiders).toEqual([]);
-  manager.advance({ ...options, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES * 2 + 1 });
+  manager.advance(
+    spiderAdvanceFixture({ ...options, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES * 2 + 1 })
+  );
   expect(manager.snapshot().spiders).toHaveLength(1);
 });
 
@@ -76,8 +79,8 @@ test('a roaming spawn keeps its distance from every pilot, not only its chosen t
     actorAt({ x: 7_000, y: 3_000 }),
     { ...actorAt({ x: 9_100, y: 3_000 }), id: 'z-other' },
   ];
-  manager.advance({ players, nowFrame: 1 });
-  manager.advance({ players, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES + 1 });
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: 1 }));
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: SPIDER.SPAWN_INTERVAL_FRAMES + 1 }));
   for (const spider of manager.snapshot().spiders) {
     for (const pilot of players) {
       expect(
@@ -92,9 +95,11 @@ test('a non-hunting roamer still occupies the roaming population slot when a new
   const manager = new TerrainSpiderManager(() => 0.5);
   const roamer = manager.spawnSpider({ x: 2200, y: 2200 });
   const players = [actorAt({ x: 7_000, y: 3_000 })];
-  manager.advance({ players, nowFrame: 1 });
+  manager.advance(spiderAdvanceFixture({ players, nowFrame: 1 }));
   expect(manager.snapshot().spiders[0]?.phase).toBe('scuttling');
-  manager.advance({ players, nowFrame: SPIDER.SPAWN_INTERVAL_MAX_FRAMES + 1 });
+  manager.advance(
+    spiderAdvanceFixture({ players, nowFrame: SPIDER.SPAWN_INTERVAL_MAX_FRAMES + 1 })
+  );
   expect(manager.snapshot().spiders.map(({ id }) => id)).toEqual([roamer?.id]);
 });
 
@@ -109,13 +114,13 @@ test('a spider released near a furnace retreats out of protection without attack
   body.velocity = { x: -200, y: 0 };
   const pilot = actorAt({ x: furnace.position.x + 300, y: furnace.position.y });
   const options = { players: [pilot] };
-  manager.advance({ ...options, nowFrame: 1, towedIds: new Set([body.id]) });
+  manager.advance(spiderAdvanceFixture({ ...options, nowFrame: 1, towedIds: new Set([body.id]) }));
   expect(body.position.x).toBe(furnace.position.x + 300);
   const retreatFrames = Math.ceil(
     (SPIDER.FURNACE_SAFE_RADIUS + SPIDER.HIT_RADIUS - 300) / SPIDER.SCUTTLE_SPEED
   );
   for (let frame = 2; frame <= retreatFrames + 1; frame++) {
-    expect(manager.advance({ ...options, nowFrame: frame })).toEqual([]);
+    expect(manager.advance(spiderAdvanceFixture({ ...options, nowFrame: frame }))).toEqual([]);
   }
   expect(manager.getBody(body.id)).toBe(body);
   expect(body.position.x).toBeGreaterThanOrEqual(
@@ -133,7 +138,7 @@ test('a released spider inside Town Square retreats alive from the grate', () =>
   }
   body.displaced = true;
   const pilot = actorAt({ x: 0, y: -900 });
-  manager.advance({ players: [pilot], nowFrame: 1 });
+  manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 1 }));
   expect(manager.getBody(body.id)).toBe(body);
   expect(body.position.y).toBeLessThan(-80);
   expect(body.targetId).toBeNull();
@@ -160,9 +165,9 @@ for (const site of ['town-square', 'street-1-0']) {
       if (!spawned) {
         throw new Error('Missing spider');
       }
-      manager.advance({ players: [pilot], nowFrame: 1 });
+      manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 1 }));
       expect(manager.getBody(spawned.id)?.targetId).toBe(pilot.id);
-      manager.advance({ players: [pilot], nowFrame: 2 });
+      manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 2 }));
       const body = manager.getBody(spawned.id);
       if (!body) {
         throw new Error('Missing pursuing spider');
@@ -178,7 +183,7 @@ for (const site of ['town-square', 'street-1-0']) {
       }
       const before = body.position.x;
       pilot.position.x = furnace.position.x + safeRadius - 1;
-      expect(manager.advance({ players: [pilot], nowFrame: 3 })).toEqual([]);
+      expect(manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 3 }))).toEqual([]);
       const escaped = manager.getBody(spawned.id);
       expect(escaped?.targetId).toBeNull();
       expect(escaped?.phase).toBe('scuttling');
@@ -187,7 +192,9 @@ for (const site of ['town-square', 'street-1-0']) {
       }
       expect(escaped?.position.x).toBeGreaterThan(before);
       for (let frame = 4; frame < 60; frame++) {
-        expect(manager.advance({ players: [pilot], nowFrame: frame })).toEqual([]);
+        expect(
+          manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: frame }))
+        ).toEqual([]);
         expect(manager.getBody(spawned.id)?.targetId).toBeNull();
       }
     }
@@ -202,7 +209,7 @@ test('a dark furnace foundation does not break a spider chase', () => {
   const manager = new TerrainSpiderManager(() => 0.5);
   const pilot = actorAt({ ...lot.position });
   const spider = manager.spawnSpider({ x: lot.position.x + 100, y: lot.position.y });
-  manager.advance({ players: [pilot], nowFrame: 1 });
-  manager.advance({ players: [pilot], nowFrame: 2 });
+  manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 1 }));
+  manager.advance(spiderAdvanceFixture({ players: [pilot], nowFrame: 2 }));
   expect(manager.snapshot().spiders.find((row) => row.id === spider?.id)?.targetId).toBe(pilot.id);
 });

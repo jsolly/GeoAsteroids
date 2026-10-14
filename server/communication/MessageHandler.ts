@@ -252,7 +252,7 @@ export class MessageHandler {
         return;
       }
       resumeToken = registered.resumeToken;
-      this.gameEngine.seedAsteroidInteractions();
+      this.gameEngine.ensureAsteroidField();
     }
 
     const snapshotVersion = this.broadcaster.negotiateSnapshot(ws);
@@ -267,7 +267,6 @@ export class MessageHandler {
         position: player.position,
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
-        shotAcknowledgements: true,
         color: player.color,
         kitId: player.kitId,
         terrainSeed: this.gameEngine.getTerrainSeed(),

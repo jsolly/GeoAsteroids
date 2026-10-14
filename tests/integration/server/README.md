@@ -1,20 +1,11 @@
 # Server integration tests
 
-These cases exercise server modules and owned loopback WebSocket interactions:
-protocol admission, authoritative state, current-client recovery and lifecycle.
-Use fixed participants and controlled clocks when the assertion depends on a
-rule deadline. Follow [test conventions](../../AGENTS.md).
+These cases exercise owned loopback protocol negotiation, authoritative state and
+server lifecycle. Follow [test setup, execution and reporting](../../AGENTS.md#run-and-report).
 
-From the absolute checkout path:
+From the absolute GeoRoids checkout directory:
 
 ```sh
 npm run test:integration:server
-./scripts/test-runner.sh tests/integration/server/server-pause.test.ts
+./scripts/test-runner.sh tests/integration/server/player-motion-cross-real-sockets.test.ts
 ```
-
-The repository runner owns an isolated Vitest worker, per-run artifacts and
-process cleanup. Socket scenarios create and close their own port-zero loopback
-servers. The runner requires Node and no browser. Never attach to a
-developer server or invoke raw Vitest on these paths. The complete literal
-[server/entity inventory](../README.md#complete-inventory) runs in the local gate
-and the CI integration lane.
