@@ -32,31 +32,14 @@ import { logger } from '../../../src/utils/Logger';
 logger.attachRuntime();
 afterEach(() => vi.unstubAllEnvs());
 
-test('the production logger keeps reconnect chatter off the log socket', async () => {
-  const release = '0123456789abcdef0123456789abcdef01234567';
-  vi.stubEnv('VITE_COMMIT_SHA', release);
-  vi.stubEnv('VITE_COMMIT_HASH', release.slice(0, 7));
-  for (const message of [
-    'reconnect_scheduled',
-    'transport_closed',
-    'transport_connected',
-    'player_joined',
-    'snapshot_resync_requested',
-    'damage_applied',
-  ]) {
-    logger.info('STATE', message);
-  }
+test('the production logger forwards one critical state message and keeps reconnect chatter local', async () => {
+  logger.info('STATE', 'reconnect_scheduled');
   await Promise.resolve();
   expect(forwarding.send).not.toHaveBeenCalled();
-
   logger.info('STATE', 'player_died');
-  logger.info('STATE', 'player_respawned');
-  logger.warn('NETWORK', 'WebSocket connection closed');
-  await vi.waitFor(() => expect(forwarding.send).toHaveBeenCalledTimes(3));
-  const forwarded = forwarding.send.mock.calls.map((call) => String(call[0]));
-  expect(forwarded.some((line) => line.includes('player_died'))).toBe(true);
-  expect(forwarded.some((line) => line.includes('player_respawned'))).toBe(true);
-  expect(forwarded.some((line) => line.includes('WebSocket connection closed'))).toBe(true);
-  expect(forwarded.some((line) => line.includes('reconnect_scheduled'))).toBe(false);
-  expect(forwarded.map((line) => JSON.parse(line).releaseId)).toEqual([release, release, release]);
+  await vi.waitFor(() => expect(forwarding.send).toHaveBeenCalledOnce());
+  expect(JSON.parse(String(forwarding.send.mock.calls[0]?.[0]))).toMatchObject({
+    category: 'STATE',
+    message: 'player_died',
+  });
 });

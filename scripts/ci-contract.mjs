@@ -212,7 +212,7 @@ assert.equal(
 );
 assert.match(
   read('scripts/test-runner-contract.sh'),
-  /exec node --test scripts\/code-integration-runner\.test\.mjs scripts\/benchmark-runner\.test\.mjs/u
+  /^exec node --test scripts\/code-integration-runner\.test\.mjs scripts\/benchmark-runner\.test\.mjs scripts\/benchmark-build-receipt\.test\.mjs$/mu
 );
 assert.equal(
   manifest.scripts['check:actions'],

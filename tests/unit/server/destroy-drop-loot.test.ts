@@ -23,7 +23,7 @@ function addSmallAsteroid(engine: GameEngine, id: string, size = 12): void {
   });
 }
 
-describe('destroy-drop shards on the #458 loot path', () => {
+describe('destroying asteroids drops shared shards into game state', () => {
   let engine: GameEngine;
 
   beforeEach(() => {

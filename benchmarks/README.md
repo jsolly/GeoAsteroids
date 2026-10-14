@@ -317,8 +317,8 @@ cellular bandwidth. It delays and throttles chunks without dropping arbitrary pr
 configured propagation/jitter model is an approximation; report measured RTT and delivery
 intervals rather than treating settings as observed network latency.
 
-Isolated architecture experiments are `collision-experiment.ts` and
-`protocol-experiment.ts`; decisions and limits are in
+The retained isolated architecture experiment is `protocol-experiment.ts`;
+decisions and limits are in
 [`docs/performance/implementation-status.md`](../docs/performance/implementation-status.md).
 
 ### Mobile constraints and repeatable fixtures

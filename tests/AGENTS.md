@@ -5,17 +5,14 @@ small, trustworthy suite. Coverage percentage and test count are not goals.
 GeoRoids does not write or run browser tests. All automated tests execute code
 without launching a browser. Do not add Playwright, Cypress, WebDriver or other
 browser correctness suites.
-Do not add browser suites or browser CI lanes. Manual browser testing is limited
-to brief smoke checks of the affected page and control, including desktop/mobile
-widths for layout changes. Avoid elaborate browser harnesses, scenario matrices,
-and multiplayer regression workflows. Svelte/jsdom component tests and canvas-call
-tests execute code in the runner; they do not launch a browser.
+Svelte/jsdom component tests and canvas-call tests execute code in the runner;
+they do not launch a browser. Brief native checks follow [Basic manual browser
+smoke](#basic-manual-browser-smoke).
 
 ## Suites
 
 - `unit/`: deterministic rules, executed DOM/canvas behavior, protocol and failure boundaries.
 - `integration/server/`: server modules and owned loopback protocol interactions.
-- `integration/entities/`: entity interactions and input behavior.
 
 Native browser rendering, real keyboard/touch behavior and audio are outside
 automated code coverage. Basic manual smoke checks do not certify those exhaustively.
@@ -59,7 +56,6 @@ Observe transient events before triggering them.
 | --- | --- |
 | Unit | Game rules, geometry, protocol validation, state transitions, executed DOM/canvas calls and failure boundaries. |
 | Server integration | Owned real transport negotiation, authoritative state and server lifecycle. |
-| Entity integration | Interactions between components/entities through real operations. |
 
 Mocks control external boundaries or failures; they must not return the exact
 outcome being claimed. Source-token matches cannot prove game behavior or drawing.
@@ -74,9 +70,11 @@ failure. Give concurrent operations distinguishable results. Diagnostics cases
 must trigger the transition or transport/write failure before inspecting the
 correlated record; hand-authored log envelopes do not prove runtime logging.
 
-Shared transport fixtures live in `tests/support/`. `RecordingSocket` models an
-in-process boundary; `WireClient` owns a real loopback connection and bounded
-cleanup. Random private token values are compared only within their owned run.
+Shared transport fixtures and test-only work-count instrumentation live in
+`tests/support/`. `RecordingSocket` models an in-process boundary; `WireClient`
+owns a real loopback connection with bounded event-driven waits and cleanup.
+Benchmark harness self-tests in `unit/performance/` own their loopback and IPC
+fixtures; they stay in unit because they test manual tooling. Random private token values are compared only within their owned run.
 
 ## Higher-risk refactors
 
@@ -114,28 +112,27 @@ Run commands from the absolute GeoRoids checkout directory:
 ```sh
 npm test                           # complete unit suite
 npm run test:all                    # units and complete integration
-npm run test:integration            # complete server/entity integration
+npm run test:integration            # complete server integration
 npm run test:integration:server     # server integration
-npm run test:integration:entities   # entity integration
 npm run test:coverage               # unit coverage, no percentage merge threshold
 ```
 
 Focused units may use `npx vitest run tests/unit/<scenario>.test.ts`.
-Always use `./scripts/test-runner.sh` for server/entity integration; never raw
+Always use `./scripts/test-runner.sh` for server integration; never raw
 Vitest on `tests/integration/`. The runner owns one isolated Vitest worker and
 per-run artifacts, stops only its process tree and defaults to a 1200-second
 execution deadline (`GEOROIDS_TEST_MAX_DURATION_SECONDS`); timeout exits 124 and
 stops owned processes. Socket scenarios create and close their own port-zero
-loopback servers; the code runner starts no Vite/server pair. Run the complete literal server/entity inventory
+loopback servers; the code runner starts no Vite/server pair. Run the complete literal server inventory
 with `npm run test:integration`; there is no shard or browser lane.
 
 Integration selectors must name literal files or directories within the
-server/entity inventory, using repository-relative or absolute paths. Missing
+server inventory, using repository-relative or absolute paths. Missing
 files, substring selectors and `:line` suffixes fail. Put selectors directly after
 the runner command; a nonempty `--` tail is rejected.
 
 ```sh
-./scripts/test-runner.sh tests/integration/server/server-pause.test.ts --reporter=verbose
+./scripts/test-runner.sh tests/integration/server/player-motion-cross-real-sockets.test.ts --reporter=verbose
 ```
 
 Keep `pool: 'forks'`, `maxWorkers: 1`, `isolate: true`, `fileParallelism: false`,
@@ -164,7 +161,8 @@ workflow. Deterministic code tests own regression coverage.
 
 ## Manual performance and media tools
 
-Keep measurement fixtures under `benchmarks/`; production must not import them.
+Keep manual measurement fixtures under `benchmarks/` and test-only instrumentation
+under `tests/support/`; production must not import either.
 Deterministic benchmark contract tests prove workload validation or cleanup, not
 elapsed-time thresholds or native browser comparisons. Browser benchmarks and
 frame measurements are manual tools outside the gate. Playwright is retained for

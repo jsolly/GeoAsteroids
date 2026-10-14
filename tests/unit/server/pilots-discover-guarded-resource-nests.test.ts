@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-import { instrumentLootIndex } from '../../../benchmarks/loot-index-instrumentation';
 import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { LootManager } from '../../../server/core/LootManager';
 import { RNGService } from '../../../server/core/RNGService';
@@ -12,6 +11,7 @@ import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { GROWTH } from '../../../shared/shipGrowth';
 import { SPIDER } from '../../../shared/terrainSpider';
 import type { AsteroidData, Position } from '../../../shared-types';
+import { instrumentLootIndex } from '../../support/lootIndexInstrumentation';
 
 const home = { x: 15_000, y: 5_000 };
 const approach = { x: home.x - 2_000, y: home.y };

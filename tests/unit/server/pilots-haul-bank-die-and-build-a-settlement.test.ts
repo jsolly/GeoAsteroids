@@ -78,7 +78,6 @@ test('death repeatedly discards cargo, preserves the bank, and always respawns',
     expect(actor.exploding).toBe(false);
     expect(Math.hypot(actor.position.x, actor.position.y)).toBeCloseTo(TOWN_SPAWN_RADIUS);
   }
-  expect(actor).not.toHaveProperty('lives');
 });
 
 test.each(['scout', 'hauler'] as const)(

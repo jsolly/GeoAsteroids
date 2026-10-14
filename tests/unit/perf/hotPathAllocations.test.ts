@@ -1,8 +1,7 @@
 import { expect, test } from 'vitest';
-import { stepAsteroidMotionInto } from '../../../shared/asteroidMotion';
 import type { AsteroidData } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
-import { Roid } from '../../../src/entities/roid/Roid';
+import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
 
 import {
   applyAsteroidKinematics,
@@ -88,23 +87,21 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
   expect(firstList).toHaveLength(1);
 });
 
-test('120 belt motion ticks reuse each roid vector pair', () => {
-  const roids = [
-    { position: { x: 10, y: 4 }, velocity: { x: 1, y: -0.5 } },
-    { position: { x: -20, y: 8 }, velocity: { x: -1, y: 0.25 } },
-  ];
-  const positions = roids.map((body) => body.position);
-  const velocities = roids.map((body) => body.velocity);
-
+test('120 belt motion ticks reuse each live roid vector pair and advance their known positions', () => {
+  const belt = new RoidBelt();
+  belt.roids.push(
+    new Roid({ ...roid('first-moving-rock', 10, 4), velocity: { x: 1, y: -0.5 } }),
+    new Roid({ ...roid('second-moving-rock', -20, 8), velocity: { x: -1, y: 0.25 } })
+  );
+  const positions = belt.roids.map((body) => body.position);
+  const velocities = belt.roids.map((body) => body.velocity);
   for (let tick = 0; tick < 120; tick++) {
-    for (const body of roids) {
-      stepAsteroidMotionInto(body.position, body.velocity, 1, body.position, body.velocity);
-    }
+    belt.moveRoids();
   }
-
-  expect(roids[0]?.position).toBe(positions[0]);
-  expect(roids[0]?.velocity).toBe(velocities[0]);
-  expect(roids[1]?.position).toBe(positions[1]);
-  expect(roids[1]?.velocity).toBe(velocities[1]);
-  expect(roids[0]?.position.x).toBeGreaterThan(10);
+  expect(belt.roids[0]?.position).toBe(positions[0]);
+  expect(belt.roids[0]?.velocity).toBe(velocities[0]);
+  expect(belt.roids[1]?.position).toBe(positions[1]);
+  expect(belt.roids[1]?.velocity).toBe(velocities[1]);
+  expect(belt.roids[0]?.position).toEqual({ x: 130, y: -56 });
+  expect(belt.roids[1]?.position).toEqual({ x: -140, y: 38 });
 });

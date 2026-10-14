@@ -38,7 +38,7 @@ See [manual maintenance](docs/wiki-maintenance.md) for content, reproducible med
 
 `npm run gate` checks dependencies, lint, configuration, strict TypeScript,
 Astro/Svelte diagnostics, frontend formatting, runner contracts, all units, the
-production build and complete server/entity integration. Testing instructions,
+production build and complete server integration. Testing instructions,
 commands and basic manual browser smoke policy live in
 [tests/AGENTS.md](tests/AGENTS.md).
 

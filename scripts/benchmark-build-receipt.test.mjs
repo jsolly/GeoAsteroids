@@ -17,7 +17,20 @@ test('repeated owned sessions reuse only the exact successfully built client', (
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_'))
   );
-  const git = (...args) => execFileSync('git', args, { cwd: root, env, stdio: 'pipe' });
+  Object.assign(env, {
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_AUTHOR_NAME: 'Fixture',
+    GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
+    GIT_COMMITTER_NAME: 'Fixture',
+    GIT_COMMITTER_EMAIL: 'fixture@example.invalid',
+  });
+  const git = (...args) =>
+    execFileSync('git', ['-c', 'maintenance.auto=false', '-c', 'commit.gpgsign=false', ...args], {
+      cwd: root,
+      env,
+      stdio: 'pipe',
+    });
   const run = (action, url = websocketUrl, extraEnvironment = {}) =>
     spawnSync(
       process.execPath,

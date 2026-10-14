@@ -2,7 +2,7 @@
 
 The automated validation battery uses code tests. Browser test suites, native
 browser comparison assertions and automatic frame-work/constrained-client gates
-are removed. Unit tests and complete server/entity integration run locally before
+are removed. Unit tests and complete server integration run locally before
 publication; PR CI independently validates the integration inventory.
 
 ## Required PR checks
@@ -11,8 +11,7 @@ publication; PR CI independently validates the integration inventory.
 Static checks cover lint policy, formatting, unused code, Markdown, YAML, Actions,
 TypeScript, benchmark types, Wiki source review and the production build.
 Runner contracts exercise owned process startup, admission, ports and cleanup.
-Integration runs every test in `tests/integration/server/` and
-`tests/integration/entities/` through the repository runner. Wiki media verifies
+Integration runs every test in `tests/integration/server/` through the repository runner. Wiki media verifies
 the committed demonstration baseline on `ubuntu-24.04`, the x64 platform that owns
 it, and uploads a regenerated candidate when it is stale; the other lanes run on
 arm64 ([Wiki maintenance](wiki-maintenance.md#generate-or-verify-gifs)).

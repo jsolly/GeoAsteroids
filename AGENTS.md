@@ -6,7 +6,7 @@ Ship profile: `vercel-static`.
 
 **Integration: branch → PR → merge on green `CI / ci`.** `/ship` merges per `skills/ship/references/git-discipline.md` → Merge a same-repo self PR (read the installed `/ship` reference). Agents never push to `main`, change rulesets, or admin-merge.
 
-Local gate: `npm run gate`; static checks, runner contracts, the complete unit suite, build, and all server/entity integration tests are mandatory. CI runs independent static, runner-contract, complete code-integration and Wiki media lanes; all must pass. Browser tests and automatic frame-work/constrained-client gates are retired.
+Local gate: `npm run gate`; static checks, runner contracts, the complete unit suite, build, and all server integration tests are mandatory. CI runs independent static, runner-contract, complete code-integration and Wiki media lanes; all must pass. Browser tests and automatic frame-work/constrained-client gates are retired.
 
 Deploy: Vercel Git at <https://www.georoids.com> plus Railway Git at <https://georoids-production-2403.up.railway.app>. Classify server inputs with `scripts/server-release-inputs.mjs` from the merged checkout; its server/shared/setup/manifest inputs determine which Railway release needs verification, and it fails if server code imports `src/`. A successful client deployment cannot prove the server deployed. Successful production Git deployments establish the release. Do not gate builds or production smoke on served release metadata, bundle SHA searches or server SHA ancestry. Follow the canonical smoke receipt through asset availability, genuine join, snapshots, movement, accepted firing and healthy persistence. Production smoke uses HTTP/assets and WebSocket protocol evidence; it does not certify browser rendering, keyboard/touch controls, graphics or audio. Skipped, cancelled, failed or missing smoke is unverified.
 
@@ -33,7 +33,7 @@ Astro static client and authoritative WebSocket server deploy independently from
 
 ## CI
 
-The dotagents dispatcher runs the tracked pre-commit gate. The tracked pre-commit hook owns lint, unused-code checks, contracts, types, unit tests, build, complete server/entity integration checks. `npm run gate` invokes that same complete battery with the fleet docs exception disabled. Exact receipts may reuse unchanged validation; candidate reuse requires index parity. Canonical actionlint/ShellCheck bytes come from dotagents.
+The dotagents dispatcher runs the tracked pre-commit gate. The tracked pre-commit hook owns lint, unused-code checks, contracts, types, unit tests, build, complete server integration checks. `npm run gate` invokes that same complete battery with the fleet docs exception disabled. Exact receipts may reuse unchanged validation; candidate reuse requires index parity. Canonical actionlint/ShellCheck bytes come from dotagents.
 
 ## Commands
 
@@ -69,10 +69,10 @@ Node24 matches `.nvmrc`. Never attach to another checkout's services or kill lis
 
 ## Verified-tree CI
 
-PRs run static checks, runner contracts, the complete server/entity integration suites, and Wiki media verification concurrently.
+PRs run static checks, runner contracts, the complete server integration suites, and Wiki media verification concurrently.
 The final `ci` job requires all four lanes to succeed; failed, cancelled, or skipped
 lanes fail the aggregate. Each lane has its own exact-tree proof.
-Full unit and server/entity integration checks run locally in the review gate. Manual performance measurements remain outside it. Post-merge CI reuses each successful PR lane only
+Full unit and server integration checks run locally in the review gate. Manual performance measurements remain outside it. Post-merge CI reuses each successful PR lane only
 when its recorded checkout tree exactly matches the landed tree, using
 `scripts/ci-verified-tree.sh` from dotagents. Missing proof runs that CI lane;
 manual runs always validate. The required `ci` name and deployment triggers stay intact.

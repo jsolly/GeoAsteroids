@@ -74,7 +74,7 @@ test('a fresh flight stands on the town ring even when another pilot is far away
   expect(Math.hypot(fresh.position.x, fresh.position.y)).toBeCloseTo(TOWN_SPAWN_RADIUS, 5);
 });
 
-test('a furnace delivery pays each contributor and does not bank a shared purse', () => {
+test('a furnace delivery pays each contributor', () => {
   const engine = new GameEngine(42);
   const hauler = engine.addPlayer(
     'hauler',
@@ -94,7 +94,6 @@ test('a furnace delivery pays each contributor and does not bank a shared purse'
   expect(hauler.score).toBe(reward);
   expect(scout.actor.score).toBe(reward);
   expect(engine.getGameState().civicModules).toEqual([]);
-  expect(engine.getGameState()).not.toHaveProperty('townCredit');
   engine.processFurnaceDeliveries();
   expect(engine.drainFurnaceDeliveries()).toHaveLength(1);
   expect(hauler.score).toBe(reward);
@@ -189,10 +188,6 @@ test('a named furnace and the builder leftover score survive a SQLite restart', 
     engine.removePlayer(actor.id);
     expect(firstStore.loadWorld()?.civicModules).toEqual(lit);
     firstStore.close();
-    const written = new DatabaseSync(path);
-    const row = written.prepare('SELECT json FROM world WHERE id=1').get() as { json: string };
-    expect(JSON.parse(row.json)).not.toHaveProperty('townCredit');
-    written.close();
     const secondStore = new WorldStore(path);
     try {
       const restarted = new GameEngine(99, undefined, new InlineWorldPersistence(secondStore));

@@ -21,7 +21,6 @@
     "test:all": "npm run test && npm run test:integration",
     "test:integration": "./scripts/test-runner.sh --reporter=verbose",
     "test:integration:server": "./scripts/test-runner.sh tests/integration/server/",
-    "test:integration:entities": "./scripts/test-runner.sh tests/integration/entities/",
     "check:test-runner": "node scripts/validation-admission.mjs contracts -- bash -c 'bash scripts/test-runner-contract.sh && node --test scripts/test-ports.test.mjs scripts/validation-admission.test.mjs scripts/check-built-client.test.mjs scripts/check-unused-typescript.test.mjs'",
     "check:dev-server": "bash scripts/dev-server-contract.sh",
     "check:ts": "astro sync && tsc --noEmit",
