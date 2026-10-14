@@ -19,6 +19,20 @@ a missing file is created empty for the local server.
 
 Setup installs repo-owned hooks outside the working tree, provisions the pinned
 tools and lockfile dependencies, and leaves browser binaries to explicitly requested manual tools.
+Claude Code's `startup|resume` hook passes `--session-hook`. A fresh checkout
+without `node_modules` runs setup; an existing tree is checked without installing
+tools or dependencies. Setup records the manifest, lockfile, repository tool and
+npm settings, actual Node/npm runtime, installed lock and package manifests after
+a successful install and complete `npm ls --all` check. Warm hooks require that
+receipt and repeat dependency validation.
+
+Changed inputs, missing packages, failed installs and older trees without a receipt
+fail the hook instead of replacing dependencies underneath a running service.
+Stop this checkout's services with `npm run dev:kill`, then run
+`bash scripts/setup-agent-environment.sh` explicitly to repair and record the tree.
+Manual setup deliberately reinstalls dependencies; stop services before using it.
+The receipt detects install drift, not arbitrary changes to every package file.
+
 Automated code checks never launch or download browsers. Run the repo's documented quality gate with its pinned tools:
 
 ```bash

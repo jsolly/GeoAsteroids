@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 ((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; open a fresh shell and rerun repository setup." >&2; exit 1; }
 set -euo pipefail
+session_hook=false
+case "$#:$*" in
+  0:) ;;
+  1:--session-hook) session_hook=true ;;
+  *) echo "Usage: $0 [--session-hook]" >&2; exit 2 ;;
+esac
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$root"
+[[ -f package-lock.json ]] || { echo 'package-lock.json is required for repository setup.' >&2; exit 1; }
+[[ ! -L node_modules ]] || { echo 'node_modules must belong to this checkout; symlinked dependencies are refused.' >&2; exit 1; }
 # A fresh Linux cloud image may not have the public tool manager. Install only
 # this pinned, checksum-verified upstream binary; never pipe a remote script to a shell.
 install_public_mise() (
@@ -36,6 +44,64 @@ install_public_mise() (
   command -v mise >/dev/null || { echo 'mise was installed in /usr/local/bin; put that directory on PATH before retrying setup.' >&2; exit 1; }
 )
 
+# A successful npm ci binds the dependency tree to its inputs and runtime.
+# npm's hidden lock alone does not prove that the current tree still matches it.
+dependency_receipt() {
+  MISE_EXEC_AUTO_INSTALL=false bash scripts/repo-python.sh - "$1" <<'PYTHON'
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+receipt = Path('node_modules/.georoids-setup.json')
+
+def digest(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+try:
+    inputs = {name: digest(name) for name in (
+        'package.json', 'package-lock.json', '.npmrc', '.mise.toml', '.nvmrc')}
+    hidden_lock = Path('node_modules/.package-lock.json')
+    packages = json.loads(hidden_lock.read_text())['packages']
+    manifests = {}
+    for name in packages:
+        path = Path(name)
+        if not path.parts or path.parts[0] != 'node_modules' or '..' in path.parts:
+            raise ValueError('Invalid installed package path')
+        manifests[name] = digest(path / 'package.json')
+    runtime = subprocess.check_output([
+        'mise', 'exec', '--', 'node', '-p',
+        'JSON.stringify([process.version, process.versions.modules, process.platform, process.arch])'
+    ], text=True).strip()
+    npm = subprocess.check_output(['mise', 'exec', '--', 'npm', '--version'], text=True).strip()
+    current = {'version': 1, 'inputs': inputs, 'runtime': runtime, 'npm': npm,
+               'installedLock': digest(hidden_lock), 'manifests': manifests}
+    if sys.argv[1] == 'verify' and json.loads(receipt.read_text()) != current:
+        raise ValueError('Dependency inputs, runtime or installed packages changed')
+    subprocess.run(['mise', 'exec', '--', 'npm', 'ls', '--all', '--include=dev',
+                    '--include=optional', '--include=peer'], check=True, stdout=subprocess.DEVNULL)
+    if sys.argv[1] == 'write':
+        receipt.write_text(json.dumps(current, sort_keys=True) + '\n')
+except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as error:
+    print(f'Dependency setup verification failed: {error}', file=sys.stderr)
+    sys.exit(1)
+PYTHON
+}
+
+# A warm hook must not reinstall dependencies or tools beneath a running service.
+# An old or incomplete tree needs a deliberate repair after its services stop.
+if $session_hook && [[ -e node_modules || -L node_modules ]]; then
+  bash scripts/repo-python.sh scripts/repo-hooks.py verify --root "$root"
+  if ! dependency_receipt verify; then
+    echo "Stop this checkout's services with npm run dev:kill, then run bash scripts/setup-agent-environment.sh explicitly to repair dependencies." >&2
+    exit 1
+  fi
+  [[ -e .env ]] || touch .env
+  echo 'Repository environment ready; existing dependencies verified without reinstalling.'
+  exit 0
+fi
+
 # Installation validates the complete reviewed bundle before writing hook state.
 # It runs no dependency lifecycle script. Unreviewed setup cannot upgrade hooks.
 bash scripts/repo-python.sh scripts/repo-hooks.py install --root "$root"
@@ -51,9 +117,10 @@ fi
 install_public_mise
 mise trust "$root/.mise.toml"
 mise install
-if [[ -f package-lock.json ]]; then
-  mise exec -- npm ci
-fi
+# A failed repair must never leave an old success receipt behind.
+rm -f node_modules/.georoids-setup.json
+mise exec -- npm ci
+dependency_receipt write
 # The local server's --env-file requires a file; never replace existing settings.
 [[ -e .env ]] || touch .env
 bash scripts/repo-python.sh scripts/repo-hooks.py verify --root "$root"
