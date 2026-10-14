@@ -1,14 +1,10 @@
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
-
-vi.mock('../../../shared/constants/gameplay', async (importOriginal) => {
-  const constants = await importOriginal<typeof import('../../../shared/constants/gameplay')>();
-  return { ...constants, DEBUG: { ...constants.DEBUG, ENABLED: false } };
-});
+import { asteroidRow } from '../../support/asteroid-row';
 
 test('a server-supplied asteroid advances once per client simulation step', () => {
   const belt = new RoidBelt();
-  const roid = new Roid({ x: 10, y: 20 }, 10, 'moving-asteroid');
+  const roid = new Roid(asteroidRow({ x: 10, y: 20 }, 10, 'moving-asteroid'));
   roid.velocity = { x: 1, y: -2 };
   belt.roids.push(roid);
 

@@ -1,10 +1,9 @@
 # Sound design
 
 All shipped samples are original GeoRoids synthesis from
-`scripts/generate-sounds.ts`, covered by the repository's ISC license. They use
+`scripts/generate-sounds.ts`, covered by the repository's Apache-2.0 license. They use
 sine partials, rounded attacks, short decays, and the C-major pentatonic palette.
 No third-party sample pack, external service, or runtime CDN is needed.
-The previous Kenney samples have been replaced.
 
 Regenerate on macOS from the checkout root with `npm run sounds:generate`.
 The deterministic PCM generator uses the system `afconvert` to encode mono
@@ -21,7 +20,7 @@ The deterministic PCM generator uses the system `afconvert` to encode mono
 | Harpoon launch, latch, release | Low plucks, seated latch tone, descending release |
 | Scout scan | C4–G4–D5 rising shimmer |
 | Flight entry and respawn | C4–E4–G4–C5 welcoming phrase |
-| Ship and orbital shots | Short G4 and C4 pulses, without pitch randomization |
+| Ship shots | Short G4 pulse, without pitch randomization |
 | Hits | Rounded low impact with a soft C4 overtone |
 | Asteroid destruction | Low body, quiet G3/E4 tail, low-pass dust |
 | Satellite and loot destruction | Shorter, lighter relatives of the asteroid impact |

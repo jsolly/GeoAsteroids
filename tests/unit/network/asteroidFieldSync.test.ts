@@ -1,372 +1,194 @@
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { WORLD } from '../../../shared/world';
+
 import type { AsteroidData, AsteroidDestroyEvent } from '../../../shared-types';
-import type { AsteroidKinematicTarget } from '../../../src/network/services/asteroidFieldSync';
+import { Roid } from '../../../src/entities/roid/Roid';
 import {
   applyAsteroidFieldPartition,
   applyAsteroidKinematics,
-  applyAsteroidRowToBelt,
-  asteroidHasSpawnPose,
-  asteroidKinematicUpdates,
   bindAsteroidFieldApply,
   createAsteroidFieldSyncScratch,
   notifyAsteroidDestroyed,
   partitionAsteroidSnapshot,
-  shouldPreserveSeenAsteroidsOnJoin,
+  readAsteroidBelt,
   shouldSnapAsteroidPose,
   unbindAsteroidFieldApply,
-  writeAsteroidKinematicUpdates,
 } from '../../../src/network/services/asteroidFieldSync';
+import { asteroidRow } from '../../support/asteroid-row';
 
-function roid(id: string, x: number, y: number): AsteroidData {
-  return {
-    id,
-    position: { x, y },
-    velocity: { x: 1, y: 0 },
-    size: 20,
-    jaggedness: 0.5,
-    rotation: 0,
-    angularVelocity: 0,
-    health: 10,
-    maxHealth: 10,
-    vertices: 8,
-    offsets: [1, 1, 1, 1, 1, 1, 1, 1],
-  };
-}
-
-function localRoid(x: number, y: number): AsteroidKinematicTarget {
-  return {
-    position: { x, y },
-    velocity: { x: 0, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    health: 10,
-    maxHealth: 10,
-    r: 20,
-  };
-}
-
-test('first snapshot creates every asteroid and records the ids', () => {
-  const seen = new Set<string>();
-  const { created, updated, removed } = partitionAsteroidSnapshot(
-    [roid('server-asteroid-0', 1, 2), roid('server-asteroid-1', 3, 4)],
-    seen
-  );
-
-  expect(created.map((asteroid) => asteroid.id)).toEqual([
-    'server-asteroid-0',
-    'server-asteroid-1',
-  ]);
-  expect(updated).toEqual([]);
-  expect(removed).toEqual([]);
-  expect(seen.size).toBe(2);
+const row = (id: string, x = 0, y = 0): AsteroidData => ({
+  ...asteroidRow({ x, y }, 20, id),
+  velocity: { x: 1, y: 0 },
 });
+afterEach(unbindAsteroidFieldApply);
 
-test('a later snapshot updates known asteroids so a late joiner can share the live field', () => {
-  const seen = new Set(['server-asteroid-0']);
-  const live = roid('server-asteroid-0', 80, -12);
-  const fresh = roid('server-asteroid-2', 0, 0);
-  const { created, updated, removed } = partitionAsteroidSnapshot([live, fresh], seen);
-  expect(removed).toEqual([]);
-
-  expect(created.map((asteroid) => asteroid.id)).toEqual(['server-asteroid-2']);
-  expect(updated).toEqual([live]);
-  expect(asteroidKinematicUpdates(live).position).toEqual({ x: 80, y: -12 });
-  expect(seen.has('server-asteroid-2')).toBe(true);
-});
-
-test('a duplicate create still writes the live pose onto the existing roid', () => {
-  const local = localRoid(1, 2);
-  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12), { snapPosition: true });
-  expect(local.position).toEqual({ x: 80, y: -12 });
-  expect(local.velocity).toEqual({ x: 1, y: 0 });
-});
-
-test('an empty creation batch preserves the local belt', () => {
-  const seen = new Set(['server-asteroid-0', 'server-asteroid-1']);
-  const { created, updated, removed } = partitionAsteroidSnapshot([], seen);
-  expect(created).toEqual([]);
-  expect(updated).toEqual([]);
-  expect(removed).toEqual([]);
-  expect(seen.size).toBe(2);
-});
-
-test('a complete local snapshot prunes asteroids outside the current view', () => {
-  const seen = new Set(['server-asteroid-0', 'gone']);
-  const { removed } = partitionAsteroidSnapshot(
-    [roid('server-asteroid-0', 4, 5)],
-    seen,
-    undefined,
-    true
-  );
-  expect(removed).toEqual(['gone']);
-  expect(seen.has('gone')).toBe(false);
-  expect(seen.has('server-asteroid-0')).toBe(true);
-});
-
-test('new split fragments preserve unrelated visible asteroids until the next complete snapshot', () => {
-  const seen = new Set(['nearby-rock', 'split-parent']);
-  const batch = partitionAsteroidSnapshot(
-    [roid('fragment-a', 1, 2), roid('fragment-b', 3, 4)],
-    seen
-  );
-  expect(batch.created.map((rock) => rock.id)).toEqual(['fragment-a', 'fragment-b']);
-  expect(batch.removed).toEqual([]);
-  expect(seen).toEqual(new Set(['nearby-rock', 'split-parent', 'fragment-a', 'fragment-b']));
-  const snapshot = partitionAsteroidSnapshot(
-    [roid('nearby-rock', 0, 0), roid('fragment-a', 1, 2), roid('fragment-b', 3, 4)],
-    seen,
-    undefined,
-    true
-  );
-  expect(snapshot.removed).toEqual(['split-parent']);
-  expect(partitionAsteroidSnapshot([], seen, undefined, true).removed).toHaveLength(3);
-  expect(seen.size).toBe(0);
-});
-
-test('applying a live pose inside the shared world leaves its position intact', () => {
-  const local = localRoid(1, 2);
-  applyAsteroidKinematics(local, roid('server-asteroid-0', 10000, 0));
-  expect(local.position.x).toBeGreaterThan(0);
-  expect(local.position).toEqual({ x: 10000, y: 0 });
-});
-
-test('small pose error keeps the interpolated position so the field does not hitch', () => {
-  const local = {
-    position: { x: 10, y: 10 },
-    velocity: { x: 1, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    health: 10,
-    maxHealth: 10,
-    r: 20,
-  };
-  applyAsteroidKinematics(local, {
-    position: { x: 14, y: 10 },
-    velocity: { x: 2, y: 0 },
-  });
-  expect(shouldSnapAsteroidPose({ x: 10, y: 10 }, { x: 14, y: 10 })).toBe(false);
-  expect(local.position).toEqual({ x: 10, y: 10 });
-  expect(local.velocity).toEqual({ x: 2, y: 0 });
-});
-
-test('a large pose error snaps so a late joiner shares the live field', () => {
-  const local = localRoid(1, 2);
-  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
-  expect(local.position).toEqual({ x: 80, y: -12 });
-});
-
-test('an escaped local pose is contained even when the server echo is also far', () => {
-  const fieldRadius = WORLD.radius;
-  const local = localRoid(fieldRadius + 1000, 40);
-  applyAsteroidKinematics(local, {
-    position: { x: fieldRadius + 1005, y: 40 },
-    velocity: { x: 1, y: 0 },
-  });
-  expect(
-    shouldSnapAsteroidPose({ x: fieldRadius + 1000, y: 40 }, { x: fieldRadius + 1005, y: 40 })
-  ).toBe(false);
-  expect(Math.hypot(local.position.x, local.position.y)).toBeLessThanOrEqual(fieldRadius);
-  expect(local.position.x).toBeGreaterThan(0);
-  expect(local.position.y / local.position.x).toBeCloseTo(40 / (fieldRadius + 1005), 10);
-});
-
-test('a lean first-seen row does not mark seen so a later full row can still create', () => {
-  const seen = new Set<string>();
-  const lean = {
-    id: 'server-asteroid-0',
-    position: { x: 80, y: -12 },
-    rotation: 1.2,
-  } as AsteroidData;
-  const first = partitionAsteroidSnapshot([lean], seen);
-  expect(first.created).toEqual([]);
-  expect(first.updated).toEqual([]);
-  expect(seen.size).toBe(0);
-  expect(asteroidHasSpawnPose(lean)).toBe(false);
-
-  const full = roid('server-asteroid-0', 80, -12);
-  const later = partitionAsteroidSnapshot([full], seen);
-  expect(later.created.map((asteroid) => asteroid.id)).toEqual(['server-asteroid-0']);
-  expect(seen.has('server-asteroid-0')).toBe(true);
-});
-
-test('a shaped update for a missing belt id creates instead of no-op', () => {
-  const belt = new Map<string, ReturnType<typeof localRoid>>();
-  const created: string[] = [];
-  const action = applyAsteroidRowToBelt(
-    (id) => belt.get(id),
-    'server-asteroid-0',
-    roid('server-asteroid-0', 80, -12),
-    (asteroid) => {
-      created.push(asteroid.id);
-      belt.set(asteroid.id, localRoid(asteroid.position.x, asteroid.position.y));
-    }
-  );
-  expect(action).toBe('created');
-  expect(created).toEqual(['server-asteroid-0']);
-  expect(belt.size).toBe(1);
-});
-
-test('lean kinematics without size do not invent a belt rock', () => {
-  const action = applyAsteroidRowToBelt(
-    () => undefined,
-    'server-asteroid-0',
-    { position: { x: 80, y: -12 }, rotation: 1.2 },
-    () => {
-      throw new Error('must not create from pose-only lean');
-    }
-  );
-  expect(action).toBe('skipped');
-});
-
-test('an unknown material in a snapshot is rejected before it can reach the belt', () => {
-  const seen = new Set<string>();
-  const invalid = {
-    ...roid('invalid-material', 80, -12),
-    material: 'plasma',
-  } as unknown as AsteroidData;
-
-  const result = partitionAsteroidSnapshot([invalid], seen);
-
-  expect(result.created).toEqual([]);
+test('first snapshot creates every complete row without inventing belt membership', () => {
+  const belt: Roid[] = [];
+  const result = partitionAsteroidSnapshot([row('a'), row('b')], belt);
+  expect(result.created.map((rock) => rock.id)).toEqual(['a', 'b']);
   expect(result.updated).toEqual([]);
   expect(result.removed).toEqual([]);
-  expect(seen.has(invalid.id)).toBe(false);
-  expect(asteroidHasSpawnPose(invalid)).toBe(false);
+  expect(belt).toEqual([]);
 });
 
-test('an invalid material update is ignored without changing an existing local material', () => {
-  const local = { ...localRoid(1, 2), material: 'ice' as const };
-
-  applyAsteroidKinematics(local, {
-    material: 'plasma',
-  } as unknown as Partial<AsteroidData>);
-
-  expect(local.material).toBe('ice');
+test('create, update and eviction follow current belt even when a caller replaces it directly', () => {
+  const belt = [new Roid(row('a')), new Roid(row('gone'))];
+  const result = partitionAsteroidSnapshot(
+    [row('a', 80, -12), row('fresh')],
+    belt,
+    undefined,
+    true
+  );
+  expect(result.created.map((rock) => rock.id)).toEqual(['fresh']);
+  expect(result.updated.map((rock) => rock.id)).toEqual(['a']);
+  expect(result.removed).toEqual(['gone']);
+  belt.length = 0;
+  expect(partitionAsteroidSnapshot([row('a')], belt).created).toHaveLength(1);
 });
 
-test('snapshot reconciliation removes stale rows without looking like an explicit destroy', () => {
-  const reconciled: string[] = [];
-  const destroyed: AsteroidDestroyEvent[] = [];
-  bindAsteroidFieldApply({
-    onCreated: () => {},
-    onUpdated: () => {},
-    onDestroyed: (event) => destroyed.push(event),
-    onReconciled: (asteroidId) => reconciled.push(asteroidId),
-  });
-
-  try {
-    applyAsteroidFieldPartition({ created: [], updated: [], removed: ['replaced-row'] });
-    notifyAsteroidDestroyed({ asteroidId: 'authoritative-destroy' });
-  } finally {
-    unbindAsteroidFieldApply();
-  }
-
-  expect(reconciled).toEqual(['replaced-row']);
-  expect(destroyed).toEqual([{ asteroidId: 'authoritative-destroy' }]);
+test('fragment batches preserve unrelated belt rows; only complete snapshots evict', () => {
+  const belt = [new Roid(row('nearby')), new Roid(row('parent'))];
+  const batch = partitionAsteroidSnapshot([row('fragment')], belt);
+  expect(batch.created.map((rock) => rock.id)).toEqual(['fragment']);
+  expect(batch.removed).toEqual([]);
+  expect(partitionAsteroidSnapshot([], belt).removed).toEqual([]);
+  expect(partitionAsteroidSnapshot([row('nearby')], belt, undefined, true).removed).toEqual([
+    'parent',
+  ]);
 });
 
-test('kinematic updates omit undefined fields so a lean row cannot wipe pose', () => {
-  expect(asteroidKinematicUpdates({ id: 'server-asteroid-0', position: { x: 3, y: 4 } })).toEqual({
-    position: { x: 3, y: 4 },
-  });
-});
-
-test('writeAsteroidKinematicUpdates reuses the caller envelope and drops stale keys', () => {
-  const into: Partial<AsteroidData> = { health: 9, size: 40 };
-  const same = writeAsteroidKinematicUpdates({ position: { x: 3, y: 4 } }, into);
-  expect(same).toBe(into);
-  expect(into).toEqual({ position: { x: 3, y: 4 } });
-});
-
-test('reflection and spin metadata reaches the local rock for live cues and previews', () => {
-  const local = localRoid(1, 2);
-  const reflective = {
-    ...roid('reflective-0', 10, 10),
-    phenomenon: { kind: 'reflective' as const, clusterId: 'cluster-0', energy: 2, maxEnergy: 6 },
-  };
-
-  applyAsteroidKinematics(local, reflective);
-
-  expect(local.phenomenon).toEqual(reflective.phenomenon);
-});
-
-test('mining contributor metadata roundtrips through complete and kinematic asteroid updates', () => {
-  const local = localRoid(1, 2);
-  const source = {
-    ...roid('mining-ledger-0', 10, 10),
-    surveyedBy: ['scout-0'],
-    miningContributors: ['miner-0', 'miner-1'],
-  };
-
-  applyAsteroidKinematics(local, source, { complete: true });
-  expect(local.surveyedBy).toEqual(source.surveyedBy);
-  expect(local.miningContributors).toEqual(source.miningContributors);
-  expect(asteroidKinematicUpdates(source).miningContributors).toEqual(source.miningContributors);
-
-  applyAsteroidKinematics(local, { miningContributors: ['miner-2'] });
-  expect(local.miningContributors).toEqual(['miner-2']);
-});
-
-test('partition scratch arrays and snapshot set stay the same identity', () => {
-  const seen = new Set<string>();
+test('partition reuses arrays and derived membership sets on every steady-state snapshot', () => {
+  const belt = [new Roid(row('a'))];
   const scratch = createAsteroidFieldSyncScratch();
-  const first = partitionAsteroidSnapshot([roid('a', 1, 2)], seen, scratch);
-  expect(first.created).toBe(scratch.created);
-  expect(first.updated).toBe(scratch.updated);
-  expect(first.removed).toBe(scratch.removed);
-
-  const second = partitionAsteroidSnapshot([roid('a', 3, 4), roid('b', 0, 0)], seen, scratch);
-  expect(second.created).toBe(scratch.created);
-  expect(second.updated).toBe(scratch.updated);
-  expect(second.created.map((asteroid) => asteroid.id)).toEqual(['b']);
-  expect(second.updated.map((asteroid) => asteroid.id)).toEqual(['a']);
+  const ids = scratch.snapshotIds;
+  const localIds = scratch.localIds;
+  for (let tick = 0; tick < 120; tick++) {
+    const result = partitionAsteroidSnapshot([row('a', tick), row('b')], belt, scratch, true);
+    expect(result).toBe(scratch);
+    expect(result.created).toBe(scratch.created);
+    expect(result.updated).toBe(scratch.updated);
+    expect(result.removed).toBe(scratch.removed);
+    expect(scratch.snapshotIds).toBe(ids);
+    expect(scratch.localIds).toBe(localIds);
+    expect(result.created.map((rock) => rock.id)).toEqual(['b']);
+    expect(result.updated.map((rock) => rock.id)).toEqual(['a']);
+  }
 });
 
-test('applyAsteroidKinematics writes into the existing roid vectors', () => {
-  const local = localRoid(1, 2);
-  const position = local.position;
-  const velocity = local.velocity;
-  applyAsteroidKinematics(local, roid('server-asteroid-0', 80, -12));
+test('complete construction preserves ore, surveys and shape without random defaults', () => {
+  const source = {
+    ...row('fragment'),
+    ore: 'metal' as const,
+    surveyedBy: ['scout'],
+    material: 'ice' as const,
+  };
+  const rock = new Roid(source);
+  expect(rock.ore).toBe('metal');
+  expect(rock.surveyedBy).toEqual(['scout']);
+  expect(rock.material).toBe('ice');
+  expect(rock.offsets).toEqual(source.offsets);
+  expect(rock.offsets).not.toBe(source.offsets);
+  expect(rock.position).not.toBe(source.position);
+});
+
+test('small pose drift remains interpolated while velocity follows authority', () => {
+  const local = new Roid(row('a', 10, 10));
+  const source = { ...row('a', 14, 10), velocity: { x: 2, y: 0 } };
+  applyAsteroidKinematics(local, source);
+  expect(local.position).toEqual({ x: 10, y: 10 });
+  expect(local.velocity).toEqual({ x: 2, y: 0 });
+  expect(shouldSnapAsteroidPose(local.position, source.position)).toBe(false);
+});
+
+test('large drift snaps in place and keeps vector identity', () => {
+  const local = new Roid(row('a', 1, 2));
+  const position = local.position,
+    velocity = local.velocity;
+  applyAsteroidKinematics(local, row('a', 80, -12));
   expect(local.position).toBe(position);
   expect(local.velocity).toBe(velocity);
   expect(position).toEqual({ x: 80, y: -12 });
-  expect(velocity).toEqual({ x: 1, y: 0 });
 });
 
-test('a warm rejoin keeps seen asteroid ids so the next snapshot updates in place', () => {
-  expect(shouldPreserveSeenAsteroidsOnJoin(0)).toBe(false);
-  expect(shouldPreserveSeenAsteroidsOnJoin(11)).toBe(true);
+test('an escaped interpolated pose is contained even when server drift is small', () => {
+  const radius = WORLD.radius;
+  const local = new Roid(row('a', radius + 1000, 40));
+  applyAsteroidKinematics(local, row('a', radius + 1005, 40));
+  expect(Math.hypot(local.position.x, local.position.y)).toBeLessThanOrEqual(radius);
+  expect(local.position.y / local.position.x).toBeCloseTo(40 / (radius + 1005), 10);
 });
 
-test('a probe follows complete asteroid snapshots and disappears when the server clears it', () => {
-  const local: AsteroidKinematicTarget = {
-    position: { x: 0, y: 0 },
-    velocity: { x: 0, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    health: 100,
-    maxHealth: 100,
-    r: 30,
-    probe: null,
+test('complete rows copy live reflection, mining and probe metadata and clear omitted metadata', () => {
+  const source: AsteroidData = {
+    ...row('a'),
+    surveyedBy: ['scout'],
+    miningContributors: ['miner'],
+    phenomenon: { kind: 'reflective', clusterId: 'cluster', energy: 2, maxEnergy: 6 },
+    probe: {
+      id: 'probe',
+      ownerId: 'scout',
+      health: 40,
+      maxHealth: 40,
+      attachedAt: 1000,
+      expiresAt: 301000,
+      angle: 0,
+      radialOffset: 40,
+    },
   };
-  const probe = {
-    id: 'probe',
-    ownerId: 'scout',
-    health: 40,
-    maxHealth: 40,
-    attachedAt: 1000,
-    expiresAt: 301000,
-    angle: 0,
-    radialOffset: 40,
-  };
-  const fields = writeAsteroidKinematicUpdates({ probe }, {});
-  applyAsteroidKinematics(local, fields, { complete: true });
-  expect(local.probe).toEqual(probe);
-  probe.health = 1;
+  const local = new Roid(row('a'));
+  applyAsteroidKinematics(local, source);
+  expect(local.phenomenon).toEqual(source.phenomenon);
+  expect(local.miningContributors).toEqual(['miner']);
+  expect(local.surveyedBy).toEqual(['scout']);
+  expect(local.probe).toEqual(source.probe);
+  if (!source.probe) {
+    throw new Error('Missing probe fixture');
+  }
+  source.probe.health = 1;
   expect(local.probe?.health).toBe(40);
-  applyAsteroidKinematics(local, { position: { x: 50, y: 60 } });
-  expect(local.probe?.id).toBe('probe');
-  applyAsteroidKinematics(local, {}, { complete: true });
+  applyAsteroidKinematics(local, row('a'));
   expect(local.probe).toBeNull();
+  expect(local.boost).toBeNull();
+  expect(local.surveyedBy).toBeUndefined();
+  expect(local.miningContributors).toBeUndefined();
+});
+
+test('reconciliation removes rows without triggering destruction effects', () => {
+  const reconciled: string[] = [],
+    destroyed: AsteroidDestroyEvent[] = [];
+  const belt = [new Roid(row('replaced'))];
+  bindAsteroidFieldApply({
+    readBelt: () => belt,
+    onCreated: () => {},
+    onUpdated: () => {},
+    onDestroyed: (event) => destroyed.push(event),
+    onReconciled: (id) => reconciled.push(id),
+  });
+  expect(readAsteroidBelt()).toBe(belt);
+  applyAsteroidFieldPartition(partitionAsteroidSnapshot([], belt, undefined, true));
+  notifyAsteroidDestroyed({ asteroidId: 'destroyed' });
+  expect(reconciled).toEqual(['replaced']);
+  expect(destroyed).toEqual([{ asteroidId: 'destroyed' }]);
+});
+
+test('complete rows copy campaign and glow metadata, then clear it after reconnecting to an older server', () => {
+  const source = {
+    ...row('glow'),
+    glowtoy: { charge: 0.8, cachePosition: { x: 200, y: 0 }, cacheRevealed: false },
+    contourRider: { height: 0, direction: 1 as const },
+    supply: { sourceId: 'furnace:1', value: 25 },
+  };
+  const rock = new Roid(source);
+  expect(rock.glowtoy).toEqual(source.glowtoy);
+  expect(rock.glowtoy).not.toBe(source.glowtoy);
+  expect(rock.contourRider).toEqual(source.contourRider);
+  expect(rock.supply).toEqual(source.supply);
+  applyAsteroidKinematics(rock, { ...source, health: 20 });
+  expect(rock.glowtoy?.charge).toBe(0.8);
+  expect(rock.contourRider?.height).toBe(0);
+  expect(rock.supply).not.toBe(source.supply);
+  applyAsteroidKinematics(rock, row('glow'));
+  expect(rock.glowtoy).toBeUndefined();
+  expect(rock.contourRider).toBeUndefined();
+  expect(rock.supply).toBeUndefined();
 });

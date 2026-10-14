@@ -163,3 +163,16 @@ test('a scanning pilot repaints both friendly and bounced laser colors without r
   expect(view.created).toHaveLength(2);
   expect(view.sources().some((canvas, index) => canvas.width < (widths[index] ?? 0))).toBe(true);
 });
+
+test('authoritative charged energy enlarges the cached beam without allocating a sprite per charge', () => {
+  const view = scene();
+  const scale = vi.spyOn(view.ctx, 'scale');
+  const laser = { position: { x: 70, y: 60 }, velocity: { x: 1, y: 0 }, explodeTime: 0, energy: 1 };
+  drawLaserBolts([laser], '#AB12CD', { x: 0, y: 0 });
+  const source = view.sources()[0];
+  view.images.mockClear();
+  laser.energy = 4;
+  drawLaserBolts([laser], '#AB12CD', { x: 0, y: 0 });
+  expect(scale).toHaveBeenLastCalledWith(2, 4);
+  expect(view.sources()[0]).toBe(source);
+});

@@ -1,4 +1,5 @@
 import { GAME } from '../../../shared/constants/gameplay';
+import { cargoCapacity } from '../../../shared/economy';
 import { cruiseSpeed } from '../../../shared/shipFlight';
 import { thrustScaleFromMass } from '../../../shared/shipGrowth';
 import { TERRAIN } from '../../../shared/terrainConfig';
@@ -29,9 +30,12 @@ export function advanceCruiseVelocity(
 
 /** Actual terrain speed, excluding collision impulses. */
 export function contourSpeedStrength(
-  ship: Pick<Ship, 'mass' | 'maxVelocity' | 'velocity' | 'knockbackVelocityLimit'>
+  ship: Pick<
+    Ship,
+    'mass' | 'maxVelocity' | 'velocity' | 'knockbackVelocityLimit' | 'cargo' | 'kitId'
+  >
 ): number {
-  const baseline = cruiseSpeed(ship.mass, ship.maxVelocity);
+  const baseline = cruiseSpeed(ship.mass, ship.maxVelocity, ship.cargo, cargoCapacity(ship.kitId));
   if (ship.knockbackVelocityLimit > baseline) {
     return 0;
   }

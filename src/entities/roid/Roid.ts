@@ -1,8 +1,10 @@
 import { tickAsteroidBoost } from '../../../shared/asteroidBoost';
 import { stepAsteroidMotionInto } from '../../../shared/asteroidMotion';
-import { DEBUG, GAME, ROID } from '../../../shared/constants/gameplay';
+import { stepContourAsteroid } from '../../../shared/contourAsteroid';
+
 import type {
   AsteroidBoost,
+  AsteroidData,
   AsteroidMaterial,
   AsteroidPhenomenon,
   AsteroidProbe,
@@ -13,6 +15,8 @@ import { playHitSound as playHitSoundAt } from '../../audio/gameSounds';
 import { worldFurnaces } from '../../network/worldExploration';
 
 class Roid {
+  position: Position;
+  r: number;
   id: string;
   angle: number;
   angularVelocity: number;
@@ -23,53 +27,72 @@ class Roid {
   maxHealth: number;
   material?: AsteroidMaterial;
   ore?: AsteroidMaterial | null;
+  supply?: AsteroidData['supply'];
   surveyedBy?: string[];
   miningContributors?: string[];
   /** Optional server-owned reflection metadata. */
   phenomenon?: AsteroidPhenomenon;
+  glowtoy?: AsteroidData['glowtoy'];
+  contourRider?: AsteroidData['contourRider'];
   boost?: AsteroidBoost | null;
   probe?: AsteroidProbe | null;
   /** Shared multi-pilot HP rock. Lasers chip; do not pending-lock. */
-  private _jaggedness: number = ROID.JAGGEDNESS; // Store jaggedness value
+  jaggedness: number;
 
   playHitSound(): void {
     playHitSoundAt(this.position);
   }
 
-  constructor(
-    public position: Position,
-    public r: number,
-    id?: string
-  ) {
-    this.id = id ?? crypto.randomUUID();
-    this.angle = Math.random() * Math.PI * 2; // in radians
-    this.angularVelocity = (Math.random() - 0.5) * 0.01 * GAME.MOTION_SCALE;
-    const speed = (Math.random() * ROID.SPEED) / GAME.FPS;
-    this.velocity = {
-      x: speed * (Math.random() < 0.5 ? 1 : -1),
-      y: speed * (Math.random() < 0.5 ? 1 : -1),
-    };
-
-    this.vertices = Math.floor(Math.random() * (ROID.VERTICES + 1) + ROID.VERTICES / 2);
-    this.health = this.r * 10; // Health based on size
-    this.maxHealth = this.r * 10;
-
-    this.generateShape();
+  constructor(row: AsteroidData) {
+    this.id = row.id;
+    this.position = { ...row.position };
+    this.velocity = { ...row.velocity };
+    this.r = row.size;
+    this.angle = row.rotation;
+    this.angularVelocity = row.angularVelocity;
+    this.health = row.health;
+    this.maxHealth = row.maxHealth;
+    this.vertices = row.vertices;
+    this.offsets = [...row.offsets];
+    this.jaggedness = row.jaggedness;
+    this.applySnapshotMetadata(row);
   }
 
-  get jaggedness(): number {
-    return this._jaggedness;
-  }
-
-  set jaggedness(value: number) {
-    this._jaggedness = value;
-  }
-
-  // Generate the shape based on current jaggedness
-  private generateShape(): void {
-    this.offsets.length = 0; // Clear existing offsets
-    for (let i = 0; i < this.vertices; i++) {
-      this.offsets.push(Math.random() * this._jaggedness * 2 + 1 - this._jaggedness);
+  /** Copy complete server metadata and clear fields absent from the latest snapshot. */
+  applySnapshotMetadata(row: AsteroidData): void {
+    this.probe = row.probe ? { ...row.probe } : null;
+    this.boost = row.boost ? { ...row.boost } : null;
+    if (row.material !== undefined) {
+      this.material = row.material;
+    } else {
+      delete this.material;
+    }
+    if (row.ore !== undefined) {
+      this.ore = row.ore;
+    } else {
+      delete this.ore;
+    }
+    if (row.supply) {
+      this.supply = { ...row.supply };
+    } else {
+      delete this.supply;
+    }
+    this.contourRider = row.contourRider ? { ...row.contourRider } : row.contourRider;
+    this.glowtoy = row.glowtoy ? { ...row.glowtoy } : row.glowtoy;
+    if (row.surveyedBy) {
+      this.surveyedBy = [...row.surveyedBy];
+    } else {
+      delete this.surveyedBy;
+    }
+    if (row.miningContributors) {
+      this.miningContributors = [...row.miningContributors];
+    } else {
+      delete this.miningContributors;
+    }
+    if (row.phenomenon) {
+      this.phenomenon = { ...row.phenomenon };
+    } else {
+      delete this.phenomenon;
     }
   }
 }
@@ -82,15 +105,11 @@ class RoidBelt {
   }
 
   moveRoids(): void {
-    // Freeze only when debug mode explicitly disables movement.
-    // The controller supplies fixed 60 Hz steps, matching the server.
-    if (DEBUG.ENABLED && !DEBUG.ROIDS.MOVEMENT) {
-      return;
-    }
-
     for (const roid of this.roids) {
       tickAsteroidBoost(roid, roid.r, worldFurnaces);
-      stepAsteroidMotionInto(roid.position, roid.velocity, 1, roid.position, roid.velocity);
+      if (!stepContourAsteroid(roid)) {
+        stepAsteroidMotionInto(roid.position, roid.velocity, 1, roid.position, roid.velocity);
+      }
     }
   }
 }

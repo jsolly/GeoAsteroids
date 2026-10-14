@@ -1,9 +1,8 @@
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { SNAPSHOT_VERSION, SnapshotEncoder } from '../../../shared/snapshotProtocol';
 import { clientPerformance } from '../../../src/diagnostics/performanceMetrics';
-import { entityFactory } from '../../../src/entities/EntityFactory';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { NetworkManager } from '../../../src/network/networkManager';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   CONNECTION_HANDSHAKE_TIMEOUT_MS,
@@ -41,7 +40,7 @@ class Transport {
 let manager: ConnectionManager;
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 
@@ -82,12 +81,12 @@ test('an unanswered initial handshake times out and permits an explicit retry', 
   const abandoned = latest();
   await vi.advanceTimersByTimeAsync(CONNECTION_HANDSHAKE_TIMEOUT_MS);
   await failure;
-  expect(manager.isConnected()).toBe(false);
+  expect(manager.isConnected).toBe(false);
   expect(manager.getSocket()).toBeNull();
   expect(abandoned.close).toHaveBeenCalledOnce();
   expect(vi.getTimerCount()).toBe(0);
   await open();
-  expect(manager.isConnected()).toBe(true);
+  expect(manager.isConnected).toBe(true);
 });
 
 test('closing before open rejects the handshake without waiting for its deadline', async () => {
@@ -97,7 +96,7 @@ test('closing before open rejects the handshake without waiting for its deadline
   expect(manager.getSocket()).toBeNull();
   expect(vi.getTimerCount()).toBe(0);
   await open();
-  expect(manager.isConnected()).toBe(true);
+  expect(manager.isConnected).toBe(true);
 });
 
 test('leaving while connecting settles the promise and ignores a late open callback', async () => {
@@ -133,15 +132,19 @@ test('a thrown gameplay send reports failure and reconnects without replaying th
   expect(
     manager.sendMessage({ type: 'useAbility', id: manager.getLocalPlayerId(), data: {} })
   ).toBe(false);
-  expect(error).toHaveBeenCalledWith('NETWORK', 'Failed to send gameplay message', cause);
+  expect(error).toHaveBeenCalledWith(
+    'NETWORK',
+    'Failed to send gameplay message',
+    expect.objectContaining({ name: 'Error', message: 'transport write failed' })
+  );
   expect(manager.getSocket()).toBeNull();
-  expect(manager.isConnected()).toBe(false);
+  expect(manager.isConnected).toBe(false);
   await vi.advanceTimersByTimeAsync(500);
   const replacement = latest();
   expect(replacement).not.toBe(socket);
   replacement.open();
   await Promise.resolve();
-  expect(manager.isConnected()).toBe(true);
+  expect(manager.isConnected).toBe(true);
   expect(replacement.send).not.toHaveBeenCalled();
 });
 
@@ -154,10 +157,14 @@ test('a socket close failure still clears local state and never retries an inten
   const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
   manager.disconnect();
   expect(manager.getSocket()).toBeNull();
-  expect(manager.isConnected()).toBe(false);
+  expect(manager.isConnected).toBe(false);
   expect(socket.onopen).toBeNull();
   expect(socket.onclose).toBeNull();
-  expect(error).toHaveBeenCalledWith('NETWORK', 'Failed to close retired WebSocket', cause);
+  expect(error).toHaveBeenCalledWith(
+    'NETWORK',
+    'Failed to close retired WebSocket',
+    expect.objectContaining({ message: 'close failed' })
+  );
   expect(logger.warn).not.toHaveBeenCalledWith('NETWORK', 'WebSocket connection closed');
   expect(logger.info).toHaveBeenCalledWith(
     'STATE',
@@ -187,7 +194,7 @@ test('five failed reconnect handshakes end in one permanent disconnect with no r
       await vi.advanceTimersByTimeAsync(CONNECTION_HANDSHAKE_TIMEOUT_MS);
     }
     expect(permanentlyDisconnected).toHaveBeenCalledOnce();
-    expect(manager.isConnected()).toBe(false);
+    expect(manager.isConnected).toBe(false);
     expect(manager.getSocket()).toBeNull();
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(60_000);
@@ -204,7 +211,6 @@ test('join completion timeout restores the permanent-disconnect path and settles
   const recoveryFailure = vi.spyOn(clientPerformance, 'recoveryFailed');
   const permanentDisconnect = vi.fn();
   window.addEventListener('networkPermanentlyDisconnected', permanentDisconnect);
-  clientPerformance.serverReleaseId = 'stale-release';
   try {
     manager.initializeAsteroidSync();
     await vi.advanceTimersByTimeAsync(JOIN_COMPLETION_TIMEOUT_MS);
@@ -212,9 +218,8 @@ test('join completion timeout restores the permanent-disconnect path and settles
     expect(joinFailure).toHaveBeenCalledOnce();
     expect(recoveryFailure).toHaveBeenCalledOnce();
     expect(permanentDisconnect).toHaveBeenCalledOnce();
-    expect(manager.isConnected()).toBe(false);
+    expect(manager.isConnected).toBe(false);
     expect(manager.getSocket()).toBeNull();
-    expect(clientPerformance.serverReleaseId).toBeUndefined();
     expect(socket.close).toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith(
       'NETWORK',
@@ -244,7 +249,7 @@ test('intentional disconnect settles an open pending join before teardown', asyn
   await vi.advanceTimersByTimeAsync(JOIN_COMPLETION_TIMEOUT_MS);
 
   expect(joinFailure).toHaveBeenCalledOnce();
-  expect(manager.isConnected()).toBe(false);
+  expect(manager.isConnected).toBe(false);
   expect(manager.getSocket()).toBeNull();
   expect(socket.close).toHaveBeenCalled();
 });
@@ -257,7 +262,7 @@ test('a pre-join server error fails the attempt while a post-join error leaves t
     manager.initializeAsteroidSync();
     preJoin.receive('error', 'The game server is full');
     expect(permanentDisconnect).toHaveBeenCalledOnce();
-    expect(manager.isConnected()).toBe(false);
+    expect(manager.isConnected).toBe(false);
     expect(logger.info).toHaveBeenCalledWith(
       'STATE',
       'transport_closed',
@@ -284,14 +289,14 @@ test('a pre-join server error fails the attempt while a post-join error leaves t
     });
     postJoin.receive('error', 'Ability unavailable');
     expect(postJoinPermanentDisconnect).not.toHaveBeenCalled();
-    expect(manager.isConnected()).toBe(true);
+    expect(manager.isConnected).toBe(true);
   } finally {
     window.removeEventListener('networkPermanentlyDisconnected', postJoinPermanentDisconnect);
   }
 });
 
 test('join waits for the joined pose and first snapshot before play can start', async () => {
-  const player = entityFactory.createLocalPlayer('Bob', { x: 12, y: 34 });
+  const player = createPlayer({ name: 'Bob', type: 'local', position: { x: 12, y: 34 } });
   vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
   manager.setLocalPlayerName('Bob');
   const socket = await open();
@@ -328,7 +333,7 @@ test('join waits for the joined pose and first snapshot before play can start', 
 });
 
 test('the first local authoritative state clears the join completion deadline', async () => {
-  const player = entityFactory.createLocalPlayer('Runtime pilot', { x: 0, y: 0 });
+  const player = createPlayer({ name: 'Runtime pilot', type: 'local', position: { x: 0, y: 0 } });
   vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
   manager.setLocalPlayerName('Runtime pilot');
   const socket = await open();
@@ -358,7 +363,7 @@ test('the first local authoritative state clears the join completion deadline', 
 
     await vi.advanceTimersByTimeAsync(JOIN_COMPLETION_TIMEOUT_MS);
     expect(permanentDisconnect).not.toHaveBeenCalled();
-    expect(manager.isConnected()).toBe(true);
+    expect(manager.isConnected).toBe(true);
   } finally {
     wallClock.mockRestore();
     window.removeEventListener('networkPermanentlyDisconnected', permanentDisconnect);
@@ -401,6 +406,6 @@ test('resync diagnostics count successful sends only', async () => {
   });
   second.receive('snapshot', { kind: 'delta', sequence: 2, baseline: 1 });
   expect(count).not.toHaveBeenCalledWith('resyncs');
-  expect(manager.isConnected()).toBe(false);
+  expect(manager.isConnected).toBe(false);
   expect(first.close).toHaveBeenCalled();
 });

@@ -2,6 +2,7 @@ import { expect, test, vi } from 'vitest';
 import {
   ExplorationMap,
   explorationCellAt,
+  exploredCells,
   isCellExplored,
   validExploration,
 } from '../../../shared/exploration';
@@ -88,6 +89,12 @@ test('radar preserves every sector bit, byte seam and world edge after decoding'
   expect(cells.map((cell) => isCellExplored(tiles, cell))).toEqual(
     cells.map((cell) => oldLookup(tiles, cell))
   );
+  const traversed = new Set(exploredCells(tiles));
+  for (const cell of cells.filter(
+    (value) => Number.isInteger(value) && value >= 0 && value < GRID * GRID
+  )) {
+    expect(traversed.has(cell)).toBe(oldLookup(tiles, cell));
+  }
   expect(isCellExplored(tiles, 0)).toBe(true);
   expect(isCellExplored(tiles, 1)).toBe(false);
   expect(isCellExplored(tiles, 15 * GRID + 15)).toBe(true);

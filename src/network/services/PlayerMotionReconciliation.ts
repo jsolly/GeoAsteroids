@@ -110,7 +110,9 @@ export class PlayerMotionReconciliation {
     if (state.mode !== 'free' || newEpoch || resumed || wasConstrained) {
       ship.position = { ...snapshot.position };
       ship.velocity = { ...snapshot.velocity };
-      ship.knockbackVelocityLimit = Math.hypot(snapshot.velocity.x, snapshot.velocity.y);
+      ship.knockbackVelocityLimit = snapshot.contourLock
+        ? 0
+        : Math.hypot(snapshot.velocity.x, snapshot.velocity.y);
       ship.angle = snapshot.angle;
       ship.mass = snapshot.mass;
     }

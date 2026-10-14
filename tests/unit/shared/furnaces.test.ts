@@ -1,4 +1,6 @@
 import { expect, test } from 'vitest';
+import { frontierSite } from '../../../shared/frontier';
+import { FurnaceField } from '../../../shared/furnaceField';
 import {
   CIVIC_LOTS,
   civicLot,
@@ -300,4 +302,49 @@ test('fresh flights stand on the town ring', () => {
     expect(isTownSquareArrival(position)).toBe(true);
   }
   expect(isTownSquareArrival({ x: 8_000, y: 0 })).toBe(false);
+});
+
+test('nearest lit furnace matches an exhaustive search across civic and frontier rebuilds', () => {
+  const field = new FurnaceField();
+  const frontier = [
+    'frontier:2,0',
+    'frontier:2,-1',
+    'frontier:-3,0',
+    'frontier:5,4',
+    'frontier:-6,-5',
+  ].map((id) => {
+    const site = frontierSite(id);
+    if (!site) {
+      throw new Error(`Missing frontier site ${id}`);
+    }
+    return site;
+  });
+  let seed = 98231;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 0x100000000;
+  };
+  const points = Array.from({ length: 1000 }, () => ({
+    x: (random() - 0.5) * 100000,
+    y: (random() - 0.5) * 100000,
+  }));
+  // An exact tie between two frontier hearths exercises the stable ID tie-break.
+  points.push({ x: 12500, y: 0 }, { x: 0, y: 0 });
+  for (const [civic, remote] of [
+    [CIVIC_LOTS, frontier],
+    [CIVIC_LOTS.slice(0, 6), frontier.slice(0, 2)],
+    [[], []],
+  ] as const) {
+    field.replaceLit(civic.map((lot) => ({ id: lot.id, builderName: 'Ada' })));
+    field.replaceFrontier(remote.map((site) => site.id));
+    const candidates = [...FURNACES, ...civic, ...remote];
+    for (const point of [...points, ...candidates.map((site) => site.position)]) {
+      const ranked = [...candidates].sort(
+        (a, b) =>
+          Math.hypot(point.x - a.position.x, point.y - a.position.y) -
+            Math.hypot(point.x - b.position.x, point.y - b.position.y) || a.id.localeCompare(b.id)
+      );
+      expect(field.nearest(point).id, JSON.stringify(point)).toBe(ranked[0]?.id);
+    }
+  }
 });

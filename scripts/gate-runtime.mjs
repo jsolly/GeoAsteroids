@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -19,8 +19,8 @@ export function lifecycleCommand(root, environment, entry, mode = '--validation-
   assert(npm, 'Missing npm validation runtime');
   // One actual npm lifecycle supplies the same effective defaults to manual and
   // hook launches. This invokes the existing battery, never the pre-commit hook.
-  // npm may be an executable shell wrapper (mise), rather than a JavaScript file.
-  return [realpathSync(npm), 'run', 'env', '--', process.execPath, entry, mode];
+  // Wrappers and symlink multiplexers must retain their invoked tool name.
+  return [resolve(npm), 'run', 'env', '--', process.execPath, entry, mode];
 }
 
 export function canonicalEnvironment(root, environment) {

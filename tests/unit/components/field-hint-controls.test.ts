@@ -6,13 +6,12 @@ import FieldHints from '../../../src/components/game/FieldHints.svelte';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { resetControlSources } from '../../../src/input/controlSources';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import {
   disposeTouchControls,
   initializeTouchControls,
   readTouchControlDiagnostics,
 } from '../../../src/input/touchControls';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { resetWorldExploration } from '../../../src/network/worldExploration';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { closeGameOverlay, getOpenGameOverlay } from '../../../src/runtime/overlayState';
@@ -26,6 +25,7 @@ import {
   subscribeFieldHints,
 } from '../../../src/ui/fieldHint';
 import { syncFurnaceTravelPrompt } from '../../../src/ui/furnaceTravelPrompt';
+import { setPlayView } from '../../../src/ui/uiUtils';
 import { setWindowViewport } from '../../support/viewport';
 
 let component: ReturnType<typeof mount>;
@@ -34,7 +34,7 @@ let restoreViewport: () => void;
 let pilot: Player;
 let canvas: HTMLCanvasElement;
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 beforeEach(() => {
@@ -42,13 +42,12 @@ beforeEach(() => {
   resetWorldExploration();
   resetControlSources();
   document.body.replaceChildren();
-  document.body.classList.add('in-play');
+  setPlayView(true);
   restoreViewport = setWindowViewport(390, 844);
   pilot = new Player({
     id: 'hint-pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   pilot.ship.position = { x: 0, y: 0 };
   vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
@@ -92,7 +91,7 @@ afterEach(async () => {
   resetControlSources();
   restoreViewport();
   vi.restoreAllMocks();
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   document.body.replaceChildren();
 });
 function prompt() {

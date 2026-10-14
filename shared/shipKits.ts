@@ -12,7 +12,6 @@ interface ShipKit {
   name: string;
   abilityId: ShipAbilityId;
   abilityName: string;
-  abilityHint: string;
   maxHealth: number;
   size: number;
   thrust: number;
@@ -50,7 +49,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     name: 'Scout',
     abilityId: 'surveyScan',
     abilityName: 'Mineral scan',
-    abilityHint: 'Start with Mineral Scan. Find Survey Probe in spider nests. V opens inventory.',
     maxHealth: SHIP.MAX_HEALTH,
     size: SHIP.SIZE,
     thrust: SHIP.THRUST,
@@ -63,8 +61,6 @@ const KITS: Record<ShipKitId, ShipKit> = {
     name: 'Hauler',
     abilityId: 'harpoon',
     abilityName: 'Harpoon',
-    abilityHint:
-      'Start with Tow Cable. Find Resource Tap and Boost Coupling in spider nests. V opens inventory.',
     maxHealth: 140,
     size: SHIP.SIZE * HAULER_TO_SCOUT_SIZE,
     thrust: 4.5 * GAME.MOTION_SCALE * GAME.PLAYER_SPEED_SCALE,

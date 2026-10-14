@@ -31,7 +31,7 @@ test.each(['scout', 'hauler'] as const)(
   (kitId) => {
     const ship = pilot(kitId);
     const start = { ...ship.position };
-    const baseline = cruiseSpeed(ship.mass, ship.maxVelocity);
+    const baseline = cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1);
     expect(ship.toggleContourLock()).toBe(true);
     const lock = ship.contourLock;
     if (!lock) {
@@ -102,7 +102,7 @@ test('rail guidance refuses a faraway level rather than snapping across empty sp
 test('a surviving laser impact releases the rail immediately', () => {
   const ship = pilot();
   expect(ship.toggleContourLock()).toBe(true);
-  ship.takeDamage(1, 'laser');
+  ship.takeDamage(1);
   expect(ship.health).toBeGreaterThan(0);
   expect(ship.contourLocked).toBe(false);
 });
@@ -114,7 +114,7 @@ test('a diagonal flick takes the reachable reverse route around an adjacent bend
   const velocity = contourLockVelocity(
     ship.position,
     original,
-    cruiseSpeed(ship.mass, ship.maxVelocity)
+    cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1)
   );
   if (!velocity) {
     throw new Error('Missing fixture guidance');

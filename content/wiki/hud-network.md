@@ -14,19 +14,21 @@ media: []
 
 ## Read the HUD
 
-Gold crates fill the cargo bay inside local and crew hulls as they collect points; a full hold pulses with Cargo Full, and [offloading](/wiki/#loot-growth) shows a stream, countdown and completion flash. The HUD shows your bank, cargo capacity, kit, shared settlement progress and resource requirements, and the crew leaderboard, ranked by bank (top ten on desktop, top three on touch, so you may not appear). The settlement percentage averages its five requirements. A thin health bar appears above a damaged ship, and the Contour Lock button shows whether a contour is available or locked. On mobile, two compact lines show bank and cargo, then kit and settlement level progress; the detailed points and resource requirements remain in the desktop HUD. On touch, the ability button names your tool and a ring shows its cooldown; desktop has no cooldown indicator. One line at the top briefly shows satellite pickups, Delivery +N or Team delivery +N each, and Scout build results; no message appears on death.
+Gold crates fill the cargo bay inside local and crew hulls as they collect points; a full hold pulses with Cargo Full, and [offloading](/wiki/#loot-growth) shows a stream, countdown and completion flash. The HUD shows your bank, cargo capacity, kit, shared settlement progress and resource requirements, and the crew leaderboard, ranked by bank (top ten on desktop, top three on touch, so you may not appear). The settlement percentage averages its five requirements. A thin health bar always appears above living crew ships and above your own damaged ship, and the Contour Lock button shows whether a contour is available or locked. On mobile, two compact lines show bank and cargo, then kit and settlement level progress; the detailed points and resource requirements remain in the desktop HUD. On touch, the ability button names your tool and a ring shows its cooldown; desktop has no cooldown indicator. One line at the top briefly shows satellite pickups, Delivery +N or Team delivery +N each, and Scout build results; no message appears on death.
 
 ## Travel prompt
 
-Inside a lit furnace's visible footprint, the prompt offers travel; at Town Square it says Enter and opens a choice of Store or Fast Travel. See [furnace travel and store](/wiki/#controls) for controls and boarding rules.
+Inside a lit furnace's visible footprint, the prompt offers travel; at Town Square it says Enter and opens a choice of Store or Fast Travel. Living pilots appear by name on the destination map; off-chart pilots get an edge arrow, and their markers do not select a destination. See [furnace travel and store](/wiki/#controls) for controls and boarding rules.
 
 ## Radar and universe map
 
-The minimap shows nearby space; M or Map opens the full shared chart. Both keep north at the top, matching the viewport and furnace destination map. Your ship marker turns to show its heading. Pinch the full chart to zoom and drag to pan; desktop also supports the mouse wheel and +/− keys. The north arrow and legend sit inside the chart, and Center on you restores the nearby ship view. The minimap shows furnaces once explored and pins off-radar crew to its rim, while the full chart always shows every lit furnace and foundation; their names appear on the chart only after you zoom in close, and only lit furnaces show fire trails. Explored ground has a pale blue tint; dark fog hides uncharted rocks and loot.
+The minimap shows nearby space; M or Map opens the full shared chart. Both keep north at the top, matching the viewport and furnace destination map. Your ship marker turns to show its heading. Pinch the full chart to zoom and drag to pan; desktop also supports the mouse wheel and +/− keys. The north arrow and legend sit inside the chart, and Center on you restores the nearby ship view. Furnace marks keep their exact world position as you approach and cross them. The minimap shows furnaces once explored and pins off-radar crew to its rim, while the full chart always shows every lit furnace and foundation; their names appear on the chart only after you zoom in close, and only lit furnaces show fire trails. Explored ground has a pale blue tint; dark fog hides uncharted rocks and loot.
+
+## Wrecks and nest ruins
+
+Red nest marks identify discovered guarded resources, even while their guards sleep offscreen; the marker disappears when its resource is collected or moved, or its last guard dies. Final guard deaths leave gray ruins, and pilot deaths leave broken hulls nearby. These temporary remains give no loot and block nothing; they expire and disappear after a server restart.
 
 ## Ricochet Court
-
-Discovered spider nests are red while any guard survives and turn dark gray when the last guard dies. A cleared marker stays until its original resource moves or disappears.
 
 The cyan open-corner marker northeast of Town Square is always visible on both maps. See [bank-shot duels](/wiki/#combat-survival) before entering.
 
@@ -46,7 +48,7 @@ Published client updates refresh open tabs automatically after two checks about 
 
 ## Can't join
 
-A generic connection-failed banner can mean your nickname is in use by an online pilot (try another), the server is full, or your tab is outdated (reload). An "unexpected error" notice returns you to the title screen; choose Enter Game to restart, or reload if the problem repeats.
+A disconnected-from-server banner can mean your nickname is in use by an online pilot (try another), the server is full, or your tab is outdated (reload). An "unexpected error" notice returns you to the title screen; choose Enter Game to restart, or reload if the problem repeats.
 
 ## Diagnostics
 
@@ -55,3 +57,7 @@ Visit `/debug` for player and page session IDs, frame rate, and connection healt
 ## Graphics option
 
 Try the [experimental WebGL version](https://www.georoids.com/?renderer=webgl2) to compare graphics performance on your device. It uses the same scene and controls and falls back automatically if the renderer is unavailable. Reload the [standard version](https://www.georoids.com/) to return to the default renderer.
+
+## Campaign status
+
+Campaign-enabled servers show the shared Deep Scanner ore total and UTC hazard warnings above the playfield. Crew signals and downed beacons appear nearby, at the playfield edge and on the chart; rescue and sac countdowns use the server clock. Downed deadlines and permanent frontier progress survive reconnects and server restarts, subject to the normal last-checkpoint crash window.

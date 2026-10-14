@@ -14,7 +14,7 @@ import {
   shouldApplyDamagedHealth,
   shouldDrawShipHull,
 } from '../../../src/entities/ship/shipUtils';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { RecordingSocket } from '../../support/recordingSocket';
 import { SHIP_KINDS } from '../scenarios/support/shipKinds';
 
@@ -45,9 +45,8 @@ describe('client explode ticks follow the 60 Hz clock', () => {
       id: 'local',
       name: 'Local',
       type: 'local',
-      input: new MockPlayerInput(),
     });
-    player.ship.takeDamage(100, 'boundary');
+    player.ship.takeDamage(100);
     player.ship.updateLifecycle(SHIP.EXPLODE_DURATION_FRAMES);
     expect(player.ship.explodeTime).toBe(0);
 
@@ -79,7 +78,7 @@ describe('shared ship HUD and respawn timers', () => {
   test.each(['local', 'remote'] as const)(
     'a %s pilot spending the exact furnace cost shows zero score',
     (type) => {
-      const player = new Player({ id: type, name: 'Builder', type, input: new MockPlayerInput() });
+      const player = new Player({ id: type, name: 'Builder', type });
       player.score = 1_500;
       player.updateFromServer({ score: 0, cargo: 0, purchases: [] });
       expect(player.score).toBe(0);
@@ -174,7 +173,6 @@ describe('client blink after a heal-leak', () => {
       id: 'local',
       name: 'Local',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.blinkCount = 0;
     player.ship.spawnProtectionTimer = 0;
@@ -195,7 +193,6 @@ describe('client blink after a heal-leak', () => {
       id: 'local',
       name: 'Local',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.health = 0;
     player.ship.exploding = true;
@@ -232,7 +229,6 @@ describe('client blink after a heal-leak', () => {
       id: 'local',
       name: 'Local',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.health = 0;
     player.ship.exploding = true;
@@ -255,7 +251,6 @@ describe('client blink after a heal-leak', () => {
       id: 'remote',
       name: 'Remote',
       type: 'remote',
-      input: new MockPlayerInput(),
     });
     const position = player.ship.position;
     const velocity = player.ship.velocity;
@@ -278,7 +273,6 @@ describe('client blink after a heal-leak', () => {
       id: 'local',
       name: 'Local',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     const first = player.getStateForNetwork();
     player.ship.angle = 0.5;
@@ -294,7 +288,6 @@ describe('remote ship lifecycle is the same 60 Hz clock', () => {
       id: 'remote',
       name: 'Remote',
       type: 'remote',
-      input: new MockPlayerInput(),
     });
     player.ship.health = 0;
     player.ship.exploding = true;
@@ -312,7 +305,6 @@ describe('remote ship lifecycle is the same 60 Hz clock', () => {
       id: 'remote',
       name: 'Remote',
       type: 'remote',
-      input: new MockPlayerInput(),
     });
     const origin = { x: 40, y: 80 };
     player.ship.position = origin;

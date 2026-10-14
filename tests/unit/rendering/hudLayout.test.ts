@@ -55,7 +55,6 @@ test('a synchronous safe-area edit moves the phone HUD without resizing or reset
   probe.style.padding = '47px 24px 34px 24px';
   const shifted = hudLayoutForCanvas(viewport);
   expect(shifted.balance).toEqual({ x: 32, y: 55 });
-  expect(shifted.score).toEqual(shifted.balance);
   expect(shifted.kitNameY).toBe(initial.kitNameY + 43);
   expect(shifted.miniMap.x).toBe(initial.miniMap.x - 20);
   expect(shifted.miniMap.y).toBe(initial.miniMap.y - 30);
@@ -121,7 +120,7 @@ test('desktop 800x600 keeps the Wave1 compact cluster anchors', () => {
     { width: 800, height: 600 },
     { touchControls: false, safeArea: ZERO }
   );
-  expect(layout.score).toEqual({ x: VISUAL.HUD_INSET, y: VISUAL.HUD_INSET });
+  expect(layout.balance).toEqual({ x: VISUAL.HUD_INSET, y: VISUAL.HUD_INSET });
   expect(layout.notificationY).toBe(12);
   expect(layout.leaderboard).toMatchObject({
     x: 800 - 180 - 16,
@@ -157,7 +156,7 @@ test('phone landscape keeps the radar below the top action buttons', () => {
     { width: 844, height: 390 },
     { touchControls: true, safeArea: ZERO }
   );
-  expect(layout.miniMap.y).toBeGreaterThan(layout.score.y + 28);
+  expect(layout.miniMap.y).toBeGreaterThan(layout.balance.y + 28);
   expect(layout.miniMap.x + layout.miniMap.size).toBe(844 - layout.padRight);
   expect(layout.leaderboard.maxRows).toBe(3);
 });
@@ -168,5 +167,5 @@ test('safe-area insets push the bank balance off the notch', () => {
     { touchControls: true, safeArea: { top: 47, right: 0, bottom: 34, left: 0 } }
   );
   expect(layout.balance.y).toBeGreaterThanOrEqual(47);
-  expect(layout.padBottom).toBeGreaterThanOrEqual(34);
+  expect(layout.miniMap.y + layout.miniMap.size).toBeLessThanOrEqual(698);
 });

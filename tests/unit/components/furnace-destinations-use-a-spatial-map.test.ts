@@ -28,13 +28,12 @@ function mountMap(
   container: HTMLElement,
   source: FurnaceSite,
   destinations: readonly FurnaceSite[],
-  ontravel: (id: string) => void,
-  rotation = 0
+  ontravel: (id: string) => void
 ) {
   document.body.append(container);
   const component = mount(FurnaceTravelMap, {
     target: container,
-    props: { view: { source, destinations, rotation }, ontravel },
+    props: { view: { source, destinations }, ontravel },
   });
   mounted.add(component);
   flushSync();
@@ -112,32 +111,118 @@ test('an isolated source remains visible with an explanation instead of an empty
   expect(container.querySelector('[data-furnace-id]')).toBeNull();
 });
 
-test('pilots see a destination along their course above them with pipes attached', () => {
+test('pilots see an eastern destination to the right with pipes attached', () => {
   const container = document.createElement('div');
   const east = CIVIC_LOTS.find((site) => site.id === 'street-1-0');
   if (!east) {
     throw new Error('Missing east street');
   }
-  const course = Math.atan2(
-    -(east.position.y - TOWN_HEARTH.position.y),
-    east.position.x - TOWN_HEARTH.position.x
-  );
-  mountMap(container, TOWN_HEARTH, [east], vi.fn(), course - Math.PI / 2);
+  mountMap(container, TOWN_HEARTH, [east], vi.fn());
   const current = container.querySelector<HTMLElement>('[aria-current="location"]');
   const destination = container.querySelector<HTMLElement>('[data-furnace-id="street-1-0"]');
   if (!current || !destination) {
     throw new Error('Missing furnace marker');
   }
-  expect(Number.parseFloat(destination.style.left)).toBeCloseTo(
+  expect(Number.parseFloat(destination.style.left)).toBeGreaterThan(
     Number.parseFloat(current.style.left)
   );
-  expect(Number.parseFloat(destination.style.top)).toBeLessThan(
-    Number.parseFloat(current.style.top)
-  );
+  const dx = Number.parseFloat(destination.style.left) - Number.parseFloat(current.style.left);
+  const dy = Number.parseFloat(destination.style.top) - Number.parseFloat(current.style.top);
+  expect(dy / dx).toBeCloseTo(east.position.y / east.position.x);
   const points = [...container.querySelectorAll('polyline')].flatMap((line) =>
     (line.getAttribute('points') ?? '').split(' ')
   );
   expect(points).toContain(
     `${Number.parseFloat(destination.style.left)},${Number.parseFloat(destination.style.top)}`
   );
+});
+
+test('crew markers preserve world bearings and names without becoming boarding targets', () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const ontravel = vi.fn();
+  const east = CIVIC_LOTS.find((site) => site.id === 'street-1-0');
+  if (!east) {
+    throw new Error('Missing east street');
+  }
+  mounted.add(
+    mount(FurnaceTravelMap, {
+      target: container,
+      props: {
+        view: {
+          source: TOWN_HEARTH,
+          destinations: [east],
+          rotation: 0,
+          pilots: [
+            { id: 'crew', name: 'Maya', position: east.position, local: false },
+            { id: 'self', name: 'John', position: TOWN_HEARTH.position, local: true },
+          ],
+        },
+        ontravel,
+      },
+    })
+  );
+  flushSync();
+  const crew = container.querySelector<HTMLElement>('[data-pilot-id="crew"]');
+  const furnace = container.querySelector<HTMLElement>(`[data-furnace-id="${east.id}"]`);
+  expect(crew?.textContent).toContain('Maya');
+  expect(crew?.style.left).toBe(furnace?.style.left);
+  expect(crew?.style.top).toBe(furnace?.style.top);
+  expect(container.querySelector('[data-pilot-id="self"]')?.textContent).toContain('John (you)');
+  crew?.click();
+  expect(ontravel).not.toHaveBeenCalled();
+});
+
+test('a Town Square-only chart keeps nearby pilots in scale and distant crew on reachable edges', () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  mounted.add(
+    mount(FurnaceTravelMap, {
+      target: container,
+      props: {
+        view: {
+          source: TOWN_HEARTH,
+          destinations: [],
+          rotation: 0,
+          pilots: [
+            { id: 'self', name: 'Local', position: { x: -40, y: 0 }, local: true },
+            ...[
+              { x: -1000, y: -1000 },
+              { x: 1000, y: -1000 },
+              { x: -1000, y: 1000 },
+              { x: 1000, y: 1000 },
+            ].map((position, id) => ({
+              id: `crew-${id}`,
+              name: `Crew ${id}`,
+              position,
+              local: false,
+            })),
+          ],
+        },
+        ontravel: vi.fn(),
+      },
+    })
+  );
+  flushSync();
+  const map = container.querySelector<HTMLElement>('.furnace-travel-map');
+  const size = Number.parseFloat(map?.style.width ?? '');
+  expect(size).toBe(320);
+  const local = container.querySelector<HTMLElement>('[data-pilot-id="self"]');
+  expect(Number.parseFloat(local?.style.left ?? '')).toBeCloseTo(151.36);
+  expect(local?.dataset['offChart']).toBe('false');
+  const crew = container.querySelectorAll<HTMLElement>('[data-pilot-id^="crew-"]');
+  expect(crew).toHaveLength(4);
+  const directions = ['northwest', 'northeast', 'southwest', 'southeast'];
+  for (const [index, pilot] of [...crew].entries()) {
+    const bearing = pilot.querySelector('.sr-only');
+    expect(bearing?.textContent?.trim()).toBe(`to the ${directions[index]}`);
+    expect(bearing?.closest('[aria-hidden="true"]')).toBeNull();
+    expect(pilot.title).toContain(`off chart to the ${directions[index]}`);
+    expect(pilot.dataset['offChart']).toBe('true');
+    expect(pilot.textContent).toContain('(off chart)');
+    expect(Number.parseFloat(pilot.style.left)).toBeGreaterThanOrEqual(16);
+    expect(Number.parseFloat(pilot.style.left)).toBeLessThanOrEqual(size - 16);
+    expect(Number.parseFloat(pilot.style.top)).toBeGreaterThanOrEqual(16);
+    expect(Number.parseFloat(pilot.style.top)).toBeLessThanOrEqual(size - 16);
+  }
 });

@@ -258,7 +258,7 @@ test('multiplayer nest creation and sleeping guards share the same active popula
   expect(manager.snapshot().spiders.filter(({ id }) => sleepingIds.includes(id))).toHaveLength(8);
 });
 
-test('the map marks the guarded deposit while its spiders chase, sleep, and remain cleared', () => {
+test('the map marks the guarded deposit while its spiders chase and sleep, then disappears when the last guard dies', () => {
   const { manager, pilot, resource, step } = setup();
   step();
   const marker = { id: nestCellId, resourceId: resource.id, cleared: false, position: { ...home } };
@@ -284,10 +284,11 @@ test('the map marks the guarded deposit while its spiders chase, sleep, and rema
   const beforeKill = manager.snapshot();
   manager.resolveLaserHit(last.position, last.position, SPIDER.MAX_HEALTH);
   expect(beforeKill.nests).toEqual([marker]);
+  expect(manager.snapshot().nests).toEqual([]);
   step(60);
   expect(beforeKill.nests).toEqual([marker]);
   expect(manager.snapshot().spiders).toEqual([]);
-  expect(manager.snapshot().nests).toEqual([{ ...marker, cleared: true }]);
+  expect(manager.snapshot().nests).toEqual([]);
 });
 
 test.each(['collected', 'moved', 'replaced'] as const)(

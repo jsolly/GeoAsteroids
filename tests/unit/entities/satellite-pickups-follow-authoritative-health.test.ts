@@ -3,7 +3,7 @@ import type { SatellitePickupData } from '../../../shared-types';
 import * as destructionSounds from '../../../src/audio/destructionSounds';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { SatellitePickupManager } from '../../../src/entities/satellitePickup/SatellitePickupManager';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 
 const manager = SatellitePickupManager.getInstance();
 const landsat: SatellitePickupData = {
@@ -23,7 +23,7 @@ const landsat: SatellitePickupData = {
 };
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 

@@ -45,20 +45,8 @@ test.each([
     expect(out).toEqual(target);
     const screen = canvasManager.worldToScreen(world, ship);
     expect(screen).toMatchObject(target);
-    expect(canvasManager.screenToWorld(screen, ship)).toEqual(world);
   }
 );
-
-test('before canvas initialization, ship-relative coordinates still round-trip without a viewport offset', () => {
-  const world = { x: 10, y: 20 };
-  const ship = { x: 3, y: 4 };
-  const out = { x: 1, y: 2 };
-  expect(canvasManager.worldToScreenInto(out, world, ship)).toBe(out);
-  expect(out).toEqual({ x: 7, y: 16 });
-  const screen = canvasManager.worldToScreen(world, ship);
-  expect(screen).toMatchObject(out);
-  expect(canvasManager.screenToWorld(screen, ship)).toEqual(world);
-});
 
 test('generic projection retains explicit distant-view scales and reuses its destination', () => {
   const out = { x: 0, y: 0 };

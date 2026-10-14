@@ -30,15 +30,6 @@ function byteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function safePageUrl(): string {
-  try {
-    const url = new URL(location.href);
-    return `${url.origin}${url.pathname}`;
-  } catch {
-    return '/';
-  }
-}
-
 function normalizeLine(line: string): QueuedLine {
   let normalized = line;
   if (byteLength(normalized) > LOG_LINE_MAX_BYTES) {
@@ -59,7 +50,7 @@ function normalizeLine(line: string): QueuedLine {
   return { line: normalized, bytes: byteLength(normalized) };
 }
 
-function enqueue(item: QueuedLine, front = false): void {
+function enqueue(item: QueuedLine): void {
   if (item.bytes > MAX_QUEUE_BYTES) {
     droppedMessageCount++;
     return;
@@ -69,11 +60,7 @@ function enqueue(item: QueuedLine, front = false): void {
     queuedBytes -= dropped?.bytes ?? 0;
     droppedMessageCount++;
   }
-  if (front) {
-    messageQueue.unshift(item);
-  } else {
-    messageQueue.push(item);
-  }
+  messageQueue.push(item);
   queuedBytes += item.bytes;
   if (droppedMessageCount % 100 === 1) {
     reportTransportFailure('Client log queue dropped records before delivery', {
@@ -164,7 +151,7 @@ function wirePayload(item: QueuedLine): string {
       level: record?.level ?? 'info',
       line: item.line,
       userAgent: navigator.userAgent,
-      pageUrl: safePageUrl(),
+      pageUrl: `${location.origin}${location.pathname}`,
     },
   });
 }

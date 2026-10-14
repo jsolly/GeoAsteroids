@@ -1,4 +1,4 @@
-import type { HaulerUtilityId, ScoutUtilityId, ShipKitId } from '../../shared-types';
+import type { CrewAction, HaulerUtilityId, ScoutUtilityId, ShipKitId } from '../../shared-types';
 import type { PhoneCollectorDownload, PhoneCollectorView } from '../diagnostics/phoneCollector';
 import type { ActionControlsView, TouchActionElements } from '../input/touchControls';
 import type { FieldHintId, FieldHintView } from '../ui/fieldHint';
@@ -25,6 +25,7 @@ export interface GameMenuView {
 }
 
 export interface GamePresentation {
+  readonly crew?: import('./crewRescue').CrewRescueView;
   readonly menu: GameMenuView;
   readonly inPlay: boolean;
   readonly joining: boolean;
@@ -43,10 +44,11 @@ export interface GamePresentation {
 }
 
 export interface GameCommands {
+  crewAction(action: CrewAction): void;
+  signalHere(kind: 'help' | 'nest'): void;
   join(name: string): void;
   selectShip(kit: ShipKitId): void;
   setPreference(kind: GamePreference, enabled: boolean): void;
-  openTownStore(): void;
   closeTownStore(): void;
   selectTownView(mode: TownView): void;
   purchaseTownOffer(id: string): void;

@@ -5,8 +5,8 @@ import { CollisionManager } from '../../../src/physics/CollisionManager';
 const mockSendMessage = vi.fn();
 const mockGetLocalPlayerId = vi.fn(() => 'local-player-123');
 
-vi.mock('../../../src/network/networkManager', () => ({
-  NetworkManager: {
+vi.mock('../../../src/network/services/ConnectionManager', () => ({
+  ConnectionManager: {
     getInstance: vi.fn(() => ({
       isConnected: true,
       getLocalPlayerId: mockGetLocalPlayerId,

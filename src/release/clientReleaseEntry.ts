@@ -1,3 +1,4 @@
+import { getClientReleaseId } from '../utils/buildInfo';
 import { watchClientRelease } from './clientReleaseWatcher';
 
 /** Independent of the match loop; owned by the mounted browser shell. */
@@ -5,9 +6,7 @@ export function mountClientRelease(): () => void {
   if (!import.meta.env.PROD) {
     return () => {};
   }
-  const previous = document.documentElement.dataset['clientRelease'];
-  const release = import.meta.env['VITE_COMMIT_SHA'];
-  document.documentElement.dataset['clientRelease'] = release;
+  const release = getClientReleaseId();
   let stop: () => void = () => {};
   const start = () => {
     stop();
@@ -39,12 +38,5 @@ export function mountClientRelease(): () => void {
     stop();
     window.removeEventListener('pagehide', hide);
     window.removeEventListener('pageshow', show);
-    if (document.documentElement.dataset['clientRelease'] === release) {
-      if (previous === undefined) {
-        delete document.documentElement.dataset['clientRelease'];
-      } else {
-        document.documentElement.dataset['clientRelease'] = previous;
-      }
-    }
   };
 }

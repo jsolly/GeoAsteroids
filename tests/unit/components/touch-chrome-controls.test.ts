@@ -6,21 +6,21 @@ import { GameStateManager } from '../../../src/core/services/GameStateManager';
 import { InputManager } from '../../../src/core/services/InputManager';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { getPressedKeysForPlayer, keys } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+import { getPressedKeysForPlayer } from '../../../src/input/keybindings';
+
 import {
   disposeTouchControls,
   initializeTouchControls,
   mountTouchActionControls,
   readActionControls,
 } from '../../../src/input/touchControls';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { setPlayView } from '../../../src/ui/uiUtils';
 
 let panel: ReturnType<typeof mount> | undefined;
 let target: HTMLDivElement;
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 afterEach(async () => {
@@ -41,7 +41,6 @@ function start(touchMode = true) {
     id: 'control-pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.ship.position = { x: 2_000, y: 0 };
   vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
@@ -74,7 +73,7 @@ function start(touchMode = true) {
     },
     leave: () => {
       inPlay = false;
-      window.dispatchEvent(new Event('playViewOff'));
+      setPlayView(false);
       flushSync();
     },
   };
@@ -193,7 +192,11 @@ test.each(['action button', 'details summary'])(
     const shoot = vi.spyOn(player.ship, 'shoot').mockImplementation(() => undefined);
     GameStateManager.getInstance().setIsGameRunning(true);
     const manager = InputManager.getInstance();
-    manager.initializeListeners();
+    const inputCanvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
+    if (!inputCanvas) {
+      throw new Error('Input fixture requires its canvas');
+    }
+    manager.initializeListeners(inputCanvas);
     try {
       const details = document.createElement('details');
       const summary = document.createElement('summary');
@@ -207,10 +210,8 @@ test.each(['action button', 'details summary'])(
       expect(shoot).not.toHaveBeenCalled();
       expect(getPressedKeysForPlayer(player).has('Space')).toBe(false);
       expect(key.defaultPrevented).toBe(false);
-      keys.Space = true;
       getPressedKeysForPlayer(player).add('Space');
       focused.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }));
-      expect(keys.Space).toBe(false);
       expect(getPressedKeysForPlayer(player).has('Space')).toBe(false);
     } finally {
       manager.detachRuntime();

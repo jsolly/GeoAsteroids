@@ -1,19 +1,24 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { ExplorationMap } from '../../../shared/exploration';
 import { CIVIC_LOTS, civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
+import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { Roid } from '../../../src/entities/roid/Roid';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   setWorldExploration,
   setWorldMapAssets,
   worldFurnaces,
 } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
+import { setPlayView } from '../../../src/ui/uiUtils';
 import {
+  bindUniverseMapField,
   mountUniverseMap as mountMap,
   type UniverseMapChrome,
   type UniverseMapController,
 } from '../../../src/ui/universeMap';
+import { asteroidRow } from '../../support/asteroid-row';
 
 let controller: UniverseMapController | undefined;
 let chrome: UniverseMapChrome | undefined;
@@ -26,11 +31,12 @@ function closeMap() {
 
 afterEach(() => {
   closeMap();
+  bindUniverseMapField(() => []);
   setSpiderField(undefined);
   worldFurnaces.replaceLit([]);
   setWorldMapAssets([]);
   setWorldExploration([]);
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -46,7 +52,7 @@ function mountUniverseMap() {
   vi.stubGlobal('requestAnimationFrame', () => 1);
   vi.stubGlobal('cancelAnimationFrame', () => {});
   vi.spyOn(performance, 'now').mockImplementation(() => clock);
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([]);
   const canvas = document.createElement('canvas');
@@ -78,6 +84,48 @@ function mountUniverseMap() {
   };
   return { open, canvas, ctx, allLocations };
 }
+
+test('keyboard and semantic chart actions signal the panned center without repeating or stealing buttons', () => {
+  const { open } = mountUniverseMap();
+  const pilot = new Player({
+    id: 'chart-signal',
+    name: 'Navigator',
+    type: 'local',
+  });
+  pilot.ship.position = { x: 10000, y: 10000 };
+  vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
+  const send = vi.spyOn(ConnectionManager.getInstance(), 'sendMessage').mockReturnValue(true);
+  open();
+  if (!controller) {
+    throw new Error('Missing chart controller');
+  }
+  controller.keydown(new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true }));
+  expect(send).toHaveBeenLastCalledWith({
+    type: 'crewAction',
+    id: pilot.id,
+    data: { kind: 'signal', signal: 'help', position: { x: 10000, y: 10000 } },
+  });
+  controller.keydown(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
+  controller.keydown(new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true }));
+  const positioned = send.mock.calls[1]?.[0];
+  expect(positioned?.data).toMatchObject({ kind: 'signal', signal: 'help' });
+  if (positioned?.type !== 'crewAction' || positioned.data.kind !== 'signal') {
+    throw new Error('Missing signal position');
+  }
+  expect(positioned.data.position.x).toBeGreaterThan(10000);
+  expect(positioned.data.position.y).toBeCloseTo(10000);
+  controller.signalHelpAtCenter();
+  expect(send.mock.calls[2]?.[0]).toEqual(positioned);
+  controller.keydown(new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true, repeat: true }));
+  const buttonEvent = new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true });
+  const button = document.createElement('button');
+  button.addEventListener('keydown', controller.keydown);
+  button.dispatchEvent(buttonEvent);
+  expect(send).toHaveBeenCalledTimes(3);
+  controller.dispose();
+  controller.signalHelpAtCenter();
+  expect(send).toHaveBeenCalledTimes(3);
+});
 
 test('a pilot pinches the universe chart, keeps dragging after lifting one finger, and locates home', () => {
   const { open, canvas, ctx } = mountUniverseMap();
@@ -239,4 +287,42 @@ test('the shared chart turns a discovered nest dark gray after its last guard di
     expect(colors).toContain(cleared ? '#444444' : '#f43f5e');
     closeMap();
   }
+});
+
+test('universe chart hides an unlit glow crystal and shows its charged mark in explored ground', () => {
+  clock = 0;
+  const { open, canvas, ctx } = mountUniverseMap();
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 400));
+  const pilot = new Player({
+    id: 'glow-chart',
+    name: 'Observer',
+    type: 'local',
+  });
+  const origin = { x: 10000, y: 10000 };
+  pilot.ship.position = origin;
+  vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
+  const ordinary = new Roid(asteroidRow({ x: origin.x + 600, y: origin.y }, 14, 'chart-control'));
+  const crystal = new Roid(
+    asteroidRow({ x: origin.x + 600, y: origin.y + 300 }, 14, 'chart-crystal')
+  );
+  crystal.glowtoy = { charge: 0, cachePosition: origin, cacheRevealed: true };
+  const exploration = new ExplorationMap();
+  exploration.reveal(origin, 1200);
+  setWorldExploration(exploration.snapshot());
+  setWorldMapAssets([]);
+  let shown: Roid[] = [];
+  bindUniverseMapField(() => shown);
+  const paint = (rocks: Roid[]) => {
+    shown = rocks;
+    open();
+    return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  };
+  const empty = paint([]);
+  const control = paint([ordinary]);
+  expect(control.some((value, i) => value !== empty[i])).toBe(true);
+  const unlit = paint([ordinary, crystal]);
+  expect(unlit.every((value, i) => value === control[i])).toBe(true);
+  crystal.glowtoy.charge = 0.8;
+  const lit = paint([ordinary, crystal]);
+  expect(lit.some((value, i) => value !== control[i])).toBe(true);
 });

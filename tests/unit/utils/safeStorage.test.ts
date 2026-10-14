@@ -4,7 +4,7 @@ import { setSound } from '../../../src/audio/Sound';
 import { soundIsOn } from '../../../src/constants/user-preferences';
 import { Player } from '../../../src/entities/player/Player';
 import { hapticsPreferenceOn, setHaptics } from '../../../src/fx/haptics';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import {
   getStoredItem,
   removeStoredItem,
@@ -193,7 +193,6 @@ test('session score still lives on the player when storage is blocked', () => {
     id: 'local-player',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.score = 0;
   expect(() => {

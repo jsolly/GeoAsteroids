@@ -24,31 +24,34 @@ afterEach(() => {
 test('a new network status is hidden until an explicit terminal message is shown', () => {
   expect(readNetworkStatus()).toBeNull();
   showNetworkBanner('Disconnected');
-  expect(readNetworkStatus()).toEqual({ message: 'Disconnected', tone: 'error' });
+  expect(readNetworkStatus()).toEqual({ message: 'Disconnected' });
   hideNetworkBanner();
   expect(readNetworkStatus()).toBeNull();
 });
 
-test('disconnect events publish the banner and either connection event clears it', () => {
+test('terminal loss publishes the banner and either connection event clears it', () => {
+  vi.spyOn(feedback, 'playFeedback').mockImplementation(() => {});
   dispose = mountNetworkStatus();
   for (const reconnect of ['networkConnected', 'networkReconnected']) {
-    window.dispatchEvent(new CustomEvent('networkDisconnected', { detail: { reason: 'test' } }));
-    expect(readNetworkStatus()).toEqual({ message: DISCONNECT_BANNER_TEXT, tone: 'error' });
+    window.dispatchEvent(
+      new CustomEvent('networkPermanentlyDisconnected', { detail: { reason: 'test' } })
+    );
+    expect(readNetworkStatus()).toEqual({ message: DISCONNECT_BANNER_TEXT });
     window.dispatchEvent(new CustomEvent(reconnect));
     expect(readNetworkStatus()).toBeNull();
   }
 });
 
-test('retrying publishes a temporary tone and terminal failure announces loss once until recovery', () => {
+test('retrying publishes a temporary notice and terminal failure announces loss once until recovery', () => {
   const sound = vi.spyOn(feedback, 'playFeedback').mockImplementation(() => {});
   dispose = mountNetworkStatus();
   window.dispatchEvent(new CustomEvent('networkReconnecting'));
-  expect(readNetworkStatus()).toEqual({ message: RECONNECTING_BANNER_TEXT, tone: 'reconnect' });
+  expect(readNetworkStatus()).toEqual({ message: RECONNECTING_BANNER_TEXT });
   window.dispatchEvent(new CustomEvent('networkReconnected'));
   expect(readNetworkStatus()).toBeNull();
   window.dispatchEvent(new CustomEvent('networkPermanentlyDisconnected', { detail: {} }));
   window.dispatchEvent(new CustomEvent('networkPermanentlyDisconnected', { detail: {} }));
-  expect(readNetworkStatus()).toEqual({ message: DISCONNECT_BANNER_TEXT, tone: 'error' });
+  expect(readNetworkStatus()).toEqual({ message: DISCONNECT_BANNER_TEXT });
   expect(sound).toHaveBeenCalledExactlyOnceWith('connectionLost');
   window.dispatchEvent(new Event('networkConnected'));
   window.dispatchEvent(new CustomEvent('networkPermanentlyDisconnected', { detail: {} }));
@@ -75,6 +78,6 @@ test('unchanged messages do not republish and disposing retires only the mounted
   dispose = mountNetworkStatus();
   previous();
   window.dispatchEvent(new Event('networkReconnecting'));
-  expect(readNetworkStatus()?.tone).toBe('reconnect');
+  expect(readNetworkStatus()?.message).toBe(RECONNECTING_BANNER_TEXT);
   unsubscribe();
 });

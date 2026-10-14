@@ -16,6 +16,7 @@ function testCombatNetwork() {
   return {
     isConnected: true,
     sendShoot: () => undefined,
+    sendCharge: () => true,
     sendAbility: mockSendAbility,
   };
 }

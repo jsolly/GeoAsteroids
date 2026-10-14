@@ -1,13 +1,5 @@
-import {
-  DEFAULT_SCOUT_UTILITY,
-  isScoutUtilityId,
-  parseScoutUtilityId,
-} from '../../../shared/shipUtilities';
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
 import type { ScoutUtilityId } from '../../../shared-types';
-import { getStoredItem, removeStoredItem, setStoredItem } from '../../utils/safeStorage';
-
-export const SCOUT_UTILITY_STORAGE_KEY = 'georoids.scoutUtility';
 
 export const SCOUT_UTILITY = {
   mineral_scan: {
@@ -25,19 +17,3 @@ export const SCOUT_UTILITY = {
 } as const satisfies {
   [Id in ScoutUtilityId]: { id: Id; name: string; hint: string; copy: string };
 };
-
-export function preferredScoutUtility(): ScoutUtilityId {
-  let stored = getStoredItem(SCOUT_UTILITY_STORAGE_KEY);
-  const retiredKey = 'georoids.surveyorUtility';
-  const retired = getStoredItem(retiredKey);
-  if (stored === null && isScoutUtilityId(retired)) {
-    stored = retired;
-    setStoredItem(SCOUT_UTILITY_STORAGE_KEY, retired);
-  }
-  removeStoredItem(retiredKey);
-  return stored === null ? DEFAULT_SCOUT_UTILITY : parseScoutUtilityId(stored);
-}
-
-export function rememberScoutUtility(utilityId: ScoutUtilityId): void {
-  setStoredItem(SCOUT_UTILITY_STORAGE_KEY, utilityId);
-}

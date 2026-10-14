@@ -5,18 +5,20 @@ import {
   applyShipImpactFlash,
   isShipCollisionImmune,
 } from '../entities/ship/shipUtils';
-import { NetworkManager } from '../network/networkManager';
+import { ConnectionManager } from '../network/services/ConnectionManager';
+import { cooperativeActive } from '../network/worldCampaign';
+
 import { logger } from '../utils/Logger';
 
 export class CollisionManager {
   private static instance: CollisionManager;
   constructor(
-    private readonly networkManager: Pick<NetworkManager, 'getLocalPlayerId' | 'sendMessage'>
+    private readonly networkManager: Pick<ConnectionManager, 'getLocalPlayerId' | 'sendMessage'>
   ) {}
 
   static getInstance(): CollisionManager {
     if (!CollisionManager.instance) {
-      CollisionManager.instance = new CollisionManager(NetworkManager.getInstance());
+      CollisionManager.instance = new CollisionManager(ConnectionManager.getInstance());
     }
     return CollisionManager.instance;
   }
@@ -30,8 +32,7 @@ export class CollisionManager {
         ship.releaseContourLock();
       }
       // Same immunity as asteroid impacts: exploding, dead, or blinking.
-      // Boundary previously skipped only exploding, so a dead or freshly
-      // respawned hull kept sending 100-damage collisionDamage at 60 Hz.
+      // Dead or blinking hulls must not resend collisionDamage every frame.
       if (isShipCollisionImmune(ship)) {
         continue;
       }
@@ -53,7 +54,7 @@ export class CollisionManager {
     });
 
     // Show a wall flash immediately; cargo protection and residual damage come from the server.
-    if (cargo > 0) {
+    if (cargo > 0 || cooperativeActive()) {
       applyShipImpactFlash(ship);
     } else {
       applyShipBoundaryDeath(ship);

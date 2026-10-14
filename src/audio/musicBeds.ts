@@ -1,6 +1,7 @@
 import type { Howl } from 'howler';
 import { AUDIO } from '../constants';
 import { LOCAL_STORAGE_KEYS, musicIsOn } from '../constants/user-preferences';
+import { isPlayViewOn } from '../ui/uiUtils';
 import { logger } from '../utils/Logger';
 import { setStoredItem } from '../utils/safeStorage';
 import {
@@ -20,6 +21,7 @@ import {
   setMusicBedCatalogForTests as setCatalog,
 } from './musicCatalog';
 import { isMusicThreatActive, registerMusicThreatListener, resetMusicThreats } from './musicThreat';
+import { isRouteMusicActive, registerRouteMusicListener, resetRouteMusic } from './routeMusic';
 
 type AudioLibrary = typeof import('howler');
 
@@ -27,6 +29,7 @@ const volumes: Record<MusicBedId, number> = {
   menu: AUDIO.MENU_BED_VOLUME,
   inGame: AUDIO.IN_GAME_BED_VOLUME,
   danger: AUDIO.DANGER_BED_VOLUME,
+  route: AUDIO.IN_GAME_BED_VOLUME * 1.2,
 };
 
 const howls: Partial<Record<MusicBedId, Howl>> = {};
@@ -34,6 +37,7 @@ const fadingOut = new Set<string>();
 let current: MusicBedId | null = null;
 let currentId: number | undefined;
 let dangerFailed = false;
+let routeFailed = false;
 let intenseInGame = false;
 
 function fadeKey(kind: MusicBedId, id: number): string {
@@ -41,7 +45,7 @@ function fadeKey(kind: MusicBedId, id: number): string {
 }
 
 function inPlay(): boolean {
-  return document.body.classList.contains('in-play');
+  return isPlayViewOn();
 }
 
 function dangerCatalogued(): boolean {
@@ -65,6 +69,9 @@ function desiredBed(): MusicBedId | null {
   if (inPlay()) {
     if (isMusicThreatActive() && dangerBedUsable()) {
       return 'danger';
+    }
+    if (isRouteMusicActive() && !isMusicThreatActive() && !routeFailed && catalog.route?.length) {
+      return 'route';
     }
     return catalog.inGame.length > 0 ? 'inGame' : null;
   }
@@ -134,7 +141,13 @@ function playBed(kind: MusicBedId): void {
   }
   const previous = current;
   const previousId = currentId;
+  const synchronized =
+    (kind === 'route' && previous === 'inGame') || (kind === 'inGame' && previous === 'route');
+  const position = synchronized && previous !== null ? howls[previous]?.seek() : undefined;
   const id = howl.play();
+  if (typeof position === 'number' && Number.isFinite(position)) {
+    howl.seek(position, id);
+  }
   current = kind;
   currentId = id;
   if (kind === 'inGame') {
@@ -171,6 +184,11 @@ function syncMusicBeds(): void {
 
 function handleBedLoadError(kind: MusicBedId): void {
   howls[kind]?.unload();
+  if (kind === 'route') {
+    routeFailed = true;
+    syncMusicBeds();
+    return;
+  }
   if (kind !== 'danger') {
     return;
   }
@@ -181,7 +199,10 @@ function handleBedLoadError(kind: MusicBedId): void {
 function ensureHowls(audio: AudioLibrary): void {
   const catalog = getMusicBedCatalog();
   for (const kind of MUSIC_BED_IDS) {
-    const src = catalog[kind];
+    if (kind === 'route' && (!inPlay() || !isRouteMusicActive())) {
+      continue;
+    }
+    const src = catalog[kind] ?? [];
     if (src.length === 0 || howls[kind]) {
       continue;
     }
@@ -249,6 +270,7 @@ function onGesture(): void {
 }
 
 function onPlayViewOff(): void {
+  resetRouteMusic();
   resetMusicThreats();
   syncMusicBeds();
 }
@@ -280,11 +302,13 @@ function unloadBeds(): void {
     delete howls[kind];
   }
   dangerFailed = false;
+  routeFailed = false;
 }
 
 registerMusicBedAvailability(musicBedsAreConfigured());
 registerMusicSound(startMusic, stopImmediate, unloadBeds);
 registerMusicThreatListener(syncMusicBeds);
+registerRouteMusicListener(syncMusicBeds);
 let listenerScope: AbortController | null = null;
 
 export function mountMusicBeds(): void {
@@ -298,9 +322,19 @@ export function mountMusicBeds(): void {
   document.addEventListener('pointerdown', onGesture, { capture: true, signal });
   document.addEventListener('touchend', onGesture, { capture: true, signal });
   document.addEventListener('keydown', onGesture, { capture: true, signal });
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden) {
+        resetRouteMusic();
+      }
+    },
+    { signal }
+  );
 }
 
 export function disposeMusicBeds(): void {
+  resetRouteMusic();
   listenerScope?.abort();
   listenerScope = null;
   stopImmediate();

@@ -20,6 +20,7 @@ export class LootField {
       mass: drop.mass,
       radius: drop.radius,
       kind: drop.kind,
+      ...(drop.salvage ? { salvage: drop.salvage } : {}),
       ...(drop.points !== undefined ? { points: drop.points } : {}),
     }));
   }

@@ -238,58 +238,6 @@ export function findHarpoonTarget(
   return pickNearestHarpoonBody(host, valid, range);
 }
 
-interface HarpoonDiagnosis {
-  kitId: ShipKitId;
-  canActivate: boolean;
-  fieldCount: number;
-  range: number;
-  targetId?: string;
-  nearest?: { id?: string; dist: number; gap: number; reason: string };
-}
-
-/** QA probe over an authoritative world: kit, nearest gap, reject reason, chosen latch. */
-export function diagnoseHarpoonLatch(host: AbilityHost, world: AbilityWorld): HarpoonDiagnosis {
-  return diagnoseHarpoonCandidates(host, world.asteroids);
-}
-
-/** QA probe over a client's predicted asteroid field. */
-export function diagnosePredictedHarpoonLatch(
-  host: AbilityHost,
-  asteroids: readonly AbilityBody[]
-): HarpoonDiagnosis {
-  return diagnoseHarpoonCandidates(host, asteroids);
-}
-
-function diagnoseHarpoonCandidates(
-  host: AbilityHost,
-  candidates: readonly AbilityBody[]
-): HarpoonDiagnosis {
-  const range = SHIP_ABILITY.HARPOON_RANGE;
-  let nearest: HarpoonDiagnosis['nearest'];
-  for (const body of candidates) {
-    const dist = Math.hypot(body.position.x - host.position.x, body.position.y - host.position.y);
-    const gap = dist - hostHullRadius(host) - bodyRadius(body);
-    let reason = 'ok';
-    if (!isHarpoonableBody(body)) {
-      reason = 'rejected';
-    } else if (gap > range) {
-      reason = 'out-of-range';
-    }
-    if (!nearest || gap < nearest.gap) {
-      nearest = { ...(body.id !== undefined ? { id: body.id } : {}), dist, gap, reason };
-    }
-  }
-  const targetId = findHarpoonTarget(host, candidates, range)?.id;
-  return {
-    kitId: host.kitId,
-    canActivate: canActivateAbility(host),
-    fieldCount: candidates.length,
-    range,
-    ...(targetId !== undefined ? { targetId } : {}),
-    ...(nearest !== undefined ? { nearest: nearest } : {}),
-  };
-}
-
 function latchStillValid(
   host: AbilityHost,
   target: AbilityBody,

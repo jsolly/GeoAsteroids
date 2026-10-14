@@ -208,6 +208,7 @@ export async function smoke({
             kitId: 'scout',
             snapshotVersion: SNAPSHOT_VERSION,
             asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+            cooperativeVersion: 1,
             clientReleaseId: expectedSha,
           },
         });

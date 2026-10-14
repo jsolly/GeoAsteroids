@@ -1,8 +1,4 @@
-import { DEFAULT_HAULER_UTILITY, parseHaulerUtilityId } from '../../../shared/shipUtilities';
 import type { HaulerUtilityId } from '../../../shared-types';
-import { getStoredItem, setStoredItem } from '../../utils/safeStorage';
-
-const HAULER_UTILITY_STORAGE_KEY = 'georoids.haulerUtility';
 
 export const HAULER_UTILITY = {
   boost_coupling: {
@@ -26,12 +22,3 @@ export const HAULER_UTILITY = {
 } as const satisfies {
   [Id in HaulerUtilityId]: { id: Id; name: string; hint: string; copy: string };
 };
-
-export function preferredHaulerUtility(): HaulerUtilityId {
-  const stored = getStoredItem(HAULER_UTILITY_STORAGE_KEY);
-  return stored ? parseHaulerUtilityId(stored) : DEFAULT_HAULER_UTILITY;
-}
-
-export function rememberHaulerUtility(utilityId: HaulerUtilityId): void {
-  setStoredItem(HAULER_UTILITY_STORAGE_KEY, utilityId);
-}
