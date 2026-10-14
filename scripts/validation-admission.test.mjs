@@ -59,7 +59,8 @@ process.on('SIGINT', cancel);
 // Observe HUP in this fixture so it can retain the descendant's actual signal.
 // The real runner supports graceful cleanup only for INT/TERM.
 process.on('SIGHUP', cancel);
-fs.writeFileSync(started, JSON.stringify({pid:process.pid, start, at:Date.now(), root:process.cwd(), env:Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('GEOROIDS_VALIDATION_')))}));
+fs.writeFileSync(started + '.tmp', JSON.stringify({pid:process.pid, start, at:Date.now(), root:process.cwd(), env:Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('GEOROIDS_VALIDATION_')))}));
+fs.renameSync(started + '.tmp', started);
 setInterval(() => { if(fs.existsSync(release)) finish(); }, 20);
 `;
 async function until(predicate, description) {
