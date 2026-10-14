@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { chooseCrewSpawn } from '../../../shared/crewSpawn';
+import { chooseCrewSpawn } from '../../../shared/player';
 import { WORLD } from '../../../shared/world';
 
 test('a requested pose inside the world is returned as a copy', () => {
