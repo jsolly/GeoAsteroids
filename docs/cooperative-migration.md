@@ -31,7 +31,10 @@ separate campaign scenario tests.
 The verified production target is project
 `08a7b6ee-af66-4c58-a21e-700d5468ee14`, environment
 `94d3de2f-4bb0-4051-8975-a30190c2fffa`, service
-`4e2cb2a2-c1e2-41a8-a970-3f60659c2524`. No preview environment exists.
+`4e2cb2a2-c1e2-41a8-a970-3f60659c2524`. An isolated shared
+[preview environment](agent-operations.md#railway-preview) now exists; the
+commands below target production only. Preview success does not authorize
+production migration or activation.
 The remote application directory has not been verified; do not assume `/app`.
 
 From any local directory, John can open the exact service's shell using the

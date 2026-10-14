@@ -3,7 +3,7 @@
 # Manual benchmark sessions own their service pair and queue native workloads.
 # The common-Git runner lock remains for older entrypoints and failed-cleanup
 # evidence; each standalone pair selects unused ports.
-((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; rerun bash ~/code/dotagents/setup/install-local-agent-runtime.sh; open a new shell." >&2; exit 1; }
+((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; open a fresh shell and rerun repository setup." >&2; exit 1; }
 set -uo pipefail
 ORIGINAL_RUNNER_ARGS=("$@")
 VALIDATION_CHILD=false
