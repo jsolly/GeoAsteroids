@@ -143,6 +143,10 @@ function isLootCollectedEvent(value: unknown): value is LootCollected {
     return false;
   }
   return (
+    (!('eventId' in value) ||
+      (typeof value.eventId === 'string' &&
+        value.eventId.length > 0 &&
+        value.eventId.length <= 128)) &&
     'lootId' in value &&
     typeof value.lootId === 'string' &&
     value.lootId.length > 0 &&
@@ -190,6 +194,7 @@ export class ConnectionManager {
   private seenAsteroidIds: Set<string> = new Set(); // Track asteroids we've already seen
   private readonly playerListCache = new PlayerListCache<Player>();
   private readonly snapshotEntityIds = new Set<string>();
+  private cargoDepositBaseline: { cargo: number; banked: number } | null = null;
   private readonly playedLootCollectionIds = new Set<string>();
   private readonly playedTapEjectionIds = new Set<string>();
   private readonly playedLootExplosionIds = new Set<string>();
@@ -1066,6 +1071,7 @@ export class ConnectionManager {
     this.clearJoinCompletionTimer();
     this.joinAcknowledged = false;
     this.snapshotDecoder.reset();
+    this.cargoDepositBaseline = null;
     clientPerformance.resetSnapshotWitness();
     this.currentProtocolReady = false;
     this.snapshotResyncPending = false;
@@ -1369,6 +1375,22 @@ export class ConnectionManager {
         if (data.serverTime !== undefined) {
           entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
         }
+        if (isLocalPlayer && entityData.bankedCargo !== undefined) {
+          const previous = this.cargoDepositBaseline;
+          const banked = entityData.bankedCargo;
+          const cargo = entityData.cargo;
+          if (
+            previous &&
+            previous.cargo > 0 &&
+            cargo === 0 &&
+            banked - previous.banked >= previous.cargo &&
+            entityData.health > 0 &&
+            !entityData.exploding
+          ) {
+            playFeedback('delivery');
+          }
+          this.cargoDepositBaseline = { cargo, banked };
+        }
         entity.updateFromServer(entityData);
         if (isLocalPlayer) {
           this.motionReconciliation.rebase(entityData, entity.ship, Date.now());
@@ -1470,7 +1492,9 @@ export class ConnectionManager {
       return;
     }
     const isLocal = data.collectorId === this.getLocalPlayerId();
-    const collectionId = `${data.lootId}:${data.collectorId}`;
+    const collectionId = data.eventId
+      ? `event:${data.eventId}`
+      : `legacy:${data.lootId}:${data.collectorId}`;
     if (this.playedLootCollectionIds.has(collectionId)) {
       return;
     }
@@ -1505,6 +1529,7 @@ export class ConnectionManager {
   private handleJoined(data: PlayerJoin): void {
     AuthoritativeProjectileField.getInstance().clear();
     this.snapshotDecoder.reset();
+    this.cargoDepositBaseline = null;
     clientPerformance.resetSnapshotWitness();
     this.snapshotResyncPending = false;
     if (

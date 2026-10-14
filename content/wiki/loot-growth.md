@@ -37,7 +37,7 @@ Tap a spider and collect its silk into your material inventory. Silk adds no sco
 
 ## Pickup melody
 
-With Sound Effects on, quick pickups play successive notes of a short melody. Tap extraction supplies lower notes.
+With Sound Effects on, quick pickups play successive notes of a short melody. Tap extraction supplies lower notes. Returning for the remainder of a points drop plays a new pickup note and local haptic.
 
 ## Cargo and banks
 
@@ -45,7 +45,7 @@ Every ship has an aft cargo bay that fills with gold crates as you collect point
 
 ## Furnace offloading
 
-Approach a lit furnace with cargo; both ships lock onto the intake ring when their hull reaches it and stream points into the fire. The countdown and emptying cargo bay show what remains; each pulse credits your bank and the shared settlement, with a flash when the hold empties. Steer to leave early with the rest aboard, or let an empty hold resume flight; hovering grants no protection from hazards.
+Approach a lit furnace with cargo; both ships lock onto the intake ring when their hull reaches it and stream points into the fire. The countdown and emptying cargo bay show what remains; each pulse credits your bank and the shared settlement, with a flash and completion sound when the hold empties. Steer to leave early with the rest aboard, or let an empty hold resume flight; hovering grants no protection from hazards.
 
 ## Cargo protection
 

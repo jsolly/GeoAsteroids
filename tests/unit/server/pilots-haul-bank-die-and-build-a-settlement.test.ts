@@ -14,7 +14,7 @@ import {
   oreResource,
   oreYield,
 } from '../../../shared/economy';
-import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
+import { civicLot, TOWN_HEARTH, TOWN_SPAWN_RADIUS } from '../../../shared/furnaces';
 import { hullRadiusForKit } from '../../../shared/shipKits';
 import type { AsteroidData } from '../../../shared-types';
 import { RecordingSocket } from '../../support/recordingSocket';
@@ -50,6 +50,7 @@ test('death repeatedly discards cargo, preserves the bank, and always respawns',
   const { actor } = pilot(engine);
   actor.score = 731;
   for (let death = 0; death < 8; death++) {
+    actor.position = { x: 20000, y: 20000 };
     actor.cargo = 90;
     actor.spawnProtectionTimer = 0;
     const beforeDeath = engine.getLoot();
@@ -75,6 +76,7 @@ test('death repeatedly discards cargo, preserves the bank, and always respawns',
     }
     expect(actor.health).toBe(actor.maxHealth);
     expect(actor.exploding).toBe(false);
+    expect(Math.hypot(actor.position.x, actor.position.y)).toBeCloseTo(TOWN_SPAWN_RADIUS);
   }
   expect(actor).not.toHaveProperty('lives');
 });

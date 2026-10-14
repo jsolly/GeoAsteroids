@@ -19,6 +19,7 @@ import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { Roid } from '../../../src/entities/roid/Roid';
 import { SatellitePickupManager } from '../../../src/entities/satellitePickup/SatellitePickupManager';
 import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
+import { resetHapticsForTests, setHaptics } from '../../../src/fx/haptics';
 import { resetControlSources } from '../../../src/input/controlSources';
 import { keyDown, keyUp } from '../../../src/input/keybindings';
 import { handleMouseDown, handleMouseUp } from '../../../src/input/mouse';
@@ -259,6 +260,116 @@ describe('actual ConnectionManager WebSocket message path', () => {
       expect(played).toHaveLength(5);
     } finally {
       resetGameAudio();
+      setSound(false);
+    }
+  });
+
+  test('each partial collection sounds once while replayed and malformed receipts stay silent', async () => {
+    const ws = await connect();
+    acknowledge(ws);
+    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1));
+    setSound(true);
+    bindGameAudio({
+      getListenerPosition: () => ({ x: 0, y: 0 }),
+      getViewport: () => ({ width: 800, height: 600 }),
+    });
+    const played = vi.spyOn(Sound.prototype, 'playNote').mockReturnValue(true);
+    const vibrate = vi.fn();
+    vi.stubGlobal('navigator', { vibrate });
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    resetHapticsForTests();
+    setHaptics(true);
+    vibrate.mockClear();
+    let now = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const collection = {
+      eventId: 'first-collection',
+      lootId: 'partly-collected-points',
+      collectorId: manager.getLocalPlayerId(),
+      kind: 'points',
+      position: { x: 0, y: 0 },
+    };
+    try {
+      ws.receive('lootCollected', collection);
+      ws.receive('lootCollected', collection);
+      now += 1000;
+      ws.receive('lootCollected', { ...collection, eventId: 'second-collection' });
+      ws.receive('lootCollected', { ...collection, eventId: '' });
+      ws.receive('lootCollected', { ...collection, eventId: 42 });
+      expect(played).toHaveBeenCalledTimes(2);
+      expect(vibrate).toHaveBeenCalledTimes(2);
+      now += 1000;
+      ws.receive('lootCollected', {
+        ...collection,
+        eventId: 'remote-collection',
+        collectorId: 'other-pilot',
+      });
+      expect(played).toHaveBeenCalledTimes(3);
+      expect(vibrate).toHaveBeenCalledTimes(2);
+    } finally {
+      setHaptics(false);
+      resetHapticsForTests();
+      resetGameAudio();
+      setSound(false);
+    }
+  });
+
+  test('cargo completion sounds once after accepted deposits, never for spending or reconnect baselines', async () => {
+    let ws = await connect();
+    acknowledge(ws);
+    const frame = captureSnapshot(snapshotFixture());
+    const actor = frame.entities[0];
+    assert.ok(actor);
+    actor.id = manager.getClientId();
+    actor.cargo = 50;
+    actor.bankedCargo = 200;
+    setSound(true);
+    const deliveries = vi.fn();
+    vi.spyOn(Sound.prototype, 'play').mockImplementation(function (this: Sound) {
+      if (this.src.endsWith('/sounds/delivery.m4a')) {
+        deliveries();
+      }
+      return Promise.resolve();
+    });
+    const send = (sequence: number) =>
+      ws.receive('snapshot', new SnapshotEncoder(frame).encode(sequence));
+    try {
+      send(1);
+      actor.cargo = 25;
+      actor.bankedCargo = 225;
+      send(2);
+      expect(deliveries).not.toHaveBeenCalled();
+      actor.cargo = 0;
+      actor.bankedCargo = 250;
+      send(3);
+      send(4);
+      actor.score = 0;
+      send(5);
+      expect(deliveries).toHaveBeenCalledOnce();
+      actor.cargo = 10;
+      send(6);
+      expect(actor.health).toBeGreaterThan(0);
+      expect(actor.exploding).toBe(false);
+      actor.cargo = 0;
+      send(7);
+      expect(deliveries).toHaveBeenCalledOnce();
+      actor.cargo = 10;
+      send(8);
+      manager.disconnect();
+      ws = await connect();
+      acknowledge(ws);
+      actor.bankedCargo = 260;
+      actor.cargo = 0;
+      send(1);
+      expect(deliveries).toHaveBeenCalledOnce();
+      actor.cargo = 10;
+      send(2);
+      actor.cargo = 0;
+      actor.health = 0;
+      actor.exploding = true;
+      send(3);
+      expect(deliveries).toHaveBeenCalledOnce();
+    } finally {
       setSound(false);
     }
   });

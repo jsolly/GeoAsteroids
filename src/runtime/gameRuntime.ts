@@ -19,6 +19,7 @@ import {
   mountTouchActionControls,
   readActionControls,
 } from '../input/touchControls';
+import { NetworkManager } from '../network/networkManager';
 import { readStoredResumeName } from '../network/services/resumeCredential';
 import { mountClientRelease } from '../release/clientReleaseEntry';
 import { canvasManager, type PlayfieldGeometry } from '../rendering/canvasSurface';
@@ -201,6 +202,19 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         source: freezeSite(travel.source),
         destinations: Object.freeze(travel.destinations.map(freezeSite)),
         rotation: travel.rotation,
+        pilots: Object.freeze(
+          NetworkManager.getInstance()
+            .getAllPlayers()
+            .filter((pilot) => pilot.ship.health > 0 && !pilot.ship.exploding)
+            .map((pilot) =>
+              Object.freeze({
+                id: pilot.id,
+                name: pilot.name,
+                position: Object.freeze({ ...pilot.ship.position }),
+                local: pilot.type === 'local',
+              })
+            )
+        ),
       });
     };
     const project = (): GamePresentation => {

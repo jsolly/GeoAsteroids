@@ -421,11 +421,7 @@ export class GameEngine {
       this.pilots.set(pilot.id, pilot);
     }
     persistence?.onFailure((cause) => this.failPersistence(cause));
-    this.entityManager = new EntityManager(
-      this.rngService,
-      () => this.getServerTime(),
-      this.furnaces
-    );
+    this.entityManager = new EntityManager(this.rngService, () => this.getServerTime());
     this.asteroidManager = new AsteroidManager(this.rngService, this.furnaces, (rock) => {
       this.beltCrawlers.escapeDestroyedHost(
         rock,
@@ -3470,6 +3466,7 @@ export class GameEngine {
     const events: LootCollected[] = [];
     for (const { collector, loot } of collected) {
       events.push({
+        eventId: randomUUID(),
         lootId: loot.id,
         collectorId: collector.id,
         kind: loot.kind,

@@ -706,6 +706,8 @@ export function drawShipAtPosition(
     return;
   }
 
+  drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
+
   if (ship.furnaceTransit) {
     ctx.save();
     ctx.strokeStyle = hexToRgba(PALETTE.LASER_LOCAL, 0.55);
@@ -766,7 +768,6 @@ export function drawShipAtPosition(
   drawAbilityFx(ctx, ship, screenX, screenY, shipR);
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
-  drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
 
   // Draw player name under ship if provided
   if (playerName) {
@@ -1027,7 +1028,7 @@ function drawFloatingHealthCapsule(
   shipR: number
 ): void {
   const damaged = ship.health < ship.maxHealth;
-  if (!damaged && ship.impactFlashFrames <= 0 && !isDebugMode()) {
+  if (ship.isLocalPlayer && !damaged && ship.impactFlashFrames <= 0 && !isDebugMode()) {
     return;
   }
 
