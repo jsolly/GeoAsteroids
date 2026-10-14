@@ -494,13 +494,13 @@ function drawCable(
   ctx: RenderContext,
   from: Position,
   to: Position,
-  color: string = '#E8D5A3'
+  color: string = PALETTE.LOOT
 ): void {
   const start = screenPoint(from);
   const end = screenPoint(to);
   renderSegment(ctx, start.x, start.y, end.x, end.y, color, 1.5, 2.5);
   ctx.save();
-  ctx.strokeStyle = '#FDE68A';
+  ctx.strokeStyle = PALETTE.LASER_LOCAL;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(end.x, end.y, 3.5, 0, Math.PI * 2);
@@ -896,7 +896,7 @@ function makeMovementDemo(): Demo {
       state.angle += steeringTurn(
         state.angle,
         Math.PI / 6,
-        (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS)
+        (getShipKit('scout').turnSpeed * Math.PI) / (180 * GAME.FPS)
       );
     }
     advanceCruiseVelocity(state, cruiseSpeed(1, SHIP.MAX_VELOCITY, 0, 1));
@@ -958,7 +958,7 @@ function makeMovementDemo(): Demo {
 
 const TERRAIN_LOCK_START_FRAME = 14;
 const TERRAIN_CROSSING_START_FRAME = 30;
-const TERRAIN_TURN_PER_TICK = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
+const TERRAIN_TURN_PER_TICK = (getShipKit('scout').turnSpeed * Math.PI) / (180 * GAME.FPS);
 
 /** Nose angle whose cruiseVelocity (canvas y-down) points along `(dirX, dirY)`. */
 function headingForDirection(dirX: number, dirY: number): number {
@@ -1706,7 +1706,7 @@ function makeSurvivalDemo(): Demo {
           rock.position = next.position;
           rock.velocity = next.velocity;
           if (circlesOverlap(ship.position, ship.r, rock.position, rock.size)) {
-            ship.takeDamage(DAMAGE.ASTEROID_COLLISION, 'asteroid');
+            ship.takeDamage(DAMAGE.ASTEROID_COLLISION);
             applyShipImpactFlash(ship);
             ship.velocity = { x: 0.85, y: 0 };
             impacted = true;

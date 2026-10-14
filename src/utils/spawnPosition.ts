@@ -1,30 +1,13 @@
-import { WORLD_BOUNDARY } from '../../shared/boundary';
-import { DEBUG } from '../../shared/constants/gameplay';
 import { townSquareSpawn } from '../../shared/furnaces';
-import { WORLD } from '../../shared/world';
 import type { Position } from '../../shared-types';
-import { getRandomPositionNearBoundary } from './positionUtils';
 
 /**
  * Shared player spawn. Local and remote ships use this — no factory-specific
- * forks. A fresh flight stands on the town ring. Debug "near boundary" is the
- * world edge, not a canvas corner.
+ * forks. A fresh flight stands on the town ring.
  */
 export function resolveSpawnPosition(explicit?: Position): Position {
   if (explicit) {
     return explicit;
   }
-  if (DEBUG.PLACE_PLAYERS_NEAR_BOUNDARY) {
-    return getRandomPositionNearBoundary();
-  }
   return townSquareSpawn(Math.random);
-}
-
-/** Local placeholder positions use the same world bounds as the server. */
-export function getRandomPositionInAsteroidField(): Position {
-  const { cx, cy } = WORLD_BOUNDARY;
-  const maxR = WORLD.radius;
-  const t = Math.random() * 2 * Math.PI;
-  const r = Math.sqrt(Math.random()) * maxR;
-  return { x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) };
 }

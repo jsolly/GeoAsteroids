@@ -1,3 +1,5 @@
+let setPlayView: typeof import('../../../src/ui/uiUtils').setPlayView;
+
 import type { HowlOptions } from 'howler';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -8,12 +10,6 @@ vi.mock('../../../src/utils/logForwarder', () => ({
 }));
 
 import { AUDIO } from '../../../src/constants';
-
-// Audio unit tests must not connect to a developer's running game server.
-vi.mock('../../../src/utils/logForwarder', () => ({
-  startClientLogForwarder: vi.fn(),
-  forwardLogToServer: vi.fn(),
-}));
 
 class FakeSource extends EventTarget {
   stop = vi.fn();
@@ -202,19 +198,18 @@ function howlFor(fragment: string): FakeHowl | undefined {
 }
 
 async function enterPlay(): Promise<void> {
-  document.body.classList.add('in-play');
-  window.dispatchEvent(new CustomEvent('playViewOn'));
+  setPlayView(true);
   await settle();
 }
 
 async function leavePlay(): Promise<void> {
-  document.body.classList.remove('in-play');
-  window.dispatchEvent(new CustomEvent('playViewOff'));
+  setPlayView(false);
   await settle();
 }
 
 beforeEach(async () => {
   vi.resetModules();
+  ({ setPlayView } = await import('../../../src/ui/uiUtils'));
   localStorage.clear();
   FakeHowl.instances = [];
   FakeContext.instances = [];
@@ -249,7 +244,7 @@ afterEach(() => {
   setMusic(false);
   setSound(false);
   resetMusicThreats();
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   for (const remove of removeListeners) {
     remove();
   }
@@ -279,7 +274,7 @@ test('a failed bed load stays silent and does not rebuild Howls', async () => {
   expect(FakeHowl.instances).toHaveLength(3);
   FakeHowl.instances[0]?.options.onloaderror?.(0, 'decode');
   document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-  window.dispatchEvent(new CustomEvent('playViewOn'));
+  setPlayView(true);
   setMusic(true);
   await settle();
   expect(FakeHowl.instances).toHaveLength(3);
@@ -306,16 +301,14 @@ test('Enter Game crossfades to the playfield bed and return restores the lobby',
   setMusic(true);
   await settle();
   expect(FakeHowl.instances[0]?.play).toHaveBeenCalledTimes(1);
-  document.body.classList.add('in-play');
-  window.dispatchEvent(new CustomEvent('playViewOn'));
+  setPlayView(true);
   await settle();
   const menu = FakeHowl.instances[0];
   const playfield = FakeHowl.instances[1];
   expect(playfield?.options.src).toEqual(['/music/in-game-bed.ogg', '/music/in-game-bed.mp3']);
   expect(playfield?.play).toHaveBeenCalledTimes(1);
   expect(menu?.stop).toHaveBeenCalled();
-  document.body.classList.remove('in-play');
-  window.dispatchEvent(new CustomEvent('playViewOff'));
+  setPlayView(false);
   await settle();
   expect(menu?.play.mock.calls.length).toBeGreaterThan(1);
   expect(playfield?.playing()).toBe(false);
@@ -630,9 +623,7 @@ test('a failed danger load falls back to intensified Drift', async () => {
 
 test('a route crossfades a real remix at the current playhead, resumes in sync, and yields to threats', async () => {
   setMusic(true);
-  document.body.classList.add('in-play');
-  window.dispatchEvent(new CustomEvent('playViewOn'));
-  await settle();
+  await enterPlay();
   const playfield = FakeHowl.instances[1];
   if (!playfield) {
     throw new Error('Missing playfield bed');
@@ -673,9 +664,7 @@ test('a route crossfades a real remix at the current playhead, resumes in sync, 
 
 test('route decode failure preserves the quiet bed and does not retry a broken remix', async () => {
   setMusic(true);
-  document.body.classList.add('in-play');
-  window.dispatchEvent(new CustomEvent('playViewOn'));
-  await settle();
+  await enterPlay();
   const { updateRouteMusic, resetRouteMusic } = await import('../../../src/audio/routeMusic');
   const { nearbyRouteWaypoints } = await import('../../../shared/travelRoutes');
   const { getTerrainField } = await import('../../../shared/terrainField');

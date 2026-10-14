@@ -58,6 +58,12 @@ export function addResourceMapPath(
           line(0.35, -0.4);
           move(-0.1, 0.55);
           line(0.6, -0.05);
+        } else if (material === 'crystal') {
+          move(0, -0.6);
+          line(0.3, 0);
+          line(0, 0.6);
+          line(-0.3, 0);
+          ctx.closePath();
         } else {
           move(-0.45, -0.25);
           line(-0.1, -0.4);

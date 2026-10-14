@@ -48,7 +48,7 @@ Published client updates refresh open tabs automatically after two checks about 
 
 ## Can't join
 
-A generic connection-failed banner can mean your nickname is in use by an online pilot (try another), the server is full, or your tab is outdated (reload). An "unexpected error" notice returns you to the title screen; choose Enter Game to restart, or reload if the problem repeats.
+A disconnected-from-server banner can mean your nickname is in use by an online pilot (try another), the server is full, or your tab is outdated (reload). An "unexpected error" notice returns you to the title screen; choose Enter Game to restart, or reload if the problem repeats.
 
 ## Diagnostics
 

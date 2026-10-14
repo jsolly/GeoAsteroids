@@ -3,7 +3,7 @@ import { ExplorationMap } from '../../../shared/exploration';
 import { WORLD } from '../../../shared/world';
 import { PALETTE } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { resetWorldExploration, setWorldExploration } from '../../../src/network/worldExploration';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
 import { drawMiniMap } from '../../../src/rendering/hud/minimap';
@@ -24,7 +24,6 @@ test.each([1280, 390])(
       id: 'scout',
       name: 'Scout',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.position = { x: 10000, y: 10000 };
     const layout = computeHudLayout(canvas, { touchControls: width < 500 });

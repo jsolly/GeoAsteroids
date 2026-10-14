@@ -5,8 +5,6 @@ let listenerScope: AbortController | null = null;
 import { playFeedback } from '../audio/feedbackSounds';
 import type { Player } from '../entities/player/Player';
 import { PlayerManager } from '../entities/player/PlayerManager';
-import { canvasManager } from '../rendering/canvasSurface';
-import { rotateVectorInto } from '../rendering/travelCamera';
 import { logger } from '../utils/Logger';
 import { controlSources, resetControlSources } from './controlSources';
 import { reconcilePlayerInput, togglePlayerContourLock } from './keybindings';
@@ -134,13 +132,13 @@ function syncLiveTouches(ev: TouchEvent): void {
 function onTouchListChange(ev: TouchEvent): void {
   syncLiveTouches(ev);
   if (ev.type === 'touchcancel' || (ev.type === 'touchend' && liveTouchPoints.size < 2)) {
-    requireLocalPlayer()?.ship.finishWeaponCharge(ev.type === 'touchend');
+    localPlayer()?.ship.finishWeaponCharge(ev.type === 'touchend');
   }
   if (liveTouchPoints.size > 1) {
     steerFlick = null;
   }
   if (ev.type !== 'touchstart' && liveTouchPoints.size === 0) {
-    resetTouchInteraction(requireLocalPlayer(), {
+    resetTouchInteraction(localPlayer(), {
       forgetTouches: false,
     });
   }
@@ -161,18 +159,7 @@ export function setTouchHeading(player: Player, heading: number | null): void {
 }
 
 export function setTouchFire(player: Player, held: boolean): void {
-  if (getOpenGameOverlay() !== null) {
-    controlSources.touchFire = false;
-    player.ship.canShoot = true;
-    return;
-  }
-  if (!held) {
-    controlSources.touchFire = false;
-    player.ship.canShoot = true;
-    return;
-  }
-
-  if (player.ship.health <= 0 || player.ship.exploding) {
+  if (!held || getOpenGameOverlay() !== null || player.ship.health <= 0 || player.ship.exploding) {
     controlSources.touchFire = false;
     player.ship.canShoot = true;
     return;
@@ -190,7 +177,12 @@ export function triggerTouchAbility(player: Player): boolean {
 }
 
 function triggerTouchContourLock(player: Player): boolean {
-  if (!isInPlay() || isContourLockMenuOpen() || player.ship.health <= 0 || player.ship.exploding) {
+  if (
+    !isInPlay() ||
+    getOpenGameOverlay() !== null ||
+    player.ship.health <= 0 ||
+    player.ship.exploding
+  ) {
     return false;
   }
   const active = togglePlayerContourLock(player);
@@ -216,16 +208,12 @@ function isInPlay(): boolean {
   return inputHost?.readInPlay() ?? false;
 }
 
-function isContourLockMenuOpen(): boolean {
-  return getOpenGameOverlay() !== null;
-}
-
 /** Read at the presentation cadence, never from the simulation frame. */
 export function readActionControls(player: Player | null): ActionControlsView {
   const inPlay = isInPlay();
   const touchMode = inputHost?.readTouchMode() ?? false;
   const alive = player !== null && player.ship.health > 0 && !player.ship.exploding;
-  const menuOpen = isContourLockMenuOpen();
+  const menuOpen = getOpenGameOverlay() !== null;
   const active = alive && player.ship.contourLocked;
   const ready = alive && !menuOpen && (active || player.ship.canLockContour());
   const ability = player
@@ -267,7 +255,7 @@ export function readActionControls(player: Player | null): ActionControlsView {
 }
 
 function syncTouchMode(): void {
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (!isTouchChromeVisible()) {
     resetTouchInteraction(player);
   }
@@ -339,7 +327,7 @@ function resetTouchInteraction(player: Player | null, options?: { forgetTouches?
   }
 }
 
-function requireLocalPlayer(): Player | null {
+function localPlayer(): Player | null {
   return PlayerManager.getInstance().getLocalPlayer();
 }
 
@@ -354,8 +342,8 @@ function abandonSteerPointer(player: Player, canvas: HTMLCanvasElement | null): 
   setTouchHeading(player, null);
 }
 
-function beginSteerPointer(ev: PointerEvent): void {
-  const ship = requireLocalPlayer()?.ship;
+function beginSteerPointer(ev: PointerEvent, player: Player): void {
+  const ship = player.ship;
   steerFlick =
     ship?.contourLocked &&
     firePointerId === null &&
@@ -410,7 +398,7 @@ function onPlayfieldPointerDown(ev: PointerEvent): void {
   ) {
     return;
   }
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (!player || player.ship.health <= 0 || player.ship.exploding) {
     return;
   }
@@ -426,10 +414,10 @@ function onPlayfieldPointerDown(ev: PointerEvent): void {
     }
     clearSteerHoldTimer();
     steerTap = null;
-    onFirePointerDown(ev);
+    onFirePointerDown(ev, player);
     return;
   }
-  beginSteerPointer(ev);
+  beginSteerPointer(ev, player);
   if (firePointerId !== null) {
     player.ship.beginWeaponCharge();
   }
@@ -461,7 +449,7 @@ function onPlayfieldPointerUp(ev: PointerEvent): void {
     return;
   }
   if (ev.pointerId === steerPointerId || ev.pointerId === firePointerId) {
-    requireLocalPlayer()?.ship.finishWeaponCharge(ev.type === 'pointerup');
+    localPlayer()?.ship.finishWeaponCharge(ev.type === 'pointerup');
   }
   if (ev.pointerId === firePointerId) {
     onFirePointerUp(ev);
@@ -476,7 +464,7 @@ function onPlayfieldPointerUp(ev: PointerEvent): void {
   const dx = flick ? ev.clientX - flick.x : 0;
   const dy = flick ? ev.clientY - flick.y : 0;
   const distance = Math.hypot(dx, dy);
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   const attempted =
     ev.type === 'pointerup' &&
     flick !== null &&
@@ -487,11 +475,7 @@ function onPlayfieldPointerUp(ev: PointerEvent): void {
     steerEpoch === controlSources.steeringEpoch &&
     player !== null &&
     player.ship.contourLockInputVersion === flick.lockVersion;
-  const hopped =
-    attempted &&
-    player.ship.hopContour(
-      rotateVectorInto({ x: 0, y: 0 }, dx, dy, -canvasManager.getCameraRotation())
-    );
+  const hopped = attempted && player.ship.hopContour({ x: dx, y: dy });
   if (attempted) {
     playFeedback(hopped ? 'contourFlickSuccess' : 'contourFlickBlocked');
   }
@@ -519,7 +503,7 @@ function onPlayfieldPointerUp(ev: PointerEvent): void {
 }
 
 function moveSteering(ev: Pick<PointerEvent, 'clientX' | 'clientY'>): void {
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   const canvas = inputHost?.canvas ?? null;
   if (!player || !canvas || steerEpoch !== controlSources.steeringEpoch) {
     return;
@@ -534,19 +518,13 @@ function moveSteering(ev: Pick<PointerEvent, 'clientX' | 'clientY'>): void {
   setTouchHeading(player, pointerHeadingFromCenter(dx, dy, player.ship.r));
 }
 
-function onFirePointerDown(ev: PointerEvent): void {
+function onFirePointerDown(ev: PointerEvent, player: Player): void {
   if (firePointerId !== null) {
     return;
   }
-  ev.preventDefault();
   firePointerId = ev.pointerId;
-  const player = requireLocalPlayer();
-  if (player) {
-    setTouchFire(player, false);
-    player.ship.beginWeaponCharge();
-  } else {
-    controlSources.touchFire = false;
-  }
+  setTouchFire(player, false);
+  player.ship.beginWeaponCharge();
 }
 
 function onFirePointerUp(ev: PointerEvent): void {
@@ -556,7 +534,7 @@ function onFirePointerUp(ev: PointerEvent): void {
   ev.preventDefault();
   firePointerId = null;
   releasePointerCapture(inputHost?.canvas ?? null, ev.pointerId);
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (player) {
     setTouchFire(player, false);
   } else {
@@ -577,7 +555,7 @@ function onAbilityPointerDown(ev: PointerEvent, ability: HTMLElement): void {
   abilityPointerId = ev.pointerId;
   ability.setPointerCapture(ev.pointerId);
   setAbilityPressed(true);
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (player) {
     triggerTouchAbility(player);
     inputHost?.onActionState();
@@ -603,7 +581,7 @@ function onAbilityClick(ev: MouseEvent): void {
   }
   ev.preventDefault();
   ev.stopPropagation();
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (player) {
     triggerTouchAbility(player);
     inputHost?.onActionState();
@@ -611,7 +589,7 @@ function onAbilityClick(ev: MouseEvent): void {
 }
 
 function onContourLockPointerDown(ev: PointerEvent, contourLock: HTMLElement): void {
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (contourLockPointerId !== null || readActionControls(player).contourLock.disabled) {
     return;
   }
@@ -647,7 +625,7 @@ function onContourLockClick(ev: MouseEvent): void {
   }
   ev.preventDefault();
   ev.stopPropagation();
-  const player = requireLocalPlayer();
+  const player = localPlayer();
   if (player) {
     triggerTouchContourLock(player);
     inputHost?.onActionState();
@@ -657,7 +635,7 @@ function onContourLockClick(ev: MouseEvent): void {
 
 function resetIfPageIsInactive(): void {
   if (typeof document === 'undefined' || document.visibilityState === 'hidden') {
-    resetTouchInteraction(requireLocalPlayer());
+    resetTouchInteraction(localPlayer());
   }
 }
 
@@ -698,7 +676,7 @@ export function initializeTouchControls(host: TouchInputHost): void {
   window.addEventListener('playViewOff', syncTouchMode, { signal });
   unsubscribeOverlay = subscribeGameOverlay((overlay) => {
     if (overlay !== null) {
-      resetTouchInteraction(requireLocalPlayer());
+      resetTouchInteraction(localPlayer());
     }
     inputHost?.onActionState();
   });
@@ -706,13 +684,13 @@ export function initializeTouchControls(host: TouchInputHost): void {
   window.addEventListener(
     'orientationchange',
     () => {
-      resetTouchInteraction(requireLocalPlayer());
+      resetTouchInteraction(localPlayer());
       syncTouchMode();
     },
     { signal }
   );
-  window.addEventListener('blur', () => resetTouchInteraction(requireLocalPlayer()), { signal });
-  window.addEventListener('pagehide', () => resetTouchInteraction(requireLocalPlayer()), {
+  window.addEventListener('blur', () => resetTouchInteraction(localPlayer()), { signal });
+  window.addEventListener('pagehide', () => resetTouchInteraction(localPlayer()), {
     signal,
   });
   document.addEventListener('visibilitychange', resetIfPageIsInactive, { signal });
@@ -729,7 +707,7 @@ export function disposeTouchControls(): void {
   listenerScope?.abort();
   listenerScope = null;
   initialized = false;
-  resetTouchInteraction(requireLocalPlayer(), { forgetTouches: true });
+  resetTouchInteraction(localPlayer(), { forgetTouches: true });
   unsubscribeOverlay?.();
   unsubscribeOverlay = null;
   inputHost = null;
@@ -738,7 +716,7 @@ export function disposeTouchControls(): void {
 /** Bind only the mounted Svelte action elements; TypeScript owns gesture capture. */
 export function mountTouchActionControls(elements: TouchActionElements): () => void {
   actionScope?.abort();
-  resetTouchInteraction(requireLocalPlayer());
+  resetTouchInteraction(localPlayer());
   const scope = new AbortController();
   actionScope = scope;
   const { signal } = scope;
@@ -753,7 +731,7 @@ export function mountTouchActionControls(elements: TouchActionElements): () => v
     'lostpointercapture',
     () => {
       if (abilityPointerId !== null) {
-        resetTouchInteraction(requireLocalPlayer());
+        resetTouchInteraction(localPlayer());
       }
     },
     { signal }
@@ -773,7 +751,7 @@ export function mountTouchActionControls(elements: TouchActionElements): () => v
     'lostpointercapture',
     () => {
       if (contourLockPointerId !== null) {
-        resetTouchInteraction(requireLocalPlayer());
+        resetTouchInteraction(localPlayer());
       }
     },
     { signal }
@@ -784,7 +762,7 @@ export function mountTouchActionControls(elements: TouchActionElements): () => v
     if (actionScope !== scope) {
       return;
     }
-    resetTouchInteraction(requireLocalPlayer());
+    resetTouchInteraction(localPlayer());
     abilityButton = null;
     contourLockButton = null;
     actionScope = null;

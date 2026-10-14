@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { drawCargoOffloads } from '../../../src/rendering/cargoOffloadRenderer';
 import { setWindowViewport } from '../../support/viewport';
@@ -26,13 +26,11 @@ test('an accepted final deposit flashes for the pilot and crew even when a purch
     id: 'cargo-local',
     name: 'Cargo',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const peer = new Player({
     id: 'cargo-peer',
     name: 'Peer',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   for (const player of [pilot, peer]) {
     player.ship.position = { x: 0, y: 0 };
@@ -51,7 +49,6 @@ test('an accepted final deposit flashes for the pilot and crew even when a purch
     id: 'damaged',
     name: 'Damaged',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   damaged.ship.position = { x: 0, y: 0 };
   damaged.cargo = 50;

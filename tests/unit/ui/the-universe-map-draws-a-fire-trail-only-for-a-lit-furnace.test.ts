@@ -4,8 +4,6 @@ import { CIVIC_LOTS, civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { Roid } from '../../../src/entities/roid/Roid';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
-import { NetworkManager } from '../../../src/network/networkManager';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   setWorldExploration,
@@ -13,12 +11,14 @@ import {
   worldFurnaces,
 } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
+import { setPlayView } from '../../../src/ui/uiUtils';
 import {
   bindUniverseMapField,
   mountUniverseMap as mountMap,
   type UniverseMapChrome,
   type UniverseMapController,
 } from '../../../src/ui/universeMap';
+import { asteroidRow } from '../../support/asteroid-row';
 
 let controller: UniverseMapController | undefined;
 let chrome: UniverseMapChrome | undefined;
@@ -36,7 +36,7 @@ afterEach(() => {
   worldFurnaces.replaceLit([]);
   setWorldMapAssets([]);
   setWorldExploration([]);
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -52,7 +52,7 @@ function mountUniverseMap() {
   vi.stubGlobal('requestAnimationFrame', () => 1);
   vi.stubGlobal('cancelAnimationFrame', () => {});
   vi.spyOn(performance, 'now').mockImplementation(() => clock);
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([]);
   const canvas = document.createElement('canvas');
@@ -91,7 +91,6 @@ test('keyboard and semantic chart actions signal the panned center without repea
     id: 'chart-signal',
     name: 'Navigator',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   pilot.ship.position = { x: 10000, y: 10000 };
   vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
@@ -298,13 +297,14 @@ test('universe chart hides an unlit glow crystal and shows its charged mark in e
     id: 'glow-chart',
     name: 'Observer',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const origin = { x: 10000, y: 10000 };
   pilot.ship.position = origin;
   vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
-  const ordinary = new Roid({ x: origin.x + 600, y: origin.y }, 14, 'chart-control');
-  const crystal = new Roid({ x: origin.x + 600, y: origin.y + 300 }, 14, 'chart-crystal');
+  const ordinary = new Roid(asteroidRow({ x: origin.x + 600, y: origin.y }, 14, 'chart-control'));
+  const crystal = new Roid(
+    asteroidRow({ x: origin.x + 600, y: origin.y + 300 }, 14, 'chart-crystal')
+  );
   crystal.glowtoy = { charge: 0, cachePosition: origin, cacheRevealed: true };
   const exploration = new ExplorationMap();
   exploration.reveal(origin, 1200);

@@ -43,7 +43,7 @@ test('a local shot and explosion buzz this device when Haptics is on', () => {
   expect(vibrate).toHaveBeenCalled();
   vibrate.mockClear();
 
-  ship.explode('asteroid');
+  ship.explode();
   expect(vibrate).toHaveBeenCalled();
 });
 
@@ -55,7 +55,7 @@ test('a remote explode does not vibrate this device', () => {
 
   const ship = new Ship({ isLocalPlayer: false });
   ship.fireLaser();
-  ship.explode('asteroid');
+  ship.explode();
   expect(ship.exploding).toBe(true);
   expect(vibrate).not.toHaveBeenCalled();
 });

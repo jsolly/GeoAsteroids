@@ -19,7 +19,7 @@ import { terrainCruiseVelocity } from '../../../shared/terrainTravel';
 import type { ContourLockState, Position } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { PlayerMotionReconciliation } from '../../../src/network/services/PlayerMotionReconciliation';
 import { RecordingSocket } from '../../support/recordingSocket';
 import { GameServerWorld, useQuietServerConsole } from '../scenarios/support/gameServerWorld';
@@ -772,7 +772,6 @@ test('three accepted adjacent hops charge one crew bridge, followers glide acros
     id: follower.id,
     name: follower.name,
     type: 'local',
-    input: new MockPlayerInput({ thrusting: true }),
   });
   const prediction = new PlayerMotionReconciliation();
   let followerNow = world.engine.getServerTime();

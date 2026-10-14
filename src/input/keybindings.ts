@@ -3,23 +3,9 @@ import { sampleGradient } from '../../shared/heightfield';
 import { getTerrainField } from '../../shared/terrainField';
 import type { Player } from '../entities/player/Player';
 import { worldFurnaces } from '../network/worldExploration';
-import { canvasManager } from '../rendering/canvasSurface';
 import { getOpenGameOverlay } from '../runtime/overlayState';
 import { controlSources } from './controlSources';
 import { steeringTurn } from './pointerSteering';
-
-interface KeyStates {
-  ArrowLeft: boolean;
-  ArrowRight: boolean;
-  Space: boolean;
-  [key: string]: boolean;
-}
-
-export const keys: KeyStates = {
-  ArrowLeft: false,
-  ArrowRight: false,
-  Space: false,
-};
 
 // Track pressed keys per-player to avoid cross-player/global interference (e.g., parallel tests)
 const playerPressedKeys = new WeakMap<Player, Set<string>>();
@@ -45,7 +31,6 @@ export function togglePlayerContourLock(player: Player): boolean {
     const pressed = getPressedKeysForPlayer(player);
     for (const code of TURN_KEYS) {
       pressed.delete(code);
-      keys[code] = false;
     }
     player.ship.angularVelocity = 0;
   }
@@ -90,8 +75,8 @@ function updateCruise(player: Player): void {
 
 // Helper to set angular velocity from the aggregate turn-key state. Supports
 // both arrow keys (ArrowLeft/ArrowRight) and WASD (KeyA/KeyD); opposing keys
-// held together cancel out. Using the per-player pressed set (rather than the
-// global `keys` map) keeps combinations correct across arrow/WASD mixes.
+// held together cancel out. Using the per-player pressed set rather than
+// another player's state) keeps combinations correct across arrow/WASD mixes.
 function turnSpeedForShip(player: Player): number {
   return (player.ship.turnSpeed * Math.PI) / (180 * GAME.FPS);
 }
@@ -122,9 +107,7 @@ function updateTurnFromKeys(player: Player): void {
   if (!turningLeft && !turningRight) {
     const heading = controlSources.pointerHeading;
     player.ship.angularVelocity =
-      heading === null
-        ? 0
-        : steeringTurn(player.ship.angle, heading + canvasManager.getCameraRotation(), turnSpeed);
+      heading === null ? 0 : steeringTurn(player.ship.angle, heading, turnSpeed);
   }
 }
 
@@ -146,9 +129,6 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
     return;
   }
   if (player.ship.health > 0 && !player.ship.exploding) {
-    if (ev.code in keys) {
-      keys[ev.code] = true;
-    }
     // Record pressed key for this player
     getPressedKeysForPlayer(player).add(ev.code);
     switch (ev.code) {
@@ -172,12 +152,10 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
       }
       case 'Space':
         // Space fires while automatic cruise continues.
-        if (getOpenGameOverlay() === null) {
-          player.ship.shoot();
-        }
+        player.ship.shoot();
         break;
       case 'KeyE':
-        if (!ev.repeat && getOpenGameOverlay() === null) {
+        if (!ev.repeat) {
           player.ship.activateAbility();
         }
         break;
@@ -204,10 +182,6 @@ export function keyDown(ev: KeyboardEvent, player: Player): void {
 export function keyUp(ev: KeyboardEvent, player: Player): void {
   if (ev.code === 'KeyF') {
     player.ship.finishWeaponCharge(getOpenGameOverlay() === null);
-  }
-  // Always update keys state first
-  if (ev.code in keys) {
-    keys[ev.code] = false;
   }
 
   // Update per-player pressed keys set

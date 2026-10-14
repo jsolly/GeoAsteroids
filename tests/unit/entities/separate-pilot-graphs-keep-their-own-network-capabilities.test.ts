@@ -1,11 +1,16 @@
 import { expect, test, vi } from 'vitest';
-import { entityFactory } from '../../../src/entities/EntityFactory';
 import type { Laser } from '../../../src/entities/laser/Laser';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import type { ShipCombatNetwork } from '../../../src/entities/ship/shipCombatNetwork';
 
 function pilotGraph(id: string) {
-  const remote = entityFactory.createRemotePlayer(`${id}-crew`, `${id} crew`, { x: 200, y: 0 });
+  const remote = createPlayer({
+    id: `${id}-crew`,
+    name: `${id} crew`,
+    type: 'remote',
+    position: { x: 200, y: 0 },
+  });
   const port = {
     getAllPlayers: () => [remote],
     setLocalPlayerName: vi.fn(),

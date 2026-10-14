@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { logger } from '../../setup/serverLogger';
 import { tickAsteroidBoost } from '../../shared/asteroidBoost';
 import { asteroidMaterialAt, MATERIAL_OUTLINES } from '../../shared/asteroidMaterials';
 import { containAsteroidPosition, stepAsteroidMotionInto } from '../../shared/asteroidMotion';
 import { isColossalAsteroid } from '../../shared/asteroidScale';
-import { DAMAGE, DEBUG, GAME, ROID } from '../../shared/constants/gameplay';
+import { DAMAGE, GAME, ROID } from '../../shared/constants/gameplay';
 import { stepContourAsteroid } from '../../shared/contourAsteroid';
+
 import { oreResource } from '../../shared/economy';
 import { FurnaceField } from '../../shared/furnaceField';
 import { WORLD } from '../../shared/world';
-import type { AsteroidData, Position } from '../../shared-types';
+import type { AsteroidData } from '../../shared-types';
 import { AsteroidSpatialIndex } from '../world/AsteroidSpatialIndex';
 import type { RNGService } from './RNGService';
 
@@ -30,7 +30,7 @@ export class AsteroidManager {
   /** Monotonic field generation; never reused after a clear in this manager. */
   private fieldGeneration = 0;
 
-  // Asteroid splitting constants - can be overridden by DEBUG settings
+  // Asteroid splitting constants.
   private readonly MIN_ASTEROID_SIZE = 10;
   private readonly COLOSSAL_SPLIT_SIZE_RATIO = 0.5;
 
@@ -120,14 +120,10 @@ export class AsteroidManager {
 
   /**
    * Advance every asteroid one simulation frame (same units as client `moveRoids`:
-   * velocity is pixels per 60 FPS tick). Debug placement modes stay frozen so
-   * collision tests that pin roids on ships do not drift.
+   * velocity is pixels per 60 FPS tick).
    */
   public updateMotion(captureMotion = false): void {
     this.index.beginMotion(captureMotion);
-    if (DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER) {
-      return;
-    }
 
     for (const asteroid of this.asteroids.values()) {
       const previous = captureMotion
@@ -150,23 +146,9 @@ export class AsteroidManager {
 
   public createAsteroids(
     count: number,
-    bounds: { radius: number } = { radius: WORLD.radius },
-    playerPositions: Position[] = []
+    bounds: { radius: number } = { radius: WORLD.radius }
   ): AsteroidData[] {
-    // If we already have asteroids and no player positions are provided, return them instead of recreating
-    // But if player positions are provided, we should recreate to place roids on players
-    // Also recreate if we're in test mode (PLACE_ON_LOCAL_PLAYER is true)
-    const isTestMode = DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER;
-    logger.debug(
-      'AsteroidManager: isTestMode =',
-      isTestMode,
-      'playerPositions.length =',
-      playerPositions.length,
-      'existing asteroids =',
-      this.asteroids.size
-    );
-    if (this.asteroids.size > 0 && playerPositions.length === 0 && !isTestMode) {
-      logger.debug('AsteroidManager: Returning existing asteroids instead of recreating');
+    if (this.asteroids.size > 0) {
       return Array.from(this.asteroids.values());
     }
 
@@ -178,35 +160,14 @@ export class AsteroidManager {
     this.fieldGeneration += 1;
     const generation = this.fieldGeneration;
 
-    // The requested count remains useful to deterministic tests and explicit
-    // tools. Only the opt-in debug mode overrides it; production callers pass
-    // the canonical ROID.INITIAL_ROID_COUNT from GameEngine.
-    const asteroidCount = DEBUG.ENABLED ? DEBUG.ROIDS.INITIAL_COUNT : count;
     const newAsteroids: AsteroidData[] = [];
 
     // Scope deterministic slot IDs to this field generation. A delayed
     // destroy/hit from a prior depleted field must never address a new rock.
-    for (let i = 0; i < asteroidCount; i++) {
+    for (let i = 0; i < count; i++) {
       const asteroidId = `server-asteroid-${this.managerNonce}-${generation}-${i}`;
 
-      // Determine position based on DEBUG settings
-      let position: Position;
-      if (DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER && playerPositions.length > 0) {
-        // Place asteroids exactly on players when PLACE_ON_LOCAL_PLAYER is true (for testing)
-        const playerPos = playerPositions[i % playerPositions.length];
-        if (playerPos === undefined) {
-          position = this.rng.randomPosition(bounds);
-        } else {
-          // Place asteroids exactly on the player for collision testing
-          position = {
-            x: playerPos.x,
-            y: playerPos.y,
-          };
-        }
-      } else {
-        position = this.rng.randomPosition(bounds);
-      }
-
+      const position = this.rng.randomPosition(bounds);
       const velocity = this.rng.randomVelocity(ROID.SERVER_VELOCITY_MAX);
 
       const material = asteroidMaterialAt(i);
@@ -217,20 +178,8 @@ export class AsteroidManager {
       );
       const vertices = offsets.length;
 
-      // Determine size based on DEBUG settings
-      let size: number;
-      // Check if we're in test mode (when PLACE_ON_LOCAL_PLAYER is true, assume test mode)
-      const localTestMode = DEBUG.ROIDS.PLACE_ON_LOCAL_PLAYER;
-
-      if (DEBUG.ENABLED && DEBUG.ROIDS.ALL_LARGE && !localTestMode) {
-        size = 50; // Large size
-      } else if (localTestMode) {
-        // In test mode, create medium asteroids (size 20-30).
-        size = this.rng.random() * 10 + 20;
-      } else {
-        // Mixed sizes make mineral silhouettes and rubble fragments readable.
-        size = this.rng.random() * 30 + 18;
-      }
+      // One size draw preserves the seeded production field.
+      const size = this.rng.random() * 30 + 18;
 
       const asteroid: AsteroidData = {
         id: asteroidId,

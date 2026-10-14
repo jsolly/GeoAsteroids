@@ -96,7 +96,7 @@ async function start(initial = initialView) {
       onmode,
       onpurchase,
       onclose,
-      travel: { source: TOWN_HEARTH, destinations: CIVIC_LOTS.slice(0, 1), rotation: 0 },
+      travel: { source: TOWN_HEARTH, destinations: CIVIC_LOTS.slice(0, 1) },
       ontravel,
     },
   });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { Player } from '../../../src/entities/player/Player';
 import { reconcilePlayerInput } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { handleMouseMove } from '../../../src/input/mouse';
 import { Point } from '../../../src/physics/Point';
 import { canvasManager, type PlayfieldGeometry } from '../../../src/rendering/canvasSurface';
@@ -177,16 +177,11 @@ describe('the playfield viewport stays in CSS-logical coordinates', () => {
     expect(canvasManager.worldToScreen({ ...shipPosition }, shipPosition)).toEqual(
       new Point(600, 450)
     );
-    expect(canvasManager.screenToWorld(new Point(650, 400), shipPosition)).toEqual({
-      x: 170,
-      y: -130,
-    });
 
     const player = new Player({
       id: 'dpr-aim',
       name: 'DPR Aim',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     handleMouseMove(new MouseEvent('mousemove', { clientX: 650, clientY: 300 }), player);
     expect(player.ship.angle).toBeCloseTo(Math.PI / 2);

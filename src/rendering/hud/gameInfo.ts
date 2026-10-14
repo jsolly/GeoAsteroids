@@ -8,46 +8,44 @@ import {
 import { getShipKit } from '../../../shared/shipKits';
 import { PALETTE, VISUAL } from '../../constants';
 import { GameStateManager } from '../../core/services/GameStateManager';
-import { PlayerManager } from '../../entities/player/PlayerManager';
+import type { Player } from '../../entities/player/Player';
 import { getSettlement } from '../../network/worldExploration';
 import { hexToRgba } from '../../utils/colorUtils';
 import type { PlayfieldSize } from '../playfieldCamera';
-import { type HudLayout, scaleHudFont } from './hudLayout';
+import type { HudLayout } from './hudLayout';
 
 export function drawScoreOverlay(
   ctx: CanvasRenderingContext2D,
   layout: HudLayout,
   viewport: PlayfieldSize,
-  score: number
+  pilot: Player
 ): void {
   ctx.save();
   ctx.fillStyle = PALETTE.HUD;
   const viewportWidth = viewport.width;
-  ctx.font = scaleHudFont(VISUAL.SCORE_FONT, layout.hudTypeScale);
+  ctx.font = VISUAL.SCORE_FONT;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
 
-  const origin = { x: VISUAL.HUD_INSET, y: VISUAL.HUD_INSET + 10 };
-  const dx = layout.balance.x - VISUAL.HUD_INSET;
-  const dy = layout.balance.y - VISUAL.HUD_INSET;
-  const pilot = PlayerManager.getInstance().getLocalPlayer();
+  const { x, y } = layout.balance;
+  const score = pilot.score;
   const compactWidth = layout.leaderboard.x - layout.balance.x - 12;
-  if (layout.compact && pilot) {
+  if (layout.compact) {
     ctx.font = 'bold 12px Arial';
     ctx.fillText(
       `Bank ${score.toLocaleString()} · Cargo ${pilot.cargo}/${cargoCapacity(pilot.ship.kitId)}`,
-      origin.x + dx,
-      origin.y + dy,
+      x,
+      y + 10,
       compactWidth
     );
   } else {
-    ctx.fillText(`Bank ${score.toLocaleString()}`, origin.x + dx, origin.y + dy);
+    ctx.fillText(`Bank ${score.toLocaleString()}`, x, y + 10);
   }
 
-  ctx.font = scaleHudFont(VISUAL.NAME_LABEL_FONT, layout.hudTypeScale);
+  ctx.font = VISUAL.NAME_LABEL_FONT;
   ctx.textBaseline = 'top';
 
-  const localShip = PlayerManager.getInstance().getLocalShip();
+  const localShip = pilot.ship;
   if (localShip) {
     const kit = getShipKit(localShip.kitId);
     ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.85);
@@ -56,12 +54,12 @@ export function drawScoreOverlay(
       ctx.font = '12px Arial';
       ctx.fillText(
         `${kit.name} · Settlement ${settlement.level} → ${settlement.level + 1} · ${Math.floor(settlementProgress(settlement) * 100)}%`,
-        VISUAL.HUD_INSET + dx,
+        x,
         layout.kitNameY,
         compactWidth
       );
     } else {
-      ctx.fillText(kit.name, VISUAL.HUD_INSET + dx, layout.kitNameY);
+      ctx.fillText(kit.name, x, layout.kitNameY);
     }
   }
 
@@ -75,11 +73,10 @@ export function drawScoreOverlay(
     ctx.fillText(gameStateManager.getPickupMessage(), viewportWidth / 2, pickupY);
   }
 
-  if (pilot && !layout.compact) {
+  if (!layout.compact) {
     const settlement = getSettlement();
     const recipe = settlementRecipe(settlement.level);
-    const x = layout.balance.x;
-    const y = layout.kitNameY + 20;
+    const settlementY = layout.kitNameY + 20;
     const width = Math.min(340, viewportWidth - x - layout.padRight);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -88,138 +85,29 @@ export function drawScoreOverlay(
     ctx.fillText(
       `Cargo ${pilot.cargo}/${cargoCapacity(pilot.ship.kitId)} · Return to a furnace`,
       x,
-      y
+      settlementY
     );
     const progress = settlementProgress(settlement);
     ctx.fillText(
       `Settlement ${settlement.level} → ${settlement.level + 1} · ${Math.floor(progress * 100)}%`,
       x,
-      y + 20
+      settlementY + 20
     );
     ctx.fillStyle = hexToRgba(PALETTE.HUD, 0.18);
-    ctx.fillRect(x, y + 37, width, 5);
+    ctx.fillRect(x, settlementY + 37, width, 5);
     ctx.fillStyle = WIRE_PALETTE.SATELLITE;
-    ctx.fillRect(x, y + 37, width * progress, 5);
+    ctx.fillRect(x, settlementY + 37, width * progress, 5);
     ctx.fillStyle = PALETTE.HUD_MUTED;
     ctx.font = '10px Arial';
-    ctx.fillText(`Points ${settlement.points}/${recipe.points}`, x, y + 47);
+    ctx.fillText(`Points ${settlement.points}/${recipe.points}`, x, settlementY + 47);
     ctx.fillText(
       RESOURCES.map((key) => `${key} ${settlement.resources[key]}/${recipe.resources[key]}`).join(
         ' · '
       ),
       x,
-      y + 61,
+      settlementY + 61,
       width
     );
   }
-  ctx.restore();
-}
-
-function drawMultiLineText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-  _alpha: number
-): void {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const metrics = ctx.measureText(testLine);
-
-    if (metrics.width > maxWidth && currentLine !== '') {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === undefined) {
-      continue;
-    }
-    const lineY = y + (i - (lines.length - 1) / 2) * lineHeight;
-    ctx.fillText(line, x, lineY);
-  }
-}
-
-export function drawTextOverlay(
-  ctx: CanvasRenderingContext2D,
-  layout: HudLayout,
-  viewport: PlayfieldSize,
-  text: string,
-  alpha: number
-): void {
-  ctx.save();
-
-  const isDeathMessage = text.toLowerCase().includes('killed by');
-  const viewportWidth = viewport.width;
-  const viewportHeight = viewport.height;
-  const centerX = viewportWidth / 2;
-  const centerY = viewportHeight / 2;
-  const scale = layout.overlayFontScale;
-
-  if (isDeathMessage) {
-    ctx.fillStyle = hexToRgba(PALETTE.BG, alpha * 0.7);
-    ctx.fillRect(0, 0, viewportWidth, viewportHeight);
-
-    ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
-    ctx.font = `bold ${Math.round(28 * scale)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const maxWidth = viewportWidth * 0.8;
-    drawMultiLineText(ctx, text, centerX, centerY, maxWidth, 36 * scale, alpha);
-  } else {
-    ctx.fillStyle = hexToRgba(PALETTE.HUD, alpha);
-    ctx.font = `${Math.round(32 * scale)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const maxWidth = viewportWidth * 0.8;
-    drawMultiLineText(
-      ctx,
-      text,
-      viewportWidth / 2,
-      viewportHeight / 2,
-      maxWidth,
-      40 * scale,
-      alpha
-    );
-  }
-
-  ctx.restore();
-}
-
-export function drawDebugInfo(
-  ctx: CanvasRenderingContext2D,
-  viewport: PlayfieldSize,
-  roidCount: number,
-  debugMode: boolean
-): void {
-  if (!debugMode) {
-    return;
-  }
-
-  ctx.save();
-  ctx.fillStyle = hexToRgba(PALETTE.HUD_MUTED, 0.7);
-  ctx.font = '12px Arial';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-
-  const canvasHeight = viewport.height;
-  ctx.fillText(`debug  asteroids ${roidCount}`, 10, canvasHeight - 28);
-
   ctx.restore();
 }

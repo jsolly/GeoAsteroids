@@ -4,7 +4,7 @@ import { GAME } from '../../../shared/constants/gameplay';
 import { Player } from '../../../src/entities/player/Player';
 import { controlSources, resetControlSources } from '../../../src/input/controlSources';
 import { keyDown, keyUp } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { setTouchFire, setTouchHeading, tickTouchControls } from '../../../src/input/touchControls';
 
 const TURN = ((540 / 180) * Math.PI) / GAME.FPS;
@@ -17,7 +17,6 @@ beforeEach(() => {
     id: 'touch-player',
     name: 'Touchy',
     type: 'local',
-    input: new MockPlayerInput(),
   });
 });
 

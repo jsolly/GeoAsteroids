@@ -1,11 +1,5 @@
-import { playFeedback } from '../audio/feedbackSounds';
 import { PlayerManager } from '../entities/player/PlayerManager';
-import {
-  closeGameOverlay,
-  isGameOverlayOpen,
-  openGameOverlay,
-  subscribeGameOverlay,
-} from './overlayState';
+import { closeGameOverlay, isGameOverlayOpen, openGameOverlay } from './overlayState';
 
 export function openInventory(inPlay: boolean): void {
   const ship = PlayerManager.getInstance().getLocalPlayer()?.ship;
@@ -70,21 +64,8 @@ export function mountInventoryShortcuts(inPlay: () => boolean): () => void {
     },
     { capture: true, signal: scope.signal }
   );
-  const stopFeedback = subscribeInventoryFeedback();
   return () => {
     scope.abort();
-    stopFeedback();
     closeGameOverlay('inventory');
   };
-}
-
-function subscribeInventoryFeedback(): () => void {
-  return subscribeGameOverlay((next, previous) => {
-    if (next === 'inventory') {
-      window.dispatchEvent(new CustomEvent('gameSchematicOpen'));
-    }
-    if (next === 'inventory' || previous === 'inventory') {
-      playFeedback('interface');
-    }
-  });
 }

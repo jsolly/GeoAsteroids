@@ -2,7 +2,7 @@ import { expect, test, vi } from 'vitest';
 import { CIVIC_LOTS } from '../../../shared/furnaces';
 import { WORLD } from '../../../shared/world';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { MINIMAP_FURNACE_MARK_SIZE } from '../../../src/rendering/hud/furnaceMapMark';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
 import { drawMiniMap } from '../../../src/rendering/hud/minimap';
@@ -45,7 +45,6 @@ test('a furnace follows exact projection continuously through approach, crossing
     id: 'pilot',
     name: 'John',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const canvas = document.createElement('canvas');
   canvas.width = 800;
@@ -76,7 +75,6 @@ test('a furnace farther than the hull keeps its true radar position', () => {
     id: 'pilot',
     name: 'John',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const eastOfGrate = 900;
   player.ship.position = {

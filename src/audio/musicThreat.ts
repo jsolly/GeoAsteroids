@@ -1,11 +1,5 @@
 /**
- * Temporary in-game danger music.
- *
- * Gameplay (the upcoming threat feature) should import these from this module:
- *
- * ```
- * import { pushMusicThreat, clearMusicThreat } from '../audio/musicThreat';
- * ```
+ * Nested in-game danger music.
  *
  * Pair every `pushMusicThreat()` with a later `clearMusicThreat()`. Counts
  * nest so overlapping threats do not fight. Music off keeps the count but
@@ -13,9 +7,7 @@
  * cannot inherit a stale threat, and re-entering play restores the normal
  * in-game bed until something pushes again.
  *
- * Expected files: `public/music/danger-bed.ogg` and `public/music/danger-bed.mp3`
- * (Iso Threat, Suno `31b6f7b6`). Missing or failed decode falls back to a
- * slightly more intense in-game bed.
+ * Missing or failed danger-bed decode falls back to a slightly more intense in-game bed.
  */
 
 let threatCount = 0;

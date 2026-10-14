@@ -1,3 +1,4 @@
+import { debugIsOn } from '../constants/user-preferences';
 import { noteDebugFrame } from '../diagnostics/debugHudMetrics';
 import { clientPerformance } from '../diagnostics/performanceMetrics';
 
@@ -9,14 +10,13 @@ export interface EventLoopLifecycle {
   renderGame(): void;
   stopAfterFrameFailure(): void;
   getNetworkManager(): {
-    readonly isConnected: boolean;
-    sendMessage(message: { type: 'snapshotResync'; data: Record<string, never> }): boolean;
+    sendSnapshotResync(): boolean;
   };
 }
 
 export interface EventLoopHost {
   window: Pick<Window, 'addEventListener' | 'removeEventListener'>;
-  document: Pick<Document, 'addEventListener' | 'removeEventListener' | 'hidden' | 'body'>;
+  document: Pick<Document, 'addEventListener' | 'removeEventListener' | 'hidden'>;
   requestAnimationFrame(callback: FrameRequestCallback): number;
   cancelAnimationFrame(id: number): void;
   now(): number;
@@ -71,10 +71,7 @@ export class EventLoop {
       this.hiddenAt = undefined;
       this.lifecycle.resetPresentationClock();
       clientPerformance.recover(this.host.now());
-      const network = this.lifecycle.getNetworkManager();
-      if (network.isConnected && network.sendMessage({ type: 'snapshotResync', data: {} })) {
-        clientPerformance.count('resyncs');
-      }
+      this.lifecycle.getNetworkManager().sendSnapshotResync();
     }
   };
 
@@ -112,14 +109,10 @@ export class EventLoop {
         return;
       }
       const observing = clientPerformance.enabled;
-      const debugHudOn = this.host.document.body.classList.contains('debug-on');
+      const debugHudOn = debugIsOn();
       if (observing) {
         clientPerformance.setPhase(
-          this.host.document.hidden
-            ? 'hidden'
-            : this.lifecycle.getCurrPlayer()?.ship.exploding
-              ? 'respawn'
-              : 'play'
+          this.lifecycle.getCurrPlayer()?.ship.exploding ? 'respawn' : 'play'
         );
         clientPerformance.record('frameIntervalMs', dtMs);
       }

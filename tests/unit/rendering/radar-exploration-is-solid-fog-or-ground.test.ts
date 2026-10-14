@@ -4,11 +4,11 @@ import { WORLD } from '../../../shared/world';
 import { PALETTE } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import { Roid } from '../../../src/entities/roid/Roid';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { resetWorldExploration, setWorldExploration } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
 import { drawMiniMap } from '../../../src/rendering/hud/minimap';
+import { asteroidRow } from '../../support/asteroid-row';
 
 afterEach(() => {
   resetWorldExploration();
@@ -49,7 +49,6 @@ test.each([1280, 390])(
       id: 'scout',
       name: 'Scout',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     const origin = { x: 10_000, y: 10_000 };
     player.ship.position = origin;
@@ -103,7 +102,6 @@ test.each([1280, 390])(
       id: 'scout',
       name: 'Scout',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.position = { x: 10000, y: 10000 };
     const position = { x: 10400, y: 10000 };
@@ -136,12 +134,13 @@ test('radar hides an unlit glow crystal and shows its charged mark in explored g
     id: 'glow-radar',
     name: 'Observer',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const origin = { x: 10000, y: 10000 };
   pilot.ship.position = origin;
-  const ordinary = new Roid({ x: origin.x + 600, y: origin.y }, 14, 'radar-control');
-  const crystal = new Roid({ x: origin.x + 600, y: origin.y + 300 }, 14, 'radar-crystal');
+  const ordinary = new Roid(asteroidRow({ x: origin.x + 600, y: origin.y }, 14, 'radar-control'));
+  const crystal = new Roid(
+    asteroidRow({ x: origin.x + 600, y: origin.y + 300 }, 14, 'radar-crystal')
+  );
   crystal.glowtoy = { charge: 0, cachePosition: origin, cacheRevealed: true };
   const exploration = new ExplorationMap();
   exploration.reveal(origin, 1200);

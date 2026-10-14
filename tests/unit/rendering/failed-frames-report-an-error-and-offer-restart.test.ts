@@ -2,9 +2,8 @@ import { afterEach, beforeAll, expect, test, vi } from 'vitest';
 import { EventLoop } from '../../../src/core/eventLoop';
 import { GameController } from '../../../src/core/gameController';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { PlayerNetwork } from '../../../src/entities/player/playerNetwork';
 import * as shipRenderer from '../../../src/entities/ship/shipRenderer';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 
 import { TestPath2D } from '../../support/TestPath2D';
@@ -12,7 +11,7 @@ import { TestPath2D } from '../../support/TestPath2D';
 let eventLoop: EventLoop | undefined;
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 
@@ -42,7 +41,7 @@ test('an actual game-loop frame failure stops work and reports once to its runti
   canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'));
   const player = PlayerManager.getInstance().createLocalPlayer();
   player.id = 'local-pilot';
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   vi.spyOn(network, 'getLocalPlayerId').mockReturnValue(player.id);
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([player]);
 
@@ -55,9 +54,6 @@ test('an actual game-loop frame failure stops work and reports once to its runti
     throw failure;
   });
   const stop = vi.spyOn(controller, 'stopAfterFrameFailure');
-  const stopNetwork = vi
-    .spyOn(PlayerNetwork.getInstance(), 'stopNetworkUpdates')
-    .mockImplementation(() => undefined);
   const reportFailure = vi.fn();
 
   eventLoop = new EventLoop(controller, {
@@ -74,7 +70,6 @@ test('an actual game-loop frame failure stops work and reports once to its runti
 
   expect(drawHull).toHaveBeenCalledOnce();
   expect(stop).toHaveBeenCalledOnce();
-  expect(stopNetwork).toHaveBeenCalledOnce();
   expect(controller.getIsGameRunning()).toBe(false);
   expect(reportFailure).toHaveBeenCalledExactlyOnceWith(failure);
   expect(scheduled).toHaveLength(0);

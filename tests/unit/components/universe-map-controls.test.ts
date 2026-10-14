@@ -3,19 +3,13 @@ import { fromStore, writable } from 'svelte/store';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import UniverseMap from '../../../src/components/game/UniverseMap.svelte';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { NetworkManager } from '../../../src/network/networkManager';
-import {
-  UNIVERSE_MAP_LOCATE_LABEL,
-  type UniverseMapChrome,
-  type UniverseMapController,
-} from '../../../src/ui/universeMap';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
+import type { UniverseMapChrome, UniverseMapController } from '../../../src/ui/universeMap';
 
 let component: ReturnType<typeof mount> | undefined;
 const initial: UniverseMapChrome = {
   frame: { x: 25, y: 35, size: 400 },
-  heading: 0,
   centered: true,
-  zoom: 24,
   locations: ['Town Hearth: X +0, Y +0'],
   locationPage: 0,
   locationPages: 2,
@@ -64,7 +58,7 @@ beforeEach(() => {
       disconnect() {}
     }
   );
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   vi.spyOn(network, 'getAllPlayers').mockReturnValue([]);
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -134,14 +128,14 @@ test('pilots open an accessible Svelte map with canvas, North compass, full lege
   expect(compass.textContent?.trim()).toBe('N');
   expect(compass.querySelectorAll('span')).toHaveLength(1);
   expect(compass.querySelector('i')).not.toBeNull();
-  expect(compass.style.transform).toBe('rotate(0rad)');
+  expect(compass.style.transform).toBe('');
   expect(compass.style.left).toBe('37px');
   const legend = element('.universe-map-legend', HTMLDivElement);
   expect(legend.querySelectorAll('canvas')).toHaveLength(7);
   for (const label of ['You', 'Crew', 'Furnace', 'Court', 'Resources', 'Nest', 'Uncharted']) {
     expect(legend.textContent).toContain(label);
   }
-  const locate = button(UNIVERSE_MAP_LOCATE_LABEL);
+  const locate = button('Center on you');
   expect(locate.parentElement).toBe(canvas.parentElement);
   expect(locate.style.left).toBe('369px');
   expect(locate.style.top).toBe('379px');
@@ -191,7 +185,7 @@ test('touch map chrome omits keyboard badges and every coordinate page is reacha
   );
   expect(document.querySelector('kbd')).toBeNull();
   expect(button('Close').tagName).toBe('BUTTON');
-  expect(button(UNIVERSE_MAP_LOCATE_LABEL).getAttribute('aria-keyshortcuts')).toBeNull();
+  expect(button('Center on you').getAttribute('aria-keyshortcuts')).toBeNull();
   button('Locations').click();
   await settle();
   expect(document.querySelector('#universe-map-locations')?.textContent).toContain('Town Hearth');

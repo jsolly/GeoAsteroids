@@ -49,23 +49,17 @@ export function isFiniteMapPosition(value: Position | undefined): value is Posit
   );
 }
 
-function chartOffset(position: Position, viewCenter: Position, headingRotation: number): Position {
+function chartOffset(position: Position, viewCenter: Position): Position {
   const dx = position.x - viewCenter.x;
   const dy = position.y - viewCenter.y;
-  const cos = Math.cos(headingRotation);
-  const sin = Math.sin(headingRotation);
-  return {
-    x: cos * dx - sin * dy,
-    y: sin * dx + cos * dy,
-  };
+  return { x: dx, y: dy };
 }
 
 export function canPlaceMapAssetLabel(
   asset: Pick<MapAsset, 'name' | 'position'>,
   frame: MapLabelFrame,
   viewCenter: Position,
-  occupied: MapLabelRect[],
-  headingRotation = 0
+  occupied: MapLabelRect[]
 ): boolean {
   if (!asset.name || !isFiniteMapPosition(asset.position)) {
     return false;
@@ -75,7 +69,7 @@ export function canPlaceMapAssetLabel(
   const iconSize = universeMapMarkScreenSize(UNIVERSE_MAP_LANDMARK_SIZE, frame.zoom) / frame.scale;
   const gap = 6 / frame.scale;
   const labelWidth = asset.name.length * fontSize * 0.62;
-  const screen = chartOffset(asset.position, viewCenter, headingRotation);
+  const screen = chartOffset(asset.position, viewCenter);
   const left = screen.x - labelWidth / 2 - gap;
   const top = screen.y + iconSize * 1.6 - gap;
   const rect: MapLabelRect = {
@@ -93,15 +87,14 @@ export function canPlaceMapCrewLabel(
   shipSize: number,
   frame: MapLabelFrame,
   viewCenter: Position,
-  occupied: MapLabelRect[],
-  headingRotation = 0
+  occupied: MapLabelRect[]
 ): boolean {
   if (!name || !isFiniteMapPosition(position)) {
     return false;
   }
 
   const fontSize = 11 / frame.scale;
-  const screen = chartOffset(position, viewCenter, headingRotation);
+  const screen = chartOffset(position, viewCenter);
   const labelX = screen.x + shipSize * 1.4;
   const labelY = screen.y - shipSize;
   const gap = 6 / frame.scale;

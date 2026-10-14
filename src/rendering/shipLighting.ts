@@ -101,7 +101,7 @@ export function drawShipLighting(viewer: Position, ships: readonly Ship[]): void
     ) {
       continue;
     }
-    const angle = ship.angle - canvasManager.getCameraRotation();
+    const angle = ship.angle;
     drawHeadlight(ctx, at, angle, scale, ghosts);
     if (ship.thrusting) {
       drawEngineLight(ctx, at, angle, ship.r * scale, contourSpeedStrength(ship) > 0.25);

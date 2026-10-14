@@ -1,20 +1,8 @@
-import { isAsteroidMaterial } from '../../../shared/asteroidMaterials';
 import { containAsteroidPositionInto } from '../../../shared/asteroidMotion';
 import { isPoseInAsteroidField } from '../../../shared/boundary';
-import type { AsteroidData, AsteroidDestroyEvent, AsteroidMaterial } from '../../../shared-types';
-import { logger } from '../../utils/Logger';
 
-function writeOptionalField<K extends keyof AsteroidData>(
-  into: Partial<AsteroidData>,
-  key: K,
-  value: AsteroidData[K] | undefined
-): void {
-  if (value !== undefined) {
-    into[key] = value;
-  } else {
-    delete into[key];
-  }
-}
+import type { AsteroidData, AsteroidDestroyEvent } from '../../../shared-types';
+import type { Roid } from '../../entities/roid/Roid';
 
 interface AsteroidFieldSyncResult {
   created: AsteroidData[];
@@ -24,6 +12,7 @@ interface AsteroidFieldSyncResult {
 
 interface AsteroidFieldSyncScratch extends AsteroidFieldSyncResult {
   snapshotIds: Set<string>;
+  localIds: Set<string>;
 }
 
 export function createAsteroidFieldSyncScratch(): AsteroidFieldSyncScratch {
@@ -32,187 +21,46 @@ export function createAsteroidFieldSyncScratch(): AsteroidFieldSyncScratch {
     updated: [],
     removed: [],
     snapshotIds: new Set<string>(),
+    localIds: new Set<string>(),
   };
 }
 
-/** Mid-session rejoin must keep seen ids so the next snapshot updates in place. */
-export function shouldPreserveSeenAsteroidsOnJoin(seenCount: number): boolean {
-  return seenCount > 0;
-}
-
-const invalidMaterialWarnings = new Set<string>();
-
-function reportInvalidAsteroidMaterial(asteroidId: unknown, material: unknown): void {
-  const key = `${typeof asteroidId === 'string' ? asteroidId : '<unknown>'}:${String(material)}`;
-  if (invalidMaterialWarnings.has(key)) {
-    return;
-  }
-  if (invalidMaterialWarnings.size >= 256) {
-    invalidMaterialWarnings.clear();
-  }
-  invalidMaterialWarnings.add(key);
-  logger.error('NETWORK', 'Rejected asteroid row with invalid material', undefined, {
-    asteroidId: typeof asteroidId === 'string' ? asteroidId : undefined,
-    material: String(material),
-  });
-}
-
-/** JSON snapshots arrive after the TypeScript cast, so validate optional material at runtime. */
-function asteroidHasValidMaterial(asteroid: Partial<AsteroidData> & { id?: string }): boolean {
-  return asteroid.material === undefined || isAsteroidMaterial(asteroid.material);
-}
-
-/** Enough pose to spawn a visible rock. Lean rows without size must wait. */
-export function asteroidHasSpawnPose(
-  asteroid: Partial<AsteroidData> & { id?: string }
-): asteroid is AsteroidData {
-  return (
-    asteroid.position !== undefined &&
-    Number.isFinite(asteroid.position.x) &&
-    Number.isFinite(asteroid.position.y) &&
-    typeof asteroid.size === 'number' &&
-    Number.isFinite(asteroid.size) &&
-    asteroidHasValidMaterial(asteroid)
-  );
-}
-
-/**
- * Split an authoritative asteroid snapshot into first-seen creates vs
- * kinematic updates for asteroids the client already spawned.
- * Incomplete first-seen rows (lean pose-only) do not mark seen — a later
- * full row can still create so the belt is not permanently empty.
- */
+/** Classify complete DTO rows against current belt membership, reusing per-session scratch. */
 export function partitionAsteroidSnapshot(
-  asteroids: AsteroidData[],
-  seenIds: Set<string>,
-  scratch?: AsteroidFieldSyncScratch,
+  asteroids: readonly AsteroidData[],
+  belt: readonly { id: string }[],
+  scratch = createAsteroidFieldSyncScratch(),
   complete = false
 ): AsteroidFieldSyncResult {
-  const created = scratch ? scratch.created : [];
-  const updated = scratch ? scratch.updated : [];
-  const removed = scratch ? scratch.removed : [];
-  if (scratch) {
-    created.length = 0;
-    updated.length = 0;
-    removed.length = 0;
-    scratch.snapshotIds.clear();
+  scratch.created.length = 0;
+  scratch.updated.length = 0;
+  scratch.removed.length = 0;
+  scratch.snapshotIds.clear();
+  scratch.localIds.clear();
+  for (const rock of belt) {
+    scratch.localIds.add(rock.id);
   }
-  const snapshotIds = scratch?.snapshotIds ?? new Set<string>();
-
   for (const asteroid of asteroids) {
-    snapshotIds.add(asteroid.id);
-    if (!asteroidHasValidMaterial(asteroid)) {
-      reportInvalidAsteroidMaterial(asteroid.id, asteroid.material);
-      continue;
-    }
-    if (seenIds.has(asteroid.id)) {
-      updated.push(asteroid);
-    } else if (asteroidHasSpawnPose(asteroid)) {
-      seenIds.add(asteroid.id);
-      created.push(asteroid);
+    scratch.snapshotIds.add(asteroid.id);
+    if (scratch.localIds.has(asteroid.id)) {
+      scratch.updated.push(asteroid);
+    } else {
+      scratch.localIds.add(asteroid.id);
+      scratch.created.push(asteroid);
     }
   }
-
-  // Creation batches add fragments; only a complete local snapshot can evict rocks.
   if (complete) {
-    for (const id of seenIds) {
-      if (!snapshotIds.has(id)) {
-        removed.push(id);
+    for (const id of scratch.localIds) {
+      if (!scratch.snapshotIds.has(id)) {
+        scratch.removed.push(id);
       }
     }
-    for (const id of removed) {
-      seenIds.delete(id);
-    }
   }
-
-  return scratch ?? { created, updated, removed };
-}
-
-/** Pose + health fields that must stay server-authoritative after first create. */
-export function writeAsteroidKinematicUpdates(
-  asteroid: Partial<AsteroidData>,
-  into: Partial<AsteroidData>
-): Partial<AsteroidData> {
-  writeOptionalField(into, 'position', asteroid.position);
-  writeOptionalField(into, 'velocity', asteroid.velocity);
-  writeOptionalField(into, 'rotation', asteroid.rotation);
-  writeOptionalField(into, 'angularVelocity', asteroid.angularVelocity);
-  writeOptionalField(into, 'health', asteroid.health);
-  writeOptionalField(into, 'maxHealth', asteroid.maxHealth);
-  writeOptionalField(into, 'size', asteroid.size);
-  writeOptionalField(into, 'miningContributors', asteroid.miningContributors);
-  writeOptionalField(into, 'phenomenon', asteroid.phenomenon);
-  writeOptionalField(into, 'glowtoy', asteroid.glowtoy);
-  writeOptionalField(into, 'contourRider', asteroid.contourRider);
-  writeOptionalField(into, 'boost', asteroid.boost);
-  writeOptionalField(into, 'probe', asteroid.probe);
-  if (asteroid.material === undefined || isAsteroidMaterial(asteroid.material)) {
-    writeOptionalField(into, 'material', asteroid.material);
-  } else {
-    delete into.material;
-    reportInvalidAsteroidMaterial(asteroid.id, asteroid.material);
-  }
-  return into;
-}
-
-export function asteroidKinematicUpdates(asteroid: Partial<AsteroidData>): Partial<AsteroidData> {
-  return writeAsteroidKinematicUpdates(asteroid, {});
-}
-
-/**
- * Apply a snapshot row to the local belt. A shaped update for a missing id
- * creates instead of no-op — heals seenIds/belt skew from a lean-first race.
- */
-export function applyAsteroidRowToBelt(
-  findById: (id: string) => AsteroidKinematicTarget | undefined,
-  asteroidId: string,
-  updates: Partial<AsteroidData>,
-  createMissing: (asteroid: AsteroidData) => void,
-  complete = false
-): 'updated' | 'created' | 'skipped' {
-  const roid = findById(asteroidId);
-  if (roid) {
-    applyAsteroidKinematics(roid, updates, { complete });
-    return 'updated';
-  }
-  const candidate = { id: asteroidId, ...updates };
-  if (!asteroidHasValidMaterial(candidate)) {
-    reportInvalidAsteroidMaterial(asteroidId, candidate.material);
-    return 'skipped';
-  }
-  if (asteroidHasSpawnPose(candidate)) {
-    createMissing(candidate);
-    return 'created';
-  }
-  return 'skipped';
+  return scratch;
 }
 
 /** Snap only when dead-reckoning has drifted; avoids 30 Hz teleport jitter. */
 const ASTEROID_POSE_SNAP_PX = 12;
-
-/** Local belt object that can receive an authoritative kinematic snapshot. */
-export interface AsteroidKinematicTarget {
-  supply?: AsteroidData['supply'];
-  surveyedBy?: string[];
-  miningContributors?: string[];
-  position: { x: number; y: number };
-  velocity: { x: number; y: number };
-  angle: number;
-  angularVelocity: number;
-  health: number;
-  maxHealth: number;
-  r: number;
-  material?: AsteroidMaterial;
-  ore?: AsteroidMaterial | null;
-  offsets?: number[];
-  vertices?: number;
-  jaggedness?: number;
-  phenomenon?: AsteroidData['phenomenon'];
-  glowtoy?: AsteroidData['glowtoy'];
-  contourRider?: AsteroidData['contourRider'];
-  boost?: AsteroidData['boost'];
-  probe?: AsteroidData['probe'];
-}
 
 export function shouldSnapAsteroidPose(
   local: { x: number; y: number },
@@ -230,113 +78,46 @@ export function shouldSnapAsteroidPose(
  * contained to the shared field.
  */
 export function applyAsteroidKinematics(
-  roid: AsteroidKinematicTarget,
-  updates: Partial<AsteroidData>,
-  options: { snapPosition?: boolean; complete?: boolean } = {}
+  roid: Roid,
+  updates: AsteroidData,
+  options: { snapPosition?: boolean } = {}
 ): void {
-  if (options.complete || 'probe' in updates) {
-    roid.probe = updates.probe ? { ...updates.probe } : null;
+  roid.applySnapshotMetadata(updates);
+  roid.offsets = [...updates.offsets];
+  roid.vertices = updates.vertices;
+  roid.jaggedness = updates.jaggedness;
+  const localEscaped = !isPoseInAsteroidField(roid.position.x, roid.position.y);
+  if (
+    options.snapPosition ||
+    localEscaped ||
+    shouldSnapAsteroidPose(roid.position, updates.position)
+  ) {
+    containAsteroidPositionInto(roid.position, updates.position.x, updates.position.y);
   }
-  if (options.complete || 'boost' in updates) {
-    roid.boost = updates.boost ? { ...updates.boost } : null;
-  }
-  if (options.complete) {
-    if (updates.material !== undefined) {
-      roid.material = updates.material;
-    } else {
-      delete roid.material;
-    }
-    if (updates.ore !== undefined) {
-      roid.ore = updates.ore;
-    } else {
-      delete roid.ore;
-    }
-    if (updates.supply) {
-      roid.supply = { ...updates.supply };
-    } else {
-      delete roid.supply;
-    }
-    if (updates.surveyedBy) {
-      roid.surveyedBy = [...updates.surveyedBy];
-    } else {
-      delete roid.surveyedBy;
-    }
-    if (updates.miningContributors) {
-      roid.miningContributors = [...updates.miningContributors];
-    } else {
-      delete roid.miningContributors;
-    }
-    if (updates.offsets) {
-      roid.offsets = [...updates.offsets];
-    }
-    if (updates.vertices !== undefined) {
-      roid.vertices = updates.vertices;
-    }
-    if (updates.jaggedness !== undefined) {
-      roid.jaggedness = updates.jaggedness;
-    }
-  }
-  if (updates.position) {
-    const localEscaped = !isPoseInAsteroidField(roid.position.x, roid.position.y);
-    if (
-      options.snapPosition ||
-      localEscaped ||
-      shouldSnapAsteroidPose(roid.position, updates.position)
-    ) {
-      containAsteroidPositionInto(roid.position, updates.position.x, updates.position.y);
-    }
-  }
-  if (updates.velocity) {
-    roid.velocity.x = updates.velocity.x;
-    roid.velocity.y = updates.velocity.y;
-  }
-  if (updates.size !== undefined) {
-    roid.r = updates.size;
-  }
-  if (updates.rotation !== undefined) {
-    roid.angle = updates.rotation;
-  }
-  if (updates.angularVelocity !== undefined) {
-    roid.angularVelocity = updates.angularVelocity;
-  }
-  if (updates.health !== undefined) {
-    roid.health = updates.health;
-  }
-  if (updates.maxHealth !== undefined) {
-    roid.maxHealth = updates.maxHealth;
-  }
-  if ('miningContributors' in updates) {
-    if (updates.miningContributors) {
-      roid.miningContributors = [...updates.miningContributors];
-    } else {
-      delete roid.miningContributors;
-    }
-  }
-  if (options.complete || 'contourRider' in updates) {
-    roid.contourRider = updates.contourRider;
-  }
-  if (options.complete || 'glowtoy' in updates) {
-    roid.glowtoy = updates.glowtoy;
-  }
-  if ('phenomenon' in updates) {
-    roid.phenomenon = updates.phenomenon;
-  }
-  if (updates.material !== undefined && isAsteroidMaterial(updates.material)) {
-    roid.material = updates.material;
-  } else if (updates.material !== undefined) {
-    reportInvalidAsteroidMaterial(undefined, updates.material);
-  }
+  roid.velocity.x = updates.velocity.x;
+  roid.velocity.y = updates.velocity.y;
+  roid.r = updates.size;
+  roid.angle = updates.rotation;
+  roid.angularVelocity = updates.angularVelocity;
+  roid.health = updates.health;
+  roid.maxHealth = updates.maxHealth;
 }
 
 type AsteroidFieldApplyHandlers = {
+  readBelt: () => readonly { id: string }[];
   onCreated: (asteroid: AsteroidData) => void;
-  onUpdated: (asteroidId: string, updates: Partial<AsteroidData>, complete?: boolean) => void;
+  onUpdated: (asteroidId: string, updates: AsteroidData) => void;
   onDestroyed: (event: AsteroidDestroyEvent) => void;
   /** Snapshot reconciliation removes stale local rows without destruction VFX. */
   onReconciled: (asteroidId: string) => void;
 };
 
 let applyHandlers: AsteroidFieldApplyHandlers | null = null;
+const EMPTY_BELT: readonly { id: string }[] = [];
+
+export function readAsteroidBelt(): readonly { id: string }[] {
+  return applyHandlers?.readBelt() ?? EMPTY_BELT;
+}
 
 export function bindAsteroidFieldApply(handlers: AsteroidFieldApplyHandlers): void {
   applyHandlers = handlers;
@@ -344,26 +125,6 @@ export function bindAsteroidFieldApply(handlers: AsteroidFieldApplyHandlers): vo
 
 export function unbindAsteroidFieldApply(): void {
   applyHandlers = null;
-}
-
-function notifyAsteroidCreated(asteroid: AsteroidData): void {
-  if (!asteroidHasValidMaterial(asteroid)) {
-    reportInvalidAsteroidMaterial(asteroid.id, asteroid.material);
-    return;
-  }
-  applyHandlers?.onCreated(asteroid);
-}
-
-function notifyAsteroidUpdated(
-  asteroidId: string,
-  updates: Partial<AsteroidData>,
-  complete: boolean
-): void {
-  applyHandlers?.onUpdated(
-    asteroidId,
-    complete ? updates : asteroidKinematicUpdates(updates),
-    complete
-  );
 }
 
 export function notifyAsteroidDestroyed(event: string | AsteroidDestroyEvent): void {
@@ -375,15 +136,12 @@ function notifyAsteroidReconciled(asteroidId: string): void {
 }
 
 /** Fan a partition out to the bound belt handlers. Snapshot removals are reconciliation, not destroys. */
-export function applyAsteroidFieldPartition(
-  result: AsteroidFieldSyncResult,
-  complete = false
-): void {
+export function applyAsteroidFieldPartition(result: AsteroidFieldSyncResult): void {
   for (const asteroid of result.created) {
-    notifyAsteroidCreated(asteroid);
+    applyHandlers?.onCreated(asteroid);
   }
   for (const asteroid of result.updated) {
-    notifyAsteroidUpdated(asteroid.id, asteroid, complete);
+    applyHandlers?.onUpdated(asteroid.id, asteroid);
   }
   for (const id of result.removed) {
     notifyAsteroidReconciled(id);

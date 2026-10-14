@@ -485,6 +485,10 @@ const world = shape<ServerGameSnapshot>({
   playerProjectiles: array(playerProjectile),
 });
 /** Validate one persisted asteroid with the same metadata rules used on the wire. */
+export function isAsteroidDto(value: unknown): value is AsteroidData {
+  return asteroid(value);
+}
+
 export function validateAsteroidDto(value: unknown): asserts value is AsteroidData {
   if (!asteroid(value)) {
     throw new Error('Invalid asteroid DTO');

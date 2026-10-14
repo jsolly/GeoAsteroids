@@ -3,27 +3,20 @@ import { AUDIO } from '../constants';
 import { Sound } from './Sound';
 import { playWorldSound } from './spatialAudio';
 
-const fxLaser = new Sound(AUDIO.LASER_PATH, AUDIO.LASER_MAX_STREAMS, AUDIO.LASER_VOLUME);
-const fxHit = new Sound(AUDIO.HIT_PATH, AUDIO.HIT_MAX_STREAMS, AUDIO.HIT_VOLUME);
-export function getLaserSound(): Sound {
-  return fxLaser;
-}
-
-export function getHitSound(): Sound {
-  return fxHit;
-}
+const fxLaser = new Sound(...AUDIO.LASER);
+const fxHit = new Sound(...AUDIO.HIT);
 
 /**
  * Shared laser SFX for local and remote shots. Viewport-culled and
  * distance-attenuated from the local ship. Omit position for local / full volume.
  */
 export function playLaserSound(position?: Position): void {
-  playWorldSound(fxLaser, position, { requireViewport: true });
+  playWorldSound(fxLaser, position);
 }
 
 /**
  * Shared hit SFX for laser impacts (ships and asteroids).
  */
 export function playHitSound(position?: Position): void {
-  playWorldSound(fxHit, position, { requireViewport: true });
+  playWorldSound(fxHit, position);
 }

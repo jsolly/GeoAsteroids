@@ -1,11 +1,10 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
+  import { focusReturnTarget, isExternalFocusTarget } from '../../ui/focusReturn';
   import {
     MAP_LEGEND_KINDS,
     paintMapLegend,
-    UNIVERSE_MAP_IDS,
-    UNIVERSE_MAP_LOCATE_LABEL,
     UNIVERSE_MAP_ZOOM,
     type UniverseMapChrome,
     type UniverseMapController,
@@ -15,6 +14,15 @@
   import DialogContent from '../ui/dialog/dialog-content.svelte';
   import DialogDescription from '../ui/dialog/dialog-description.svelte';
   import DialogTitle from '../ui/dialog/dialog-title.svelte';
+
+  const UNIVERSE_MAP_IDS = {
+    dialog: 'universe-map-dialog',
+    canvas: 'universe-map-canvas',
+    close: 'universe-map-close',
+    center: 'universe-map-center',
+    locations: 'universe-map-locations',
+  } as const;
+  const UNIVERSE_MAP_LOCATE_LABEL = 'Center on you';
 
   let {
     open,
@@ -48,33 +56,10 @@
   let showLocations = $state(false);
   const frame = $derived(chrome?.frame ?? { x: 0, y: 0, size: 180 });
 
-  function usable(target: HTMLElement | null | undefined): target is HTMLElement {
-    if (
-      !target?.isConnected ||
-      target === document.body ||
-      target.matches(':disabled, [aria-disabled="true"]')
-    ) {
-      return false;
-    }
-    for (let node: HTMLElement | null = target; node; node = node.parentElement) {
-      const style = window.getComputedStyle(node);
-      if (
-        node.hidden ||
-        node.hasAttribute('inert') ||
-        style.display === 'none' ||
-        style.visibility === 'hidden'
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   function openFocus(event: Event) {
     event.preventDefault();
     const active = document.activeElement;
-    opener =
-      active instanceof HTMLElement && !active.closest('[role="dialog"], dialog') ? active : null;
+    opener = active instanceof HTMLElement && isExternalFocusTarget(active) ? active : null;
     closeButton?.focus({ preventScroll: true });
   }
 
@@ -83,9 +68,8 @@
     if (open || !restoreFocus) {
       return;
     }
-    const explicit = closeFocusTarget?.();
-    const target = usable(explicit) ? explicit : usable(opener) ? opener : fallbackFocusTarget?.();
-    if (usable(target)) {
+    const target = focusReturnTarget(closeFocusTarget?.(), opener, fallbackFocusTarget?.());
+    if (target) {
       target.focus({ preventScroll: true });
     }
   }
@@ -208,7 +192,6 @@
         bind:this={compass}
         style:left={`${frame.x + 12}px`}
         style:top={`${frame.y + 12}px`}
-        style:transform={`rotate(${chrome?.heading ?? 0}rad)`}
         aria-hidden="true"
       >
         <span>N</span><i></i>

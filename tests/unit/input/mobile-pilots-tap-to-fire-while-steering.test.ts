@@ -7,7 +7,7 @@ import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { controlSources, resetControlSources } from '../../../src/input/controlSources';
 import { togglePlayerContourLock } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import {
   disposeTouchControls,
   initializeTouchControls,
@@ -17,7 +17,7 @@ import {
   setTouchHeading,
   tickTouchControls,
 } from '../../../src/input/touchControls';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import {
   closeGameOverlay,
@@ -34,7 +34,7 @@ let touchMode = true;
 const sendCharge = vi.fn<(action: WeaponChargeAction) => boolean>(() => true);
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 
@@ -45,7 +45,6 @@ beforeEach(() => {
     id: 'touch-pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
     combatNetwork: { isConnected: true, sendShoot: () => {}, sendAbility: () => true, sendCharge },
   });
   // Keep ordinary tool scenarios away from contextual furnace actions.
@@ -655,15 +654,6 @@ test.each(['slow', 'short', 'cancel', 'blur', 'second-finger', 'away', 'relocked
     expect(player.ship.contourLockInputVersion).toBe(gesture === 'relocked' ? 1 : 0);
   }
 );
-
-test('a flick toward a displayed contour follows the camera rotation into world space', () => {
-  settleOnHopFixture();
-  vi.spyOn(canvasManager, 'getCameraRotation').mockReturnValue(Math.PI / 2);
-  pointer('pointerdown', 110, 0, 150, 300);
-  pointer('pointermove', 110, 40, 150, 260);
-  pointer('pointerup', 110, 80, 150, 220);
-  expect(player.ship.contourLock).toEqual({ height: 0.08, direction: 1 });
-});
 
 test('using the ability with a second finger cancels a pending contour flick', () => {
   settleOnHopFixture();

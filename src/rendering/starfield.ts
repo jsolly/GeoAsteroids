@@ -4,7 +4,6 @@ import { PALETTE, VISUAL } from '../constants';
 import { hexToRgba } from '../utils/colorUtils';
 import { canvasManager } from './canvasSurface';
 import { drawStarLayers, type StarPoint } from './nativeStarPainter';
-import { rotatedViewSize } from './travelCamera';
 
 interface Star extends StarPoint {
   fillStyle: string;
@@ -120,11 +119,7 @@ export function visibleStarTiles(shipPosition: Position): readonly (readonly Sta
 
   const boundary = WORLD_BOUNDARY;
   const scale = canvasManager.getPlayfieldScale();
-  const bounds = rotatedViewSize(
-    viewport.width,
-    viewport.height,
-    canvasManager.getCameraRotation()
-  );
+  const bounds = viewport;
   const halfWidth = bounds.width / (2 * scale);
   const halfHeight = bounds.height / (2 * scale);
   const viewPadding = (size + 1) / scale;
@@ -167,7 +162,6 @@ export function drawStarfield(shipPosition: Position): void {
     visibleStarTiles(shipPosition),
     shipPosition,
     canvasManager.getViewportSize(),
-    canvasManager.getPlayfieldScale(),
-    canvasManager.getCameraRotation()
+    canvasManager.getPlayfieldScale()
   );
 }

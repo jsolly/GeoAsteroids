@@ -2,8 +2,14 @@ import { beltSlotPosition, beltSlots } from '../../shared/asteroidBelt';
 import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { COOPERATIVE } from '../../shared/cooperativeRules';
 import { oreResource } from '../../shared/economy';
-import { explorationCellAt, isCellExplored } from '../../shared/exploration';
+import {
+  cellWorldBounds,
+  explorationCellAt,
+  exploredCells,
+  isCellExplored,
+} from '../../shared/exploration';
 import { frontierSitesNear } from '../../shared/frontier';
+
 import { CIVIC_LOTS, pipeHopToParent } from '../../shared/furnaces';
 import { isAsteroidLit } from '../../shared/glowtoy';
 import { RICOCHET_COURT } from '../../shared/ricochetCourt';
@@ -29,9 +35,10 @@ import {
 import { asteroidMapInk, drawResourceMapMark } from '../rendering/hud/resourceMapMark';
 import { drawRemainsMark } from '../rendering/remainsRenderer';
 import { drawCourtMapMark } from '../rendering/ricochetCourtRenderer';
-import { travelCameraRotation } from '../rendering/travelCamera';
 import { sendCrewAction } from '../runtime/crewRescue';
+
 import { hexToRgba } from '../utils/colorUtils';
+import { formatMapCoordinate } from './mapCoordinates';
 import {
   canPlaceMapAssetLabel,
   canPlaceMapCrewLabel,
@@ -40,15 +47,6 @@ import {
   mapAssetNameVisible,
 } from './universeMapLabels';
 
-export const UNIVERSE_MAP_IDS = {
-  dialog: 'universe-map-dialog',
-  canvas: 'universe-map-canvas',
-  toggle: 'universe-map-toggle',
-  close: 'universe-map-close',
-  center: 'universe-map-center',
-  locations: 'universe-map-locations',
-} as const;
-
 export const UNIVERSE_MAP_ZOOM = {
   min: 1,
   max: 48,
@@ -56,13 +54,9 @@ export const UNIVERSE_MAP_ZOOM = {
   step: 1.35,
 } as const;
 
-export const UNIVERSE_MAP_LOCATE_LABEL = 'Center on you';
 const MAP_RASTER_SIZE = 960;
-const CELLS_PER_SECTOR = 16;
-const CELL_SIZE = WORLD.sectorSize / CELLS_PER_SECTOR;
 const WORLD_DIAMETER = WORLD.radius * 2;
-const EXPLORATION_GRID_SIZE = WORLD_DIAMETER / CELL_SIZE;
-const RASTER_CELL_SIZE = MAP_RASTER_SIZE / EXPLORATION_GRID_SIZE;
+const RASTER_SCALE = MAP_RASTER_SIZE / WORLD_DIAMETER;
 const BLOCKED_GAMEPLAY_KEYS = new Set([
   'Space',
   'KeyE',
@@ -96,9 +90,7 @@ type MapView = {
 
 export type UniverseMapChrome = Readonly<{
   frame: Readonly<Pick<MapFrame, 'x' | 'y' | 'size'>>;
-  heading: number;
   centered: boolean;
-  zoom: number;
   locations: readonly string[];
   locationPage: number;
   locationPages: number;
@@ -150,10 +142,6 @@ function clampZoom(zoom: number): number {
   return Math.min(UNIVERSE_MAP_ZOOM.max, Math.max(UNIVERSE_MAP_ZOOM.min, zoom));
 }
 
-export function clampUniverseMapZoom(zoom: number): number {
-  return clampZoom(zoom);
-}
-
 function mapFrameFor(width: number, height: number, zoom: number): MapFrame {
   const margin = Math.min(width, height) < 520 ? 76 : 48;
   const size = Math.max(180, Math.min(width, height) - margin);
@@ -166,40 +154,9 @@ function mapFrameFor(width: number, height: number, zoom: number): MapFrame {
   };
 }
 
-function chartHeadingRotation(): number {
-  const ship = PlayerManager.getInstance().getLocalPlayer()?.ship;
-  return ship ? travelCameraRotation(ship) : 0;
-}
-
-export function mapScreenDeltaToWorld(
-  dx: number,
-  dy: number,
-  scale: number,
-  headingRotation = 0
-): Position {
+export function mapScreenDeltaToWorld(dx: number, dy: number, scale: number): Position {
   const safeScale = scale === 0 ? 1 : scale;
-  const cos = Math.cos(headingRotation);
-  const sin = Math.sin(headingRotation);
-  return {
-    x: (cos * dx + sin * dy) / safeScale,
-    y: (-sin * dx + cos * dy) / safeScale,
-  };
-}
-
-export function mapWorldToCanvas(
-  position: Position,
-  viewCenter: Position,
-  frame: Pick<MapFrame, 'x' | 'y' | 'size' | 'scale'>,
-  headingRotation = 0
-): Position {
-  const dx = position.x - viewCenter.x;
-  const dy = position.y - viewCenter.y;
-  const cos = Math.cos(headingRotation);
-  const sin = Math.sin(headingRotation);
-  return {
-    x: frame.x + frame.size / 2 + (cos * dx - sin * dy) * frame.scale,
-    y: frame.y + frame.size / 2 + (sin * dx + cos * dy) * frame.scale,
-  };
+  return { x: dx / safeScale, y: dy / safeScale };
 }
 
 function visibleWorldHalfSize(mapFrame: MapFrame): number {
@@ -270,33 +227,15 @@ function rebuildExplorationRaster(tiles: readonly ExplorationTile[]): void {
   context.fillStyle = hexToRgba(WIRE_PALETTE.REMOTE, 0.14);
   context.imageSmoothingEnabled = false;
 
-  // The server sends sparse 16×16 sector tiles. Decode only revealed bytes once
-  // per changed snapshot; every open-map frame draws this raster as one image.
-  for (const tile of tiles) {
-    const [sectorXText, sectorYText] = tile.id.split(',');
-    const sectorX = Number.parseInt(sectorXText ?? '', 10);
-    const sectorY = Number.parseInt(sectorYText ?? '', 10);
-    if (!Number.isInteger(sectorX) || !Number.isInteger(sectorY) || sectorX < 0 || sectorY < 0) {
-      continue;
-    }
-    for (let localRow = 0; localRow < CELLS_PER_SECTOR; localRow++) {
-      for (let localCol = 0; localCol < CELLS_PER_SECTOR; localCol++) {
-        const bitIndex = localRow * CELLS_PER_SECTOR + localCol;
-        const byteIndex = Math.floor(bitIndex / 8);
-        const byte = Number.parseInt(tile.bits.slice(byteIndex * 2, byteIndex * 2 + 2), 16);
-        if (!Number.isFinite(byte) || (byte & (1 << (bitIndex % 8))) === 0) {
-          continue;
-        }
-        const cellCol = sectorX * CELLS_PER_SECTOR + localCol;
-        const cellRow = sectorY * CELLS_PER_SECTOR + localRow;
-        context.fillRect(
-          cellCol * RASTER_CELL_SIZE,
-          cellRow * RASTER_CELL_SIZE,
-          RASTER_CELL_SIZE + 0.5,
-          RASTER_CELL_SIZE + 0.5
-        );
-      }
-    }
+  // Decode each immutable snapshot once; open-map frames reuse the raster.
+  for (const cell of exploredCells(tiles)) {
+    const bounds = cellWorldBounds(cell);
+    context.fillRect(
+      (bounds.x + WORLD.radius) * RASTER_SCALE,
+      (bounds.y + WORLD.radius) * RASTER_SCALE,
+      bounds.size * RASTER_SCALE + 0.5,
+      bounds.size * RASTER_SCALE + 0.5
+    );
   }
   explorationRaster.source = tiles;
 }
@@ -344,7 +283,6 @@ function drawDiscoveredBelt(
   if (label) {
     context.save();
     context.translate(label.x, label.y);
-    context.rotate(-chartHeadingRotation());
     context.font = `${11 / frame.scale}px monospace`;
     context.fillText('ASTEROID BELT', 12 / frame.scale, -15 / frame.scale);
     context.restore();
@@ -438,7 +376,6 @@ function drawMapAsset(
   }
   if (showLabel && asset.name) {
     context.save();
-    context.rotate(-chartHeadingRotation());
     context.font = `${12 / frame.scale}px "Courier New", monospace`;
     context.fillStyle = hexToRgba(PALETTE.HUD, 0.86);
     context.textAlign = 'center';
@@ -644,18 +581,9 @@ function drawCrew(
     }
     if (
       view.zoom >= 1.35 &&
-      canPlaceMapCrewLabel(
-        player.name,
-        position,
-        size,
-        frame,
-        view.center,
-        occupied,
-        chartHeadingRotation()
-      )
+      canPlaceMapCrewLabel(player.name, position, size, frame, view.center, occupied)
     ) {
       context.save();
-      context.rotate(-chartHeadingRotation());
       context.font = `${11 / frame.scale}px "Courier New", monospace`;
       context.fillStyle = hexToRgba(PALETTE.HUD, 0.9);
       context.textAlign = 'left';
@@ -665,10 +593,6 @@ function drawCrew(
     }
     context.restore();
   }
-}
-
-function formatCoordinate(value: number): string {
-  return `${value >= 0 ? '+' : ''}${Math.round(value)}`;
 }
 
 function accessibleLocations(assets: readonly MapAsset[]): string[] {
@@ -702,7 +626,7 @@ function accessibleLocations(assets: readonly MapAsset[]): string[] {
   ];
   return locations.map(
     ({ name, position }) =>
-      `${name}: X ${formatCoordinate(position.x)}, Y ${formatCoordinate(position.y)}`
+      `${name}: X ${formatMapCoordinate(position.x)}, Y ${formatMapCoordinate(position.y)}`
   );
 }
 
@@ -730,8 +654,7 @@ function drawCourtLandmark(
     { name: RICOCHET_COURT.name, position: RICOCHET_COURT.center },
     frame,
     view.center,
-    labelRects,
-    chartHeadingRotation()
+    labelRects
   );
   context.save();
   context.translate(RICOCHET_COURT.center.x, RICOCHET_COURT.center.y);
@@ -740,7 +663,6 @@ function drawCourtLandmark(
   drawCourtMapMark(context, 0, 0, markSize);
   context.restore();
   if (showLabel) {
-    context.rotate(-chartHeadingRotation());
     context.scale(1 / frame.scale, 1 / frame.scale);
     context.font = '12px "Courier New", monospace';
     context.textAlign = 'center';
@@ -819,9 +741,7 @@ export function mountUniverseMap(
     const frame = mapFrameFor(dimensions.width, dimensions.height, view.zoom);
     const chrome: UniverseMapChrome = {
       frame: { x: frame.x, y: frame.y, size: frame.size },
-      heading: chartHeadingRotation(),
       centered: isNearbyLocalView(),
-      zoom: view.zoom,
       locations: locations.slice(
         locationPage * LOCATION_PAGE_SIZE,
         (locationPage + 1) * LOCATION_PAGE_SIZE
@@ -837,17 +757,11 @@ export function mountUniverseMap(
     }
   }
 
-  function mapCanvasToWorld(
-    x: number,
-    y: number,
-    mapFrame: MapFrame,
-    headingRotation: number
-  ): Position {
+  function mapCanvasToWorld(x: number, y: number, mapFrame: MapFrame): Position {
     const delta = mapScreenDeltaToWorld(
       x - (mapFrame.x + mapFrame.size / 2),
       y - (mapFrame.y + mapFrame.size / 2),
-      mapFrame.scale,
-      headingRotation
+      mapFrame.scale
     );
     return {
       x: view.center.x + delta.x,
@@ -881,12 +795,11 @@ export function mountUniverseMap(
     }
 
     if (anchor) {
-      const heading = chartHeadingRotation();
       const oldFrame = mapFrameFor(dimensions.width, dimensions.height, view.zoom);
-      const anchorWorld = mapCanvasToWorld(anchor.x, anchor.y, oldFrame, heading);
+      const anchorWorld = mapCanvasToWorld(anchor.x, anchor.y, oldFrame);
       view.zoom = nextZoom;
       const nextFrame = mapFrameFor(dimensions.width, dimensions.height, view.zoom);
-      const nextAnchorWorld = mapCanvasToWorld(anchor.x, anchor.y, nextFrame, heading);
+      const nextAnchorWorld = mapCanvasToWorld(anchor.x, anchor.y, nextFrame);
       view.center = clampCenter(
         {
           x: view.center.x + (anchorWorld.x - nextAnchorWorld.x),
@@ -928,7 +841,6 @@ export function mountUniverseMap(
       return;
     }
     resizeCanvas();
-    const heading = chartHeadingRotation();
     publishChrome();
     const context = canvas.getContext('2d');
     if (!context) {
@@ -945,7 +857,6 @@ export function mountUniverseMap(
     context.rect(frame.x, frame.y, frame.size, frame.size);
     context.clip();
     context.translate(frame.x + frame.size / 2, frame.y + frame.size / 2);
-    context.rotate(heading);
     context.scale(frame.scale, frame.scale);
     context.translate(-view.center.x, -view.center.y);
 
@@ -986,8 +897,7 @@ export function mountUniverseMap(
     for (const asset of revealedAssets) {
       const labelAllowed = mapAssetNameVisible(asset.kind, view.zoom, drawnLabelCount);
       const showLabel =
-        labelAllowed &&
-        canPlaceMapAssetLabel(asset, frame, view.center, labelRects, chartHeadingRotation());
+        labelAllowed && canPlaceMapAssetLabel(asset, frame, view.center, labelRects);
       if (showLabel) {
         drawnLabelCount++;
       }
@@ -1107,17 +1017,14 @@ export function mountUniverseMap(
         break;
     }
     if (panX !== 0 || panY !== 0) {
-      const pan = mapScreenDeltaToWorld(panX, panY, 1, chartHeadingRotation());
+      const pan = mapScreenDeltaToWorld(panX, panY, 1);
       setViewCenter({ x: view.center.x + pan.x, y: view.center.y + pan.y });
     }
     ev.preventDefault();
     ev.stopPropagation();
   }
 
-  function canvasPoint(ev: PointerEvent | WheelEvent): { x: number; y: number } | null {
-    if (disposed) {
-      return null;
-    }
+  function canvasPoint(ev: PointerEvent | WheelEvent): { x: number; y: number } {
     const rect = canvas.getBoundingClientRect();
     return {
       x: ev.clientX - rect.left,
@@ -1160,7 +1067,7 @@ export function mountUniverseMap(
       sendCrewAction({
         kind: 'signal',
         signal: 'help',
-        position: mapCanvasToWorld(point.x, point.y, frame, chartHeadingRotation()),
+        position: mapCanvasToWorld(point.x, point.y, frame),
       });
       ev.preventDefault();
       return;
@@ -1169,6 +1076,7 @@ export function mountUniverseMap(
       ev.pointerType === 'touch' && mapPointers.size === 0
         ? { id: ev.pointerId, point, at: Date.now() }
         : null;
+
     mapPointers.set(ev.pointerId, point);
     canvas.setPointerCapture?.(ev.pointerId);
     ev.preventDefault();
@@ -1180,7 +1088,7 @@ export function mountUniverseMap(
     }
     const point = canvasPoint(ev);
     const before = mapGesture();
-    if (!point || !before) {
+    if (!before) {
       return;
     }
     if (
@@ -1201,8 +1109,7 @@ export function mountUniverseMap(
     const pan = mapScreenDeltaToWorld(
       after.center.x - before.center.x,
       after.center.y - before.center.y,
-      frame.scale,
-      chartHeadingRotation()
+      frame.scale
     );
     setViewCenter({ x: view.center.x - pan.x, y: view.center.y - pan.y });
     ev.preventDefault();
@@ -1221,12 +1128,7 @@ export function mountUniverseMap(
       sendCrewAction({
         kind: 'signal',
         signal: 'help',
-        position: mapCanvasToWorld(
-          touchSignal.point.x,
-          touchSignal.point.y,
-          frame,
-          chartHeadingRotation()
-        ),
+        position: mapCanvasToWorld(touchSignal.point.x, touchSignal.point.y, frame),
       });
     }
     touchSignal = null;
@@ -1240,9 +1142,6 @@ export function mountUniverseMap(
       return;
     }
     const point = canvasPoint(ev);
-    if (!point) {
-      return;
-    }
     const direction = ev.deltaY < 0 ? UNIVERSE_MAP_ZOOM.step : 1 / UNIVERSE_MAP_ZOOM.step;
     setViewZoom(view.zoom * direction, point);
     ev.preventDefault();

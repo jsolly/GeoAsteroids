@@ -47,10 +47,10 @@ test('authoritative glow metadata survives DTO and client application', () => {
   }
   row.glowtoy = { charge: 0, cachePosition: { x: 600, y: 0 }, cacheRevealed: false };
   validateAsteroidDto(row);
-  const client = new Roid(row.position, row.size, row.id);
+  const client = new Roid(row);
   applyAsteroidKinematics(client, row);
   expect(isAsteroidLit(client)).toBe(false);
-  applyAsteroidKinematics(client, { glowtoy: { ...row.glowtoy, charge: 0.8 } });
+  applyAsteroidKinematics(client, { ...row, glowtoy: { ...row.glowtoy, charge: 0.8 } });
   expect(client.glowtoy?.cachePosition).toEqual({ x: 600, y: 0 });
   expect(isAsteroidLit(client)).toBe(true);
   expect(() =>

@@ -1,8 +1,6 @@
-import { checkBoundaryCollision } from '../../../shared/boundary';
 import { GAME, SHIP } from '../../../shared/constants/gameplay';
 import { GROWTH, maxVelocityFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import type { Position, Velocity } from '../../../shared-types';
-import { isGenericDeathCause } from '../../utils/deathCause';
 import { addPositions, createPositionFromAngle } from '../../utils/mathUtils';
 
 /** Minimal ship shape shared by local and remote players. */
@@ -23,7 +21,7 @@ interface SharedShipCombatVisuals extends ShipSpawnProtectionState {
   exploding: boolean;
   explodeTime: number;
   health: number;
-  explode(cause?: string): void;
+  explode(): void;
 }
 
 interface ShipImpactFlashState {
@@ -33,7 +31,7 @@ interface ShipImpactFlashState {
 interface ShipLethalHitState extends ShipImpactFlashState {
   health: number;
   exploding: boolean;
-  takeDamage(amount: number, cause?: string): void;
+  takeDamage(amount: number): void;
 }
 
 /** Only a positive timer is an active respawn countdown. Omitted or 0 is not dead. */
@@ -44,14 +42,13 @@ export function isServerRespawnActive(respawnTimer?: number): boolean {
 /** Explode / clear the exploding flag. Shared by local and remote ships. */
 export function applySharedShipExplodingFlag(
   ship: Pick<SharedShipCombatVisuals, 'exploding' | 'health' | 'explode'>,
-  exploding: boolean | undefined,
-  cause = 'server-damage'
+  exploding: boolean | undefined
 ): void {
   if (exploding === true) {
     // Hitch catch-up can finish the local FX while the server is still
     // exploding. Do not rewind explodeTime — that restacked the death window.
     if (!ship.exploding && ship.health > 0) {
-      ship.explode(cause);
+      ship.explode();
     }
     return;
   }
@@ -91,25 +88,11 @@ export function applySharedShipRespawnCue(
   }
 }
 
-/** Prefer a known cause; a hull past the arena edge is a wall death. */
-export function resolveCombatDeathCause(
-  known: string | undefined,
-  ship?: { position: Position; r: number }
-): string {
-  if (known && !isGenericDeathCause(known)) {
-    return known;
-  }
-  if (ship && checkBoundaryCollision(ship.position, ship.r)) {
-    return 'boundary';
-  }
-  return known ?? 'unknown';
-}
-
 /** Predict wall contact while the server confirms the life loss. */
 export function applyShipBoundaryDeath(ship: ShipLethalHitState): void {
   applyShipImpactFlash(ship);
   if (!ship.exploding) {
-    ship.takeDamage(ship.health, 'boundary');
+    ship.takeDamage(ship.health);
   }
 }
 
@@ -207,23 +190,6 @@ export function calculateHealthAfterDamage(
   const afterDamage = currentHealth - damage;
   // Clamp between 0 and maxHealth
   return Math.min(maxHealth, Math.max(0, afterDamage));
-}
-
-export function calculateHealthAfterHeal(
-  currentHealth: number,
-  healAmount: number,
-  maxHealth: number
-): number {
-  return Math.min(currentHealth + healAmount, maxHealth);
-}
-
-export function shouldStartHealthRegeneration(
-  healthRegenTimer: number,
-  currentHealth: number,
-  maxHealth: number
-): boolean {
-  // Dead ships (health 0) await server respawn — never regen locally from zero.
-  return healthRegenTimer <= 0 && currentHealth > 0 && currentHealth < maxHealth;
 }
 
 export function calculateLaserStartPosition(

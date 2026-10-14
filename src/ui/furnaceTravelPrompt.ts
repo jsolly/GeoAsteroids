@@ -6,11 +6,12 @@ import { getOpenGameOverlay } from '../runtime/overlayState';
 import { canEnterTownStore, isAtTownSquare, openTownStore } from '../runtime/townStore';
 import { SCOUT_ONLY_BUILD_HINT } from './constants';
 import { hideFieldHints, setFieldHint } from './fieldHint';
+import { isPlayViewOn } from './uiUtils';
 import { shouldUseTouchControls } from './viewportChrome';
 
 /** Explain who can build, or the Scout's missing points, on a dark foundation. */
 function darkLotBuildHint(): string | undefined {
-  if (!document.body.classList.contains('in-play')) {
+  if (!isPlayViewOn()) {
     return undefined;
   }
   const player = PlayerManager.getInstance().getLocalPlayer();

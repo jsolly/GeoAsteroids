@@ -7,7 +7,6 @@ import { setSound } from '../audio/Sound';
 import { musicIsOn, soundIsOn } from '../constants/user-preferences';
 import { EventLoop } from '../core/eventLoop';
 import { GameController } from '../core/gameController';
-import { InputManager } from '../core/services/InputManager';
 import { clientPerformance, mountPerformanceMetrics } from '../diagnostics/performanceMetrics';
 import { createPhoneCollector } from '../diagnostics/phoneCollector';
 import { PlayerManager } from '../entities/player/PlayerManager';
@@ -19,7 +18,8 @@ import {
   mountTouchActionControls,
   readActionControls,
 } from '../input/touchControls';
-import { NetworkManager } from '../network/networkManager';
+import { ConnectionManager } from '../network/services/ConnectionManager';
+
 import { readStoredResumeName } from '../network/services/resumeCredential';
 import { mountClientRelease } from '../release/clientReleaseEntry';
 import { canvasManager, type PlayfieldGeometry } from '../rendering/canvasSurface';
@@ -36,6 +36,7 @@ import type { FurnaceSite, FurnaceTravelView } from '../ui/furnaceTravelMap';
 import { mountNetworkStatus, readNetworkStatus, subscribeNetworkStatus } from '../ui/networkStatus';
 import { disposeSchematicEquipHint, initializeSchematicEquipHint } from '../ui/schematicEquipHint';
 import { mountSpawnFlyIn, stopSpawnFlyIn } from '../ui/spawnFlyIn';
+import { isPlayViewOn, resetPlayView } from '../ui/uiUtils';
 import { mountUniverseMap, type UniverseMapController } from '../ui/universeMap';
 import { shouldUseTouchControls } from '../ui/viewportChrome';
 import { getBuildInfoString } from '../utils/buildInfo';
@@ -63,7 +64,6 @@ import { getSelectedShipKitId, setSelectedShipKitId } from './shipSelection';
 import {
   closeTownStore,
   mountTownStore,
-  openTownStore,
   purchaseTownOffer,
   readTownStoreView,
   readTownTravelMap,
@@ -94,7 +94,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     throw new Error('A game shell is already mounted.');
   }
   let disposed = false;
-  const cleanup: (() => void)[] = [];
+  const cleanup: (() => void)[] = [resetPlayView];
   const painters = new Set<() => void>();
   const mapControllers = new Set<UniverseMapController>();
   const actionBindings = new Set<() => void>();
@@ -161,6 +161,10 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     installGlobalErrorLogging();
     cleanup.push(disposeAudioRuntime, disposeMusicBeds);
     mountMusicBeds();
+    clientPerformance.observeServerRelease(() =>
+      ConnectionManager.getInstance().getServerReleaseId()
+    );
+    cleanup.push(() => clientPerformance.observeServerRelease(undefined));
     cleanup.push(mountPerformanceMetrics());
     cleanup.push(disposeSchematicEquipHint);
     initializeSchematicEquipHint();
@@ -177,7 +181,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     let joining = false;
     let joinError: string | null = null;
     let failureNotice: string | null = null;
-    let inPlay = false;
+
     let inventoryPage = 0;
     const debug = createDebugPresentation(() => notifyPresentation());
     cleanup.push(() => debug.dispose());
@@ -202,9 +206,8 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
       return Object.freeze({
         source: freezeSite(travel.source),
         destinations: Object.freeze(travel.destinations.map(freezeSite)),
-        rotation: travel.rotation,
         pilots: Object.freeze(
-          NetworkManager.getInstance()
+          ConnectionManager.getInstance()
             .getAllPlayers()
             .filter((pilot) => pilot.ship.health > 0 && !pilot.ship.exploding)
             .map((pilot) =>
@@ -234,8 +237,9 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
           }),
           buildInfo: getBuildInfoString(),
         }),
-        inPlay,
+        inPlay: isPlayViewOn(),
         crew: readCrewRescue(),
+
         joining,
         joinError,
         failureNotice,
@@ -243,9 +247,9 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         inventory: isGameOverlayOpen('inventory') ? readInventoryView(inventoryPage) : null,
         townStore,
         townTravel: townStore?.mode === 'travel' ? projectTravel() : null,
-        debug: debug.read(inPlay),
+        debug: debug.read(isPlayViewOn()),
         network: readNetworkStatus(),
-        hints: inPlay ? readFieldHints() : Object.freeze([]),
+        hints: isPlayViewOn() ? readFieldHints() : Object.freeze([]),
         controls: Object.freeze({
           ...controls,
           ability: Object.freeze(controls.ability),
@@ -271,18 +275,12 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     );
     cleanup.push(
       subscribeGameOverlay((next, previous) => {
+        playFeedback('interface');
         if (previous === 'universe-map' && next !== 'universe-map') {
           for (const map of mapControllers) {
             map.dispose();
           }
           mapControllers.clear();
-          window.dispatchEvent(new CustomEvent('gameMapClose'));
-          playFeedback('interface');
-        }
-        if (next === 'universe-map' && previous !== 'universe-map') {
-          InputManager.getInstance().releaseHeldInput();
-          window.dispatchEvent(new CustomEvent('gameMapOpen'));
-          playFeedback('interface');
         }
         if (next === 'inventory' && previous !== 'inventory') {
           inventoryPage = 0;
@@ -298,7 +296,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         }
       })
     );
-    cleanup.push(mountInventoryShortcuts(() => inPlay));
+    cleanup.push(mountInventoryShortcuts(() => isPlayViewOn()));
     cleanup.push(subscribeTownStore(() => presentation.transition()));
     cleanup.push(mountTownStore());
     const events = new AbortController();
@@ -306,7 +304,6 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     window.addEventListener(
       'playViewOn',
       () => {
-        inPlay = true;
         presentation.transition();
       },
       { signal: events.signal }
@@ -314,7 +311,6 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     window.addEventListener(
       'playViewOff',
       () => {
-        inPlay = false;
         const overlay = getOpenGameOverlay();
         if (overlay !== null) {
           closeGameOverlay(overlay);
@@ -326,12 +322,12 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     cleanup.push(disposeTouchControls);
     initializeTouchControls({
       canvas: hosts.canvas,
-      readInPlay: () => inPlay,
+      readInPlay: () => isPlayViewOn(),
       readTouchMode: shouldUseTouchControls,
       onActionState: notifyPresentation,
     });
     const openMap = () => {
-      if (!disposed && inPlay) {
+      if (!disposed && isPlayViewOn()) {
         openGameOverlay('universe-map');
       }
     };
@@ -340,7 +336,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
       (event) => {
         if (
           event.code !== 'KeyM' ||
-          !inPlay ||
+          !isPlayViewOn() ||
           (event.target instanceof Element &&
             event.target.closest('input, textarea, select, [contenteditable]'))
         ) {
@@ -376,7 +372,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
           { observedAt: Date.now() }
         );
         failureNotice = 'An unexpected error occurred. Enter the game again to restart.';
-        inPlay = false;
+
         const overlay = getOpenGameOverlay();
         if (overlay !== null) {
           closeGameOverlay(overlay);
@@ -388,11 +384,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     const commands: GameCommands = {
       crewAction: sendCrewAction,
       signalHere,
-      openTownStore() {
-        if (!disposed) {
-          openTownStore();
-        }
-      },
+
       closeTownStore() {
         if (!disposed) {
           closeTownStore();
@@ -409,7 +401,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         }
       },
       requestFurnaceTravel(id) {
-        if (!disposed && inPlay) {
+        if (!disposed && isPlayViewOn()) {
           requestFurnaceTravel(id);
         }
       },
@@ -459,7 +451,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         return retire;
       },
       activateHint(id) {
-        if (!disposed && inPlay && getOpenGameOverlay() === null) {
+        if (!disposed && isPlayViewOn() && getOpenGameOverlay() === null) {
           activateFieldHint(id);
         }
       },
@@ -491,7 +483,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
       },
       openInventory() {
         if (!disposed) {
-          openInventory(inPlay);
+          openInventory(isPlayViewOn());
         }
       },
       closeInventory() {

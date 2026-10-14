@@ -106,8 +106,7 @@ The former Surveyor kit is now Scout, including the `scout` network ID and
 `scoutUtility` field. The startup rewrite of saved `surveyor` kit IDs has been
 retired: every live row was rewritten long ago. A pilot row restored from an
 older backup keeps its score, inventory and credentials; only its stored flight
-pose is dropped, which was already past its 30-second return window. The client
-migrates the saved utility preference to `georoids.scoutUtility`.
+pose is dropped, which was already past its 30-second return window. Client tool selection starts with shared defaults; old localStorage tool keys are ignored.
 
 ## Economy persistence
 

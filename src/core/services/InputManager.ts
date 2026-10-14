@@ -4,16 +4,10 @@ import { resetControlSources } from '../../input/controlSources';
 import {
   getPressedKeysForPlayer,
   keyDown,
-  keys,
   keyUp,
   reconcilePlayerInput,
 } from '../../input/keybindings';
-import {
-  handleMouseDown,
-  handleMouseMove,
-  handleMouseUp,
-  preventContextMenu,
-} from '../../input/mouse';
+import { handleMouseDown, handleMouseMove, preventContextMenu } from '../../input/mouse';
 import {
   disposePlayfieldSelection,
   initializePlayfieldSelection,
@@ -23,7 +17,6 @@ import {
   getOpenGameOverlay,
   subscribeGameOverlay,
 } from '../../runtime/overlayState';
-import { initializeSchematicEquipHint } from '../../ui/schematicEquipHint';
 import { logger } from '../../utils/Logger';
 import { GameStateManager } from './GameStateManager';
 
@@ -45,7 +38,7 @@ export class InputManager {
     return InputManager.instance;
   }
 
-  initializeListeners(): void {
+  initializeListeners(canvas: HTMLCanvasElement): void {
     if (this.listenersInitialized) {
       return;
     }
@@ -54,7 +47,7 @@ export class InputManager {
     this.listenerScope = new AbortController();
     const { signal } = this.listenerScope;
     try {
-      this.installListeners(signal);
+      this.installListeners(canvas, signal);
       this.listenersInitialized = true;
     } catch (error) {
       this.detachRuntime();
@@ -62,7 +55,7 @@ export class InputManager {
     }
   }
 
-  private installListeners(signal: AbortSignal): void {
+  private installListeners(canvas: HTMLCanvasElement, signal: AbortSignal): void {
     const getLocalPlayer = () => PlayerManager.getInstance().getLocalPlayer();
 
     // Keyboard listeners
@@ -89,8 +82,6 @@ export class InputManager {
 
         if (this.gameStateManager.getIsGameRunning()) {
           keyDown(ev, localPlayer);
-        } else {
-          logger.warn('INPUT', 'Key down ignored - game not running', { key: ev.code });
         }
       },
       { signal }
@@ -114,50 +105,37 @@ export class InputManager {
     );
 
     // Mouse listeners on canvas
-    const canvas = document.querySelector('#gameCanvas') as HTMLCanvasElement | null;
-    if (canvas) {
-      canvas.addEventListener(
-        'mousemove',
-        (ev) => {
-          const localPlayer = getLocalPlayer();
-          if (localPlayer && this.gameStateManager.getIsGameRunning()) {
-            handleMouseMove(ev, localPlayer);
-          }
-        },
-        { signal }
-      );
-      canvas.addEventListener(
-        'mousedown',
-        (ev) => {
-          const localPlayer = getLocalPlayer();
-          if (localPlayer && this.gameStateManager.getIsGameRunning()) {
-            handleMouseDown(ev, localPlayer);
-          }
-        },
-        { signal }
-      );
-      canvas.addEventListener(
-        'mouseup',
-        (ev) => {
-          const localPlayer = getLocalPlayer();
-          if (localPlayer && this.gameStateManager.getIsGameRunning()) {
-            handleMouseUp(ev, localPlayer);
-          }
-        },
-        { signal }
-      );
-      // Keep browser context menus out of the playfield
-      canvas.addEventListener('contextmenu', preventContextMenu, { signal });
-      canvas.addEventListener(
-        'touchstart',
-        (ev) => {
-          if (ev.cancelable) {
-            ev.preventDefault();
-          }
-        },
-        { passive: false, signal }
-      );
-    }
+    canvas.addEventListener(
+      'mousemove',
+      (ev) => {
+        const localPlayer = getLocalPlayer();
+        if (localPlayer && this.gameStateManager.getIsGameRunning()) {
+          handleMouseMove(ev, localPlayer);
+        }
+      },
+      { signal }
+    );
+    canvas.addEventListener(
+      'mousedown',
+      (ev) => {
+        const localPlayer = getLocalPlayer();
+        if (localPlayer && this.gameStateManager.getIsGameRunning()) {
+          handleMouseDown(ev, localPlayer);
+        }
+      },
+      { signal }
+    );
+    // Keep browser context menus out of the playfield
+    canvas.addEventListener('contextmenu', preventContextMenu, { signal });
+    canvas.addEventListener(
+      'touchstart',
+      (ev) => {
+        if (ev.cancelable) {
+          ev.preventDefault();
+        }
+      },
+      { passive: false, signal }
+    );
 
     // Reset shoot cooldown if the mouse is released outside the canvas
     document.addEventListener(
@@ -185,7 +163,6 @@ export class InputManager {
       { signal }
     );
     initializePlayfieldSelection();
-    initializeSchematicEquipHint();
     this.unsubscribeOverlay = subscribeGameOverlay(() => this.releaseHeldInput());
   }
 
@@ -193,9 +170,6 @@ export class InputManager {
     this.updateMovementLock();
     const localPlayer = PlayerManager.getInstance().getLocalPlayer();
     resetControlSources();
-    for (const key of Object.keys(keys)) {
-      keys[key] = false;
-    }
     if (localPlayer) {
       getPressedKeysForPlayer(localPlayer).clear();
       localPlayer.ship.canShoot = true;

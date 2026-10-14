@@ -112,10 +112,8 @@
     let unsubscribe: (() => void) | undefined;
     const wasInPlay = document.body.classList.contains('in-play');
     const wasTouchPlay = document.body.classList.contains('touch-play');
-    const wasDebug = document.body.classList.contains('debug-on');
     const syncBody = () => {
       document.body.classList.toggle('in-play', view.inPlay);
-      document.body.classList.toggle('debug-on', view.debug !== null);
       document.body.classList.toggle('touch-play', view.inPlay && touchControls);
     };
     syncBody();
@@ -139,7 +137,6 @@
               wrapper.style.setProperty('--map-toggle-x', `${geometry.mapX}px`);
               wrapper.style.setProperty('--map-toggle-y', `${geometry.mapY}px`);
               wrapper.style.setProperty('--schematic-toggle-y', `${geometry.schematicY}px`);
-              wrapper.style.setProperty('--store-toggle-y', `${geometry.storeY}px`);
               syncBody();
             },
           },
@@ -176,7 +173,6 @@
       lifetime.dispose();
       document.body.classList.toggle('in-play', wasInPlay);
       document.body.classList.toggle('touch-play', wasTouchPlay);
-      document.body.classList.toggle('debug-on', wasDebug);
     };
   });
 </script>

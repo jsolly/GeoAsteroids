@@ -1853,11 +1853,10 @@ export class GameEngine {
 
   public createAsteroids(
     count: number,
-    bounds: { radius: number } = { radius: WORLD.radius },
-    playerPositions: Array<{ x: number; y: number }> = []
+    bounds: { radius: number } = { radius: WORLD.radius }
   ): AsteroidData[] {
     this.managedField = false;
-    return this.asteroidManager.createAsteroids(count, bounds, playerPositions);
+    return this.asteroidManager.createAsteroids(count, bounds);
   }
 
   public getSatellitePickup(pickupId: string): SatellitePickupData | undefined {

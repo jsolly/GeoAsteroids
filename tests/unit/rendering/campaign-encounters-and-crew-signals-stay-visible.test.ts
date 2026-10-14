@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type { CampaignSnapshot } from '../../../shared-types';
-import { entityFactory } from '../../../src/entities/EntityFactory';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { setWorldCampaign } from '../../../src/network/worldCampaign';
 import { drawCampaign } from '../../../src/rendering/campaignRenderer';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
@@ -137,7 +137,7 @@ test('rescue takes priority over a Help signal, edge markers clamp and sources b
     expect(x - width / 2).toBeGreaterThanOrEqual(8);
     expect(x + width / 2).toBeLessThanOrEqual(792);
   };
-  const pilot = entityFactory.createPlayer({
+  const pilot = createPlayer({
     id: 'crew',
     name: 'Mira',
     type: 'remote',
