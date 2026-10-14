@@ -1,5 +1,7 @@
+import { isPlayViewOn } from '../ui/uiUtils';
+
 function isInPlay(): boolean {
-  return typeof document !== 'undefined' && document.body.classList.contains('in-play');
+  return isPlayViewOn();
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

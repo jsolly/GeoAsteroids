@@ -10,6 +10,7 @@ import {
   FURNACE_MAP_INK,
   MINIMAP_FURNACE_MARK_SIZE,
 } from '../../../src/rendering/hud/furnaceMapMark';
+import { asteroidRow } from '../../support/asteroid-row';
 
 function recordCanvas(ctx: CanvasRenderingContext2D) {
   let points: Array<[number, number]> = [];
@@ -218,9 +219,9 @@ describe('painted HUD composition', () => {
       addListener(type, listener, options);
       removeListeners.push(() => window.removeEventListener(type, listener, options));
     });
-    const { NetworkManager } = await import('../../../src/network/networkManager');
+    const { ConnectionManager } = await import('../../../src/network/services/ConnectionManager');
     const { PlayerManager } = await import('../../../src/entities/player/PlayerManager');
-    const network = NetworkManager.getInstance();
+    const network = ConnectionManager.getInstance();
     PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
   });
 
@@ -250,7 +251,13 @@ describe('painted HUD composition', () => {
     player.cargo = 123;
     const ctx = canvasContext();
     const { texts } = recordCanvas(ctx);
-    drawScoreOverlay(ctx, computeHudLayout(ctx.canvas, { touchControls: false }), ctx.canvas, 4321);
+    player.score = 4321;
+    drawScoreOverlay(
+      ctx,
+      computeHudLayout(ctx.canvas, { touchControls: false }),
+      ctx.canvas,
+      player
+    );
     expect(texts.some((row) => row.text === 'Bank 4,321')).toBe(true);
     expect(texts.some((row) => row.text.includes('Cargo 123/500'))).toBe(true);
     expect(texts.some((row) => row.text.includes('Settlement 1'))).toBe(true);
@@ -267,7 +274,8 @@ describe('painted HUD composition', () => {
     const { texts } = recordCanvas(ctx);
     const viewport = { width: 390, height: 844 };
     const layout = computeHudLayout(viewport, { touchControls: true });
-    drawScoreOverlay(ctx, layout, viewport, 12385);
+    player.score = 12385;
+    drawScoreOverlay(ctx, layout, viewport, player);
     expect(texts.map((row) => row.text)).toEqual([
       'Bank 12,385 · Cargo 123/1500',
       'Hauler · Settlement 1 → 2 · 0%',
@@ -318,24 +326,24 @@ describe('painted HUD composition', () => {
     const player = PlayerManager.getInstance().createLocalPlayer('scout');
     player.ship.position = { x: 0, y: 0 };
     player.ship.abilityActiveFrames = 1;
-    const roids = (['ice', 'metal', 'rubble'] as const).map((material, index) => {
-      const rock = new Roid({ x: (index - 1) * 800, y: 0 }, 20, material);
+    const roids = (['ice', 'metal', 'rubble', 'crystal'] as const).map((material, index) => {
+      const rock = new Roid(asteroidRow({ x: (index - 1.5) * 600, y: 0 }, 20, material));
       rock.material = material;
       return rock;
     });
     const ctx = canvasContext();
     const { texts, strokes } = recordCanvas(ctx);
     const layout = computeHudLayout(ctx.canvas, { touchControls: false });
-    const centers = [-800, 0, 800].map((x) => ({
+    const centers = [-900, -300, 300, 900].map((x) => ({
       x:
         layout.miniMap.x +
         layout.miniMap.size / 2 +
         (x / WORLD.minimapRadius) * (layout.miniMap.size / 2),
       y: layout.miniMap.y + layout.miniMap.size / 2,
     }));
-    const [ice, metal, rubble] = centers;
-    if (!ice || !metal || !rubble) {
-      throw new Error('All three mineral fixtures must project');
+    const [ice, metal, rubble, crystal] = centers;
+    if (!ice || !metal || !rubble || !crystal) {
+      throw new Error('All four mineral fixtures must project');
     }
     const exploration = new ExplorationMap();
     for (const rock of roids) {
@@ -343,8 +351,15 @@ describe('painted HUD composition', () => {
     }
     setWorldExploration(exploration.snapshot());
     drawMiniMap(ctx, layout, player.ship, roids, [], [], []);
-    expect(texts.map(({ text }) => text)).toEqual(['ice', 'metal', 'rubble', 'X +0', 'Y +0']);
-    for (const [index, color] of ['#A5F3FC', '#FDE68A', '#FDBA74'].entries()) {
+    expect(texts.map(({ text }) => text)).toEqual([
+      'ice',
+      'metal',
+      'rubble',
+      'crystal',
+      'X +0',
+      'Y +0',
+    ]);
+    for (const [index, color] of ['#A5F3FC', '#FDE68A', '#FDBA74', '#D8B4FE'].entries()) {
       const center = centers[index];
       if (!center) {
         throw new Error('Missing mineral projection');
@@ -384,7 +399,7 @@ describe('painted HUD composition', () => {
     expect(VISUAL.MINIMAP_LOCAL_SIZE).toBeGreaterThan(VISUAL.MINIMAP_DOT / 2);
 
     const { PlayerManager } = await import('../../../src/entities/player/PlayerManager');
-    const { entityFactory } = await import('../../../src/entities/EntityFactory');
+    const { createPlayer } = await import('../../../src/entities/player/createPlayer');
     const { LootField } = await import('../../../src/entities/loot/LootField');
     const { Roid } = await import('../../../src/entities/roid/Roid');
     const { SatellitePickupManager } = await import(
@@ -397,8 +412,10 @@ describe('painted HUD composition', () => {
     const player = PlayerManager.getInstance().createLocalPlayer('scout');
     player.ship.position = { x: 0, y: 0 };
     player.ship.angle = Math.PI / 2;
-    const visible = new Roid({ x: WORLD.minimapRadius / 2, y: 0 }, 20, 'radar-visible');
-    const dead = new Roid({ x: 0, y: WORLD.minimapRadius / 4 }, 20, 'radar-dead');
+    const visible = new Roid(
+      asteroidRow({ x: WORLD.minimapRadius / 2, y: 0 }, 20, 'radar-visible')
+    );
+    const dead = new Roid(asteroidRow({ x: 0, y: WORLD.minimapRadius / 4 }, 20, 'radar-dead'));
     dead.health = 0;
     const roids = [visible, dead];
     const exploration = new ExplorationMap();
@@ -410,20 +427,35 @@ describe('painted HUD composition', () => {
     exploration.reveal({ x: WORLD.minimapRadius / 4, y: WORLD.minimapRadius / 2 }, 100);
     exploration.reveal({ x: -WORLD.minimapRadius / 2, y: 0 }, 100);
     setWorldExploration(exploration.snapshot());
-    const remote = entityFactory.createRemotePlayer('radar-remote', 'Radar Crew', {
-      x: -WORLD.minimapRadius / 2,
-      y: 0,
+    const remote = createPlayer({
+      id: 'radar-remote',
+      name: 'Radar Crew',
+      type: 'remote',
+      position: {
+        x: -WORLD.minimapRadius / 2,
+        y: 0,
+      },
     });
     remote.ship.angle = 0;
-    const peer = entityFactory.createRemotePlayer('radar-peer', 'Radar Peer', {
-      x: WORLD.minimapRadius / 2,
-      y: 0,
+    const peer = createPlayer({
+      id: 'radar-peer',
+      name: 'Radar Peer',
+      type: 'remote',
+      position: {
+        x: WORLD.minimapRadius / 2,
+        y: 0,
+      },
     });
     peer.ship.angle = 0;
     applyShipKitToShip(peer.ship, 'hauler');
-    const far = entityFactory.createRemotePlayer('radar-far', 'Radar Far', {
-      x: 0,
-      y: -WORLD.minimapRadius * 2,
+    const far = createPlayer({
+      id: 'radar-far',
+      name: 'Radar Far',
+      type: 'remote',
+      position: {
+        x: 0,
+        y: -WORLD.minimapRadius * 2,
+      },
     });
     far.ship.angle = 0;
     SatellitePickupManager.getInstance().syncFromServer([

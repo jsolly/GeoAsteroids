@@ -1,23 +1,25 @@
 import { expect, test, vi } from 'vitest';
 import { logger } from '../../../src/utils/Logger';
-import { LogLevel } from '../../../src/utils/logLevel';
 
 test('the shared logger suppresses debug at the default info threshold', () => {
-  const previous = logger.getLogLevel();
-  logger.setLogLevel(LogLevel.INFO);
+  const previous = window.location.pathname + window.location.search;
+  window.history.replaceState(null, '', '/');
+  logger.applyConfiguredLogLevel();
   const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
   try {
     logger.debug('TEST', 'per-frame pose must not print at info');
     expect(spy).not.toHaveBeenCalled();
   } finally {
     spy.mockRestore();
-    logger.setLogLevel(previous);
+    window.history.replaceState(null, '', typeof previous === 'string' ? previous : '/');
+    logger.applyConfiguredLogLevel();
   }
 });
 
 test('the shared logger keeps cyclic diagnostic context from crashing callers', () => {
-  const previous = logger.getLogLevel();
-  logger.setLogLevel(LogLevel.WARN);
+  const previous = window.location.pathname + window.location.search;
+  window.history.replaceState(null, '', '/debug?log-level=warn');
+  logger.applyConfiguredLogLevel();
   const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const context: Record<string, unknown> = {};
   context['self'] = context;
@@ -27,7 +29,8 @@ test('the shared logger keeps cyclic diagnostic context from crashing callers', 
     expect(spy).toHaveBeenCalledWith(expect.stringContaining('[circular]'));
   } finally {
     spy.mockRestore();
-    logger.setLogLevel(previous);
+    window.history.replaceState(null, '', typeof previous === 'string' ? previous : '/');
+    logger.applyConfiguredLogLevel();
   }
 });
 
@@ -48,8 +51,9 @@ test('page log sessions are distinct while connection identity is explicitly rep
 });
 
 test('copied diagnostics retain only 80 detached and redacted recent records', () => {
-  const previous = logger.getLogLevel();
-  logger.setLogLevel(LogLevel.WARN);
+  const previous = window.location.pathname + window.location.search;
+  window.history.replaceState(null, '', '/debug?log-level=warn');
+  logger.applyConfiguredLogLevel();
   const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   try {
     const context = {
@@ -72,6 +76,7 @@ test('copied diagnostics retain only 80 detached and redacted recent records', (
     expect(logger.getRecentDiagnostics()).toHaveLength(80);
   } finally {
     spy.mockRestore();
-    logger.setLogLevel(previous);
+    window.history.replaceState(null, '', typeof previous === 'string' ? previous : '/');
+    logger.applyConfiguredLogLevel();
   }
 });

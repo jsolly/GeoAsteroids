@@ -5,7 +5,7 @@ import {
   SATELLITE_INVENTORY_PAGE_SIZE,
   SatellitePickupManager,
 } from '../../../src/entities/satellitePickup/SatellitePickupManager';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 
 const manager = SatellitePickupManager.getInstance();
 function satellite(id: string, ownerId: string): SatellitePickupData {
@@ -27,7 +27,7 @@ function satellite(id: string, ownerId: string): SatellitePickupData {
 }
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
 });
 beforeEach(() => manager.clear());

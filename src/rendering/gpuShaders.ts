@@ -4,7 +4,6 @@ export const GPU_SEGMENT_VERTEX = `#version 300 es
 precision highp float;
 layout(location = 0) in vec4 a_segment;
 uniform vec2 u_camera;
-uniform vec2 u_rotation;
 uniform vec2 u_size;
 uniform vec2 u_view;
 uniform float u_scale;
@@ -13,10 +12,8 @@ out vec2 v_local;
 flat out float v_length;
 vec2 project(vec2 p) {
   vec2 d = p - u_camera;
-  vec2 rotated = vec2(d.x * u_rotation.x - d.y * u_rotation.y,
-                      d.x * u_rotation.y + d.y * u_rotation.x);
   return vec2(u_view.x * 0.5, u_size.y - u_view.y * 0.5)
-    + rotated * u_scale * vec2(1.0, -1.0);
+    + d * u_scale * vec2(1.0, -1.0);
 }
 void main() {
   vec2 a = project(a_segment.xy);

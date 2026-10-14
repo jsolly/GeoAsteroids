@@ -5,7 +5,6 @@ import {
   playHarpoonLatch,
   playHarpoonLaunch,
   playHarpoonRelease,
-  playOrbitalFire,
   playOrbitalPickup,
   playRespawn,
 } from '../../../src/audio/interactionSounds';
@@ -48,35 +47,33 @@ describe('interaction sound cues', () => {
     playHarpoonLaunch(listener);
     playHarpoonLatch(listener);
     playHarpoonRelease(listener);
-    playOrbitalFire(listener);
     playOrbitalPickup(listener);
     playLootPickup(listener);
     playAbilityActivation('surveyScan', listener);
     playRespawn(listener);
 
-    expect(played).toHaveLength(8);
-    expect(new Set(played).size).toBe(8);
+    expect(played).toHaveLength(7);
+    expect(new Set(played).size).toBe(7);
     expect(played.map((sound) => sound.src.split('/').pop())).toEqual([
       'harpoon-launch.m4a',
       'harpoon-latch.m4a',
       'harpoon-release.m4a',
-      'orbital-fire.m4a',
       'orbital-pickup.m4a',
       'loot-pickup.m4a',
       'survey-scan.m4a',
       'respawn.m4a',
     ]);
     playLootPickup(listener);
-    expect(played[8]).toBe(played[5]);
+    expect(played[7]).toBe(played[4]);
   });
 
   test('world interaction cues use viewport culling and distance attenuation', () => {
     const playSpy = vi.spyOn(Sound.prototype, 'play').mockResolvedValue(undefined);
 
-    playOrbitalFire({ x: listener.x + 1000, y: listener.y });
+    playOrbitalPickup({ x: listener.x + 1000, y: listener.y });
     expect(playSpy).not.toHaveBeenCalled();
 
-    playOrbitalFire({ x: listener.x + 100, y: listener.y });
+    playOrbitalPickup({ x: listener.x + 100, y: listener.y });
     expect(playSpy).toHaveBeenCalledTimes(1);
     expect(playSpy.mock.calls[0]?.[0]).toBeGreaterThan(0);
     expect(playSpy.mock.calls[0]?.[0]).toBeLessThan(1);
@@ -89,7 +86,6 @@ describe('interaction sound cues', () => {
     playHarpoonLaunch(listener);
     playHarpoonLatch(listener);
     playHarpoonRelease(listener);
-    playOrbitalFire(listener);
     playOrbitalPickup(listener);
     playAbilityActivation('surveyScan', listener);
     playRespawn(listener);

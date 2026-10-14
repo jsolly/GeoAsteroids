@@ -102,7 +102,7 @@ test('rail guidance refuses a faraway level rather than snapping across empty sp
 test('a surviving laser impact releases the rail immediately', () => {
   const ship = pilot();
   expect(ship.toggleContourLock()).toBe(true);
-  ship.takeDamage(1, 'laser');
+  ship.takeDamage(1);
   expect(ship.health).toBeGreaterThan(0);
   expect(ship.contourLocked).toBe(false);
 });

@@ -13,12 +13,6 @@ import { strokePhosphorPolyline, type Vec2 } from './vectorJuice';
 
 const furnaceScreen = { x: 0, y: 0 };
 const pipeHead = { x: 0, y: 0 };
-const PIPE_SCREEN: Array<{ x: number; y: number }> = [
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-];
 const TRAIL_SCREEN: Array<{ x: number; y: number }> = [];
 const trailEmber = { x: 0, y: 0 };
 const FURNACE_COLOR = WIRE_PALETTE.SATELLITE;
@@ -648,46 +642,16 @@ export function drawFurnacePipes(viewerPosition: Position, now = performance.now
     if (!frame) {
       continue;
     }
-    let visible = false;
-    for (let index = 0; index < pulse.points.length - 1; index += 1) {
-      const start = pulse.points[index];
-      const end = pulse.points[index + 1];
-      if (start && end && segmentNear(viewerPosition, start, end, reach)) {
-        visible = true;
-        break;
-      }
-    }
-    if (!visible) {
+    if (!hopNear(viewerPosition, pulse.points, reach)) {
       continue;
     }
-    while (PIPE_SCREEN.length < pulse.points.length) {
-      PIPE_SCREEN.push({ x: 0, y: 0 });
-    }
-    const count = pulse.points.length;
-    for (let index = 0; index < count; index += 1) {
-      const world = pulse.points[index];
-      const screen = PIPE_SCREEN[index];
-      if (!world || !screen) {
-        continue;
-      }
-      canvasManager.worldToScreenInto(screen, world, viewerPosition);
-    }
+    const count = projectHop(viewerPosition, pulse.points);
     ctx.save();
     ctx.shadowColor = PALETTE.LASER_LOCAL;
     ctx.shadowBlur = resolveGlow(VISUAL.FURNACE_FLAME_GLOW);
     ctx.strokeStyle = hexToRgba(PALETTE.LASER_LOCAL, 0.9 * frame.alpha);
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    const first = PIPE_SCREEN[0];
-    if (first) {
-      ctx.moveTo(first.x, first.y);
-    }
-    for (let index = 1; index < count; index += 1) {
-      const screen = PIPE_SCREEN[index];
-      if (screen) {
-        ctx.lineTo(screen.x, screen.y);
-      }
-    }
+    tracePolyline(ctx, TRAIL_SCREEN, count);
     ctx.stroke();
     canvasManager.worldToScreenInto(pipeHead, frame.head, viewerPosition);
     ctx.fillStyle = hexToRgba(PALETTE.LOOT, frame.alpha);
@@ -763,7 +727,6 @@ function drawDockingStation(
 ): void {
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(canvasManager.getCameraRotation());
   ctx.strokeStyle = '#91A7C0';
   ctx.fillStyle = '#111C2B';
   ctx.lineWidth = 1.5;

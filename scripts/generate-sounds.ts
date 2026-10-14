@@ -84,10 +84,6 @@ const recipes: Record<string, Recipe> = {
     ],
   },
   laser: { duration: 0.14, tones: [bell(7, 0, 0.14, 0.48, 0.08), bell(19, 0, 0.07, 0.08, 0)] },
-  'orbital-fire': {
-    duration: 0.18,
-    tones: [bell(0, 0, 0.18, 0.48, 0.09), bell(12, 0, 0.07, 0.12, 0)],
-  },
   hit: { duration: 0.15, tones: [body(-12, 0.12, 0.52), bell(0, 0, 0.15, 0.18, 0.06)], dust: 0.06 },
   'asteroid-explode': {
     duration: 0.52,

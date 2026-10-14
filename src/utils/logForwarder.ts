@@ -1,9 +1,5 @@
-import {
-  createLogRecord,
-  LOG_LINE_MAX_BYTES,
-  parseLogRecord,
-  stringifyLogRecord,
-} from '../../shared/logRecords';
+import { createLogRecord, parseLogRecord, stringifyLogRecord } from '../../shared/logRecords';
+import { getClientReleaseId } from './buildInfo';
 import { getClientLogContext } from './clientLogContext';
 import { logsWebSocketUrlFromGameplay } from './logsWebSocketUrl';
 
@@ -29,50 +25,17 @@ function byteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function safePageUrl(): string {
-  try {
-    const url = new URL(location.href);
-    return `${url.origin}${url.pathname}`;
-  } catch {
-    return '/';
-  }
+function queuedLine(line: string): QueuedLine {
+  return { line, bytes: byteLength(line) };
 }
 
-function normalizeLine(line: string): QueuedLine {
-  let normalized = line;
-  if (byteLength(normalized) > LOG_LINE_MAX_BYTES) {
-    const parsed = parseLogRecord(line);
-    normalized = stringifyLogRecord(
-      createLogRecord({
-        timestamp: parsed?.timestamp ?? new Date().toISOString(),
-        source: 'client',
-        level: parsed?.level ?? 'warn',
-        releaseId: parsed?.releaseId ?? import.meta.env['VITE_COMMIT_HASH'] ?? 'dev',
-        category: parsed?.category ?? 'LOG_FORWARD',
-        message: parsed?.message ?? 'Oversized client log record',
-        context: { truncated: true },
-        ...getClientLogContext(),
-      })
-    );
-  }
-  return { line: normalized, bytes: byteLength(normalized) };
-}
-
-function enqueue(item: QueuedLine, front = false): void {
-  if (item.bytes > MAX_QUEUE_BYTES) {
-    droppedMessageCount++;
-    return;
-  }
+function enqueue(item: QueuedLine): void {
   while (queuedBytes + item.bytes > MAX_QUEUE_BYTES && messageQueue.length > 0) {
     const dropped = messageQueue.shift();
     queuedBytes -= dropped?.bytes ?? 0;
     droppedMessageCount++;
   }
-  if (front) {
-    messageQueue.unshift(item);
-  } else {
-    messageQueue.push(item);
-  }
+  messageQueue.push(item);
   queuedBytes += item.bytes;
   if (droppedMessageCount % 100 === 1) {
     reportTransportFailure('Client log queue dropped records before delivery', {
@@ -163,7 +126,7 @@ function wirePayload(item: QueuedLine): string {
       level: record?.level ?? 'info',
       line: item.line,
       userAgent: navigator.userAgent,
-      pageUrl: safePageUrl(),
+      pageUrl: `${location.origin}${location.pathname}`,
     },
   });
 }
@@ -193,13 +156,13 @@ function sendLossTelemetry(socket: WebSocket): boolean {
   if (droppedMessageCount === reportedDroppedMessageCount) {
     return true;
   }
-  const item = normalizeLine(
+  const item = queuedLine(
     stringifyLogRecord(
       createLogRecord({
         timestamp: new Date().toISOString(),
         source: 'client',
         level: 'error',
-        releaseId: import.meta.env['VITE_COMMIT_HASH'] ?? 'dev',
+        releaseId: getClientReleaseId(),
         category: 'STATE',
         message: 'Client log records dropped before delivery',
         context: {
@@ -329,7 +292,7 @@ export function stopClientLogForwarder(): void {
 }
 
 export function forwardLogToServer(line: string): void {
-  const item = normalizeLine(line);
+  const item = queuedLine(line);
   if (ws?.readyState === WebSocket.OPEN && trySend(ws, item)) {
     return;
   }

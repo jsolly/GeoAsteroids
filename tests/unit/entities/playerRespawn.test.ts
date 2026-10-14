@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { SHIP } from '../../../shared/constants/gameplay';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 describe('Player Respawn System', () => {
   let player: Player;
@@ -12,7 +11,6 @@ describe('Player Respawn System', () => {
       id: 'test-player',
       name: 'Test Player',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     ship = player.ship;
   });

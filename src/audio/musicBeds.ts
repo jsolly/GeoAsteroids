@@ -1,6 +1,7 @@
 import type { Howl } from 'howler';
 import { AUDIO } from '../constants';
 import { LOCAL_STORAGE_KEYS, musicIsOn } from '../constants/user-preferences';
+import { isPlayViewOn } from '../ui/uiUtils';
 import { logger } from '../utils/Logger';
 import { setStoredItem } from '../utils/safeStorage';
 import {
@@ -44,7 +45,7 @@ function fadeKey(kind: MusicBedId, id: number): string {
 }
 
 function inPlay(): boolean {
-  return document.body.classList.contains('in-play');
+  return isPlayViewOn();
 }
 
 function dangerCatalogued(): boolean {

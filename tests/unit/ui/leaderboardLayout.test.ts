@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
-import { entityFactory } from '../../../src/entities/EntityFactory';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import type { Player } from '../../../src/entities/player/Player';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
 import { drawLeaderboard, fitLeaderboardName } from '../../../src/rendering/hud/leaderboard';
@@ -49,7 +49,7 @@ function normalizedColor(ctx: CanvasRenderingContext2D, color: string) {
 }
 
 function player(id: string, name: string, type: Player['type'], score: number) {
-  const participant = entityFactory.createPlayer({
+  const participant = createPlayer({
     id,
     name,
     type,

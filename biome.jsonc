@@ -304,8 +304,8 @@
         "noTemplateCurlyInString": "error",
         "noTsIgnore": "error",
         // HOLD: Biome 2.5 types domain false-positives on uninitialized
-        // singleton statics, mutable class fields (biome#11174), compile-time
-        // DEBUG constants, and marching-squares switch narrowing.
+        // singleton statics, mutable class fields (biome#11174), and
+        // marching-squares switch narrowing.
         "noUnnecessaryConditions": "off",
         "noUselessEscapeInString": "error",
         "noUselessRegexBackrefs": "error",

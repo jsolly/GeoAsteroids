@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
+import { pointsForRoidSize } from '../../../shared/asteroidScale';
 import { ROID } from '../../../shared/constants/gameplay';
-import { pointsForRoidSize } from '../../../shared/roidScore';
 
 describe('roid score helpers', () => {
   test('points follow size class', () => {

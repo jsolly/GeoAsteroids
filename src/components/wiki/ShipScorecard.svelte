@@ -1,12 +1,9 @@
 <script lang="ts">
   import { getShipKit } from '../../../shared/shipKits';
   import type { ShipKitId } from '../../../shared-types';
-  import { shipRatings } from '../../wiki/shipScorecard';
+  import { mountShipRadar, shipRatings } from '../../wiki/shipScorecard';
 
-  // The shell mounts the radar into `radar` only for the active article; static rendering never does.
-  // No fallback: the shell binds a keyed ref that starts undefined.
-  let { id, radar = $bindable() }: { id: ShipKitId; radar?: HTMLElement | null | undefined } =
-    $props();
+  let { id, active = false }: { id: ShipKitId; active?: boolean } = $props();
   const kit = $derived(getShipKit(id));
   const ratings = $derived(shipRatings(id));
 </script>
@@ -23,7 +20,7 @@
   </div>
   <div class="ship-profile-layout">
     <div
-      bind:this={radar}
+      {@attach active && ((element) => mountShipRadar(element, id))}
       class="ship-radar"
       role="img"
       aria-label={`${kit.name} base stat profile, rated from 1 to 5. Exact values and ratings follow.`}
@@ -95,9 +92,11 @@
     height: 6px;
     border-radius: 100%;
     background: var(--muted);
+    box-shadow: inset 0 0 0 1px var(--muted-foreground);
   }
   .stat-bubble.filled {
     background: var(--foreground);
+    box-shadow: none;
   }
   @media (max-width: 799px) {
     .ship-profile-layout {

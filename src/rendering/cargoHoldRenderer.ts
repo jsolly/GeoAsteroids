@@ -24,7 +24,6 @@ export function drawCargoHolds(players: readonly Player[], viewer: Position): vo
     return;
   }
   const scale = canvasManager.getPlayfieldScale();
-  const rotation = canvasManager.getCameraRotation();
   const now = performance.now();
   for (const player of players) {
     if (
@@ -39,7 +38,7 @@ export function drawCargoHolds(players: readonly Player[], viewer: Position): vo
     drawCargoHoldArtwork(ctx, {
       position: holdScreen,
       radius: player.ship.r * scale,
-      angle: player.ship.angle - rotation,
+      angle: player.ship.angle,
       kitId: player.ship.kitId,
       color: player.color,
       fraction: player.cargo / cargoCapacity(player.ship.kitId),
@@ -83,7 +82,7 @@ export function drawCargoHoldArtwork(
 
   ctx.save();
   ctx.translate(position.x, position.y);
-  // Match hullOutlines' +forward/-screen-y projection, including camera rotation.
+  // Match hullOutlines' +forward/-screen-y projection.
   ctx.rotate(-angle);
   ctx.fillStyle = hexToRgba(PALETTE.BG, 0.95);
   ctx.fillRect(x, y, width, height);

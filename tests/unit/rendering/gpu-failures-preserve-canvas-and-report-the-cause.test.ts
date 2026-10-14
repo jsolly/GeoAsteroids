@@ -73,9 +73,9 @@ test('an oversized GPU frame retires its resources and reports the failed draw o
     dpr: 1,
     scale: 1,
     zoom: 1,
-    rotation: 0,
     contours: [],
     rearSource: overlay,
+    contourTransform: { a: 1, b: 0, c: 0, d: 1 },
     nativeStars: 0,
     nativeStarRects: 0,
   };

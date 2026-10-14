@@ -1,6 +1,5 @@
 import { pipeToTownSquare } from '../../shared/furnaces';
 import type { Position } from '../../shared-types';
-import { rotateVectorInto } from '../rendering/travelCamera';
 
 export interface FurnaceSite {
   readonly id: string;
@@ -10,7 +9,6 @@ export interface FurnaceSite {
 export interface FurnaceTravelView {
   readonly source: FurnaceSite;
   readonly destinations: readonly FurnaceSite[];
-  readonly rotation: number;
   readonly pilots?: readonly (FurnaceSite & { readonly local: boolean })[];
 }
 const MARKER_SIZE = 64;
@@ -22,17 +20,15 @@ const MIN_ZOOM = 0.7;
 
 /** Preserve world bearings and pipe geometry, expanding dense maps to separate targets. */
 export function createFurnaceTravelLayout(
-  { source, destinations, rotation, pilots = [] }: FurnaceTravelView,
+  { source, destinations, pilots = [] }: FurnaceTravelView,
+
   viewportWidth: number,
   viewportWindowHeight: number
 ) {
-  const projectBearing = (position: Position) =>
-    rotateVectorInto(
-      { x: 0, y: 0 },
-      position.x - source.position.x,
-      position.y - source.position.y,
-      rotation
-    );
+  const projectBearing = (position: Position) => ({
+    x: position.x - source.position.x,
+    y: position.y - source.position.y,
+  });
   const sites = [source, ...destinations].map((site) => ({
     ...site,
     position: projectBearing(site.position),

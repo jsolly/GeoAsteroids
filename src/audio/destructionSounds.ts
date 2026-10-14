@@ -10,5 +10,5 @@ const sounds = {
 };
 
 export function playDestructionSound(kind: keyof typeof sounds, position: Position): void {
-  playWorldSound(sounds[kind], position, { requireViewport: true });
+  playWorldSound(sounds[kind], position);
 }

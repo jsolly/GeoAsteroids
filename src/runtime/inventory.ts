@@ -3,6 +3,8 @@ import { canEquipUtility } from '../../shared/equipment';
 import { setHaulerUtilityOnHost, setScoutUtilityOnHost } from '../../shared/shipAbilities';
 import { getShipKit } from '../../shared/shipKits';
 import {
+  DEFAULT_HAULER_UTILITY,
+  DEFAULT_SCOUT_UTILITY,
   HAULER_UTILITY_IDS,
   haulerUtilityOf,
   isHaulerUtilityId,
@@ -17,17 +19,9 @@ import {
   SATELLITE_INVENTORY_PAGE_SIZE,
   SatellitePickupManager,
 } from '../entities/satellitePickup/SatellitePickupManager';
-import {
-  HAULER_UTILITY,
-  preferredHaulerUtility,
-  rememberHaulerUtility,
-} from '../entities/ship/haulerUtility';
-import {
-  preferredScoutUtility,
-  rememberScoutUtility,
-  SCOUT_UTILITY,
-} from '../entities/ship/scoutUtility';
-import { NetworkManager } from '../network/networkManager';
+import { HAULER_UTILITY } from '../entities/ship/haulerUtility';
+import { SCOUT_UTILITY } from '../entities/ship/scoutUtility';
+import { ConnectionManager } from '../network/services/ConnectionManager';
 import type { SchematicSelection } from '../rendering/shipSchematicCanvas';
 import type { InventoryView } from './uiTypes';
 
@@ -40,8 +34,8 @@ export function readSchematicSelection(): SchematicSelection {
   const ship = PlayerManager.getInstance().getLocalPlayer()?.ship;
   return Object.freeze({
     kitId: ship?.kitId ?? 'hauler',
-    haulerUtility: ship ? haulerUtilityOf(ship) : preferredHaulerUtility(),
-    scoutUtility: ship ? scoutUtilityOf(ship) : preferredScoutUtility(),
+    haulerUtility: ship ? haulerUtilityOf(ship) : DEFAULT_HAULER_UTILITY,
+    scoutUtility: ship ? scoutUtilityOf(ship) : DEFAULT_SCOUT_UTILITY,
   });
 }
 
@@ -83,7 +77,7 @@ export function readInventoryView(requestedPage: number): InventoryView {
     description: `Equip one satellite to identify asteroids within ${SATELLITE_PICKUP.SCAN_RANGE} units. Full health lasts ${SATELLITE_PICKUP.LIFETIME_FRAMES / GAME.FPS} seconds of flight. Health drains while equipped; damage shortens its remaining lifetime.`,
     canEquipSatellite:
       player !== null &&
-      NetworkManager.getInstance().isConnected &&
+      ConnectionManager.getInstance().isConnected &&
       canUseInventory() &&
       manager.getEquipped(player.id) === undefined,
     kitName: getShipKit(selection.kitId).name,
@@ -107,7 +101,7 @@ export function readInventoryView(requestedPage: number): InventoryView {
 
 export function equipInventorySatellite(id: string): void {
   const player = PlayerManager.getInstance().getLocalPlayer();
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   const manager = SatellitePickupManager.getInstance();
   const pickup = manager.get(id);
   if (
@@ -135,12 +129,11 @@ export function equipInventoryUtility(id: HaulerUtilityId | ScoutUtilityId): voi
     return;
   }
   const ship = player.ship;
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   if (ship.kitId === 'hauler' && isHaulerUtilityId(id)) {
     if (haulerUtilityOf(ship) !== id) {
       playFeedback('interface');
     }
-    rememberHaulerUtility(id);
     setHaulerUtilityOnHost(ship, id);
     if (network.isConnected) {
       network.sendMessage({
@@ -153,7 +146,6 @@ export function equipInventoryUtility(id: HaulerUtilityId | ScoutUtilityId): voi
     if (scoutUtilityOf(ship) !== id) {
       playFeedback('interface');
     }
-    rememberScoutUtility(id);
     setScoutUtilityOnHost(ship, id);
     if (network.isConnected) {
       network.sendMessage({

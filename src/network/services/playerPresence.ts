@@ -1,55 +1,9 @@
-/**
- * Remote-player presence helpers.
- *
- * The server removes a player on socket close and now also broadcasts
- * `playerLeft`. `handleSnapshotState` still updates entities in place, so snapshot
- * pruning remains the fallback if a `playerLeft` is dropped.
- *
- * These helpers drop only `type === 'remote'` players missing from the latest
- * authoritative snapshot. Local entries stay.
- */
-
-/** True when this snapshot row is the local pilot, including a new-id clone. */
+/** Match private local identity by id; display names do not identify pilots. */
 export function isLocalGameEntity(
   entity: { id: string; name?: string; type?: string },
-  local: { clientId: string; localPlayerId: string; localPlayerName: string }
+  local: { clientId: string; localPlayerId: string }
 ): boolean {
-  if (entity.id === local.clientId || entity.id === local.localPlayerId) {
-    return true;
-  }
-  return Boolean(
-    local.localPlayerName && entity.type === 'player' && entity.name === local.localPlayerName
-  );
-}
-
-/** Drop remotes that are just another copy of our display name. */
-export function duplicateOwnRemoteIds(
-  players: Iterable<{ id: string; name: string; type: string }>,
-  localPlayerName: string
-): string[] {
-  if (!localPlayerName) {
-    return [];
-  }
-  const stale: string[] = [];
-  for (const player of players) {
-    if (player.type === 'remote' && player.name === localPlayerName) {
-      stale.push(player.id);
-    }
-  }
-  return stale;
-}
-
-export function staleRemotePlayerIds(
-  players: Iterable<{ id: string; type: string }>,
-  snapshotEntityIds: ReadonlySet<string>
-): string[] {
-  const stale: string[] = [];
-  for (const player of players) {
-    if (player.type === 'remote' && !snapshotEntityIds.has(player.id)) {
-      stale.push(player.id);
-    }
-  }
-  return stale;
+  return entity.id === local.clientId || entity.id === local.localPlayerId;
 }
 
 /** Clear and refill `into` with this snapshot's entity ids — no new Set per tick. */
@@ -76,24 +30,6 @@ export function pruneStaleRemotePlayers<T extends { type: string }>(
   let removed = 0;
   for (const [id, player] of players) {
     if (player.type === 'remote' && !snapshotEntityIds.has(id)) {
-      players.delete(id);
-      removed += 1;
-    }
-  }
-  return removed;
-}
-
-/** Drop remotes that are just another copy of our display name. */
-export function pruneDuplicateOwnRemotes<T extends { name: string; type: string }>(
-  players: Map<string, T>,
-  localPlayerName: string
-) {
-  if (!localPlayerName) {
-    return 0;
-  }
-  let removed = 0;
-  for (const [id, player] of players) {
-    if (player.type === 'remote' && player.name === localPlayerName) {
       players.delete(id);
       removed += 1;
     }

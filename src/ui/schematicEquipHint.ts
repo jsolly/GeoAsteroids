@@ -1,3 +1,6 @@
+import { subscribeGameOverlay } from '../runtime/overlayState';
+import { isPlayViewOn } from './uiUtils';
+
 let listenerScope: AbortController | null = null;
 
 import { PALETTE } from '../constants';
@@ -28,7 +31,7 @@ let pending = false;
 let dismissed = false;
 
 function inPlay(): boolean {
-  return typeof document !== 'undefined' && document.body.classList.contains('in-play');
+  return isPlayViewOn();
 }
 
 function clearHint(): void {
@@ -54,15 +57,14 @@ export function initializeSchematicEquipHint(): void {
   const { signal } = listenerScope;
   initialized = true;
   window.addEventListener('playViewOff', clearHint, { signal });
-  window.addEventListener(
-    'gameSchematicOpen',
-    () => {
+  const stopOverlay = subscribeGameOverlay((next) => {
+    if (next === 'inventory') {
       dismissed = true;
       startedAt = null;
       pending = false;
-    },
-    { signal }
-  );
+    }
+  });
+  signal.addEventListener('abort', stopOverlay, { once: true });
 }
 
 function schematicEquipHintLines(): readonly [string, string] {

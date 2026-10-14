@@ -1,4 +1,5 @@
 import type { GpuFrameStats } from '../rendering/gpuRearRenderer';
+import { getClientReleaseId } from '../utils/buildInfo';
 import { logger } from '../utils/Logger';
 
 const SAMPLE_LIMIT = 4096;
@@ -204,9 +205,13 @@ export class ClientPerformanceMetrics {
   private recoveryStartedAt: number | undefined;
   private startedAt = this.phaseStartedAt;
   private nextExportAt = this.startedAt + 15_000;
-  public serverReleaseId: string | undefined;
+  private readServerReleaseId: (() => string | undefined) | undefined;
 
   constructor(public readonly enabled: boolean) {}
+
+  observeServerRelease(observe: (() => string | undefined) | undefined): void {
+    this.readServerReleaseId = observe;
+  }
 
   setPhase(phase: Phase): void {
     const now = performance.now();
@@ -395,8 +400,8 @@ export class ClientPerformanceMetrics {
         frames: { ...this.rendererFrames },
         gpuStats: renderer?.gpuStats ?? null,
       },
-      clientReleaseId: import.meta.env['VITE_COMMIT_HASH'] ?? 'unknown',
-      serverReleaseId: this.serverReleaseId ?? 'unknown',
+      clientReleaseId: getClientReleaseId(),
+      serverReleaseId: this.readServerReleaseId?.() ?? 'unknown',
       durationMs: now - this.startedAt,
       phase: this.phase,
       pendingJoin: this.joinStartedAt !== undefined,

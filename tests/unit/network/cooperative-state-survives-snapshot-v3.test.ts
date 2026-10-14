@@ -56,7 +56,6 @@ test('local downed snapshots keep the hull visible and an authoritative partial 
     name: 'Pilot',
     type: 'local',
     kitId: 'hauler',
-    input: { getThrusting: () => false, getAngularVelocity: () => 0, getShooting: () => false },
   });
   pilot.updateFromServer({
     health: 0,

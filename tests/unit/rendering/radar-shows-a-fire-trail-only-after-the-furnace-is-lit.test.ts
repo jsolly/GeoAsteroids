@@ -3,7 +3,7 @@ import { CIVIC_LOTS, civicLot, pipeHopToParent } from '../../../shared/furnaces'
 import { WORLD } from '../../../shared/world';
 import type { Position } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { resetWorldExploration, worldFurnaces } from '../../../src/network/worldExploration';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
 import { drawMiniMap } from '../../../src/rendering/hud/minimap';
@@ -64,7 +64,6 @@ test('the radar draws a fire trail only after that furnace is lit', () => {
     id: 'scout',
     name: 'Scout',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.ship.position = { ...furnace.position };
   const canvas = document.createElement('canvas');
@@ -157,7 +156,6 @@ test('the radar draws a fire trail when only the pipe crosses the disc', () => {
     id: 'scout',
     name: 'Scout',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.ship.position = crossing.ship;
   const canvas = document.createElement('canvas');
@@ -182,7 +180,6 @@ test('the radar hides a lit pipe that misses the disc', () => {
     id: 'scout',
     name: 'Scout',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.ship.position = { x: 40_000, y: 40_000 };
   const canvas = document.createElement('canvas');

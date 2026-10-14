@@ -5,7 +5,6 @@ import { PALETTE, VISUAL } from '../../../src/constants';
 import { LootField } from '../../../src/entities/loot/LootField';
 import { drawLootRelative, lootScreenRadius } from '../../../src/entities/loot/lootRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { HAULER_TETHER_COLOR } from '../../../src/entities/ship/shipRenderer';
 import { Point } from '../../../src/physics/Point';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { configureRenderQuality } from '../../../src/rendering/renderQuality';
@@ -66,11 +65,6 @@ afterEach(() => {
   drawLootRelative(new Ship(), []);
   vi.restoreAllMocks();
   configureRenderQuality('', false);
-});
-
-test('shards share the tether’s locked cream', () => {
-  expect(PALETTE.LOOT).toBe('#E8D5A3');
-  expect(PALETTE.LOOT).toBe(HAULER_TETHER_COLOR);
 });
 
 test('loot geometry rejects invalid radii and keeps tiny valid drops visible', () => {

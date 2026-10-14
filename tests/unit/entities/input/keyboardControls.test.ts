@@ -4,7 +4,7 @@ import { Player } from '../../../../src/entities/player/Player';
 import { publishHarpoonField } from '../../../../src/entities/ship/harpoonField';
 import { controlSources, resetControlSources } from '../../../../src/input/controlSources';
 import { keyDown, keyUp, reconcilePlayerInput } from '../../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../../src/input/MockPlayerInput';
+
 import { setSelectedShipKitId } from '../../../../src/runtime/shipSelection';
 
 // Keyboard steering and combat remain usable while the ship automatically cruises.
@@ -18,7 +18,7 @@ const release = (code: string): void => keyUp(new KeyboardEvent('keyup', { code 
 
 beforeEach(() => {
   resetControlSources();
-  player = new Player({ id: 'p', name: 'P', type: 'local', input: new MockPlayerInput() });
+  player = new Player({ id: 'p', name: 'P', type: 'local' });
   reconcilePlayerInput(player);
 });
 
@@ -125,7 +125,6 @@ test.each(['scout', 'hauler'] as const)(
       name: 'Pilot',
       type: 'local',
       kitId,
-      input: new MockPlayerInput(),
     });
     player.cargo = 400;
     player.ship.angle = 0;

@@ -5,6 +5,7 @@ import { GameController } from '../../../../src/core/gameController';
 import { Laser } from '../../../../src/entities/laser/Laser';
 import { Roid } from '../../../../src/entities/roid/Roid';
 import { canvasManager } from '../../../../src/rendering/canvasSurface';
+import { asteroidRow } from '../../../support/asteroid-row';
 
 const game = GameController.getInstance();
 
@@ -29,7 +30,7 @@ function arrangeFlight() {
   ship.angularVelocity = 0.005;
   ship.thrusting = true;
   ship.lasers = [new Laser({ x: 500, y: 500 }, { x: 2, y: 0 }, 0, 0)];
-  const asteroid = new Roid({ x: -500, y: -500 }, 20, 'clock-asteroid');
+  const asteroid = new Roid(asteroidRow({ x: -500, y: -500 }, 20, 'clock-asteroid'));
   asteroid.velocity = { x: 0.2, y: -0.1 };
   game.getCurrRoidBelt().roids = [asteroid];
   return ship;
@@ -108,7 +109,7 @@ test.each([
   ship.thrusting = false;
   const laser = new Laser({ x: -100, y: 0 }, { x: 100, y: 0 }, 0, 0);
   ship.lasers = [laser];
-  const asteroid = new Roid({ x: rockX, y: 0 }, 10, 'crossed-rock');
+  const asteroid = new Roid(asteroidRow({ x: rockX, y: 0 }, 10, 'crossed-rock'));
   asteroid.velocity = { x: 0, y: 0 };
   game.getCurrRoidBelt().roids = [asteroid];
 

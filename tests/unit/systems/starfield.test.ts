@@ -26,7 +26,7 @@ vi.mock('../../../src/rendering/canvasSurface', () => ({
       point: { x: number; y: number },
       camera: { x: number; y: number }
     ) => {
-      return projectWorldToScreenInto(out, point, camera, view, view.scale, view.rotation);
+      return projectWorldToScreenInto(out, point, camera, view, view.scale);
     },
   },
 }));

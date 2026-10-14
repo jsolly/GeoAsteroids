@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { ROID } from '../../../shared/constants/gameplay';
 import { PALETTE, VISUAL } from '../../../src/constants';
-import { entityFactory } from '../../../src/entities/EntityFactory';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { Roid } from '../../../src/entities/roid/Roid';
 import {
   canDrawAsteroid,
@@ -12,6 +12,7 @@ import {
 } from '../../../src/entities/roid/roidRenderer';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import * as vectorJuice from '../../../src/rendering/vectorJuice';
+import { asteroidRow } from '../../support/asteroid-row';
 import { setWindowViewport } from '../../support/viewport';
 
 let restoreViewport = () => {};
@@ -54,7 +55,7 @@ function asteroidScene() {
   restoreViewport = setWindowViewport(800, 600);
   canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'));
   const ctx = canvasManager.requireContext();
-  const pilot = entityFactory.createPlayer({
+  const pilot = createPlayer({
     id: 'observer',
     name: 'Observer',
     type: 'remote',
@@ -121,11 +122,11 @@ test('a destroyed asteroid shatters without its silhouette while a nearby empty-
   const performanceNow = vi.spyOn(performance, 'now').mockReturnValue(2000);
   const { ctx, pilot } = asteroidScene();
   const outlines = vi.spyOn(vectorJuice, 'polygonPoints');
-  const normal = new Roid({ x: -100, y: -60 }, 10, 'normal-empty-outline');
+  const normal = new Roid(asteroidRow({ x: -100, y: -60 }, 10, 'normal-empty-outline'));
   normal.angle = 0;
   normal.vertices = 4;
   normal.offsets = [];
-  const pending = new Roid({ x: 100, y: 60 }, 14, 'destroyed-shatter');
+  const pending = new Roid(asteroidRow({ x: 100, y: 60 }, 14, 'destroyed-shatter'));
   pending.angle = 0;
   pending.vertices = 4;
   pending.offsets = [1, 1, 1, 1];
@@ -197,10 +198,10 @@ test('a destroyed asteroid shatters without its silhouette while a nearby empty-
 
 test('large plain asteroids keep a jagged inner facet while medium, pebble and material rocks omit it', () => {
   const { ctx, pilot } = asteroidScene();
-  const large = new Roid({ x: -220, y: -120 }, ROID.SIZE, 'large-plain');
-  const medium = new Roid({ x: -60, y: -120 }, ROID.SIZE * 0.5, 'medium-plain');
-  const pebble = new Roid({ x: 80, y: -120 }, ROID.SIZE * 0.2, 'pebble-plain');
-  const material = new Roid({ x: 240, y: -120 }, ROID.SIZE, 'large-ice');
+  const large = new Roid(asteroidRow({ x: -220, y: -120 }, ROID.SIZE, 'large-plain'));
+  const medium = new Roid(asteroidRow({ x: -60, y: -120 }, ROID.SIZE * 0.5, 'medium-plain'));
+  const pebble = new Roid(asteroidRow({ x: 80, y: -120 }, ROID.SIZE * 0.2, 'pebble-plain'));
+  const material = new Roid(asteroidRow({ x: 240, y: -120 }, ROID.SIZE, 'large-ice'));
   material.material = 'ice';
   const offsets = [1.1, 0.8, 1.05, 0.9, 1.2, 0.85];
   for (const rock of [large, medium, pebble, material]) {
@@ -292,7 +293,7 @@ test('large plain asteroids keep a jagged inner facet while medium, pebble and m
 test('rubble shatter keeps its drifting wobble and fading ticks halfway through its lifetime', () => {
   const clock = vi.spyOn(performance, 'now').mockReturnValue(2000 + VISUAL.ROID_SHATTER_MS / 2);
   const { ctx, pilot } = asteroidScene();
-  const rock = new Roid({ x: 100, y: 60 }, 14, 'rubble-shatter');
+  const rock = new Roid(asteroidRow({ x: 100, y: 60 }, 14, 'rubble-shatter'));
   rock.angle = 0;
   rock.vertices = 4;
   rock.offsets = [1, 1, 1, 1];

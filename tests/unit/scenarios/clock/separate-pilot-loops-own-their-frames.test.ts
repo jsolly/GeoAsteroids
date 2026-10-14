@@ -31,7 +31,7 @@ function pilot() {
     updateGame: vi.fn(),
     renderGame: vi.fn(),
     stopAfterFrameFailure: vi.fn(),
-    getNetworkManager: () => ({ isConnected: true, sendMessage: resync }),
+    getNetworkManager: () => ({ sendSnapshotResync: resync }),
   } satisfies EventLoopLifecycle;
   const resync = vi.fn(() => true);
   const present = vi.fn((now: number) => {
@@ -47,7 +47,6 @@ function pilot() {
       get hidden() {
         return hidden;
       },
-      body,
     },
     now: () => 100,
     requestAnimationFrame: (callback: FrameRequestCallback) => {
@@ -156,7 +155,7 @@ test('a hidden pilot resumes at zero delta through its own connection while the 
   a.tick(60016);
   expect(a.lifecycle.updateGame).toHaveBeenLastCalledWith(0);
   expect(a.lifecycle.resetPresentationClock).toHaveBeenCalledOnce();
-  expect(a.resync).toHaveBeenCalledWith({ type: 'snapshotResync', data: {} });
+  expect(a.resync).toHaveBeenCalledOnce();
   expect(b.resync).not.toHaveBeenCalled();
   expect(b.lifecycle.updateGame).toHaveBeenCalledWith(32);
 });
