@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:7ecec8dbbad66ef757897c7033971a8bd3cdb5873c6627d8b04ff07537eccf87",
+    "package.json": "sha256:dc73332d982a7ac324b79229e11306f5328690ebfc5341ac688241124416dfdc",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -570,7 +570,7 @@
       "owners": {}
     },
     {
-      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main\u2019s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
+      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main’s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
@@ -2538,7 +2538,7 @@
       }
     },
     {
-      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75\u219250 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
+      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75→50 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
       "sources": [
         "docs/protocol/snapshot-v2.md",
         "docs/protocol/snapshot-v3.md",
@@ -5938,6 +5938,15 @@
         "src/components/wiki/WikiShell.svelte": "field-manual",
         "src/styles/theme.css": "field-manual",
         "src/components/wiki/ShipScorecard.svelte": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed markdownlint-cli2 0.23.2 to 0.23.3 and its exact lock changes against the field manual. Only development tooling changes; product rules, Wiki content and demonstration assets are unchanged. Clean install and peer resolution, unchanged Markdown and lint policy, TypeScript, benchmark types, Astro/Svelte diagnostics and all downstream static build contracts passed. Existing package overrides keep the product Markdown parser unchanged. Root refreshed the unchanged feature814 Wiki at desktop1280x900 and mobile390x844: native navigation and campaign prerequisite text were readable, with no horizontal overflow or browser warnings/errors. This batch accepts only package.json, preserves all prior records, and does not claim the pending full gate or CI.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
       }
     }
   ]
