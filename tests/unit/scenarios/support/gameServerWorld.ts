@@ -45,6 +45,7 @@ export interface Pilot {
 }
 
 interface JoinOptions {
+  worldRemains?: 1;
   kitId?: ShipKitId;
   resumeToken?: string;
 }
@@ -261,7 +262,12 @@ export class GameServerWorld {
           kitId: options.kitId,
           snapshotVersion: SNAPSHOT_VERSION,
           asteroidInteractions: 1,
-          ...(options.resumeToken ? { resumeToken: options.resumeToken } : {}),
+          cooperativeVersion: 1,
+          ...(options.worldRemains ? { worldRemains: options.worldRemains } : {}),
+
+          ...(options.resumeToken != null && options.resumeToken !== ''
+            ? { resumeToken: options.resumeToken }
+            : {}),
         },
       },
       socket

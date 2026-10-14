@@ -215,7 +215,7 @@ try {
     ? JSON.parse(readFileSync(baselinePath, 'utf8'))
     : { hashes: {} };
   if (
-    !parsed ||
+    parsed === null ||
     typeof parsed !== 'object' ||
     Array.isArray(parsed) ||
     !('hashes' in parsed) ||

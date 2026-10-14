@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { LASER } from '../../../shared/constants/gameplay';
 import type { PlayerProjectileState, PlayerShotAcknowledgement } from '../../../shared-types';
 import type { Ship } from '../ship/Ship';
@@ -34,7 +33,7 @@ export class AuthoritativeProjectileField {
   }
   trackShot(ship: Ship, laser: Laser): string {
     this.expirePendingShots();
-    const requestId = uuidv4();
+    const requestId = crypto.randomUUID();
     this.pending.set(requestId, {
       ship,
       laser,
@@ -93,6 +92,7 @@ export class AuthoritativeProjectileField {
         laser.prevPosition = { ...row.prevPosition };
         laser.velocity = { ...row.velocity };
         laser.bounceCount = row.bounces;
+        laser.energy = row.energy;
         laser.distTraveled = 0;
         laser.hasExploded = false;
         laser.explodeTime = 0;

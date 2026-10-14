@@ -7,7 +7,7 @@ export class LootField {
   private blast: { position: Position; radius: number; until: number } | null = null;
 
   static getInstance(): LootField {
-    if (!LootField.instance) {
+    if (LootField.instance == null) {
       LootField.instance = new LootField();
     }
     return LootField.instance;
@@ -20,6 +20,7 @@ export class LootField {
       mass: drop.mass,
       radius: drop.radius,
       kind: drop.kind,
+      ...(drop.salvage ? { salvage: drop.salvage } : {}),
       ...(drop.points !== undefined ? { points: drop.points } : {}),
     }));
   }

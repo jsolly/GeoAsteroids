@@ -1,11 +1,10 @@
 import type { Position } from '../../shared-types';
 import { AUDIO } from '../constants';
 import { soundIsOn } from '../constants/user-preferences';
-import { rotateVectorInto } from '../rendering/travelCamera';
 import { getDistance } from '../utils/mathUtils';
 import { playSound, type Sound } from './Sound';
 
-type ViewportSize = { width: number; height: number; rotation?: number };
+type ViewportSize = { width: number; height: number };
 
 interface PlaybackPlan {
   shouldPlay: boolean;
@@ -52,12 +51,7 @@ export function isInViewport(
   listener: Position,
   viewport: ViewportSize
 ): boolean {
-  const offset = rotateVectorInto(
-    { x: 0, y: 0 },
-    worldPos.x - listener.x,
-    worldPos.y - listener.y,
-    viewport.rotation ?? 0
-  );
+  const offset = { x: worldPos.x - listener.x, y: worldPos.y - listener.y };
   const screenX = viewport.width / 2 + offset.x;
   const screenY = viewport.height / 2 + offset.y;
   return screenX >= 0 && screenX <= viewport.width && screenY >= 0 && screenY <= viewport.height;
@@ -85,22 +79,20 @@ function maxAudibleDistance(viewport?: ViewportSize): number {
 /**
  * Decide whether to play and at what volume.
  * No position (or no listener) => local / full volume.
- * requireViewport: skip playback when the source is off-screen.
+ * Sources outside the viewport are silent.
  */
 export function planPositionalPlayback(
   sourcePosition: Position | undefined,
   listener: Position | undefined,
-  viewport: ViewportSize | undefined,
-  options?: { requireViewport?: boolean }
+  viewport: ViewportSize | undefined
 ): PlaybackPlan {
   if (sourcePosition === undefined || listener === undefined) {
     return { shouldPlay: true, volumeScale: 1 };
   }
 
-  const requireViewport = options?.requireViewport === true;
   const inViewport = viewport ? isInViewport(sourcePosition, listener, viewport) : true;
 
-  if (requireViewport && viewport && !inViewport) {
+  if (viewport && !inViewport) {
     return { shouldPlay: false, volumeScale: 0 };
   }
 
@@ -109,41 +101,29 @@ export function planPositionalPlayback(
     maxAudibleDistance(viewport)
   );
 
-  if (requireViewport && inViewport) {
+  if (inViewport) {
     volumeScale = Math.max(volumeScale, AUDIO.MIN_IN_VIEWPORT_VOLUME);
   }
 
   return {
     shouldPlay: volumeScale > 0,
     volumeScale,
-    offset: rotateVectorInto(
-      { x: 0, y: 0 },
-      sourcePosition.x - listener.x,
-      sourcePosition.y - listener.y,
-      viewport?.rotation ?? 0
-    ),
+    offset: { x: sourcePosition.x - listener.x, y: sourcePosition.y - listener.y },
   };
 }
 
-export function planBoundPlayback(
-  sourcePosition: Position | undefined,
-  options?: { requireViewport?: boolean }
-): PlaybackPlan {
+export function planBoundPlayback(sourcePosition: Position | undefined): PlaybackPlan {
   if (worldAudioSuppressed) {
     return { shouldPlay: false, volumeScale: 0 };
   }
-  return planPositionalPlayback(sourcePosition, getListenerPosition(), getViewportSize(), options);
+  return planPositionalPlayback(sourcePosition, getListenerPosition(), getViewportSize());
 }
 
-export function playWorldSound(
-  sound: Sound,
-  position?: Position,
-  options?: { requireViewport?: boolean }
-): void {
+export function playWorldSound(sound: Sound, position?: Position): void {
   if (!soundIsOn()) {
     return;
   }
-  const plan = planBoundPlayback(position, options);
+  const plan = planBoundPlayback(position);
   if (!plan.shouldPlay) {
     return;
   }

@@ -43,10 +43,10 @@ export class MessageHandler {
     }
     const decoded = decodeClientCommand(message);
     if (!decoded.ok) {
-      if (decoded.logUnknown) {
+      if (decoded.logUnknown === true) {
         logger.warn(`Unknown message type: ${decoded.messageType}`);
       }
-      if (decoded.error) {
+      if (decoded.error != null && decoded.error !== '') {
         this.broadcaster.sendError(ws, decoded.error);
       }
       return;
@@ -104,15 +104,22 @@ export class MessageHandler {
           const issue = this.gameEngine.travelFurnace(command.id, command.destinationId);
           this.broadcaster.sendToWebSocket(ws, {
             type: 'furnaceTravelResult',
-            data: { ok: !issue, message: issue ?? 'Travelling' },
+            data: { ok: issue == null || issue === '', message: issue ?? 'Travelling' },
             timestamp: this.gameEngine.getServerTime(),
           });
-          if (!issue) {
+          if (issue == null || issue === '') {
             this.broadcaster.broadcastGameState();
           }
           break;
         }
 
+        case 'crewAction': {
+          const owner = this.gameEngine.getPlayerBySocket(ws);
+          if (owner?.id === command.id) {
+            this.gameEngine.crewAction(owner.id, command.action);
+          }
+          break;
+        }
         case 'useAbility':
           this.handleUseAbility(ws, command);
           break;
@@ -141,6 +148,16 @@ export class MessageHandler {
           this.handlePlayerUpdate(ws, command);
           break;
 
+        case 'chargeWeapon': {
+          const pilot = this.gameEngine.getPlayerBySocket(ws);
+          if (pilot?.id === command.id) {
+            const laser = this.gameEngine.chargeWeapon(pilot.id, command.action);
+            if (laser) {
+              this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits(laser.id));
+            }
+          }
+          break;
+        }
         case 'shoot':
           this.handlePlayerShoot(ws, command);
           break;
@@ -183,6 +200,10 @@ export class MessageHandler {
       return;
     }
 
+    if (this.gameEngine.cooperativeEnabled() && command.cooperativeVersion !== 1) {
+      this.broadcaster.sendError(ws, 'Refresh this client to join the cooperative campaign');
+      return;
+    }
     name = sanitizePlayerName(name);
     if (!name) {
       this.broadcaster.sendError(ws, 'Player ID or name is missing or invalid');
@@ -243,7 +264,9 @@ export class MessageHandler {
         return;
       }
       const arrival =
-        command.position && isTownSquareArrival(command.position) ? command.position : undefined;
+        command.position != null && isTownSquareArrival(command.position)
+          ? command.position
+          : undefined;
       player = this.gameEngine.addPlayer(id, name, ws, arrival, command.kitId);
       const registered = this.gameEngine.registerPilot(player, ws, command.clientReleaseId);
       if (!registered.ok) {
@@ -255,7 +278,7 @@ export class MessageHandler {
       this.gameEngine.ensureAsteroidField();
     }
 
-    const snapshotVersion = this.broadcaster.negotiateSnapshot(ws);
+    const snapshotVersion = this.broadcaster.negotiateSnapshot(ws, command.worldRemains === 1);
     const provenance = this.gameEngine.getPilotReleaseProvenance(id);
 
     // Send confirmation to the joining player
@@ -267,6 +290,7 @@ export class MessageHandler {
         position: player.position,
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        chargedWeapons: 1,
         color: player.color,
         kitId: player.kitId,
         terrainSeed: this.gameEngine.getTerrainSeed(),
@@ -284,8 +308,12 @@ export class MessageHandler {
         releaseId: SERVER_RELEASE_ID,
         playerId: id,
         credentialReleaseId: provenance.credentialReleaseId,
-        ...(provenance.scoreReleaseId ? { scoreReleaseId: provenance.scoreReleaseId } : {}),
-        ...(command.clientReleaseId ? { clientReleaseId: command.clientReleaseId } : {}),
+        ...(provenance.scoreReleaseId != null && provenance.scoreReleaseId !== ''
+          ? { scoreReleaseId: provenance.scoreReleaseId }
+          : {}),
+        ...(command.clientReleaseId != null && command.clientReleaseId !== ''
+          ? { clientReleaseId: command.clientReleaseId }
+          : {}),
       });
     }
     logger.info('STATE', 'player_joined', {
@@ -296,7 +324,9 @@ export class MessageHandler {
       resumed: resumedSession,
       snapshotVersion,
       ...provenance,
-      ...(command.clientReleaseId ? { clientReleaseId: command.clientReleaseId } : {}),
+      ...(command.clientReleaseId != null && command.clientReleaseId !== ''
+        ? { clientReleaseId: command.clientReleaseId }
+        : {}),
       ...(player.playerMotion
         ? {
             motionEpoch: player.playerMotion.epoch,
@@ -318,6 +348,9 @@ export class MessageHandler {
       return;
     }
 
+    if (command.motionEpoch === socketPlayer.playerMotion?.epoch) {
+      this.gameEngine.cancelRescueOnMovement(id, update.position, update.velocity, update.angle);
+    }
     this.gameEngine.setOverlayHold(id, update.overlayHold === true);
 
     // Ignore movement updates while the player is dead, exploding, or waiting to
@@ -468,7 +501,7 @@ export class MessageHandler {
     }
 
     const reporterId = this.getReporterId(ws);
-    if (!reporterId || reporterId !== targetPlayerId) {
+    if (reporterId == null || reporterId === '' || reporterId !== targetPlayerId) {
       return;
     }
 
@@ -498,16 +531,17 @@ export class MessageHandler {
     const pilot = this.gameEngine.getPlayer(command.id);
     this.broadcaster.sendToWebSocket(ws, {
       type: 'townStoreResult',
-      data: issue
-        ? { message: issue }
-        : {
-            message: this.gameEngine.townStoreNotice(command.offerId),
-            score: pilot?.score,
-            purchases: pilot?.purchases,
-          },
+      data:
+        issue != null && issue !== ''
+          ? { message: issue }
+          : {
+              message: this.gameEngine.townStoreNotice(command.offerId),
+              score: pilot?.score,
+              purchases: pilot?.purchases,
+            },
       timestamp: Date.now(),
     });
-    if (!issue) {
+    if (issue == null || issue === '') {
       this.broadcaster.broadcastGameState();
     }
   }
@@ -529,9 +563,10 @@ export class MessageHandler {
     if (!socketPlayer || socketPlayer.id !== playerId) {
       return;
     }
-    const latchedTarget = socketPlayer.harpoonTargetId
-      ? this.gameEngine.getAsteroid(socketPlayer.harpoonTargetId)
-      : undefined;
+    const latchedTarget =
+      socketPlayer.harpoonTargetId != null && socketPlayer.harpoonTargetId !== ''
+        ? this.gameEngine.getAsteroid(socketPlayer.harpoonTargetId)
+        : undefined;
     const wasArmed = latchedTarget?.boost?.phase === 'armed';
     const offeringBuild =
       socketPlayer.kitId === 'scout' &&
@@ -640,7 +675,11 @@ export class MessageHandler {
         : {}),
       ...(outcome.envelope ? { envelope: outcome.envelope } : {}),
       ...(outcome.contour ? { contour: outcome.contour } : {}),
-      ...(previous?.suppressed ? { suppressed: previous.suppressed } : {}),
+      ...(previous?.suppressed != null &&
+      previous?.suppressed !== 0 &&
+      !Number.isNaN(previous?.suppressed)
+        ? { suppressed: previous.suppressed }
+        : {}),
     });
     this.motionRejections.set(ws, { lastThrottleAt: throttleAt, suppressed: 0 });
   }
@@ -657,7 +696,11 @@ export class MessageHandler {
       playerId: owner?.id,
       receivedAt,
       gameTime: this.gameEngine.getDiagnostics().gameTime,
-      ...(previous?.suppressed ? { suppressed: previous.suppressed } : {}),
+      ...(previous?.suppressed != null &&
+      previous?.suppressed !== 0 &&
+      !Number.isNaN(previous?.suppressed)
+        ? { suppressed: previous.suppressed }
+        : {}),
     });
     this.snapshotResyncLogs.set(ws, { lastThrottleAt: throttleAt, suppressed: 0 });
   }

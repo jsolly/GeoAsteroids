@@ -131,8 +131,10 @@ export async function readGameLogs(files: LogInput[], query: LogQuery) {
           continue;
         }
         if (
-          (query.playerId && record.playerId !== query.playerId) ||
-          (query.sessionId && record.sessionId !== query.sessionId) ||
+          (query.playerId != null && query.playerId !== '' && record.playerId !== query.playerId) ||
+          (query.sessionId != null &&
+            query.sessionId !== '' &&
+            record.sessionId !== query.sessionId) ||
           (query.source && record.source !== query.source) ||
           (query.since !== undefined && at < query.since)
         ) {
@@ -149,7 +151,7 @@ export async function readGameLogs(files: LogInput[], query: LogQuery) {
       readFiles++;
     } catch (error) {
       if (
-        !input.optional ||
+        input.optional !== true ||
         !(error instanceof Error) ||
         !('code' in error) ||
         error.code !== 'ENOENT'

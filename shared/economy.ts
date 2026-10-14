@@ -54,7 +54,7 @@ export function settlementProgress(state: SettlementState): number {
 }
 export function validSettlement(value: unknown): value is SettlementState {
   if (
-    !value ||
+    value === null ||
     typeof value !== 'object' ||
     !('level' in value) ||
     !('points' in value) ||

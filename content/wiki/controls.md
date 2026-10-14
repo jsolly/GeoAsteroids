@@ -19,7 +19,7 @@ The viewport and maps keep north at the top while your ship turns. Point or drag
 
 ## Keyboard
 
-Steer with A/D or Left/Right, hold Space to fire, and press E for your equipped tool. Thrust is automatic; reaching a lit furnace ring with cargo stops either ship to [offload](/wiki/#loot-growth) until the hold empties or you steer away. Shift toggles Contour Lock.
+Steer with A/D or Left/Right, hold Space to fire, hold F and release for a charged beam, and press E for your equipped tool. Thrust is automatic; reaching a lit furnace ring with cargo stops either ship to [offload](/wiki/#loot-growth) until the hold empties or you steer away. Shift toggles Contour Lock; [ and ] hop toward lower and higher neighboring contours while settled on a line.
 
 ## Mouse
 
@@ -27,7 +27,7 @@ Move the pointer to steer toward it, click to fire (each click is one shot; hold
 
 ## Touch
 
-Hold or drag one finger to steer; release to keep your heading. A quick tap fires once, or hold a second finger to fire continuously while steering. Use the on-screen ability and Contour Lock buttons for tools and contour travel. Leaving the tab or app releases every held control.
+Hold or drag one finger to steer; release to keep your heading. A quick tap fires once, or hold two fingers on the playfield to charge a large beam while the first keeps steering; lifting either finger releases it. Use the on-screen ability and Contour Lock buttons for tools and contour travel. Leaving the tab or app releases every held control.
 
 ## Contour Lock
 
@@ -35,7 +35,7 @@ Near a visible contour, tap Contour Lock to catch it and follow its curves at ex
 
 ## Mobile contour hopping
 
-While settled in Contour Lock, flick back along your line to reverse, or flick toward an adjacent line to glide onto it; a diagonal flick chooses your new travel direction. Use one finger, move at least 24 screen pixels within 220 milliseconds, and release briskly. A rising chime confirms a successful change and a softer falling chime marks a blocked attempt; flicks reach a little farther than ordinary lock pickup, but unreachable lines and flicks made while still joining a line leave your route unchanged.
+While settled in Contour Lock, flick back along your line to reverse, or flick toward an adjacent line to glide onto it; a diagonal flick chooses your new travel direction. Use one finger, move at least 24 screen pixels within 220 milliseconds, and release briskly. Make at most three adjacent hops without a two-second pause; the third leaves a [crew bridge](/wiki/#terrain). A rising chime confirms a successful change and a softer falling chime marks a blocked attempt; flicks reach a little farther than ordinary lock pickup, but unreachable lines and flicks made while still joining a line leave your route unchanged.
 
 ## Contour travel
 
@@ -43,7 +43,7 @@ Follow the gray lines for extra speed in either direction; crossing them keeps n
 
 ## Inventory and menus
 
-V or Inventory opens your ship schematic to choose [owned tools](/wiki/#loot-growth) and equip [satellites](/wiki/#satellites). Map, Inventory, and the furnace menu hold your ship safely while the world keeps moving; satellite health still drains and you cannot collect pickups. Your ship stops dead and drops Contour Lock. Close with Escape or the close control to resume flight with brief blink protection. Return to flight also restores keyboard focus to the playfield. Your equipped tool is remembered in this browser.
+V or Inventory opens your ship schematic to choose [owned tools](/wiki/#loot-growth) and equip [satellites](/wiki/#satellites). Map, Inventory, and the furnace menu hold your ship safely while the world keeps moving; satellite health still drains and you cannot collect pickups. Your ship stops dead and drops Contour Lock. Close with Escape or the close control to resume flight with brief blink protection. Return to flight also restores keyboard focus to the playfield. Each join starts with Tow Cable or Mineral Scan.
 
 ## Furnace travel and store
 
@@ -62,3 +62,7 @@ M or Map opens the shared universe chart centred on your ship. Drag to pan and p
 Tab reaches menu controls and the touch tool and Contour Lock buttons; Enter or Space activates a focused button. Focus the universe chart itself for arrow-key panning and +/− zoom, because a focused button keeps its normal keyboard behavior. On the furnace destination map, Tab selects a lit stop and Enter chooses it.
 
 Your device's reduced-motion setting skips the opening camera dive, steadies prominent loot and travel flames, and replaces Wiki animations with still images. The game still moves in real time. The universe chart also exposes a text list of revealed landmarks and crew coordinates for assistive technology.
+
+## Campaign controls
+
+Use Help here or Nest here to signal nearby crew; Shift-click Map on desktop or tap without dragging on touch to place a help signal. With a keyboard, pan with the arrow keys, then choose Signal help at center or press Shift+Enter on the chart; signals reach nearby crew only. Hold Revive near a downed pilot, or activate it with a keyboard or assistive control to start or cancel; see [rescue rules](/wiki/#combat-survival). At a stocked furnace, a Hauler with Tow Cable can choose Tow supply for [frontier restoration](/wiki/#teamwork).

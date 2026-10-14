@@ -150,7 +150,6 @@ export function drawBeltEncounters(pilot: Position, roids: readonly Roid[]): voi
     ctx.setLineDash([]);
     ctx.font = `${12 / scale}px monospace`;
     ctx.textAlign = 'center';
-    ctx.rotate(-canvasManager.getCameraRotation());
     ctx.fillText('REFORMING · KEEP CLEAR', 0, -warning.size - 16 / scale);
     ctx.restore();
   }
@@ -163,7 +162,7 @@ export function drawBeltEncounters(pilot: Position, roids: readonly Roid[]): voi
       continue;
     }
     const host = byId.get(spider.crawler.hostId);
-    if (host) {
+    if (host != null) {
       drawCrawler(ctx, spider, host, pilot, scale, time);
     }
   }

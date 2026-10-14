@@ -1,9 +1,6 @@
 import type { Position } from '../../shared-types';
-import { rotateVectorInto } from './travelCamera';
 
 export type PlayfieldSize = { width: number; height: number };
-
-const projectScratch = { x: 0, y: 0 };
 
 /** Single close/play scale used by the renderer; the minimap is the wide view. */
 export const PLAYFIELD_CLOSE_SCALE = 1;
@@ -14,45 +11,13 @@ export function projectWorldToScreenInto(
   world: Position,
   ship: Position,
   canvas: PlayfieldSize,
-  scale = 1,
-  rotation = 0
+  scale = 1
 ): { x: number; y: number } {
-  rotateVectorInto(out, world.x - ship.x, world.y - ship.y, rotation);
+  out.x = world.x - ship.x;
+  out.y = world.y - ship.y;
   out.x = canvas.width / 2 + out.x * scale;
   out.y = canvas.height / 2 + out.y * scale;
   return out;
-}
-
-export function isRockOnCanvas(
-  world: Position,
-  ship: Position,
-  canvas: PlayfieldSize,
-  scale = 1,
-  margin = 0
-): boolean {
-  const screen = projectWorldToScreenInto(projectScratch, world, ship, canvas, scale);
-  return (
-    screen.x >= -margin &&
-    screen.x <= canvas.width + margin &&
-    screen.y >= -margin &&
-    screen.y <= canvas.height + margin
-  );
-}
-
-export function countRocksOnCanvas(
-  roids: ReadonlyArray<{ position: Position }>,
-  ship: Position,
-  canvas: PlayfieldSize,
-  scale = 1,
-  margin = 0
-) {
-  let count = 0;
-  for (const roid of roids) {
-    if (isRockOnCanvas(roid.position, ship, canvas, scale, margin)) {
-      count += 1;
-    }
-  }
-  return count;
 }
 
 const EMPTY_OFFSETS = [1];

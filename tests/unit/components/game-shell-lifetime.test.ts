@@ -99,6 +99,8 @@ beforeEach(async () => {
   teardownOrder = [];
   runtime = {
     commands: {
+      crewAction: vi.fn(),
+      signalHere: vi.fn(),
       join: vi.fn(),
       selectShip: vi.fn(),
       setPreference: vi.fn(),
@@ -108,7 +110,6 @@ beforeEach(async () => {
       equipSatellite: vi.fn(),
       equipUtility: vi.fn(),
       drawInventory: vi.fn(() => ({ refresh: vi.fn(), dispose: vi.fn() })),
-      openTownStore: vi.fn(),
       closeTownStore: vi.fn(),
       selectTownView: vi.fn(),
       purchaseTownOffer: vi.fn(),
@@ -259,7 +260,6 @@ test('play and geometry update body classes synchronously and preserve shell can
     mapX: 300,
     mapY: 200,
     schematicY: 148,
-    storeY: 96,
   });
   expect(document.body.classList.contains('touch-play')).toBe(false);
   publish({ ...initialView, inPlay: true });
@@ -275,7 +275,6 @@ test('play and geometry update body classes synchronously and preserve shell can
   expect(wrapper.style.getPropertyValue('--map-toggle-x')).toBe('300px');
   expect(wrapper.style.getPropertyValue('--map-toggle-y')).toBe('200px');
   expect(wrapper.style.getPropertyValue('--schematic-toggle-y')).toBe('148px');
-  expect(wrapper.style.getPropertyValue('--store-toggle-y')).toBe('96px');
   expect(element('#start-screen', HTMLDivElement).hidden).toBe(true);
   publish({ ...initialView, failureNotice: 'Restart your flight.' });
   expect(document.body.classList.contains('in-play')).toBe(false);
@@ -300,7 +299,6 @@ test('play and geometry update body classes synchronously and preserve shell can
     mapX: 0,
     mapY: 0,
     schematicY: 0,
-    storeY: 0,
   });
   publish({ ...initialView, inPlay: true });
   expect(document.body.className).toBe('existing touch-play');

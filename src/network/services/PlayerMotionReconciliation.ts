@@ -77,7 +77,7 @@ export class PlayerMotionReconciliation {
     ) {
       throw new RangeError('Invalid authoritative player motion snapshot');
     }
-    if (this.actorId && snapshot.id !== this.actorId) {
+    if (this.actorId != null && this.actorId !== '' && snapshot.id !== this.actorId) {
       this.reset();
     }
     const previous = this.motion;
@@ -110,7 +110,9 @@ export class PlayerMotionReconciliation {
     if (state.mode !== 'free' || newEpoch || resumed || wasConstrained) {
       ship.position = { ...snapshot.position };
       ship.velocity = { ...snapshot.velocity };
-      ship.knockbackVelocityLimit = Math.hypot(snapshot.velocity.x, snapshot.velocity.y);
+      ship.knockbackVelocityLimit = snapshot.contourLock
+        ? 0
+        : Math.hypot(snapshot.velocity.x, snapshot.velocity.y);
       ship.angle = snapshot.angle;
       ship.mass = snapshot.mass;
     }

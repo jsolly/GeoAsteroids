@@ -134,7 +134,7 @@ test('a pose credited a blocked server second lands where the pilot flew and is 
   const speed = engine.playerMotion.legalSpeed(pilot, engine.getServerTime());
   // Reported velocity stays at flat cruise. A town-ring departure can be on a
   // descent, and the next pose is rejected if it keeps that bonus onto flatter ground.
-  const flat = cruiseSpeed(pilot.mass, getShipKit(pilot.kitId).maxVelocity);
+  const flat = cruiseSpeed(pilot.mass, getShipKit(pilot.kitId).maxVelocity, 0, 1);
   const start = { ...pilot.position };
   const cruise = (sequence: number, frames: number) => ({
     type: 'update',

@@ -3,7 +3,7 @@ import { ExplorationMap } from '../../../shared/exploration';
 import { WORLD } from '../../../shared/world';
 import type { TerrainSpider } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { resetWorldExploration, setWorldExploration } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
 import { computeHudLayout } from '../../../src/rendering/hud/hudLayout';
@@ -21,7 +21,6 @@ test('radar follows a living spider beacon and hides destroyed or distant beacon
     id: 'scout',
     name: 'Scout',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.ship.position = { x: 0, y: 0 };
   const spider: TerrainSpider = {

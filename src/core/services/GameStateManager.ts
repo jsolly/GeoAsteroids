@@ -2,8 +2,6 @@ import { logger } from '../../utils/Logger';
 
 export class GameStateManager {
   private static instance: GameStateManager;
-  private textAlpha = 1;
-  private text = '';
   private isGameRunning = false;
 
   private pickupMessage = '';
@@ -13,33 +11,14 @@ export class GameStateManager {
   private constructor() {}
 
   static getInstance(): GameStateManager {
-    if (!GameStateManager.instance) {
+    if (GameStateManager.instance == null) {
       GameStateManager.instance = new GameStateManager();
     }
     return GameStateManager.instance;
   }
 
-  getTextAlpha(): number {
-    return this.textAlpha;
-  }
-
-  getText(): string {
-    return this.text;
-  }
-
   getIsGameRunning(): boolean {
     return this.isGameRunning;
-  }
-
-  updateTextProperties(text: string, alpha: number): void {
-    this.text = text;
-    this.textAlpha = alpha;
-  }
-
-  clearOverlay(): void {
-    this.text = '';
-    this.textAlpha = 0;
-    this.clearPickupMessage();
   }
 
   setIsGameRunning(running: boolean): void {

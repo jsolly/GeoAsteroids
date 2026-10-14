@@ -133,7 +133,7 @@ browser smoke policy live in [tests/AGENTS.md](../tests/AGENTS.md).
 
 ### Two processes, one game
 
-- **Client** (`src/`, served and built by Astro with Vite): rendering, input, prediction, HUD. Static game and debug routes share `src/components/GameDocument.astro` → `src/components/game/GameShell.svelte` → `src/runtime/gameRuntime.ts`, which composes an injected `EventLoop` and bootstraps `GameController` (singleton) which wires `GameStateManager`, `PlayerManager`, `InputManager`, `NetworkManager`, `CollisionManager`.
+- **Client** (`src/`, served and built by Astro with Vite): rendering, input, prediction, HUD. Static game and debug routes share `src/components/GameDocument.astro` → `src/components/game/GameShell.svelte` → `src/runtime/gameRuntime.ts`, which composes an injected `EventLoop` and bootstraps `GameController` (singleton) which wires `GameStateManager`, `PlayerManager`, `InputManager`, `ConnectionManager`, `CollisionManager`.
 - **Server** (`server.ts` → `server/`): authoritative game loop. `GameEngine` owns world state via `EntityManager`, `AsteroidManager`, deterministic `RNGService`. `WebSocketCore` (`server/communication/`) routes messages through `MessageHandler`. `GameStateBroadcaster` periodically pushes state.
 - **Two WebSocket paths on the same server**: `/ws` for gameplay, `/logs` for forwarded client logs (`ClientLogger` writes them to `logs/client.log`). HTTP routes on the same port: `/health`, `/status` (HTML or JSON depending on Accept/UA), `/test-server-log` (development/test only).
 
@@ -150,13 +150,13 @@ use a private resume token. See [snapshot deployment](protocol/snapshot-v3.md#de
 
 ### Server-authoritative model
 
-Asteroids live on the server; clients render snapshots. Clients still simulate their local ship for responsiveness. `playerNetwork.ts` and `network/networkManager.ts` handle outbound (input/shoot) and inbound (state) messages. Shared message/payload types live in `shared-types.ts` (top level, imported by both client and server).
+Asteroids live on the server; clients render snapshots. Clients still simulate their local ship for responsiveness. `GameController` owns the wall-clock 60 Hz pose timer; `network/services/ConnectionManager.ts` owns outbound commands and inbound state. Shared message/payload types live in `shared-types.ts` (top level, imported by both client and server).
 
 `shared/` holds the gameplay rules both sides must agree on (ship flight, combat, asteroid materials/reflection, furnaces, economy, exploration, world interest radii in `shared/world.ts`). Client prediction and the server simulation import the same module, so change a rule there once rather than mirroring it in `src/` and `server/`.
 
 The injected slice covers EventLoop lifecycle, collision messaging, PlayerManager's
 network port, and each Ship's combat capability. GameController creates the
-production PlayerManager with NetworkManager's connection-owned capabilities;
+production PlayerManager with ConnectionManager's capabilities;
 authoritative snapshot creation passes that same connection's capability through
 the factory to Player and Ship. Later singleton access cannot rebind an instance.
 Other UI, world, rendering, telemetry, audio and network singleton entrypoints remain;
@@ -168,10 +168,11 @@ the tested independent graphs do not represent two complete games or sockets.
 - `src/core/eventLoop.ts` — injected render/update loop with owned RAF and visibility/start listeners; `dispose()` cancels its work and removes those listeners. `src/runtime/gameRuntime.ts` owns browser startup and the production HUD callback.
 - `src/entities/{player,ship,roid,laser,satellite,satellitePickup,loot}/` — entity classes and their managers/renderers. Ship motion and combat live in `Ship.ts` and its ship helpers.
 - `src/physics/CollisionManager.ts` — client collision system; boundary checks live in `shared/boundary.ts`.
-- `src/network/networkManager.ts` + `services/ConnectionManager.ts` — WS lifecycle, reconnection, message dispatch.
+- `src/network/services/ConnectionManager.ts` — WS lifecycle, reconnection, message dispatch.
+
 - `src/rendering/{canvas,boundaryRenderer,hud/}` — canvas + HUD; `GameController.renderGame` calls `canvasManager.drawGame`.
-- `src/input/{PlayerInput,MockPlayerInput,mouse}.ts` — input abstraction; `MockPlayerInput` is what tests drive.
-- `shared/constants/gameplay.ts` — gameplay tuning both sides enforce (`GAME`, `SHIP`, `LASER`, `ROID`, deposits, pickups, snapshot colours) and the simulation `DEBUG` flags.
+- `src/input/{keybindings,mouse,touchControls,controlSources}.ts` — input sources; `reconcilePlayerInput` applies controls to the local ship.
+- `shared/constants/gameplay.ts` — gameplay tuning both sides enforce (`GAME`, `SHIP`, `LASER`, `ROID`, deposits, pickups, snapshot colours).
 - `src/constants/index.ts` — client presentation tuning (`VISUAL`, `PALETTE`, `TOUCH`, `AUDIO`) and `LOGGING`.
 
 ### Debug & logging
@@ -180,13 +181,7 @@ For client diagnostics, visit `/debug`; add `?log-level=debug` for verbose clien
 logs, or `?log-level=info` or `?log-level=warn` to select a quieter threshold.
 The normal `/` page uses Info and never remembers debug mode.
 
-Simulation debug overrides remain compile-time constants, not URL or environment
-settings. Set `DEBUG.ENABLED = true` in `shared/constants/gameplay.ts` when those
-local world overrides are needed; the server reads that switch alone. The client's
-debug drawing also requires `LOGGING.GLOBAL_LOG_LEVEL = 'debug'` in
-`src/constants/index.ts`; that constant does not select client log verbosity.
-
-Notable flags under `DEBUG.*`: `ROIDS.{INITIAL_COUNT,MOVEMENT,PLACE_ON_LOCAL_PLAYER}`, `PLACE_PLAYERS_NEAR_BOUNDARY`. Client logs forward over `/logs` to the server; both ends append to:
+Client logs forward over `/logs` to the server; both ends append to:
 
 - `logs/client.log` — client-side (forwarded over WS)
 - `logs/server.log` — server-side
@@ -241,6 +236,8 @@ retain their scenario-owned fixtures.
 | --- | --- | --- |
 | Astro (client + `/ws` and `/logs` proxies) | 5173 | `curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/` → `200` |
 | Game server (HTTP + WS) | 3001 | `curl http://localhost:3001/health` |
+
+Browser identity uses `crypto.randomUUID()` and requires HTTPS or a localhost secure context.
 
 Start both with `npm run dev` (`./scripts/dev-server.sh`) for interactive development. The command refuses to attach to occupied ports; inspect the owner or choose isolated ports for the interactive session. The launcher keeps `astro dev --ignore-lock` in the foreground under its recorded process tree and owns both services, including content-triggered Astro restarts. Status: `npm run dev:check`. Stop: `npm run dev:kill`, which signals only the process tree recorded for this checkout. Code integration scenarios create their own port-zero loopback servers. Manual benchmark harnesses own separate configured service pairs and refuse occupied ports.
 

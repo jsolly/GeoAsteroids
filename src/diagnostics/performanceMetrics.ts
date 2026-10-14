@@ -205,9 +205,13 @@ export class ClientPerformanceMetrics {
   private recoveryStartedAt: number | undefined;
   private startedAt = this.phaseStartedAt;
   private nextExportAt = this.startedAt + 15_000;
-  public serverReleaseId: string | undefined;
+  private readServerReleaseId: (() => string | undefined) | undefined;
 
   constructor(public readonly enabled: boolean) {}
+
+  observeServerRelease(observe: (() => string | undefined) | undefined): void {
+    this.readServerReleaseId = observe;
+  }
 
   setPhase(phase: Phase): void {
     const now = performance.now();
@@ -397,7 +401,7 @@ export class ClientPerformanceMetrics {
         gpuStats: renderer?.gpuStats ?? null,
       },
       clientReleaseId: getClientReleaseId(),
-      serverReleaseId: this.serverReleaseId ?? 'unknown',
+      serverReleaseId: this.readServerReleaseId?.() ?? 'unknown',
       durationMs: now - this.startedAt,
       phase: this.phase,
       pendingJoin: this.joinStartedAt !== undefined,

@@ -15,7 +15,7 @@ export type ScanDecision = 'not-due' | 'waiting-authoritative' | 'waiting-ui' | 
 /** Bind the natural workload before its first world, using the actual negotiated acknowledgment. */
 export function bindRegionalPilotOwner(data: unknown, previousOwner: string | undefined): string {
   if (
-    !data ||
+    data === null ||
     typeof data !== 'object' ||
     Array.isArray(data) ||
     !('id' in data) ||
@@ -137,7 +137,7 @@ export function requireAppliedRegionalWork(
   ownerId: string | undefined,
   measuredSession: number | undefined
 ) {
-  if (!ownerId || applied.ownerId !== ownerId) {
+  if (ownerId == null || ownerId === '' || applied.ownerId !== ownerId) {
     throw new Error('Applied regional snapshot has no matching browser owner');
   }
   if (

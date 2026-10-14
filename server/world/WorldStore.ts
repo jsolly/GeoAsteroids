@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { type BeltSlotState, readBeltState } from '../../shared/asteroidBelt';
+import { validCooperativeRecord } from '../../shared/cooperativeWorld';
 import { ECONOMY, emptySettlement, validSettlement } from '../../shared/economy';
 import { epochField } from '../../shared/epochField';
 import { validEquipment } from '../../shared/equipment';
@@ -24,7 +25,8 @@ import type {
   ShipKitId,
   Velocity,
 } from '../../shared-types';
-import type { LoadedWorld } from './worldPersistence';
+import { readCooperativeWorld } from './cooperativeSchema';
+import type { LoadedWorld, WorldCheckpoint } from './worldPersistence';
 
 const PILOT_TOKEN_HASH_PATTERN = /^[a-f0-9]{64}$/u;
 
@@ -110,7 +112,7 @@ export interface SavedWorld {
 }
 
 function readVector(value: unknown): Position | undefined {
-  if (!value || typeof value !== 'object') {
+  if (value === null || typeof value !== 'object') {
     return undefined;
   }
   const vector = value as Record<string, unknown>;
@@ -194,7 +196,7 @@ function readReleaseProvenance(
 }
 
 function readPilot(value: unknown): PersistentPilot | undefined {
-  if (!value || typeof value !== 'object') {
+  if (value === null || typeof value !== 'object') {
     return undefined;
   }
   const pilot = value as Record<string, unknown>;
@@ -454,7 +456,7 @@ export class WorldStore {
     this.worldJson = String(row['json']);
     const value: unknown = JSON.parse(this.worldJson);
     if (
-      !value ||
+      value === null ||
       typeof value !== 'object' ||
       !('seed' in value) ||
       !('startedAt' in value) ||
@@ -517,11 +519,13 @@ export class WorldStore {
   load(): LoadedWorld {
     const row = this.db.prepare('SELECT json FROM economy WHERE id=1').get();
     const saved: unknown = row ? JSON.parse(String(row['json'])) : {};
-    if (!saved || typeof saved !== 'object') {
+    if (saved === null || typeof saved !== 'object') {
       throw new Error('Invalid saved economy');
     }
+    const cooperative = readCooperativeWorld(this.db);
     const economy = { settlement: readSettlement(saved), pointLoot: readPointLoot(saved) };
     return {
+      ...(cooperative ? { cooperative } : {}),
       economy,
       world: this.loadWorld(),
       pilots: this.loadPilots(),
@@ -555,7 +559,8 @@ export class WorldStore {
     world: SavedWorld | undefined,
     sectors: ReadonlyMap<string, AsteroidData[]>,
     pilots: readonly PersistentPilot[],
-    economy?: SavedEconomy
+    economy?: SavedEconomy,
+    cooperative?: WorldCheckpoint['cooperative']
   ): void {
     const validatedSectors = [...sectors].map(([id, rocks]): [string, AsteroidData[]] => [
       id,
@@ -566,8 +571,38 @@ export class WorldStore {
     const changedPilots = pilots
       .map((pilot) => ({ id: pilot.id, json: JSON.stringify(pilot) }))
       .filter((pilot) => this.pilotJson.get(pilot.id) !== pilot.json);
+    if (cooperative) {
+      const marker = this.db.prepare('SELECT version,activated FROM cooperative_schema').get();
+      if (marker?.['version'] !== 1 || marker['activated'] !== 1) {
+        throw new Error('Cooperative world is not activated');
+      }
+      for (const row of cooperative.records) {
+        if (!validCooperativeRecord(row)) {
+          throw new Error('Invalid cooperative checkpoint');
+        }
+      }
+      if (
+        new Set(cooperative.records.map((row) => `${row.kind}:${row.id}`)).size !==
+          cooperative.records.length ||
+        cooperative.removed.some((id) => !id.startsWith('downed:'))
+      ) {
+        throw new Error('Invalid cooperative identities');
+      }
+    }
     this.db.exec('BEGIN IMMEDIATE');
     try {
+      if (cooperative) {
+        const write = this.db.prepare(
+          'INSERT OR REPLACE INTO cooperative_records(id,json) VALUES(?,?)'
+        );
+        for (const row of cooperative.records) {
+          write.run(`${row.kind}:${row.id}`, JSON.stringify(row));
+        }
+        const remove = this.db.prepare('DELETE FROM cooperative_records WHERE id=?');
+        for (const id of cooperative.removed) {
+          remove.run(id);
+        }
+      }
       if (worldJson !== undefined && this.worldJson !== worldJson) {
         this.db.prepare('INSERT OR REPLACE INTO world(id,json) VALUES(1,?)').run(worldJson);
       }
@@ -605,6 +640,9 @@ export class WorldStore {
   reset(): void {
     this.db.exec('BEGIN IMMEDIATE');
     try {
+      if (readCooperativeWorld(this.db)) {
+        this.db.exec('DELETE FROM cooperative_records; UPDATE cooperative_schema SET activated=0;');
+      }
       this.db.exec(
         'DELETE FROM sectors; DELETE FROM pilots; DELETE FROM world; DELETE FROM economy;'
       );

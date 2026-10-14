@@ -86,7 +86,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       stopClientLogForwarder();
       const { GameController } = await import('../src/core/gameController');
       const { GameStateManager } = await import('../src/core/services/GameStateManager');
-      const { NetworkManager } = await import('../src/network/networkManager');
+      const { ConnectionManager } = await import('../src/network/services/ConnectionManager');
       const { canvasManager } = await import('../src/rendering/canvasSurface');
       const { Roid } = await import('../src/entities/roid/Roid');
       const { LootField } = await import('../src/entities/loot/LootField');
@@ -100,7 +100,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       const { setPlayView } = await import('../src/ui/uiUtils');
       const game = GameController.getInstance();
       const state = GameStateManager.getInstance();
-      const network = NetworkManager.getInstance();
+      const network = ConnectionManager.getInstance();
       if (state.getIsGameRunning() || network.isConnected) {
         throw new Error('Fixture booted live gameplay');
       }
@@ -144,11 +144,20 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       for (let index = 0; index < 24; index++) {
         const angle = (index / 24) * Math.PI * 2;
         const radius = 105 + (index % 3) * 14;
-        const roid = new Roid(
-          { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
-          5 + (index % 3) * 2,
-          `benchmark-asteroid-${index}`
-        );
+        const size = 5 + (index % 3) * 2;
+        const roid = new Roid({
+          id: `benchmark-asteroid-${index}`,
+          position: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
+          size,
+          velocity: { x: 0.005, y: -0.003 },
+          rotation: 0,
+          angularVelocity: 0,
+          health: size * 10,
+          maxHealth: size * 10,
+          vertices: 8,
+          jaggedness: 0.5,
+          offsets: [1, 1, 1, 1, 1, 1, 1, 1],
+        });
         roid.velocity = { x: 0.005, y: -0.003 };
         belt.roids.push(roid);
       }
@@ -192,10 +201,10 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         setSpiderField({ nests: [], spiders });
         restores.push(() => setSpiderField(undefined));
       }
-      state.clearOverlay();
+      state.clearPickupMessage();
       ensureTerrain(options.seed);
-      document.body.classList.add('in-play');
       setPlayView(true);
+      restores.push(() => setPlayView(false));
       document.body.classList.add('in-play');
       document.body.classList.toggle('touch-play', options.viewport !== 'desktop');
       const probe = document.querySelector('#safe-area-probe');
@@ -306,7 +315,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       // Preserve writes so the fixture still exercises normal simulation.
       function observeRead(target: object, key: string, name: string) {
         const descriptor = Object.getOwnPropertyDescriptor(target, key);
-        if (!descriptor || !('value' in descriptor) || !descriptor.configurable) {
+        if (!descriptor || !('value' in descriptor) || descriptor.configurable !== true) {
           throw new Error(`Cannot observe ${name}`);
         }
         let value: unknown = descriptor.value;
@@ -730,10 +739,10 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         const { hudLayoutForCanvas, computeHudLayout } = await import(
           '../src/rendering/hud/hudLayout'
         );
-        const { drawScoreOverlay, drawTextOverlay } = await import('../src/rendering/hud/gameInfo');
+        const { drawScoreOverlay } = await import('../src/rendering/hud/gameInfo');
         const { drawMiniMap } = await import('../src/rendering/hud/minimap');
         const { drawLeaderboard } = await import('../src/rendering/hud/leaderboard');
-        const { entityFactory } = await import('../src/entities/EntityFactory');
+        const { createPlayer } = await import('../src/entities/player/createPlayer');
         const { drawFieryBoundary } = await import('../src/rendering/boundaryRenderer');
         const { WORLD_BOUNDARY } = await import('../shared/boundary');
         const reads = { safeAreaStyles: 0, pointerMediaQueries: 0 };
@@ -785,18 +794,17 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
           SatellitePickupManager.getInstance().getAll(),
           []
         );
-        drawScoreOverlay(ctx, layout, viewport, local.score);
-        drawTextOverlay(ctx, layout, viewport, 'You were killed by an asteroid', 1);
-        const rival = entityFactory.createRemotePlayer(
-          'benchmark-rival',
-          'Benchmark Rival',
-          { x: 0, y: 0 },
-          '#55aaff'
-        );
+        drawScoreOverlay(ctx, layout, viewport, local);
+        const rival = createPlayer({
+          id: 'benchmark-rival',
+          name: 'Benchmark Rival',
+          type: 'remote',
+          position: { x: 0, y: 0 },
+          color: '#55aaff',
+        });
         drawLeaderboard(ctx, layout, [local, rival], local.id);
         record = false;
         if (
-          !textCalls.some((text) => text.includes('killed by')) ||
           !textCalls.some((text) => text.includes('Benchmark')) ||
           (canvasCalls['canvas.fillText'] ?? 0) < 2
         ) {
@@ -906,7 +914,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       `Fixture execution or restoration failed: ${[...operationFailures, ...cleanupFailures].map((error) => (error instanceof Error ? error.message : String(error))).join('; ')}`
     );
   }
-  if (!result) {
+  if (result == null) {
     throw new Error('Client fixture completed without a result');
   }
   return result;

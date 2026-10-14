@@ -1,5 +1,6 @@
 import type { AsteroidData, CivicModule, Position } from '../shared-types';
 import { oreResource, oreYield } from './economy';
+import { frontierSite } from './frontier';
 import { WORLD } from './world';
 
 /** Respawn and fresh-join ring around the Town Square grate. */
@@ -210,7 +211,7 @@ function tailClearsOtherGrates(from: Position, to: Position, tail: readonly Posi
   for (let index = 0; index < points.length - 1; index += 1) {
     const start = points[index];
     const end = points[index + 1];
-    if (!start || !end) {
+    if (start == null || !end) {
       continue;
     }
     const first = index === 0;
@@ -348,6 +349,10 @@ export function pipeHopToParent(lotId: string): readonly Position[] {
  * The first point is the source. Town Square itself is a single point.
  */
 export function pipeToTownSquare(furnaceId: string): readonly Position[] {
+  const frontier = frontierSite(furnaceId);
+  if (frontier) {
+    return [frontier.position, { x: 0, y: frontier.position.y }, TOWN_HEARTH.position];
+  }
   if (furnaceId === TOWN_HEARTH.id) {
     return [TOWN_HEARTH.position];
   }
@@ -361,7 +366,7 @@ export function pipeToTownSquare(furnaceId: string): readonly Position[] {
     seen.add(id);
     const hop = PIPE_HOPS.get(id);
     const lot = LOT_BY_ID.get(id);
-    if (!hop || hop.length < 2 || !lot) {
+    if (!hop || hop.length < 2 || lot == null) {
       return [];
     }
     const points = path.length === 0 ? hop : hop.slice(1);
@@ -405,7 +410,7 @@ const MODULE_BUILDER_NAME = /^[A-Za-z0-9 ]{0,20}$/u;
 function litParentReady(ids: ReadonlySet<string>): boolean {
   for (const id of ids) {
     const lot = LOT_BY_ID.get(id);
-    if (!lot) {
+    if (lot == null) {
       return false;
     }
     if (lot.parentId !== TOWN_HEARTH.id && !ids.has(lot.parentId)) {

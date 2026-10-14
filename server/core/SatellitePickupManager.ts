@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { logger } from '../../setup/serverLogger';
-import { DEBUG, SATELLITE_PICKUP, WIRE_PALETTE } from '../../shared/constants/gameplay';
+import { SATELLITE_PICKUP, WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { satelliteProfileAt } from '../../shared/eoSatellites';
 import {
   attachOrbitPosition,
@@ -58,11 +58,7 @@ export class SatellitePickupManager {
 
   public createPickups(count: number = SATELLITE_PICKUP.MAX_COUNT): SatellitePickupData[] {
     this.pickups.clear();
-    const configuredCount = DEBUG.ENABLED ? DEBUG.SATELLITE_PICKUP.COUNT : count;
-    const spawnCount = Math.min(
-      Math.max(0, Math.trunc(configuredCount)),
-      SATELLITE_PICKUP.MAX_COUNT
-    );
+    const spawnCount = Math.min(Math.max(0, Math.trunc(count)), SATELLITE_PICKUP.MAX_COUNT);
     const created: SatellitePickupData[] = [];
 
     for (let i = 0; i < spawnCount; i++) {
@@ -181,7 +177,7 @@ export class SatellitePickupManager {
     for (const pickup of this.pickups.values()) {
       if (pickup.state === 'stored') {
         const owner = byId.get(pickup.ownerId ?? '');
-        if (!owner || owner.health <= 0 || owner.exploding) {
+        if (owner == null || owner.health <= 0 || owner.exploding) {
           this.makeLooseAtCurrentPose(pickup);
         } else {
           pickup.position = { ...owner.position };

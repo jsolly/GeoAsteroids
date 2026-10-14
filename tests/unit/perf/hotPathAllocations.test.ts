@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import type { AsteroidData } from '../../../shared-types';
 import { Player } from '../../../src/entities/player/Player';
 import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import {
   applyAsteroidKinematics,
   createAsteroidFieldSyncScratch,
@@ -38,23 +38,14 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
   const cache = new PlayerListCache<Player>();
   const snapshotIds = new Set<string>();
   const scratch = createAsteroidFieldSyncScratch();
-  const seen = new Set<string>();
+  const belt: { id: string }[] = [];
   const remote = new Player({
     id: 'remote',
     name: 'Castle',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   const players = new Map<string, Player>([['remote', remote]]);
-  const localRoid = {
-    position: { x: 1, y: 2 },
-    velocity: { x: 0, y: 0 },
-    angle: 0,
-    angularVelocity: 0,
-    health: 10,
-    maxHealth: 10,
-    r: 20,
-  };
+  const localRoid = new Roid({ ...roid('server-asteroid-0', 1, 2), velocity: { x: 0, y: 0 } });
 
   const firstList = cache.allPlayers(players);
   const firstPosition = remote.ship.position;
@@ -75,9 +66,10 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
     expect(cache.allPlayers(players)).toBe(firstList);
 
     const live = roid('server-asteroid-0', tick, -tick);
-    const partitioned = partitionAsteroidSnapshot([live], seen, scratch);
+    const partitioned = partitionAsteroidSnapshot([live], belt, scratch);
     if (tick === 0) {
       expect(partitioned.created).toHaveLength(1);
+      belt.push({ id: live.id });
     } else {
       expect(partitioned.updated).toHaveLength(1);
       applyAsteroidKinematics(localRoid, live, { snapPosition: true });
@@ -97,13 +89,10 @@ test('120 gameState-style apply ticks reuse lists, sets, and entity vectors', ()
 
 test('120 belt motion ticks reuse each live roid vector pair and advance their known positions', () => {
   const belt = new RoidBelt();
-  const first = new Roid({ x: 10, y: 4 }, 20, 'first-moving-rock');
-  first.velocity = { x: 1, y: -0.5 };
-  first.angularVelocity = 0;
-  const second = new Roid({ x: -20, y: 8 }, 20, 'second-moving-rock');
-  second.velocity = { x: -1, y: 0.25 };
-  second.angularVelocity = 0;
-  belt.roids.push(first, second);
+  belt.roids.push(
+    new Roid({ ...roid('first-moving-rock', 10, 4), velocity: { x: 1, y: -0.5 } }),
+    new Roid({ ...roid('second-moving-rock', -20, 8), velocity: { x: -1, y: 0.25 } })
+  );
   const positions = belt.roids.map((body) => body.position);
   const velocities = belt.roids.map((body) => body.velocity);
   for (let tick = 0; tick < 120; tick++) {

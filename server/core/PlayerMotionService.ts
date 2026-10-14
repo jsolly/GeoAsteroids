@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import { checkBoundaryCollision } from '../../shared/boundary';
 import { GAME } from '../../shared/constants/gameplay';
+import { CONTOUR_BRIDGE, contourDraftMultiplier } from '../../shared/contourBridge';
 import {
   CONTOUR_LOCK,
   canHopContour,
@@ -11,7 +12,9 @@ import {
   contourLockVelocity,
   isContourLockState,
 } from '../../shared/contourLock';
+import { cargoCapacity } from '../../shared/economy';
 import { GAME_TICK_MS, MAX_CATCH_UP_TICKS, MAX_TICK_DEBT_MS } from '../../shared/gameClock';
+import { navigationCaptureRadius } from '../../shared/navigationSalvage';
 import { capMotionVelocity, finiteMotionVector, PLAYER_MOTION } from '../../shared/playerMotion';
 import { cruiseSpeed } from '../../shared/shipFlight';
 import { getShipKit, hullRadiusForKit } from '../../shared/shipKits';
@@ -87,6 +90,8 @@ interface Session {
   burstAt: number;
   wasAlive: boolean;
   contourLockAt: number;
+  hopCount: number;
+  hopAt: number;
   knockback?: { speed: number; at: number };
 }
 
@@ -111,6 +116,15 @@ const BLOCKED_SPAN_RETENTION_MS = 30_000;
  * on their existing systems.
  */
 export class PlayerMotionService {
+  constructor(
+    private readonly onHop?: (
+      actorId: string,
+      from: Position,
+      source: ContourLockState,
+      target: ContourLockState,
+      count: number
+    ) => void
+  ) {}
   private readonly sessions = new Map<string, Session>();
   private readonly tokens = new Map<string, Session>();
   private readonly sockets = new Map<WebSocket, Session>();
@@ -179,8 +193,16 @@ export class PlayerMotionService {
     position = actor.position
   ): number {
     const kit = getShipKit(actor.kitId);
-    const cruise = cruiseSpeed(actor.mass, kit.maxVelocity);
-    const normal = locked ? contourLockSpeed(cruise) : terrainSpeedLimit(position, cruise);
+    const cruise = cruiseSpeed(
+      actor.mass,
+      kit.maxVelocity,
+      actor.cargo,
+      cargoCapacity(actor.kitId)
+    );
+    const normal = locked
+      ? contourLockSpeed(cruise) * contourDraftMultiplier(actor.contourDraftFrames)
+      : terrainSpeedLimit(position, cruise);
+
     const impulse = this.sessions.get(actor.id)?.knockback;
     if (!impulse) {
       return normal;
@@ -203,8 +225,11 @@ export class PlayerMotionService {
     return Math.max(
       this.legalSpeed(actor, now, locked),
       locked
-        ? contourLockSpeed(cruiseSpeed(actor.mass, kit.maxVelocity))
-        : cruiseSpeed(actor.mass, kit.maxVelocity) * (1 + TERRAIN.CONTOUR_SPEED_BONUS)
+        ? contourLockSpeed(
+            cruiseSpeed(actor.mass, kit.maxVelocity, actor.cargo, cargoCapacity(actor.kitId))
+          )
+        : cruiseSpeed(actor.mass, kit.maxVelocity, actor.cargo, cargoCapacity(actor.kitId)) *
+            (1 + TERRAIN.CONTOUR_SPEED_BONUS)
     );
   }
 
@@ -254,6 +279,8 @@ export class PlayerMotionService {
       burstAt: now,
       wasAlive: true,
       contourLockAt: now,
+      hopCount: 0,
+      hopAt: -Infinity,
     };
     actor.velocity = capMotionVelocity(actor.velocity, this.legalSpeed(actor, now));
     this.sessions.set(actor.id, session);
@@ -299,6 +326,9 @@ export class PlayerMotionService {
     if (old) {
       this.sockets.delete(old);
     }
+    if (session.actor.contourTransit) {
+      this.handoff(session, now, 0);
+    }
     session.actor.contourLock = null;
     session.actor.velocity = capMotionVelocity(
       session.actor.velocity,
@@ -332,6 +362,9 @@ export class PlayerMotionService {
     delete session.actor.ws;
     session.disconnectedUntil = now + PLAYER_MOTION.reconnectGraceMs;
     session.actor.thrusting = false;
+    if (session.actor.contourTransit) {
+      this.handoff(session, now, 0);
+    }
     session.actor.contourLock = null;
     session.actor.velocity = capMotionVelocity(
       session.actor.velocity,
@@ -348,6 +381,7 @@ export class PlayerMotionService {
   }
 
   private handoff(session: Session, now: number, poseCredit?: number): void {
+    delete session.actor.contourTransit;
     session.actor.contourLock = null;
     const speed = this.legalSpeed(session.actor, now);
     session.actor.velocity = capMotionVelocity(session.actor.velocity, speed);
@@ -451,12 +485,13 @@ export class PlayerMotionService {
       !session ||
       !this.validActor(session.actor) ||
       session.actor.furnaceTransit ||
+      session.actor.contourTransit ||
       !['free', 'handoff'].includes(session.mode)
     ) {
       return { ok: false, error: 'Server still owns this motion transform' };
     }
     if (
-      !pose ||
+      pose == null ||
       pose.epoch !== session.epoch ||
       !Number.isSafeInteger(pose.sequence) ||
       pose.sequence < 0 ||
@@ -489,6 +524,15 @@ export class PlayerMotionService {
       candidate !== null &&
       previousLock !== null &&
       (candidate.height !== previousLock.height || candidate.direction !== previousLock.direction);
+    if (
+      changingRail &&
+      candidate.height !== previousLock.height &&
+      session.hopCount >= CONTOUR_BRIDGE.hopLimit &&
+      now - session.hopAt < CONTOUR_BRIDGE.comboWindowMs
+    ) {
+      this.handoff(session, now, session.poseCredit);
+      return { ok: false, error: 'Contour hop combo must settle before another jump' };
+    }
     const acquiredAt = previousLock && !changingRail ? session.contourLockAt : now;
     const contour = candidate
       ? this.contourPoseRejection(session, pose, candidate, acquiredAt, now)
@@ -604,6 +648,18 @@ export class PlayerMotionService {
     session.mode = 'free';
     session.anchor = undefined;
     session.ack = pose.sequence;
+    if (changingRail && candidate && previousLock && candidate.height !== previousLock.height) {
+      session.hopCount =
+        now - session.hopAt < CONTOUR_BRIDGE.comboWindowMs ? session.hopCount + 1 : 1;
+      session.hopAt = now;
+      this.onHop?.(
+        session.actor.id,
+        { ...session.actor.position },
+        previousLock,
+        candidate,
+        session.hopCount
+      );
+    }
     session.actor.position = { x: pose.position.x, y: pose.position.y };
     session.actor.velocity = { x: pose.velocity.x, y: pose.velocity.y };
     session.actor.angle = pose.angle;
@@ -624,19 +680,11 @@ export class PlayerMotionService {
     if (!session || !this.alive(session.actor)) {
       return;
     }
+    delete session.actor.contourTransit;
     session.actor.contourLock = null;
     const speed = Math.hypot(session.actor.velocity.x, session.actor.velocity.y);
     session.knockback = { speed, at: now };
-    session.epoch += 1;
-    session.mode = 'free';
-    session.ack = 0;
-    session.poseSequence = -1;
-    session.anchor = undefined;
-    session.poseAt = now;
-    session.anchorAt = now;
-    session.poseCredit = this.maximumTravelSpeed(session.actor, now) * PLAYER_MOTION.poseLeadFrames;
-    session.burstCredit = 0;
-    session.burstAt = now;
+    this.beginFreeEpoch(session, now);
     this.publish(session);
   }
 
@@ -647,6 +695,18 @@ export class PlayerMotionService {
       delete session.knockback;
       this.handoff(session, now, 0);
     }
+  }
+
+  /** Finish the bounded server-owned bridge glide on the destination rail. */
+  public finishContourBridge(actorId: string, now: number): void {
+    const session = this.sessions.get(actorId);
+    if (!session) {
+      return;
+    }
+    session.contourLockAt = now;
+    this.beginFreeEpoch(session, now);
+    delete session.knockback;
+    this.publish(session);
   }
 
   /** Keep test-only fixture placement coherent with server motion ownership. */
@@ -663,7 +723,7 @@ export class PlayerMotionService {
     return this.placeFixtureSession(session, position, now);
   }
 
-  private placeFixtureSession(session: Session, position: Position, now: number): boolean {
+  private beginFreeEpoch(session: Session, now: number): void {
     session.epoch += 1;
     session.mode = 'free';
     session.ack = 0;
@@ -674,6 +734,10 @@ export class PlayerMotionService {
     session.poseCredit = this.maximumTravelSpeed(session.actor, now) * PLAYER_MOTION.poseLeadFrames;
     session.burstCredit = 0;
     session.burstAt = now;
+  }
+
+  private placeFixtureSession(session: Session, position: Position, now: number): boolean {
+    this.beginFreeEpoch(session, now);
     session.actor.contourLock = null;
     session.actor.position = { ...position };
     session.actor.velocity = { x: 0, y: 0 };
@@ -686,7 +750,7 @@ export class PlayerMotionService {
   /** Release at a physical contact even when protection prevents health loss. */
   public releaseContourLock(actorId: string, now: number): void {
     const session = this.sessions.get(actorId);
-    if (session?.actor.contourLock) {
+    if (session && (session.actor.contourLock || session.actor.contourTransit)) {
       this.handoff(session, now, session.poseCredit);
     }
   }
@@ -732,7 +796,8 @@ export class PlayerMotionService {
       if (
         previous
           ? !canHopContour(start, previous, state)
-          : contourLockDistance(start, state) > CONTOUR_LOCK.captureRadius
+          : contourLockDistance(start, state) >
+            navigationCaptureRadius(actor.navigationAssistFrames)
       ) {
         continue;
       }
@@ -880,7 +945,7 @@ export class PlayerMotionService {
         this.handoff(session, now);
       }
       if (
-        !session.actor.furnaceTransit &&
+        !(session.actor.furnaceTransit || session.actor.contourTransit) &&
         session.mode === 'handoff' &&
         now - session.anchorAt >= PLAYER_MOTION.handoffTimeoutMs
       ) {
@@ -896,7 +961,11 @@ export class PlayerMotionService {
     if (!session) {
       return false;
     }
-    return Boolean(session.actor.furnaceTransit) || session.mode !== 'free' || !session.socket;
+    return (
+      Boolean(session.actor.furnaceTransit ?? session.actor.contourTransit) ||
+      session.mode !== 'free' ||
+      !session.socket
+    );
   }
 
   public getState(actorId: string): PlayerMotionState | undefined {

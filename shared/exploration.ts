@@ -41,7 +41,7 @@ const SECTORS_PER_AXIS = EXPLORATION_GRID_SIZE / CELLS_PER_SECTOR;
 // Snapshot identity owns one index. Decode only queried sectors, retaining no history
 // after that immutable snapshot becomes unreachable.
 const indexes = new WeakMap<readonly ExplorationTile[], Map<number, string | Uint8Array>>();
-export function isCellExplored(tiles: readonly ExplorationTile[], cell: number): boolean {
+function explorationIndex(tiles: readonly ExplorationTile[]): Map<number, string | Uint8Array> {
   let index = indexes.get(tiles);
   if (!index) {
     index = new Map();
@@ -67,6 +67,26 @@ export function isCellExplored(tiles: readonly ExplorationTile[], cell: number):
     }
     indexes.set(tiles, index);
   }
+  return index;
+}
+
+function tileBytes(index: Map<number, string | Uint8Array>, key: number): Uint8Array | undefined {
+  let bytes = index.get(key);
+  if (bytes === undefined) {
+    return undefined;
+  }
+  if (typeof bytes === 'string') {
+    const encoded = bytes;
+    bytes = new Uint8Array(Math.ceil(encoded.length / 2));
+    for (let byte = 0; byte < bytes.length; byte++) {
+      bytes[byte] = Number.parseInt(encoded.slice(byte * 2, byte * 2 + 2), 16);
+    }
+    index.set(key, bytes);
+  }
+  return bytes;
+}
+
+export function isCellExplored(tiles: readonly ExplorationTile[], cell: number): boolean {
   const col = cell % EXPLORATION_GRID_SIZE;
   const row = Math.floor(cell / EXPLORATION_GRID_SIZE);
   const sectorCol = Math.floor(col / CELLS_PER_SECTOR);
@@ -79,21 +99,30 @@ export function isCellExplored(tiles: readonly ExplorationTile[], cell: number):
   ) {
     return false;
   }
-  const key = sectorRow * SECTORS_PER_AXIS + sectorCol;
-  let bytes = index.get(key);
-  if (bytes === undefined) {
-    return false;
-  }
-  if (typeof bytes === 'string') {
-    const encoded = bytes;
-    bytes = new Uint8Array(Math.ceil(encoded.length / 2));
-    for (let byte = 0; byte < bytes.length; byte++) {
-      bytes[byte] = Number.parseInt(encoded.slice(byte * 2, byte * 2 + 2), 16);
-    }
-    index.set(key, bytes);
-  }
+  const bytes = tileBytes(explorationIndex(tiles), sectorRow * SECTORS_PER_AXIS + sectorCol);
   const offset = (row % CELLS_PER_SECTOR) * CELLS_PER_SECTOR + (col % CELLS_PER_SECTOR);
-  return ((bytes[Math.floor(offset / 8)] ?? 0) & (1 << (offset % 8))) !== 0;
+  return ((bytes?.[Math.floor(offset / 8)] ?? 0) & (1 << (offset % 8))) !== 0;
+}
+
+/** Sparse immutable snapshot traversal for chart raster rebuilds, outside the game loop. */
+export function* exploredCells(tiles: readonly ExplorationTile[]): Generator<number> {
+  const index = explorationIndex(tiles);
+  for (const key of index.keys()) {
+    const bytes = tileBytes(index, key);
+    if (!bytes) {
+      continue;
+    }
+    const sectorCol = key % SECTORS_PER_AXIS;
+    const sectorRow = Math.floor(key / SECTORS_PER_AXIS);
+    for (let offset = 0; offset < CELLS_PER_SECTOR ** 2; offset++) {
+      if (((bytes[Math.floor(offset / 8)] ?? 0) & (1 << (offset % 8))) !== 0) {
+        yield (sectorRow * CELLS_PER_SECTOR + Math.floor(offset / CELLS_PER_SECTOR)) *
+          EXPLORATION_GRID_SIZE +
+          sectorCol * CELLS_PER_SECTOR +
+          (offset % CELLS_PER_SECTOR);
+      }
+    }
+  }
 }
 
 /** Iterate visible cells only, regardless of the explored world's size. */
@@ -126,7 +155,7 @@ export function validExploration(value: unknown): value is ExplorationTile[] {
   const ids = new Set<string>();
   return value.every((tile: unknown) => {
     if (
-      !tile ||
+      tile === null ||
       typeof tile !== 'object' ||
       !('id' in tile) ||
       !('bits' in tile) ||

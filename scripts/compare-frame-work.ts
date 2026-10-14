@@ -5,7 +5,7 @@ import process from 'node:process';
 import { parseArgs } from 'node:util';
 
 function record(value: unknown): Record<string, unknown> {
-  assert(value && typeof value === 'object' && !Array.isArray(value));
+  assert(value !== null && typeof value === 'object' && !Array.isArray(value));
   return Object.fromEntries(Object.entries(value));
 }
 const { values } = parseArgs({

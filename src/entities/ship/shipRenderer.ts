@@ -1,5 +1,7 @@
+import { CHARGED_WEAPON } from '../../../shared/chargedWeapon';
 import { GAME, LASER, SHIP, WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { planFurnaceRoute } from '../../../shared/furnaceTravel';
+import { NAVIGATION_SALVAGE } from '../../../shared/navigationSalvage';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { haulerUtilityOf, isResourceTapUtility } from '../../../shared/shipUtilities';
 import { UTILITY_FLIGHT } from '../../../shared/utilityFlight';
@@ -11,7 +13,6 @@ import type { DrawingContext } from '../../rendering/drawingContext';
 import type { PlayfieldSize } from '../../rendering/playfieldCamera';
 import { prepareRasterSurface, type RasterSurface } from '../../rendering/rasterSurface';
 import { resolveGlow } from '../../rendering/renderQuality';
-import { rotateVectorInto } from '../../rendering/travelCamera';
 import {
   driftSegment,
   easeOutCubic,
@@ -20,7 +21,6 @@ import {
   thrusterFlameGeometry,
 } from '../../rendering/vectorJuice';
 import { hexToRgba, laserBoltColor } from '../../utils/colorUtils';
-import { isDebugMode } from '../../utils/debugUtils';
 import { contourSpeedStrength } from './cruiseMotion';
 import { findHarpoonFieldBody } from './harpoonField';
 import {
@@ -33,58 +33,14 @@ import {
 import type { Ship } from './Ship';
 
 /** Hauler cable. Cream line separates the cable from the hull. */
-export const HAULER_TETHER_COLOR = '#E8D5A3';
 /** Latch tip / hook head. Game Director PASS: amber tip on the cream cable. */
-export const HAULER_TETHER_TIP_COLOR = '#FDE68A';
 
 const thrusterGeom = {
   rearCenter: { x: 0, y: 0 },
 };
 
-const laserVelocityScreen = { x: 0, y: 0 };
 const laserScreen = { x: 0, y: 0 };
 const shipScreen = { x: 0, y: 0 };
-/** Shared phosphor stroke for kit outlines. */
-export function strokePhosphorPolyline(
-  ctx: DrawingContext,
-  points: readonly { x: number; y: number }[],
-  color: string,
-  closed = true
-): void {
-  const first = points[0];
-  if (!first) {
-    return;
-  }
-
-  const trace = (): void => {
-    ctx.beginPath();
-    ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < points.length; i++) {
-      const point = points[i];
-      if (point) {
-        ctx.lineTo(point.x, point.y);
-      }
-    }
-    if (closed) {
-      ctx.closePath();
-    }
-  };
-
-  ctx.save();
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.lineWidth = VISUAL.SHIP_STROKE_WIDTH;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = resolveGlow(VISUAL.SHIP_GLOW);
-  ctx.strokeStyle = hexToRgba(color, 0.4);
-  trace();
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = color;
-  // stroke() retains the path; reuse it for the crisp pass.
-  ctx.stroke();
-  ctx.restore();
-}
 
 export function strokeKitHullOutline(
   ctx: DrawingContext,
@@ -97,10 +53,12 @@ export function strokeKitHullOutline(
   utility: HaulerUtilityId = 'tow_cable'
 ): void {
   const outline = getKitHullOutline(kitId);
-  strokePhosphorPolyline(
+  strokeJuicePolyline(
     ctx,
     projectHullPolyline(centerX, centerY, radius, angle, outline.hull),
     color,
+    VISUAL.SHIP_STROKE_WIDTH,
+    VISUAL.SHIP_GLOW,
     outline.hull.closed
   );
   const details =
@@ -108,13 +66,65 @@ export function strokeKitHullOutline(
       ? [...outline.extras, ...getHaulerEquipment(utility)]
       : outline.extras;
   for (const extra of details) {
-    strokePhosphorPolyline(
+    strokeJuicePolyline(
       ctx,
       projectHullPolyline(centerX, centerY, radius, angle, extra),
       color,
+      VISUAL.SHIP_STROKE_WIDTH,
+      VISUAL.SHIP_GLOW,
       extra.closed
     );
   }
+}
+
+/** Existing hull edges arrive separately, then meet at their normal ship-space coordinates. */
+export function drawHullAssembly(
+  ctx: DrawingContext,
+  ship: Ship,
+  x: number,
+  y: number,
+  radius: number,
+  angle: number,
+  color: string,
+  now = performance.now()
+): boolean {
+  const progress = Math.max(0, (now - ship.hullAssemblyStartedAt) / 700);
+  if (progress >= 1 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    return false;
+  }
+  const outline = getKitHullOutline(ship.kitId);
+  const parts = [
+    outline.hull,
+    ...outline.extras,
+    ...(ship.kitId === 'hauler' ? getHaulerEquipment(haulerUtilityOf(ship)) : []),
+  ];
+  const separation = radius * 2.5 * (1 - progress) ** 3;
+  for (const part of parts) {
+    const points = projectHullPolyline(x, y, radius, angle, part);
+    const count = points.length - (part.closed ? 0 : 1);
+    for (let i = 0; i < count; i++) {
+      const from = points[i];
+      const to = points[(i + 1) % points.length];
+      if (!from || !to) {
+        continue;
+      }
+      const direction = Math.atan2((from.y + to.y) / 2 - y, (from.x + to.x) / 2 - x);
+      const dx = Math.cos(direction) * separation;
+      const dy = Math.sin(direction) * separation;
+      strokeJuicePolyline(
+        ctx,
+        [
+          { x: from.x + dx, y: from.y + dy },
+          { x: to.x + dx, y: to.y + dy },
+        ],
+        color,
+        VISUAL.SHIP_STROKE_WIDTH,
+        VISUAL.SHIP_GLOW,
+        false
+      );
+    }
+  }
+  return true;
 }
 
 export function strokePhosphorSegment(
@@ -214,7 +224,7 @@ export function drawThruster(ship: Ship, color: string = ship.color): void {
         ctx,
         viewport.width / 2,
         viewport.height / 2,
-        ship.angle - canvasManager.getCameraRotation(),
+        ship.angle,
         ship.r,
         contourSpeedStrength(ship),
         performance.now()
@@ -223,7 +233,7 @@ export function drawThruster(ship: Ship, color: string = ship.color): void {
     drawGenericThruster(
       viewport.width / 2,
       viewport.height / 2,
-      ship.angle - canvasManager.getCameraRotation(),
+      ship.angle,
       ship.r,
       color,
       ship.kitId
@@ -254,14 +264,7 @@ export function drawThrusterAtPosition(
     ) {
       return;
     }
-    drawGenericThruster(
-      screen.x,
-      screen.y,
-      ship.angle - canvasManager.getCameraRotation(),
-      ship.r * scale,
-      color,
-      ship.kitId
-    );
+    drawGenericThruster(screen.x, screen.y, ship.angle, ship.r * scale, color, ship.kitId);
   }
 }
 
@@ -371,26 +374,6 @@ function explosionProgress(ship: Ship): number {
   return 1 - ship.explodeTime / SHIP.EXPLODE_DURATION_FRAMES;
 }
 
-export function drawShipExplosion(ship: Ship, color?: string): void {
-  const ctx = canvasManager.getContext();
-  const cvs = canvasManager.getCanvas();
-  if (!ctx || !cvs) {
-    return;
-  }
-
-  const viewport = canvasManager.getViewportSize();
-  drawVectorExplosion(
-    ctx,
-    viewport.width / 2,
-    viewport.height / 2,
-    ship.r * canvasManager.getPlayfieldScale(),
-    ship.angle - canvasManager.getCameraRotation(),
-    explosionProgress(ship),
-    color ?? ship.color ?? PALETTE.LOCAL,
-    ship.kitId
-  );
-}
-
 export function drawShipExplosionAtPosition(
   ship: Ship,
   shipPosition: { x: number; y: number },
@@ -409,7 +392,7 @@ export function drawShipExplosionAtPosition(
     screen.x,
     screen.y,
     ship.r * scale,
-    ship.angle - canvasManager.getCameraRotation(),
+    ship.angle,
     explosionProgress(ship),
     color ?? ship.color ?? WIRE_PALETTE.REMOTE,
     ship.kitId
@@ -538,7 +521,8 @@ function drawCachedLaserBolt(
   x: number,
   y: number,
   velocityX: number,
-  velocityY: number
+  velocityY: number,
+  energy = 1
 ): void {
   const sprite = laserBoltSprite(cache, color);
   // A stationary bolt faces screen-right.
@@ -546,6 +530,7 @@ function drawCachedLaserBolt(
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
+  ctx.scale(Math.sqrt(energy), energy);
   ctx.shadowBlur = 0;
   ctx.drawImage(
     sprite.canvas,
@@ -563,6 +548,7 @@ export function drawLaserBolts(
     velocity: Velocity;
     explodeTime: number;
     bounceCount?: number;
+    energy?: number;
   }>,
   color: string,
   viewerPosition: Position
@@ -595,12 +581,7 @@ export function drawLaserBolts(
 
     const boltColor = laserBoltColor(color, laser.bounceCount);
     if (laser.explodeTime === 0) {
-      const velocity = rotateVectorInto(
-        laserVelocityScreen,
-        laser.velocity.x,
-        laser.velocity.y,
-        canvasManager.getCameraRotation()
-      );
+      const velocity = laser.velocity;
       drawCachedLaserBolt(
         ctx,
         sprites,
@@ -608,7 +589,8 @@ export function drawLaserBolts(
         screenPos.x,
         screenPos.y,
         velocity.x,
-        velocity.y
+        velocity.y,
+        laser.energy ?? 1
       );
     } else {
       const t = 1 - laser.explodeTime / Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
@@ -706,6 +688,46 @@ export function drawShipAtPosition(
     return;
   }
 
+  if (ship.navigationAssistFrames > 0) {
+    ctx.save();
+    ctx.strokeStyle = '#a4eeff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(
+      screenX,
+      screenY,
+      shipR * 1.25,
+      -Math.PI / 2,
+      -Math.PI / 2 +
+        Math.PI * 2 * Math.min(1, ship.navigationAssistFrames / NAVIGATION_SALVAGE.frames)
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+  const charge =
+    ship.weaponChargeStartedAt === null
+      ? ship.weaponChargeFrames
+      : ((performance.now() - ship.weaponChargeStartedAt) * GAME.FPS) / 1000;
+  if (charge > 0) {
+    const fraction = Math.min(1, charge / CHARGED_WEAPON.fullFrames);
+    ctx.save();
+    ctx.strokeStyle = PALETTE.LASER_LOCAL;
+    ctx.shadowColor = PALETTE.LASER_LOCAL;
+    ctx.shadowBlur = resolveGlow(18);
+    ctx.lineWidth = 2 + fraction * 4;
+    ctx.beginPath();
+    ctx.arc(
+      screenX,
+      screenY,
+      shipR * (1.5 + fraction),
+      -Math.PI / 2,
+      -Math.PI / 2 + fraction * Math.PI * 2
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
+
   if (ship.furnaceTransit) {
     ctx.save();
     ctx.strokeStyle = hexToRgba(PALETTE.LASER_LOCAL, 0.55);
@@ -728,23 +750,20 @@ export function drawShipAtPosition(
     }
     ctx.stroke();
     ctx.restore();
-    drawFurnaceTravelFlame(
-      ctx,
-      screenX,
-      screenY,
-      shipR,
-      canvasManager.getCameraRotation() - ship.angle
-    );
+    drawFurnaceTravelFlame(ctx, screenX, screenY, shipR, -ship.angle);
     strokeKitHullOutline(
       ctx,
       screenX,
       screenY,
       shipR,
-      ship.angle - canvasManager.getCameraRotation(),
+      ship.angle,
       color ?? ship.color,
       ship.kitId,
       haulerUtilityOf(ship)
     );
+    return;
+  }
+  if (drawHullAssembly(ctx, ship, screenX, screenY, shipR, ship.angle, color ?? ship.color)) {
     return;
   }
   if (ship.blinkCount > 0 && !ship.blinkOn) {
@@ -758,7 +777,7 @@ export function drawShipAtPosition(
     screenX,
     screenY,
     shipR,
-    ship.angle - canvasManager.getCameraRotation(),
+    ship.angle,
     shipColor,
     ship.kitId,
     haulerUtilityOf(ship)
@@ -766,19 +785,11 @@ export function drawShipAtPosition(
   drawAbilityFx(ctx, ship, screenX, screenY, shipR);
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
-  drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
 
   // Draw player name under ship if provided
-  if (playerName) {
+  if (playerName != null && playerName !== '') {
     drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
   }
-}
-
-export function canDrawHaulerHarpoon(ship: {
-  kitId: string;
-  harpoonTargetId: string | null;
-}): boolean {
-  return ship.kitId === 'hauler' && ship.harpoonTargetId !== null;
 }
 
 /** Tether geometry is already in screen space; keep it hairline at every zoom. */
@@ -833,10 +844,7 @@ export function drawHaulerHarpoonVfx(
   const latch = canvasManager.worldToScreen(latchWorld, cameraShipPosition);
   const style = harpoonTetherStyle();
   ctx.save();
-  // Literals stay in this module. Imported HAULER_TETHER_* hexes were
-  // Rolldown-renamed across the asteroidPhenomena split: cream became
-  // strokeStyle=_e (no binding) and tip became fillStyle=t (the ship param).
-  ctx.strokeStyle = '#E8D5A3';
+  ctx.strokeStyle = PALETTE.LOOT;
   ctx.lineWidth = style.lineWidth;
   ctx.setLineDash(style.dash);
   ctx.beginPath();
@@ -844,8 +852,8 @@ export function drawHaulerHarpoonVfx(
   ctx.lineTo(latch.x, latch.y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = '#FDE68A';
-  ctx.strokeStyle = '#FDE68A';
+  ctx.fillStyle = PALETTE.LASER_LOCAL;
+  ctx.strokeStyle = PALETTE.LASER_LOCAL;
   ctx.beginPath();
   ctx.arc(latch.x, latch.y, style.tipRadius, 0, Math.PI * 2);
   ctx.fill();
@@ -857,7 +865,7 @@ export function drawHaulerHarpoonVfx(
       const u = (cycle + i / 5) % 1;
       const x = latch.x + (screenX - latch.x) * u;
       const y = latch.y + (screenY - latch.y) * u;
-      ctx.fillStyle = i === 4 ? '#FDE68A' : '#E8D5A3';
+      ctx.fillStyle = i === 4 ? PALETTE.LASER_LOCAL : PALETTE.LOOT;
       ctx.beginPath();
       ctx.arc(x, y, 1.35, 0, Math.PI * 2);
       ctx.fill();
@@ -1027,7 +1035,7 @@ function drawFloatingHealthCapsule(
   shipR: number
 ): void {
   const damaged = ship.health < ship.maxHealth;
-  if (!damaged && ship.impactFlashFrames <= 0 && !isDebugMode()) {
+  if (ship.isLocalPlayer && !damaged && ship.impactFlashFrames <= 0) {
     return;
   }
 
@@ -1054,12 +1062,6 @@ function drawFloatingHealthCapsule(
     ctx.stroke();
   }
 
-  if (isDebugMode()) {
-    ctx.fillStyle = PALETTE.HUD;
-    ctx.font = '10px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${Math.ceil(ship.health)}/${ship.maxHealth}`, screenX, barY - 10);
-  }
   ctx.restore();
 }
 
@@ -1079,12 +1081,12 @@ function drawUtilityFlight(
   ctx.lineWidth = 1.5;
   ctx.setLineDash([]);
   if (flight.kind === 'tow') {
-    ctx.strokeStyle = '#E8D5A3';
+    ctx.strokeStyle = PALETTE.LOOT;
     ctx.beginPath();
     ctx.moveTo(screenX, screenY);
     ctx.lineTo(tip.x, tip.y);
     ctx.stroke();
-    ctx.fillStyle = '#FDE68A';
+    ctx.fillStyle = PALETTE.LASER_LOCAL;
     ctx.beginPath();
     ctx.arc(tip.x, tip.y, 3.5, 0, Math.PI * 2);
     ctx.fill();

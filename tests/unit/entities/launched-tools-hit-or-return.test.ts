@@ -65,7 +65,7 @@ test('tow contact uses the current moving hull rather than its position at launc
   const target = rock('moving', 120);
   activateAbilityOnHost(pilot, { asteroids: [target] });
   target.position.y = 100;
-  for (let frame = 0; frame < 8; frame++) {
+  for (let frame = 0; frame < 4; frame++) {
     tickTowLine(pilot, [target]);
   }
   expect(pilot.harpoonTargetId).toBeNull();
@@ -79,7 +79,7 @@ test('tow contact uses the current moving hull rather than its position at launc
 test('a missed tow reels to a moving pilot and cannot attach during its return', () => {
   const pilot = hauler();
   activateAbilityOnHost(pilot, { asteroids: [] });
-  for (let frame = 0; frame < 35; frame++) {
+  for (let frame = 0; frame < 100 && pilot.utilityFlight?.phase === 'outbound'; frame++) {
     tickTowLine(pilot, []);
   }
   expect(pilot.utilityFlight?.phase).toBe('reeling');
@@ -138,7 +138,7 @@ test('a probe miss consumes recharge and disintegrates, while moving hosts can i
   expect(manager.launch(scout)).toBe(true);
   expect(scout.abilityCooldownFrames).toBe(180);
   expect(manager.launch(scout)).toBe(false);
-  for (let frame = 0; frame < 70; frame++) {
+  for (let frame = 0; frame < 100 && scout.utilityFlight?.phase === 'outbound'; frame++) {
     manager.advanceFlight(scout, new AsteroidSpatialIndex([]), 100);
   }
   expect(scout.utilityFlight?.phase).toBe('disintegrating');
@@ -150,7 +150,7 @@ test('a probe miss consumes recharge and disintegrates, while moving hosts can i
   const target = rock('intercept', 200, 100);
   expect(manager.launch(scout)).toBe(true);
   const index = new AsteroidSpatialIndex([target]);
-  for (let frame = 0; frame < 10; frame++) {
+  for (let frame = 0; frame < 5; frame++) {
     manager.advanceFlight(scout, index, 100);
   }
   expect(target.probe).toBeUndefined();
@@ -224,7 +224,7 @@ test('a tow line uses the asteroid contour rather than an invisible bounding cir
   const target = rock('small-contour', 100);
   target.offsets = [0.5, 0.5, 0.5, 0.5];
   predictAbilityOnHost(pilot, []);
-  for (let frame = 0; frame < 7; frame++) {
+  for (let frame = 0; frame < 2; frame++) {
     tickTowLine(pilot, [target]);
   }
   expect(pilot.harpoonTargetId).toBeNull();

@@ -4,7 +4,7 @@ import { cruiseVelocity } from './shipFlight';
 import { TERRAIN } from './terrainConfig';
 import { getTerrainField } from './terrainField';
 
-function travelGradient(position: Position): { x: number; y: number; strength: number } {
+function travelGradient(position: Position) {
   const gradient = sampleGradient(getTerrainField(), position.x, position.y);
   const magnitude = Math.hypot(gradient.x, gradient.y);
   const strength = Math.max(

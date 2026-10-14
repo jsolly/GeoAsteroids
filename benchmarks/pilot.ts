@@ -134,7 +134,10 @@ export class Pilot {
         } else {
           const message = result.message;
           assert(
-            message && typeof message === 'object' && 'type' in message && 'data' in message,
+            message !== null &&
+              typeof message === 'object' &&
+              'type' in message &&
+              'data' in message,
             'Invalid server envelope'
           );
           const data = message.data;
@@ -254,10 +257,13 @@ export class Pilot {
       id: this.id,
       data: {
         name: `測試-${this.index}`,
-        ...(this.options.naturalSpawn ? {} : { position: { x: 100 + this.index * 70, y: 100 } }),
+        ...(this.options.naturalSpawn === true
+          ? {}
+          : { position: { x: 100 + this.index * 70, y: 100 } }),
         kitId: 'scout',
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        cooperativeVersion: 1,
       },
     });
   }

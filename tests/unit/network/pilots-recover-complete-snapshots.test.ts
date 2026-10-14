@@ -167,7 +167,6 @@ describe('pilots reconstruct complete authoritative worlds', () => {
         pilot.health = 0;
         pilot.exploding = true;
         pilot.respawnTimer = 60 - tick;
-        pilot.deathCause = 'boundary';
       }
 
       if (tick >= 80) {

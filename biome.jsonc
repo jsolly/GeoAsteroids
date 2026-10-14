@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -142,6 +142,7 @@
         "noInvalidPropertyInitValue": "error",
         "noJsonUnsafeValues": "error",
         "noLoopFunc": "error",
+        "noMeaninglessVoidOperator": "error",
         "noMisleadingReturnType": "error",
         "noMisusedPromises": "error",
         "noNegationInEqualityCheck": "error",
@@ -203,6 +204,7 @@
         "useRegexpExec": "error",
         "useRegexpTest": "error",
         "useStringStartsEndsWith": "error",
+        "useStrictBooleanExpressions": "error",
         "useTestHooksInOrder": "error",
         "useTestHooksOnTop": "error",
         // HOLD: singleton/factory methods often exist for a stable instance API
@@ -303,8 +305,8 @@
         "noTemplateCurlyInString": "error",
         "noTsIgnore": "error",
         // HOLD: Biome 2.5 types domain false-positives on uninitialized
-        // singleton statics, mutable class fields (biome#11174), compile-time
-        // DEBUG constants, and marching-squares switch narrowing.
+        // singleton statics, mutable class fields (biome#11174), and
+        // marching-squares switch narrowing.
         "noUnnecessaryConditions": "off",
         "noUselessEscapeInString": "error",
         "noUselessRegexBackrefs": "error",

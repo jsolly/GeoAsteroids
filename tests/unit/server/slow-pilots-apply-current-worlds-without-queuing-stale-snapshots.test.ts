@@ -32,7 +32,7 @@ function applyReceived(acknowledge = true) {
         );
       }
     } else if (
-      result.message &&
+      result.message !== null &&
       typeof result.message === 'object' &&
       'type' in result.message &&
       result.message.type === 'joined'

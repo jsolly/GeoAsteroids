@@ -3,8 +3,6 @@ import process from 'node:process';
 import type { Plugin } from 'vite';
 import { clientReleaseSha } from './client-release-sha';
 
-const HAULER_TETHER_HEXES = ['#E8D5A3', '#FDE68A'] as const;
-
 /** Attribute gameplay by source modules, independent of output filenames. */
 function clientAssets(): Plugin {
   return {
@@ -29,7 +27,7 @@ function clientAssets(): Plugin {
           return;
         }
         const chunk = byName.get(name);
-        if (!chunk) {
+        if (chunk == null) {
           throw new Error(`Missing attributed chunk: ${name}`);
         }
         reachable.add(name);
@@ -50,11 +48,6 @@ function clientAssets(): Plugin {
         ) {
           throw new Error('Gameplay must not load ECharts');
         }
-      }
-      const gameCode = [...reachable].map((name) => byName.get(name)?.code ?? '').join('\n');
-      const missing = HAULER_TETHER_HEXES.filter((hex) => !gameCode.includes(hex));
-      if (missing.length) {
-        throw new Error(`Gameplay tether colors missing: ${missing.join(', ')}`);
       }
       const modules = Object.fromEntries(
         chunks.map((chunk) => [

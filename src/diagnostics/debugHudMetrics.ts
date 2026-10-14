@@ -62,11 +62,5 @@ export function readDebugHudMetrics(now: number): {
 }
 
 export function shortReleaseId(id: string | undefined): string {
-  if (!id || id === 'unknown') {
-    return '—';
-  }
-  if (id === 'dev') {
-    return 'dev';
-  }
-  return id.length <= 7 ? id : id.slice(0, 7);
+  return id != null && id !== '' ? id.slice(0, 7) : '—';
 }

@@ -1,11 +1,10 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
+  import { focusReturnTarget, isExternalFocusTarget } from '../../ui/focusReturn';
   import {
     MAP_LEGEND_KINDS,
     paintMapLegend,
-    UNIVERSE_MAP_IDS,
-    UNIVERSE_MAP_LOCATE_LABEL,
     UNIVERSE_MAP_ZOOM,
     type UniverseMapChrome,
     type UniverseMapController,
@@ -15,6 +14,15 @@
   import DialogContent from '../ui/dialog/dialog-content.svelte';
   import DialogDescription from '../ui/dialog/dialog-description.svelte';
   import DialogTitle from '../ui/dialog/dialog-title.svelte';
+
+  const UNIVERSE_MAP_IDS = {
+    dialog: 'universe-map-dialog',
+    canvas: 'universe-map-canvas',
+    close: 'universe-map-close',
+    center: 'universe-map-center',
+    locations: 'universe-map-locations',
+  } as const;
+  const UNIVERSE_MAP_LOCATE_LABEL = 'Center on you';
 
   let {
     open,
@@ -48,44 +56,20 @@
   let showLocations = $state(false);
   const frame = $derived(chrome?.frame ?? { x: 0, y: 0, size: 180 });
 
-  function usable(target: HTMLElement | null | undefined): target is HTMLElement {
-    if (
-      !target?.isConnected ||
-      target === document.body ||
-      target.matches(':disabled, [aria-disabled="true"]')
-    ) {
-      return false;
-    }
-    for (let node: HTMLElement | null = target; node; node = node.parentElement) {
-      const style = window.getComputedStyle(node);
-      if (
-        node.hidden ||
-        node.hasAttribute('inert') ||
-        style.display === 'none' ||
-        style.visibility === 'hidden'
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   function openFocus(event: Event) {
     event.preventDefault();
     const active = document.activeElement;
-    opener =
-      active instanceof HTMLElement && !active.closest('[role="dialog"], dialog') ? active : null;
+    opener = active instanceof HTMLElement && isExternalFocusTarget(active) ? active : null;
     closeButton?.focus({ preventScroll: true });
   }
 
   function closeFocus(event: Event) {
     event.preventDefault();
-    if (open || !restoreFocus) {
+    if (open || restoreFocus !== true) {
       return;
     }
-    const explicit = closeFocusTarget?.();
-    const target = usable(explicit) ? explicit : usable(opener) ? opener : fallbackFocusTarget?.();
-    if (usable(target)) {
+    const target = focusReturnTarget(closeFocusTarget?.(), opener, fallbackFocusTarget?.());
+    if (target) {
       target.focus({ preventScroll: true });
     }
   }
@@ -171,10 +155,14 @@
         <p class="universe-map-eyebrow">Shared field cartography</p>
         <DialogTitle id="universe-map-title">Universe map</DialogTitle>
         <DialogDescription class="universe-map-subtitle"
-          >Your nearby discoveries. Zoom out to explore the whole world.</DialogDescription
+          >Your nearby discoveries. Pan to choose a nearby spot; Signal help at center marks it for
+          crew.</DialogDescription
         >
       </div>
       <div class="universe-map-actions">
+        <Button variant="outline" onclick={() => controller?.signalHelpAtCenter()}>
+          Signal help at center
+        </Button>
         <Button
           id={UNIVERSE_MAP_IDS.close}
           bind:ref={closeButton}
@@ -188,12 +176,13 @@
       <p id="universe-map-navigation" class="sr-only">
         {touch
           ? 'Drag to pan and pinch to zoom. Use Center on you to return to your ship.'
-          : 'Arrow keys pan, plus and minus zoom, and Home centers on your ship.'}
+          : 'Arrow keys pan, plus and minus zoom, and Home centers on your ship. Shift+Enter places a help signal at the chart center, within nearby crew range.'}
       </p>
       <canvas
         id={UNIVERSE_MAP_IDS.canvas}
         tabindex="0"
         aria-label="Shared universe map"
+        aria-keyshortcuts="Shift+Enter"
         aria-describedby="universe-map-navigation"
         aria-details={UNIVERSE_MAP_IDS.locations}
         {@attach attachCanvas}
@@ -203,7 +192,6 @@
         bind:this={compass}
         style:left={`${frame.x + 12}px`}
         style:top={`${frame.y + 12}px`}
-        style:transform={`rotate(${chrome?.heading ?? 0}rad)`}
         aria-hidden="true"
       >
         <span>N</span><i></i>

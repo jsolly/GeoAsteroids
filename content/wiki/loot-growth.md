@@ -17,7 +17,7 @@ media:
 
 ## Collecting loot
 
-Mined rocks leave point drops, the main source of cargo; they pull toward any ship and expire after two minutes. Shards and Tap canisters add smaller amounts, and Tap canisters and silk pull toward Haulers while one is flying. Pickups leave your ship’s mass, health, hull size, and flight speed unchanged, and collecting loot keeps Contour Lock engaged.
+Mined rocks leave point drops, the main source of cargo; they pull toward any ship and expire after two minutes. Shards and metal Tap canisters add smaller amounts; other [Tap salvage](/wiki/#hauler) repairs damage or supplies materials and navigation help. Tap canisters and silk pull toward Haulers while one is flying, and collecting loot keeps Contour Lock engaged.
 
 Shards, Tap canisters, and silk normally expire quickly; nest caches last longer, with lifetimes in the reference below. A Scout can collect Tap canisters and silk by touching them even when their attraction favors a nearby Hauler.
 
@@ -33,11 +33,11 @@ Shoot a shard, Tap canister, or silk drop from nearby to detonate it and push sm
 
 ## Spider silk
 
-Tap a spider and collect its silk into your material inventory. Silk adds no score and has no crafting use yet.
+Tap a spider for silk, or a rubble rock for salvaged fiber, and collect it into your material inventory. Silk adds no score and has no crafting use yet.
 
 ## Pickup melody
 
-With Sound Effects on, quick pickups play successive notes of a short melody. Tap extraction supplies lower notes.
+With Sound Effects on, quick pickups play successive notes of a short melody. Tap extraction supplies lower notes. Returning for the remainder of a points drop plays a new pickup note and local haptic.
 
 ## Cargo and banks
 
@@ -45,10 +45,12 @@ Every ship has an aft cargo bay that fills with gold crates as you collect point
 
 ## Furnace offloading
 
-Approach a lit furnace with cargo; both ships lock onto the intake ring when their hull reaches it and stream points into the fire. The countdown and emptying cargo bay show what remains; each pulse credits your bank and the shared settlement, with a flash when the hold empties. Steer to leave early with the rest aboard, or let an empty hold resume flight; hovering grants no protection from hazards.
+Approach a lit furnace with cargo; both ships lock onto the intake ring when their hull reaches it and stream points into the fire. The countdown and emptying cargo bay show what remains; each pulse credits your bank and the shared settlement, with a flash and completion sound when the hold empties. Steer to leave early with the rest aboard, or let an empty hold resume flight; hovering grants no protection from hazards.
 
 ## Cargo protection
 
 Cargo protects your hull by spilling recoverable points when a hazard hits; hull health takes only the damage your cargo cannot cover. Spills fly outward before pickups and magnetism resume, and bigger cargo losses leave more points to recover. Immunity prevents spills, while a protected hit still delays health regeneration; any cargo left on death is discarded without an extra stash.
 
 Store purchases spend your bank, never carried cargo. See [Town Square](/wiki/#controls) for the store and [survival](/wiki/#combat-survival) for damage and respawns.
+
+A full hold slows cruise to 70%; half a hold slows it to 85%.

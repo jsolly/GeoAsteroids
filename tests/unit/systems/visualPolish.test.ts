@@ -17,12 +17,12 @@ import {
 import {
   drawLaserBolts,
   drawShipAtPosition,
-  drawShipExplosion,
+  drawShipExplosionAtPosition,
   drawThruster,
   drawThrusterAtPosition,
   strokeKitHullOutline,
 } from '../../../src/entities/ship/shipRenderer';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { drawContourLaserTicks } from '../../../src/rendering/contourLaserRenderer';
 import { drawIsoContours } from '../../../src/rendering/contourRenderer';
@@ -141,7 +141,7 @@ function canvasColor(ctx: CanvasRenderingContext2D, color: string) {
 }
 
 function pilot(id: string, type: Player['type'] = 'local') {
-  return new Player({ id, name: id, type, input: new MockPlayerInput() });
+  return new Player({ id, name: id, type });
 }
 
 const KITS: ReadonlyArray<{ id: ShipKitId }> = [{ id: 'scout' }, { id: 'hauler' }];
@@ -467,7 +467,7 @@ test('a destroyed scout breaks into drifting hull edges, an expanding ring and u
   ship.angle = 0;
   ship.exploding = true;
   ship.explodeTime = SHIP.EXPLODE_DURATION_FRAMES / 2;
-  drawShipExplosion(ship, PALETTE.LOCAL);
+  drawShipExplosionAtPosition(ship, ship.position, PALETTE.LOCAL);
 
   expect(VISUAL.EXPLOSION_SPARKS).toBeGreaterThanOrEqual(8);
   expect(VISUAL.EXPLOSION_HIT_TICKS).toBe(4);
@@ -610,11 +610,15 @@ test('touch input targets the game canvas while the title terrain stays passive'
   document.body.appendChild(titleTerrain);
   const bodyClass = document.body.className;
   try {
-    const { NetworkManager } = await import('../../../src/network/networkManager');
+    const { ConnectionManager } = await import('../../../src/network/services/ConnectionManager');
     const { PlayerManager } = await import('../../../src/entities/player/PlayerManager');
-    const network = NetworkManager.getInstance();
+    const network = ConnectionManager.getInstance();
     PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
-    InputManager.getInstance().initializeListeners();
+    const inputCanvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
+    if (!inputCanvas) {
+      throw new Error('Input fixture requires its canvas');
+    }
+    InputManager.getInstance().initializeListeners(inputCanvas);
     const gameCanvas = document.querySelector('#gameCanvas');
     if (!gameCanvas) {
       throw new Error('expected both canvases in the play shell');

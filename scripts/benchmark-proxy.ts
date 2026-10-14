@@ -71,7 +71,7 @@ async function stop(error?: unknown) {
     process.stderr.write(`${String(failure)}\n`);
     process.exitCode = 1;
   }
-  if (error) {
+  if (Boolean(error) === true) {
     process.stderr.write(`${String(error)}\n`);
     process.exitCode = 1;
   }

@@ -20,6 +20,10 @@ media:
 
 Shots inherit your ship's motion; hold Space to repeat them, while a mouse click fires once. Direct crew shots mine rocks and kill spiders without hurting pilots. After a wall, reflective-rock, or court-panel bounce, a shot becomes a dangerous ricochet that can hit anyone.
 
+## Charged beam
+
+Hold two playfield fingers, or F on desktop, then release for a larger, stronger shot; a growing ring shows the charge. Longer holds increase mining damage up to a fixed maximum, followed by a short charge cooldown; a quick tap does not fire. Opening a menu, losing focus, cancelling a touch, or dying cancels the charge, and abandoned holds expire.
+
 ## Ricochet Court
 
 Meet at the cyan court northeast of Town Square for informal bank-shot duels; it stays marked on both maps before exploration. Its indestructible panels reflect lasers without changing their energy, while ships pass through safely. Banked shots can escape through the gaps and hurt anyone, with normal death and protection rules and no separate duel score.
@@ -30,8 +34,16 @@ Hazards spill [cargo](/wiki/#loot-growth) before damaging your hull; with an emp
 
 ## Lives and respawn
 
-Death loses your carried points. You respawn near a lit furnace with restored health and brief protection; banked points, salvaged tools, and silk remain safe. Death also releases any tow and drops satellites. There are no lives or game over. Returning after a brief disconnect skips spawn protection.
+Death loses your carried points. You respawn at Town Square with restored health and brief protection; banked points, salvaged tools, and silk remain safe. Death also releases any tow and drops satellites. There are no lives or game over. Returning after a brief disconnect skips spawn protection.
 
 ## Recovery
 
 Avoid damage for a short time and your hull repairs itself automatically. A hit that removes health or spills protective cargo restarts the wait; repairs stop at full health and never revive a destroyed ship. Bank cargo at a lit furnace, then spend banked points on placeholders at [Town Square](/wiki/#controls).
+
+## Downed and rescue
+
+On a campaign-enabled server, a lethal hit leaves you downed with a rescue beacon and a countdown. Another live pilot can hold Revive beside you, or activate it with a keyboard or assistive control to start or cancel; moving, damage, releasing a pointer hold, opening an overlay or either pilot disconnecting cancels the attempt. A completed rescue restores part of your hull with brief protection; Give up or an expired countdown causes the ordinary death and cargo loss, even if you reconnect after the deadline.
+
+## Hull deployment
+
+Your hull pieces snap together on deployment and respawn while flight controls remain available. Reduced motion skips the assembly.

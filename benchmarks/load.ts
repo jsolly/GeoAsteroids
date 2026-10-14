@@ -238,7 +238,7 @@ try {
   const measurement: Measurement | undefined =
     cleanupComplete && Object.keys(samples).length
       ? {
-          primaryMetric: samples['rttMs'] ? 'rttMs' : 'snapshotHandlingMs',
+          primaryMetric: samples['rttMs'] != null ? 'rttMs' : 'snapshotHandlingMs',
           samples,
           counts: {
             offeredPilots: pilots,

@@ -40,7 +40,7 @@ function flight() {
   reconcile();
   ship.angle = 0;
   ship.thrusting = true;
-  ship.velocity = { x: cruiseSpeed(ship.mass, getShipKit('hauler').maxVelocity), y: 0 };
+  ship.velocity = { x: cruiseSpeed(ship.mass, getShipKit('hauler').maxVelocity, 0, 1), y: 0 };
   // Build the pose now; the transport may deliver it later.
   const capture = () => {
     const pose = prediction.buildHandoffPose(ship);

@@ -21,7 +21,7 @@ Hauler is the larger, slower-turning cargo ship with stronger mining lasers and 
 
 ## Resource Tap E
 
-Press E near a rock to extract collectible canisters without destroying it; E again cancels extraction. Tap a spider for limited silk instead, but expect it to turn on you. Silk stays in your material inventory and has no crafting use yet.
+Press E near a rock to extract collectible canisters without destroying it; E again cancels extraction. Ice repairs damage, metal adds cargo, rubble supplies fiber, and crystal briefly widens the reach of Contour Lock. Tap a spider for limited silk instead, but expect it to turn on you; fiber and silk share your material inventory and have no crafting use yet.
 
 ## Tow cable E
 
@@ -50,3 +50,7 @@ Towing a living spider attracts rescuers that can bite through your cable. Bring
 ## Mining lasers
 
 Hauler hits metal and colossal deposits harder. Direct shots are safe for crew hulls; [ricochets](/wiki/#combat-survival) are dangerous.
+
+## Loaded flight
+
+A full hold reduces cruise speed to 70% of its empty speed. Spiders choose the most loaded eligible pilot first, so an escort can clear the route while the carrier heads for a furnace.

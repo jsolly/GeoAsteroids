@@ -9,17 +9,21 @@ import { getTerrainContours } from './terrainSession';
 const captureCandidates = createContourQuery();
 
 /** Capture only a visible nearby line, never an arbitrary implicit level in empty space. */
-export function findContourCapture(position: Position, angle: number): ContourLockState | null {
+export function findContourCapture(
+  position: Position,
+  angle: number,
+  captureRadius: number = CONTOUR_LOCK.captureRadius
+): ContourLockState | null {
   const viewport = canvasManager.getViewportSize();
   const scale = Math.max(canvasManager.getPlayfieldScale(), Number.EPSILON);
   const viewRadius = Math.hypot(viewport.width / 2, viewport.height / 2) / scale + 32 / scale;
   const levels = getTerrainContours(position, viewRadius);
-  let nearest = CONTOUR_LOCK.captureRadius ** 2;
+  let nearest = captureRadius ** 2;
   let height: number | undefined;
   const view = {
     ...position,
-    width: CONTOUR_LOCK.captureRadius * 2,
-    height: CONTOUR_LOCK.captureRadius * 2,
+    width: captureRadius * 2,
+    height: captureRadius * 2,
     scale: 1,
     pad: 0,
   };
@@ -56,7 +60,7 @@ export function findContourCapture(position: Position, angle: number): ContourLo
   const gradient = sampleGradient(getTerrainField(), position.x, position.y);
   const direction = -gradient.y * Math.cos(angle) - gradient.x * Math.sin(angle) >= 0 ? 1 : -1;
   const state: ContourLockState = { height, direction };
-  return contourLockDistance(position, state) <= CONTOUR_LOCK.captureRadius ? state : null;
+  return contourLockDistance(position, state) <= captureRadius ? state : null;
 }
 
 /** Reverse with a backward tangent flick; otherwise catch the first adjacent contour in reach. */

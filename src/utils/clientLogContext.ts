@@ -4,16 +4,16 @@ export type ClientLogContext = {
   connectionId?: string;
 };
 
-const sessionId =
-  globalThis.crypto?.randomUUID?.() ??
-  `page-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+const sessionId = crypto.randomUUID();
 let identity: Omit<ClientLogContext, 'sessionId'> = {};
 
 /** Replace the current connection identity; the page session always remains stable. */
 export function setClientLogContext(context: { playerId?: string; connectionId?: string }): void {
   identity = {
-    ...(context.playerId ? { playerId: context.playerId } : {}),
-    ...(context.connectionId ? { connectionId: context.connectionId } : {}),
+    ...(context.playerId != null && context.playerId !== '' ? { playerId: context.playerId } : {}),
+    ...(context.connectionId != null && context.connectionId !== ''
+      ? { connectionId: context.connectionId }
+      : {}),
   };
 }
 

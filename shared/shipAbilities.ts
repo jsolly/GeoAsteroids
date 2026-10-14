@@ -159,7 +159,7 @@ export function setScoutUtilityOnHost(
 }
 
 function isHarpoonableBody(body: AbilityBody): boolean {
-  return !body.exploding && (body.health === undefined || body.health > 0);
+  return body.exploding !== true && (body.health === undefined || body.health > 0);
 }
 
 export function tickAbilityHost(host: AbilityHost): void {
@@ -238,58 +238,6 @@ export function findHarpoonTarget(
   return pickNearestHarpoonBody(host, valid, range);
 }
 
-interface HarpoonDiagnosis {
-  kitId: ShipKitId;
-  canActivate: boolean;
-  fieldCount: number;
-  range: number;
-  targetId?: string;
-  nearest?: { id?: string; dist: number; gap: number; reason: string };
-}
-
-/** QA probe over an authoritative world: kit, nearest gap, reject reason, chosen latch. */
-export function diagnoseHarpoonLatch(host: AbilityHost, world: AbilityWorld): HarpoonDiagnosis {
-  return diagnoseHarpoonCandidates(host, world.asteroids);
-}
-
-/** QA probe over a client's predicted asteroid field. */
-export function diagnosePredictedHarpoonLatch(
-  host: AbilityHost,
-  asteroids: readonly AbilityBody[]
-): HarpoonDiagnosis {
-  return diagnoseHarpoonCandidates(host, asteroids);
-}
-
-function diagnoseHarpoonCandidates(
-  host: AbilityHost,
-  candidates: readonly AbilityBody[]
-): HarpoonDiagnosis {
-  const range = SHIP_ABILITY.HARPOON_RANGE;
-  let nearest: HarpoonDiagnosis['nearest'];
-  for (const body of candidates) {
-    const dist = Math.hypot(body.position.x - host.position.x, body.position.y - host.position.y);
-    const gap = dist - hostHullRadius(host) - bodyRadius(body);
-    let reason = 'ok';
-    if (!isHarpoonableBody(body)) {
-      reason = 'rejected';
-    } else if (gap > range) {
-      reason = 'out-of-range';
-    }
-    if (!nearest || gap < nearest.gap) {
-      nearest = { ...(body.id !== undefined ? { id: body.id } : {}), dist, gap, reason };
-    }
-  }
-  const targetId = findHarpoonTarget(host, candidates, range)?.id;
-  return {
-    kitId: host.kitId,
-    canActivate: canActivateAbility(host),
-    fieldCount: candidates.length,
-    range,
-    ...(targetId !== undefined ? { targetId } : {}),
-    ...(nearest !== undefined ? { nearest: nearest } : {}),
-  };
-}
-
 function latchStillValid(
   host: AbilityHost,
   target: AbilityBody,
@@ -317,7 +265,7 @@ function canLatchBoostedBody(host: AbilityHost, body: AbilityBody): boolean {
     return false;
   }
   const owners = boostOwnerIds(body.boost);
-  if (host.id && owners.includes(host.id)) {
+  if (host.id != null && host.id !== '' && owners.includes(host.id)) {
     return false;
   }
   return owners.length < asteroidCrewNeeded(abilityBodySize(body));
@@ -334,7 +282,7 @@ export function pullHarpoonTarget(
     clearHaulerLatch(host);
     return;
   }
-  if (!host.harpoonTargetId) {
+  if (host.harpoonTargetId == null || host.harpoonTargetId === '') {
     tickTowCable(host, undefined);
     return;
   }
@@ -362,10 +310,15 @@ export function tickTapExtract(
   host: AbilityHost,
   target?: AbilityBody
 ): 'complete' | 'burst' | 'latched' | 'idle' {
-  if (!isResourceTapUtility(host) || !host.harpoonTargetId || !target) {
+  if (
+    !isResourceTapUtility(host) ||
+    host.harpoonTargetId == null ||
+    host.harpoonTargetId === '' ||
+    !target
+  ) {
     return 'idle';
   }
-  if (host.tapExtractCompleted) {
+  if (host.tapExtractCompleted === true) {
     return 'latched';
   }
   host.tapExtractFrames = (host.tapExtractFrames ?? 0) + 1;
@@ -407,11 +360,13 @@ function activateAbility(
   if (!canActivateAbility(host)) {
     return { activated: false };
   }
-  if (host.kitId === 'hauler' && host.harpoonTargetId) {
+  if (host.kitId === 'hauler' && host.harpoonTargetId != null && host.harpoonTargetId !== '') {
     if (haulerUtilityOf(host) === 'boost_coupling') {
       const target = world?.asteroids.find((body) => body.id === host.harpoonTargetId);
       const armed = target?.boost?.phase === 'armed' ? target.boost : null;
-      const ownsArmedBoost = Boolean(host.id && armed && boostOwnerIds(armed).includes(host.id));
+      const ownsArmedBoost = Boolean(
+        host.id != null && host.id !== '' && armed && boostOwnerIds(armed).includes(host.id)
+      );
       if (
         ownsArmedBoost &&
         target &&
@@ -421,7 +376,7 @@ function activateAbility(
         target.boost = igniteBoost(armed, furnaceHeading(target.position, world?.furnaces));
         host.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.hauler;
       } else if (world) {
-        if (ownsArmedBoost && host.id && armed && target) {
+        if (ownsArmedBoost && host.id != null && host.id !== '' && armed && target) {
           target.boost = removeBoostOwner(armed, host.id);
         }
         clearHaulerLatch(host);
@@ -470,7 +425,7 @@ function activateAbility(
       return { activated: false };
     }
     if (world && haulerUtilityOf(host) === 'boost_coupling') {
-      if (!host.id) {
+      if (host.id == null || host.id === '') {
         return { activated: false };
       }
       if (target.boost?.phase === 'burning') {

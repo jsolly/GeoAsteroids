@@ -7,7 +7,7 @@ import {
   reconcilePlayerInput,
   togglePlayerContourLock,
 } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
+
 import {
   handleMouseDown,
   handleMouseMove,
@@ -33,7 +33,6 @@ beforeEach(() => {
     id: 'mouse-desktop',
     name: 'Desk',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   reconcilePlayerInput(player);
 });

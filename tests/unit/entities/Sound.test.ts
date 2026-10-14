@@ -78,7 +78,7 @@ class FakeHowl {
     this.loaded = false;
   });
   end(id: number) {
-    if (!this.options.loop) {
+    if (this.options.loop !== true) {
       this.voices.delete(id);
     }
     this.sources.get(id)?.dispatchEvent(new Event('ended'));

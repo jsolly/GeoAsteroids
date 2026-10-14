@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { cargoCapacity } from '../../../shared/economy';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { resetCargoFullHint, syncCargoFullHint } from '../../../src/ui/cargoFullHint';
 import {
   CARGO_FULL_HINT,
@@ -9,13 +9,14 @@ import {
   CARGO_FULL_SHOW_MS,
 } from '../../../src/ui/constants';
 import { hideFieldHints, readFieldHints } from '../../../src/ui/fieldHint';
+import { setPlayView } from '../../../src/ui/uiUtils';
 
 const shown = () => readFieldHints().some((hint) => hint.id === 'cargo-full-hint');
 
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
-  document.body.classList.add('in-play');
+  setPlayView(true);
   PlayerManager.getInstance().createLocalPlayer('hauler');
 });
 
@@ -25,7 +26,7 @@ beforeEach(() => {
 });
 
 afterAll(() => {
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   hideFieldHints();
   resetCargoFullHint();
 });
@@ -88,8 +89,8 @@ test('a new runtime resets the full-hold reminder clock and leaving play hides i
   expect(shown()).toBe(true);
   syncCargoFullHint(100_001 + CARGO_FULL_SHOW_MS);
   expect(shown()).toBe(false);
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   syncCargoFullHint(100_001 + CARGO_FULL_REPEAT_MS);
   expect(shown()).toBe(false);
-  document.body.classList.add('in-play');
+  setPlayView(true);
 });

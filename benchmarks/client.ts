@@ -171,13 +171,13 @@ export async function runClientSample(options: ClientOptions) {
     browserServer = await chromium.launchServer({
       headless: true,
       timeout: 30_000,
-      ...(options.chromiumGpu ? { channel: 'chromium', args: ['--enable-gpu'] } : {}),
+      ...(options.chromiumGpu === true ? { channel: 'chromium', args: ['--enable-gpu'] } : {}),
     });
     const browser = await chromium.connect(browserServer.wsEndpoint(), { timeout: 30_000 });
     const session = await browser.newBrowserCDPSession();
     const { gpu } = await session.send('SystemInfo.getInfo');
     await session.detach();
-    if (options.chromiumGpu) {
+    if (options.chromiumGpu === true) {
       const renderer: unknown = gpu.auxAttributes?.['glRenderer'];
       if (
         typeof renderer !== 'string' ||
@@ -284,7 +284,7 @@ export async function runClientSample(options: ClientOptions) {
       if (contextFailures.length) {
         throw new AggregateError(contextFailures, 'Client context failed');
       }
-      if (!outcome || !diagnostics) {
+      if (!outcome || diagnostics == null) {
         throw new Error('Client context returned no outcome or diagnostic receipt');
       }
       return { outcome, diagnostics };

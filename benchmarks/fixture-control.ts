@@ -42,7 +42,9 @@ type FixtureRequest = {
   participants: string[];
 };
 function parseRequest(value: unknown): FixtureRequest {
-  assert(value && typeof value === 'object' && 'scenario' in value && 'participants' in value);
+  assert(
+    value !== null && typeof value === 'object' && 'scenario' in value && 'participants' in value
+  );
   assert(
     value.scenario === 'traversal' ||
       value.scenario === 'combat' ||
@@ -92,7 +94,7 @@ export async function startFixtureControl(
       try {
         const command: unknown = JSON.parse(data);
         if (
-          command &&
+          command !== null &&
           typeof command === 'object' &&
           'operation' in command &&
           command.operation === 'readServerProcessUsage'
@@ -107,7 +109,7 @@ export async function startFixtureControl(
           return;
         }
         if (
-          command &&
+          command !== null &&
           typeof command === 'object' &&
           'operation' in command &&
           (command.operation === 'readRegionalStatus' ||
@@ -127,7 +129,7 @@ export async function startFixtureControl(
           return;
         }
         if (
-          command &&
+          command !== null &&
           typeof command === 'object' &&
           'operation' in command &&
           command.operation === 'readSimulationClock'
@@ -137,7 +139,7 @@ export async function startFixtureControl(
           return;
         }
         if (
-          command &&
+          command !== null &&
           typeof command === 'object' &&
           'operation' in command &&
           command.operation === 'finalizeMetrics'
@@ -447,7 +449,7 @@ async function requestControl(
         captureResponse?.(data);
         try {
           const value: unknown = JSON.parse(data);
-          assert(value && typeof value === 'object');
+          assert(value !== null && typeof value === 'object');
           assert(!('error' in value), 'error' in value ? String(value.error) : 'Fixture error');
           resolve(value);
         } catch (error) {
@@ -462,7 +464,7 @@ async function requestControl(
 
 export async function finalizeServerWindow(path: string) {
   const value = await requestControl(path, { operation: 'finalizeMetrics' });
-  assert(value && typeof value === 'object' && 'window' in value);
+  assert(value !== null && typeof value === 'object' && 'window' in value);
   const window = value.window;
   assert(
     window &&
@@ -519,7 +521,7 @@ export async function readSimulationClock(path: string) {
         parsedType,
       };
     });
-    assert(value && typeof value === 'object');
+    assert(value !== null && typeof value === 'object');
     assert(
       'gameTime' in value &&
         typeof value.gameTime === 'number' &&
@@ -549,7 +551,7 @@ export async function readRegionalManifest(path: string) {
 
 export async function prepareFixture(path: string, request: FixtureRequest) {
   const value = await requestControl(path, request);
-  assert(value && typeof value === 'object');
+  assert(value !== null && typeof value === 'object');
   if ('kind' in value && value.kind === 'pending') {
     assert('missing' in value && Array.isArray(value.missing) && value.missing.length > 0);
     const missing = value.missing.map((id: unknown) => {
@@ -573,7 +575,7 @@ export async function prepareFixture(path: string, request: FixtureRequest) {
   }
   const baselines = value.baselines.map((entry: unknown) => {
     assert(
-      entry &&
+      entry !== null &&
         typeof entry === 'object' &&
         'id' in entry &&
         typeof entry.id === 'string' &&

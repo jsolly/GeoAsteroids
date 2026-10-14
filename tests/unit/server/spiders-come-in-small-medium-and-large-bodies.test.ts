@@ -31,7 +31,7 @@ test('a laser grazing a large spider hits it while the same miss clears a small 
     for (let spawn = 0; spawn <= index; spawn++) {
       spider = manager.spawnSpider({ x: 2200 + spawn * 900, y: 2200 });
     }
-    if (!spider) {
+    if (spider == null) {
       throw new Error('Spider did not spawn');
     }
     expect(spider.id).toBe(ids[index]);

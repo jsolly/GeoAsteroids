@@ -12,8 +12,7 @@ export function drawStarLayers(
   tiles: readonly (readonly StarPoint[])[],
   shipPosition: Position,
   viewport: PlayfieldSize,
-  scale: number,
-  rotation: number
+  scale: number
 ): { nativeStars: number; nativeStarRects: number } {
   const size = VISUAL.STAR_SIZE;
   const screen = starScreen;
@@ -22,7 +21,7 @@ export function drawStarLayers(
   for (const tile of tiles) {
     for (const star of tile) {
       nativeStars++;
-      projectWorldToScreenInto(screen, star, shipPosition, viewport, scale, rotation);
+      projectWorldToScreenInto(screen, star, shipPosition, viewport, scale);
       const sx = screen.x;
       const sy = screen.y;
       if (sx < -size || sy < -size || sx > viewport.width + size || sy > viewport.height + size) {

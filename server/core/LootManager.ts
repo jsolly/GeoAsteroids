@@ -7,10 +7,18 @@ import {
   isEquipmentId,
 } from '../../shared/equipment';
 import { cellWorldBounds, explorationCellAt } from '../../shared/exploration';
+import { NAVIGATION_SALVAGE } from '../../shared/navigationSalvage';
 import { addLootMagnetPull, canCollectLoot, GROWTH, lootOverlap } from '../../shared/shipGrowth';
 import { hullRadiusForKit } from '../../shared/shipKits';
 import { nearbyWorldRows, WORLD } from '../../shared/world';
-import type { EquipmentId, LootData, Position, SavedPointLoot, Velocity } from '../../shared-types';
+import type {
+  AsteroidMaterial,
+  EquipmentId,
+  LootData,
+  Position,
+  SavedPointLoot,
+  Velocity,
+} from '../../shared-types';
 import { spatialQueryBounds } from '../world/spatialQueryBounds';
 import type { GameEntity } from './EntityManager';
 import type { RNGService } from './RNGService';
@@ -271,14 +279,24 @@ export class LootManager {
   }
 
   /** One ejected canister during a Resource Tap extract. The rock stays in the field. */
-  public spawnTap(position: Position, gameTime: number, velocity: Velocity): LootData {
+  public spawnTap(
+    position: Position,
+    gameTime: number,
+    velocity: Velocity,
+    salvage?: AsteroidMaterial
+  ): LootData {
     const drop: TrackedLoot = {
       id: `tap-${this.nextId++}`,
       position: { x: position.x, y: position.y },
       mass: GROWTH.TAP_LOOT_MASS,
       radius: GROWTH.TAP_LOOT_RADIUS,
       kind: 'tap',
-      points: GROWTH.TAP_LOOT_SCORE,
+      points: salvage
+        ? salvage === 'metal'
+          ? NAVIGATION_SALVAGE.metalCargo
+          : 0
+        : GROWTH.TAP_LOOT_SCORE,
+      ...(salvage ? { salvage } : {}),
       expiresAt: gameTime + GROWTH.LOOT_TTL_FRAMES,
       velocity: { ...velocity },
       ejectFramesLeft: GROWTH.TAP_LOOT_EJECT_FRAMES,
@@ -399,7 +417,7 @@ export class LootManager {
         if (
           isEquipmentId(drop.kind) &&
           (!canCollectEquipment(entity, drop.kind) ||
-            claimedEquipment.get(entity.id)?.has(drop.kind))
+            claimedEquipment.get(entity.id)?.has(drop.kind) === true)
         ) {
           return false;
         }
@@ -794,6 +812,7 @@ export class LootManager {
       radius: drop.radius,
       kind: drop.kind,
       ...(drop.points !== undefined ? { points: drop.points } : {}),
+      ...(drop.salvage ? { salvage: drop.salvage } : {}),
     };
 
     return publicDrop;

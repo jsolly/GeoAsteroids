@@ -177,7 +177,7 @@ function executable(name, env) {
   for (const directory of (env.PATH ?? '').split(':')) {
     const path = join(directory, name);
     if (existsSync(path)) {
-      return realpathSync(path);
+      return resolve(path);
     }
   }
   throw new Error(`Missing runtime ${name}`);
@@ -217,7 +217,8 @@ export function identity(root, inputEnvironment = process.env) {
   const source = sourceRows(root);
   const runtimes = ['node', 'npm', 'bash', 'git', 'uvx'].map((name) => {
     const path = executable(name, env);
-    return [name, path, fileRecord(path)];
+    const target = realpathSync(path);
+    return [name, path, fileRecord(path), target, fileRecord(target)];
   });
   const python = pythonRuntime(root, env);
   runtimes.push(['python', python, fileRecord(python)]);
@@ -281,7 +282,7 @@ export function identity(root, inputEnvironment = process.env) {
           key
         )
     )
-    .sort();
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   const unknown = relevant.filter((key) => !allowed.has(key));
   const environment = relevant.map((key) => [key, digest(env[key] ?? '')]);
   const ignoredInputs = readdirSync(root)
@@ -420,7 +421,7 @@ export function readReusable(path, current, candidate, validateReview, ancestors
         return null;
       }
       let donor = donors.get(proof.receipt);
-      if (!donor) {
+      if (donor == null) {
         donor = readReusable(
           proof.receipt,
           { ...current, buildHead: proof.buildHead },

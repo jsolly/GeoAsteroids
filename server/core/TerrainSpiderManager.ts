@@ -1,5 +1,6 @@
 import { segmentCircleContact } from '../../shared/asteroidPhenomena';
 import { FurnaceField } from '../../shared/furnaceField';
+import { GLOWTOY } from '../../shared/glowtoy';
 import { sampleGradient } from '../../shared/heightfield';
 import { SHIP_ABILITY } from '../../shared/shipKits';
 import { getTerrainField } from '../../shared/terrainField';
@@ -18,6 +19,7 @@ interface SpiderActor {
   spawnProtectionTimer?: number;
   radius: number;
   scanning?: boolean;
+  cargo?: number;
 }
 
 interface SpiderAdvanceOptions {
@@ -29,6 +31,7 @@ interface SpiderAdvanceOptions {
   resources: (players: readonly SpiderActor[]) => readonly SpiderResource[];
   resource: (id: string, home: Position) => SpiderResource | undefined;
   onNestCreated: (nest: SpiderFieldState['nests'][number]) => void;
+  lightSources?: readonly Position[];
 }
 
 export interface SpiderAttack {
@@ -145,10 +148,14 @@ export class TerrainSpiderManager {
   private readonly nests = new Map<string, SpiderNest>();
   private nestMarkers: SpiderFieldState['nests'] = [];
   private spawnTargetIndex = 0;
+  private readonly reservedSpiders = new Set<string>();
+  private populationLimit: number = SPIDER.MAX_ACTIVE;
+  private totalLimit: number = SPIDER.MAX_ACTIVE;
 
   public constructor(
     private readonly random: () => number = Math.random,
-    private readonly furnaces = new FurnaceField()
+    private readonly furnaces = new FurnaceField(),
+    private readonly onNestCleared?: (position: Position) => void
   ) {}
 
   public snapshot(): SpiderFieldState {
@@ -173,7 +180,10 @@ export class TerrainSpiderManager {
   }
 
   public clear(): void {
+    this.populationLimit = SPIDER.MAX_ACTIVE;
+    this.totalLimit = SPIDER.MAX_ACTIVE;
     this.spiders.clear();
+    this.reservedSpiders.clear();
     this.nextSpawnFrame = null;
     this.nextRescueFrame = null;
     this.nextNestFrame = 0;
@@ -183,9 +193,10 @@ export class TerrainSpiderManager {
   }
 
   /** Deterministic arrangement hook used by server scenarios and diagnostics. */
-  public spawnSpider(position: Position, angle = 0): TerrainSpider | null {
+  public spawnSpider(position: Position, angle = 0, reserved = false): TerrainSpider | null {
     if (
-      this.spiders.size >= SPIDER.MAX_ACTIVE ||
+      this.spiders.size >= this.totalLimit ||
+      (!reserved && this.ordinaryCount() >= this.populationLimit) ||
       !Number.isFinite(position.x) ||
       !Number.isFinite(position.y) ||
       !Number.isFinite(angle) ||
@@ -212,7 +223,34 @@ export class TerrainSpiderManager {
       territory: { kind: 'roaming' },
     };
     this.spiders.set(spider.id, spider);
+    if (reserved) {
+      this.reservedSpiders.add(spider.id);
+    }
     return copySpider(spider);
+  }
+
+  public ordinaryCount(): number {
+    return this.spiders.size - this.reservedSpiders.size;
+  }
+
+  public setPopulationLimit(ordinary: number, total: number): void {
+    this.populationLimit = Math.max(0, ordinary);
+    this.totalLimit = Math.max(this.populationLimit, total);
+    for (const id of [...this.spiders.keys()].reverse()) {
+      if (this.ordinaryCount() <= this.populationLimit) {
+        break;
+      }
+      if (!this.reservedSpiders.has(id)) {
+        this.removeSpider(id);
+      }
+    }
+    while (this.spiders.size > this.totalLimit) {
+      const id = [...this.spiders.keys()].pop();
+      if (!id) {
+        break;
+      }
+      this.removeSpider(id);
+    }
   }
 
   public getBody(id: string): RuntimeSpider | undefined {
@@ -256,8 +294,18 @@ export class TerrainSpiderManager {
       const nest = this.nests.get(spider.territory.nestId);
       if (nest) {
         nest.guards = nest.guards.filter((guard) => guard.id !== spiderId);
+        if (nest.guards.length === 0) {
+          this.onNestCleared?.(copyPosition(nest.home));
+          const nestId = spider.territory.nestId;
+          this.nestMarkers = this.nestMarkers.filter((marker) => marker.id !== nestId);
+        }
       }
     }
+    return this.removeLiveBody(spiderId);
+  }
+
+  private removeLiveBody(spiderId: string): boolean {
+    this.reservedSpiders.delete(spiderId);
     return this.spiders.delete(spiderId);
   }
 
@@ -277,7 +325,7 @@ export class TerrainSpiderManager {
 
     for (const spider of this.spiders.values()) {
       spider.shudderFrames = Math.max(0, (spider.shudderFrames ?? 0) - 1);
-      if (options.towedIds?.has(spider.id)) {
+      if (options.towedIds?.has(spider.id) === true) {
         spider.displaced = true;
       }
     }
@@ -300,7 +348,12 @@ export class TerrainSpiderManager {
     for (const tow of options.spiderTows ?? []) {
       const owner = playerById.get(tow.ownerId);
       const friend = this.spiders.get(tow.spiderId);
-      if (owner && friend && friend.health > 0 && options.towedIds?.has(friend.id)) {
+      if (
+        owner != null &&
+        friend &&
+        friend.health > 0 &&
+        options.towedIds?.has(friend.id) === true
+      ) {
         tows.push({ owner, friend });
       }
     }
@@ -309,7 +362,7 @@ export class TerrainSpiderManager {
     }
     const attacks: SpiderAttack[] = [];
     for (const spider of [...this.spiders.values()].sort((a, b) => a.id.localeCompare(b.id))) {
-      if (options.towedIds?.has(spider.id)) {
+      if (options.towedIds?.has(spider.id) === true) {
         const start = copyPosition(spider.position);
         spider.position = this.containPosition({
           x: start.x + spider.velocity.x,
@@ -326,7 +379,16 @@ export class TerrainSpiderManager {
         }
         spider.displaced = false;
       }
-      this.advanceSpider(spider, players, playerById, nowFrame, attacks, tows, options.releaseTow);
+      this.advanceSpider(
+        spider,
+        players,
+        playerById,
+        nowFrame,
+        attacks,
+        tows,
+        options.releaseTow,
+        options.lightSources
+      );
     }
 
     const rescueOwners = tows
@@ -354,7 +416,7 @@ export class TerrainSpiderManager {
       const roamers = [...this.spiders.values()].filter(
         (spider) => spider.territory.kind === 'roaming'
       );
-      if (roamers.length < SPIDER.MAX_ROAMERS && this.spiders.size < SPIDER.MAX_ACTIVE) {
+      if (roamers.length < SPIDER.MAX_ROAMERS && this.ordinaryCount() < this.populationLimit) {
         this.spawnNearPlayers(players);
       }
       // Failed attempts consume the interval too; never retry spawning every frame.
@@ -436,7 +498,7 @@ export class TerrainSpiderManager {
         spider.territory.kind === 'guard' ? SPIDER.NEST_WAKE_DISTANCE : SPIDER.DESPAWN_DISTANCE;
       if (nearest > limit && !spider.probe) {
         // Sleeping guards retain their health and identity. Death uses removeSpider.
-        this.spiders.delete(spider.id);
+        this.removeLiveBody(spider.id);
         spider.targetId = null;
         spider.phase = 'scuttling';
         if (spider.territory.kind === 'guard') {
@@ -501,7 +563,7 @@ export class TerrainSpiderManager {
     }
     for (const [id, resource] of candidates) {
       const count = SPIDER.NEST_GUARDS;
-      if (this.spiders.size + count > SPIDER.MAX_ACTIVE) {
+      if (this.ordinaryCount() + count > this.populationLimit) {
         continue;
       }
       const home = copyPosition(resource.position);
@@ -543,7 +605,11 @@ export class TerrainSpiderManager {
     // Check only those known homes once a second, never scan dormant sectors.
     for (const [id, nest] of this.nests) {
       const resource = observedResources.get(id);
-      if (resource && distanceBetween(nest.home, resource.position) <= POSITION_EPSILON) {
+      if (
+        nest.guards.length > 0 &&
+        resource &&
+        distanceBetween(nest.home, resource.position) <= POSITION_EPSILON
+      ) {
         markers.push({
           id,
           resourceId: nest.resourceId,
@@ -564,7 +630,7 @@ export class TerrainSpiderManager {
             continue;
           }
           for (const guard of nest.guards) {
-            if (this.spiders.size >= SPIDER.MAX_ACTIVE) {
+            if (this.ordinaryCount() >= this.populationLimit) {
               break;
             }
             if (
@@ -590,7 +656,8 @@ export class TerrainSpiderManager {
     nowFrame: number,
     attacks: SpiderAttack[],
     tows: SpiderTow[],
-    releaseTow: SpiderAdvanceOptions['releaseTow']
+    releaseTow: SpiderAdvanceOptions['releaseTow'],
+    lightSources: SpiderAdvanceOptions['lightSources']
   ): void {
     spider.rescuing = false;
     const scanner = players
@@ -609,7 +676,10 @@ export class TerrainSpiderManager {
       return;
     }
     const territory = spider.territory;
-    const target = spider.targetId ? playerById.get(spider.targetId) : undefined;
+    const target =
+      spider.targetId != null && spider.targetId !== ''
+        ? playerById.get(spider.targetId)
+        : undefined;
     if (target && !this.canOccupy(target.position, target.radius)) {
       // Shelter overrides an existing chase before it can move or bite.
       if (territory.kind === 'guard') {
@@ -656,7 +726,33 @@ export class TerrainSpiderManager {
         territory.activity = 'returning';
         this.returnHome(spider, territory);
       } else {
-        this.scuttle(spider);
+        const light =
+          territory.kind === 'roaming'
+            ? lightSources
+                ?.filter(
+                  (position) =>
+                    this.canOccupy(position, spider.size) &&
+                    distanceBetween(spider.position, position) < GLOWTOY.attractionRadius
+                )
+                .sort(
+                  (a, b) =>
+                    distanceBetween(spider.position, a) - distanceBetween(spider.position, b)
+                )[0]
+            : undefined;
+        if (light) {
+          const angle = Math.atan2(light.y - spider.position.y, light.x - spider.position.x);
+          const next = {
+            x: spider.position.x + Math.cos(angle),
+            y: spider.position.y + Math.sin(angle),
+          };
+          if (this.canOccupy(next, spider.size)) {
+            spider.position = next;
+            spider.angle = angle;
+            spider.velocity = { x: Math.cos(angle), y: Math.sin(angle) };
+          }
+        } else {
+          this.scuttle(spider);
+        }
       }
       return;
     }
@@ -724,8 +820,10 @@ export class TerrainSpiderManager {
       )
       .sort(
         (a, b) =>
+          (b.cargo ?? 0) - (a.cargo ?? 0) ||
           distanceBetween(a.position, spider.position) -
-            distanceBetween(b.position, spider.position) || a.id.localeCompare(b.id)
+            distanceBetween(b.position, spider.position) ||
+          a.id.localeCompare(b.id)
       )[0];
     if (!target) {
       return;
@@ -926,8 +1024,10 @@ export class TerrainSpiderManager {
       )
       .sort(
         (a, b) =>
+          (b.cargo ?? 0) - (a.cargo ?? 0) ||
           distanceBetween(a.position, spider.position) -
-            distanceBetween(b.position, spider.position) || a.id.localeCompare(b.id)
+            distanceBetween(b.position, spider.position) ||
+          a.id.localeCompare(b.id)
       )[0];
   }
 

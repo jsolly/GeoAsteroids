@@ -12,6 +12,8 @@ import type { Measurement } from './results';
 import { assertSelectedSnapshotState, SELECTED_SNAPSHOT_CONTRACT } from './snapshot-state';
 
 const FULL_FIXTURE_FIELDS = {
+  cooperativeActive: false,
+  campaign: false,
   asteroids: true,
   beltRecovery: false,
   civicModules: false,
@@ -26,6 +28,8 @@ const FULL_FIXTURE_FIELDS = {
   serverTime: false,
   settlement: true,
   spiderField: false,
+  rolyPolys: false,
+  contourBridges: false,
   terrainSeed: true,
 } satisfies Record<keyof ServerGameSnapshot, boolean>;
 const FULL_FIXTURE_KEYS = Object.entries(FULL_FIXTURE_FIELDS)
@@ -120,7 +124,7 @@ function worlds(options: CodecSampleOptions): ServerGameSnapshot[] {
   const result = Array.from({ length: count }, (_, index) => snapshotFixture(options.seed + index));
   for (const [index, world] of result.entries()) {
     assert.deepEqual(
-      Object.keys(world).toSorted(),
+      Object.keys(world).toSorted((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
       FULL_FIXTURE_KEYS,
       `Codec fixture at tick ${index} is missing a complete top-level field set`
     );

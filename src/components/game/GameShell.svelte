@@ -7,6 +7,7 @@
   import type { GamePreference, GamePresentation } from '../../runtime/uiTypes';
   import Button from '../ui/button/button.svelte';
   import ActionControls from './ActionControls.svelte';
+  import CrewControls from './CrewControls.svelte';
   import DebugPanel from './DebugPanel.svelte';
   import FieldHints from './FieldHints.svelte';
   import GameOverlay from './GameOverlay.svelte';
@@ -111,10 +112,8 @@
     let unsubscribe: (() => void) | undefined;
     const wasInPlay = document.body.classList.contains('in-play');
     const wasTouchPlay = document.body.classList.contains('touch-play');
-    const wasDebug = document.body.classList.contains('debug-on');
     const syncBody = () => {
       document.body.classList.toggle('in-play', view.inPlay);
-      document.body.classList.toggle('debug-on', view.debug !== null);
       document.body.classList.toggle('touch-play', view.inPlay && touchControls);
     };
     syncBody();
@@ -138,7 +137,6 @@
               wrapper.style.setProperty('--map-toggle-x', `${geometry.mapX}px`);
               wrapper.style.setProperty('--map-toggle-y', `${geometry.mapY}px`);
               wrapper.style.setProperty('--schematic-toggle-y', `${geometry.schematicY}px`);
-              wrapper.style.setProperty('--store-toggle-y', `${geometry.storeY}px`);
               syncBody();
             },
           },
@@ -175,7 +173,6 @@
       lifetime.dispose();
       document.body.classList.toggle('in-play', wasInPlay);
       document.body.classList.toggle('touch-play', wasTouchPlay);
-      document.body.classList.toggle('debug-on', wasDebug);
     };
   });
 </script>
@@ -227,6 +224,13 @@
     <canvas id="spawn-fly-in" bind:this={spawnCanvas} hidden={!view.spawnActive} aria-hidden="true"
     ></canvas>
     {#if startup.kind === 'ready'}
+      {#if view.inPlay && view.overlay === null && view.crew?.active}
+        <CrewControls
+          view={view.crew}
+          act={startup.runtime.commands.crewAction}
+          signal={startup.runtime.commands.signalHere}
+        />
+      {/if}
       <ActionControls
         view={view.controls}
         mountActions={startup.runtime.commands.mountTouchActions}

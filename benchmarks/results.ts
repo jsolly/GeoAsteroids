@@ -25,7 +25,7 @@ export function canonicalJson(value: unknown): string {
       assert(Number.isFinite(item), 'Report contains a non-finite number');
       return item;
     }
-    assert(item && typeof item === 'object', 'Report contains a non-JSON value');
+    assert(item != null && typeof item === 'object', 'Report contains a non-JSON value');
     assert(!ancestors.has(item), 'Report contains a cycle');
     ancestors.add(item);
     try {
@@ -35,7 +35,7 @@ export function canonicalJson(value: unknown): string {
       assert(isRecord(item), 'Report contains a non-JSON object');
       return Object.fromEntries(
         Object.keys(item)
-          .sort()
+          .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
           .map((key) => [key, normalize(item[key])])
       );
     } finally {

@@ -47,7 +47,7 @@
   $effect(() => {
     const kit = view.kitName;
     const utility = selectedTool?.id;
-    if (painter && (kit !== paintedKit || utility !== paintedTool)) {
+    if (painter != null && (kit !== paintedKit || utility !== paintedTool)) {
       paintedKit = kit;
       paintedTool = utility;
       painter.refresh();

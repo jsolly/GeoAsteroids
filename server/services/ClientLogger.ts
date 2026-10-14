@@ -86,7 +86,7 @@ function sanitize(value: unknown): Payload | undefined {
   const userAgent = text(value['userAgent'], 512);
   const rawPageUrl = text(value['pageUrl'], 2048);
   let pageUrl: string | undefined;
-  if (rawPageUrl) {
+  if (rawPageUrl != null && rawPageUrl !== '') {
     try {
       const url = new URL(rawPageUrl);
       if (url.protocol === 'http:' || url.protocol === 'https:') {
@@ -96,7 +96,7 @@ function sanitize(value: unknown): Payload | undefined {
       pageUrl = undefined;
     }
   }
-  if (!sessionId) {
+  if (sessionId == null || sessionId === '') {
     return;
   }
   if (value['userAgent'] !== undefined && userAgent === undefined) {
@@ -108,7 +108,7 @@ function sanitize(value: unknown): Payload | undefined {
   return {
     record,
     sessionId,
-    ...(userAgent ? { userAgent } : {}),
+    ...(userAgent != null && userAgent !== '' ? { userAgent } : {}),
     ...(pageUrl ? { pageUrl } : {}),
   };
 }
@@ -200,8 +200,10 @@ function receivedRecord(payload: Payload): DiagnosticLogRecord {
     receiverReleaseId: SERVER_RELEASE_ID,
     context: {
       ...payload.record.context,
-      ...(payload.userAgent ? { userAgent: payload.userAgent } : {}),
-      ...(payload.pageUrl ? { pageUrl: payload.pageUrl } : {}),
+      ...(payload.userAgent != null && payload.userAgent !== ''
+        ? { userAgent: payload.userAgent }
+        : {}),
+      ...(payload.pageUrl != null && payload.pageUrl !== '' ? { pageUrl: payload.pageUrl } : {}),
     },
   });
 }
@@ -292,7 +294,7 @@ function getDiagnostics(): ClientLogDiagnostics {
     clientReportedDroppedRecords,
     queuedBytes,
     writeErrors,
-    ...(lastWriteErrorAt ? { lastWriteErrorAt } : {}),
+    ...(lastWriteErrorAt != null && lastWriteErrorAt !== '' ? { lastWriteErrorAt } : {}),
   };
 }
 

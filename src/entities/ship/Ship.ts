@@ -1,16 +1,14 @@
-import { v4 as uuidv4 } from 'uuid';
 import { GAME, SHIP } from '../../../shared/constants/gameplay';
-import {
-  calculateHealthRegenDelayFrames,
-  calculateHealthRegenPerFrame,
-} from '../../../shared/constants/health';
+import { CONTOUR_BRIDGE, contourDraftMultiplier } from '../../../shared/contourBridge';
 import {
   acceleratedContourVelocity,
   canReachContour,
   contourLockVelocity,
 } from '../../../shared/contourLock';
+import { cargoCapacity } from '../../../shared/economy';
 import { onDarkFurnaceFootprint } from '../../../shared/furnaceField';
 import { furnaceTravelPose } from '../../../shared/furnaceTravel';
+import { navigationCaptureRadius } from '../../../shared/navigationSalvage';
 import { PLAYER_MOTION } from '../../../shared/playerMotion';
 import {
   type AbilityWorld,
@@ -26,6 +24,7 @@ import { GROWTH, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import {
   applyShipKitToShip,
   DEFAULT_SHIP_KIT_ID,
+  getShipKit,
   hullRadiusForKit,
   SHIP_ABILITY,
 } from '../../../shared/shipKits';
@@ -33,11 +32,13 @@ import { scoutUtilityOf } from '../../../shared/shipUtilities';
 import { terrainCruiseVelocity, terrainSpeedLimit } from '../../../shared/terrainTravel';
 import type {
   ContourLockState,
+  CrewSignal,
   EquipmentId,
   FurnaceTransit,
   HaulerUtilityId,
   PlayerMotionState,
   Position,
+  RescueState,
   ScoutUtilityId,
   ShipKitId,
   Velocity,
@@ -48,7 +49,6 @@ import { PALETTE } from '../../constants';
 import { playLocalHaptic } from '../../fx/haptics';
 import { worldFurnaces } from '../../network/worldExploration';
 import { findContourCapture, findContourHop } from '../../physics/terrain/contourCapture';
-import { isGenericDeathCause } from '../../utils/deathCause';
 import { logger } from '../../utils/Logger';
 import { addPositionAndVelocity } from '../../utils/mathUtils';
 import { AuthoritativeProjectileField } from '../laser/AuthoritativeProjectileField';
@@ -61,13 +61,11 @@ import {
   applyShipSpawnProtection,
   applyThrustOrFriction,
   calculateHealthAfterDamage,
-  calculateHealthAfterHeal,
-  shouldStartHealthRegeneration,
   tickShipImpactFlash,
 } from './shipUtils';
 
 class Ship {
-  id: string = uuidv4(); // Unique identifier for event handling
+  id: string = crypto.randomUUID(); // Unique identifier for event handling
   position: Position = { x: 0, y: 0 };
   velocity: Velocity = { x: 0, y: 0 };
   /** Granted only by an authoritative motion rebase after an external impulse. */
@@ -75,6 +73,46 @@ class Ship {
   r: number = hullRadiusForKit(DEFAULT_SHIP_KIT_ID);
   mass: number = GROWTH.BASE_MASS;
   angle: number = (90 / 180) * Math.PI;
+  weaponChargeStartedAt: number | null = null;
+  weaponChargeFrames = 0;
+  navigationAssistFrames = 0;
+  contourDraftFrames = 0;
+  private contourHopCount = 0;
+  private contourHopAt = -Infinity;
+
+  beginWeaponCharge(): void {
+    if (
+      this.weaponChargeStartedAt !== null ||
+      this.health <= 0 ||
+      this.exploding ||
+      this.furnaceTransit
+    ) {
+      return;
+    }
+    if (this.combatNetwork?.sendCharge('start') === true) {
+      this.weaponChargeStartedAt = performance.now();
+    }
+  }
+
+  finishWeaponCharge(release: boolean): void {
+    const wasCharging = this.weaponChargeStartedAt !== null;
+    this.weaponChargeStartedAt = null;
+    this.weaponChargeFrames = 0;
+    if (!wasCharging) {
+      return;
+    }
+    this.combatNetwork?.sendCharge(
+      release && this.health > 0 && !this.exploding ? 'release' : 'cancel'
+    );
+  }
+
+  /** Presentation clock only; authoritative flight remains active during assembly. */
+  hullAssemblyStartedAt = Number.NEGATIVE_INFINITY;
+
+  beginHullAssembly(): void {
+    this.hullAssemblyStartedAt = performance.now();
+  }
+
   blinkCount: number = 0;
   spawnProtectionTimer: number = 0;
   canShoot: boolean = true;
@@ -111,7 +149,6 @@ class Ship {
   health: number = SHIP.MAX_HEALTH;
   maxHealth: number = SHIP.MAX_HEALTH;
 
-  healthRegenTimer: number = 0;
   impactFlashFrames: number = 0;
   blinkOn: boolean; // Will be set in constructor based on blinkCount
   lastShotTime: number = 0;
@@ -122,11 +159,15 @@ class Ship {
   movementLocked = false;
   /** Automatic cargo stop, released by steering; grants no damage immunity. */
   cargoHover = false;
+  cargo = 0;
+  downedUntil: number | null = null;
+  rescue: RescueState | null = null;
+  crewSignal: CrewSignal | null = null;
   isLocalPlayer: boolean = false; // Track if this is the local player
   kitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
   thrust: number = SHIP.THRUST;
   maxVelocity: number = SHIP.MAX_VELOCITY;
-  turnSpeed: number = SHIP.TURN_SPEED;
+  turnSpeed: number = getShipKit(DEFAULT_SHIP_KIT_ID).turnSpeed;
   abilityCooldownFrames: number = 0;
   abilityActiveFrames: number = 0;
 
@@ -140,15 +181,12 @@ class Ship {
   scoutUtility?: ScoutUtilityId;
   tapExtractFrames?: number;
   tapExtractCompleted?: boolean;
-  /** Last specific environmental cause (boundary, asteroid, or ricochet). */
-  lastExplodeCause?: string;
 
   private readonly combatNetwork: ShipCombatNetwork | undefined;
 
   constructor(options?: {
     combatNetwork?: ShipCombatNetwork;
     position?: Position;
-    shotCooldown?: number;
     color?: string;
     isLocalPlayer?: boolean;
     frictionCoefficient?: number;
@@ -156,7 +194,7 @@ class Ship {
   }) {
     this.combatNetwork = options?.combatNetwork;
     // Set initial spawn protection for local players to prevent immediate collisions
-    if (options?.isLocalPlayer) {
+    if (options?.isLocalPlayer === true) {
       applyShipSpawnProtection(this);
 
       logger.debug('SPAWN_PROTECTION', 'Initial spawn protection set for local player', {
@@ -174,12 +212,6 @@ class Ship {
     if (options?.position) {
       this.position = options.position;
     }
-    if (options?.shotCooldown !== undefined) {
-      this.shotCooldown = options.shotCooldown;
-    }
-    if (options?.color) {
-      this.color = options.color;
-    }
     if (options?.isLocalPlayer !== undefined) {
       this.isLocalPlayer = options.isLocalPlayer;
     }
@@ -188,10 +220,7 @@ class Ship {
     }
 
     applyShipKitToShip(this, options?.kitId ?? DEFAULT_SHIP_KIT_ID);
-    if (options?.shotCooldown !== undefined) {
-      this.shotCooldown = options.shotCooldown;
-    }
-    if (options?.color) {
+    if (options?.color != null && options?.color !== '') {
       this.color = options.color;
     }
   }
@@ -200,16 +229,12 @@ class Ship {
     this.blinkOn = this.blinkCount % 2 === 0;
   }
 
-  explode(cause?: string): void {
+  explode(): void {
+    this.finishWeaponCharge(false);
+
     this.utilityFlight = null;
     if (this.exploding) {
       return;
-    }
-
-    if (cause && !isGenericDeathCause(cause)) {
-      this.lastExplodeCause = cause;
-    } else if (cause && !this.lastExplodeCause) {
-      this.lastExplodeCause = cause;
     }
 
     this.explodeTime = SHIP.EXPLODE_DURATION_FRAMES;
@@ -219,17 +244,6 @@ class Ship {
     this.angularVelocity = 0;
     playExplosionSound(this.position);
     playLocalHaptic(this.isLocalPlayer, 'boom');
-
-    // Dispatch event to notify that ship has exploded with cause information
-    window.dispatchEvent(
-      new CustomEvent('shipExploded', {
-        detail: {
-          shipId: this.id,
-          position: { x: this.position.x, y: this.position.y },
-          cause,
-        },
-      })
-    );
   }
 
   canShootAgain(): boolean {
@@ -248,7 +262,7 @@ class Ship {
   }
 
   shoot(): void {
-    if (this.furnaceTransit) {
+    if (this.furnaceTransit || this.weaponChargeStartedAt !== null) {
       return;
     }
 
@@ -280,7 +294,7 @@ class Ship {
     }
     this.contourLock = null;
     this.contourLockInputVersion++;
-    const speed = cruiseSpeed(this.mass, this.maxVelocity);
+    const speed = cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId));
     if (this.knockbackVelocityLimit <= speed) {
       const target = terrainCruiseVelocity(this.position, this.angle, speed);
       this.capVelocity(Math.hypot(target.x, target.y));
@@ -294,8 +308,13 @@ class Ship {
       !this.exploding &&
       this.health > 0 &&
       !this.movementLocked &&
-      this.knockbackVelocityLimit <= cruiseSpeed(this.mass, this.maxVelocity) &&
-      findContourCapture(this.position, this.angle) !== null
+      this.knockbackVelocityLimit <=
+        cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId)) &&
+      findContourCapture(
+        this.position,
+        this.angle,
+        navigationCaptureRadius(this.navigationAssistFrames)
+      ) !== null
     );
   }
 
@@ -307,34 +326,60 @@ class Ship {
     if (!this.canLockContour()) {
       return false;
     }
-    const capture = findContourCapture(this.position, this.angle);
+    const capture = findContourCapture(
+      this.position,
+      this.angle,
+      navigationCaptureRadius(this.navigationAssistFrames)
+    );
     return capture ? this.acquireContour(capture) : false;
   }
 
-  hopContour(flick: Position): boolean {
+  hopContour(flick: Position, preserveDirection = false): boolean {
     if (!this.contourLock || !this.canLockContour()) {
       return false;
     }
+    const now = performance.now();
     const capture = findContourHop(this.position, this.contourLock, flick);
-    const cruise = cruiseSpeed(this.mass, this.maxVelocity);
+    if (capture && preserveDirection) {
+      capture.direction = this.contourLock.direction;
+    }
+    if (
+      capture?.height !== this.contourLock.height &&
+      this.contourHopCount >= CONTOUR_BRIDGE.hopLimit &&
+      now - this.contourHopAt < CONTOUR_BRIDGE.comboWindowMs
+    ) {
+      return false;
+    }
+    const cruise = cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId));
+
     const acceleration = (this.thrust * thrustScaleFromMass(this.mass)) / GAME.FPS;
-    return capture &&
-      canReachContour(
+    if (
+      !capture ||
+      !canReachContour(
         this.position,
         capture,
         cruise,
         Math.hypot(this.velocity.x, this.velocity.y),
         acceleration
       )
-      ? this.acquireContour(capture)
-      : false;
+    ) {
+      return false;
+    }
+    const changedRail = capture.height !== this.contourLock.height;
+    const accepted = this.acquireContour(capture);
+    if (accepted && changedRail) {
+      this.contourHopCount =
+        now - this.contourHopAt < CONTOUR_BRIDGE.comboWindowMs ? this.contourHopCount + 1 : 1;
+      this.contourHopAt = now;
+    }
+    return accepted;
   }
 
   private acquireContour(capture: ContourLockState): boolean {
     const target = contourLockVelocity(
       this.position,
       capture,
-      cruiseSpeed(this.mass, this.maxVelocity)
+      cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId))
     );
     if (!target) {
       return false;
@@ -369,7 +414,7 @@ class Ship {
     }
     if (this.isLocalPlayer) {
       const network = this.combatNetwork;
-      if (network?.isConnected) {
+      if (network?.isConnected === true) {
         // The server owns the ability result and cooldown. An optimistic toggle
         // can be undone by an older snapshot or disagree about eligible cargo.
         const sent = network.sendAbility();
@@ -417,51 +462,22 @@ class Ship {
 
   private sendShootEvent(laser: Laser): void {
     const network = this.combatNetwork;
-    if (network?.isConnected) {
+    if (network?.isConnected === true) {
       network.sendShoot(laser);
     }
   }
 
-  takeDamage(amount: number, cause?: string): void {
+  takeDamage(amount: number): void {
     this.releaseContourLock();
     if (this.exploding || this.movementLocked) {
       return;
     }
 
     this.health = calculateHealthAfterDamage(this.health, amount, this.maxHealth);
-    this.healthRegenTimer = calculateHealthRegenDelayFrames();
 
     if (this.health <= 0) {
       this.health = 0;
-      this.explode(cause);
-    }
-  }
-
-  heal(amount: number): void {
-    if (this.exploding) {
-      return;
-    }
-
-    this.health = calculateHealthAfterHeal(this.health, amount, this.maxHealth);
-  }
-
-  /** Once a server snapshot owns health, only authoritative echoes may heal it. */
-  serverOwnsHealth = false;
-
-  updateHealth(): void {
-    if (this.serverOwnsHealth) {
-      return;
-    }
-    // Predict the same five-second countdown and proportional rate as the server.
-    if (this.exploding || this.health <= 0) {
-      return;
-    }
-    if (this.healthRegenTimer > 0) {
-      this.healthRegenTimer--;
-      return;
-    }
-    if (shouldStartHealthRegeneration(this.healthRegenTimer, this.health, this.maxHealth)) {
-      this.heal(calculateHealthRegenPerFrame(this.maxHealth));
+      this.explode();
     }
   }
 
@@ -481,13 +497,6 @@ class Ship {
         this.spawnProtectionTimer = SHIP.INVINCIBILITY_BLINK_DURATION_FRAMES;
         this.setBlinkOn();
       }
-    } else if (this.isLocalPlayer) {
-      // Debug logging when spawn protection is complete
-      logger.debug('SPAWN_PROTECTION', 'Spawn protection complete', {
-        shipId: this.id,
-        blinkCount: this.blinkCount,
-        canCollide: true,
-      });
     }
   }
 
@@ -513,15 +522,23 @@ class Ship {
       this.updateInvincibility();
       tickShipImpactFlash(this);
       tickAbilityHost(this);
-      if (!this.combatNetwork?.isConnected) {
+      if (this.combatNetwork?.isConnected !== true) {
         tickTowLine(this, getHarpoonField());
       }
-      this.updateHealth();
     }
   }
 
   /** Advance one 60 Hz simulation step, including movement and combat timers. */
   update(): void {
+    if (
+      (this.downedUntil != null && this.downedUntil !== 0 && !Number.isNaN(this.downedUntil)) ||
+      this.rescue
+    ) {
+      this.velocity = { x: 0, y: 0 };
+      this.thrusting = false;
+      this.releaseContourLock();
+      return;
+    }
     if (this.furnaceTransit) {
       this.releaseContourLock();
       const pose = furnaceTravelPose(this.furnaceTransit, Date.now() + this.furnaceClockOffsetMs);
@@ -567,8 +584,10 @@ class Ship {
       this.knockbackVelocityLimit = 0;
       return;
     }
+    this.navigationAssistFrames = Math.max(0, this.navigationAssistFrames - 1);
+    this.contourDraftFrames = Math.max(0, this.contourDraftFrames - 1);
     this.angle += this.angularVelocity;
-    const speed = cruiseSpeed(this.mass, this.maxVelocity);
+    const speed = cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId));
     if (this.knockbackVelocityLimit > speed) {
       this.releaseContourLock();
     }
@@ -576,7 +595,7 @@ class Ship {
       const target = acceleratedContourVelocity(
         this.position,
         this.contourLock,
-        speed,
+        speed * contourDraftMultiplier(this.contourDraftFrames),
         Math.hypot(this.velocity.x, this.velocity.y),
         (this.thrust * thrustScaleFromMass(this.mass)) / GAME.FPS
       );

@@ -5,7 +5,6 @@
   import { setMediaSource, shouldAutoplayMedia } from '../../wiki/mediaPlayback';
   import { WikiScrollMemory } from '../../wiki/scrollMemory';
   import { searchArticles } from '../../wiki/search';
-  import { mountShipRadar } from '../../wiki/shipScorecard';
   import Button from '../ui/button/button.svelte';
   import Input from '../ui/input/input.svelte';
   import ShipHull from './ShipHull.svelte';
@@ -20,8 +19,6 @@
   let navigationOpen = $state(false);
   let content: HTMLElement;
   let searchInput = $state<HTMLInputElement | null>(null);
-  // Keyed by article: the static document renders every ship article before one becomes active.
-  let radars = $state<Record<string, HTMLElement | null>>({});
   const categories = $derived([...new Set(articles.map((entry) => entry.category))]);
   const results = $derived(searchArticles(articles, query.trim()));
   const article = $derived(articles.find((entry) => entry.id === route));
@@ -36,11 +33,10 @@
   let alive = true;
   let generation = 0;
   let frame: number | undefined;
-  let disposeRadar = () => {};
   let historyFailureReported = false;
 
   function savedScroll(state: unknown): { id?: string; y?: number } {
-    if (!state || typeof state !== 'object') {
+    if (state === null || typeof state !== 'object') {
       return {};
     }
     const record = state as Record<string, unknown>;
@@ -103,8 +99,6 @@
   }
   async function activate(moveFocus: boolean) {
     const ticket = ++generation;
-    disposeRadar();
-    disposeRadar = () => {};
     await tick();
     if (!alive || ticket !== generation) {
       return;
@@ -119,10 +113,6 @@
     if (article && !query.trim()) {
       if (article.media.length !== content.querySelectorAll('.demo').length) {
         throw new Error(`Media mapping mismatch for ${article.id}`);
-      }
-      const radar = radars[article.id];
-      if (radar && isShipKitId(article.id)) {
-        disposeRadar = mountShipRadar(radar, article.id);
       }
       playback();
     }
@@ -207,7 +197,7 @@
     const id = initial.id ?? crypto.randomUUID();
     const oldRestoration = history.scrollRestoration;
     memory = new WikiScrollMemory(id, writeScroll, remember, () => window.scrollY);
-    if (!initial.id) {
+    if (initial.id == null || initial.id === '') {
       remember(id, initial.y ?? 0);
     }
     history.scrollRestoration = 'manual';
@@ -231,7 +221,6 @@
     return () => {
       alive = false;
       generation++;
-      disposeRadar();
       memory?.capture(window.scrollY);
       memory?.dispose();
       if (frame !== undefined) {
@@ -342,10 +331,7 @@
                 </div>
                 <p class="article-summary">{entry.summary}</p>
               </header>
-              {#if isShipKitId(entry.id)}<ShipScorecard
-                  id={entry.id}
-                  bind:radar={radars[entry.id]}
-                />{/if}
+              {#if isShipKitId(entry.id)}<ShipScorecard id={entry.id} active={initialized} />{/if}
               <!-- Compiled at build time with Markdown HTML disabled; scripts/wiki-content.ts owns .demo. -->
               <div class="article-body">{@html entry.html}</div>
               <aside class="related">
@@ -512,17 +498,6 @@
   /* Global rules below style markup compiled into each article body. */
   main :global(.article-body .table-scroll) {
     overflow: auto;
-  }
-  main :global(.article-body table) {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  main :global(.article-body th),
-  main :global(.article-body td) {
-    text-align: left;
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
   }
   main :global(.demo img) {
     display: block;

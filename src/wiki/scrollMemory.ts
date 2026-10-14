@@ -170,7 +170,7 @@ export class WikiScrollMemory {
   private queueRemember(y: number): void {
     this.pendingY = y;
     this.pendingRemember = true;
-    if (this.rememberTimer) {
+    if (this.rememberTimer != null) {
       return;
     }
     this.rememberTimer = setTimeout(() => {
@@ -180,7 +180,7 @@ export class WikiScrollMemory {
   }
 
   private flushRemember(): void {
-    if (this.rememberTimer) {
+    if (this.rememberTimer != null) {
       clearTimeout(this.rememberTimer);
       this.rememberTimer = undefined;
     }
@@ -192,7 +192,7 @@ export class WikiScrollMemory {
   }
 
   private cancelRemember(): void {
-    if (this.rememberTimer) {
+    if (this.rememberTimer != null) {
       clearTimeout(this.rememberTimer);
       this.rememberTimer = undefined;
     }
