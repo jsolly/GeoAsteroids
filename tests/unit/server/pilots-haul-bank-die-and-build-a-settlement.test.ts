@@ -14,7 +14,7 @@ import {
   oreResource,
   oreYield,
 } from '../../../shared/economy';
-import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
+import { civicLot, TOWN_HEARTH, TOWN_SPAWN_RADIUS } from '../../../shared/furnaces';
 import { hullRadiusForKit } from '../../../shared/shipKits';
 import type { AsteroidData } from '../../../shared-types';
 import { RecordingSocket } from '../../support/recordingSocket';
@@ -48,8 +48,22 @@ function rock(id: string, ore: AsteroidData['ore'], size = 25): AsteroidData {
 test('death repeatedly discards cargo, preserves the bank, and always respawns', () => {
   const engine = new GameEngine(42);
   const { actor } = pilot(engine);
-  actor.score = 731;
+  const outerFurnace = civicLot('street-1-0');
+  if (!outerFurnace) {
+    throw new Error('Missing outer furnace');
+  }
+  actor.position = { ...outerFurnace.position };
+  actor.score = outerFurnace.cost + 731;
+  actor.abilityCooldownFrames = 0;
+  expect(engine.useAbility(actor.id)).toBe(true);
+  expect(engine.getGameState().civicModules).toContainEqual({
+    id: outerFurnace.id,
+    builderName: actor.name,
+    builderId: actor.id,
+  });
+  expect(actor.score).toBe(731);
   for (let death = 0; death < 8; death++) {
+    actor.position = { ...outerFurnace.position };
     actor.cargo = 90;
     actor.spawnProtectionTimer = 0;
     const beforeDeath = engine.getLoot();
@@ -75,6 +89,7 @@ test('death repeatedly discards cargo, preserves the bank, and always respawns',
     }
     expect(actor.health).toBe(actor.maxHealth);
     expect(actor.exploding).toBe(false);
+    expect(Math.hypot(actor.position.x, actor.position.y)).toBeCloseTo(TOWN_SPAWN_RADIUS);
   }
 });
 

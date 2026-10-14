@@ -30,7 +30,7 @@ Northeast of Town Square, cyan court panels reflect lasers but let ships pass th
 
 ## Spider nests
 
-Each new nest has a fixed guard pack and mixed salvage, often including [rare equipment](/wiki/#loot-growth); guard and cache numbers are in the reference below. Caches are time-limited, subject to the shared pickup limit, and do not refill when you return. Red map webs mark discovered guarded resources; the mark disappears when the resource is collected or moved.
+Each new nest has a fixed guard pack and mixed salvage, often including [rare equipment](/wiki/#loot-growth); guard and cache numbers are in the reference below. Caches are time-limited, subject to the shared pickup limit, and do not refill when you return. Red map webs mark discovered guarded resources; the mark disappears when the last guard dies or the resource is collected or moved.
 
 ## Guard patrols
 

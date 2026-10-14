@@ -14,19 +14,19 @@ media: []
 
 ## Read the HUD
 
-Gold crates fill the cargo bay inside local and crew hulls as they collect points; a full hold pulses with Cargo Full, and [offloading](/wiki/#loot-growth) shows a stream, countdown and completion flash. The HUD shows your bank, cargo capacity, kit, shared settlement progress and resource requirements, and the crew leaderboard, ranked by bank (top ten on desktop, top three on touch, so you may not appear). The settlement percentage averages its five requirements. A thin health bar appears above a damaged ship, and the Contour Lock button shows whether a contour is available or locked. On mobile, two compact lines show bank and cargo, then kit and settlement level progress; the detailed points and resource requirements remain in the desktop HUD. On touch, the ability button names your tool and a ring shows its cooldown; desktop has no cooldown indicator. One line at the top briefly shows satellite pickups, Delivery +N or Team delivery +N each, and Scout build results; no message appears on death.
+Gold crates fill the cargo bay inside local and crew hulls as they collect points; a full hold pulses with Cargo Full, and [offloading](/wiki/#loot-growth) shows a stream, countdown and completion flash. The HUD shows your bank, cargo capacity, kit, shared settlement progress and resource requirements, and the crew leaderboard, ranked by bank (top ten on desktop, top three on touch, so you may not appear). The settlement percentage averages its five requirements. A thin health bar always appears above living crew ships and above your own damaged ship, and the Contour Lock button shows whether a contour is available or locked. On mobile, two compact lines show bank and cargo, then kit and settlement level progress; the detailed points and resource requirements remain in the desktop HUD. On touch, the ability button names your tool and a ring shows its cooldown; desktop has no cooldown indicator. One line at the top briefly shows satellite pickups, Delivery +N or Team delivery +N each, and Scout build results; no message appears on death.
 
 ## Travel prompt
 
-Inside a lit furnace's visible footprint, the prompt offers travel; at Town Square it says Enter and opens a choice of Store or Fast Travel. See [furnace travel and store](/wiki/#controls) for controls and boarding rules.
+Inside a lit furnace's visible footprint, the prompt offers travel; at Town Square it says Enter and opens a choice of Store or Fast Travel. Living pilots appear by name on the destination map; off-chart pilots get an edge arrow, and their markers do not select a destination. See [furnace travel and store](/wiki/#controls) for controls and boarding rules.
 
 ## Radar and universe map
 
-The minimap shows nearby space; M or Map opens the full shared chart. Both keep north at the top, matching the viewport and furnace destination map. Your ship marker turns to show its heading. Pinch the full chart to zoom and drag to pan; desktop also supports the mouse wheel and +/− keys. The north arrow and legend sit inside the chart, and Center on you restores the nearby ship view. The minimap shows furnaces once explored and pins off-radar crew to its rim, while the full chart always shows every lit furnace and foundation; their names appear on the chart only after you zoom in close, and only lit furnaces show fire trails. Explored ground has a pale blue tint; dark fog hides uncharted rocks and loot.
+The minimap shows nearby space; M or Map opens the full shared chart. Both keep north at the top, matching the viewport and furnace destination map. Your ship marker turns to show its heading. Pinch the full chart to zoom and drag to pan; desktop also supports the mouse wheel and +/− keys. The north arrow and legend sit inside the chart, and Center on you restores the nearby ship view. Furnace marks keep their exact world position as you approach and cross them. The minimap shows furnaces once explored and pins off-radar crew to its rim, while the full chart always shows every lit furnace and foundation; their names appear on the chart only after you zoom in close, and only lit furnaces show fire trails. Explored ground has a pale blue tint; dark fog hides uncharted rocks and loot.
 
 ## Ricochet Court
 
-Discovered spider nests are red while any guard survives and turn dark gray when the last guard dies. A cleared marker stays until its original resource moves or disappears.
+Discovered spider nests stay red while any guard survives, even when those guards sleep offscreen. The marker disappears when the last guard dies.
 
 The cyan open-corner marker northeast of Town Square is always visible on both maps. See [bank-shot duels](/wiki/#combat-survival) before entering.
 

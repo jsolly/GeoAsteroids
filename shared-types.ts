@@ -238,6 +238,8 @@ export type LootKind = 'shard' | 'tap' | 'silk' | EquipmentId | 'points';
 
 /** One accepted collection, emitted before the next world snapshot. */
 export interface LootCollected {
+  /** Stable identity of this collection, optional while older servers remain deployed. */
+  eventId?: string;
   lootId: string;
   collectorId: string;
   kind: LootKind;

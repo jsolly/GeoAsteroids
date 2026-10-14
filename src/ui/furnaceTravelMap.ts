@@ -11,16 +11,18 @@ export interface FurnaceTravelView {
   readonly source: FurnaceSite;
   readonly destinations: readonly FurnaceSite[];
   readonly rotation: number;
+  readonly pilots?: readonly (FurnaceSite & { readonly local: boolean })[];
 }
 const MARKER_SIZE = 64;
 const MARKER_GAP = 12;
 const MAP_PADDING = 52;
+const MIN_WORLD_SPAN = 1000;
 // Keep 64px markers at least 44px wide after the whole map is scaled.
 const MIN_ZOOM = 0.7;
 
 /** Preserve world bearings and pipe geometry, expanding dense maps to separate targets. */
 export function createFurnaceTravelLayout(
-  { source, destinations, rotation }: FurnaceTravelView,
+  { source, destinations, rotation, pilots = [] }: FurnaceTravelView,
   viewportWidth: number,
   viewportWindowHeight: number
 ) {
@@ -41,7 +43,7 @@ export function createFurnaceTravelLayout(
   const minY = Math.min(...points.map((point) => point.y));
   const width = Math.max(...points.map((point) => point.x)) - minX;
   const height = Math.max(...points.map((point) => point.y)) - minY;
-  const span = Math.max(1, width, height);
+  const span = Math.max(MIN_WORLD_SPAN, width, height);
   let nearest = Number.POSITIVE_INFINITY;
   for (let a = 0; a < sites.length; a++) {
     const left = sites[a];
@@ -75,6 +77,27 @@ export function createFurnaceTravelLayout(
   return {
     size,
     markerSize: MARKER_SIZE,
+    pilots: pilots.map((pilot) => {
+      const position = project(projectBearing(pilot.position));
+      const inset = 16;
+      const x = Math.max(inset, Math.min(size - inset, position.x));
+      const y = Math.max(inset, Math.min(size - inset, position.y));
+      const offMap = x !== position.x || y !== position.y;
+      const bearing =
+        (Math.round(Math.atan2(position.y - y, position.x - x) / (Math.PI / 4)) + 8) % 8;
+      const direction = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'][bearing];
+      const directionName = [
+        'east',
+        'southeast',
+        'south',
+        'southwest',
+        'west',
+        'northwest',
+        'north',
+        'northeast',
+      ][bearing];
+      return { ...pilot, position: { x, y }, offMap, direction, directionName };
+    }),
     sites: sites.map((site) => ({ ...site, position: project(site.position) })),
     routes: sites.map((site, index) => ({
       id: site.id,

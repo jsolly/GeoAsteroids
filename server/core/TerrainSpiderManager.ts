@@ -256,6 +256,10 @@ export class TerrainSpiderManager {
       const nest = this.nests.get(spider.territory.nestId);
       if (nest) {
         nest.guards = nest.guards.filter((guard) => guard.id !== spiderId);
+        if (nest.guards.length === 0) {
+          const nestId = spider.territory.nestId;
+          this.nestMarkers = this.nestMarkers.filter((marker) => marker.id !== nestId);
+        }
       }
     }
     return this.spiders.delete(spiderId);
@@ -543,7 +547,11 @@ export class TerrainSpiderManager {
     // Check only those known homes once a second, never scan dormant sectors.
     for (const [id, nest] of this.nests) {
       const resource = observedResources.get(id);
-      if (resource && distanceBetween(nest.home, resource.position) <= POSITION_EPSILON) {
+      if (
+        nest.guards.length > 0 &&
+        resource &&
+        distanceBetween(nest.home, resource.position) <= POSITION_EPSILON
+      ) {
         markers.push({
           id,
           resourceId: nest.resourceId,

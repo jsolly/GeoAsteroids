@@ -30,7 +30,7 @@ Hazards spill [cargo](/wiki/#loot-growth) before damaging your hull; with an emp
 
 ## Lives and respawn
 
-Death loses your carried points. You respawn near a lit furnace with restored health and brief protection; banked points, salvaged tools, and silk remain safe. Death also releases any tow and drops satellites. There are no lives or game over. Returning after a brief disconnect skips spawn protection.
+Death loses your carried points. You respawn at Town Square with restored health and brief protection; banked points, salvaged tools, and silk remain safe. Death also releases any tow and drops satellites. There are no lives or game over. Returning after a brief disconnect skips spawn protection.
 
 ## Recovery
 
