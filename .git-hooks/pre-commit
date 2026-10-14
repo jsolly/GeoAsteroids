@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
+((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; open a fresh shell and rerun repository setup." >&2; exit 1; }
 # Commit-time quality gate; shared preamble supports explicit full manual runs.
 # Vercel deploys the client after merge; this hook does not deploy.
 set -euo pipefail
 
 # shellcheck source=/dev/null
-source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
-  echo "✗ dotagents gate-lib not found (expected ~/code/dotagents/gate/gate-lib.sh) — re-run install-local-agent-runtime.sh." >&2
-  exit 1
-}
+_repo_owned_gate_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+source "$_repo_owned_gate_root/gate/gate-lib.sh"
 # Gate the tree being committed, not this copy's: under an absolute core.hooksPath (Claude
 # desktop worktrees) this re-execs the committing tree's own hook; it sets ROOT and cd's.
 gate_enter_committing_tree "${BASH_SOURCE[0]}"
-gate_require_lib 12  # gate_check_bash_floor
 
 gate_begin_commit "GeoRoids"    # staged secrets/lint and ordinary commit fast paths
 run_step "bash floor" gate_check_bash_floor 'scripts/process-tree.sh' '.cursor/*'   # non-Cursor Bash entrypoints refuse Bash < 5

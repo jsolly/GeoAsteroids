@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:958446e70428b5b61710ffb6250ae3b3d0b23184829eacc94cbf24594cee2728",
+    "package.json": "sha256:7ecec8dbbad66ef757897c7033971a8bd3cdb5873c6627d8b04ff07537eccf87",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -66,14 +66,14 @@
     "scripts/wiki-media-requirements.txt": "sha256:5dd5a7db938c69c025039265a023c0253f450704efd947dd579e6958a14c964d",
     "scripts/wiki-media.ts": "sha256:daec9b8c2a1cc8c764304f3ff7cd25f382df982553d5abb7ef5a8924e731ade6",
     "scripts/wiki-satellite-demo.ts": "sha256:7ecaae18ab604448b3706caab776aaf48e7f4b18fc5781e97cae2838fca52f88",
-    "server.ts": "sha256:1847341c2cd9286dc2a2ef87693cdb199d290d58f16a3a195c4e34d158c24125",
+    "server.ts": "sha256:59210b7720b95338cebbb531e6f2548f60c6b8dee86847eec65c8d5b86347b5e",
     "server/communication/MessageHandler.ts": "sha256:a35d496961d8ae5a31f9383bd18b8130d6d711d5726ddf83ef30fee9fddca096",
     "server/communication/WebSocketCore.ts": "sha256:824dcee22c88aadaaa97a372aaf955ac4094374d6dc7e48af7455d6caadaecf8",
     "server/communication/clientCommandDecoder.ts": "sha256:fa3dee633beb27d908a9b5632de707bfe9811b1ebfcd3072c0a7577bf4525228",
     "server/communication/connectionAdmission.ts": "sha256:a2a9327cb76fedd362cc156431b31c5d648a0dc222b44b1f87558acc56d5910a",
     "server/communication/inboundMessageLog.ts": "sha256:a9ce18d51630fbbcdaa5145c7ad0940cddb41c5353be47dd3fa540155e74090a",
     "server/communication/messageBudget.ts": "sha256:2fb41f10f624428212246737a3b67a554143c9b393ede8ed449be17a739e9a69",
-    "server/configuration.ts": "sha256:73b18759bebf97fb96ede60fafeb5b5145a0c4bd034db98366cc878ef9863395",
+    "server/configuration.ts": "sha256:8c31383fb0c11922ffec139e30fe0b09b2461b541113152da5052e7bb2c5d88f",
     "server/core/AsteroidManager.ts": "sha256:1dd33888a9e88396d39c7e7bdec44960990cb0a6ba8f696470f64ed28fd41102",
     "server/core/BeltCrawlerManager.ts": "sha256:81b35635f9f280a843c912b29b436503816d8e120870f25095bfc43cf711f6aa",
     "server/core/CollisionAuthority.ts": "sha256:d32d9e22b8efc7a922ebd9bf399bf71f773a4a8b372e879a288795771d93cfdc",
@@ -4204,6 +4204,56 @@
       }
     },
     {
+      "note": "Reviewed package.json tooling-only changes: repository-owned worktree setup and hook-trust test command; dependencies, gameplay, Wiki content and demonstrations are unchanged. Lint, types and all 1969 unit tests passed. Checked the existing production Wiki at 1280x900 and 390x844, exercised search and mobile navigation, and observed no browser errors. No article or media update is needed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Scoped review of the opt-in Railway preview: package.json only adds the /preview comment-matcher contract to check:actions; server.ts and server/configuration.ts add GEOROIDS_PREVIEW_CLIENT, which serves the built client from the game server only in the Railway preview environment and fails startup elsewhere. Gameplay rules, controls, protocol, Wiki articles, generated references and demonstrations are unchanged; production keeps NODE_ENV and the local playground behavior. No Wiki page is affected.",
+      "sources": ["package.json", "server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Scoped re-review after preview hardening: server.ts passes explicit configuration fields and the dist/ client root only in preview mode; server/configuration.ts additionally keeps the local playground off whenever the preview client is enabled. Gameplay rules, controls, protocol, Wiki articles and demonstrations are unchanged; no Wiki page is affected.",
+      "sources": ["server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Refreshed opt-in preview startup on current main while preserving all 129 main review batches and both distinct historical preview review batches. Reviewed the three changed source inputs, the static-client handler and server route integration, all 11 field-manual articles, generated-reference imports and demonstration ownership. Preview selection and deployment contracts leave gameplay rules, player interfaces and media sources unchanged; no article or demonstration update is needed. Strict types and all 22 preview/configuration regression cases passed.",
+      "sources": ["package.json", "server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the package-script merge onto current main: preserved repository hook trust and all current required checks, and retained the opt-in preview comment-matcher contract in check:actions. Dependency versions, gameplay, player interfaces, Wiki articles and demonstration inputs are unchanged; no article or media update is needed. CI and preview-comment contracts passed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
       "note": "Reviewed exact-position furnace marks, named travel crew with accessible off-chart bearings, living crew health, Town Square death respawn, cleared nest markers and their resource-movement limit, pickup receipt identity, and accepted cargo-completion sound. Updated Combat, HUD, Loot, Scout, Teamwork and Terrain articles and visually inspected all six in Chrome at 1280x900 and 390x844 with clean warning/error logs. Existing demonstrations remain accurate; cargo media was inspected after lazy loading. Actual travel-component selection and keyboard zoom passed in the earlier desktop/mobile smoke. Biome, strict types, frontend diagnostics, and 49 focused component/network scenarios passed; removing the deposit bank-growth guard made the living cargo-loss regression fail. Full publication gate follows. Physical-device audio and haptics remain separately unverified.",
       "sources": [
         "server/core/EntityManager.ts",
@@ -5839,6 +5889,38 @@
       ],
       "owners": {
         "src/components/game/UniverseMap.svelte": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed package.json after integrating repository-owned tooling and Railway preview support into draft #814. Mandatory hook trust/gate commands and preview comment contracts are preserved alongside the existing gameplay branch scripts; gameplay controls and field-guide behavior are unchanged by this integration. Preview and pinned cloud commands are documented in docs/agent-operations.md. Existing accepted gameplay source values and all 163 historical review batches are preserved, including the feature deletions.",
+      "sources": ["package.json"],
+      "topics": [
+        "asteroids",
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "hauler",
+        "hud-network",
+        "loot-growth",
+        "satellites",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": [
+        "cargo",
+        "hauler",
+        "loot",
+        "movement",
+        "pickups",
+        "reflection",
+        "satellites",
+        "scout",
+        "survival",
+        "terrain"
+      ],
+      "owners": {
+        "package.json": "field-manual"
       }
     }
   ]

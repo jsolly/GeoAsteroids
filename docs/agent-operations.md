@@ -8,7 +8,7 @@ Run the complete gate before publication and after review fixes; [CI and local r
 
 After merging, confirm Vercel's production Git deployment is READY at <https://www.georoids.com>. Classify server inputs with the classifier's `--changed` mode using the actual base and merge SHAs from the ship receipt. If the graph requires a server deployment, independently confirm Railway's production Git deployment succeeded; client success alone is insufficient. Successful host deployments establish the release. Do not compare served metadata or search bundle text for a commit SHA. Railway auto-deploys main. If deployment is absent or red, inspect the actual trigger and staged platform changes before any pinned-commit fallback; never upload an arbitrary local tree as a production release.
 
-Read `/ship`'s installed deploy and smoke references for the canonical follower invocation. The Production smoke receipt uses `releaseSha` and `requestId` to identify the checked-out scenario and verification request. The runner checks the build-generated `client-assets.json` module graph, gameplay entry reachability, declared asset availability, HTTP health and a genuine current-protocol WebSocket pilot. Preserve healthy persistent-worker state, zero game-loop stalls, protocol admission, authoritative snapshots, movement and a correlated accepted-shot acknowledgement. It does not compare client/server release metadata or certify browser rendering, keyboard/touch controls, graphics or audio.
+Follow the repository-owned Production smoke workflow and inspect its exact-release receipt; optional personal release helpers are not prerequisites. The Production smoke receipt uses `releaseSha` and `requestId` to identify the checked-out scenario and verification request. The runner checks the build-generated `client-assets.json` module graph, gameplay entry reachability, declared asset availability, HTTP health and a genuine current-protocol WebSocket pilot. Preserve healthy persistent-worker state, zero game-loop stalls, protocol admission, authoritative snapshots, movement and a correlated accepted-shot acknowledgement. It does not compare client/server release metadata or certify browser rendering, keyboard/touch controls, graphics or audio.
 
 Manual production smoke requires a full `PRODUCTION_SMOKE_RELEASE_SHA` and unique `PRODUCTION_SMOKE_REQUEST_ID` to select the scenario checkout and correlate its receipt. Use the workflow dispatch inputs `release_sha` and `request_id`. The production runner starts no local server. After a new Railway deployment, follow a fresh smoke. Skipped, cancelled, missing, failed or timed-out smoke remains unverified. Artifacts retain HTTP/assets and protocol observations, descriptive release metadata, accepted-shot evidence, persistence health and owned-pilot cleanup.
 
@@ -16,7 +16,7 @@ Open clients check the static same-origin `release.json` for the full build iden
 
 ## Deploy
 
-Two separate deploy targets — client and server do not share a host.
+Two separate production deploy targets — client and server do not share a host. The opt-in [Railway preview](#railway-preview) is the one same-origin exception.
 
 ### Vercel (static client)
 
@@ -25,8 +25,8 @@ Two separate deploy targets — client and server do not share a host.
 | **Project** | `georoids` (`jsollys-projects`) |
 | **Production URLs** | **Canonical:** <https://www.georoids.com>; **apex:** <https://georoids.com> (redirects to www); **Vercel default:** `https://georoids-jsollys-projects.vercel.app` |
 | **Build** | `npm run build` → `dist/` (Astro static output; Vite is managed by Astro) |
-| **Trigger** | Merge to `main` after the pre-commit gate and PR CI; Vercel GitHub integration. Branch pushes do **not** create Preview deployments (`vercel.json` `git.deploymentEnabled`); GeoRoids has no Preview path. |
-| **Local deploy** | None — no `npm run deploy` or CLI deploy step from `/ship` |
+| **Trigger** | Merge to `main` after the pre-commit gate and PR CI; Vercel GitHub integration. Branch pushes do **not** create Preview deployments (`vercel.json` `git.deploymentEnabled`); Vercel is production-only. The opt-in preview path is the [Railway preview](#railway-preview). |
+| **Local deploy** | None — no `npm run deploy` or CLI deploy step in the release process |
 
 **Required Vercel production env vars:**
 
@@ -69,6 +69,29 @@ because the platform importer omits these default values.
 Smoke: `curl -i https://georoids-production-2403.up.railway.app/health`. The player count is `world.players`, alongside `world.loop` and `world.persistence`; `/status` reads that same count. The server exposes `RAILWAY_GIT_COMMIT_SHA` in health JSON `releaseId` for diagnostics; host deployment status and gameplay smoke establish production verification.
 
 The former `geoasteroids-production-2403.up.railway.app` hostname returns a Railway edge 404. Use the current `georoids-production-2403.up.railway.app` host for client configuration and verification.
+
+### Railway preview
+
+One shared Railway environment, `preview`, runs a pull request's server **and** serves its built client from the same origin, so the client's same-origin `/ws` reaches the matching server. Use it to play a change before merge. It is never release evidence.
+
+| | |
+| --- | --- |
+| **Trigger** | An owner or member comments `/preview` (alone on the first non-empty line) on a same-repo PR, or the repository owner dispatches `Railway Preview` with a PR number. Agents never comment `/preview` or dispatch `Railway Preview` unless John asks. |
+| **Deploy** | `.github/workflows/railway-preview.yml` resolves the request in a job without secrets, then checks out the PR head, refuses symlinks, removes `.railway/`, stamps `public/preview-release.txt` with the head SHA, and runs `railway up --environment preview`. It installs nothing from the PR and executes no PR code. The pinned Railway CLI runs through `npm exec` from `$RUNNER_TEMP`, so no PR `.npmrc` applies. The PR comment carries the URL and SHA. Rejections, failures, timeouts and cancellations also comment; a request still queued when a newer `/preview` arrives is superseded without a comment. |
+| **Slot** | One environment: the latest `/preview` on any PR replaces the deploy. New commits do not redeploy until someone comments `/preview` again. |
+| **Server mode** | `GEOROIDS_PREVIEW_CLIENT=1` makes `server.ts` serve `dist/` through `server/staticClient.ts`; the exact server routes `/health`, `/status`, `/ws` and `/logs` keep precedence. The flag refuses to start unless `RAILWAY_ENVIRONMENT_NAME=preview`. `NODE_ENV` stays `production`, so rate limits stay on and test routes stay off, and the flag always disables the local playground. It is a deployment selector, like `GEOROIDS_LOCAL_PLAYGROUND`, rather than a second entrypoint, so preview and production share one startup, persistence guard and shutdown path. |
+| **World** | The environment's own `world-data` volume at `/data`. Treat it as disposable. |
+| **Credentials** | GitHub Environment `railway-preview` (deployment branches: `main`) holds `RAILWAY_TOKEN`, a Railway project token scoped to `preview`, plus `RAILWAY_PREVIEW_DOMAIN`. That token cannot deploy or configure production. |
+| **Release identity** | Upload deploys carry no Git metadata, so `/health` `releaseId` is `dev` and `release.json` holds a per-build token. `/preview-release.txt` names the deployed head SHA; the workflow waits for exactly that SHA. |
+
+One-time setup is human-owned production configuration:
+
+1. Duplicate production into an environment named `preview` without copying variable values into source. Confirm its volume id differs from production's `world-data`, and that it has a Railway-provided domain on port 8080.
+2. In `preview` only, set `GEOROIDS_PREVIEW_CLIENT=1`, disconnect its automatic deploys from `main`, enable app sleeping, and set a 1 GB memory limit.
+3. Keep Railway's PR Environments and Bot PR Environments toggles off.
+4. Create the `preview`-scoped project token and the GitHub Environment secrets above.
+
+Never point this workflow at production, apply `.railway/railway.ts` to `preview`, or use a workspace or account token for it. Preview `deployment_status` events start `production-smoke.yml`, which skips them because its `if:` requires the production environment URL.
 
 ## Commands
 
@@ -175,6 +198,24 @@ Logs are structured JSONL. Use `npm run --silent logs -- --player <id>` to merge
 - **`canvas` native deps:** the `canvas` npm package needs Cairo, Pango, libjpeg, libgif, and librsvg dev headers installed on the system.
 - **Playwright browsers** (manual benchmarks only): install the browser required by that tool with `npx --no-install playwright install chromium`. Browser binaries are not needed for code-test validation. Preserve owned media and measurement outputs; these tools remain outside the gate.
 - **Wiki media:** node-canvas and Python with the pin in `scripts/wiki-media-requirements.txt` render demonstrations. Set `WIKI_MEDIA_PYTHON` to the prepared Python executable; browser binaries are unnecessary.
+
+### Cloud sessions
+
+Claude Code cloud containers start on an image Node and without dependencies. When a session is rooted above the repository (multi-repo sessions), the repo's SessionStart hook does not run. Bootstrap from the repository root:
+
+```shell
+bash .cursor/install-app.sh        # native libraries, pinned mise tools, npm ci, .env
+mise exec -- node --version        # v24.x
+mise exec -- npm run gate
+```
+
+For a brief manual smoke ([tests/AGENTS.md](../tests/AGENTS.md#basic-manual-browser-smoke)):
+
+1. Start `mise exec -- npm run dev` in the background.
+2. Wait for `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5173/` to return `200` and `curl http://127.0.0.1:3001/health` to answer.
+3. Open the affected route with the session's browser controls and exercise the changed control or a brief join/steer/fire flow. Check console and page errors. For layout changes, inspect desktop and mobile widths and attach both screenshots; report the routes, interactions, errors and observed result.
+4. If the repository's pinned Playwright expects a different browser revision than `/opt/pw-browsers`, use the image's preinstalled Playwright from a scratch directory, never as a package script. Wait for the game canvas rather than a fixed delay. Report missing browser access as unverified. Personal skills may help with the check but are not a bootstrap requirement.
+5. Stop with `mise exec -- npm run dev:kill`.
 
 ### Local playground
 
