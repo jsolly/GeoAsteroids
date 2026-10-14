@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:0422cb7b249e0a389614d1ed093725454628796d08ebcbfdafb68201dc90fd5e",
+    "package.json": "sha256:9f3f1ecef31d798ef27e39b632e642aa24cd8373e7d024d4b9a9631bdfe17f6b",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -6089,6 +6089,15 @@
         "src/rendering/shipSchematicCanvas.ts": "hud-network",
         "src/utils/safeStorage.ts": "hud-network",
         "src/wiki/scrollMemory.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed TypeScript7 native CLI migration against the field manual after the actual exact-lock installation, supported TypeScript6 compiler API resolution across Astro/Svelte/unused-export consumers, explicit nativeVersion7.0.2, real valid-code acceptance and TS2322 rejection under a poisoned ambient tsc, and complete application/benchmark/frontend type checks. Current gameplay, Wiki content, controls, values and media are byte-unchanged from the accepted Biome candidate; its desktop/mobile real-join, chart and inventory evidence remains applicable. Only build/type-check selection changes: native CLI7, supported API6.0.3 via the official6.0.2 wrapper. Existing preview failure/success contracts and all prior dependency bumps remain intact; all169 earlier review records are preserved. No article/value/media change is needed. Complete gate, independent semantic review, exact-head LinuxCI and production/browser verification remain separate requirements; no physical-device or activated campaign acceptance is claimed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
       }
     }
   ]
