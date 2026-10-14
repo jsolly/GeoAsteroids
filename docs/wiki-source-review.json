@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:dc73332d982a7ac324b79229e11306f5328690ebfc5341ac688241124416dfdc",
+    "package.json": "sha256:32d123d933e17cbce5266783c1a16e65b3d947c455845ea765fccd1630fdaf74",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -5942,6 +5942,15 @@
     },
     {
       "note": "Reviewed markdownlint-cli2 0.23.2 to 0.23.3 and its exact lock changes against the field manual. Only development tooling changes; product rules, Wiki content and demonstration assets are unchanged. Clean install and peer resolution, unchanged Markdown and lint policy, TypeScript, benchmark types, Astro/Svelte diagnostics and all downstream static build contracts passed. Existing package overrides keep the product Markdown parser unchanged. Root refreshed the unchanged feature814 Wiki at desktop1280x900 and mobile390x844: native navigation and campaign prerequisite text were readable, with no horizontal overflow or browser warnings/errors. This batch accepts only package.json, preserves all prior records, and does not claim the pending full gate or CI.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed Knip6.38.0 through6.41.0 and its exact scanner/parser/resolver lock changes against the field manual. Railway, Vite and Vitest discovery remain covered by the existing explicit entrypoints; all hint-error flags remain enabled, and no speculative entry removal was made. Clean install and peer resolution, unchanged Knip, Markdown/lint policy, TypeScript, benchmark types, Astro/Svelte diagnostics and all downstream static build contracts passed. Product rules, Wiki content and demonstration assets are unchanged; existing feature814 gameplay coverage and root fresh1280x900/390x844 Wiki navigation/layout/console proof remain applicable. This batch accepts only package.json and preserves the preceding markdownlint review; full gate and CI are still pending.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
