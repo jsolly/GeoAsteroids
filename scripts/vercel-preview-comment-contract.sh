@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; open a fresh shell and rerun repository setup." >&2; exit 1; }
 # Lock the /preview comment matcher used by .github/workflows/railway-preview.yml.
 set -euo pipefail
 

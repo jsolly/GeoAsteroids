@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -40,6 +41,7 @@ after(() => rmSync(fixtureHome, { recursive: true, force: true }));
 
 // Independent acceptance contract: never derive this battery from STAGES.
 const REQUIRED_COMMANDS = [
+  'check:repo-hooks',
   'check:lint-policy',
   'check:lint',
   'check:knip',
@@ -592,6 +594,28 @@ test('installed payload identity records executable mode and symlink contents', 
   }
 });
 
+function runtimeIdentityFixture(root) {
+  mkdirSync(join(root, 'scripts'), { recursive: true });
+  writeFileSync(
+    join(root, 'scripts/repo-python.sh'),
+    readFileSync(new URL('./repo-python.sh', import.meta.url))
+  );
+  const shell = spawnSync('bash', ['-c', 'printf %s "$BASH"'], { encoding: 'utf8' });
+  assert.equal(shell.status, 0, shell.stderr);
+  const bash = join(root, 'bin/bash');
+  writeFileSync(bash, `#!/bin/sh\nexec "${shell.stdout}" "$@"\n`, { mode: 0o755 });
+  const python = join(root, 'bin/python3');
+  writeFileSync(python, `#!/bin/sh\nprintf '%s\\n' '${python}'\n`, { mode: 0o755 });
+  const npm = join(root, 'bin/npm');
+  const cli = join(root, 'bin/npm-cli.js');
+  writeFileSync(cli, readFileSync(npm));
+  const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+  writeFileSync(npm, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(cli)} "$@"\n`, {
+    mode: 0o755,
+  });
+  return { bash, python, npm, cli };
+}
+
 test('real identity covers installed bytes, ignored env, tool bytes, and unknown overrides', async () => {
   const { identity } = await import('./gate-receipt.mjs');
   const f = fixture();
@@ -610,18 +634,43 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     const payload = join(f.root, 'node_modules', 'native.node');
     writeFileSync(payload, 'native payload');
     writeFileSync(join(f.root, '.env.local'), 'SECRET=one');
+    const pythonTools = runtimeIdentityFixture(f.root);
     const env = {
       PATH: join(f.root, 'bin'),
       HOME: fixtureHome,
+      npm_execpath: pythonTools.cli,
+      npm_node_execpath: process.execPath,
     };
     const first = identity(f.root, env);
+    writeFileSync(
+      pythonTools.python,
+      `${readFileSync(pythonTools.python, 'utf8')}# replaced interpreter bytes\n`
+    );
+    assert.notEqual(
+      identity(f.root, env).runtime,
+      first.runtime,
+      'Python replacement invalidates prior evidence'
+    );
+    unlinkSync(pythonTools.python);
+    assert.throws(() => identity(f.root, env), /Cannot identify supported Python runtime/u);
+    // A supported versioned fallback is selected by the same production launcher.
+    const fallback = join(f.root, 'bin/python3.11');
+    writeFileSync(fallback, `#!/bin/sh\nprintf '%s\\n' '${fallback}'\n`, { mode: 0o755 });
+    assert.notEqual(
+      identity(f.root, env).runtime,
+      first.runtime,
+      'Fallback selection changes runtime identity'
+    );
     writeFileSync(payload, 'changed native payload');
     assert.notEqual(identity(f.root, env).installation, first.installation);
     writeFileSync(join(f.root, '.env.local'), 'SECRET=two');
     const second = identity(f.root, env);
     assert.notEqual(second.runtime, first.runtime);
     assert.equal(JSON.stringify(second).includes('SECRET=two'), false);
-    writeFileSync(join(f.root, 'bin', 'bash'), 'new executable');
+    writeFileSync(
+      pythonTools.bash,
+      `${readFileSync(pythonTools.bash, 'utf8')}# changed shell bytes\n`
+    );
     assert.notEqual(identity(f.root, env).runtime, second.runtime);
     assert.equal(identity(f.root, { ...env, GEOROIDS_UNKNOWN_OVERRIDE: '1' }).reusable, false);
     const systemCa = identity(f.root, { ...env, NODE_USE_SYSTEM_CA: '1' });
@@ -647,6 +696,16 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     });
     assert.equal(sibling.reusable, false);
     assert(sibling.unknown.includes('NPM_CONFIG_HTTPS_PROXY'));
+    const beforeCli = identity(f.root, env);
+    const wrapper = fileRecord(pythonTools.npm);
+    writeFileSync(
+      pythonTools.cli,
+      `${readFileSync(pythonTools.cli, 'utf8')}\n// changed npm CLI bytes\n`
+    );
+    assert.notEqual(identity(f.root, env).runtime, beforeCli.runtime);
+    assert.deepEqual(fileRecord(pythonTools.npm), wrapper, 'the wrapper itself did not change');
+    unlinkSync(pythonTools.cli);
+    assert.throws(() => identity(f.root, env), /ENOENT/u);
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }
@@ -705,11 +764,11 @@ test('manual and substantive commit hook dispatch one complete entry without dup
       readFileSync(new URL('../.git-hooks/pre-commit', import.meta.url))
     );
     const calls = join(root, 'calls');
-    const library = join(root, 'gate-lib.sh');
+    mkdirSync(join(root, 'gate'));
+    const library = join(root, 'gate/gate-lib.sh');
     writeFileSync(
       library,
       `gate_enter_committing_tree() { cd "$FIXTURE_ROOT"; }
-gate_require_lib() { printf 'lib:%s\\n' "$1" >> "$CALLS"; }
 gate_begin_commit() { printf 'preamble:%s\\n' "$FLEET_DOC_FAST" >> "$CALLS"; }
 gate_check_bash_floor() { :; }
 gate_require_node() { printf 'node-floor\\n' >> "$CALLS"; }
@@ -726,7 +785,6 @@ run_step() { printf 'step:%s\\n' "$1" >> "$CALLS"; shift; "$@"; }
         cwd: root,
         env: {
           ...process.env,
-          DOTAGENTS_GATE_LIB: library,
           FIXTURE_ROOT: root,
           CALLS: calls,
           FLEET_DOC_FAST: forced,
@@ -735,7 +793,6 @@ run_step() { printf 'step:%s\\n' "$1" >> "$CALLS"; shift; "$@"; }
       });
       assert.equal(result.status, 0, result.stderr);
       assert.deepEqual(readFileSync(calls, 'utf8').trim().split('\n'), [
-        'lib:12',
         `preamble:${forced}`,
         'step:bash floor',
         'node-floor',
@@ -978,10 +1035,14 @@ test('actual identity hashes hosted SHAs, npm config and resolved consumed file 
       join(f.root, '.gitignore'),
       '.performance/\nnode_modules/\nbin/\nhome/\n.env.local\n'
     );
+    const pythonTools = runtimeIdentityFixture(f.root);
     const env = {
       PATH: join(f.root, 'bin'),
       HOME: join(f.root, 'home'),
+      npm_execpath: pythonTools.cli,
+      npm_node_execpath: process.execPath,
     };
+    assert.ok(existsSync(pythonTools.python));
     const first = identity(f.root, env);
     f.git('add', '.');
     f.git(
@@ -1187,6 +1248,11 @@ test('Git boundary failures retain bounded exit, signal, error and stderr diagno
 
 test('manual, nested npm and hook launches execute identical runtime inputs without ignoring overrides', (t) => {
   const f = fixture();
+  mkdirSync(join(f.root, 'scripts'));
+  writeFileSync(
+    join(f.root, 'scripts/repo-python.sh'),
+    readFileSync(new URL('./repo-python.sh', import.meta.url))
+  );
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
   mkdirSync(join(f.root, 'bin'));
   mkdirSync(join(f.root, 'node_modules'));
@@ -1363,6 +1429,21 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   const before = launch(selected);
   writeFileSync(config, 'loglevel=error\n');
   assert.notEqual(launch(selected).runtime, before.runtime);
+  // Tool managers can expose npm as a shell wrapper around the actual CLI.
+  const beforeWrapper = launch(base);
+  const originalNpm = base.PATH.split(':')
+    .map((path) => join(path, 'npm'))
+    .find(existsSync);
+  assert(originalNpm);
+  const quotedNpm = `'${realpathSync(originalNpm).replaceAll("'", "'\\''")}'`;
+  writeFileSync(join(f.root, 'bin/npm'), `#!/bin/sh\nexec ${quotedNpm} "$@"\n`, {
+    mode: 0o755,
+  });
+  const wrapped = launch(base);
+  assert.equal(wrapped.reusable, true, JSON.stringify(wrapped.unknown));
+  assert.notEqual(wrapped.runtime, beforeWrapper.runtime);
+  assert.deepEqual(launch(base, true), wrapped);
+  assert.deepEqual(launch({ ...base, GIT_PREFIX: '', PATH: `${core}:${base.PATH}` }), wrapped);
   writeFileSync(join(f.root, 'package.json'), '{"scripts":{"env":"echo bypass"}}');
   assert.throws(() => lifecycleCommand(f.root, base, probe), /built-in env/u);
   writeFileSync(join(f.root, 'package.json'), '{"scripts":{"preenv":"echo unexpected"}}');

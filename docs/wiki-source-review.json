@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:dcd78b7f195ae4e0c60df142837d05e7fbf599bfed9d370d40e1931f95ee51dd",
     "docs/sounds.md": "sha256:88bd06e26a7688c6b348dc635c1badffa83635a0413abd033eb63843f5975eb8",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:7d0d3c757a24162aadd10a2778eb6dd697d1893891ae0180c0e756d3b51cd384",
+    "package.json": "sha256:f852fd1fb0dfb461c4790c1c0c57153f6e28b7fd9822f71283ddbd4d7760c124",
     "public/music/README.md": "sha256:bc37faf582c661603145329bc3759822344b5a49865dc2433b6a8451eca22f9e",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -535,7 +535,7 @@
       "owners": {}
     },
     {
-      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main\u2019s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
+      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main’s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
@@ -2503,7 +2503,7 @@
       }
     },
     {
-      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75\u219250 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
+      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75→50 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
       "sources": [
         "docs/protocol/snapshot-v2.md",
         "docs/protocol/snapshot-v3.md",
@@ -4169,6 +4169,15 @@
       }
     },
     {
+      "note": "Reviewed package.json tooling-only changes: repository-owned worktree setup and hook-trust test command; dependencies, gameplay, Wiki content and demonstrations are unchanged. Lint, types and all 1969 unit tests passed. Checked the existing production Wiki at 1280x900 and 390x844, exercised search and mobile navigation, and observed no browser errors. No article or media update is needed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
       "note": "Scoped review of the opt-in Railway preview: package.json only adds the /preview comment-matcher contract to check:actions; server.ts and server/configuration.ts add GEOROIDS_PREVIEW_CLIENT, which serves the built client from the game server only in the Railway preview environment and fails startup elsewhere. Gameplay rules, controls, protocol, Wiki articles, generated references and demonstrations are unchanged; production keeps NODE_ENV and the local playground behavior. No Wiki page is affected.",
       "sources": ["package.json", "server.ts", "server/configuration.ts"],
       "topics": ["field-manual"],
@@ -4198,6 +4207,15 @@
         "package.json": "field-manual",
         "server.ts": "field-manual",
         "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the package-script merge onto current main: preserved repository hook trust and all current required checks, and retained the opt-in preview comment-matcher contract in check:actions. Dependency versions, gameplay, player interfaces, Wiki articles and demonstration inputs are unchanged; no article or media update is needed. CI and preview-comment contracts passed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
       }
     }
   ]
