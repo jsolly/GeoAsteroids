@@ -1,6 +1,6 @@
 import type { AsteroidData, Position, ToolTargetPose } from '../shared-types';
 import { asteroidPolygonPoints, findNearestAsteroidImpact } from './asteroidReflection';
-import { findWorldBoundaryImpact } from './worldBoundary';
+import { findWorldBoundaryImpact } from './boundary';
 
 /** Shift the shot's origin into the target's end-of-frame coordinates. */
 export function relativeFlightStart(
