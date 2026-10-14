@@ -1,4 +1,4 @@
-import { getGameBoundary } from './boundary';
+import { WORLD_BOUNDARY } from './boundary';
 import { createHeightfield, type Heightfield } from './heightfield';
 import { TERRAIN } from './terrainConfig';
 
@@ -6,14 +6,9 @@ import { TERRAIN } from './terrainConfig';
 // src/physics/terrain/terrainSession.ts; the server only samples it.
 let field: Heightfield | null = null;
 
-function boundsFromWorld(): { cx: number; cy: number; radius: number } {
-  const boundary = getGameBoundary();
-  return { cx: boundary.cx, cy: boundary.cy, radius: boundary.radius };
-}
-
 export function ensureTerrain(
   seed: number = TERRAIN.DEFAULT_SEED,
-  bounds = boundsFromWorld()
+  bounds = WORLD_BOUNDARY
 ): Heightfield {
   if (
     field &&

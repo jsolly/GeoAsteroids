@@ -24,7 +24,8 @@ vi.mock('../../../src/utils/Logger', () => ({
   },
 }));
 
-vi.mock('../../../shared/collisionDetection', () => ({
+vi.mock('../../../shared/boundary', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../shared/boundary')>()),
   checkBoundaryCollision: vi.fn(() => true),
 }));
 
