@@ -2,7 +2,7 @@
 
 The automated validation battery uses code tests. Browser test suites, native
 browser comparison assertions and automatic frame-work/constrained-client gates
-are removed. Unit tests and complete server/entity integration run locally before
+are removed. Unit tests and complete server integration run locally before
 publication; PR CI independently validates the integration inventory.
 
 ## Required PR checks
@@ -11,8 +11,7 @@ publication; PR CI independently validates the integration inventory.
 Static checks cover lint policy, formatting, unused code, Markdown, YAML, Actions,
 TypeScript, benchmark types, Wiki source review and the production build.
 Runner contracts exercise owned process startup, admission, ports and cleanup.
-Integration runs every test in `tests/integration/server/` and
-`tests/integration/entities/` through the repository runner. Wiki media verifies
+Integration runs every test in `tests/integration/server/` through the repository runner. Wiki media verifies
 the committed demonstration baseline on `ubuntu-24.04`, the x64 platform that owns
 it, and uploads a regenerated candidate when it is stale; the other lanes run on
 arm64 ([Wiki maintenance](wiki-maintenance.md#generate-or-verify-gifs)).
@@ -31,7 +30,7 @@ Dependabot keeps its explicit manual-drain invocation gate.
 Testing commands, deterministic setup, runner ownership, cleanup and evidence
 reporting live in [tests/AGENTS.md](../tests/AGENTS.md). Publication through `/ship`
 requires the complete `npm run gate`; a partial selection or hosted lane cannot
-replace it. Coverage reporting has no percentage merge threshold.
+replace it. `scripts/gate-receipt.mjs` `STAGES` is the source of truth: lint policy, lint, Knip, ts-prune, Markdown, YAML, Actions, runner and dev-server contracts, TypeScript, Astro/Svelte diagnostics, frontend formatting, benchmark types, the complete unit/component suite, build, and complete server integration. Coverage reporting has no percentage merge threshold.
 
 ## Production verification
 
@@ -44,10 +43,9 @@ The local smoke scenario contracts use controlled clocks and transports with the
 production protocol encoder/decoder. Host deployment status establishes the
 release; descriptive metadata and bundle text do not gate verification. Follow
 the scenario checkout/request receipt;
-a skipped, failed, missing or timed-out smoke remains unverified.
+a skipped, failed, missing or timed-out smoke remains unverified. Unexpected application and transport errors reach the job log once with safe causes; parser diagnostics omit response and socket content. Public receipt and gameplay-artifact error strings remain bounded.
 
-This test-tooling removal changes no gameplay behavior, controls, assets or Wiki
-player instructions. Wiki media generation uses node-canvas, not a browser.
+Wiki media generation uses node-canvas and Python with the pinned requirements in `scripts/wiki-media-requirements.txt`; it needs no browser.
 
 ## Exact validation receipts
 

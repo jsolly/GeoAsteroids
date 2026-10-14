@@ -735,7 +735,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         const { drawLeaderboard } = await import('../src/rendering/hud/leaderboard');
         const { entityFactory } = await import('../src/entities/EntityFactory');
         const { drawFieryBoundary } = await import('../src/rendering/boundaryRenderer');
-        const { getGameBoundary } = await import('../shared/boundary');
+        const { WORLD_BOUNDARY } = await import('../shared/boundary');
         const reads = { safeAreaStyles: 0, pointerMediaQueries: 0 };
         const originalStyle = window.getComputedStyle;
         const originalMedia = window.matchMedia;
@@ -812,7 +812,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         const centered = canvasCalls;
         canvasCalls = {};
         record = true;
-        const boundary = getGameBoundary();
+        const boundary = WORLD_BOUNDARY;
         drawFieryBoundary({ x: boundary.cx + boundary.radius, y: boundary.cy });
         record = false;
         if (

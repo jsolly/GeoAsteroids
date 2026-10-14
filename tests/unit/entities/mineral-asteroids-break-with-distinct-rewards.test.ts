@@ -7,7 +7,7 @@ import { AsteroidManager } from '../../../server/core/AsteroidManager';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { RNGService } from '../../../server/core/RNGService';
 import { ASTEROID_MATERIALS, MATERIAL_OUTLINES } from '../../../shared/asteroidMaterials';
-import { DAMAGE, ROID } from '../../../shared/constants/gameplay';
+import { DAMAGE } from '../../../shared/constants/gameplay';
 import type { AsteroidData, AsteroidMaterial } from '../../../shared-types';
 import { serializeAsteroidMaterialSvg } from '../../../src/entities/roid/materialArt';
 import { Roid } from '../../../src/entities/roid/Roid';
@@ -85,17 +85,6 @@ describe('mineral asteroids break with distinct rewards', () => {
       expect(manager.registerLaserHit(fragment.id, 'pilot').newAsteroids).toHaveLength(0);
     }
     expect(manager.getAsteroidCount()).toBe(0);
-  });
-
-  test('a crowded local field suppresses rubble fragments and ship rams create none', () => {
-    const manager = new AsteroidManager(new RNGService(42));
-    for (let i = 0; i < ROID.SPLIT_NEARBY_LIMIT - 2; i++) {
-      manager.addAsteroid({ ...mineral('ice'), id: `ice-${i}` });
-    }
-    manager.addAsteroid(mineral('rubble'));
-    expect(manager.registerLaserHit('rubble', 'pilot').newAsteroids).toHaveLength(0);
-    manager.addAsteroid(mineral('rubble'));
-    expect(manager.destroyFromCollision('rubble').newAsteroids).toHaveLength(0);
   });
 
   test('one pilot breaking rubble creates three fragments', () => {

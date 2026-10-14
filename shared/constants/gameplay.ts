@@ -135,7 +135,6 @@ export const ROID = {
   INITIAL_ROID_COUNT: 20,
 
   // Procedural deposits fill nearby sectors throughout the playable world.
-  FIELD_RADIUS: WORLD.radius,
   /** Splits stop adding fragments when this many rocks crowd one sector-wide circle. */
   SPLIT_NEARBY_LIMIT: 1_600,
 } as const;

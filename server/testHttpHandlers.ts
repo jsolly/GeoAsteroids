@@ -1,9 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import process from 'node:process';
 import { logger } from '../setup/serverLogger';
 import type { GameEngine } from './core/GameEngine';
-import type { ServerPerformanceSummary } from './performanceMetrics';
-import { SERVER_RELEASE_ID } from './release';
 
 function isLoopbackRequest(req: IncomingMessage): boolean {
   const address = req.socket.remoteAddress;
@@ -31,24 +28,6 @@ export function acceptTestPost(
 /** Test-only HTTP routes — enabled only in local dev and Vitest, never in production. */
 export function areTestHttpEndpointsEnabled(nodeEnv: string): boolean {
   return nodeEnv === 'test' || nodeEnv === 'development';
-}
-
-export function buildHealthPayload(
-  gameEngine: GameEngine,
-  logging?: Record<string, unknown>,
-  metrics?: ServerPerformanceSummary
-): Record<string, unknown> {
-  const diagnostics = gameEngine.getDiagnostics();
-  return {
-    status: gameEngine.isPersistenceHealthy() ? 'healthy' : 'unhealthy',
-    releaseId: SERVER_RELEASE_ID,
-    timestamp: new Date().toISOString(),
-    players: gameEngine.getPlayerCount(),
-    uptime: process.uptime(),
-    world: diagnostics,
-    ...(logging ? { logging } : {}),
-    ...(metrics ? { metrics } : {}),
-  };
 }
 
 export function handleTestResetWorld(

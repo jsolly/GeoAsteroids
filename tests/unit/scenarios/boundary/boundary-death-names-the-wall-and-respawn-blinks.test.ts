@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getGameBoundary } from '../../../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../../../shared/boundary';
 import { GAME } from '../../../../shared/constants/gameplay';
 import { Player } from '../../../../src/entities/player/Player';
 import {
@@ -20,7 +20,7 @@ function localPilot(): Player {
 }
 
 function outsideWallPosition(): { x: number; y: number } {
-  return { x: getGameBoundary().radius + 100, y: 0 };
+  return { x: WORLD_BOUNDARY.radius + 100, y: 0 };
 }
 
 describe('Boundary death and respawn cues', () => {

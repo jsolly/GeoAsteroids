@@ -4,7 +4,6 @@ import { logger } from '../../setup/serverLogger';
 import type { BeltSlotState } from '../../shared/asteroidBelt';
 import { boostOwnerIds, removeBoostOwner } from '../../shared/asteroidBoost';
 import { asteroidShardMass } from '../../shared/asteroidMaterials';
-import { getAsteroidFieldRadius } from '../../shared/asteroidMotion';
 import {
   ASTEROID_INTERACTIONS,
   advanceReflectionEnergy,
@@ -12,12 +11,15 @@ import {
   segmentCircleContact,
 } from '../../shared/asteroidPhenomena';
 import { findNearestAsteroidImpact, reflectVector } from '../../shared/asteroidReflection';
-import { asteroidCrewNeeded, isColossalAsteroid } from '../../shared/asteroidScale';
-import { checkBoundaryCollision } from '../../shared/collisionDetection';
+import {
+  asteroidCrewNeeded,
+  isColossalAsteroid,
+  pointsForRoidSize,
+} from '../../shared/asteroidScale';
+import { checkBoundaryCollision } from '../../shared/boundary';
 import { isCombatantImmune, isWorldHazard, laserDamagesShips } from '../../shared/combat';
 import { DAMAGE, GAME, LASER, ROID, SATELLITE_PICKUP, SHIP } from '../../shared/constants/gameplay';
 import { calculateHealthRegenDelayFrames } from '../../shared/constants/health';
-import { chooseCrewSpawn } from '../../shared/crewSpawn';
 import {
   advanceSettlement,
   cargoCapacity,
@@ -59,9 +61,8 @@ import {
   isSmallRoid,
   LOOT_BLAST,
 } from '../../shared/lootBlast';
-import { sanitizePlayerName } from '../../shared/playerName';
+import { chooseCrewSpawn, sanitizePlayerName } from '../../shared/player';
 import { readReleaseId, releaseField } from '../../shared/releaseId';
-import { pointsForRoidSize } from '../../shared/roidScore';
 import {
   activateAbilityOnHost,
   clearHaulerLatch,
@@ -1587,7 +1588,7 @@ export class GameEngine {
   }
 
   /** Seed phenomena on a fixture field once; the managed regional field seeds its own sectors. */
-  public seedAsteroidInteractions(): void {
+  private seedAsteroidInteractions(): void {
     if (this.managedField) {
       return;
     }
@@ -1655,6 +1656,7 @@ export class GameEngine {
       return [];
     }
     if (!this.managedField) {
+      this.seedAsteroidInteractions();
       return [];
     }
     return this.regionalField.update(
@@ -1669,7 +1671,7 @@ export class GameEngine {
 
   public createAsteroids(
     count: number,
-    bounds = { radius: getAsteroidFieldRadius() },
+    bounds: { radius: number } = { radius: WORLD.radius },
     playerPositions: Array<{ x: number; y: number }> = []
   ): AsteroidData[] {
     this.managedField = false;
@@ -2322,7 +2324,7 @@ export class GameEngine {
     const vy = typeof velocity?.y === 'number' && Number.isFinite(velocity.y) ? velocity.y : NaN;
     if (
       !position ||
-      Math.hypot(position.x, position.y) > getAsteroidFieldRadius() ||
+      Math.hypot(position.x, position.y) > WORLD.radius ||
       !Number.isFinite(vx) ||
       !Number.isFinite(vy)
     ) {

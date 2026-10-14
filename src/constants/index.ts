@@ -146,6 +146,16 @@ export const VISUAL = {
 // AUDIO CONFIGURATION
 // ============================================================================
 export const AUDIO = {
+  CONTOUR_LOCK_ACQUIRED: ['/sounds/contour-lock-acquired.m4a', 2, 0.045],
+  CONTOUR_LOCK_RELEASED: ['/sounds/contour-lock-released.m4a', 2, 0.035],
+  CONTOUR_FLICK_SUCCESS: ['/sounds/contour-flick-success.m4a', 2, 0.045],
+  CONTOUR_FLICK_BLOCKED: ['/sounds/contour-flick-blocked.m4a', 2, 0.035],
+  CONNECTION_LOST: ['/sounds/connection-lost.m4a', 1, 0.055],
+  BOOST_IGNITE: ['/sounds/boost-ignite.m4a', 3, 0.05],
+  HULL_DAMAGE: ['/sounds/hull-damage.m4a', 2, 0.065],
+  DELIVERY: ['/sounds/delivery.m4a', 2, 0.075],
+  INTERFACE: ['/sounds/interface.m4a', 2, 0.025],
+  SATELLITE_EQUIP: ['/sounds/satellite-equip.m4a', 2, 0.05],
   HARPOON_LAUNCH: ['/sounds/harpoon-launch.m4a', 4, 0.04],
   HARPOON_LATCH: ['/sounds/harpoon-latch.m4a', 4, 0.045],
   HARPOON_RELEASE: ['/sounds/harpoon-release.m4a', 3, 0.035],

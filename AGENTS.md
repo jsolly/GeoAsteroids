@@ -4,9 +4,9 @@
 
 Ship profile: `vercel-static`.
 
-**Integration: branch → PR → merge on green `CI / ci`.** `/ship` merges per `skills/ship/references/git-discipline.md` → Merge a same-repo self PR, read the installed reference. Agents never push to `main`, change rulesets, or admin-merge.
+**Integration: branch → PR → merge on green `CI / ci`.** `/ship` merges per `skills/ship/references/git-discipline.md` → Merge a same-repo self PR (read the installed `/ship` reference). Agents never push to `main`, change rulesets, or admin-merge.
 
-Local gate: `npm run gate`; static checks, runner contracts, the complete unit suite, build, and all server/entity integration tests are mandatory. CI runs independent static, runner-contract, complete code-integration and Wiki media lanes; all must pass. Browser tests and automatic frame-work/constrained-client gates are retired.
+Local gate: `npm run gate`; static checks, runner contracts, the complete unit suite, build, and all server integration tests are mandatory. CI runs independent static, runner-contract, complete code-integration and Wiki media lanes; all must pass. Browser tests and automatic frame-work/constrained-client gates are retired.
 
 Deploy: Vercel Git at <https://www.georoids.com> plus Railway Git at <https://georoids-production-2403.up.railway.app>. Classify server inputs with `scripts/server-release-inputs.mjs` from the merged checkout; its server/shared/setup/manifest inputs determine which Railway release needs verification, and it fails if server code imports `src/`. A successful client deployment cannot prove the server deployed. Successful production Git deployments establish the release. Do not gate builds or production smoke on served release metadata, bundle SHA searches or server SHA ancestry. Follow the canonical smoke receipt through asset availability, genuine join, snapshots, movement, accepted firing and healthy persistence. Production smoke uses HTTP/assets and WebSocket protocol evidence; it does not certify browser rendering, keyboard/touch controls, graphics or audio. Skipped, cancelled, failed or missing smoke is unverified.
 
@@ -22,9 +22,7 @@ GeoRoids — a cooperative open-world multiplayer spaceship game (surveying, ast
 
 Astro owns static `/`, `/debug` and `/wiki` documents and manages Vite. Svelte 5
 and committed shadcn-svelte primitives own page and DOM interfaces. TypeScript
-owns canvas painting, geometry, simulation and multiplayer. This completes the
-user-directed migration from the former rendering-stack exception; no exception
-remains for product DOM interfaces. Keep ordinary document navigation, relative
+owns canvas painting, geometry, simulation and multiplayer. Keep ordinary document navigation, relative
 imports and imports from defining modules. Canon: dotagents `rules/frontend-stack.md`.
 
 ## Deploy
@@ -33,7 +31,7 @@ Astro static client and authoritative WebSocket server deploy independently from
 
 ## CI
 
-The dotagents dispatcher runs the tracked pre-commit gate. The tracked pre-commit hook owns lint, unused-code checks, contracts, types, unit tests, build, complete server/entity integration checks. `npm run gate` invokes that same complete battery with the fleet docs exception disabled. Exact receipts may reuse unchanged validation; candidate reuse requires index parity. Canonical actionlint/ShellCheck bytes come from dotagents.
+The dotagents dispatcher runs the tracked pre-commit gate. The tracked pre-commit hook owns lint, unused-code checks, contracts, types, unit tests, build, complete server integration checks. `npm run gate` invokes that same complete battery with the fleet docs exception disabled. Exact receipts may reuse unchanged validation; candidate reuse requires index parity. Canonical actionlint/ShellCheck bytes come from dotagents.
 
 ## Commands
 
@@ -56,7 +54,7 @@ Read [tests/AGENTS.md](tests/AGENTS.md) for all testing instructions.
 - **No barrel files / re-exports** — import from the defining module.
 - **Relative paths only** — no `@`-style aliases.
 - **No CDN for app assets** — never load runtime CSS or JS from CDNs. Prefer npm, local files, or same-origin Vite/Railway builds.
-- **Biome** checks all authored formats it supports, including JavaScript/TypeScript, JSON/JSONC, CSS, HTML, and SVG (`biome.jsonc`). It respects `.gitignore` and excludes the generated npm lockfile. ESLint is gone. Knip and ts-prune check unused code; Markdownlint, Yamllint, actionlint, and ShellCheck cover their respective files. Every enabled lint diagnostic must fail its check, including Knip hints and ShellCheck info/style findings.
+- **Biome** checks all authored formats it supports, including JavaScript/TypeScript, JSON/JSONC, CSS, HTML, and SVG (`biome.jsonc`). It respects `.gitignore` and excludes the generated npm lockfile. Pinned Prettier formats Astro/Svelte documents (`check:format`); `astro check` and `svelte-check` run framework diagnostics. Knip and ts-prune check unused code; Markdownlint, Yamllint, actionlint, and ShellCheck cover their respective files. Every enabled lint diagnostic must fail its check, including Knip hints and ShellCheck info/style findings.
 - **Production managers use `getInstance()`** (`GameController`, `PlayerManager`, `CollisionManager`, etc.). `GameController` supplies PlayerManager's complete network capabilities at creation; later access cannot rebind them. Isolated runtime tests may construct PlayerManager and CollisionManager with explicit capabilities. `src/runtime/gameRuntime.ts` owns production EventLoop wiring and disposal. The Svelte shell owns its mount lifetime.
 - **The 60 Hz game loop never touches the disk or does O(world) work.** The saved world is read once at startup and lives in memory; changes leave the loop once a second as a batch through `WorldPersistence` (`server/world/`); unchanged-membership asteroid sectors persist drift every `WORLD.driftFlushCheckpoints` checkpoints. Do not add SQLite calls, `fs` calls, or per-saved-sector scans to `advanceOneFrame` or the message handlers; `tests/unit/server/explored-world-keeps-the-simulation-frame-off-the-database.test.ts` and `world-writes-leave-the-game-loop-once-a-second.test.ts` fail if that regresses.
 - **Snapshots and terrain work stay local.** Snapshots send each player only nearby world entities (loot, projectiles, and other players' pickups within `WORLD.interestRadius`; asteroids within the smaller `WORLD.asteroidInterestRadius` radar circle, widened to the interest square while that pilot's Mineral Scan zooms the camera out; a player's own pickups always ship) (`shared/world.ts`; applied in `server/services/GameStateBroadcaster.ts`, with sectors waking at `WORLD.interestRadius` in `server/world/RegionalAsteroidField.ts`), and the client builds contours in local patches (`src/physics/terrain/terrainSession.ts`). Never broadcast or rebuild the whole world. `tests/unit/server/nearby-asteroid-queries-stay-local-as-the-world-grows.test.ts` guards regional asteroid queries and per-player asteroid row filtering, and `tests/unit/rendering/contours-follow-the-camera-without-dropping-lines.test.ts` guards contour patches; per-player filtering of non-asteroid rows has no dedicated guard test.
@@ -69,14 +67,14 @@ Node24 matches `.nvmrc`. Never attach to another checkout's services or kill lis
 
 ## Local UI verification
 
-Start `npm run dev`; verify at origin `http://127.0.0.1:5173/` (routes `/`, `/debug`, `/wiki`) with no auth, following `rules/frontend-verification.md` and `/verify-ui`. A `/preview` URL is verified the same way at its preview origin.
+Start `npm run dev`; verify at origin `http://127.0.0.1:5173/` (routes `/`, `/debug`, `/wiki`) with no auth, following the basic manual browser smoke in [tests/AGENTS.md](tests/AGENTS.md#basic-manual-browser-smoke). A `/preview` URL is verified the same way at its preview origin. Personal skills are optional helpers.
 
 ## Verified-tree CI
 
-PRs run static checks, runner contracts, the complete server/entity integration suites, and Wiki media verification concurrently.
+PRs run static checks, runner contracts, the complete server integration suites, and Wiki media verification concurrently.
 The final `ci` job requires all four lanes to succeed; failed, cancelled, or skipped
 lanes fail the aggregate. Each lane has its own exact-tree proof.
-Full unit and server/entity integration checks run locally in the review gate. Manual performance measurements remain outside it. Post-merge CI reuses each successful PR lane only
+Full unit and server integration checks run locally in the review gate. Manual performance measurements remain outside it. Post-merge CI reuses each successful PR lane only
 when its recorded checkout tree exactly matches the landed tree, using
 `scripts/ci-verified-tree.sh` from dotagents. Missing proof runs that CI lane;
 manual runs always validate. The required `ci` name and deployment triggers stay intact.
@@ -104,4 +102,4 @@ See the canonical `dotagents/skills/optimize-workspaces/references/pr-drain.md`
 
 ## Cloud skills
 
-- **Cloud skills.** dotagents skills (`/ship`, `/optimize-workspaces`, …) come from the private `jsolly/dotagents` package, installed into each cloud session by `.cursor/install-cloud-skills.sh` (Cursor runs it from `.cursor/environment.json`, Claude Code from the `.claude/settings.json` SessionStart hook). Before repository work in a cloud session, read `~/.local/share/dotagents/package/CLOUD.md` when it exists and follow its installed owners. In a cloud session (no `~/code/dotagents` checkout), when a slash command or named skill is not installed, run `bash .cursor/install-cloud-skills.sh`, then read `~/.local/share/dotagents/package/CLOUD.md` and `~/.local/share/dotagents/package/skills/<name>/SKILL.md` and follow them. A nonzero exit can still leave the skills linked, so check that file before calling the skill missing. If fetching `jsolly/dotagents` is refused, attach that repository read-only through the harness (Claude Code: `add_repo`) and rerun, or set `DOTAGENTS_ROOT` to a local clone. Still blocked: report setup blocked. Never reconstruct a skill from memory or prose. Canon: dotagents `templates/cloud-agent/README.md`.
+- **Cloud skills.** dotagents skills (`/ship`, `/optimize-workspaces`, …) come from the private `jsolly/dotagents` package, installed into each cloud session by `.cursor/install-cloud-skills.sh` (Cursor runs it from `.cursor/environment.json`, Claude Code from the `.claude/settings.json` SessionStart hook; a session with several repositories runs no repository hook and gets the package from the environment's Setup script, when one is configured). Before repository work in a cloud session, read `~/.local/share/dotagents/package/CLOUD.md` when it exists and follow its installed owners. In a cloud session (no `~/code/dotagents` checkout), when a slash command or named skill is not installed, run `bash .cursor/install-cloud-skills.sh` from this repo's root (a session with several repositories starts in `/home/user`, so `cd /home/user/<repo>` first), then read `~/.local/share/dotagents/package/CLOUD.md` and `~/.local/share/dotagents/package/skills/<name>/SKILL.md` and follow them. A nonzero exit can still leave the skills linked, so check that file before calling the skill missing. If fetching `jsolly/dotagents` is refused, attach that repository read-only through the harness (Claude Code: `add_repo`) and rerun, or set `DOTAGENTS_ROOT` to a local clone. Still blocked: report setup blocked. Never reconstruct a skill from memory or prose. Canon: dotagents `templates/cloud-agent/README.md`.

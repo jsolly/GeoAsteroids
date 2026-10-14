@@ -1,10 +1,4 @@
-import { getGameBoundary } from './boundary';
-import { ROID } from './constants/gameplay';
-
-/** Asteroids inhabit the full world; the server activates nearby sectors. */
-export function getAsteroidFieldRadius(): number {
-  return Math.min(getGameBoundary().radius, ROID.FIELD_RADIUS);
-}
+import { WORLD } from './world';
 
 /** Return a drifting asteroid inside the circular world at its outer edge. */
 export function containAsteroidPositionInto(
@@ -12,10 +6,9 @@ export function containAsteroidPositionInto(
   x: number,
   y: number
 ): { x: number; y: number } {
-  const { cx, cy } = getGameBoundary();
-  const radius = getAsteroidFieldRadius();
-  const dx = x - cx;
-  const dy = y - cy;
+  const radius = WORLD.radius;
+  const dx = x;
+  const dy = y;
   const dist = Math.hypot(dx, dy);
   if (dist <= radius || dist === 0) {
     dest.x = x;
@@ -23,8 +16,8 @@ export function containAsteroidPositionInto(
     return dest;
   }
   const scale = (radius - 1e-5) / dist;
-  dest.x = cx + dx * scale;
-  dest.y = cy + dy * scale;
+  dest.x = dx * scale;
+  dest.y = dy * scale;
   return dest;
 }
 
@@ -39,15 +32,14 @@ export function stepAsteroidMotionInto(
   outPosition: { x: number; y: number },
   outVelocity: { x: number; y: number }
 ): void {
-  const { cx, cy } = getGameBoundary();
-  const radius = getAsteroidFieldRadius();
+  const radius = WORLD.radius;
   let x = position.x + velocity.x * tickScale;
   let y = position.y + velocity.y * tickScale;
   let vx = velocity.x;
   let vy = velocity.y;
 
-  const dx = x - cx;
-  const dy = y - cy;
+  const dx = x;
+  const dy = y;
   const dist = Math.hypot(dx, dy);
   if (dist > radius && dist > 0) {
     containAsteroidPositionInto(outPosition, x, y);
@@ -77,9 +69,4 @@ export function stepAsteroidMotion(
   const nextVelocity = { x: 0, y: 0 };
   stepAsteroidMotionInto(position, velocity, tickScale, nextPosition, nextVelocity);
   return { position: nextPosition, velocity: nextVelocity };
-}
-
-export function isPoseInAsteroidField(x: number, y: number, slop = 1): boolean {
-  const { cx, cy } = getGameBoundary();
-  return Math.hypot(x - cx, y - cy) <= getAsteroidFieldRadius() + slop;
 }

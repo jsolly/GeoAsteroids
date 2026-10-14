@@ -104,7 +104,12 @@ type HealthReply = { ok: boolean; status: number; body: Record<string, unknown> 
 const HEALTHY_REPLY: HealthReply = {
   ok: true,
   status: 200,
-  body: { players: 0, status: 'healthy', timestamp: '2026-01-01T00:00:00.000Z', uptime: 1 },
+  body: {
+    world: { players: 0 },
+    status: 'healthy',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    uptime: 1,
+  },
 };
 
 function createStatusDocument(health: HealthReply = HEALTHY_REPLY): {
@@ -383,11 +388,10 @@ test('a 503 health reply shows the failed world persistence instead of a bare HT
     ok: false,
     status: 503,
     body: {
-      players: 2,
       status: 'unhealthy',
       timestamp: '2026-01-01T00:00:00.000Z',
       uptime: 3,
-      world: { persistence: { failed: true, pendingBatches: 1 } },
+      world: { players: 2, persistence: { failed: true, pendingBatches: 1 } },
     },
   });
   try {

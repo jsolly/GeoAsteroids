@@ -4,6 +4,7 @@ import {
   parseLogRecord,
   stringifyLogRecord,
 } from '../../shared/logRecords';
+import { getClientReleaseId } from './buildInfo';
 import { getClientLogContext } from './clientLogContext';
 import { logsWebSocketUrlFromGameplay } from './logsWebSocketUrl';
 
@@ -47,7 +48,7 @@ function normalizeLine(line: string): QueuedLine {
         timestamp: parsed?.timestamp ?? new Date().toISOString(),
         source: 'client',
         level: parsed?.level ?? 'warn',
-        releaseId: parsed?.releaseId ?? import.meta.env['VITE_COMMIT_HASH'] ?? 'dev',
+        releaseId: parsed?.releaseId ?? getClientReleaseId(),
         category: parsed?.category ?? 'LOG_FORWARD',
         message: parsed?.message ?? 'Oversized client log record',
         context: { truncated: true },
@@ -199,7 +200,7 @@ function sendLossTelemetry(socket: WebSocket): boolean {
         timestamp: new Date().toISOString(),
         source: 'client',
         level: 'error',
-        releaseId: import.meta.env['VITE_COMMIT_HASH'] ?? 'dev',
+        releaseId: getClientReleaseId(),
         category: 'STATE',
         message: 'Client log records dropped before delivery',
         context: {

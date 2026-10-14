@@ -21,7 +21,6 @@
     "test:all": "npm run test && npm run test:integration",
     "test:integration": "./scripts/test-runner.sh --reporter=verbose",
     "test:integration:server": "./scripts/test-runner.sh tests/integration/server/",
-    "test:integration:entities": "./scripts/test-runner.sh tests/integration/entities/",
     "check:test-runner": "node scripts/validation-admission.mjs contracts -- bash -c 'bash scripts/test-runner-contract.sh && node --test scripts/test-ports.test.mjs scripts/validation-admission.test.mjs scripts/check-built-client.test.mjs scripts/check-unused-typescript.test.mjs'",
     "check:dev-server": "bash scripts/dev-server-contract.sh",
     "check:ts": "astro sync && tsc --noEmit",
@@ -54,7 +53,7 @@
     "url": "git+https://github.com/jsolly/GeoRoids.git"
   },
   "author": "jsolly",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/jsolly/GeoRoids/issues"
   },
@@ -65,18 +64,18 @@
   "dependencies": {
     "@astrojs/svelte": "9.0.1",
     "@tailwindcss/vite": "4.3.3",
-    "@types/node": "^26.6.1",
-    "@types/ws": "^8.18.1",
+    "@types/node": "^26.6.5",
+    "@types/ws": "^8.18.2",
     "astro": "7.3.8",
     "echarts": "^6.1.0",
     "howler": "^2.2.4",
     "svelte": "5.57.2",
     "tailwindcss": "4.3.3",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "6.0.3",
     "uuid": "^14.0.2",
     "vite": "^8.3.0",
-    "ws": "^8.21.3"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
@@ -87,12 +86,12 @@
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/howler": "^2.2.13",
     "@types/jsdom": "^30.0.0",
-    "@vitest/coverage-v8": "5.0.1",
+    "@vitest/coverage-v8": "5.0.3",
     "bits-ui": "^2.19.5",
     "canvas": "^3.2.3",
     "cn": "0.4.0",
     "concurrently": "^10.0.5",
-    "jsdom": "^30.0.1",
+    "jsdom": "^30.1.2",
     "jsonc-parser": "3.3.1",
     "knip": "6.38.0",
     "markdown-it": "^15.0.2",
@@ -106,7 +105,7 @@
     "svelte-check": "4.7.6",
     "tailwind-variants": "3.3.1",
     "ts-prune": "0.10.3",
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.3",
     "yaml": "^2.9.1"
   },
   "overrides": {

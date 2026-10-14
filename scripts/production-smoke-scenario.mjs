@@ -4,16 +4,20 @@ import { join } from 'node:path';
 import { tsImport } from 'tsx/esm/api';
 import WebSocket from 'ws';
 import { clientAssetGraph, clientDocumentAssets } from './client-asset-graph.mjs';
-import { requireEvidence, SmokeFailure, smokeClock } from './production-smoke-network.mjs';
+import {
+  requireEvidence,
+  SmokeFailure,
+  smokeCause,
+  smokeClock,
+} from './production-smoke-network.mjs';
 
 export const productionUrl = 'https://www.georoids.com/';
 const healthUrl = 'https://georoids-production-2403.up.railway.app/health';
-const socketUrl =
-  'wss://georoids-production-2403.up.railway.app/ws?snapshotVersion=3&asteroidInteractions=1';
-const { SNAPSHOT_VERSION, SnapshotDecoder } = await tsImport(
+const { ASTEROID_INTERACTIONS_CAPABILITY, SNAPSHOT_VERSION, SnapshotDecoder } = await tsImport(
   '../shared/snapshotProtocol.ts',
   import.meta.url
 );
+const socketUrl = `wss://georoids-production-2403.up.railway.app/ws?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=${ASTEROID_INTERACTIONS_CAPABILITY}`;
 const { GAME, LASER } = await tsImport('../shared/constants/gameplay.ts', import.meta.url);
 
 function documentAssets(html) {
@@ -180,8 +184,10 @@ export async function smoke({
       handshakeTimeout: 15000,
       maxPayload: 1024 * 1024,
     });
-    socket.on('error', () => {
-      wireFailure ??= new SmokeFailure('Gameplay socket transport failed');
+    socket.on('error', (error) => {
+      wireFailure ??= new SmokeFailure('Gameplay socket transport failed', {
+        cause: smokeCause(error),
+      });
     });
     socket.on('close', (code) => {
       evidence.socketClosed = true;
@@ -201,12 +207,14 @@ export async function smoke({
             position: { x: 0, y: 0 },
             kitId: 'scout',
             snapshotVersion: SNAPSHOT_VERSION,
-            asteroidInteractions: 1,
+            asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
             clientReleaseId: expectedSha,
           },
         });
-      } catch {
-        wireFailure ??= new SmokeFailure('Gameplay join could not be sent');
+      } catch (error) {
+        wireFailure ??= new SmokeFailure('Gameplay join could not be sent', {
+          cause: smokeCause(error),
+        });
       }
     });
     socket.on('message', (payload) => {
@@ -219,7 +227,9 @@ export async function smoke({
           { acceptSnapshots: admitted }
         );
         if (decoded.kind === 'snapshot-rejected') {
-          throw new SmokeFailure('Gameplay snapshot failed current protocol validation');
+          throw new SmokeFailure('Gameplay snapshot failed current protocol validation', {
+            cause: decoded.error,
+          });
         }
         if (decoded.kind === 'snapshot') {
           state = decoded.state;
@@ -233,8 +243,7 @@ export async function smoke({
             !admitted &&
               message.data?.id === pilotId &&
               message.data?.snapshotVersion === SNAPSHOT_VERSION &&
-              message.data?.asteroidInteractions === 1 &&
-              message.data?.shotAcknowledgements === true &&
+              message.data?.asteroidInteractions === ASTEROID_INTERACTIONS_CAPABILITY &&
               typeof message.data?.resumeToken === 'string' &&
               message.data.resumeToken.length > 0,
             'Gameplay join admission is incomplete or mismatched'
@@ -244,8 +253,7 @@ export async function smoke({
           evidence.admission = {
             playerId: pilotId,
             snapshotVersion: SNAPSHOT_VERSION,
-            asteroidInteractions: 1,
-            shotAcknowledgements: true,
+            asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
           };
         } else if (message?.type === 'shotAcknowledged') {
           requireEvidence(
@@ -270,7 +278,13 @@ export async function smoke({
         wireFailure ??=
           error instanceof SmokeFailure
             ? error
-            : new SmokeFailure('Malformed gameplay protocol message');
+            : new SmokeFailure('Malformed gameplay protocol message', {
+                // JSON.parse diagnostics can embed a private socket payload.
+                cause:
+                  error instanceof SyntaxError
+                    ? new Error('Gameplay JSON parsing failed')
+                    : smokeCause(error),
+              });
       }
     });
     signal?.addEventListener('abort', abort, { once: true });
@@ -400,8 +414,10 @@ export async function smoke({
             } else {
               socket.terminate();
             }
-          } catch {
-            cleanupFailure = new SmokeFailure('Owned gameplay socket cleanup failed');
+          } catch (error) {
+            cleanupFailure = new SmokeFailure('Owned gameplay socket cleanup failed', {
+              cause: smokeCause(error),
+            });
             socket.terminate();
           }
           await Promise.race([closed, timeout]);
@@ -420,7 +436,7 @@ export async function smoke({
       cleanupFailure =
         error instanceof SmokeFailure
           ? error
-          : new SmokeFailure('Owned gameplay socket cleanup failed');
+          : new SmokeFailure('Owned gameplay socket cleanup failed', { cause: smokeCause(error) });
       evidence.cleanupError = cleanupFailure.message;
     }
     if (cleanupFailure) {

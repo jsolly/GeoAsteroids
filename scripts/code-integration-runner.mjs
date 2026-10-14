@@ -39,7 +39,7 @@ export function integrationFiles(root) {
       }
     }
   }
-  for (const directory of ['server', 'entities']) {
+  for (const directory of ['server']) {
     const home = join(root, 'tests/integration', directory);
     if (existsSync(home)) {
       visit(home);
@@ -74,7 +74,7 @@ export function selectIntegration(root, args) {
       const relativePath = relative(root, path);
       assert(
         relativePath === 'tests/integration' ||
-          /^(?:tests\/integration\/(?:server|entities))(?:\/|$)/u.test(relativePath),
+          /^(?:tests\/integration\/server)(?:\/|$)/u.test(relativePath),
         `Integration selector is outside code tests: ${arg}`
       );
       assert(existsSync(path), `Explicit integration selector does not exist: ${arg}`);

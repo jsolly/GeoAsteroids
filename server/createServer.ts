@@ -14,6 +14,7 @@ import { GameplayMessageBudget } from './communication/messageBudget';
 import { WebSocketCore } from './communication/WebSocketCore';
 import { readServerConfiguration } from './configuration';
 import { GameEngine } from './core/GameEngine';
+import { buildHealthResponse } from './health';
 import {
   acquireServerPerformanceMetrics,
   releaseServerPerformanceMetrics,
@@ -27,7 +28,6 @@ import { renderStatusPage } from './statusPage';
 import {
   acceptTestPost,
   areTestHttpEndpointsEnabled,
-  buildHealthPayload,
   handleTestResetWorld,
 } from './testHttpHandlers';
 import { openWorldPersistence } from './world/openWorldPersistence';
@@ -94,18 +94,13 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     });
 
     if (req.url === '/health') {
-      res.writeHead(gameEngine.isPersistenceHealthy() ? 200 : 503, {
-        'Content-Type': 'application/json',
-      });
-      res.end(
-        JSON.stringify(
-          buildHealthPayload(
-            gameEngine,
-            loggingDiagnostics(),
-            serverPerformanceMetricsEnabled() ? serverPerformanceMetrics.read() : undefined
-          )
-        )
+      const health = buildHealthResponse(
+        gameEngine,
+        loggingDiagnostics(),
+        serverPerformanceMetricsEnabled() ? serverPerformanceMetrics.read() : undefined
       );
+      res.writeHead(health.statusCode, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(health.body));
       return;
     }
 

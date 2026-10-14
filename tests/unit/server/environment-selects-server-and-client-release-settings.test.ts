@@ -70,16 +70,15 @@ test('the preview environment serves its client and never the local playground',
 });
 
 test('deployed client build information uses the injected release identity', () => {
-  vi.stubEnv('VITE_COMMIT_HASH', 'abc1234567890');
+  vi.stubEnv('VITE_COMMIT_SHA', 'A'.repeat(40));
   vi.stubEnv('VITE_BUILD_TIME', '2026-09-07T00:00:00.000Z');
   vi.stubEnv('MODE', 'production');
   const label = getBuildInfoString();
-  expect(label).toContain('abc1234567890');
+  expect(label).toBe(`aaaaaaa (${new Date('2026-09-07T00:00:00.000Z').toLocaleDateString()})`);
   expect(label).toContain(new Date('2026-09-07T00:00:00.000Z').toLocaleDateString());
 });
 
 test('a local client without injected release metadata stays labeled dev', () => {
-  vi.stubEnv('VITE_COMMIT_HASH', undefined);
   vi.stubEnv('VITE_COMMIT_SHA', undefined);
   vi.stubEnv('VITE_BUILD_TIME', undefined);
   vi.stubEnv('MODE', 'development');

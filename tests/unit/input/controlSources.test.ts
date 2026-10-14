@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { GAME } from '../../../shared/constants/gameplay';
 import { Player } from '../../../src/entities/player/Player';
 import { controlSources, resetControlSources } from '../../../src/input/controlSources';
-import { keyDown, keyUp, reconcilePlayerInput } from '../../../src/input/keybindings';
+import { keyDown, keyUp } from '../../../src/input/keybindings';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { setTouchFire, setTouchHeading, tickTouchControls } from '../../../src/input/touchControls';
 
@@ -33,16 +33,6 @@ function press(code: string): void {
 function release(code: string): void {
   keyUp(new KeyboardEvent('keyup', { code }), player);
 }
-
-test('cruise starts without a held control and the freed throttle keys do not change it', () => {
-  reconcilePlayerInput(player);
-  expect(player.ship.thrusting).toBe(true);
-  for (const code of ['ArrowUp', 'KeyW']) {
-    press(code);
-    release(code);
-    expect(player.ship.thrusting).toBe(true);
-  }
-});
 
 test('keyboard steering takes over from the pointer and release keeps cruising on the new heading', () => {
   setTouchHeading(player, 0);

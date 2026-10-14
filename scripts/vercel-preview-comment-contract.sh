@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lock the /preview comment matcher used by .github/workflows/vercel-preview.yml.
+# Lock the /preview comment matcher used by .github/workflows/railway-preview.yml.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
