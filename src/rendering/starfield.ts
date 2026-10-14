@@ -1,4 +1,4 @@
-import { getGameBoundary } from '../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../shared/boundary';
 import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import { hexToRgba } from '../utils/colorUtils';
@@ -90,7 +90,7 @@ const cachedTiles = new Map<string, Star[]>();
 let cachedWorldKey = '';
 
 function getStarTile(tileX: number, tileY: number): readonly Star[] {
-  const boundary = getGameBoundary();
+  const boundary = WORLD_BOUNDARY;
   const worldKey = `${VISUAL.STAR_SEED}:${boundary.cx}:${boundary.cy}:${boundary.radius}`;
   if (cachedWorldKey !== worldKey) {
     cachedWorldKey = worldKey;
@@ -118,7 +118,7 @@ export function visibleStarTiles(shipPosition: Position): readonly (readonly Sta
   const viewport = canvasManager.getViewportSize();
   const size = VISUAL.STAR_SIZE;
 
-  const boundary = getGameBoundary();
+  const boundary = WORLD_BOUNDARY;
   const scale = canvasManager.getPlayfieldScale();
   const bounds = rotatedViewSize(
     viewport.width,

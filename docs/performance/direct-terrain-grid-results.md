@@ -30,12 +30,14 @@ accurate; no article or media change is needed.
 
 ## Calibrated CPU comparison
 
-Run `benchmarks/terrain-grid/run.mjs` for the frozen baseline versus the actual
-production extraction plus a fresh spatial index. Fields are created outside
-timing. The driver retains every input, compiled-module identity, raw duration,
-control pair and cleanup receipt. It uses fresh observation/timing contexts,
-native Chromium/GPU, CPU slowdown 4 and alternating baseline/candidate arms
-between bracketing baseline/baseline controls.
+The driver ran at the shipping revision of #763 and has since been retired.
+Its pre-retirement sources remain in immutable revision
+`1649ce7325a4d65e0a7b23ccdeeabf3f3472ec2c` under `benchmarks/terrain-grid/`; this
+pointer does not claim a new run. The ongoing exactness guard is
+`tests/unit/rendering/terrain-patches-preserve-the-shared-world-shape.test.ts`.
+The historical driver kept fields outside timing and retained input identities,
+raw durations, control pairs and cleanup receipts from native Chromium/GPU, CPU
+slowdown 4 and alternating arms between bracketing controls.
 
 The first production run used ten warmups and twelve calls per arm with three
 pairs in each phase. Its host load averaged roughly 40–68 runnable jobs and

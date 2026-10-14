@@ -203,8 +203,6 @@ describe('current pilots share the production handler and broadcaster', () => {
       data: {
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: 1,
-        // Retired for clients, but the production smoke's join admission still requires it.
-        shotAcknowledgements: true,
         // The client refuses an ack without the seed of the world it is about to apply.
         terrainSeed: baseline.terrainSeed,
         resumeToken: expect.stringMatching(RESUME_TOKEN_PATTERN),

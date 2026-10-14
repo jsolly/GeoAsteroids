@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { WebSocket } from 'ws';
-import { checkBoundaryCollision } from '../../shared/collisionDetection';
+import { checkBoundaryCollision } from '../../shared/boundary';
 import { GAME } from '../../shared/constants/gameplay';
 import {
   CONTOUR_LOCK,

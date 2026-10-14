@@ -1269,7 +1269,7 @@ export class ConnectionManager {
     applyTerrainSeed(data.terrainSeed);
     setWorldMapAssets(data.mapAssets);
     setSettlement(data.settlement);
-    worldFurnaces.replaceLit(data.civicModules ?? []);
+    worldFurnaces.replaceLit(data.civicModules);
     if (validExploration(data.exploration)) {
       setWorldExploration(data.exploration);
     }
@@ -1372,9 +1372,7 @@ export class ConnectionManager {
         if (!entityData.deathCause && !entityData.exploding && entityData.health > 0) {
           delete entity.deathCause;
         }
-        if (data.serverTime !== undefined) {
-          entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
-        }
+        entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
         if (isLocalPlayer && entityData.bankedCargo !== undefined) {
           const previous = this.cargoDepositBaseline;
           const banked = entityData.bankedCargo;

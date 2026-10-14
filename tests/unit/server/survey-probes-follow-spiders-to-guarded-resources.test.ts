@@ -9,6 +9,7 @@ import { probePosition, SURVEY_PROBE } from '../../../shared/surveyProbe';
 import { SPIDER } from '../../../shared/terrainSpider';
 import type { AsteroidData, TerrainSpider } from '../../../shared-types';
 import { RecordingSocket } from '../../support/recordingSocket';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 import { fireProbe, resolveToolFlights } from '../../support/tool-flight';
 
 const pilot = {
@@ -107,12 +108,12 @@ describe('spiders carry Scout probes', () => {
       players: [scout],
       resources: () => [resource],
     };
-    spiders.advance({ ...options, nowFrame: 1 });
+    spiders.advance(spiderAdvanceFixture({ ...options, nowFrame: 1 }));
     const guard = spiders.getBodies()[0];
     assert.ok(guard);
     scout.position = { x: guard.position.x + 300, y: guard.position.y };
     for (let frame = 2; frame < 50; frame++) {
-      spiders.advance({ ...options, nowFrame: frame });
+      spiders.advance(spiderAdvanceFixture({ ...options, nowFrame: frame }));
     }
     assert.ok(
       fireProbe(
@@ -125,7 +126,7 @@ describe('spiders carry Scout probes', () => {
     );
     scout.position = { x: 21000, y: 5000 };
     for (let frame = 50; frame < 500; frame++) {
-      spiders.advance({ ...options, nowFrame: frame });
+      spiders.advance(spiderAdvanceFixture({ ...options, nowFrame: frame }));
     }
     expect(spiders.getBody(guard.id)).toBe(guard);
     expect(

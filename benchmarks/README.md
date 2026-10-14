@@ -8,7 +8,7 @@ Browser benchmarks and frame measurements are manual tools outside `npm run gate
 and CI code-test validation. Playwright remains for those tools. Manual test-runner benchmark modes and frame measurements use the common-Git
 heavyweight queue; code checks can overlap across different worktrees. The same
 checkout excludes overlapping validation. Install Chromium for browser tools with
-`npx --no-install playwright install chromium`.
+`npx --no-install playwright install chromium`. Wiki media uses node-canvas and Python with `scripts/wiki-media-requirements.txt` (`WIKI_MEDIA_PYTHON`), without a browser.
 
 ## Run a measurement
 
@@ -317,8 +317,8 @@ cellular bandwidth. It delays and throttles chunks without dropping arbitrary pr
 configured propagation/jitter model is an approximation; report measured RTT and delivery
 intervals rather than treating settings as observed network latency.
 
-Isolated architecture experiments are `collision-experiment.ts` and
-`protocol-experiment.ts`; decisions and limits are in
+The retained isolated architecture experiment is `protocol-experiment.ts`;
+decisions and limits are in
 [`docs/performance/implementation-status.md`](../docs/performance/implementation-status.md).
 
 ### Mobile constraints and repeatable fixtures

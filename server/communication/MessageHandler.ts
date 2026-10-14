@@ -4,7 +4,7 @@ import { isClientOwnedCollisionAttacker } from '../../shared/combat';
 import { onDarkFurnaceFootprint } from '../../shared/furnaceField';
 import { isTownSquareArrival } from '../../shared/furnaces';
 import { MAX_TICK_DEBT_MS } from '../../shared/gameClock';
-import { sanitizePlayerName } from '../../shared/playerName';
+import { sanitizePlayerName } from '../../shared/player';
 import { getShipKit } from '../../shared/shipKits';
 import { ASTEROID_INTERACTIONS_CAPABILITY } from '../../shared/snapshotProtocol';
 import type { AbilityUsedEvent, PlayerJoin, PlayerShotAcknowledgement } from '../../shared-types';
@@ -252,7 +252,7 @@ export class MessageHandler {
         return;
       }
       resumeToken = registered.resumeToken;
-      this.gameEngine.seedAsteroidInteractions();
+      this.gameEngine.ensureAsteroidField();
     }
 
     const snapshotVersion = this.broadcaster.negotiateSnapshot(ws);
@@ -267,7 +267,6 @@ export class MessageHandler {
         position: player.position,
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
-        shotAcknowledgements: true,
         color: player.color,
         kitId: player.kitId,
         terrainSeed: this.gameEngine.getTerrainSeed(),

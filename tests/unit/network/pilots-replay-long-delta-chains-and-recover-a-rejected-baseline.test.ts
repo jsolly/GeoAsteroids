@@ -53,9 +53,6 @@ test('a pilot reconstructs more than a thousand consecutive deltas and a full re
     elapsedTicks += ticks;
     world.gameTime = elapsedTicks;
     world.serverTime = 1_700_000_000_000 + elapsedTicks * (1000 / 60);
-    if (sequence % 17 === 0) {
-      delete world.serverTime;
-    }
     for (const asteroid of world.asteroids) {
       asteroid.position.x += asteroid.velocity.x * ticks;
       asteroid.position.y += asteroid.velocity.y * ticks;

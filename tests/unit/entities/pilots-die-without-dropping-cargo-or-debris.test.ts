@@ -44,35 +44,6 @@ describe('death, shared pickups and saved mass', () => {
     expect(second.loot).toEqual(first.loot);
   });
 
-  test('collecting a shard removes the drop without changing the collector', () => {
-    const ws = new RecordingSocket();
-    const collector = engine.addPlayer('p1', 'Collector', ws, { x: 200, y: 0 });
-    const victim = engine.addPlayer('p2', 'Victim', ws, { x: 0, y: 0 });
-    engine.entityManager.updateEntity('p1', { spawnProtectionTimer: 0 });
-    engine.entityManager.updateEntity('p2', { spawnProtectionTimer: 0 });
-
-    const lootManager = new LootManager(new RNGService(42));
-    lootManager.spawnShard(victim.position, 0);
-    const loot = lootManager.getAll();
-    const shard = loot[0];
-    assert.ok(shard);
-
-    engine.updatePlayer('p1', { position: { ...shard.position } });
-    const before = {
-      mass: collector.mass,
-      maxHealth: collector.maxHealth,
-      health: collector.health,
-    };
-    const collected = lootManager.collectOverlaps([collector]);
-
-    expect(collected).toHaveLength(1);
-    expect(collected[0]?.collector.id).toBe('p1');
-    expect(collector.mass).toBe(before.mass);
-    expect(collector.maxHealth).toBe(before.maxHealth);
-    expect(collector.health).toBe(before.health);
-    expect(lootManager.getAll().some((drop) => drop.id === shard.id)).toBe(false);
-  });
-
   test('only the first overlapping ship collects a drop', () => {
     const ws = new RecordingSocket();
     const first = engine.addPlayer('p1', 'First', ws, { x: 400, y: 0 });

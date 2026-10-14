@@ -1,7 +1,7 @@
-import { getAsteroidFieldRadius } from '../../shared/asteroidMotion';
-import { getGameBoundary } from '../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../shared/boundary';
 import { DEBUG } from '../../shared/constants/gameplay';
 import { townSquareSpawn } from '../../shared/furnaces';
+import { WORLD } from '../../shared/world';
 import type { Position } from '../../shared-types';
 import { getRandomPositionNearBoundary } from './positionUtils';
 
@@ -22,8 +22,8 @@ export function resolveSpawnPosition(explicit?: Position): Position {
 
 /** Local placeholder positions use the same world bounds as the server. */
 export function getRandomPositionInAsteroidField(): Position {
-  const { cx, cy } = getGameBoundary();
-  const maxR = getAsteroidFieldRadius();
+  const { cx, cy } = WORLD_BOUNDARY;
+  const maxR = WORLD.radius;
   const t = Math.random() * 2 * Math.PI;
   const r = Math.sqrt(Math.random()) * maxR;
   return { x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) };

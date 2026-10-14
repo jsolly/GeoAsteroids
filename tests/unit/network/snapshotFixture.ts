@@ -7,6 +7,11 @@ export function snapshotFixture(tick = 0): ServerGameSnapshot {
   const kits: ShipKitId[] = ['scout', 'hauler'];
   const materials: AsteroidMaterial[] = ['ice', 'metal', 'rubble'];
   return {
+    serverTime: 0,
+    civicModules: [],
+    spiderField: { spiders: [], nests: [] },
+    beltRecovery: [],
+
     settlement: emptySettlement(),
     exploration: EMPTY_EXPLORATION,
     mapAssets: [],

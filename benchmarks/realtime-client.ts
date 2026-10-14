@@ -14,7 +14,11 @@ import {
   webkit,
 } from 'playwright';
 import { onDarkFurnaceFootprint } from '../shared/furnaceField';
-import { SNAPSHOT_VERSION, SnapshotDecoder } from '../shared/snapshotProtocol';
+import {
+  ASTEROID_INTERACTIONS_CAPABILITY,
+  SNAPSHOT_VERSION,
+  SnapshotDecoder,
+} from '../shared/snapshotProtocol';
 import type { Position, ServerGameSnapshot } from '../shared-types';
 import type { ClientPerformanceMetrics } from '../src/diagnostics/performanceMetrics';
 import { PLAYFIELD_CLOSE_SCALE } from '../src/rendering/playfieldCamera';
@@ -1731,7 +1735,9 @@ try {
         errors.push(String(error));
       };
       const protocolPeerOptions = (_index: number): ConstructorParameters<typeof Pilot>[1] => ({
-        url: new URL(`${socketUrl}?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=1`),
+        url: new URL(
+          `${socketUrl}?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=${ASTEROID_INTERACTIONS_CAPABILITY}`
+        ),
         measuring: () => measuring,
         fail: protocolPeerFail,
         deliveryBudget: () => delivery,

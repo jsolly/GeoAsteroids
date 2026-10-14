@@ -48,8 +48,7 @@ The remaining results were the same 70 supporting type exports and one tool entr
 
 The override keeps ts-prune's analyzer while supplying a parser that understands
 `satisfies` and bundler module resolution. ts-morph 28 uses TypeScript 6.0; the
-measured application used TypeScript 5.9. The application compiler has since
-advanced to TypeScript 7.0, and the parser override remains separately pinned. The installed CLI contract tests exercise
+measured application used TypeScript 5.9. The application now pins TypeScript 6.0.3, the same major as ts-morph 28's TypeScript 6.0; the parser override remains separately pinned. The installed CLI contract tests exercise
 namespace imports and `satisfies`, then prove that adding an unused export causes
 each tool to exit with an error. This is a repository-tested dependency override,
 not an upstream ts-prune release. [ts-morph release notes](https://github.com/dsherret/ts-morph/releases/tag/28.0.0)
@@ -59,9 +58,7 @@ not an upstream ts-prune release. [ts-morph release notes](https://github.com/ds
 The immutable source snapshot was based on commit
 `c60859d20c03a760ee9e423a50c9996a723c2781` plus the cleanup working tree. Its manifest
 SHA-256 was `2e888434f38f62d52e1fae8375fdd6db588b97ead0759475fe45e976683d3880`.
-Both tools read that same tree with the installed dependencies. Since the snapshot
-has no `.git` directory, both commands received the actual commit through
-`VERCEL_GIT_COMMIT_SHA` for Vite's required release-identity check.
+Both tools read that same tree with the installed dependencies. The snapshot had no `.git` directory, so builds at that revision received the actual commit through `VERCEL_GIT_COMMIT_SHA` for the then-required release-identity check.
 
 The measured entry points included shell-invoked scripts and browser tests. Browser test entry points and `vitest.browser.config.ts` are now retired; manual benchmark/media tooling remains live. The benchmark
 restricted its report to exports and types for the symbol comparison; the active

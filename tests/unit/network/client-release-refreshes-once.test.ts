@@ -55,7 +55,6 @@ async function start(f: ReturnType<typeof fixture>, build = CURRENT) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   vi.useFakeTimers();
 });
 afterEach(() => {

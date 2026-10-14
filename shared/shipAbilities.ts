@@ -493,10 +493,6 @@ function activateAbility(
     host.tapExtractCompleted = false;
 
     host.harpoonLatchPos = { x: target.position.x, y: target.position.y };
-    // Only a supplied simulation world owns towing forces, and only Tow Cable hauls.
-    if (world?.asteroids.includes(target) && isTowCableUtility(host)) {
-      attachTowCable(host, target);
-    }
     return { activated: true, abilityId: 'harpoon' };
   }
 

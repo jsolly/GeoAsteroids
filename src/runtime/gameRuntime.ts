@@ -1,4 +1,4 @@
-import { sanitizePlayerName } from '../../shared/playerName';
+import { sanitizePlayerName } from '../../shared/player';
 import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import { activateAudio, disposeAudioRuntime } from '../audio/audioRuntime';
 import { playFeedback } from '../audio/feedbackSounds';

@@ -1,4 +1,4 @@
-import type { LootManager } from '../server/core/LootManager';
+import type { LootManager } from '../../server/core/LootManager';
 
 function readObject(owner: object, key: string): object {
   const value: unknown = Reflect.get(owner, key);
@@ -32,7 +32,7 @@ function heapSize(queue: object): number {
   return heap.length;
 }
 
-/** Observe real owner operations only when requested by a benchmark or test. */
+/** Observe real owner operations only when requested by a test. */
 export function instrumentLootIndex(manager: LootManager) {
   const counts = {
     cellVisits: 0,

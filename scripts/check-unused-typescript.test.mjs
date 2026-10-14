@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import process from 'node:process';
 import { test } from 'node:test';
+import ts from 'typescript';
 import { checkUnusedTypescript, frontendEntry } from './check-unused-typescript.mjs';
 
 test('frontend imports preserve exact TypeScript export usage without hiding new or removed consumers', () => {
@@ -69,6 +72,69 @@ test('frontend imports preserve exact TypeScript export usage without hiding new
       JSON.stringify({ compilerOptions: { noUnusedLocals: false }, include: ['src/**/*.ts'] })
     );
     assert.throws(() => checkUnusedTypescript(root), /requires noUnusedLocals/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('the unused-file gate rejects an orphaned Svelte component and follows its Astro consumer', () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'georoids-svelte-prune-contract-')));
+  const write = (path, body) => writeFileSync(join(root, path), body);
+  const config = ts.parseConfigFileTextToJson(
+    'knip.jsonc',
+    readFileSync(new URL('../knip.jsonc', import.meta.url), 'utf8')
+  ).config;
+  assert.ok(config, 'Cannot read the committed unused-file configuration');
+  const run = () =>
+    spawnSync(
+      process.execPath,
+      [
+        resolve('node_modules/knip/bin/knip.js'),
+        '--directory',
+        root,
+        '--include',
+        'files',
+        '--no-progress',
+        '--treat-config-hints-as-errors',
+        '--treat-tag-hints-as-errors',
+      ],
+      { encoding: 'utf8', timeout: 120000, env: { ...process.env, JITI_FS_CACHE: 'false' } }
+    );
+  try {
+    mkdirSync(join(root, 'src/pages'), { recursive: true });
+    mkdirSync(join(root, 'src/components'));
+    write(
+      'package.json',
+      JSON.stringify({
+        type: 'module',
+        dependencies: { astro: '7.3.8', svelte: '5.57.2', tailwindcss: '4.3.3' },
+      })
+    );
+    write(
+      'knip.json',
+      JSON.stringify({
+        entry: config.entry.filter((pattern) => pattern.startsWith('src/')),
+        project: config.project.filter((pattern) => pattern.startsWith('src/')),
+      })
+    );
+    write('src/pages/index.astro', '<p>Live page</p>');
+    write('src/components/Orphan.svelte', '<p>Orphan</p>');
+    const orphan = run();
+    assert.equal(orphan.status, 1, orphan.stdout + orphan.stderr);
+    assert.match(orphan.stdout, /src\/components\/Orphan\.svelte/u);
+    write(
+      'src/pages/index.astro',
+      '---\nimport Panel from "../components/Orphan.svelte";\n---\n<Panel/>'
+    );
+    const live = run();
+    assert.equal(live.status, 0, live.stdout + live.stderr);
+    write(
+      'src/pages/index.astro',
+      '<!-- import Panel from "../components/Orphan.svelte" --> <p>Live page</p>'
+    );
+    const mentioned = run();
+    assert.equal(mentioned.status, 1, mentioned.stdout + mentioned.stderr);
+    assert.match(mentioned.stdout, /src\/components\/Orphan\.svelte/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
