@@ -1,6 +1,7 @@
 import { createLogRecord, stringifyLogRecord } from '../../shared/logRecords';
 import { LOGGING } from '../constants';
 import { clientLogLevel } from '../constants/user-preferences';
+import { getClientReleaseId } from './buildInfo';
 import { getClientLogContext } from './clientLogContext';
 import { shouldForwardClientLog } from './logForwardPolicy';
 import { LogLevel, shouldEmitLog } from './logLevel';
@@ -108,7 +109,7 @@ class Logger {
       timestamp: new Date().toISOString(),
       source: 'client',
       level: levelName(level),
-      releaseId: import.meta.env['VITE_COMMIT_HASH'] || 'dev',
+      releaseId: getClientReleaseId(),
       category,
       message,
       context: error ? { ...context, error } : context,

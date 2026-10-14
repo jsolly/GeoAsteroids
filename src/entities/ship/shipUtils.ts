@@ -1,4 +1,4 @@
-import { checkBoundaryCollision } from '../../../shared/collisionDetection';
+import { checkBoundaryCollision } from '../../../shared/boundary';
 import { GAME, SHIP } from '../../../shared/constants/gameplay';
 import { GROWTH, maxVelocityFromMass, thrustScaleFromMass } from '../../../shared/shipGrowth';
 import type { Position, Velocity } from '../../../shared-types';

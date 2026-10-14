@@ -313,6 +313,11 @@ describe('pilots reconstruct complete authoritative worlds', () => {
         ['ASCII pilot', `retired${nonAscii}`],
       ] as const) {
         const world = {
+          serverTime: 0,
+          civicModules: [],
+          spiderField: { spiders: [], nests: [] },
+          beltRecovery: [],
+
           entities: [],
           asteroids: [],
           loot: [],
@@ -732,7 +737,7 @@ describe('pilots reconstruct complete authoritative worlds', () => {
     }
   });
 
-  test('moving spiders retain global homes and unknown fields across nested patches and field removal', () => {
+  test('moving spiders retain global homes and unknown fields across nested patches and empty fields', () => {
     const world = snapshotFixture();
     world.spiderField = {
       spiders: Array.from({ length: 24 }, (_, i) => ({
@@ -782,16 +787,14 @@ describe('pilots reconstruct complete authoritative worlds', () => {
     decodeSnapshotMessage(decoder, snapshotMessage(first.encode(1)));
     expect(decodeSnapshotMessage(decoder, snapshotMessage(frame))).toEqual(next.state);
     const noSpiders = structuredClone(changed);
-    delete noSpiders.spiderField;
+    noSpiders.spiderField = { spiders: [], nests: [] };
     const gone = new SnapshotEncoder(noSpiders),
       removed = gone.encode(3, { sequence: 2, state: next.state });
     assert.equal(removed.kind, 'delta');
-    expect(removed.patch.clear).toContain('spiderField');
-    expect(removed.patch.objects).toBeUndefined();
+    expect(removed.patch.clear ?? []).not.toContain('spiderField');
     expect(decodeSnapshotMessage(decoder, snapshotMessage(removed))).toEqual(gone.state);
     const returned = next.encode(4, { sequence: 3, state: gone.state });
     assert.equal(returned.kind, 'delta');
-    expect(returned.patch.set?.['spiderField']).toEqual(next.state.spiderField);
     expect(decodeSnapshotMessage(decoder, snapshotMessage(returned))).toEqual(next.state);
   });
 

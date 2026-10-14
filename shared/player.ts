@@ -18,18 +18,9 @@ function randomPointInSector(x: number, y: number, random: () => number): Positi
   const maxX = minX + WORLD.sectorSize;
   const maxY = minY + WORLD.sectorSize;
   const inset = Math.min(WORLD.spawnInset, WORLD.sectorSize / 2 - 8);
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const candidate = clampInsideWorld({
-      x: minX + inset + random() * Math.max(8, maxX - minX - inset * 2),
-      y: minY + inset + random() * Math.max(8, maxY - minY - inset * 2),
-    });
-    if (Math.hypot(candidate.x, candidate.y) <= WORLD.radius) {
-      return candidate;
-    }
-  }
   return clampInsideWorld({
-    x: (x + 0.5) * WORLD.sectorSize,
-    y: (y + 0.5) * WORLD.sectorSize,
+    x: minX + inset + random() * Math.max(8, maxX - minX - inset * 2),
+    y: minY + inset + random() * Math.max(8, maxY - minY - inset * 2),
   });
 }
 
@@ -58,4 +49,16 @@ export function chooseCrewSpawn(options: {
   const origin = options.previous ?? { x: 0, y: 0 };
   const sector = sectorAt(origin);
   return randomPointInSector(sector.x, sector.y, random);
+}
+
+export const PLAYER_NAME_MAX_LENGTH = 20;
+
+/** Title-screen nicknames keep letters, numbers, and spaces. */
+export function sanitizePlayerName(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[^A-Za-z0-9 ]+/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, PLAYER_NAME_MAX_LENGTH);
 }

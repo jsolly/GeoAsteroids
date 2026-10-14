@@ -56,10 +56,9 @@ Published client releases automatically refresh open tabs after two matching
 release checks, about 30–60 seconds for active tabs. The check uses the client
 origin's static `release.json` full build SHA; the independently deployed Railway server does not
 trigger reloads. A per-tab guard prevents repeated reloads if the edge still
-serves a cached bundle. Tabs opened before this watcher was shipped need one
-manual refresh.
+serves a cached bundle.
 
 Gameplay WebSocket URLs include `asteroidInteractions=1`. Older clients receive
 HTTP 426 before the WebSocket opens and must refresh. The join message must also
 contain both current capabilities. `/logs` is unaffected. Client and server are
-deployed independently; verify each release ID and current multiplayer behavior.
+deployed independently; verify both production Git deployments and current multiplayer behavior through [deployment operations](agent-operations.md#deploy).

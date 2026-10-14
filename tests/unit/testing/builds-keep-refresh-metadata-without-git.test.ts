@@ -32,9 +32,6 @@ test.each(['VERCEL_GIT_COMMIT_SHA', 'RAILWAY_GIT_COMMIT_SHA'])(
     });
 
     const built = buildConfig();
-    expect(built.define?.['import.meta.env.VITE_COMMIT_HASH']).toBe(
-      JSON.stringify(release.slice(0, 7))
-    );
     expect(built.define?.['import.meta.env.VITE_COMMIT_SHA']).toBe(JSON.stringify(release));
     expect(execFileSync).not.toHaveBeenCalled();
   }
@@ -46,9 +43,6 @@ test('local builds embed their Git identity and bound the lookup', () => {
   vi.mocked(execFileSync).mockReturnValue(`${release}\n`);
 
   const built = buildConfig();
-  expect(built.define?.['import.meta.env.VITE_COMMIT_HASH']).toBe(
-    JSON.stringify(release.slice(0, 7))
-  );
   expect(built.define?.['import.meta.env.VITE_COMMIT_SHA']).toBe(JSON.stringify(release));
   expect(execFileSync).toHaveBeenCalledWith('git', ['rev-parse', 'HEAD'], {
     cwd: process.cwd(),
@@ -67,7 +61,6 @@ test('a failed Git lookup still builds with one token shared by client and refre
 
   const built = buildConfig();
   expect(built.define?.['import.meta.env.VITE_COMMIT_SHA']).toBe(JSON.stringify('d'.repeat(40)));
-  expect(built.define?.['import.meta.env.VITE_COMMIT_HASH']).toBe(JSON.stringify('d'.repeat(7)));
   expect(randomBytes).toHaveBeenCalledWith(20);
   const plugin = built.plugins.find((candidate) => candidate.name === 'client-release-manifest');
   if (!plugin || typeof plugin.generateBundle !== 'function') {
@@ -96,9 +89,6 @@ test('empty VERCEL_GIT_COMMIT_SHA still uses a valid RAILWAY_GIT_COMMIT_SHA', ()
   });
 
   const built = buildConfig();
-  expect(built.define?.['import.meta.env.VITE_COMMIT_HASH']).toBe(
-    JSON.stringify(release.slice(0, 7))
-  );
   expect(built.define?.['import.meta.env.VITE_COMMIT_SHA']).toBe(JSON.stringify(release));
   expect(execFileSync).not.toHaveBeenCalled();
 });

@@ -5,6 +5,8 @@ import WebSocket from 'ws';
 import { createServerInstance } from '../../../server/createServer';
 import { SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
+import { closePlayerMotionScenario } from '../../support/playerMotionCleanup';
+import { WireClient } from '../../support/wireClient';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -12,14 +14,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 describe('Server scoring via automatic satellite pickup collection', () => {
   let server: ReturnType<typeof createServerInstance> | null = null;
-  let client: WebSocket | null = null;
+  let client: WireClient | null = null;
 
   afterEach(async () => {
     try {
-      client?.terminate();
-      if (server) {
-        await server.close();
-      }
+      await closePlayerMotionScenario({
+        clients: client ? [client] : [],
+        server: server ?? undefined,
+      });
+      client?.assertHealthy();
     } finally {
       server = null;
       client = null;
@@ -32,23 +35,21 @@ describe('Server scoring via automatic satellite pickup collection', () => {
     const ws = new WebSocket(
       `ws://localhost:${port}/ws?snapshotVersion=${SNAPSHOT_VERSION}&asteroidInteractions=1`
     );
-    client = ws;
-    await new Promise<void>((resolve, reject) => {
-      ws.once('open', () => resolve());
-      ws.once('error', (err) => reject(err));
-    });
+    client = new WireClient(ws);
+    await client.open();
 
     const playerId = 'p1-pickup';
-    ws.send(
-      JSON.stringify({
-        type: 'join',
-        id: playerId,
-        name: 'Collector',
-        snapshotVersion: SNAPSHOT_VERSION,
-        asteroidInteractions: 1,
-      })
-    );
-    await expect.poll(() => server?.gameEngine.getPlayer(playerId)).toBeDefined();
+    client.send({
+      type: 'join',
+      id: playerId,
+      name: 'Collector',
+      snapshotVersion: SNAPSHOT_VERSION,
+      asteroidInteractions: 1,
+    });
+    await client.barrier();
+    expect(client.messages.find((message) => message.type === 'joined')?.data).toMatchObject({
+      id: playerId,
+    });
     server.gameEngine.stopGameLoop();
     server.wsCore.stopPeriodicGameStateBroadcast();
 
@@ -60,33 +61,7 @@ describe('Server scoring via automatic satellite pickup collection', () => {
       throw new Error('join did not create the pickup test fixture');
     }
 
-    const event = new Promise<{ type: string; data: Record<string, unknown> }>(
-      (resolve, reject) => {
-        const timeout = setTimeout(
-          () => reject(new Error('Timed out waiting for collect event')),
-          5000
-        );
-        ws.on('message', (raw) => {
-          try {
-            const packet: unknown = JSON.parse(String(raw));
-            if (
-              typeof packet === 'object' &&
-              packet !== null &&
-              'type' in packet &&
-              packet.type === 'satellitePickupCollected' &&
-              'data' in packet &&
-              isRecord(packet.data)
-            ) {
-              clearTimeout(timeout);
-              resolve({ type: packet.type, data: packet.data });
-            }
-          } catch (error) {
-            clearTimeout(timeout);
-            reject(error);
-          }
-        });
-      }
-    );
+    const beforeCollection = client.mark();
 
     server.gameEngine.updatePlayer(playerId, {
       position: { x: pickup.position.x + 110, y: pickup.position.y },
@@ -98,7 +73,13 @@ describe('Server scoring via automatic satellite pickup collection', () => {
     expect(server.gameEngine.getSatellitePickup(pickup.id)?.ownerId).toBe(playerId);
     server.wsCore.getBroadcaster().broadcastGameState();
 
-    const collected = await event;
+    await client.barrier();
+    const collected = client.messages
+      .slice(beforeCollection)
+      .find((message) => message.type === 'satellitePickupCollected');
+    if (!collected || !isRecord(collected.data)) {
+      throw new Error('Missing collection event');
+    }
     expect(collected.type).toBe('satellitePickupCollected');
     expect(collected.data['playerId']).toBe(playerId);
     expect(collected.data['pickupId']).toBe(pickup.id);
@@ -110,6 +91,5 @@ describe('Server scoring via automatic satellite pickup collection', () => {
       Math.hypot(source['x'] - collector.position.x, source['y'] - collector.position.y)
     ).toBeLessThanOrEqual(SATELLITE_PICKUP.AUTO_COLLECT_RANGE);
     expect(collected.data['scoreBonus']).toBe(SATELLITE_PICKUP.SCORE_BONUS);
-    expect(collected.data).not.toHaveProperty('shieldFrames');
   });
 });

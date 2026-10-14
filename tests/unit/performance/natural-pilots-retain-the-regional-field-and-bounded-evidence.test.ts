@@ -14,7 +14,7 @@ test('observing natural pilots preserves their real spawns and every generated a
   for (let index = 0; index < 5; index++) {
     const socket = new RecordingSocket();
     const actor = engine.addPlayer(`pilot-${index}`, `Pilot ${index}`, socket);
-    engine.seedAsteroidInteractions();
+    engine.ensureAsteroidField();
     expect(engine.registerPilot(actor, socket).ok).toBe(true);
   }
   const before = structuredClone(engine.getGameState());
@@ -94,4 +94,25 @@ test('a natural baseline rejects a pilot whose life epoch changed before readine
       { ...observation, motionEpoch: 2 }
     )
   ).toBe(true);
+});
+
+test('ensuring a fixture field seeds reflective clusters once and preserves consumed rocks', () => {
+  const engine = new GameEngine(42);
+  engine.createAsteroids(80);
+  const rocks = engine.getAllAsteroids();
+  expect(rocks.some((rock) => rock.phenomenon)).toBe(false);
+  engine.addPlayer('pilot', 'Pilot', new RecordingSocket());
+  engine.ensureAsteroidField();
+  const reflective = rocks.filter((rock) => rock.phenomenon?.kind === 'reflective');
+  expect(reflective).toHaveLength(6);
+  const consumed = reflective[0];
+  if (!consumed) {
+    throw new Error('Fixture has no reflective cluster');
+  }
+  delete consumed.phenomenon;
+  const seeded = structuredClone(rocks);
+  engine.ensureAsteroidField();
+  engine.ensureAsteroidField();
+  expect(engine.getAllAsteroids()).toEqual(seeded);
+  expect(consumed.phenomenon).toBeUndefined();
 });

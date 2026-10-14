@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { inspect } from 'node:util';
 import { tsImport } from 'tsx/esm/api';
 import WebSocket from 'ws';
 import { runNetworkSmoke, SmokeFailure } from './production-smoke-network.mjs';
@@ -115,6 +116,7 @@ function clientHttp({
 function codedSocket(outcome = 'accepted') {
   let socket,
     sent = [];
+  const transportFailure = new Error('Controlled socket transport failure');
   const createSocket = (url, options) => {
     assert.equal(
       url,
@@ -168,10 +170,13 @@ function codedSocket(outcome = 'accepted') {
           id: outcome === 'wrong-player' ? 'other' : id,
           snapshotVersion: outcome === 'old-protocol' ? 2 : 3,
           asteroidInteractions: 1,
-          shotAcknowledgements: true,
           resumeToken: 'private-resume-token',
           serverReleaseId: outcome === 'stale-server' ? oldRelease : release,
         });
+        if (outcome === 'malformed-json') {
+          socket.emit('message', Buffer.from('socketSecret'));
+          return;
+        }
         if (outcome === 'malformed-snapshot') {
           receive('snapshot', { version: 999 });
           return;
@@ -224,7 +229,7 @@ function codedSocket(outcome = 'accepted') {
         return;
       }
       if (outcome === 'error-on-close') {
-        socket.emit('error', new Error('private-resume-token'));
+        socket.emit('error', transportFailure);
       }
       socket.readyState = WebSocket.CLOSED;
       socket.emit(
@@ -241,24 +246,24 @@ function codedSocket(outcome = 'accepted') {
       socket.readyState = WebSocket.OPEN;
       socket.emit('open');
       if (outcome === 'transport-failure') {
-        socket.emit('error', new Error('private-resume-token'));
+        socket.emit('error', transportFailure);
       }
     });
     return socket;
   };
-  return { createSocket, socket: () => socket, sent: () => sent };
+  return { createSocket, socket: () => socket, sent: () => sent, failure: transportFailure };
 }
 async function fixture(run) {
   const artifacts = await mkdtemp(join(tmpdir(), 'georoids-coded-smoke-'));
   try {
-    await run(artifacts);
+    await run(artifacts, []);
   } finally {
     await rm(artifacts, { recursive: true, force: true });
   }
 }
 
 test('the deployed HTTP assets and genuine current-protocol gameplay produce a canonical receipt without private credentials', async () => {
-  await fixture(async (artifacts) => {
+  await fixture(async (artifacts, reports) => {
     const transport = codedSocket(),
       clock = controlledClock();
     const receipt = await runNetworkSmoke({
@@ -268,6 +273,7 @@ test('the deployed HTTP assets and genuine current-protocol gameplay produce a c
       clock,
       createSocket: transport.createSocket,
       artifacts,
+      report: (error) => reports.push(error),
     });
     assert.equal(receipt.success, true);
     assert.deepEqual(receipt.errors, []);
@@ -300,6 +306,7 @@ for (const outcome of [
   'old-protocol',
   'snapshot-before-join',
   'malformed-snapshot',
+  'malformed-json',
   'missing-second-snapshot',
   'wrong-motion-epoch',
   'missing-motion-ack',
@@ -311,7 +318,7 @@ for (const outcome of [
   'transport-failure',
 ]) {
   test(`code verification rejects ${outcome} and closes only its owned socket`, async () => {
-    await fixture(async (artifacts) => {
+    await fixture(async (artifacts, reports) => {
       const transport = codedSocket(outcome),
         clock = controlledClock();
       const receipt = await runNetworkSmoke({
@@ -321,6 +328,7 @@ for (const outcome of [
         clock,
         createSocket: transport.createSocket,
         artifacts,
+        report: (error) => reports.push(error),
       });
       assert.equal(receipt.success, false);
       assert.ok(receipt.errors.length > 0);
@@ -330,6 +338,22 @@ for (const outcome of [
       const evidence = JSON.parse(await readFile(join(artifacts, 'gameplay-server.json'), 'utf8'));
       assert.equal(evidence.socketClosed, true);
       assert.ok(evidence.error);
+      if (outcome === 'transport-failure') {
+        assert.equal(reports.length, 1);
+        assert.equal(reports[0].cause, transport.failure);
+      }
+      if (outcome === 'malformed-json') {
+        assert.deepEqual(receipt.errors, ['Malformed gameplay protocol message']);
+        assert.equal(reports.length, 1);
+        assert.equal(reports[0].cause.message, 'Gameplay JSON parsing failed');
+        assert.doesNotMatch(
+          inspect(reports, { depth: 10 }) +
+            JSON.stringify(receipt) +
+            (await readFile(join(artifacts, 'gameplay-server.json'), 'utf8')) +
+            (await readFile(join(artifacts, 'receipt.json'), 'utf8')),
+          /socketSecret/u
+        );
+      }
     });
   });
 }
@@ -339,7 +363,7 @@ for (const world of [
   { ...healthy, world: { ...healthy.world, loop: { stalls: 1 } } },
 ]) {
   test(`production health rejects coded invalid state ${JSON.stringify(world)}`, async () => {
-    await fixture(async (artifacts) => {
+    await fixture(async (artifacts, reports) => {
       let launched = false;
       const receipt = await runNetworkSmoke({
         scenario: { productionUrl, smoke },
@@ -347,6 +371,7 @@ for (const world of [
         fetcher: clientHttp({ world }),
         clock: controlledClock(),
         artifacts,
+        report: (error) => reports.push(error),
         createSocket: () => {
           launched = true;
           throw new Error('Must not launch');
@@ -435,7 +460,7 @@ test('client assets poll within the original deadline when the graph is not yet 
 });
 
 test('HTTP and behavior deadline races abort owned work and retain failed canonical receipts', async () => {
-  await fixture(async (artifacts) => {
+  await fixture(async (artifacts, reports) => {
     const clock = controlledClock();
     let started;
     const active = new Promise((resolveStarted) => {
@@ -463,6 +488,7 @@ test('HTTP and behavior deadline races abort owned work and retain failed canoni
       fetcher: clientHttp(),
       clock,
       artifacts,
+      report: (error) => reports.push(error),
     });
     await active;
     // The behavior call precedes timer creation by one synchronous frame.
@@ -474,7 +500,7 @@ test('HTTP and behavior deadline races abort owned work and retain failed canoni
     assert.equal(aborted, true);
     assert.equal(clock.pending(), 0);
   });
-  await fixture(async (artifacts) => {
+  await fixture(async (artifacts, reports) => {
     const clock = controlledClock();
     let started;
     const active = new Promise((resolveStarted) => {
@@ -500,12 +526,16 @@ test('HTTP and behavior deadline races abort owned work and retain failed canoni
       },
       clock,
       artifacts,
+      report: (error) => reports.push(error),
     });
     await active;
     clock.advance(15000);
     const receipt = await run;
     assert.equal(receipt.success, false);
     assert.deepEqual(receipt.errors, ['Readiness deadline exceeded']);
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].cause.message, 'Production HTTP request deadline exceeded');
+    assert.doesNotMatch(inspect(reports, { depth: 10 }), /private-github-token/u);
     assert.equal(aborted, true);
     assert.equal(clock.pending(), 0);
     assert.doesNotMatch(JSON.stringify(receipt), /private-github-token/u);
@@ -517,7 +547,7 @@ test('verified HTTP rejects missing assets and noncanonical redirects before ope
     { status: 404 },
     { redirect: 'https://other.example/private?token=private-github-token' },
   ]) {
-    await fixture(async (artifacts) => {
+    await fixture(async (artifacts, reports) => {
       let opened = false;
       const fetcher = clientHttp(options);
       const scenario = {
@@ -531,6 +561,7 @@ test('verified HTTP rejects missing assets and noncanonical redirects before ope
         readinessMs: 0,
         clock: controlledClock(),
         artifacts,
+        report: (error) => reports.push(error),
         createSocket: () => {
           opened = true;
         },
@@ -546,7 +577,7 @@ test('healthy persistence must survive the accepted shot', async () => {
   for (const changed of [
     { ...healthy, world: { ...healthy.world, persistence: { mode: 'worker', failed: true } } },
   ]) {
-    await fixture(async (artifacts) => {
+    await fixture(async (artifacts, reports) => {
       let healthChecks = 0;
       const transport = codedSocket();
       const fetcher = (url) =>
@@ -560,6 +591,7 @@ test('healthy persistence must survive the accepted shot', async () => {
         clock: controlledClock(),
         createSocket: transport.createSocket,
         artifacts,
+        report: (error) => reports.push(error),
       });
       assert.equal(receipt.success, false);
       assert.equal(healthChecks, 2);
@@ -571,7 +603,7 @@ test('healthy persistence must survive the accepted shot', async () => {
 });
 
 test('an aborted gameplay behavior closes its current socket and awaits cleanup before returning', async () => {
-  await fixture(async (artifacts) => {
+  await fixture(async (artifacts, reports) => {
     const clock = controlledClock(),
       transport = codedSocket();
     const receipt = await runNetworkSmoke({
@@ -581,6 +613,7 @@ test('an aborted gameplay behavior closes its current socket and awaits cleanup 
       clock,
       createSocket: transport.createSocket,
       artifacts,
+      report: (error) => reports.push(error),
       behaviorMs: 1,
     });
     assert.equal(receipt.success, false);
@@ -594,7 +627,7 @@ test('an aborted gameplay behavior closes its current socket and awaits cleanup 
 });
 
 test('forced socket termination is retained as failed cleanup even after a successful accepted shot', async () => {
-  await fixture(async (artifacts) => {
+  await fixture(async (artifacts, reports) => {
     const clock = controlledClock(),
       transport = codedSocket('close-timeout');
     let started;
@@ -613,6 +646,7 @@ test('forced socket termination is retained as failed cleanup even after a succe
       clock,
       createSocket,
       artifacts,
+      report: (error) => reports.push(error),
     });
     await closing;
     clock.advance(9000);
@@ -632,7 +666,7 @@ for (const metadata of [
   { world: { ...healthy, releaseId: undefined } },
 ]) {
   test(`healthy gameplay passes independently of descriptive release metadata ${JSON.stringify(metadata)}`, async () => {
-    await fixture(async (artifacts) => {
+    await fixture(async (artifacts, reports) => {
       const transport = codedSocket('stale-server');
       const receipt = await runNetworkSmoke({
         scenario: { productionUrl, smoke },
@@ -641,6 +675,7 @@ for (const metadata of [
         clock: controlledClock(),
         createSocket: transport.createSocket,
         artifacts,
+        report: (error) => reports.push(error),
       });
       assert.equal(receipt.success, true);
       assert.deepEqual(receipt.errors, []);
@@ -653,7 +688,7 @@ for (const metadata of [
 }
 
 test('a transport error during owned close cannot turn into a successful receipt', async () => {
-  await fixture(async (artifacts) => {
+  await fixture(async (artifacts, reports) => {
     const transport = codedSocket('error-on-close');
     const receipt = await runNetworkSmoke({
       scenario: { productionUrl, smoke },
@@ -662,9 +697,12 @@ test('a transport error during owned close cannot turn into a successful receipt
       clock: controlledClock(),
       createSocket: transport.createSocket,
       artifacts,
+      report: (error) => reports.push(error),
     });
     assert.equal(receipt.success, false);
     assert.ok(receipt.errors.includes('Gameplay socket transport failed'));
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].cause, transport.failure);
     assert.equal(transport.socket().readyState, WebSocket.CLOSED);
     assert.doesNotMatch(JSON.stringify(receipt), /private-resume-token/u);
   });
@@ -672,7 +710,7 @@ test('a transport error during owned close cannot turn into a successful receipt
 
 for (const closeCode of [1006, 1011]) {
   test(`owned socket close ${closeCode} alone rejects an otherwise accepted production session`, async () => {
-    await fixture(async (artifacts) => {
+    await fixture(async (artifacts, reports) => {
       const transport = codedSocket(`close-only-${closeCode}`),
         clock = controlledClock();
       const receipt = await runNetworkSmoke({
@@ -682,6 +720,7 @@ for (const closeCode of [1006, 1011]) {
         clock,
         createSocket: transport.createSocket,
         artifacts,
+        report: (error) => reports.push(error),
       });
       assert.equal(receipt.success, false);
       assert.deepEqual(receipt.errors, ['Owned gameplay socket closed abnormally']);
@@ -696,6 +735,140 @@ for (const closeCode of [1006, 1011]) {
         JSON.stringify(receipt) + JSON.stringify(evidence),
         /private-resume-token|private-github-token/u
       );
+    });
+  });
+}
+
+test('an unexpected application error is reported once and leaves the public receipt generic', async () => {
+  await fixture(async (artifacts, reports) => {
+    const failure = new TypeError('Controlled application failure');
+    const receipt = await runNetworkSmoke({
+      scenario: {
+        productionUrl,
+        smoke: () => Promise.reject(failure),
+      },
+      env,
+      fetcher: clientHttp(),
+      clock: controlledClock(),
+      artifacts,
+      report: (error) => reports.push(error),
+    });
+    assert.equal(receipt.success, false);
+    assert.deepEqual(receipt.errors, ['Production verification failed']);
+    assert.deepEqual(reports, [failure]);
+    assert.deepEqual(JSON.parse(await readFile(join(artifacts, 'receipt.json'), 'utf8')), receipt);
+  });
+});
+
+test('a non-Error throw is reported without exposing its arbitrary fields', async () => {
+  await fixture(async (artifacts, reports) => {
+    const receipt = await runNetworkSmoke({
+      scenario: {
+        productionUrl,
+        smoke: () => Promise.reject({ token: 'nonErrorSecret' }),
+      },
+      env,
+      fetcher: clientHttp(),
+      clock: controlledClock(),
+      artifacts,
+      report: (error) => reports.push(error),
+    });
+    assert.equal(receipt.success, false);
+    assert.deepEqual(receipt.errors, ['Production verification failed']);
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0] instanceof Error, true);
+    assert.equal(reports[0].message, 'Unexpected non-Error smoke failure');
+    assert.doesNotMatch(
+      inspect(reports, { depth: 10 }) + JSON.stringify(receipt),
+      /nonErrorSecret/u
+    );
+  });
+});
+
+test('readiness retains a safe immediate transport cause through the deadline boundary', async () => {
+  await fixture(async (artifacts, reports) => {
+    const failure = new Error('Controlled ECONNRESET from production transport');
+    const receipt = await runNetworkSmoke({
+      scenario: { productionUrl, smoke },
+      env,
+      fetcher: () => Promise.reject(failure),
+      readinessMs: 0,
+      clock: controlledClock(),
+      artifacts,
+      report: (error) => reports.push(error),
+    });
+    assert.equal(receipt.success, false);
+    assert.deepEqual(receipt.errors, ['Readiness deadline exceeded']);
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].cause.message, 'Production HTTP request failed');
+    assert.equal(reports[0].cause.cause, failure);
+    assert.doesNotMatch(await readFile(join(artifacts, 'receipt.json'), 'utf8'), /ECONNRESET/u);
+  });
+});
+
+test('malformed HTTP JSON never exposes its body through reports or retained artifacts', async () => {
+  await fixture(async (artifacts, reports) => {
+    const http = clientHttp();
+    const clock = controlledClock();
+    const receipt = await runNetworkSmoke({
+      scenario: { productionUrl, smoke },
+      env,
+      fetcher: (url) =>
+        url.endsWith('/health') ? Promise.resolve(response(url, 'httpSecret')) : http(url),
+      clock,
+      artifacts,
+      report: (error) => reports.push(error),
+    });
+    assert.equal(receipt.success, false);
+    assert.deepEqual(receipt.errors, ['Production HTTP body failed or timed out']);
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].cause.message, 'Production HTTP JSON parsing failed');
+    assert.doesNotMatch(
+      inspect(reports, { depth: 10 }) +
+        (await readFile(join(artifacts, 'receipt.json'), 'utf8')) +
+        (await readFile(join(artifacts, 'gameplay-server.json'), 'utf8')),
+      /httpSecret/u
+    );
+    assert.equal(clock.pending(), 0);
+  });
+});
+
+for (const expectedAbort of [false, true]) {
+  test(`late behavior cleanup ${expectedAbort ? 'suppresses its expected abort' : 'reports its distinct failure'}`, async () => {
+    await fixture(async (artifacts, reports) => {
+      const clock = controlledClock();
+      const failure = expectedAbort
+        ? new DOMException('Owned behavior cancelled', 'AbortError')
+        : new Error('Controlled late cleanup failure');
+      let started;
+      const active = new Promise((resolveStarted) => {
+        started = resolveStarted;
+      });
+      const run = runNetworkSmoke({
+        scenario: {
+          productionUrl,
+          smoke: ({ signal }) => {
+            started();
+            return new Promise((_, reject) =>
+              signal.addEventListener('abort', () => reject(failure), { once: true })
+            );
+          },
+        },
+        env,
+        fetcher: clientHttp(),
+        clock,
+        artifacts,
+        behaviorMs: 1,
+        report: (error) => reports.push(error),
+      });
+      await active;
+      await Promise.resolve();
+      clock.advance(1);
+      const receipt = await run;
+      assert.equal(receipt.success, false);
+      assert.deepEqual(receipt.errors, ['Behavior deadline exceeded']);
+      assert.deepEqual(reports, expectedAbort ? [] : [failure]);
+      assert.equal(clock.pending(), 0);
     });
   });
 }

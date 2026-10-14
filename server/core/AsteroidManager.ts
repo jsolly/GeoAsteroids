@@ -2,11 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { logger } from '../../setup/serverLogger';
 import { tickAsteroidBoost } from '../../shared/asteroidBoost';
 import { asteroidMaterialAt, MATERIAL_OUTLINES } from '../../shared/asteroidMaterials';
-import {
-  containAsteroidPosition,
-  getAsteroidFieldRadius,
-  stepAsteroidMotionInto,
-} from '../../shared/asteroidMotion';
+import { containAsteroidPosition, stepAsteroidMotionInto } from '../../shared/asteroidMotion';
 import { isColossalAsteroid } from '../../shared/asteroidScale';
 import { DAMAGE, DEBUG, GAME, ROID } from '../../shared/constants/gameplay';
 import { oreResource } from '../../shared/economy';
@@ -151,7 +147,7 @@ export class AsteroidManager {
 
   public createAsteroids(
     count: number,
-    bounds = { radius: getAsteroidFieldRadius() },
+    bounds: { radius: number } = { radius: WORLD.radius },
     playerPositions: Position[] = []
   ): AsteroidData[] {
     // If we already have asteroids and no player positions are provided, return them instead of recreating

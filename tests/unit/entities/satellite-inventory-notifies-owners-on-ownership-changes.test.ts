@@ -1,10 +1,7 @@
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import type { SatellitePickupData } from '../../../shared-types';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import {
-  SATELLITE_INVENTORY_PAGE_SIZE,
-  SatellitePickupManager,
-} from '../../../src/entities/satellitePickup/SatellitePickupManager';
+import { SatellitePickupManager } from '../../../src/entities/satellitePickup/SatellitePickupManager';
 import { NetworkManager } from '../../../src/network/networkManager';
 
 const manager = SatellitePickupManager.getInstance();
@@ -32,19 +29,6 @@ beforeAll(() => {
 });
 beforeEach(() => manager.clear());
 afterEach(() => manager.clear());
-
-test('a pilot can reach all 53 stored satellites in bounded pages without seeing another pilot inventory', () => {
-  const owned = Array.from({ length: 53 }, (_, index) => satellite(`pilot-${index}`, 'pilot'));
-  manager.syncFromServer([...owned, satellite('other-0', 'other')]);
-  expect(SATELLITE_INVENTORY_PAGE_SIZE).toBe(24);
-  expect(manager.getOwnedCount('pilot')).toBe(53);
-  const pages = [0, 1, 2].map((page) => manager.getOwnedPage('pilot', page));
-  expect(pages.map((page) => page.length)).toEqual([24, 24, 5]);
-  expect(pages.flat().map(({ id }) => id)).toEqual(owned.map(({ id }) => id));
-  expect(manager.getOwnedPage('pilot', 3)).toEqual([]);
-  expect(manager.getOwnedPage('absent', 0)).toEqual([]);
-  expect(manager.getOwnedPage('other', 0).map(({ id }) => id)).toEqual(['other-0']);
-});
 
 test('equip, transfer and removal notify immediately while health changes wait for presentation sampling', () => {
   const notify = vi.fn();

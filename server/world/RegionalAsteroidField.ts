@@ -469,10 +469,6 @@ export class RegionalAsteroidField {
     }
   }
 
-  hasVisited(id: string): boolean {
-    return this.visited.has(id) || this.active.has(id) || this.dormant.has(id);
-  }
-
   activeSectorCount(): number {
     return this.active.size;
   }

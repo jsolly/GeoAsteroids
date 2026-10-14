@@ -1,4 +1,4 @@
-import { sanitizePlayerName } from '../../../shared/playerName';
+import { sanitizePlayerName } from '../../../shared/player';
 import { releaseField } from '../../../shared/releaseId';
 import { getClientReleaseId } from '../../utils/buildInfo';
 import { getStoredItem, removeStoredItem, setStoredItem } from '../../utils/safeStorage';

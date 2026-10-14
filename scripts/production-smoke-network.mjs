@@ -7,6 +7,9 @@ import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 export class SmokeFailure extends Error {}
+export function smokeCause(error) {
+  return error instanceof Error ? error : new Error('Unexpected non-Error smoke failure');
+}
 export const smokeClock = {
   now: () => performance.now(),
   sleep: (ms, signal) => delay(ms, undefined, { signal }),
@@ -28,6 +31,7 @@ export async function runNetworkSmoke({
   readinessMs = 120000,
   pollMs = 10000,
   behaviorMs = 240000,
+  report = (error) => console.error(error),
 }) {
   await mkdir(artifacts, { recursive: true });
   const receipt = {
@@ -39,6 +43,18 @@ export async function runNetworkSmoke({
   };
   const controller = new AbortController();
   const signal = controller.signal;
+  const reported = new Set();
+  const reportFailure = (error) => {
+    if (
+      (error instanceof Error && error.name === 'AbortError' && signal.aborted) ||
+      (error instanceof SmokeFailure && error.cause === undefined) ||
+      reported.has(error)
+    ) {
+      return;
+    }
+    reported.add(error);
+    report(smokeCause(error));
+  };
   let timer, behavior;
   const verifyHttp = async (url) => {
     const request = new AbortController();
@@ -80,7 +96,15 @@ export async function runNetworkSmoke({
         try {
           return await Promise.race([response[method](), expired]);
         } catch (error) {
-          throw new SmokeFailure('Production HTTP body failed or timed out', { cause: error });
+          // biome-ignore lint/style/useErrorCause: JSON parser causes can expose response bodies; normalize before public reporting.
+          throw new SmokeFailure('Production HTTP body failed or timed out', {
+            // JSON parser messages can contain the response body. Keep only a
+            // code-authored diagnostic at this external-data boundary.
+            cause:
+              method === 'json' && error instanceof SyntaxError
+                ? new Error('Production HTTP JSON parsing failed')
+                : smokeCause(error),
+          });
         } finally {
           clock.clearTimeout(requestTimer);
         }
@@ -98,7 +122,7 @@ export async function runNetworkSmoke({
       request.abort();
       throw error instanceof SmokeFailure
         ? error
-        : new SmokeFailure('Production HTTP request failed');
+        : new SmokeFailure('Production HTTP request failed', { cause: smokeCause(error) });
     }
   };
   try {
@@ -117,8 +141,10 @@ export async function runNetworkSmoke({
         const response = await verifyHttp(scenario.productionUrl);
         await response.arrayBuffer();
         break;
-      } catch {
-        requireEvidence(clock.now() < deadline, 'Readiness deadline exceeded');
+      } catch (error) {
+        if (clock.now() >= deadline) {
+          throw new SmokeFailure('Readiness deadline exceeded', { cause: error });
+        }
         await clock.sleep(Math.min(pollMs, deadline - clock.now()), signal);
       }
     }
@@ -142,6 +168,7 @@ export async function runNetworkSmoke({
     ]);
     receipt.success = true;
   } catch (error) {
+    reportFailure(error);
     receipt.errors.push(
       error instanceof SmokeFailure ? error.message : 'Production verification failed'
     );
@@ -152,6 +179,7 @@ export async function runNetworkSmoke({
     // or returning a timed-out receipt, so work cannot continue after publication.
     if (behavior) {
       await behavior.catch((error) => {
+        reportFailure(error);
         if (error instanceof SmokeFailure && !receipt.errors.includes(error.message)) {
           receipt.errors.push(error.message);
         }

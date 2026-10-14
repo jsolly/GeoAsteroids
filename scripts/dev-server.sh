@@ -187,17 +187,12 @@ ensure_env_local() {
     if [ -f .env.local ]; then
         return 0
     fi
-    if [ -f .env.example ]; then
-        cp .env.example .env.local
+    if [ -f .env.example ] && cp .env.example .env.local; then
         echo "📋 Created .env.local from .env.example"
         return 0
     fi
-    cat > .env.local <<'EOF'
-NODE_ENV=development
-PORT=3001
-VITEST=false
-EOF
-    echo "📋 Created default .env.local"
+    echo "❌ .env.local is missing and .env.example could not be copied" >&2
+    return 1
 }
 
 prepare_logs() {
