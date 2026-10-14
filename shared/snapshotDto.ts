@@ -429,10 +429,21 @@ const worldRules = {
         Array.isArray(value) && value.length <= 12 && value.every(shape({ id: string, position })),
     })
   ),
-  serverTime: optional(number),
+  serverTime: number,
   settlement: validSettlement,
-  civicModules: optional(validCivicModules),
-  spiderField: optional(spiderField),
+  civicModules: validCivicModules,
+  spiderField,
+  beltRecovery: (value) =>
+    Array.isArray(value) &&
+    value.length <= ASTEROID_BELT.columns * ASTEROID_BELT.rows &&
+    value.every(
+      shape<BeltRecoveryWarning>({
+        slot: counter,
+        position,
+        size: number,
+        recoverAt: number,
+      })
+    ),
   contourBridges: optional(
     uniqueRows(
       shape({
@@ -458,19 +469,6 @@ const worldRules = {
       }),
       ROLY_POLY.maximumActive
     )
-  ),
-  beltRecovery: optional(
-    (value) =>
-      Array.isArray(value) &&
-      value.length <= ASTEROID_BELT.columns * ASTEROID_BELT.rows &&
-      value.every(
-        shape<BeltRecoveryWarning>({
-          slot: counter,
-          position,
-          size: number,
-          recoverAt: number,
-        })
-      )
   ),
   exploration: validExploration,
   mapAssets: array(mapAsset),

@@ -1,10 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { instrumentLootIndex } from '../../../benchmarks/loot-index-instrumentation';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { LootManager } from '../../../server/core/LootManager';
 import { RNGService } from '../../../server/core/RNGService';
 import { cargoCapacity, ECONOMY } from '../../../shared/economy';
 import { GROWTH } from '../../../shared/shipGrowth';
+import { instrumentLootIndex } from '../../support/lootIndexInstrumentation';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 afterEach(() => vi.useRealTimers());

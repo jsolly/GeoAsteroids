@@ -36,7 +36,11 @@ export function drawCrewSignals(players: readonly Player[], viewer: Position): v
     ctx.stroke();
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(downed ? `${pilot.name} · rescue` : `${pilot.name} · ${signal?.kind}`, x, y + 30);
+    const label = downed ? `${pilot.name} · rescue` : `${pilot.name} · ${signal?.kind}`;
+    const maxWidth = Math.max(1, viewport.width - 16);
+    const halfWidth = Math.min(ctx.measureText(label).width, maxWidth) / 2;
+    const labelX = Math.max(halfWidth + 8, Math.min(viewport.width - halfWidth - 8, x));
+    ctx.fillText(label, labelX, y + 30, maxWidth);
     ctx.restore();
   }
 }

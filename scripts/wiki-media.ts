@@ -24,6 +24,7 @@ import { GameEngine } from '../server/core/GameEngine';
 import { LootManager } from '../server/core/LootManager';
 import { RNGService } from '../server/core/RNGService';
 import { SatellitePickupManager } from '../server/core/SatellitePickupManager';
+import { GameStateBroadcaster } from '../server/services/GameStateBroadcaster';
 import { stepAsteroidMotion } from '../shared/asteroidMotion';
 import {
   ASTEROID_INTERACTIONS,
@@ -57,6 +58,7 @@ import {
 import { cruiseSpeed, cruiseVelocity } from '../shared/shipFlight';
 import { GROWTH, lootOverlap } from '../shared/shipGrowth';
 import { getShipKit, hullRadiusForKit } from '../shared/shipKits';
+import { SnapshotDecoder } from '../shared/snapshotProtocol';
 import { TERRAIN } from '../shared/terrainConfig';
 import { getTerrainField, getTerrainSeed } from '../shared/terrainField';
 import type { AsteroidData, Position, SatellitePickupTypeId, Velocity } from '../shared-types';
@@ -211,6 +213,7 @@ interface Demo {
 interface RenderedRun {
   root: string;
   frameHashes: Partial<Record<MediaId, string[]>>;
+  demos: readonly Demo[];
 }
 
 interface AssetManifest {
@@ -233,7 +236,7 @@ interface MediaManifest {
   assets: Partial<Record<MediaId, AssetManifest>>;
 }
 
-function invariant(condition: boolean, message: string): void {
+function invariant(condition: boolean, message: string): asserts condition {
   if (!condition) {
     throw new Error(`wiki-media verification failed: ${message}`);
   }
@@ -565,16 +568,12 @@ function makeScoutDemo(): Demo {
     'Scout scan must activate'
   );
   let classified = false;
-  let sharedClassification = false;
   let tagged = false;
   return {
     id: 'scout',
     posterFrame: 10,
     verify: () => {
-      invariant(
-        classified && sharedClassification && tagged,
-        'Scan must classify and share minerals'
-      );
+      invariant(classified && tagged, 'Scan must classify and share minerals');
       runSimulationTicks(host.abilityActiveFrames + 1, () => tickAbilityHost(host));
       const scannedRock = rocks[0];
       if (scannedRock === undefined) {
@@ -606,8 +605,6 @@ function makeScoutDemo(): Demo {
       for (const rock of rocks) {
         const material = rock.surveyedBy?.length ? rock.material : scannedMaterial(host, rock);
         classified ||= material !== undefined;
-        const teammateMaterial = material;
-        sharedClassification ||= teammateMaterial !== undefined;
         if (material !== undefined) {
           rock.surveyedBy ??= [];
           if (!rock.surveyedBy.includes(host.id ?? '')) {
@@ -776,12 +773,6 @@ function makeHaulerDemo(): Demo {
         'E did not release after delivery'
       );
       invariant(target.surveyedBy?.includes('scout-demo') === true, 'delivery lost the Scout tag');
-      const recipients = new Set(['hauler-demo', ...(target.surveyedBy ?? [])]);
-      const reward = furnaceReward(target);
-      invariant(
-        reward > 0 && recipients.size === 2,
-        'delivery reward did not include both contributors'
-      );
       invariant(Math.abs(targetRotation) > 1, 'towed rock did not visibly spin');
     },
     render: (ctx, frame) => {
@@ -1918,7 +1909,91 @@ function verifyCoverage(): void {
   }
 }
 
+function verifyCrewToolDemonstrations(): void {
+  const engine = new GameEngine(getTerrainSeed());
+  try {
+    const scoutSocket = new RecordingSocket();
+    const haulerSocket = new RecordingSocket();
+    const scout = engine.addPlayer('media-scout', 'Scout', scoutSocket, { x: 0, y: 0 }, 'scout');
+    const hauler = engine.addPlayer(
+      'media-hauler',
+      'Hauler',
+      haulerSocket,
+      { x: 100, y: 0 },
+      'hauler'
+    );
+    scout.spawnProtectionTimer = 0;
+    hauler.spawnProtectionTimer = 0;
+    for (const rock of engine.getAllAsteroids()) {
+      engine.removeAsteroid(rock.id);
+    }
+    engine.parkSatellitePickups();
+    const rock: AsteroidData = {
+      ...makeAsteroid('media-ore', { x: 200, y: 0 }, 34, 'metal'),
+      ore: 'metal',
+    };
+    engine.addAsteroid(rock);
+    const resolveFlight = () => {
+      for (let frame = 0; frame < 100; frame++) {
+        if (![scout, hauler].some((pilot) => pilot.utilityFlight?.phase === 'outbound')) {
+          return;
+        }
+        engine.tickToolFlights();
+      }
+      throw new Error('wiki-media verification failed: tool flight did not resolve');
+    };
+    invariant(engine.useAbility(scout.id), 'authoritative Scout scan did not launch');
+    resolveFlight();
+    invariant(rock.surveyedBy?.includes(scout.id) === true, 'authoritative scan did not tag metal');
+    const broadcaster = new GameStateBroadcaster(engine);
+    broadcaster.negotiateSnapshot(scoutSocket);
+    broadcaster.negotiateSnapshot(haulerSocket);
+    broadcaster.broadcastGameState();
+    for (const socket of [scoutSocket, haulerSocket]) {
+      const raw = socket.sent.at(-1);
+      invariant(raw !== undefined, 'crew demonstration recipient received no snapshot');
+      const decoded = new SnapshotDecoder().readMessage(raw, { acceptSnapshots: true });
+      invariant(decoded.kind === 'snapshot', 'crew demonstration snapshot was rejected');
+      const received = decoded.state.asteroids.find((row) => row.id === rock.id);
+      invariant(
+        received?.material === 'metal' && received.surveyedBy?.includes(scout.id) === true,
+        'nearby crew recipient did not receive the surveyed metal'
+      );
+    }
+    invariant(engine.useAbility(hauler.id), 'authoritative Hauler tow did not launch');
+    resolveFlight();
+    invariant(hauler.harpoonTargetId === rock.id, 'authoritative tow did not attach');
+    const furnace = FURNACES[0];
+    invariant(furnace !== undefined, 'crew demonstration has no furnace');
+    // Arrange the illustrated arrival; the real engine consumes and pays it.
+    rock.position = { ...furnace.position };
+    hauler.position = { x: furnace.position.x + 100, y: furnace.position.y };
+    const before = [scout.score, hauler.score] as const;
+    engine.processFurnaceDeliveries();
+    invariant(
+      scout.score === before[0] + 540 && hauler.score === before[1] + 540,
+      'authoritative furnace did not pay both pilots the illustrated 540 points'
+    );
+    invariant(engine.getAsteroid(rock.id) === undefined, 'delivery did not consume the rock');
+    invariant(hauler.harpoonTargetId === null, 'delivery did not release the tow');
+    invariant(
+      engine.drainFurnaceDeliveries().length === 1,
+      'delivery receipt was not emitted once'
+    );
+    engine.processFurnaceDeliveries();
+    invariant(
+      scout.score === before[0] + 540 &&
+        hauler.score === before[1] + 540 &&
+        engine.drainFurnaceDeliveries().length === 0,
+      'the same illustrated arrival paid twice'
+    );
+  } finally {
+    engine.stopGameLoop();
+  }
+}
+
 function renderRun(root: string): RenderedRun {
+  verifyCrewToolDemonstrations();
   const demos = buildDemos();
   const frameHashes: Partial<Record<MediaId, string[]>> = {};
   for (const demo of demos) {
@@ -1937,7 +2012,7 @@ function renderRun(root: string): RenderedRun {
     demo.verify();
     frameHashes[demo.id] = hashes;
   }
-  return { root, frameHashes };
+  return { root, frameHashes, demos };
 }
 
 function encodeGif(python: string, frames: string, output: string): void {
@@ -2064,89 +2139,92 @@ function main(): void {
   }
   invariant(existsSync(ENCODER_SCRIPT), `missing encoder ${ENCODER_SCRIPT}`);
   const tempRoot = mkdtempSync(join(tmpdir(), 'georoids-wiki-media-'));
-  const runA = renderRun(join(tempRoot, 'run-a'));
-  const runB = renderRun(join(tempRoot, 'run-b'));
-  const gifsA = join(tempRoot, 'gifs-a');
-  const gifsB = join(tempRoot, 'gifs-b');
-  mkdirSync(gifsA, { recursive: true });
-  mkdirSync(gifsB, { recursive: true });
-  const assetManifests: Partial<Record<MediaId, AssetManifest>> = {};
-  const demos = buildDemos();
+  try {
+    const runA = renderRun(join(tempRoot, 'run-a'));
+    const runB = renderRun(join(tempRoot, 'run-b'));
+    const gifsA = join(tempRoot, 'gifs-a');
+    const gifsB = join(tempRoot, 'gifs-b');
+    mkdirSync(gifsA, { recursive: true });
+    mkdirSync(gifsB, { recursive: true });
+    const assetManifests: Partial<Record<MediaId, AssetManifest>> = {};
+    const demos = runA.demos;
 
-  for (const id of MEDIA_IDS) {
-    const framesA = runA.frameHashes[id];
-    const framesB = runB.frameHashes[id];
-    if (framesA === undefined || framesB === undefined) {
-      throw new Error(`wiki-media verification failed: missing frame hashes for ${id}`);
-    }
-    invariant(
-      JSON.stringify(framesA) === JSON.stringify(framesB),
-      `${id} frames are not reproducible`
-    );
-    const gifA = join(gifsA, `${id}.gif`);
-    const gifB = join(gifsB, `${id}.gif`);
-    encodeGif(python, join(runA.root, id), gifA);
-    encodeGif(python, join(runB.root, id), gifB);
-    const gifBytesA = readFileSync(gifA);
-    const gifBytesB = readFileSync(gifB);
-    invariant(sha256(gifBytesA) === sha256(gifBytesB), `${id} GIF encoding is not reproducible`);
-    const demo = demos.find((candidate) => candidate.id === id);
-    if (demo === undefined) {
-      throw new Error(`wiki-media verification failed: missing demo for ${id}`);
-    }
-    const posterPath = join(
-      runA.root,
-      demo.id,
-      `frame-${String(demo.posterFrame).padStart(2, '0')}.png`
-    );
-    const posterBytes = readFileSync(posterPath);
-    assetManifests[id] = {
-      frameHashes: framesA,
-      gifSha256: sha256(gifBytesA),
-      posterSha256: sha256(posterBytes),
-    };
-  }
-
-  const manifest: MediaManifest = {
-    version: 2,
-    platform: HOST_PLATFORM,
-    seed: SEED,
-    simulationFps: GAME.FPS,
-    ticksPerFrame: SIM_TICKS_PER_FRAME,
-    width: WIDTH,
-    height: HEIGHT,
-    fps: FPS,
-    frameCount: FRAME_COUNT,
-    encoder: ENCODER_VERSION,
-    assets: assetManifests,
-  };
-  if (verifyOnly) {
-    verifyExistingOutput(output, manifest);
-  } else {
-    cleanOutput(output);
-    for (const demo of demos) {
-      const gif = join(gifsA, `${demo.id}.gif`);
+    for (const id of MEDIA_IDS) {
+      const framesA = runA.frameHashes[id];
+      const framesB = runB.frameHashes[id];
+      if (framesA === undefined || framesB === undefined) {
+        throw new Error(`wiki-media verification failed: missing frame hashes for ${id}`);
+      }
+      invariant(
+        JSON.stringify(framesA) === JSON.stringify(framesB),
+        `${id} frames are not reproducible`
+      );
+      const gifA = join(gifsA, `${id}.gif`);
+      const gifB = join(gifsB, `${id}.gif`);
+      encodeGif(python, join(runA.root, id), gifA);
+      encodeGif(python, join(runB.root, id), gifB);
+      const gifBytesA = readFileSync(gifA);
+      const gifBytesB = readFileSync(gifB);
+      invariant(sha256(gifBytesA) === sha256(gifBytesB), `${id} GIF encoding is not reproducible`);
+      const demo = demos.find((candidate) => candidate.id === id);
+      if (demo === undefined) {
+        throw new Error(`wiki-media verification failed: missing demo for ${id}`);
+      }
       const posterPath = join(
         runA.root,
         demo.id,
         `frame-${String(demo.posterFrame).padStart(2, '0')}.png`
       );
-      const gifBytes = readFileSync(gif);
       const posterBytes = readFileSync(posterPath);
-      writeFileSync(join(output, `${demo.id}.gif`), gifBytes);
-      writeFileSync(join(output, `${demo.id}.png`), posterBytes);
+      assetManifests[id] = {
+        frameHashes: framesA,
+        gifSha256: sha256(gifBytesA),
+        posterSha256: sha256(posterBytes),
+      };
     }
-    writeFileSync(join(output, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+
+    const manifest: MediaManifest = {
+      version: 2,
+      platform: HOST_PLATFORM,
+      seed: SEED,
+      simulationFps: GAME.FPS,
+      ticksPerFrame: SIM_TICKS_PER_FRAME,
+      width: WIDTH,
+      height: HEIGHT,
+      fps: FPS,
+      frameCount: FRAME_COUNT,
+      encoder: ENCODER_VERSION,
+      assets: assetManifests,
+    };
+    if (verifyOnly) {
+      verifyExistingOutput(output, manifest);
+    } else {
+      cleanOutput(output);
+      for (const demo of demos) {
+        const gif = join(gifsA, `${demo.id}.gif`);
+        const posterPath = join(
+          runA.root,
+          demo.id,
+          `frame-${String(demo.posterFrame).padStart(2, '0')}.png`
+        );
+        const gifBytes = readFileSync(gif);
+        const posterBytes = readFileSync(posterPath);
+        writeFileSync(join(output, `${demo.id}.gif`), gifBytes);
+        writeFileSync(join(output, `${demo.id}.png`), posterBytes);
+      }
+      writeFileSync(join(output, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+    }
+    process.stdout.write(
+      `${verifyOnly ? 'wiki media verified' : 'wiki media generated'}: ${MEDIA_IDS.length} GIFs + ${MEDIA_IDS.length} posters\n`
+    );
+    process.stdout.write(`output: ${output}\n`);
+    process.stdout.write(
+      `seed: ${SEED} · ${WIDTH}x${HEIGHT} · ${FRAME_COUNT} frames · ${FPS} fps · ${GAME.FPS} Hz simulation · ${SIM_TICKS_PER_FRAME} ticks/frame\n`
+    );
+    process.stdout.write(`encoder: ${ENCODER_VERSION}\n`);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
   }
-  rmSync(tempRoot, { recursive: true, force: true });
-  process.stdout.write(
-    `${verifyOnly ? 'wiki media verified' : 'wiki media generated'}: ${MEDIA_IDS.length} GIFs + ${MEDIA_IDS.length} posters\n`
-  );
-  process.stdout.write(`output: ${output}\n`);
-  process.stdout.write(
-    `seed: ${SEED} · ${WIDTH}x${HEIGHT} · ${FRAME_COUNT} frames · ${FPS} fps · ${GAME.FPS} Hz simulation · ${SIM_TICKS_PER_FRAME} ticks/frame\n`
-  );
-  process.stdout.write(`encoder: ${ENCODER_VERSION}\n`);
 }
 
 main();

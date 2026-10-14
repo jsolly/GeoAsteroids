@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { COOPERATIVE } from '../../../shared/cooperativeRules';
   import type { CrewAction } from '../../../shared-types';
   import type { CrewRescueView } from '../../runtime/crewRescue';
   import Button from '../ui/button/button.svelte';
@@ -78,7 +79,10 @@
 <svelte:document onvisibilitychange={release} />
 <div class="crew-controls">
   {#if view.hazard}<p role="status">{view.hazard}</p>{/if}
-  <p>Deep Scanner · {view.projectValue.toLocaleString()} / 10,000 ore</p>
+  <p>
+    Deep Scanner · {view.projectValue.toLocaleString()} / {COOPERATIVE.scannerValue.toLocaleString()}
+    ore
+  </p>
   {#if view.canWithdraw}<Button variant="outline" onclick={() => act({ kind: 'withdraw-supply' })}
       >Tow supply · {view.shipmentValue} ore</Button
     >{/if}

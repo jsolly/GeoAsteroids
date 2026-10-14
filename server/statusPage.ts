@@ -491,14 +491,14 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
                 const data = await response.json();
                 const healthy = response.ok && data && data.status === 'healthy';
                 if (!data || data.status !== (response.ok ? 'healthy' : 'unhealthy') ||
-                    !Number.isSafeInteger(data.players) || data.players < 0 ||
+                    !data.world || !Number.isSafeInteger(data.world.players) || data.world.players < 0 ||
                     !Number.isFinite(data.uptime) || data.uptime < 0 ||
                     typeof data.timestamp !== 'string' || !Number.isFinite(Date.parse(data.timestamp))) {
                     throw new Error('Invalid health response');
                 }
                 const persistence = data.world && data.world.persistence;
                 const messages = [healthy ? '✅ Server is healthy' : '❌ Server is unhealthy: world persistence failed',
-                    'Players: ' + data.players, 'Uptime: ' + data.uptime.toFixed(2) + 's', 'Timestamp: ' + data.timestamp];
+                    'Players: ' + data.world.players, 'Uptime: ' + data.uptime.toFixed(2) + 's', 'Timestamp: ' + data.timestamp];
                 if (!healthy && persistence) {
                     messages.push('World persistence: ' + JSON.stringify(persistence));
                 }

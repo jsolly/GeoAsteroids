@@ -6,10 +6,10 @@ import { RNGService } from '../../../server/core/RNGService';
 import {
   containAsteroidPosition,
   containAsteroidPositionInto,
-  getAsteroidFieldRadius,
   stepAsteroidMotion,
   stepAsteroidMotionInto,
 } from '../../../shared/asteroidMotion';
+import { WORLD } from '../../../shared/world';
 
 /** Whether a world point falls inside the ship-centered 1:1 viewport. */
 function isOnPlayfieldCanvas(
@@ -56,7 +56,7 @@ describe('authoritative asteroid motion', () => {
   });
 
   test('an escaped asteroid is pulled back along the same ray, not the opposite rim', () => {
-    const fieldRadius = getAsteroidFieldRadius();
+    const fieldRadius = WORLD.radius;
     const contained = containAsteroidPosition(fieldRadius + 10000, 8000);
     expect(Math.hypot(contained.x, contained.y)).toBeLessThanOrEqual(fieldRadius);
     expect(contained.x).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ describe('authoritative asteroid motion', () => {
     const asteroid = manager.getAllAsteroids()[0];
     assert.ok(asteroid);
     manager.updateAsteroid(asteroid.id, {
-      position: { x: getAsteroidFieldRadius() + 1000, y: 0 },
+      position: { x: WORLD.radius + 1000, y: 0 },
       velocity: { x: 2, y: 0 },
     });
     const position = asteroid.position;
@@ -78,7 +78,7 @@ describe('authoritative asteroid motion', () => {
     manager.updateMotion();
     const after = manager.getAsteroid(asteroid.id);
     assert.ok(after);
-    const fieldRadius = getAsteroidFieldRadius();
+    const fieldRadius = WORLD.radius;
     expect(Math.hypot(after.position.x, after.position.y)).toBeLessThanOrEqual(fieldRadius);
     expect(after.position.x).toBeGreaterThan(0);
     expect(after.velocity.x).toBeLessThan(0);
@@ -89,7 +89,7 @@ describe('authoritative asteroid motion', () => {
   });
 
   test('bouncing at the field edge stays at the wall instead of jumping into the interior', () => {
-    const fieldRadius = getAsteroidFieldRadius();
+    const fieldRadius = WORLD.radius;
     const stepped = stepAsteroidMotion({ x: fieldRadius + 40, y: 0 }, { x: 8, y: 0 });
     expect(stepped.position.x).toBeGreaterThan(0);
     expect(stepped.position.x).toBeLessThanOrEqual(fieldRadius);
@@ -107,7 +107,7 @@ describe('authoritative asteroid motion', () => {
       position: { x: 0, y: 0 },
       velocity: { x: 0, y: 0 },
     });
-    const fieldRadius = getAsteroidFieldRadius();
+    const fieldRadius = WORLD.radius;
     const origin = { x: 0, y: 0 };
 
     for (let i = 0; i < 3600; i++) {
@@ -127,7 +127,7 @@ describe('authoritative asteroid motion', () => {
   });
 
   test('two interpolators stay aligned across a bounce when they share snapshots', () => {
-    const start = { position: { x: getAsteroidFieldRadius() - 6, y: 0 }, velocity: { x: 4, y: 0 } };
+    const start = { position: { x: WORLD.radius - 6, y: 0 }, velocity: { x: 4, y: 0 } };
     let server = { ...start, position: { ...start.position }, velocity: { ...start.velocity } };
     let clientA = { ...start, position: { ...start.position }, velocity: { ...start.velocity } };
     let clientB = { ...start, position: { ...start.position }, velocity: { ...start.velocity } };
@@ -156,7 +156,7 @@ describe('authoritative asteroid motion', () => {
     let server = { position: { ...start.position }, velocity: { ...start.velocity } };
     let clientA = { position: { ...start.position }, velocity: { ...start.velocity } };
     let clientB = { position: { ...start.position }, velocity: { ...start.velocity } };
-    const fieldRadius = getAsteroidFieldRadius();
+    const fieldRadius = WORLD.radius;
 
     for (let tick = 0; tick < 1800; tick++) {
       server = stepAsteroidMotion(server.position, server.velocity);

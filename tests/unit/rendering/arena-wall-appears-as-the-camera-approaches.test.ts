@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { getGameBoundary } from '../../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../../shared/boundary';
 import { drawFieryBoundary } from '../../../src/rendering/boundaryRenderer';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 
@@ -22,7 +22,7 @@ test('the arena wall paints when the camera approaches it and skips fully invisi
   expect(arc).not.toHaveBeenCalled();
   expect(pixels().every((channel, index) => channel === background[index])).toBe(true);
 
-  const boundaryRadius = getGameBoundary().radius;
+  const boundaryRadius = WORLD_BOUNDARY.radius;
   drawFieryBoundary({ x: boundaryRadius - 100, y: 0 });
   expect(arc).toHaveBeenCalledOnce();
   expect(stroke).toHaveBeenCalledOnce();

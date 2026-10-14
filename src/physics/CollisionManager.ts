@@ -1,4 +1,4 @@
-import { checkBoundaryCollision } from '../../shared/collisionDetection';
+import { checkBoundaryCollision } from '../../shared/boundary';
 import type { Ship } from '../entities/ship/Ship';
 import {
   applyShipBoundaryDeath,

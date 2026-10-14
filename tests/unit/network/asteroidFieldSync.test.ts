@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { getAsteroidFieldRadius } from '../../../shared/asteroidMotion';
+import { WORLD } from '../../../shared/world';
 import type { AsteroidData, AsteroidDestroyEvent } from '../../../shared-types';
 import type { AsteroidKinematicTarget } from '../../../src/network/services/asteroidFieldSync';
 import {
@@ -157,7 +157,7 @@ test('a large pose error snaps so a late joiner shares the live field', () => {
 });
 
 test('an escaped local pose is contained even when the server echo is also far', () => {
-  const fieldRadius = getAsteroidFieldRadius();
+  const fieldRadius = WORLD.radius;
   const local = localRoid(fieldRadius + 1000, 40);
   applyAsteroidKinematics(local, {
     position: { x: fieldRadius + 1005, y: 40 },

@@ -1,5 +1,6 @@
 import { isAsteroidMaterial } from '../../../shared/asteroidMaterials';
-import { containAsteroidPositionInto, isPoseInAsteroidField } from '../../../shared/asteroidMotion';
+import { containAsteroidPositionInto } from '../../../shared/asteroidMotion';
+import { isPoseInAsteroidField } from '../../../shared/boundary';
 import type { AsteroidData, AsteroidDestroyEvent, AsteroidMaterial } from '../../../shared-types';
 import { logger } from '../../utils/Logger';
 

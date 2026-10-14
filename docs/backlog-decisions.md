@@ -28,11 +28,7 @@ unrun, as recorded in the [phone measurement plan](performance/phone-fps-measure
 
 ## Existing gameplay and operations
 
-Health regeneration already runs on the authoritative server. Ship tuning is
-1 HP per second after five seconds without damage. Another hit restarts the
-delay, healing caps at maximum health, and a client update cannot clear the
-server timer. The wire scenario checks that both pilots receive the same delayed
-recovery after an asteroid impact.
+Health regeneration runs on the authoritative server using `SHIP.HEALTH_REGEN_*`: 2% of maximum health per second after five seconds without damage. Another hit restarts the delay, healing caps at maximum health, and client updates cannot clear the server timer. `tests/unit/server/health-regeneration.test.ts` guards these rules; the wire scenario below refers to its reviewed revision.
 
 Surveying already reveals the shared exploration chart and records survey owner
 IDs on nearby eligible rocks. A moving survey probe pulses from its host; a
@@ -64,3 +60,42 @@ full gate and release verification belong to the shipping step.
 No player behavior or Wiki semantics changed, so no Wiki article update is
 needed. The test-writing instructions are now consolidated in
 `tests/AGENTS.md`, including the prohibition on browser tests.
+
+## Maintenance separated from human testing, 2026-10-14
+
+The maintenance from PRs #815–817 is reapplied to the current game on `main`.
+Their original branches include held gameplay and co-op work, so those branches
+are not the merge input. PRs #809–812 and #814 retain interface, gameplay,
+client-policy and campaign changes for human testing. PR #801 retains the new
+Railway preview capability and its live setup acceptance.
+
+| Maintenance item | Result and retained contract |
+| --- | --- |
+| Fixture phenomena | Seed unmanaged fields once through `ensureAsteroidField`; keep regional seeding and make its helper private. |
+| Complete snapshots | Require the four always-emitted world fields in types and decoder; reject missing fields and delta clears, preserving immutable cached spider data. |
+| Spider boundaries | Require the four existing callbacks; isolated tests supply explicit resolvers without adding production resource scans. |
+| Build identity | Derive the short label, diagnostic logs and performance receipts from the validated full identity; retain complete provenance and archive tokens. |
+| Feedback cues | Centralize ten tuples in `AUDIO` with identical paths, counts and volumes. |
+| Health | Own the production builder in `server/health.ts`; derive status once and count players only in `world.players`, retaining 503 on persistence failure. |
+| Unused Svelte files | Prove the existing Knip graph rejects an orphan and a comment-only reference while accepting a live Astro import. |
+| Dead helpers | Remove `isReleaseId` and `RegionalAsteroidField.hasVisited`; preserve the parser and the visited-sector set used by persistence tests. |
+
+W3 moves transport stories to the server integration runner, consolidates input
+proof in unit tests, and removes duplicate or vacuous assertions. The two
+cleanup cases that deliberately fail multiple client closes and a server close
+remain under `tests/unit/testing/`; their live helper must settle and report all
+failures. Current `PlayerInput`, `NetworkManager`, asteroid constructors, death causes and gameplay
+behavior remain. W4 simplifies smoke errors and cleanup, removes the unused
+shot-acknowledgement admission flag while keeping accepted-shot receipts,
+consolidates validation instructions, and strengthens actual Wiki simulation
+proof without importing future demonstration artwork.
+
+Keep `chooseCrewSpawn` in `shared/player.ts` and snapshot `isPaused`; both have
+live consumers. Keep the owner-less burn normalizer until the production scan
+and retained-backup dates satisfy its existing task; [world operations](persistent-world.md)
+records the older-backup restore caveat. Keep wire `deathCause` and
+`findShipAsteroidOverlaps` until W2 and W3 meet their merged-and-live prerequisite
+in [task `6hjWGhm4rvX2f5pv`](https://app.todoist.com/app/task/6hjWGhm4rvX2f5pv).
+Other unverified sweep rows remain planning data on
+[task `6hjWGhqrx6rhMrrv`](https://app.todoist.com/app/task/6hjWGhqrx6rhMrrv),
+not evidence of dead code.

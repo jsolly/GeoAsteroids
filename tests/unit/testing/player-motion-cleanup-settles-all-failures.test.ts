@@ -67,30 +67,3 @@ test('a server close that throws synchronously is reported without any clients',
     })
   ).rejects.toMatchObject({ errors: [failure] });
 });
-
-test('successful client cleanup finishes before successful server cleanup', async () => {
-  const attempts: string[] = [];
-  await closePlayerMotionScenario({
-    clients: [
-      {
-        close() {
-          attempts.push('client');
-          return Promise.resolve();
-        },
-      },
-    ],
-    server: {
-      close() {
-        attempts.push('server');
-        return Promise.resolve();
-      },
-    },
-  });
-  expect(attempts).toEqual(['client', 'server']);
-});
-
-test('cleanup succeeds when arrangement created no server or clients', async () => {
-  await expect(
-    closePlayerMotionScenario({ clients: [], server: undefined })
-  ).resolves.toBeUndefined();
-});

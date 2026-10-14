@@ -96,6 +96,9 @@ separate decision.
    entry point. Include setup, complete extraction and a fresh real spatial
    index in each call. Keep immutable fields outside both timers. Retain the
    rerunnable harness, every raw sample, identities and cleanup receipts.
+   The harness-retention instruction was later superseded by retirement; see the
+   [result history](direct-terrain-grid-results.md#calibrated-cpu-comparison) for
+   its immutable source revision. Historical receipts remain unchanged.
 5. **Review docs and validate.** Review Terrain and Scout Wiki text and their
    demonstration rules. Exact output should require no article/media change;
    record that conclusion and accept only the changed source hashes using the

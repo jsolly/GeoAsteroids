@@ -164,6 +164,28 @@ test.each([1, 2])(
   }
 );
 
+test.each([1, 2])(
+  'live steering capture loss preserves a two-finger charge until finger %i lifts',
+  (released) => {
+    pointer('pointerdown', 1, 0);
+    touchChange('touchstart', [{ id: 1, x: 60, y: 300 }]);
+    pointer('pointermove', 1, 10, 60, 270);
+    pointer('pointerdown', 2, 50, 320, 400);
+    touchChange('touchstart', [
+      { id: 1, x: 60, y: 270 },
+      { id: 2, x: 320, y: 400 },
+    ]);
+    expect(sendCharge.mock.calls).toEqual([['start']]);
+    pointer('lostpointercapture', 1, 100, 60, 270);
+    expect(readTouchControlDiagnostics()).toMatchObject({ steerPointerHeld: true, liveTouches: 2 });
+    expect(sendCharge.mock.calls).toEqual([['start']]);
+    pointer('pointerup', released, 1000);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
+    pointer('pointerup', released === 1 ? 2 : 1, 1100);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
+  }
+);
+
 test('dragging or holding the movement finger never creates a release shot', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
   pointer('pointerdown', 1, 0);
@@ -816,13 +838,15 @@ test('opening a menu releases held charge and a detached Contour Lock capture on
   expect(readActionControls(player).contourLock).toMatchObject({ pressed: false, disabled: true });
 });
 
-test.each(['blur', 'pointercancel', 'touchcancel'])(
+test.each(['blur', 'pointercancel', 'touchcancel', 'overlay'])(
   '%s cancels a charge without firing it',
   (cause) => {
     pointer('pointerdown', 1, 0);
     pointer('pointerdown', 2, 50, 320, 400);
     if (cause === 'blur') {
       window.dispatchEvent(new Event('blur'));
+    } else if (cause === 'overlay') {
+      openGameOverlay('inventory');
     } else if (cause === 'touchcancel') {
       touchChange('touchcancel', []);
     } else {

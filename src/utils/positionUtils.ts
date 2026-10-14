@@ -1,4 +1,4 @@
-import { getGameBoundary } from '../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../shared/boundary';
 import { SHIP } from '../../shared/constants/gameplay';
 import type { Position } from '../../shared-types';
 
@@ -8,7 +8,7 @@ import type { Position } from '../../shared-types';
  * @returns A random position near the boundary, guaranteed to be inside the boundary
  */
 export function getRandomPositionNearBoundary(minDistanceFromCenter: number = 0.6): Position {
-  const boundary = getGameBoundary();
+  const boundary = WORLD_BOUNDARY;
   const shipRadius = SHIP.SIZE / 2;
   const boundaryRadius = boundary.radius - shipRadius;
 

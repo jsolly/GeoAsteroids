@@ -171,10 +171,14 @@
         <p class="universe-map-eyebrow">Shared field cartography</p>
         <DialogTitle id="universe-map-title">Universe map</DialogTitle>
         <DialogDescription class="universe-map-subtitle"
-          >Your nearby discoveries. Zoom out to explore the whole world.</DialogDescription
+          >Your nearby discoveries. Pan to choose a nearby spot; Signal help at center marks it for
+          crew.</DialogDescription
         >
       </div>
       <div class="universe-map-actions">
+        <Button variant="outline" onclick={() => controller?.signalHelpAtCenter()}>
+          Signal help at center
+        </Button>
         <Button
           id={UNIVERSE_MAP_IDS.close}
           bind:ref={closeButton}
@@ -188,12 +192,13 @@
       <p id="universe-map-navigation" class="sr-only">
         {touch
           ? 'Drag to pan and pinch to zoom. Use Center on you to return to your ship.'
-          : 'Arrow keys pan, plus and minus zoom, and Home centers on your ship.'}
+          : 'Arrow keys pan, plus and minus zoom, and Home centers on your ship. Shift+Enter places a help signal at the chart center, within nearby crew range.'}
       </p>
       <canvas
         id={UNIVERSE_MAP_IDS.canvas}
         tabindex="0"
         aria-label="Shared universe map"
+        aria-keyshortcuts="Shift+Enter"
         aria-describedby="universe-map-navigation"
         aria-details={UNIVERSE_MAP_IDS.locations}
         {@attach attachCanvas}

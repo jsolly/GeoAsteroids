@@ -29,7 +29,7 @@ export function drawCampaign(viewer: Position, now: number): void {
       ctx.stroke();
       ctx.fillStyle = ctx.strokeStyle;
       ctx.fillText(
-        `Queen ${Math.ceil(hive.queenHealth)} / 500 · ${hive.shieldOpen ? 'exposed' : 'shielded'}`,
+        `Queen ${Math.ceil(hive.queenHealth)} / ${COOPERATIVE.queenHealth} · ${hive.shieldOpen ? 'exposed' : 'shielded'}`,
         at.x,
         at.y - 95
       );
@@ -56,7 +56,7 @@ export function drawCampaign(viewer: Position, now: number): void {
       ctx.ellipse(sac.x, sac.y, 34, 28, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = ctx.strokeStyle;
-      ctx.fillText(`Sac ${Math.ceil(health)} / 50`, sac.x, sac.y - 42);
+      ctx.fillText(`Sac ${Math.ceil(health)} / ${COOPERATIVE.sacHealth}`, sac.x, sac.y - 42);
     });
     if (hive.sacDeadline !== null) {
       ctx.fillStyle = '#d4db8d';

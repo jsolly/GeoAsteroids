@@ -5,8 +5,8 @@
 # .cursor/worktrees.json.
 #
 # This is an ALLOWLIST, not a blanket copy: node_modules is intentionally absent
-# (worktree:init runs `npm ci` for a real install — never a symlink). The dev server
-# reads VITE_WEBSOCKET_URL from .env.local (see scripts/dev-server.sh). Paths are
+# (worktree:init runs `npm ci` for a real install — never a symlink). Direct Astro
+# reads endpoint overrides here; npm run dev uses its same-origin proxy. Paths are
 # globbed against the primary checkout; zero matches are tolerated. Copied, never
 # symlinked (a symlinked .env.local resolves outside the worktree and trips Vite's
 # server.fs.allow).

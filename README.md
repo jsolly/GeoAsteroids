@@ -12,7 +12,6 @@ Use Node 24.15 or newer within major 24 (`nvm use`). The jsdom test environment 
 git clone git@github.com:jsolly/GeoRoids.git
 cd GeoRoids
 npm ci
-touch .env
 npm run dev
 ```
 
@@ -36,11 +35,7 @@ See [manual maintenance](docs/wiki-maintenance.md) for content, reproducible med
 
 ## Verification
 
-`npm run gate` checks dependencies, lint, configuration, strict TypeScript,
-Astro/Svelte diagnostics, frontend formatting, runner contracts, all units, the
-production build and complete server/entity integration. Testing instructions,
-commands and basic manual browser smoke policy live in
-[tests/AGENTS.md](tests/AGENTS.md).
+Run the complete gate before publication; [CI and local review](docs/ci-and-local-review.md#local-review) owns its stages and evidence requirements.
 
 TypeScript checks the client, server, shared protocol, scripts, tests and build configuration. `strict` (including `noImplicitAny`) is enforced alongside checked indexed access, exact optional properties, index-signature bracket access and side-effect import checking. Clear absent optional state with `delete`; use `| undefined` only when an API intentionally distinguishes clearing a value from leaving it unchanged.
 
@@ -50,7 +45,7 @@ Repeatable client, server, snapshot codec and loopback transport measurements us
 the [benchmark framework](benchmarks/README.md). It documents clean committed
 harness requirements, revision isolation, paired comparisons and raw artifacts.
 The framework reports fixture timings, work counts and outcome equality; it does
-not claim a generic optimization or supported capacity. Browser benchmarks and frame measurements remain manual tools outside the test gate; Playwright is retained for them. Wiki media needs no browser; CI's `wiki-media` lane verifies the committed baseline.
+not claim a generic optimization or supported capacity. Browser benchmarks and frame measurements remain manual tools outside the test gate; Playwright is retained for them. Wiki media uses node-canvas and Python with `scripts/wiki-media-requirements.txt` (`WIKI_MEDIA_PYTHON`), without a browser; CI's `wiki-media` lane verifies the committed baseline.
 
 ## Production
 
@@ -62,7 +57,7 @@ The static client deploys through Vercel's Git integration when a CI-approved PR
 
 World storage, backup, and recovery are described in [persistent world operations](docs/persistent-world.md).
 
-Verify the deployed commit using each service's `x-release-id` header. Full deployment instructions are in `AGENTS.md`.
+Successful production Git deployments establish the release; metadata is diagnostic. Follow [deployment verification](docs/agent-operations.md#deploy).
 
 ## Art and contributions
 
@@ -70,6 +65,6 @@ The recovered reference sheets, canonical vector assets, palette and provenance 
 
 Contributions use topic branches and pull requests that merge on green `CI / ci`; direct pushes to `main` are reserved for an emergency the maintainer explicitly authorizes. Use Conventional Commits with a scope and include relevant validation.
 
-[MIT license](LICENSE)
+[Apache-2.0 license](LICENSE)
 
 Production disables test and diagnostic-write HTTP routes. WebSocket admission and joins always require the current snapshot protocol; reconnects use the private resume token.

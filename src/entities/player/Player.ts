@@ -282,9 +282,15 @@ export class Player {
     if (data.score !== undefined) {
       this.score = data.score;
     }
-    this.ship.weaponChargeFrames = data.weaponChargeFrames ?? 0;
-    this.ship.navigationAssistFrames = data.navigationAssistFrames ?? 0;
-    this.ship.contourDraftFrames = data.contourDraftFrames ?? 0;
+    if (data.weaponChargeFrames !== undefined) {
+      this.ship.weaponChargeFrames = data.weaponChargeFrames;
+    }
+    if (data.navigationAssistFrames !== undefined) {
+      this.ship.navigationAssistFrames = data.navigationAssistFrames;
+    }
+    if (data.contourDraftFrames !== undefined) {
+      this.ship.contourDraftFrames = data.contourDraftFrames;
+    }
     if (data.bankedCargo !== undefined) {
       this.bankedCargo = data.bankedCargo;
     }

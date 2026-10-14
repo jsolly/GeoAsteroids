@@ -1,4 +1,4 @@
-import { getGameBoundary } from '../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../shared/boundary';
 import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import { logger } from '../utils/Logger';
@@ -15,7 +15,7 @@ export function drawFieryBoundary(shipPosition: Position): void {
     return;
   }
 
-  const boundary = getGameBoundary();
+  const boundary = WORLD_BOUNDARY;
   const center = canvasManager.worldToScreen({ x: boundary.cx, y: boundary.cy }, shipPosition);
   const centerX = center.x;
   const centerY = center.y;

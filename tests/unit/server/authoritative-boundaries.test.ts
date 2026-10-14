@@ -74,7 +74,7 @@ describe('server authority boundaries', () => {
     expect(pilot.harpoonTargetId ?? null).toBeNull();
   });
 
-  test('a rammed rubble rock does not announce a cooperative split', () => {
+  test('a rammed rubble rock breaks without fragments', () => {
     engine = new GameEngine(43);
     const pilot = engine.addPlayer('pilot', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
     delete pilot.spawnProtectionTimer;

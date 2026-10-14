@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
 import { GAME, LASER } from '../shared/constants/gameplay';
-import { SNAPSHOT_VERSION, SnapshotDecoder } from '../shared/snapshotProtocol';
+import {
+  ASTEROID_INTERACTIONS_CAPABILITY,
+  SNAPSHOT_VERSION,
+  SnapshotDecoder,
+} from '../shared/snapshotProtocol';
 import type { ServerGameSnapshot } from '../shared-types';
 import { PerformanceBudget } from './performance-budget';
 
@@ -149,7 +153,7 @@ export class Pilot {
                 'snapshotVersion' in data &&
                 data.snapshotVersion === SNAPSHOT_VERSION &&
                 'asteroidInteractions' in data &&
-                data.asteroidInteractions === 1 &&
+                data.asteroidInteractions === ASTEROID_INTERACTIONS_CAPABILITY &&
                 'resumeToken' in data &&
                 typeof data.resumeToken === 'string' &&
                 data.resumeToken.length > 0,
@@ -253,7 +257,7 @@ export class Pilot {
         ...(this.options.naturalSpawn ? {} : { position: { x: 100 + this.index * 70, y: 100 } }),
         kitId: 'scout',
         snapshotVersion: SNAPSHOT_VERSION,
-        asteroidInteractions: 1,
+        asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
         cooperativeVersion: 1,
       },
     });
