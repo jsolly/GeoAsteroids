@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { hullRadiusForKit } from '../../../shared/shipKits';
 import { STEERING } from '../../../src/constants';
 import type { DrawingContext } from '../../../src/rendering/drawingContext';
+import { closeGameOverlay, openGameOverlay } from '../../../src/runtime/overlayState';
 import {
   drawSchematicEquipHint,
   initializeSchematicEquipHint,
@@ -114,7 +115,8 @@ describe('equip reminder after a pickup', () => {
     setFlightState(true);
     showSchematicEquipHint();
     expect(schematicEquipHintAlpha()).toBe(1);
-    window.dispatchEvent(new CustomEvent('gameSchematicOpen'));
+    openGameOverlay('inventory');
+    closeGameOverlay('inventory');
     expect(schematicEquipHintAlpha()).toBe(0);
   });
 });

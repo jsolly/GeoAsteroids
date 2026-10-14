@@ -1,0 +1,31 @@
+export const QUEEN_COMBAT = {
+  radius: 65,
+  oppositeCosine: -0.8,
+  oppositeWindowMs: 1500,
+  shieldWindowMs: 2000,
+} as const;
+
+export const COOPERATIVE = {
+  schemaVersion: 1,
+  swarmSlots: 12,
+  shipmentValue: 1000,
+  signalRadius: 3600,
+  signalCooldownMs: 2000,
+  signalLifetimeMs: 30_000,
+  queenHealth: 500,
+  birthFrames: 8 * 60,
+  childrenPerHive: 6,
+  sacHealth: 50,
+  sacSpacing: 450,
+  sacWindowMs: 20_000,
+  restoreValue: 9_600,
+  atlasRadius: 1_200,
+  scannerValue: 10_000,
+  initialInnerRadius: 11_000,
+  initialOuterRadius: 20_000,
+  expandedOuterRadius: 57_500,
+  downedMs: 30_000,
+  reviveMs: 3_000,
+  reviveRadius: 100,
+  reviveHealthFraction: 0.35,
+} as const;

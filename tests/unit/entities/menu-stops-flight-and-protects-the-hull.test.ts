@@ -25,7 +25,7 @@ test('a menu stops momentum and collisions, then blinks when flight returns', ()
   expect(ship.contourLocked).toBe(false);
   expect(ship.abilityCooldownFrames).toBe(60);
   expect(isShipCollisionImmune(ship)).toBe(true);
-  ship.takeDamage(25, 'asteroid');
+  ship.takeDamage(25);
   expect(ship.health).toBe(health);
   expect(applyLocalOverlayHold(ship, false)).toBe(true);
   expect(ship.blinkCount).toBeGreaterThan(0);

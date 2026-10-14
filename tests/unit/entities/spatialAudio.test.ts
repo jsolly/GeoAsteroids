@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { getExplosionSound, playExplosionSound } from '../../../src/audio/explosionSound';
-import { getLaserSound, playLaserSound } from '../../../src/audio/gameSounds';
+import { playExplosionSound } from '../../../src/audio/explosionSound';
+import { playLaserSound } from '../../../src/audio/gameSounds';
 import { Sound, setSound } from '../../../src/audio/Sound';
 import {
   bindGameAudio,
@@ -13,7 +13,6 @@ import { AUDIO } from '../../../src/constants';
 import { LOCAL_STORAGE_KEYS } from '../../../src/constants/user-preferences';
 import { Player } from '../../../src/entities/player/Player';
 import { reconcilePlayerInput } from '../../../src/input/keybindings';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 const listener = { x: 400, y: 300 };
 const viewport = { width: 800, height: 600 };
@@ -35,7 +34,6 @@ test('automatic thrust stays silent while firing still plays its sound', () => {
     id: 'silent-pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   player.ship.position = { ...listener };
   const play = vi.spyOn(Sound.prototype, 'play').mockResolvedValue(undefined);
@@ -50,16 +48,14 @@ test('automatic thrust stays silent while firing still plays its sound', () => {
 });
 
 test('sound with no position plays at full volume', () => {
-  expect(planPositionalPlayback(undefined, listener, viewport, { requireViewport: true })).toEqual({
+  expect(planPositionalPlayback(undefined, listener, viewport)).toEqual({
     shouldPlay: true,
     volumeScale: 1,
   });
 });
 
 test('sound with no listener plays at full volume', () => {
-  expect(
-    planPositionalPlayback({ x: 0, y: 0 }, undefined, viewport, { requireViewport: true })
-  ).toEqual({
+  expect(planPositionalPlayback({ x: 0, y: 0 }, undefined, viewport)).toEqual({
     shouldPlay: true,
     volumeScale: 1,
   });
@@ -67,7 +63,7 @@ test('sound with no listener plays at full volume', () => {
 
 test('explosion at the local ship is in the viewport at full volume', () => {
   expect(isInViewport(listener, listener, viewport)).toBe(true);
-  expect(planPositionalPlayback(listener, listener, viewport, { requireViewport: true })).toEqual({
+  expect(planPositionalPlayback(listener, listener, viewport)).toEqual({
     shouldPlay: true,
     volumeScale: 1,
     offset: { x: 0, y: 0 },
@@ -76,7 +72,7 @@ test('explosion at the local ship is in the viewport at full volume', () => {
 
 test('explosion inside the viewport far from the ship is quieter than a near explosion', () => {
   const farOnScreen = { x: listener.x + 300, y: listener.y };
-  const plan = planPositionalPlayback(farOnScreen, listener, viewport, { requireViewport: true });
+  const plan = planPositionalPlayback(farOnScreen, listener, viewport);
   expect(isInViewport(farOnScreen, listener, viewport)).toBe(true);
   expect(plan.shouldPlay).toBe(true);
   expect(plan.volumeScale).toBeGreaterThan(0);
@@ -87,7 +83,7 @@ test('explosion inside the viewport far from the ship is quieter than a near exp
 test('explosion outside the viewport does not play', () => {
   const offScreen = { x: listener.x + 1000, y: listener.y };
   expect(isInViewport(offScreen, listener, viewport)).toBe(false);
-  expect(planPositionalPlayback(offScreen, listener, viewport, { requireViewport: true })).toEqual({
+  expect(planPositionalPlayback(offScreen, listener, viewport)).toEqual({
     shouldPlay: false,
     volumeScale: 0,
   });
@@ -117,11 +113,6 @@ test('playExplosionSound skips off-viewport explosions and plays near ones', () 
   expect(playSpy).toHaveBeenCalledWith(1, { x: 0, y: 0 });
 });
 
-test('one explosion event uses the shared explosion sound instance', () => {
-  expect(getExplosionSound()).toBe(getExplosionSound());
-  expect(getExplosionSound()).toBeInstanceOf(Sound);
-});
-
 test('a second explode on the same ship does not play another sound', async () => {
   bindGameAudio({
     getListenerPosition: () => listener,
@@ -138,7 +129,7 @@ test('a second explode on the same ship does not play another sound', async () =
 
 test('in-viewport explosions never drop below the audible floor', () => {
   const corner = { x: listener.x + 399, y: listener.y + 299 };
-  const plan = planPositionalPlayback(corner, listener, viewport, { requireViewport: true });
+  const plan = planPositionalPlayback(corner, listener, viewport);
   expect(plan.shouldPlay).toBe(true);
   expect(plan.volumeScale).toBeGreaterThanOrEqual(AUDIO.MIN_IN_VIEWPORT_VOLUME);
 });
@@ -181,11 +172,6 @@ test('laser and explosion share Sound.play so Sound-off mutes both', () => {
   expect(playSpy).not.toHaveBeenCalled();
 });
 
-test('every laser uses the same laser sound instance', () => {
-  expect(getLaserSound()).toBe(getLaserSound());
-  expect(getLaserSound()).toBeInstanceOf(Sound);
-});
-
 test('server exploding flag plays once for a remote and a second update does not', () => {
   bindGameAudio({
     getListenerPosition: () => listener,
@@ -196,12 +182,11 @@ test('server exploding flag plays once for a remote and a second update does not
     id: 'remote-1',
     name: 'Remote',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   remote.ship.position = listener;
 
-  remote.updateFromServer({ health: 0, exploding: true, deathCause: 'asteroid' });
-  remote.updateFromServer({ health: 0, exploding: true, deathCause: 'asteroid' });
+  remote.updateFromServer({ health: 0, exploding: true });
+  remote.updateFromServer({ health: 0, exploding: true });
 
   expect(remote.ship.exploding).toBe(true);
   expect(playSpy).toHaveBeenCalledTimes(1);
@@ -217,7 +202,6 @@ test('health drop and exploding flag together still play only one explosion', ()
     id: 'remote-1',
     name: 'Remote',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
   remote.ship.position = listener;
   remote.ship.health = 100;
@@ -229,7 +213,7 @@ test('health drop and exploding flag together still play only one explosion', ()
 
 test('muted firing leaves idle media untouched across simulation steps', () => {
   setSound(false);
-  const laserPlay = vi.spyOn(getLaserSound(), 'play');
+  const laserPlay = vi.spyOn(Sound.prototype, 'play');
   for (let frame = 0; frame < 60; frame++) {
     playLaserSound();
   }
@@ -244,17 +228,4 @@ test('directions stay relative to the listener as both move across world sectors
   const moved = planPositionalPlayback(source, { x: 9200, y: -2900 }, viewport);
   expect(moved.offset).toEqual({ x: -200, y: -100 });
   expect(moved.volumeScale).toBe(plan.volumeScale);
-});
-
-test('eastbound pilots hear eastern sources ahead and southern sources on screen right', () => {
-  const rotated = { ...viewport, rotation: -Math.PI / 2 };
-  const east = planPositionalPlayback({ x: listener.x + 100, y: listener.y }, listener, rotated);
-  expect(east.offset?.x).toBeCloseTo(0);
-  expect(east.offset?.y).toBeCloseTo(-100);
-  const south = planPositionalPlayback({ x: listener.x, y: listener.y + 350 }, listener, rotated, {
-    requireViewport: true,
-  });
-  expect(south.shouldPlay).toBe(true);
-  expect(south.offset?.x).toBeCloseTo(350);
-  expect(south.offset?.y).toBeCloseTo(0);
 });

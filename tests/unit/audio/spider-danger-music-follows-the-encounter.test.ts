@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { setPlayView } from '../../../src/ui/uiUtils';
 
 vi.mock('../../../src/audio/audioRuntime', () => ({
   getRunningAudioContext: () => null,
@@ -56,7 +57,7 @@ test('disconnect releases only the spider claim even when no more frames render'
 test('leaving play discards ownership so the next encounter can claim danger again', () => {
   updateSpiderScore('hunted');
   resetMusicThreats();
-  window.dispatchEvent(new Event('playViewOff'));
+  setPlayView(false);
   pushMusicThreat();
   updateSpiderScore('quiet');
   expect(isMusicThreatActive()).toBe(true);

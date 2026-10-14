@@ -3,9 +3,7 @@ import { GAME, SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import type { SatellitePickupData } from '../../../shared-types';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { SatellitePickupManager } from '../../../src/entities/satellitePickup/SatellitePickupManager';
-import { preferredHaulerUtility } from '../../../src/entities/ship/haulerUtility';
-import { preferredScoutUtility } from '../../../src/entities/ship/scoutUtility';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   equipInventorySatellite,
   equipInventoryUtility,
@@ -15,7 +13,7 @@ import {
 import { resetSafeStorage } from '../../../src/utils/safeStorage';
 
 const pickups = SatellitePickupManager.getInstance();
-const network = NetworkManager.getInstance();
+const network = ConnectionManager.getInstance();
 
 function satellite(id: string, ownerId: string): SatellitePickupData {
   return {
@@ -136,7 +134,7 @@ test('satellite equip rechecks connection, ownership, live ship, transit and exi
   expect(pickups.get('owned')?.state).toBe('stored');
 });
 
-test('a Hauler swaps only available matching tools and keeps prediction, storage and wire command aligned', () => {
+test('a Hauler swaps only available matching tools and keeps prediction and wire command aligned', () => {
   const pilot = localPlayer();
   equipInventoryUtility('survey_probe');
   equipInventoryUtility('resource_tap');
@@ -151,7 +149,6 @@ test('a Hauler swaps only available matching tools and keeps prediction, storage
   equipInventoryUtility('resource_tap');
   expect(pilot.ship.haulerUtility).toBe('resource_tap');
   expect(pilot.ship.harpoonTargetId).toBeNull();
-  expect(preferredHaulerUtility()).toBe('resource_tap');
   expect(readSchematicSelection()).toMatchObject({
     kitId: 'hauler',
     haulerUtility: 'resource_tap',
@@ -163,7 +160,7 @@ test('a Hauler swaps only available matching tools and keeps prediction, storage
   });
 });
 
-test('a Scout tool swap stops predicted scanning and preserves the offline selection without sending', () => {
+test('a Scout tool swap stops predicted scanning and preserves the current offline selection without sending', () => {
   const pilot = PlayerManager.getInstance().createLocalPlayer('scout');
   pilot.ship.equipment = ['survey_probe'];
   pilot.ship.abilityActiveFrames = 80;
@@ -173,7 +170,6 @@ test('a Scout tool swap stops predicted scanning and preserves the offline selec
   equipInventoryUtility('survey_probe');
   expect(pilot.ship.abilityActiveFrames).toBe(0);
   expect(pilot.ship.abilityCooldownFrames).toBe(120);
-  expect(preferredScoutUtility()).toBe('survey_probe');
   expect(network.sendMessage).toHaveBeenCalledExactlyOnceWith({
     type: 'setScoutUtility',
     id: 'wire-pilot',
@@ -183,6 +179,5 @@ test('a Scout tool swap stops predicted scanning and preserves the offline selec
   vi.spyOn(network, 'isConnected', 'get').mockReturnValue(false);
   equipInventoryUtility('mineral_scan');
   expect(pilot.ship.scoutUtility).toBe('mineral_scan');
-  expect(preferredScoutUtility()).toBe('mineral_scan');
   expect(network.sendMessage).not.toHaveBeenCalled();
 });

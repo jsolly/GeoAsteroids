@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import { SATELLITE_PICKUP } from '../../../shared/constants/gameplay';
 import {
   attachOrbitPosition,
-  isWithinCollectRange,
   orbitOffset,
   spawnRingPosition,
   velocityFromDelta,
@@ -23,11 +22,6 @@ describe('satellite pickup orbit math', () => {
     const attached = attachOrbitPosition({ x: 100, y: 50 }, 0, 42);
     expect(attached.x).toBeCloseTo(142);
     expect(attached.y).toBeCloseTo(50);
-  });
-
-  test('isWithinCollectRange accepts nearby ships and rejects distant ones', () => {
-    expect(isWithinCollectRange({ x: 0, y: 0 }, { x: 20, y: 0 }, 15, 9, 0)).toBe(true);
-    expect(isWithinCollectRange({ x: 0, y: 0 }, { x: 400, y: 0 }, 15, 9, 50)).toBe(false);
   });
 
   test('velocityFromDelta is the per-frame step', () => {

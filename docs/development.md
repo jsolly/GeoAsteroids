@@ -19,6 +19,20 @@ a missing file is created empty for the local server.
 
 Setup installs repo-owned hooks outside the working tree, provisions the pinned
 tools and lockfile dependencies, and leaves browser binaries to explicitly requested manual tools.
+Claude Code's `startup|resume` hook passes `--session-hook`. A fresh checkout
+without `node_modules` runs setup; an existing tree is checked without installing
+tools or dependencies. Setup records the manifest, lockfile, repository tool and
+npm settings, actual Node/npm runtime, installed lock and package manifests after
+a successful install and complete `npm ls --all` check. Warm hooks require that
+receipt and repeat dependency validation.
+
+Changed inputs, missing packages, failed installs and older trees without a receipt
+fail the hook instead of replacing dependencies underneath a running service.
+Stop this checkout's services with `npm run dev:kill`, then run
+`bash scripts/setup-agent-environment.sh` explicitly to repair and record the tree.
+Manual setup deliberately reinstalls dependencies; stop services before using it.
+The receipt detects install drift, not arbitrary changes to every package file.
+
 Automated code checks never launch or download browsers. Run the repo's documented quality gate with its pinned tools:
 
 ```bash
@@ -68,13 +82,14 @@ intended deployment and exact-release smoke when the repository requires them.
 ## Infrastructure and access
 
 Use existing scoped identities. Agents do not recover credentials, broaden grants
-or run destructive infrastructure/database operations. Keep read-only checks on
-the read-only role, including the repo-owned credential-isolation wrapper.
-`check:infra-pending` reports merged infrastructure inputs not yet deployed; AWS
-CloudFormation drift detection separately reports manual live-resource changes.
-Infrastructure apply and protection changes remain a concrete handoff to the
-human owner, with exact repository commands. A successful code deploy does not
-prove infrastructure adoption. Never bypass a dirty-infrastructure deploy refusal.
+or run destructive infrastructure/database operations. Review Railway's complete
+redacted live configuration and plan before any production configuration apply;
+preserve unrelated staged dashboard changes. Follow the repository's
+[deployment operations](agent-operations.md#deploy) and
+[Railway plan procedure](../.railway/README.md). Production configuration, data
+changes and protection changes remain a concrete handoff to the human owner with
+the exact reviewed repository commands. A successful code deploy does not prove
+infrastructure adoption.
 
 Repository instructions and access rules are maintained here. Personal home
 configuration and optional global skills remain separate and are not installed,

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { GameStateBroadcaster } from '../../../server/services/GameStateBroadcaster';
 import { ROID } from '../../../shared/constants/gameplay';
+import { cargoCapacity } from '../../../shared/economy';
 import { GROWTH } from '../../../shared/shipGrowth';
 import { RecordingSocket } from '../../support/recordingSocket';
 
@@ -72,12 +73,36 @@ describe('destroying asteroids drops shared shards into game state', () => {
     const notifications = ws.inbox.filter((message) => message.type === 'lootCollected');
     expect(notifications).toHaveLength(2);
     expect(notifications.map((message) => message.data)).toContainEqual({
+      eventId: expect.any(String),
       lootId: collected.find((drop) => drop.mass > 0)?.lootId,
       collectorId: player.id,
       kind: 'shard',
       position: { x: 20, y: 30 },
     });
     expect(engine.drainLootCollections()).toEqual([]);
+  });
+
+  test('returning for the same points drop creates a distinct collection receipt', () => {
+    const player = engine.addPlayer('p1', 'Pilot', new RecordingSocket(), { x: 20, y: 30 });
+    player.spawnProtectionTimer = 0;
+    player.cargo = cargoCapacity(player.kitId) - GROWTH.SHARD_SCORE - 1;
+    addSmallAsteroid(engine, 'partial-rock', 12);
+    engine.handleAsteroidHit('partial-rock', player.id, 'laser');
+    const points = engine.getLoot().find((drop) => drop.kind === 'points');
+    assert.ok(points);
+    player.position = { ...points.position };
+    engine.collectLoot();
+    const first = engine.drainLootCollections().find((event) => event.lootId === points.id);
+    assert.ok(first);
+    expect(engine.getLoot().some((drop) => drop.id === points.id)).toBe(true);
+    player.cargo = 0;
+    engine.collectLoot();
+    const second = engine.drainLootCollections().find((event) => event.lootId === points.id);
+    assert.ok(second);
+    expect(second.collectorId).toBe(first.collectorId);
+    expect(first.eventId).toEqual(expect.any(String));
+    expect(second.eventId).toEqual(expect.any(String));
+    expect(second.eventId).not.toBe(first.eventId);
   });
 
   test('ending a world discards pickup sounds that have not been broadcast', () => {

@@ -113,6 +113,13 @@ export class MessageHandler {
           break;
         }
 
+        case 'crewAction': {
+          const owner = this.gameEngine.getPlayerBySocket(ws);
+          if (owner?.id === command.id) {
+            this.gameEngine.crewAction(owner.id, command.action);
+          }
+          break;
+        }
         case 'useAbility':
           this.handleUseAbility(ws, command);
           break;
@@ -141,6 +148,16 @@ export class MessageHandler {
           this.handlePlayerUpdate(ws, command);
           break;
 
+        case 'chargeWeapon': {
+          const pilot = this.gameEngine.getPlayerBySocket(ws);
+          if (pilot?.id === command.id) {
+            const laser = this.gameEngine.chargeWeapon(pilot.id, command.action);
+            if (laser) {
+              this.broadcastAppliedAsteroidHits(this.gameEngine.resolveSpawnedLaserHits(laser.id));
+            }
+          }
+          break;
+        }
         case 'shoot':
           this.handlePlayerShoot(ws, command);
           break;
@@ -183,6 +200,10 @@ export class MessageHandler {
       return;
     }
 
+    if (this.gameEngine.cooperativeEnabled() && command.cooperativeVersion !== 1) {
+      this.broadcaster.sendError(ws, 'Refresh this client to join the cooperative campaign');
+      return;
+    }
     name = sanitizePlayerName(name);
     if (!name) {
       this.broadcaster.sendError(ws, 'Player ID or name is missing or invalid');
@@ -255,7 +276,7 @@ export class MessageHandler {
       this.gameEngine.ensureAsteroidField();
     }
 
-    const snapshotVersion = this.broadcaster.negotiateSnapshot(ws);
+    const snapshotVersion = this.broadcaster.negotiateSnapshot(ws, command.worldRemains === 1);
     const provenance = this.gameEngine.getPilotReleaseProvenance(id);
 
     // Send confirmation to the joining player
@@ -267,6 +288,7 @@ export class MessageHandler {
         position: player.position,
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        chargedWeapons: 1,
         color: player.color,
         kitId: player.kitId,
         terrainSeed: this.gameEngine.getTerrainSeed(),
@@ -318,6 +340,9 @@ export class MessageHandler {
       return;
     }
 
+    if (command.motionEpoch === socketPlayer.playerMotion?.epoch) {
+      this.gameEngine.cancelRescueOnMovement(id, update.position, update.velocity, update.angle);
+    }
     this.gameEngine.setOverlayHold(id, update.overlayHold === true);
 
     // Ignore movement updates while the player is dead, exploding, or waiting to

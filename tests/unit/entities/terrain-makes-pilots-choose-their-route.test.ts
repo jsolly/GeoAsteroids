@@ -25,7 +25,7 @@ test.each(['scout', 'hauler'] as const)(
     const across = Math.atan2(-gradient.y, gradient.x);
     const kit = getShipKit(kitId);
     for (const mass of [1, 8]) {
-      const cruise = cruiseSpeed(mass, kit.maxVelocity);
+      const cruise = cruiseSpeed(mass, kit.maxVelocity, 0, 1);
       const speeds = [across, across + Math.PI, across + Math.PI / 2, across - Math.PI / 2].map(
         (angle) => {
           const ship: Parameters<typeof advanceCruiseVelocity>[0] = {
@@ -147,7 +147,7 @@ test.each(['scout', 'hauler'] as const)(
   '%s speed lines reflect terrain speed rather than blasts',
   (kitId) => {
     const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true, kitId });
-    const baseline = cruiseSpeed(ship.mass, ship.maxVelocity);
+    const baseline = cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1);
     for (const bonus of [0, 0.5, 1]) {
       ship.velocity = { x: baseline * (1 + TERRAIN.CONTOUR_SPEED_BONUS * bonus), y: 0 };
       expect(contourSpeedStrength(ship)).toBeCloseTo(bonus, 10);

@@ -25,6 +25,7 @@ export function nearestTravelFurnace(position: Position, field: FurnaceField) {
 export function litTravelDestinations(sourceId: string, field: FurnaceField) {
   return [
     TOWN_HEARTH,
+    ...field.frontierHearths(),
     ...field.litModules().flatMap((module) => {
       const lot = civicLot(module.id);
       return lot ? [{ ...lot, name: field.displayName(lot.id) }] : [];

@@ -29,7 +29,6 @@ class Logger {
   private static instance: Logger;
   private currentLevel: LogLevel;
   private readonly recentDiagnostics: string[] = [];
-  private static isForwarderInitialized = false;
   private runtimeActive = false;
   private runtimeGeneration = 0;
   private forwarder: LogForwarderModule | undefined;
@@ -37,7 +36,7 @@ class Logger {
 
   private constructor() {
     this.currentLevel = LogLevel.INFO;
-    this.initializeLogLevel();
+    this.applyConfiguredLogLevel();
   }
 
   public static getInstance(): Logger {
@@ -45,13 +44,6 @@ class Logger {
       Logger.instance = new Logger();
     }
     return Logger.instance;
-  }
-
-  private initializeLogLevel(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    this.applyConfiguredLogLevel();
   }
 
   /** Apply the route-scoped diagnostic verbosity. */
@@ -62,17 +54,7 @@ class Logger {
         ? LogLevel.DEBUG
         : configured === 'warn'
           ? LogLevel.WARN
-          : configured === 'error'
-            ? LogLevel.ERROR
-            : LogLevel.INFO;
-  }
-
-  setLogLevel(level: LogLevel): void {
-    this.currentLevel = level;
-  }
-
-  getLogLevel(): LogLevel {
-    return this.currentLevel;
+          : LogLevel.INFO;
   }
 
   debug(category: string, message: string, context?: Record<string, unknown>): void {
@@ -151,7 +133,6 @@ class Logger {
     this.runtimeActive = false;
     this.runtimeGeneration++;
     this.forwarder?.stopClientLogForwarder();
-    Logger.isForwarderInitialized = false;
   }
 
   private forwardToServer(line: string): void {
@@ -166,10 +147,7 @@ class Logger {
         }
         this.forwarder = forwarder;
         const { forwardLogToServer, startClientLogForwarder } = forwarder;
-        if (!Logger.isForwarderInitialized) {
-          startClientLogForwarder();
-          Logger.isForwarderInitialized = true;
-        }
+        startClientLogForwarder();
         forwardLogToServer(line);
         Logger.forwardingFailureReported = false;
       })

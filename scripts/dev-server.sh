@@ -356,7 +356,7 @@ start() {
         export GEOROIDS_LOCAL_PLAYGROUND="${GEOROIDS_LOCAL_PLAYGROUND:-1}"
         export VITEST=""
         export PORT="$DEV_SERVER_PORT"
-        # Keep gameplay on the page origin so LAN clients and HTTPS tunnels work.
+        # Keep gameplay on the page origin for localhost and secure HTTPS tunnels.
         export VITE_WEBSOCKET_URL=""
         export GEOROIDS_TEST_SERVER_PORT="$DEV_SERVER_PORT"
         exec npx --no-install concurrently \

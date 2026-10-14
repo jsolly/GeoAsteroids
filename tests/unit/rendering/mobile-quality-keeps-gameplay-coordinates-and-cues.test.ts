@@ -28,7 +28,6 @@ test('a DPR-three pilot keeps the same view and aiming coordinates at lower rend
   const screen = canvasManager.worldToScreen(position, position);
   expect(screen.x).toBe(viewport.width / 2);
   expect(screen.y).toBe(viewport.height / 2);
-  expect(canvasManager.screenToWorld(screen, position)).toEqual(position);
 
   canvasManager.destroy();
   window.history.replaceState(null, '', '?performance=collect&renderDpr=native');

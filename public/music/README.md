@@ -42,3 +42,25 @@ Current keepers are original Song Lab / Suno instrumentals:
 - Phosphor Lobby (`a5931a6b`) → `menu-bed`
 - Playfield Drift (`b63b4578`) → `in-game-bed`
 - Iso Threat (`31b6f7b6`) → `danger-bed`
+
+## Route remix
+
+`route-bed.ogg` / `route-bed.mp3` are a synchronized derivative of the shipped
+Playfield Drift recording (`b63b4578`), made for passage travel. The mix adds
+low/high presence, light harmonic excitation, compression, and a compensated
+limiter; it does not alter tempo or duration. The player seeks to the existing
+bed's playhead before crossfading. Threat music takes priority. The remix loads
+only after a pilot rides a route, and a decode failure keeps the quiet bed.
+
+Reproduce from this repository root with FFmpeg 7.1:
+
+```sh
+ffmpeg -i public/music/in-game-bed.ogg -af 'bass=g=4:f=110,treble=g=3:f=4500,aexciter=amount=1.5:drive=2:blend=0.2,acompressor=threshold=0.18:ratio=2:attack=20:release=180:makeup=1.15,alimiter=limit=0.94:level=false:latency=true' -c:a libvorbis -q:a 5 public/music/route-bed.ogg
+ffmpeg -i public/music/in-game-bed.ogg -af 'bass=g=4:f=110,treble=g=3:f=4500,aexciter=amount=1.5:drive=2:blend=0.2,acompressor=threshold=0.18:ratio=2:attack=20:release=180:makeup=1.15,alimiter=limit=0.94:level=false:latency=true' -c:a libmp3lame -b:a 128k public/music/route-bed.mp3
+```
+
+The offline tool was imageio-ffmpeg 0.6.0's macOS arm64 FFmpeg 7.1 package,
+verified against PyPI SHA-256
+`b1ae3173414b5fc5f538a726c4e48ea97edc0d2cdc11f103afee655c463fa742`.
+FFmpeg is an offline GPL/LGPL tool, not shipped in this application; imageio-ffmpeg
+is BSD-licensed. The remix retains the source music's attribution and rights.

@@ -17,10 +17,6 @@ export function getPlayerColor(
   }
 }
 
-export function getLaserColor(): string {
-  return PALETTE.LASER_LOCAL;
-}
-
 /** Bounced bolts read as hazards; direct shots keep the ordinary laser color. */
 export function laserBoltColor(baseColor: string, bounces = 0): string {
   return laserDamagesShips(bounces) ? PALETTE.DANGER : baseColor;

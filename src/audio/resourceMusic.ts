@@ -31,7 +31,7 @@ function playResourceNote(part: 'extraction' | 'pickup', sound: Sound, position?
   if (!soundIsOn()) {
     return;
   }
-  const plan = planBoundPlayback(position, { requireViewport: true });
+  const plan = planBoundPlayback(position);
   if (!plan.shouldPlay) {
     return;
   }

@@ -15,12 +15,17 @@ export function setSettlement(value: SettlementState): void {
 
 let exploration: ExplorationTile[] = EMPTY_EXPLORATION;
 let mapAssets: MapAsset[] = [];
+let remains: MapAsset[] = [];
+export function getWorldRemains(): readonly MapAsset[] {
+  return remains;
+}
 
 export function getWorldMapAssets(): readonly MapAsset[] {
   return mapAssets;
 }
 export function setWorldMapAssets(value: MapAsset[]): void {
   mapAssets = value;
+  remains = value.filter((asset) => asset.kind === 'ship-remains' || asset.kind === 'nest-remains');
 }
 
 function sameExploration(
@@ -49,7 +54,9 @@ export function setWorldExploration(value: ExplorationTile[]): void {
 
 export function resetWorldExploration(): void {
   worldFurnaces.replaceLit([]);
+  worldFurnaces.replaceFrontier([]);
   settlement = emptySettlement();
   mapAssets = [];
+  remains = [];
   exploration = EMPTY_EXPLORATION;
 }

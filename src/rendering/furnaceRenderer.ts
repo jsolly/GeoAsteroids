@@ -1,6 +1,6 @@
 import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { explorationCellAt, isCellExplored } from '../../shared/exploration';
-import { CIVIC_LOTS, pipeHopToParent, TOWN_HEARTH } from '../../shared/furnaces';
+import { CIVIC_LOTS, pipeHopToParent, pipeToTownSquare, TOWN_HEARTH } from '../../shared/furnaces';
 import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import { activeFurnacePipePulses, furnacePipeFrame } from '../fx/furnacePipePulse';
@@ -13,12 +13,6 @@ import { strokePhosphorPolyline, type Vec2 } from './vectorJuice';
 
 const furnaceScreen = { x: 0, y: 0 };
 const pipeHead = { x: 0, y: 0 };
-const PIPE_SCREEN: Array<{ x: number; y: number }> = [
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-];
 const TRAIL_SCREEN: Array<{ x: number; y: number }> = [];
 const trailEmber = { x: 0, y: 0 };
 const FURNACE_COLOR = WIRE_PALETTE.SATELLITE;
@@ -609,51 +603,55 @@ export function drawFurnacePipes(viewerPosition: Position, now = performance.now
       28
     );
   }
+  // Frontier routes can span tens of thousands of units. Clip their axis-aligned
+  // segments before adding embers, and paint shared trunk segments only once.
+  const frontierSegments = new Set<string>();
+  for (const site of worldFurnaces.frontierHearths()) {
+    const route = pipeToTownSquare(site.id);
+    for (let i = 1; i < route.length; i++) {
+      const start = route[i - 1],
+        end = route[i];
+      if (!start || !end || !segmentNear(viewerPosition, start, end, reach)) {
+        continue;
+      }
+      const clip = (point: Position): Position => ({
+        x: Math.max(viewerPosition.x - reach, Math.min(viewerPosition.x + reach, point.x)),
+        y: Math.max(viewerPosition.y - reach, Math.min(viewerPosition.y + reach, point.y)),
+      });
+      const from = clip(start),
+        to = clip(end);
+      const key = [`${from.x},${from.y}`, `${to.x},${to.y}`].sort().join(':');
+      if (frontierSegments.has(key)) {
+        continue;
+      }
+      frontierSegments.add(key);
+      const count = projectHop(viewerPosition, [from, to]);
+      strokeFurnaceFireTrail(
+        ctx,
+        TRAIL_SCREEN,
+        count,
+        now,
+        2.2,
+        resolveGlow(VISUAL.FURNACE_FLAME_GLOW),
+        28
+      );
+    }
+  }
   for (const pulse of activeFurnacePipePulses(now)) {
     const frame = furnacePipeFrame(pulse, now);
     if (!frame) {
       continue;
     }
-    let visible = false;
-    for (let index = 0; index < pulse.points.length - 1; index += 1) {
-      const start = pulse.points[index];
-      const end = pulse.points[index + 1];
-      if (start && end && segmentNear(viewerPosition, start, end, reach)) {
-        visible = true;
-        break;
-      }
-    }
-    if (!visible) {
+    if (!hopNear(viewerPosition, pulse.points, reach)) {
       continue;
     }
-    while (PIPE_SCREEN.length < pulse.points.length) {
-      PIPE_SCREEN.push({ x: 0, y: 0 });
-    }
-    const count = pulse.points.length;
-    for (let index = 0; index < count; index += 1) {
-      const world = pulse.points[index];
-      const screen = PIPE_SCREEN[index];
-      if (!world || !screen) {
-        continue;
-      }
-      canvasManager.worldToScreenInto(screen, world, viewerPosition);
-    }
+    const count = projectHop(viewerPosition, pulse.points);
     ctx.save();
     ctx.shadowColor = PALETTE.LASER_LOCAL;
     ctx.shadowBlur = resolveGlow(VISUAL.FURNACE_FLAME_GLOW);
     ctx.strokeStyle = hexToRgba(PALETTE.LASER_LOCAL, 0.9 * frame.alpha);
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    const first = PIPE_SCREEN[0];
-    if (first) {
-      ctx.moveTo(first.x, first.y);
-    }
-    for (let index = 1; index < count; index += 1) {
-      const screen = PIPE_SCREEN[index];
-      if (screen) {
-        ctx.lineTo(screen.x, screen.y);
-      }
-    }
+    tracePolyline(ctx, TRAIL_SCREEN, count);
     ctx.stroke();
     canvasManager.worldToScreenInto(pipeHead, frame.head, viewerPosition);
     ctx.fillStyle = hexToRgba(PALETTE.LOOT, frame.alpha);
@@ -729,7 +727,6 @@ function drawDockingStation(
 ): void {
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(canvasManager.getCameraRotation());
   ctx.strokeStyle = '#91A7C0';
   ctx.fillStyle = '#111C2B';
   ctx.lineWidth = 1.5;

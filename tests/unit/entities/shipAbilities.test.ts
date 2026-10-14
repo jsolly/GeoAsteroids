@@ -3,7 +3,6 @@ import {
   type AbilityBody,
   type AbilityHost,
   activateAbilityOnHost,
-  diagnoseHarpoonLatch,
   findHarpoonTarget,
   harpoonSurfaceGap,
   predictAbilityOnHost,
@@ -13,6 +12,7 @@ import {
 } from '../../../shared/shipAbilities';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { attachTowCable, tickTowCable } from '../../../shared/towCable';
+import { UTILITY_FLIGHT } from '../../../shared/utilityFlight';
 import {
   applySharedHarpoonLatch,
   bindHarpoonFieldSource,
@@ -145,10 +145,17 @@ test('Hauler harpoon whiffs without a rock in range', () => {
   const result = activateAbilityOnHost(hauler, { asteroids: [] });
   expect(result.activated).toBe(true);
   expect(hauler.abilityCooldownFrames).toBe(180);
-  for (let i = 0; i < 40; i++) {
+  expect(hauler.utilityFlight?.phase).toBe('outbound');
+  const outboundFrames = Math.ceil(SHIP_ABILITY.HARPOON_RANGE / UTILITY_FLIGHT.TOW_SPEED);
+  for (let i = 0; i <= outboundFrames; i++) {
     tickTowLine(hauler, []);
   }
   expect(hauler.utilityFlight?.phase).toBe('reeling');
+  expect(hauler.harpoonTargetId).toBeNull();
+  for (let i = 0; i < UTILITY_FLIGHT.REEL_MAX_FRAMES; i++) {
+    tickTowLine(hauler, []);
+  }
+  expect(hauler.utilityFlight).toBeNull();
   expect(hauler.harpoonTargetId).toBeNull();
 });
 
@@ -176,17 +183,6 @@ test('pull clears a latch when its asteroid leaves the authoritative world', () 
   pullHarpoonTarget(hauler, []);
   expect(hauler.harpoonTargetId).toBeNull();
   expect(hauler.harpoonLatchPos).toBeUndefined();
-});
-
-test('diagnoseHarpoonLatch reports kit, nearest gap, and chosen target', () => {
-  const hauler = host('hauler');
-  const rock = { id: 'near-rock', position: { x: 60, y: 0 }, velocity: { x: 0, y: 0 }, r: 20 };
-  const probe = diagnoseHarpoonLatch(hauler, { asteroids: [rock] });
-  expect(probe.kitId).toBe('hauler');
-  expect(probe.canActivate).toBe(true);
-  expect(probe.fieldCount).toBe(1);
-  expect(probe.targetId).toBe('near-rock');
-  expect(probe.nearest?.reason).toBe('ok');
 });
 
 test('server latch copies the field pose and explicit null clears it', () => {

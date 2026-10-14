@@ -1,4 +1,5 @@
 import { EQUIPMENT, isEquipmentId } from '../../../shared/equipment';
+import { TAP_SALVAGE_LABELS } from '../../../shared/navigationSalvage';
 import type { LootData } from '../../../shared-types';
 import { PALETTE, VISUAL } from '../../constants';
 import { canvasManager } from '../../rendering/canvasSurface';
@@ -304,7 +305,11 @@ export function drawLootRelative(ship: Ship, loot: readonly LootData[]): void {
     ctx.shadowColor = PALETTE.BG;
     ctx.shadowBlur = resolveGlow(4);
     ctx.fillText(
-      equipment ? EQUIPMENT[equipment].name.toUpperCase() : 'TAP CANISTER',
+      equipment
+        ? EQUIPMENT[equipment].name.toUpperCase()
+        : drop.salvage
+          ? TAP_SALVAGE_LABELS[drop.salvage]
+          : 'TAP CANISTER',
       screen.x,
       screen.y + drawR + 7
     );

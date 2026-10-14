@@ -258,6 +258,7 @@ export class Pilot {
         kitId: 'scout',
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        cooperativeVersion: 1,
       },
     });
   }

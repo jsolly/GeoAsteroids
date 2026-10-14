@@ -28,13 +28,12 @@ function mountMap(
   container: HTMLElement,
   source: FurnaceSite,
   destinations: readonly FurnaceSite[],
-  ontravel: (id: string) => void,
-  rotation = 0
+  ontravel: (id: string) => void
 ) {
   document.body.append(container);
   const component = mount(FurnaceTravelMap, {
     target: container,
-    props: { view: { source, destinations, rotation }, ontravel },
+    props: { view: { source, destinations }, ontravel },
   });
   mounted.add(component);
   flushSync();

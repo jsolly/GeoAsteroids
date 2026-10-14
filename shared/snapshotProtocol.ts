@@ -187,6 +187,8 @@ const BROADCAST_ROW_COLLECTIONS = new Set([
   'satellitePickups',
   'playerProjectiles',
   'mapAssets',
+  'rolyPolys',
+  'contourBridges',
 ]);
 const BROADCAST_COMMON_BRANCHES = new Set([
   'settlement',

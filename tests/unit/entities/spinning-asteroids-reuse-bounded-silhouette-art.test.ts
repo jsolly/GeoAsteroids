@@ -6,6 +6,7 @@ import { Ship } from '../../../src/entities/ship/Ship';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { configureRenderQuality } from '../../../src/rendering/renderQuality';
 import * as vectorJuice from '../../../src/rendering/vectorJuice';
+import { asteroidRow } from '../../support/asteroid-row';
 
 afterEach(() => {
   clearAsteroidShatters();
@@ -58,7 +59,7 @@ function scene(dpr = 1) {
 }
 
 function asteroid(id: string, radius = 30): Roid {
-  const roid = new Roid({ x: 0, y: 0 }, radius, id);
+  const roid = new Roid(asteroidRow({ x: 0, y: 0 }, radius, id));
   roid.angle = 0;
   roid.vertices = 4;
   roid.offsets = [1, 0.8, 1.1, 0.9];

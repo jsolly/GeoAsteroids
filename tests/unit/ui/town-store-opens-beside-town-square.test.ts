@@ -6,7 +6,7 @@ import { InputManager } from '../../../src/core/services/InputManager';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { readAbilityChrome } from '../../../src/input/touchAbility';
 import { triggerTouchAbility } from '../../../src/input/touchControls';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { worldFurnaces } from '../../../src/network/worldExploration';
 import { isGameOverlayOpen } from '../../../src/runtime/overlayState';
 import {
@@ -23,18 +23,23 @@ import {
 import { SCOUT_ONLY_BUILD_HINT } from '../../../src/ui/constants';
 import { activateFieldHint, hideFieldHints, readFieldHints } from '../../../src/ui/fieldHint';
 import { syncFurnaceTravelPrompt } from '../../../src/ui/furnaceTravelPrompt';
+import { setPlayView } from '../../../src/ui/uiUtils';
 import { setWindowViewport } from '../../support/viewport';
 
 let stopStore: () => void;
 beforeAll(() => {
-  const network = NetworkManager.getInstance();
+  const network = ConnectionManager.getInstance();
   PlayerManager.getInstance({ networkPort: network, combatNetwork: network.combatNetwork });
-  document.body.classList.add('in-play');
+  setPlayView(true);
   PlayerManager.getInstance().createLocalPlayer('hauler');
-  vi.spyOn(NetworkManager.getInstance(), 'getAllPlayers').mockReturnValue([]);
+  vi.spyOn(ConnectionManager.getInstance(), 'getAllPlayers').mockReturnValue([]);
   vi.spyOn(network, 'isConnected', 'get').mockReturnValue(true);
   stopStore = mountTownStore();
-  InputManager.getInstance().initializeListeners();
+  const inputCanvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
+  if (!inputCanvas) {
+    throw new Error('Input fixture requires its canvas');
+  }
+  InputManager.getInstance().initializeListeners(inputCanvas);
 });
 
 afterAll(() => {
@@ -42,7 +47,7 @@ afterAll(() => {
   stopStore();
   closeTownStore();
   vi.restoreAllMocks();
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   hideFieldHints();
 });
 
@@ -72,7 +77,7 @@ test('the store opens at Town Square via E and buys a placeholder without an upg
   expect(view.mode).toBe('store');
   expect(view.offers[0]).toMatchObject({ name: 'Placeholder A', cost: 100, available: true });
   expect(player.ship.movementLocked).toBe(true);
-  const send = vi.spyOn(NetworkManager.getInstance(), 'sendMessage').mockReturnValue(true);
+  const send = vi.spyOn(ConnectionManager.getInstance(), 'sendMessage').mockReturnValue(true);
   purchaseTownOffer('placeholder-1');
   expect(send).toHaveBeenCalledWith({
     type: 'buyStoreItem',
@@ -118,10 +123,14 @@ test('touch ability uses the kit tool over Town Square without opening the store
   expect(activate).toHaveBeenCalledOnce();
   expect(isGameOverlayOpen('town-store')).toBe(false);
   activate.mockRestore();
+  const connected = vi
+    .spyOn(ConnectionManager.getInstance(), 'isConnected', 'get')
+    .mockReturnValue(false);
   player.ship.position = { x: TOWN_STORE_RADIUS + 50, y: 0 };
   expect(readAbilityChrome(player.ship).label).toBe('HOOK');
   expect(triggerTouchAbility(player)).toBe(true);
   expect(player.ship.utilityFlight?.phase).toBe('outbound');
+  connected.mockReturnValue(true);
   expect(isGameOverlayOpen('town-store')).toBe(false);
 });
 
@@ -165,7 +174,7 @@ test('a lit street offers free travel to Town Square and other lit streets but n
   expect(new Set(travel.destinations.map((destination) => destination.id)).size).toBe(
     travel.destinations.length
   );
-  const send = vi.spyOn(NetworkManager.getInstance(), 'sendMessage').mockReturnValue(true);
+  const send = vi.spyOn(ConnectionManager.getInstance(), 'sendMessage').mockReturnValue(true);
   requestFurnaceTravel(street.id);
   requestFurnaceTravel('street-1-2');
   expect(send).not.toHaveBeenCalled();

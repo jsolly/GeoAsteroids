@@ -1,9 +1,11 @@
+import { QUEEN_COMBAT } from '../../../shared/cooperativeRules';
 import {
   type AbilityBody,
   type AbilityHost,
   clearHaulerLatch,
 } from '../../../shared/shipAbilities';
 import type { Position, UtilityFlight } from '../../../shared-types';
+import { getWorldCampaign } from '../../network/worldCampaign';
 
 let field: readonly AbilityBody[] = [];
 let holdEmptyField = false;
@@ -37,7 +39,19 @@ export function publishHarpoonField(asteroids: readonly AbilityBody[]): void {
 }
 
 export function getHarpoonField(): readonly AbilityBody[] {
-  return field;
+  return [
+    ...field,
+    ...(getWorldCampaign()?.hives ?? [])
+      .filter((h) => h.clearedAt === null)
+      .map((h) => ({
+        id: h.id,
+        kind: 'spider' as const,
+        position: h.position,
+        velocity: { x: 0, y: 0 },
+        size: QUEEN_COMBAT.radius,
+        health: h.queenHealth,
+      })),
+  ];
 }
 
 export function findHarpoonFieldBody(id: string | null | undefined): AbilityBody | undefined {

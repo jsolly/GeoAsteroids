@@ -7,14 +7,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import process from 'node:process';
 import test, { after } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -1431,11 +1430,22 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   assert.notEqual(launch(selected).runtime, before.runtime);
   // Tool managers can expose npm as a shell wrapper around the actual CLI.
   const beforeWrapper = launch(base);
-  const originalNpm = base.PATH.split(':')
+  const installedNpm = base.PATH.split(':')
     .map((path) => join(path, 'npm'))
     .find(existsSync);
-  assert(originalNpm);
-  const quotedNpm = `'${realpathSync(originalNpm).replaceAll("'", "'\\''")}'`;
+  assert(installedNpm);
+  // Make the backing tool basename-sensitive on every host, including CI.
+  const backingDirectory = join(f.root, 'bin/backing');
+  mkdirSync(backingDirectory);
+  const originalNpm = join(backingDirectory, 'npm');
+  const quotedInstalledNpm = `'${resolve(installedNpm).replaceAll("'", "'\\''")}'`;
+  writeFileSync(
+    join(backingDirectory, 'tool-multiplexer'),
+    `#!/bin/sh\ncase "\${0##*/}" in npm) exec ${quotedInstalledNpm} "$@" ;; *) exit 92 ;; esac\n`,
+    { mode: 0o755 }
+  );
+  symlinkSync('tool-multiplexer', originalNpm);
+  const quotedNpm = `'${resolve(originalNpm).replaceAll("'", "'\\''")}'`;
   writeFileSync(join(f.root, 'bin/npm'), `#!/bin/sh\nexec ${quotedNpm} "$@"\n`, {
     mode: 0o755,
   });
@@ -1444,6 +1454,26 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   assert.notEqual(wrapped.runtime, beforeWrapper.runtime);
   assert.deepEqual(launch(base, true), wrapped);
   assert.deepEqual(launch({ ...base, GIT_PREFIX: '', PATH: `${core}:${base.PATH}` }), wrapped);
+  // Multiplexer shims choose the tool from the invoked symlink's basename.
+  const npmShim = join(f.root, 'bin/npm');
+  const multiplexer = join(f.root, 'bin/tool-multiplexer');
+  writeFileSync(
+    multiplexer,
+    `#!/bin/sh\ncase "\${0##*/}" in npm) exec ${quotedNpm} "$@" ;; *) exit 91 ;; esac\n`,
+    { mode: 0o755 }
+  );
+  unlinkSync(npmShim);
+  symlinkSync('tool-multiplexer', npmShim);
+  const multiplexed = launch(base);
+  assert.equal(multiplexed.reusable, true, JSON.stringify(multiplexed.unknown));
+  assert.deepEqual(launch(base, true), multiplexed);
+  assert.deepEqual(launch({ ...base, GIT_PREFIX: '', PATH: `${core}:${base.PATH}` }), multiplexed);
+  writeFileSync(multiplexer, `${readFileSync(multiplexer, 'utf8')}# changed target bytes\n`);
+  assert.notEqual(
+    launch(base).runtime,
+    multiplexed.runtime,
+    'a shim target replacement invalidates prior runtime evidence'
+  );
   writeFileSync(join(f.root, 'package.json'), '{"scripts":{"env":"echo bypass"}}');
   assert.throws(() => lifecycleCommand(f.root, base, probe), /built-in env/u);
   writeFileSync(join(f.root, 'package.json'), '{"scripts":{"preenv":"echo unexpected"}}');

@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { emptySettlement } from '../../../shared/economy';
 import { civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
-import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   resetWorldExploration,
   setSettlement,
@@ -25,8 +25,9 @@ import {
   selectTownView,
   subscribeTownStore,
 } from '../../../src/runtime/townStore';
+import { setPlayView } from '../../../src/ui/uiUtils';
 
-const network = NetworkManager.getInstance();
+const network = ConnectionManager.getInstance();
 let dispose: () => void;
 function pilot() {
   const player = PlayerManager.getInstance().getLocalPlayer();
@@ -50,7 +51,7 @@ beforeEach(() => {
   if (current) {
     closeGameOverlay(current);
   }
-  document.body.classList.add('in-play');
+  setPlayView(true);
   const player = PlayerManager.getInstance().createLocalPlayer('hauler');
   player.ship.position = { x: 40, y: 0 };
   player.score = 100;
@@ -64,7 +65,7 @@ afterEach(() => {
   if (current) {
     closeGameOverlay(current);
   }
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   resetWorldExploration();
   vi.restoreAllMocks();
 });
@@ -119,7 +120,7 @@ test('boarding rejects dead, exploding, travelling and out-of-range pilots', () 
   player.ship.position = { x: 1_000_000, y: 0 };
   expect(canEnterTownStore()).toBe(false);
   player.ship.position = { x: 0, y: 0 };
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   expect(openTownStore()).toBe(false);
 });
 
@@ -211,13 +212,13 @@ test('unmount retires keyboard and result subscriptions, resets state and suppor
   const unsubscribe = subscribeTownStore(listener);
   try {
     openTownStore();
-    applyTownStoreResult('Pending');
+    applyTownStoreResult({ message: 'Pending' });
     openGameOverlay('inventory');
     expect(readTownStoreView().status).toBe('');
     openTownStore();
-    window.dispatchEvent(new Event('playViewOff'));
+    setPlayView(false);
     expect(getOpenGameOverlay()).toBeNull();
-    document.body.classList.add('in-play');
+    setPlayView(true);
     expect(openTownStore()).toBe(true);
     dispose();
     dispose();

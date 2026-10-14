@@ -3,7 +3,6 @@ import { createHeightfield, sampleGradient } from '../../../shared/heightfield';
 import { TERRAIN } from '../../../shared/terrainConfig';
 import { ensureTerrain } from '../../../shared/terrainField';
 import { PALETTE, VISUAL } from '../../../src/constants';
-import { HAULER_TETHER_COLOR } from '../../../src/entities/ship/shipRenderer';
 import {
   contourLaserTick,
   contourLaserTickInto,
@@ -156,7 +155,6 @@ describe('contour lasers stay a terrain blush, not a new authority path', () => 
 
   test('cream terrain response stays subordinate to a short bolt', () => {
     expect(PALETTE.LOOT).toBe('#E8D5A3');
-    expect(PALETTE.LOOT).toBe(HAULER_TETHER_COLOR);
     expect(VISUAL.CONTOUR_LASER_LENGTH).toBeLessThanOrEqual(2 * VISUAL.LASER_LENGTH);
     expect(VISUAL.CONTOUR_LASER_STROKE_WIDTH).toBeLessThanOrEqual(VISUAL.LASER_STROKE_WIDTH);
     expect(VISUAL.CONTOUR_LASER_ALPHA).toBeGreaterThan(0);

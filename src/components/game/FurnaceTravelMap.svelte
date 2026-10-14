@@ -63,6 +63,22 @@
             <polyline points={route.points} />
           {/each}
         </svg>
+        {#each layout.pilots as pilot (pilot.id)}
+          <span
+            class={['furnace-travel-pilot', { local: pilot.local }]}
+            style:left={`${pilot.position.x}px`}
+            style:top={`${pilot.position.y}px`}
+            title={`${pilot.name}${pilot.local ? ' (you)' : ''}${pilot.offMap ? ` (off chart to the ${pilot.directionName})` : ''}`}
+            data-pilot-id={pilot.id}
+            data-off-chart={pilot.offMap}
+          >
+            <span aria-hidden="true">{pilot.offMap ? pilot.direction : '▲'}</span>
+            <span class="pilot-name">
+              {pilot.name}{pilot.local ? ' (you)' : ''}{pilot.offMap ? ' (off chart)' : ''}
+              {#if pilot.offMap}<span class="sr-only"> to the {pilot.directionName}</span>{/if}
+            </span>
+          </span>
+        {/each}
         {#each layout.sites as site (site.id)}
           {@const current = site.id === view.source.id}
           {@const label = current ? `${site.name} — You are here` : `Travel to ${site.name}`}
@@ -173,6 +189,24 @@
     border-color: var(--primary);
     opacity: 1;
     cursor: default;
+  }
+  .furnace-travel-pilot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    color: #7ed8f0;
+    z-index: 2;
+    pointer-events: none;
+    font-size: 13px;
+    text-shadow: 0 1px 3px var(--background);
+  }
+  .furnace-travel-pilot.local {
+    color: var(--primary);
+  }
+  .pilot-name {
+    position: absolute;
+    left: 14px;
+    white-space: nowrap;
+    font-size: 10px;
   }
   .furnace-travel-symbol {
     font-size: 23px;

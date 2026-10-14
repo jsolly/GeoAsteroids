@@ -7,6 +7,7 @@ import {
 } from '../../../src/entities/roid/roidRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
+import { asteroidRow } from '../../support/asteroid-row';
 
 afterEach(() => {
   clearAsteroidShatters();
@@ -28,7 +29,7 @@ test('a latch shakes only the drawn asteroid and settles after a quarter second'
   );
   const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
   const placement = vi.spyOn(ctx, 'translate');
-  const roid = new Roid({ x: 100, y: 50 }, 20, 'cargo');
+  const roid = new Roid(asteroidRow({ x: 100, y: 50 }, 20, 'cargo'));
   const ship = new Ship({ position: { x: 0, y: 0 } });
   const pose = { ...roid.position };
   const velocity = { ...roid.velocity };

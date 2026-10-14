@@ -82,6 +82,7 @@ export function playSpawnFlyIn(): void {
     const ship = PlayerManager.getInstance().getLocalPlayer()?.ship;
     const elapsed = now - started;
     if (!ship || elapsed >= HOLD_MS + DIVE_MS + FADE_MS) {
+      ship?.beginHullAssembly();
       stopSpawnFlyIn();
       return;
     }

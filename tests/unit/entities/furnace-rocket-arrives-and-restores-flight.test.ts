@@ -1,7 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { furnaceTravelPose } from '../../../shared/furnaceTravel';
 import { Player } from '../../../src/entities/player/Player';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -10,7 +9,6 @@ test('a furnace rocket follows server time despite clock skew and accepts its ar
     id: 'pilot',
     name: 'Pilot',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const transit = {
     sourceId: 'town-square',
@@ -53,7 +51,6 @@ test.each(['snapshot', 'tick'] as const)(
       id: 'boarding-pilot',
       name: 'Boarding pilot',
       type: 'local',
-      input: new MockPlayerInput(),
     });
     player.ship.position = { x: 2250, y: 100 };
     player.ship.velocity = { x: 2, y: 1 };

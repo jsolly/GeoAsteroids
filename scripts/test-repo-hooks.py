@@ -241,5 +241,206 @@ cp "$BOOTSTRAP_PAYLOAD" "$2"
         self.assertFalse(self.downloads.exists())
 
 
+class SessionBootstrap(unittest.TestCase):
+    """Run the complete setup script with isolated install/provisioning boundaries."""
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name).resolve()
+        scripts = self.root / 'scripts'
+        scripts.mkdir()
+        for name in ('setup-agent-environment.sh', 'repo-python.sh'):
+            shutil.copy2(SOURCE / 'scripts' / name, scripts / name)
+        self.bin = self.root / 'bin'
+        self.bin.mkdir()
+        for name in ('bash', 'dirname', 'touch', 'rm'):
+            (self.bin / name).symlink_to(shutil.which(name))
+        (self.bin / 'python3').symlink_to(sys.executable)
+        self.log = self.root / 'commands.jsonl'
+        self.env = {k: v for k, v in os.environ.items() if not k.startswith(('GIT_', 'PYTHON', 'MISE_', 'npm_', 'NPM_'))}
+        self.env.update(HOME=str(self.root), PATH=str(self.bin), SETUP_LOG=str(self.log))
+        for name, value in {'.mise.toml': '[tools]\nnode = "24"\n', '.nvmrc': '24\n',
+                            '.npmrc': 'yes=false\n', 'package.json': '{"name":"fixture","version":"1.0.0"}\n',
+                            'package-lock.json': '{"lockfileVersion":3}\n'}.items():
+            (self.root / name).write_text(value)
+        self.write_script(scripts / 'repo-hooks.py', '''import os, sys
+with open(os.environ['SETUP_LOG'], 'a') as log:
+    log.write(__import__('json').dumps(['hooks', *sys.argv[1:]]) + '\\n')
+sys.exit(int(os.environ.get('HOOK_FAILURE', '0')))
+''')
+        self.write_script(self.bin / 'uname', '#!/usr/bin/env bash\necho Linux\n')
+        self.write_script(self.bin / 'pkg-config', '#!/usr/bin/env bash\nexit 0\n')
+        self.write_script(self.bin / 'mise', '''#!/usr/bin/env python3
+import json, os, sys
+with open(os.environ['SETUP_LOG'], 'a') as log:
+    log.write(json.dumps(['mise', *sys.argv[1:]]) + '\\n')
+if sys.argv[1] == 'exec':
+    assert os.environ.get('MISE_EXEC_AUTO_INSTALL') == 'false' or sys.argv[3:] == ['npm', 'ci']
+    os.execvp(sys.argv[3], sys.argv[3:])
+sys.exit(0)
+''')
+        self.write_script(self.bin / 'node', '''#!/usr/bin/env python3
+import os
+print(os.environ.get('FIXTURE_RUNTIME', '["v24.16.0","137","linux","x64"]'))
+''')
+        self.write_script(self.bin / 'npm', '''#!/usr/bin/env python3
+import json, os, pathlib, sys
+with open(os.environ['SETUP_LOG'], 'a') as log:
+    log.write(json.dumps(['npm', *sys.argv[1:]]) + '\\n')
+if sys.argv[1] == '--version':
+    print('11.12.0')
+elif sys.argv[1] == 'ci':
+    if os.environ.get('INSTALL_FAILURE'):
+        sys.exit(23)
+    packages = {}
+    for name in ('node_modules/fixture', 'node_modules/fixture/node_modules/transitive'):
+        path = pathlib.Path(name)
+        path.mkdir(parents=True, exist_ok=True)
+        (path / 'package.json').write_text('{"version":"1.0.0"}\\n')
+        packages[name] = {'version': '1.0.0'}
+    pathlib.Path('node_modules/.package-lock.json').write_text(json.dumps({'packages': packages}))
+elif sys.argv[1] == 'ls':
+    sys.exit(int(os.environ.get('TREE_FAILURE', '0')))
+else:
+    sys.exit('Unexpected npm operation')
+''')
+
+    @staticmethod
+    def write_script(path, text):
+        path.write_text(text)
+        path.chmod(0o755)
+
+    def setup(self, *args, extra=None):
+        return subprocess.run([str(self.bin / 'bash'), 'scripts/setup-agent-environment.sh', *args],
+                              cwd=self.root, env={**self.env, **(extra or {})}, text=True, capture_output=True)
+
+    def assert_ready(self, result):
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def commands(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def tree(self):
+        return {str(p.relative_to(self.root)): (p.read_bytes(), p.stat().st_mtime_ns)
+                for p in (self.root / 'node_modules').rglob('*') if p.is_file()}
+
+    def test_fresh_hook_installs_and_unchanged_resume_preserves_dependencies(self):
+        (self.root / '.env').write_text('fixture setting\n')
+        self.assert_ready(self.setup('--session-hook'))
+        receipt = self.root / 'node_modules/.georoids-setup.json'
+        self.assertTrue(receipt.is_file())
+        before = self.tree()
+        self.log.write_text('')
+        self.assert_ready(self.setup('--session-hook'))
+        self.assertEqual(self.tree(), before)
+        self.assertEqual((self.root / '.env').read_text(), 'fixture setting\n')
+        self.assertIn(['npm', 'ls', '--all', '--include=dev', '--include=optional', '--include=peer'], self.commands())
+        self.assertNotIn(['npm', 'ci'], self.commands())
+        self.assertNotIn(['mise', 'install'], self.commands())
+        self.assertNotIn(['mise', 'trust', str(self.root / '.mise.toml')], self.commands())
+        self.assertEqual(self.commands()[0][0:2], ['hooks', 'verify'])
+
+    def test_changed_inputs_refuse_then_explicit_setup_repairs(self):
+        self.assert_ready(self.setup('--session-hook'))
+        for name in ('package-lock.json', 'package.json', '.mise.toml', '.npmrc', '.nvmrc'):
+            with self.subTest(name=name):
+                path = self.root / name
+                path.write_text(path.read_text() + '\n')
+                before = self.tree()
+                self.log.write_text('')
+                result = self.setup('--session-hook')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('npm run dev:kill', result.stderr)
+                self.assertEqual(self.tree(), before)
+                self.assertNotIn(['npm', 'ci'], self.commands())
+                self.assert_ready(self.setup())
+                self.assertIn(['npm', 'ci'], self.commands())
+                self.assert_ready(self.setup('--session-hook'))
+
+    def test_incomplete_or_changed_installed_tree_refuses_without_reinstall(self):
+        self.assert_ready(self.setup())
+        changes = [
+            ('node_modules/.georoids-setup.json', None),
+            ('node_modules/.georoids-setup.json', '{'),
+            ('node_modules/.package-lock.json', None),
+            ('node_modules/fixture/node_modules/transitive/package.json', None),
+            ('node_modules/fixture/node_modules/transitive/package.json', '{"version":"1.0.1"}'),
+        ]
+        for name, replacement in changes:
+            with self.subTest(name=name, replacement=replacement):
+                path = self.root / name
+                if replacement is None:
+                    path.unlink()
+                else:
+                    path.write_text(replacement)
+                before = self.tree()
+                self.log.write_text('')
+                result = self.setup('--session-hook')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.tree(), before)
+                self.assertNotIn(['npm', 'ci'], self.commands())
+                self.assert_ready(self.setup())
+
+    def test_changed_runtime_or_invalid_dependency_graph_refuses_warm_resume(self):
+        self.assert_ready(self.setup())
+        before = self.tree()
+        for extra in ({'FIXTURE_RUNTIME': 'changed runtime'}, {'TREE_FAILURE': '1'}):
+            with self.subTest(extra=extra):
+                self.log.write_text('')
+                result = self.setup('--session-hook', extra=extra)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.tree(), before)
+                self.assertNotIn(['npm', 'ci'], self.commands())
+
+    def test_failed_explicit_repair_invalidates_receipt_and_failure_propagates(self):
+        self.assert_ready(self.setup())
+        result = self.setup(extra={'INSTALL_FAILURE': '1'})
+        self.assertEqual(result.returncode, 23)
+        self.assertFalse((self.root / 'node_modules/.georoids-setup.json').exists())
+        self.log.write_text('')
+        self.assertNotEqual(self.setup('--session-hook').returncode, 0)
+        self.assertNotIn(['npm', 'ci'], self.commands())
+        self.assert_ready(self.setup())
+        self.assert_ready(self.setup('--session-hook'))
+
+    def test_failed_fresh_install_or_postinstall_validation_never_gets_receipt(self):
+        for extra in ({'INSTALL_FAILURE': '1'}, {'TREE_FAILURE': '1'}):
+            with self.subTest(extra=extra):
+                result = self.setup('--session-hook', extra=extra)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.root / 'node_modules/.georoids-setup.json').exists())
+
+    def test_invalid_arguments_fail_before_hooks_or_provisioning(self):
+        for args in (('--unknown',), ('--session-hook', '--session-hook'), ('--session-hook=1',)):
+            with self.subTest(args=args):
+                result = self.setup(*args)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('Usage:', result.stderr)
+                self.assertFalse(self.log.exists())
+                self.assertFalse((self.root / 'node_modules').exists())
+
+    def test_missing_lockfile_or_shared_dependency_tree_fails_before_provisioning(self):
+        lock = self.root / 'package-lock.json'
+        lock.unlink()
+        self.assertNotEqual(self.setup('--session-hook').returncode, 0)
+        self.assertFalse(self.log.exists())
+        lock.write_text('{"lockfileVersion":3}\n')
+        shared = self.root / 'shared-dependencies'
+        shared.mkdir()
+        sentinel = shared / '.georoids-setup.json'
+        sentinel.write_text('another checkout receipt\n')
+        (self.root / 'node_modules').symlink_to(shared)
+        for args in ((), ('--session-hook',)):
+            self.assertNotEqual(self.setup(*args).returncode, 0)
+            self.assertFalse(self.log.exists())
+            self.assertEqual(sentinel.read_text(), 'another checkout receipt\n')
+
+    def test_untrusted_hook_bundle_fails_before_provisioning(self):
+        result = self.setup('--session-hook', extra={'HOOK_FAILURE': '17'})
+        self.assertEqual(result.returncode, 17)
+        self.assertEqual(len(self.commands()), 1)
+        self.assertFalse((self.root / 'node_modules').exists())
+
+
 if __name__ == '__main__':
     unittest.main()

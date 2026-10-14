@@ -1,16 +1,13 @@
 import { expect, test } from 'vitest';
-import { DEBUG, ROID, WIRE_PALETTE } from '../../../shared/constants/gameplay';
+import { ROID, WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { PALETTE, VISUAL } from '../../../src/constants';
 import { Player } from '../../../src/entities/player/Player';
 import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
-import { getLaserColor, hexToRgba, laserBoltColor } from '../../../src/utils/colorUtils';
-import { isDebugMode } from '../../../src/utils/debugUtils';
+
+import { hexToRgba, laserBoltColor } from '../../../src/utils/colorUtils';
 
 test('laser colors never use white', () => {
-  expect(getLaserColor()).toBe(PALETTE.LASER_LOCAL);
-  expect(getLaserColor().toLowerCase()).not.toBe('#ffffff');
   expect(laserBoltColor(PALETTE.LASER_LOCAL, 0)).toBe(PALETTE.LASER_LOCAL);
   expect(laserBoltColor(PALETTE.LASER_LOCAL, 1)).toBe(PALETTE.DANGER);
   expect(laserBoltColor(PALETTE.LASER_LOCAL, 1).toLowerCase()).not.toBe('#ffffff');
@@ -21,13 +18,11 @@ test('players and ships use the role palette instead of white', () => {
     id: 'p-local',
     name: 'Local',
     type: 'local',
-    input: new MockPlayerInput(),
   });
   const remote = new Player({
     id: 'p-remote',
     name: 'Remote',
     type: 'remote',
-    input: new MockPlayerInput(),
   });
 
   expect(local.color).toBe(PALETTE.LOCAL);
@@ -52,9 +47,4 @@ test('roid stroke weights follow four size tiers', () => {
   expect(getRoidStrokeWidth(ROID.SIZE)).toBe(VISUAL.ROID_STROKE_LARGE);
   expect(getRoidStrokeWidth(ROID.SIZE * 0.5)).toBe(VISUAL.ROID_STROKE_MEDIUM);
   expect(getRoidStrokeWidth(ROID.SIZE * 0.2)).toBe(VISUAL.ROID_STROKE_SMALL);
-});
-
-test('default play path keeps debug chrome gated off', () => {
-  expect(DEBUG.ENABLED).toBe(false);
-  expect(isDebugMode()).toBe(false);
 });

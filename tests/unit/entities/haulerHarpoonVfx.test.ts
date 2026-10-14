@@ -1,42 +1,12 @@
 import { expect, test } from 'vitest';
 import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
 import { Ship } from '../../../src/entities/ship/Ship';
-import {
-  canDrawHaulerHarpoon,
-  drawHaulerHarpoonVfx,
-  HAULER_TETHER_COLOR,
-  HAULER_TETHER_TIP_COLOR,
-  harpoonTetherStyle,
-} from '../../../src/entities/ship/shipRenderer';
-
-test('tether VFX is Hauler-only while latched', () => {
-  expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTargetId: 'rock-1' })).toBe(true);
-  expect(canDrawHaulerHarpoon({ kitId: 'scout', harpoonTargetId: 'rock-1' })).toBe(false);
-  expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTargetId: null })).toBe(false);
-  expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTargetId: null })).toBe(false);
-});
-
-test('PASS bar cream line and amber tip are exact hex', () => {
-  expect(HAULER_TETHER_COLOR).toBe('#E8D5A3');
-  expect(HAULER_TETHER_TIP_COLOR).toBe('#FDE68A');
-});
+import { drawHaulerHarpoonVfx, harpoonTetherStyle } from '../../../src/entities/ship/shipRenderer';
 
 test('tethers stay solid and hairline in screen space at every zoom', () => {
   expect(harpoonTetherStyle().dash).toEqual([]);
   expect(harpoonTetherStyle().lineWidth).toBe(1.5);
   expect(harpoonTetherStyle().tipRadius).toBe(3.5);
-});
-
-test('tether VFX can resolve a latched asteroid from the shared field', () => {
-  publishHarpoonField([
-    {
-      id: 'rock-1',
-      position: { x: 80, y: 0 },
-      velocity: { x: 0, y: 0 },
-      health: 100,
-    },
-  ]);
-  expect(canDrawHaulerHarpoon({ kitId: 'hauler', harpoonTargetId: 'rock-1' })).toBe(true);
 });
 
 function paintRecorder(): {
@@ -203,4 +173,14 @@ test('non-Hauler draw is a no-op even if a latch is spoofed', () => {
   scout.harpoonTargetId = 'rock-1';
   drawHaulerHarpoonVfx(ctx, scout, 0, 0, { x: 0, y: 0 });
   expect(calls).toEqual([]);
+});
+
+test.each(['scout', 'unlatched'] as const)('%s never paints a tow cable', (kind) => {
+  publishHarpoonField([{ id: 'rock', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 } }]);
+  const ship = new Ship({ kitId: kind === 'scout' ? 'scout' : 'hauler' });
+  ship.harpoonTargetId = kind === 'scout' ? 'rock' : null;
+  const { ctx, strokes, fills } = paintRecorder();
+  drawHaulerHarpoonVfx(ctx, ship, 0, 0, { x: 0, y: 0 });
+  expect(strokes).toEqual([]);
+  expect(fills).toEqual([]);
 });

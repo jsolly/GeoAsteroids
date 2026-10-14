@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
-
 import { initializePlayfieldSelection } from '../../../src/input/playfieldSelection';
+import { setPlayView } from '../../../src/ui/uiUtils';
 
 beforeEach(() => {
   initializePlayfieldSelection();
-  document.body.classList.add('in-play');
+  setPlayView(true);
 });
 
 afterEach(() => {
   document.getSelection()?.removeAllRanges();
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   document.body.replaceChildren();
 });
 
@@ -23,7 +23,7 @@ test('playfield selectstart is cancelled during flight', () => {
 });
 
 test('title-screen selectstart still works before flight', () => {
-  document.body.classList.remove('in-play');
+  setPlayView(false);
   const hint = document.createElement('p');
   hint.textContent = 'Always thrust';
   document.body.append(hint);

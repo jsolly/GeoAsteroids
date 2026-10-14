@@ -29,7 +29,7 @@ export function parseHaulerUtilityId(value: unknown): HaulerUtilityId {
   return isHaulerUtilityId(value) ? value : DEFAULT_HAULER_UTILITY;
 }
 
-export function parseScoutUtilityId(value: unknown): ScoutUtilityId {
+function parseScoutUtilityId(value: unknown): ScoutUtilityId {
   return isScoutUtilityId(value) ? value : DEFAULT_SCOUT_UTILITY;
 }
 

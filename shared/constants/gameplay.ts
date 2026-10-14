@@ -28,7 +28,6 @@ const EXPLODE_DURATION_FRAMES = 18;
 
 export const SHIP = {
   // Movement
-  TURN_SPEED: 450, // degrees per second
   THRUST: 5 * GAME.MOTION_SCALE * GAME.PLAYER_SPEED_SCALE,
   MAX_VELOCITY: 2 * GAME.MOTION_SCALE * GAME.PLAYER_SPEED_SCALE,
   SIZE: 30, // Scout / classic hull height in pixels. Hauler uses kit size.
@@ -64,7 +63,6 @@ export const DAMAGE = {
 // ============================================================================
 export const LASER = {
   SPEED: 300 * GAME.MOTION_SCALE, // pixels per second
-  MAX_COUNT: 200, // limit of lasers that can exist
   /** World units a shot travels before it expires; the server enforces the same reach. */
   MAX_TRAVEL_DISTANCE: 800,
   EXPLODE_DURATION: 0.1, // seconds
@@ -78,7 +76,6 @@ export const LASER = {
 // ============================================================================
 export const ROID = {
   // Movement and size
-  SPEED: 50 * GAME.MOTION_SCALE, // starting speed in pixels per second
   /** Server asteroid velocity uses pixels per 60 Hz tick, unlike SPEED. */
   SERVER_VELOCITY_MAX: 4 * GAME.MOTION_SCALE,
   // Generated deposits: most drift slowly, small rocks drift and spin faster,
@@ -110,8 +107,6 @@ export const ROID = {
   METAL_HITS: 3,
   DEPOSIT_JAGGEDNESS_SPREAD: 0.15,
   SIZE: 50, // starting size in pixels
-  VERTICES: 10, // average number of vertices
-  JAGGEDNESS: 0.5, // 0 = smooth, 1 = jagged
 
   // Scoring
   LARGE_MIN_SIZE: 40,
@@ -129,9 +124,7 @@ export const ROID = {
   COLOSSAL_SECTOR_PERIOD: 5,
   COLOSSAL_CORE_EXCLUSION: 2,
 
-  // Spawning (can be overridden by DEBUG.ROIDS.INITIAL_COUNT when in debug mode)
-  // Production density; DEBUG.ROIDS.INITIAL_COUNT may override this only
-  // when debug mode is explicitly enabled.
+  // Initial production field density.
   INITIAL_ROID_COUNT: 20,
 
   // Procedural deposits fill nearby sectors throughout the playable world.
@@ -210,28 +203,4 @@ export const WIRE_PALETTE = {
   REMOTE: '#7DD3FC',
   /** Collectible EO hardware. */
   SATELLITE: '#C4B5FD',
-} as const;
-
-// ============================================================================
-// DEBUG CONFIGURATION
-// ============================================================================
-export const DEBUG = {
-  // Master switch for debug features. Off in the default play path so yellow
-  // DEBUG MODE chrome does not paint in production builds.
-  ENABLED: false,
-
-  SATELLITE_PICKUP: {
-    COUNT: 6,
-  },
-
-  // Roid settings (overrides ROID.INITIAL_ROID_COUNT when in debug mode)
-  ROIDS: {
-    INITIAL_COUNT: 20, // Overrides ROID.INITIAL_ROID_COUNT in debug mode
-    MOVEMENT: false,
-    PLACE_ON_LOCAL_PLAYER: false,
-    ALL_LARGE: true, // Force all generated roids to be large size
-  },
-
-  // Player positioning settings (Affects local and remote players)
-  PLACE_PLAYERS_NEAR_BOUNDARY: false,
 } as const;

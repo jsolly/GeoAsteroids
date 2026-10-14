@@ -5,7 +5,6 @@ import { getTerrainContours } from '../physics/terrain/terrainSession';
 import { hexToRgba } from '../utils/colorUtils';
 import { canvasManager } from './canvasSurface';
 import { createContourQuery } from './contourSpatialIndex';
-import { rotatedViewSize } from './travelCamera';
 
 type ContourSegment = ContourLevel['segments'][number];
 
@@ -23,7 +22,8 @@ export function visibleContourLayers(shipPosition: Position) {
   const levels = getTerrainContours(shipPosition, viewRadius);
   const view = {
     ...shipPosition,
-    ...rotatedViewSize(viewport.width, viewport.height, canvasManager.getCameraRotation()),
+    width: viewport.width,
+    height: viewport.height,
     scale,
     pad,
   };

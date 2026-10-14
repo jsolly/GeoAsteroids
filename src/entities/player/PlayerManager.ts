@@ -1,7 +1,7 @@
 import type { ShipKitId } from '../../../shared-types';
 import { logger } from '../../utils/Logger';
-import { entityFactory } from '../EntityFactory';
 import type { ShipCombatNetwork } from '../ship/shipCombatNetwork';
+import { createPlayer } from './createPlayer';
 import type { Player } from './Player';
 import type { PlayerNetworkPort } from './playerNetworkPort';
 
@@ -42,7 +42,12 @@ class PlayerManager {
   }
 
   public createLocalPlayer(kitId?: ShipKitId): Player {
-    const player = entityFactory.createLocalPlayer('Player', undefined, kitId, this.combatNetwork);
+    const player = createPlayer({
+      name: 'Player',
+      type: 'local',
+      ...(kitId !== undefined ? { kitId: kitId } : {}),
+      combatNetwork: this.combatNetwork,
+    });
     this.localPlayer = player;
     return player;
   }

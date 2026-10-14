@@ -16,36 +16,26 @@ const LOW_HEALTH = DAMAGE.ASTEROID_COLLISION - 5;
 describe.each(SHIP_KINDS)('An asteroid impacts a $kind', ({ options }) => {
   test('at full health it survives and loses one asteroid impact of health', () => {
     const ship = new Ship(options);
-    ship.takeDamage(DAMAGE.ASTEROID_COLLISION, 'asteroid');
+    ship.takeDamage(DAMAGE.ASTEROID_COLLISION);
 
     expect(ship.health).toBe(SHIP.MAX_HEALTH - DAMAGE.ASTEROID_COLLISION);
     expect(ship.exploding).toBe(false);
   });
 
-  test('at low health it explodes on the very same frame, with the cause attached', () => {
+  test('at low health it explodes on the very same frame, without waiting for the server', () => {
     const ship = new Ship(options);
     ship.health = LOW_HEALTH;
-    const explosions: string[] = [];
-    window.addEventListener(
-      'shipExploded',
-      (event) => {
-        explosions.push((event as CustomEvent<{ cause?: string }>).detail.cause ?? '');
-      },
-      { once: true }
-    );
-
-    ship.takeDamage(DAMAGE.ASTEROID_COLLISION, 'asteroid');
+    ship.takeDamage(DAMAGE.ASTEROID_COLLISION);
 
     expect(ship.health).toBe(0);
     expect(ship.exploding).toBe(true);
-    expect(explosions).toEqual(['asteroid']);
   });
 
   test('an exploding ship cannot be hit again, and the explosion resolves in 0.3s', () => {
     const ship = new Ship(options);
     ship.health = LOW_HEALTH;
-    ship.takeDamage(DAMAGE.ASTEROID_COLLISION, 'asteroid');
-    ship.takeDamage(DAMAGE.ASTEROID_COLLISION, 'asteroid');
+    ship.takeDamage(DAMAGE.ASTEROID_COLLISION);
+    ship.takeDamage(DAMAGE.ASTEROID_COLLISION);
 
     expect(ship.health).toBe(0);
     for (let frame = 0; frame < EXPLOSION_FRAMES; frame++) {

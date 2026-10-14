@@ -1,6 +1,7 @@
 import { SHIP_ABILITY } from '../../shared/shipKits';
 import { activeScanners } from '../../shared/surveyScan';
 import type { Position } from '../../shared-types';
+import { PALETTE } from '../constants';
 import { LootField } from '../entities/loot/LootField';
 import { drawLootRelative } from '../entities/loot/lootRenderer';
 import type { Player } from '../entities/player/Player';
@@ -13,21 +14,20 @@ import {
   drawHaulerHarpoonRelative,
   drawLasers,
   drawShipAtPosition,
-  drawShipExplosion,
   drawShipExplosionAtPosition,
   drawThruster,
   drawThrusterAtPosition,
 } from '../entities/ship/shipRenderer';
 import { shouldDrawShipHull } from '../entities/ship/shipUtils';
 import { drawSchematicEquipHint } from '../ui/schematicEquipHint';
-import { getLaserColor } from '../utils/colorUtils';
-import { isDebugMode } from '../utils/debugUtils';
 import { drawBeltEncounters } from './beltRenderer';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { drawCampaign } from './campaignRenderer';
 import { paintOpaqueBackground } from './canvasBackground';
 import { canvasManager } from './canvasSurface';
 import { drawCargoHolds } from './cargoHoldRenderer';
 import { drawCargoOffloads } from './cargoOffloadRenderer';
+import { drawContourBridges } from './contourBridgeRenderer';
 import {
   drawContourLaserTicks,
   type LiveLaserSource,
@@ -35,6 +35,7 @@ import {
 } from './contourLaserRenderer';
 import { drawContourLayers, drawIsoContours, visibleContourLayers } from './contourRenderer';
 import { drawContourTrack } from './contourTrackRenderer';
+import { drawCrewSignals } from './crewSignalRenderer';
 import {
   drawFurnaceFoundations,
   drawFurnaceLabels,
@@ -42,11 +43,15 @@ import {
   drawFurnacesRelative,
 } from './furnaceRenderer';
 import { drawHeadingCue } from './headingCueRenderer';
-import { drawDebugInfo, drawScoreOverlay, drawTextOverlay } from './hud/gameInfo';
+import { drawScoreOverlay } from './hud/gameInfo';
 import { hudLayoutForCanvas } from './hud/hudLayout';
 import { drawLeaderboard } from './hud/leaderboard';
 import { drawMiniMap } from './hud/minimap';
+import { drawWorldRemains } from './remainsRenderer';
 import { drawRicochetCourt } from './ricochetCourtRenderer';
+import { drawRolyPolys } from './rolyPolyRenderer';
+import { drawRouteWaypoints } from './routeWaypoints';
+import { drawShipLighting } from './shipLighting';
 import { drawTerrainSpiders } from './spiderRenderer';
 import { drawStarfield, visibleStarTiles } from './starfield';
 
@@ -107,6 +112,14 @@ function drawWorldLayers(
   if (!currShip.exploding && currShip.health > 0 && !currShip.furnaceTransit) {
     drawContourTrack(currShip.position, currShip.angle, currShip.contourLock);
   }
+  drawShipLighting(
+    currShip.position,
+    allPlayers.map((player) => player.ship)
+  );
+  drawRouteWaypoints(currShip.position);
+  drawContourBridges(currShip.position);
+  drawWorldRemains(currShip.position);
+  drawRolyPolys(currShip.position);
   drawRicochetCourt(currShip.position);
   drawTerrainSpiders(currShip.position, currPlayer.id, currShip.health > 0 && !currShip.exploding);
 
@@ -144,7 +157,7 @@ function drawWorldLayers(
   drawLootRelative(currShip, loot);
   drawSatellitePickups(satellitePickups, currShip.position);
 
-  const laserColor = getLaserColor();
+  const laserColor = PALETTE.LASER_LOCAL;
 
   for (const player of allPlayers) {
     const isLocal = player.id === localId;
@@ -158,11 +171,7 @@ function drawWorldLayers(
     const shipColor = isLocal ? currPlayer.color : player.color;
 
     if (ship.exploding) {
-      if (isLocal) {
-        drawShipExplosion(currShip, shipColor);
-      } else {
-        drawShipExplosionAtPosition(ship, currShip.position, shipColor);
-      }
+      drawShipExplosionAtPosition(ship, currShip.position, shipColor);
     } else if (shouldDrawShipHull(ship)) {
       drawShipAtPosition(
         ship,
@@ -187,6 +196,8 @@ function drawWorldLayers(
     }
   }
 
+  drawCampaign(currShip.position, Date.now() + currShip.furnaceClockOffsetMs);
+  drawCrewSignals(allPlayers, currShip.position);
   drawCargoHolds(allPlayers, currShip.position);
   drawCargoOffloads(allPlayers, currShip.position);
 
@@ -213,14 +224,7 @@ function drawWorldLayers(
   }
 }
 
-export function drawGame(
-  currPlayer: Player,
-  currRoidBelt: RoidBelt,
-  currScore: number,
-  textAlpha: number,
-  text: string,
-  allPlayers: Player[]
-): void {
+export function drawGame(currPlayer: Player, currRoidBelt: RoidBelt, allPlayers: Player[]): void {
   const currShip = currPlayer.ship;
   const ctx = canvasManager.getContext();
   const canvas = canvasManager.getCanvas();
@@ -229,7 +233,6 @@ export function drawGame(
     return;
   }
 
-  canvasManager.followTravel(currShip);
   const viewport = canvasManager.getViewportSize();
   canvasManager.easeZoomToward(
     scanCameraZoom(currShip, viewport.width, viewport.height),
@@ -254,14 +257,7 @@ export function drawGame(
   const otherPlayers = allPlayers.filter((player) => player.id !== localId);
   drawMiniMap(ctx, hudLayout, currShip, roids, loot, satellitePickups, otherPlayers);
 
-  drawScoreOverlay(ctx, hudLayout, viewport, currScore);
-
-  if (text && textAlpha > 0) {
-    drawTextOverlay(ctx, hudLayout, viewport, text, textAlpha);
-  }
+  drawScoreOverlay(ctx, hudLayout, viewport, currPlayer);
 
   drawLeaderboard(ctx, hudLayout, allPlayers, currPlayer.id);
-
-  const roidCount = currRoidBelt.roids.length;
-  drawDebugInfo(ctx, viewport, roidCount, isDebugMode());
 }

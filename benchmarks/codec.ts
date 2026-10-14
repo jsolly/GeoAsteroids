@@ -12,6 +12,8 @@ import type { Measurement } from './results';
 import { assertSelectedSnapshotState, SELECTED_SNAPSHOT_CONTRACT } from './snapshot-state';
 
 const FULL_FIXTURE_FIELDS = {
+  cooperativeActive: false,
+  campaign: false,
   asteroids: true,
   beltRecovery: false,
   civicModules: false,
@@ -26,6 +28,8 @@ const FULL_FIXTURE_FIELDS = {
   serverTime: false,
   settlement: true,
   spiderField: false,
+  rolyPolys: false,
+  contourBridges: false,
   terrainSeed: true,
 } satisfies Record<keyof ServerGameSnapshot, boolean>;
 const FULL_FIXTURE_KEYS = Object.entries(FULL_FIXTURE_FIELDS)

@@ -32,17 +32,6 @@ export function velocityFromDelta(prev: Position, next: Position): Velocity {
   };
 }
 
-export function isWithinCollectRange(
-  ship: Position,
-  pickup: Position,
-  shipRadius: number,
-  pickupRadius: number,
-  slack = 0
-): boolean {
-  const limit = shipRadius + pickupRadius + slack;
-  return Math.hypot(pickup.x - ship.x, pickup.y - ship.y) <= limit;
-}
-
 export function spawnRingPosition(
   index: number,
   count: number,
