@@ -317,7 +317,7 @@ playable production behavior.
 | Player pings/rescue signals | Implemented as distinct crewAction messages with bounded signals and persisted rescue deadlines. | `crewRescue`, `CrewControls`, `crewSignalRenderer`, owned-message/rescue and snapshot tests. |
 
 | Furnace pinch/drag and shortfall popup | Implemented; covered by the furnace travel and Build rows above. | This feature resolves its prior coverage handoff. Gradual cargo banking landed separately and is covered by the cargo dropoff row; travelling tow/probe launches remain covered by the Scout and Hauler inventory rows. |
-| Infrastructure, snapshot compression/sequence, disk workers, log internals | Non-player-facing internals excluded; player-visible connection/restart limitations are covered. | `shared/epochField.ts`, snapshot DTO/precision/protocol, `server/world/WorldPersistence.ts`; developer operational docs own maintenance. |
+| Infrastructure, snapshot compression/sequence, disk workers, log internals | Non-player-facing internals excluded; player-visible connection/restart limitations are covered. | `shared/epochField.ts`, snapshot DTO/precision/protocol, `server/world/worldPersistence.ts`; developer operational docs own maintenance. |
 
 ## Audit evidence home
 

@@ -8,7 +8,7 @@ Browser benchmarks and frame measurements are manual tools outside `npm run gate
 and CI code-test validation. Playwright remains for those tools. Manual test-runner benchmark modes and frame measurements use the common-Git
 heavyweight queue; code checks can overlap across different worktrees. The same
 checkout excludes overlapping validation. Install Chromium for browser tools with
-`npx --no-install playwright install chromium`.
+`npx --no-install playwright install chromium`. Wiki media uses node-canvas and Python with `scripts/wiki-media-requirements.txt` (`WIKI_MEDIA_PYTHON`), without a browser.
 
 ## Run a measurement
 

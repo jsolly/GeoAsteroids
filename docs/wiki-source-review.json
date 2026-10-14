@@ -4,11 +4,11 @@
     ".prettierrc.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
     "astro.config.ts": "sha256:add972d8f27001af0742bec72153a349a9eae0beda5d881b10ee4b0a5a390cea",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
-    "docs/diagnostics.md": "sha256:40f6b5c47eb026562093eda5a7407b40d3575804edf9d790928572813e615a69",
+    "docs/diagnostics.md": "sha256:671c1287c5d6a44274d61cfd4ac5836112105bb31b8aaf0c8ddc13064ea2b409",
     "docs/protocol/snapshot-v3.md": "sha256:2f69308fa360523e5d4e3efe54bc8603d29bbab68a7d79c183cc5ab445a4bdaf",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:58bd74186d55530fea072e67c41de64a391b48a83f0c1580150b1c93a44081ac",
+    "package.json": "sha256:d76b3d1f278c239ed4fb23b3294e80a79e3297e52c35ccf72b63cc693a0c1a2a",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -57,17 +57,17 @@
     "public/wiki/media/survival.png": "sha256:cb90006f39af1cdbe46ec2de2455722049fbf19fb64fc412a0cdd7f40de3dda6",
     "public/wiki/media/terrain.gif": "sha256:7472aa49b2c6b860d7b790e3c2bc9d83c986a04c2604b85c48e62aee1642579e",
     "public/wiki/media/terrain.png": "sha256:45e89a0f083c9c619b195543040ffabf80f4427a04e38e9a92c95fe4807d8133",
-    "scripts/client-build.ts": "sha256:f3b3a08ce89986fe61ab554dde277df1b87ed7f62898fbcabfc7f858cf1e74c3",
+    "scripts/client-build.ts": "sha256:b62683bd1f0983a8b9b2075403faf704aed0a0297d9318946bdb2138ed43146c",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
     "scripts/wiki-check.ts": "sha256:e80695a318d70dba90376b8c2cec4451f5ea43cb98450f35aed505a60e6e1434",
     "scripts/wiki-content.ts": "sha256:40bb30338736ad8c274a558b58181b645b0c24d568a2e2aabc0d72415b308e44",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
     "scripts/wiki-media-requirements.txt": "sha256:5dd5a7db938c69c025039265a023c0253f450704efd947dd579e6958a14c964d",
-    "scripts/wiki-media.ts": "sha256:28e2d722442538e6794c5071e4521204d5f79277470687da954837d6bbda2e62",
+    "scripts/wiki-media.ts": "sha256:daec9b8c2a1cc8c764304f3ff7cd25f382df982553d5abb7ef5a8924e731ade6",
     "scripts/wiki-satellite-demo.ts": "sha256:7ecaae18ab604448b3706caab776aaf48e7f4b18fc5781e97cae2838fca52f88",
     "server.ts": "sha256:1847341c2cd9286dc2a2ef87693cdb199d290d58f16a3a195c4e34d158c24125",
-    "server/communication/MessageHandler.ts": "sha256:2934d27025bc7277021bf1fc136f9bc7fb4c71e3697a2b3f4d8902f029814d15",
+    "server/communication/MessageHandler.ts": "sha256:947a399c612ef0b23876df2bde1998f1393989a9fc9b5d29037691cfb7594fec",
     "server/communication/WebSocketCore.ts": "sha256:824dcee22c88aadaaa97a372aaf955ac4094374d6dc7e48af7455d6caadaecf8",
     "server/communication/clientCommandDecoder.ts": "sha256:fa3dee633beb27d908a9b5632de707bfe9811b1ebfcd3072c0a7577bf4525228",
     "server/communication/connectionAdmission.ts": "sha256:a2a9327cb76fedd362cc156431b31c5d648a0dc222b44b1f87558acc56d5910a",
@@ -103,7 +103,7 @@
     "server/world/worldPersistence.ts": "sha256:0846eb3503a381325733e295f7541760baf03c5d7cf1b9e64db2248c1bfba38c",
     "server/world/worldStoreWorker.ts": "sha256:10691d33041b176ff3a78464a58eab107990ac70f38339cadf521524748cc2c7",
     "server/world/worldStoreWorkerProtocol.ts": "sha256:52c4ccd90564a3d0eb63a800d87d731817cbd5825eba1c77ea2b4e8ce48e08dd",
-    "shared-types.ts": "sha256:c3b0322d87c7a9ab639b75bb0f306a143e2bd2cfad4c48e7bd1cf4af521b91a9",
+    "shared-types.ts": "sha256:d29e281501ae57f210b788db1dcd4f3781be5f2edbabb76d9de1a3a6efec8dcb",
     "shared/asteroidBelt.ts": "sha256:94d55e4288a9d968066ac05f666ae0cfe757739166a00ff1dd7a368339378b49",
     "shared/asteroidBoost.ts": "sha256:98594cb2fc30bac61c5a7ce16e9015c9aeb2c5517caa9bbe05711991dbae5b9c",
     "shared/asteroidMaterials.ts": "sha256:fcdc8ed77c790da388f773cb55f54bf890562df76acc44d9bb2b5c2e41cab84b",
@@ -5024,6 +5024,77 @@
       "owners": {
         "public/wiki/media/manifest.json": "terrain"
       }
+    },
+    {
+      "note": "Reviewed W4 license/build metadata, diagnostic ownership, current asteroid capability constant and removal of the obsolete shot-ack admission flag; correlated accepted-shot evidence is retained. Gameplay and all eleven article bodies remain unchanged. The real-engine Scout sharing and Hauler two-pilot 540-point delivery proofs ran during two reproducible Mac preview renders; all 21 output files match the unchanged W3 generator preview, and the reviewed Linux baseline is retained. Inspected Scout, Hauler, movement and terrain posters and the Linux movement/terrain frame contact sheet. Forty-two smoke contracts and four isolated error-reporting faults passed after restoration; missing Scout payment fails the real-engine proof, and encoder failure leaves no temporary media directory. Effective strict options and protected instructions are unchanged. Prior desktop/mobile Wiki evidence remains applicable to unchanged interfaces. Full gate and Linux media verification remain publication requirements and are not claimed here.",
+      "sources": [
+        "docs/diagnostics.md",
+        "package.json",
+        "scripts/client-build.ts",
+        "scripts/wiki-media.ts",
+        "server/communication/MessageHandler.ts",
+        "shared-types.ts"
+      ],
+      "topics": [
+        "asteroids",
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "hauler",
+        "hud-network",
+        "loot-growth",
+        "satellites",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": [
+        "cargo",
+        "hauler",
+        "loot",
+        "movement",
+        "pickups",
+        "reflection",
+        "satellites",
+        "scout",
+        "survival",
+        "terrain"
+      ],
+      "owners": {
+        "package.json": "field-manual",
+        "scripts/client-build.ts": "field-manual",
+        "scripts/wiki-media.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Removed only the stale shot-ack compatibility JSDoc left beside the private resume token after the field and all three admission callers were retired. Runtime types, gameplay, article bodies and demonstrations are unchanged. The full nine-lens source review completed with no findings and an unchanged checkout; this comment-only follow-up receives affected-lens review before the full publication gate.",
+      "sources": ["shared-types.ts"],
+      "topics": [
+        "asteroids",
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "hauler",
+        "hud-network",
+        "loot-growth",
+        "satellites",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": [
+        "cargo",
+        "hauler",
+        "loot",
+        "movement",
+        "pickups",
+        "reflection",
+        "satellites",
+        "scout",
+        "survival",
+        "terrain"
+      ],
+      "owners": {}
     }
   ]
 }

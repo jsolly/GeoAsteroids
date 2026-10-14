@@ -30,7 +30,7 @@ Dependabot keeps its explicit manual-drain invocation gate.
 Testing commands, deterministic setup, runner ownership, cleanup and evidence
 reporting live in [tests/AGENTS.md](../tests/AGENTS.md). Publication through `/ship`
 requires the complete `npm run gate`; a partial selection or hosted lane cannot
-replace it. Coverage reporting has no percentage merge threshold.
+replace it. `scripts/gate-receipt.mjs` `STAGES` is the source of truth: lint policy, lint, Knip, ts-prune, Markdown, YAML, Actions, runner and dev-server contracts, TypeScript, Astro/Svelte diagnostics, frontend formatting, benchmark types, the complete unit/component suite, build, and complete server integration. Coverage reporting has no percentage merge threshold.
 
 ## Production verification
 
@@ -43,10 +43,9 @@ The local smoke scenario contracts use controlled clocks and transports with the
 production protocol encoder/decoder. Host deployment status establishes the
 release; descriptive metadata and bundle text do not gate verification. Follow
 the scenario checkout/request receipt;
-a skipped, failed, missing or timed-out smoke remains unverified.
+a skipped, failed, missing or timed-out smoke remains unverified. Unexpected application and transport errors reach the job log once with safe causes; parser diagnostics omit response and socket content. Public receipt and gameplay-artifact error strings remain bounded.
 
-This test-tooling removal changes no gameplay behavior, controls, assets or Wiki
-player instructions. Wiki media generation uses node-canvas, not a browser.
+Wiki media generation uses node-canvas and Python with the pinned requirements in `scripts/wiki-media-requirements.txt`; it needs no browser.
 
 ## Exact validation receipts
 

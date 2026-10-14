@@ -28,11 +28,7 @@ unrun, as recorded in the [phone measurement plan](performance/phone-fps-measure
 
 ## Existing gameplay and operations
 
-Health regeneration already runs on the authoritative server. Ship tuning is
-1 HP per second after five seconds without damage. Another hit restarts the
-delay, healing caps at maximum health, and a client update cannot clear the
-server timer. The wire scenario checks that both pilots receive the same delayed
-recovery after an asteroid impact.
+Health regeneration runs on the authoritative server using `SHIP.HEALTH_REGEN_*`: 2% of maximum health per second after five seconds without damage. Another hit restarts the delay, healing caps at maximum health, and client updates cannot clear the server timer. `tests/unit/server/health-regeneration.test.ts` guards these rules; the wire scenario below refers to its reviewed revision.
 
 Surveying already reveals the shared exploration chart and records survey owner
 IDs on nearby eligible rocks. A moving survey probe pulses from its host; a

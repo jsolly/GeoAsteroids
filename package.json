@@ -53,7 +53,7 @@
     "url": "git+https://github.com/jsolly/GeoRoids.git"
   },
   "author": "jsolly",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/jsolly/GeoRoids/issues"
   },

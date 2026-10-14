@@ -179,11 +179,11 @@ for (const job of Object.values(ci.jobs)) {
 }
 const manifest = JSON.parse(read('package.json'));
 // Manual measurements are explicit user entrypoints, never hidden validation.
-const browserMeasurement =
+const manualMeasurement =
   /playwright|puppeteer|--benchmark-(?:client|load)|benchmark:(?:realtime|load)|measure-frame-work/u;
 for (const [name, command] of Object.entries(manifest.scripts)) {
   if (/^(?:test(?::|$)|check:|gate$|fix$)/u.test(name)) {
-    assert.doesNotMatch(command, browserMeasurement, `${name} must remain code-only validation`);
+    assert.doesNotMatch(command, manualMeasurement, `${name} must remain code-only validation`);
     // Wiki media belongs to linux-x64 and its CI lane; local validation must pass on macOS too.
     assert.doesNotMatch(
       command,
@@ -198,7 +198,7 @@ for (const file of ['.github/workflows/ci.yml', '.github/workflows/production-sm
     for (const step of job.steps) {
       assert.doesNotMatch(
         step.run ?? '',
-        browserMeasurement,
+        manualMeasurement,
         `${file} must not invoke manual measurements`
       );
     }
@@ -226,7 +226,10 @@ assert.equal(
   manifest.scripts['smoke:scenario-contract'],
   'node --import tsx --test scripts/server-release-inputs.test.mjs scripts/production-smoke-scenario.test.mjs'
 );
-assert.ok(manifest.devDependencies.playwright, 'Manual benchmarks still need Playwright');
+assert.ok(
+  manifest.devDependencies.playwright,
+  'Manual browser benchmarks and frame measurements still need Playwright'
+);
 assert.equal(manifest.scripts['benchmark:realtime'], './scripts/test-runner.sh --benchmark-client');
 assert.equal(manifest.scripts['benchmark:load'], './scripts/test-runner.sh --benchmark-load');
 for (const command of Object.keys(manifest.scripts)) {

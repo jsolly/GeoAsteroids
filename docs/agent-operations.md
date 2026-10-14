@@ -4,7 +4,7 @@ Read root `AGENTS.md` for controls. This guide owns commands, deployment procedu
 
 ## Ship
 
-Run `npm run gate` before publication and again after review fixes. It includes static checks, runner contracts, the complete unit suite, production build and all server integration tests. Code checks can overlap across worktrees; each checkout excludes overlapping validation. CI requires independent static, runner-contract, complete code-integration and Wiki media lanes to pass `CI / ci`. Browser suites and automatic frame-work/constrained-client gates are retired. Manual measurements remain outside the gate. Read [CI and local review](ci-and-local-review.md).
+Run the complete gate before publication and after review fixes; [CI and local review](ci-and-local-review.md#local-review) owns its stages and evidence requirements.
 
 After merging, confirm Vercel's production Git deployment is READY at <https://www.georoids.com>. Classify server inputs with the classifier's `--changed` mode using the actual base and merge SHAs from the ship receipt. If the graph requires a server deployment, independently confirm Railway's production Git deployment succeeded; client success alone is insufficient. Successful host deployments establish the release. Do not compare served metadata or search bundle text for a commit SHA. Railway auto-deploys main. If deployment is absent or red, inspect the actual trigger and staged platform changes before any pinned-commit fallback; never upload an arbitrary local tree as a production release.
 
@@ -72,7 +72,7 @@ The former `geoasteroids-production-2403.up.railway.app` hostname returns a Rail
 
 ## Commands
 
-Use `npm run dev` for live rebuilding. The former `npm run watch` build command is retired because Astro does not support watched static builds.
+Use `npm run dev` for live rebuilding.
 
 ```shell
 # Dev (Astro on :5173 + ws server on :3001 via concurrently)
@@ -95,7 +95,7 @@ npm run check:actions      # actionlint + ShellCheck
 npm run check:fix          # biome check --write --error-on-warnings .
 npm run fix                # biome write + tsc + unit tests
 npm run check:wiki         # flag gameplay changes that need a Wiki review (runs in build)
-npm run gate               # same complete pre-commit battery; exact unchanged receipts may reuse
+npm run gate               # complete battery; see docs/ci-and-local-review.md
 
 # Diagnostics / performance
 npm run --silent logs -- --player <id>   # merged client/server timeline
@@ -171,9 +171,10 @@ Logs are structured JSONL. Use `npm run --silent logs -- --player <id>` to merge
 - **Manual measurement queue:** browser benchmark runner modes and direct frame measurements use one heavyweight FIFO slot in the common Git directory. Queue waits are visible and cancellable and precede execution deadlines. Failed ownership inspection preserves evidence; never delete a live allocator's lock.
 - **Ports:** manual benchmark harnesses select distinct Astro client, server and proxy ports and support diagnostic `GEOROIDS_TEST_VITE_PORT`, `GEOROIDS_TEST_SERVER_PORT` and `GEOROIDS_TEST_PROXY_PORT` overrides. Their startup checks listener ownership and refuses occupied ports. Interactive development retains its defaults.
 - **Node:** `package.json` requires `^24.15.0` (jsdom's Node 24 floor); `.nvmrc` is `24`.
-- **`.env`:** an empty `.env` file must exist at the repo root (server startup uses `--env-file=.env`); create one with `touch .env` if missing.
+- **Environment:** `npm run dev` copies `.env.example` to `.env.local` when missing; the server loads it with `--env-file=.env.local`. A missing or unreadable example fails startup.
 - **`canvas` native deps:** the `canvas` npm package needs Cairo, Pango, libjpeg, libgif, and librsvg dev headers installed on the system.
 - **Playwright browsers** (manual benchmarks only): install the browser required by that tool with `npx --no-install playwright install chromium`. Browser binaries are not needed for code-test validation. Preserve owned media and measurement outputs; these tools remain outside the gate.
+- **Wiki media:** node-canvas and Python with the pin in `scripts/wiki-media-requirements.txt` render demonstrations. Set `WIKI_MEDIA_PYTHON` to the prepared Python executable; browser binaries are unnecessary.
 
 ### Local playground
 

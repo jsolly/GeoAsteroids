@@ -1,8 +1,6 @@
 {
   "extends": "./tsconfig/fleet/strict-tsc.json",
   "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
     "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true,

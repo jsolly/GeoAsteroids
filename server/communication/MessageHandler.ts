@@ -288,7 +288,6 @@ export class MessageHandler {
         position: player.position,
         resumeToken,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
-        shotAcknowledgements: true,
         chargedWeapons: 1,
         color: player.color,
         kitId: player.kitId,

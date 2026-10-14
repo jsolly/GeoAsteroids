@@ -10,7 +10,7 @@ try {
   if (!receipt.success) {
     process.exitCode = 1;
   }
-} catch {
-  process.stderr.write('Production verification could not retain its receipt\n');
+} catch (error) {
+  console.error('Production verification could not retain its receipt', error);
   process.exitCode = 1;
 }
