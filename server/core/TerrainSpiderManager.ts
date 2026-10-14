@@ -325,7 +325,7 @@ export class TerrainSpiderManager {
 
     for (const spider of this.spiders.values()) {
       spider.shudderFrames = Math.max(0, (spider.shudderFrames ?? 0) - 1);
-      if (options.towedIds?.has(spider.id)) {
+      if (options.towedIds?.has(spider.id) === true) {
         spider.displaced = true;
       }
     }
@@ -348,7 +348,12 @@ export class TerrainSpiderManager {
     for (const tow of options.spiderTows ?? []) {
       const owner = playerById.get(tow.ownerId);
       const friend = this.spiders.get(tow.spiderId);
-      if (owner && friend && friend.health > 0 && options.towedIds?.has(friend.id)) {
+      if (
+        owner != null &&
+        friend &&
+        friend.health > 0 &&
+        options.towedIds?.has(friend.id) === true
+      ) {
         tows.push({ owner, friend });
       }
     }
@@ -357,7 +362,7 @@ export class TerrainSpiderManager {
     }
     const attacks: SpiderAttack[] = [];
     for (const spider of [...this.spiders.values()].sort((a, b) => a.id.localeCompare(b.id))) {
-      if (options.towedIds?.has(spider.id)) {
+      if (options.towedIds?.has(spider.id) === true) {
         const start = copyPosition(spider.position);
         spider.position = this.containPosition({
           x: start.x + spider.velocity.x,
@@ -671,7 +676,10 @@ export class TerrainSpiderManager {
       return;
     }
     const territory = spider.territory;
-    const target = spider.targetId ? playerById.get(spider.targetId) : undefined;
+    const target =
+      spider.targetId != null && spider.targetId !== ''
+        ? playerById.get(spider.targetId)
+        : undefined;
     if (target && !this.canOccupy(target.position, target.radius)) {
       // Shelter overrides an existing chase before it can move or bite.
       if (territory.kind === 'guard') {

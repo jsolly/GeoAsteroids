@@ -178,7 +178,7 @@ export class BeltCrawlerManager {
       (index.get(body.host.id)?.health ?? 0) > 0 &&
       body.crawler.phase === 'lunging' &&
       body.targetId === attack.targetId &&
-      !this.impact(body.position, target.position, index)
+      this.impact(body.position, target.position, index) == null
     );
   }
 
@@ -261,7 +261,7 @@ export class BeltCrawlerManager {
             ) > BELT_CRAWLER.ESCAPE_DISTANCE ||
             this.enclosed(body.position) ||
             this.enclosed(next) ||
-            this.impact(body.position, next)
+            this.impact(body.position, next) != null
           ) {
             host.beltCrawlerHealth?.splice(index, 1, 0);
             this.bodies.delete(id);
@@ -360,9 +360,10 @@ export class BeltCrawlerManager {
             y: body.position.y + body.direction.y * reach,
           };
           const obstruction = this.impact(body.position, end);
-          const travel = obstruction
-            ? Math.max(0, obstruction.distance - BELT_CRAWLER.HIT_RADIUS)
-            : reach;
+          const travel =
+            obstruction != null
+              ? Math.max(0, obstruction.distance - BELT_CRAWLER.HIT_RADIUS)
+              : reach;
           body.position = {
             x: body.position.x + body.direction.x * travel,
             y: body.position.y + body.direction.y * travel,
@@ -372,7 +373,7 @@ export class BeltCrawlerManager {
             !body.struck &&
             Math.hypot(target.position.x - body.position.x, target.position.y - body.position.y) <=
               BELT_CRAWLER.HIT_RADIUS + target.radius &&
-            !this.impact(body.position, target.position)
+            this.impact(body.position, target.position) == null
           ) {
             attacks.push({ spiderId: id, targetId: target.id, attackerId: 'spider' });
             body.struck = true;
@@ -474,7 +475,7 @@ export class BeltCrawlerManager {
         BELT_CRAWLER.ESCAPE_DISTANCE ||
       this.enclosed(from) ||
       this.enclosed(placement.position) ||
-      this.impact(from, placement.position)
+      this.impact(from, placement.position) != null
     ) {
       return undefined;
     }
@@ -606,7 +607,7 @@ export class BeltCrawlerManager {
   private canReach(position: Position, target: Actor): boolean {
     return (
       Math.hypot(target.position.x - position.x, target.position.y - position.y) <=
-        BELT_CRAWLER.LUNGE_REACH + target.radius && !this.impact(position, target.position)
+        BELT_CRAWLER.LUNGE_REACH + target.radius && this.impact(position, target.position) == null
     );
   }
 
@@ -623,7 +624,7 @@ export class BeltCrawlerManager {
       }
       const distance = fraction * Math.hypot(end.x - start.x, end.y - start.y);
       if (
-        (obstacle && obstacle.distance <= distance) ||
+        (obstacle != null && obstacle.distance <= distance) ||
         (closest && closest.distance <= distance)
       ) {
         continue;

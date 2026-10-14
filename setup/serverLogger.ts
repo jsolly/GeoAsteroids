@@ -61,7 +61,7 @@ function initializeStdoutLogState(): StdoutLogState {
   return created;
 }
 const stdoutLogState = initializeStdoutLogState();
-if (!stdoutLogState.listenerInstalled) {
+if (stdoutLogState.listenerInstalled !== true) {
   stdoutLogState.listenerInstalled = true;
   process.stdout.on('error', (error) => {
     stdoutLogState.reportFailure?.(error);
@@ -270,7 +270,7 @@ function queueFileLine(line: string, reportFailureToStdout = true): Promise<bool
 function reportStdoutFailure(error: unknown): void {
   stdoutLogState.writeErrors++;
   stdoutLogState.lastWriteErrorAt = new Date().toISOString();
-  if (stdoutLogState.failureReported) {
+  if (stdoutLogState.failureReported === true) {
     return;
   }
   stdoutLogState.failureReported = true;
@@ -310,13 +310,17 @@ function splitServerArguments(
   const renderedMessage = categorized ? (args.shift() as string) : message;
   const category = categorized ? message : undefined;
   const context = args.length === 0 ? undefined : args.length === 1 ? args[0] : { arguments: args };
-  return { ...(category ? { category } : {}), message: renderedMessage, context };
+  return {
+    ...(category != null && category !== '' ? { category } : {}),
+    message: renderedMessage,
+    context,
+  };
 }
 
 function emitServer(level: ServerLogLevel, message: string, args: unknown[]): Promise<boolean> {
   const split = splitServerArguments(message, [...args]);
   const metadata =
-    split.context && typeof split.context === 'object' && !Array.isArray(split.context)
+    split.context !== null && typeof split.context === 'object' && !Array.isArray(split.context)
       ? (split.context as Record<string, unknown>)
       : {};
   const playerId = typeof metadata['playerId'] === 'string' ? metadata['playerId'] : undefined;
@@ -329,9 +333,9 @@ function emitServer(level: ServerLogLevel, message: string, args: unknown[]): Pr
     level: levelName(level),
     releaseId: SERVER_RELEASE_ID,
     ...split,
-    ...(playerId ? { playerId } : {}),
-    ...(sessionId ? { sessionId } : {}),
-    ...(connectionId ? { connectionId } : {}),
+    ...(playerId != null && playerId !== '' ? { playerId } : {}),
+    ...(sessionId != null && sessionId !== '' ? { sessionId } : {}),
+    ...(connectionId != null && connectionId !== '' ? { connectionId } : {}),
   });
   const line = stringifyLogRecord(record);
   writeStdout(line);
@@ -348,10 +352,10 @@ export function getServerLogDiagnostics(): ServerLogDiagnostics {
     queuedBytes: queuedFileBytes,
     droppedRecords: droppedFileRecords,
     writeErrors: fileWriteErrors,
-    ...(lastWriteErrorAt ? { lastWriteErrorAt } : {}),
+    ...(lastWriteErrorAt != null && lastWriteErrorAt !== '' ? { lastWriteErrorAt } : {}),
     stdoutDroppedRecords: stdoutLogState.droppedRecords,
     stdoutWriteErrors: stdoutLogState.writeErrors,
-    ...(stdoutLogState.lastWriteErrorAt
+    ...(stdoutLogState.lastWriteErrorAt != null && stdoutLogState.lastWriteErrorAt !== ''
       ? { lastStdoutWriteErrorAt: stdoutLogState.lastWriteErrorAt }
       : {}),
   };

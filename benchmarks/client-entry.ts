@@ -315,7 +315,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       // Preserve writes so the fixture still exercises normal simulation.
       function observeRead(target: object, key: string, name: string) {
         const descriptor = Object.getOwnPropertyDescriptor(target, key);
-        if (!descriptor || !('value' in descriptor) || !descriptor.configurable) {
+        if (!descriptor || !('value' in descriptor) || descriptor.configurable !== true) {
           throw new Error(`Cannot observe ${name}`);
         }
         let value: unknown = descriptor.value;
@@ -914,7 +914,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       `Fixture execution or restoration failed: ${[...operationFailures, ...cleanupFailures].map((error) => (error instanceof Error ? error.message : String(error))).join('; ')}`
     );
   }
-  if (!result) {
+  if (result == null) {
     throw new Error('Client fixture completed without a result');
   }
   return result;

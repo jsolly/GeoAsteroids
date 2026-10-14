@@ -64,7 +64,11 @@ export class SatellitePickupManager {
   syncFromServer(list: SatellitePickupData[]): void {
     const owners = new Set<string>();
     const markOwner = (pickup: Pick<SatellitePickupData, 'ownerId' | 'state'>) => {
-      if (pickup.ownerId && (pickup.state === 'stored' || pickup.state === 'orbiting')) {
+      if (
+        pickup.ownerId != null &&
+        pickup.ownerId !== '' &&
+        (pickup.state === 'stored' || pickup.state === 'orbiting')
+      ) {
         owners.add(pickup.ownerId);
       }
     };

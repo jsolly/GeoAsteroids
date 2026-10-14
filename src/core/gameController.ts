@@ -170,7 +170,7 @@ export class GameController {
     this.playerManager.createLocalPlayer(kitId ?? getSelectedShipKitId());
 
     // Set the player name if provided
-    if (playerName) {
+    if (playerName != null && playerName !== '') {
       this.playerManager.setPlayerName(playerName);
     }
 

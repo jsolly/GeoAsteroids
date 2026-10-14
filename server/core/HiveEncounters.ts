@@ -62,7 +62,7 @@ export class HiveEncounters {
           continue;
         }
         let hive = this.campaign.get('hive', site.id);
-        if (!hive) {
+        if (hive == null) {
           hive = {
             kind: 'hive',
             id: site.id,
@@ -155,12 +155,12 @@ export class HiveEncounters {
   private nearby(position: Position, radius: number): Hive[] {
     return frontierSitesNear(position, radius).flatMap((site) => {
       const hive = this.active.get(site.id);
-      return hive ? [hive] : [];
+      return hive != null ? [hive] : [];
     });
   }
   body(id: string): (AbilityBody & { size: number }) | undefined {
     const hive = this.active.get(id);
-    return hive && hive.clearedAt === null
+    return hive != null && hive.clearedAt === null
       ? {
           id,
           kind: 'spider',
@@ -212,7 +212,7 @@ export class HiveEncounters {
   hit(id: string, owner: GameEntity, damage: number, now: number): boolean {
     const [hiveId, sac] = id.split('/sac/');
     const hive = hiveId ? this.active.get(hiveId) : undefined;
-    if (!hive || !Number.isFinite(damage) || damage <= 0) {
+    if (hive == null || !Number.isFinite(damage) || damage <= 0) {
       return false;
     }
     if (sac !== undefined) {

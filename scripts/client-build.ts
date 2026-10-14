@@ -27,7 +27,7 @@ function clientAssets(): Plugin {
           return;
         }
         const chunk = byName.get(name);
-        if (!chunk) {
+        if (chunk == null) {
           throw new Error(`Missing attributed chunk: ${name}`);
         }
         reachable.add(name);

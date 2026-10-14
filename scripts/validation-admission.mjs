@@ -305,7 +305,7 @@ async function allocateTicket(home, owner, cancelled) {
         Date.now() - metadata.mtimeMs <
           5000, `Untrustworthy validation allocation blocks admission: ${allocation}`);
     }
-    if (prior) {
+    if (Boolean(prior) === true) {
       require(live(prior), `Dead validation allocator requires inspection: ${allocation}`);
     }
     if (Date.now() - reported > 10000) {

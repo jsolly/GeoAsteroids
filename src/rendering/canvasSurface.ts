@@ -99,7 +99,7 @@ class CanvasManager {
     if (gpuRequested) {
       try {
         this.gpuRenderer = GpuRearRenderer.create(this.canvas, () => {
-          if (!this.gpuRenderer?.available()) {
+          if (this.gpuRenderer?.available() !== true) {
             this.gpuFrameActive = false;
           }
         });
@@ -284,7 +284,7 @@ class CanvasManager {
   }
 
   getRendererBackend(): 'canvas' | 'webgl2' {
-    return this.gpuFrameActive && this.gpuRenderer?.available() ? 'webgl2' : 'canvas';
+    return this.gpuFrameActive && this.gpuRenderer?.available() === true ? 'webgl2' : 'canvas';
   }
 
   getGpuFrameStats() {

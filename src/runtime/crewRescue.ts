@@ -34,7 +34,7 @@ export function readCrewRescue(): CrewRescueView {
       pilot &&
         pilot.ship.health > 0 &&
         isTowCableUtility(pilot.ship) &&
-        !pilot.ship.harpoonTargetId &&
+        (pilot.ship.harpoonTargetId == null || pilot.ship.harpoonTargetId === '') &&
         supplyValue > 0
     ),
     hazard:
@@ -61,9 +61,12 @@ export function readCrewRescue(): CrewRescueView {
       : undefined;
   return {
     ...common,
-    downedSeconds: pilot.ship.downedUntil
-      ? Math.max(0, Math.ceil((pilot.ship.downedUntil - now) / 1000))
-      : null,
+    downedSeconds:
+      pilot.ship.downedUntil != null &&
+      pilot.ship.downedUntil !== 0 &&
+      !Number.isNaN(pilot.ship.downedUntil)
+        ? Math.max(0, Math.ceil((pilot.ship.downedUntil - now) / 1000))
+        : null,
     target: target ? { id: target.id, name: target.name } : null,
     reviveSeconds: pilot.ship.rescue
       ? Math.max(0, Math.ceil((pilot.ship.rescue.completesAt - now) / 1000))

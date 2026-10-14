@@ -41,7 +41,7 @@ export function createDebugPresentation(changed: () => void) {
     'playerIdentityChanged',
     (event) => {
       const id: unknown = event.detail?.playerId;
-      if (typeof id === 'string' && id && id !== playerId) {
+      if (typeof id === 'string' && id !== '' && id !== playerId) {
         playerId = id.slice(0, 128);
         changed();
       }

@@ -265,7 +265,9 @@ export class GameServerWorld {
           cooperativeVersion: 1,
           ...(options.worldRemains ? { worldRemains: options.worldRemains } : {}),
 
-          ...(options.resumeToken ? { resumeToken: options.resumeToken } : {}),
+          ...(options.resumeToken != null && options.resumeToken !== ''
+            ? { resumeToken: options.resumeToken }
+            : {}),
         },
       },
       socket

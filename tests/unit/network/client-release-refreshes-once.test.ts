@@ -14,7 +14,10 @@ const LATER = 'c'.repeat(40);
 const stops: Array<() => void> = [];
 
 function response(release?: string, status = 200): Response {
-  return new Response(JSON.stringify(release ? { releaseSha: release } : {}), { status });
+  return new Response(
+    JSON.stringify(release != null && release !== '' ? { releaseSha: release } : {}),
+    { status }
+  );
 }
 
 function fixture() {

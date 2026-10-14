@@ -86,7 +86,7 @@ function jsonByteLowerBound(value: Json): number {
     return 4;
   }
   if (typeof value === 'boolean') {
-    return value ? 4 : 5;
+    return value === true ? 4 : 5;
   }
   if (typeof value === 'number') {
     return 1;
@@ -130,7 +130,7 @@ function copyJson(
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
     if (bounds) {
       bounds.bytes +=
-        value === null ? 4 : typeof value === 'string' ? value.length + 2 : value ? 4 : 5;
+        value === null ? 4 : typeof value === 'string' ? value.length + 2 : value === true ? 4 : 5;
     }
     return value;
   }
@@ -288,7 +288,7 @@ export class SnapshotBroadcastCapture {
       loot: freshRows(detached.loot),
       satellitePickups: freshRows(detached.satellitePickups),
       playerProjectiles: freshRows(detached.playerProjectiles),
-      ...(spiderField && newlyDetached.has(spiderField) ? { spiderField } : {}),
+      ...(spiderField != null && newlyDetached.has(spiderField) ? { spiderField } : {}),
     });
     for (const entry of pending) {
       freezeJsonTree(entry.detached);

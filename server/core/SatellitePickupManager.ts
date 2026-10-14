@@ -177,7 +177,7 @@ export class SatellitePickupManager {
     for (const pickup of this.pickups.values()) {
       if (pickup.state === 'stored') {
         const owner = byId.get(pickup.ownerId ?? '');
-        if (!owner || owner.health <= 0 || owner.exploding) {
+        if (owner == null || owner.health <= 0 || owner.exploding) {
           this.makeLooseAtCurrentPose(pickup);
         } else {
           pickup.position = { ...owner.position };

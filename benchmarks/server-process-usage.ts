@@ -14,11 +14,11 @@ export interface ServerProcessUsage {
 /** Strict private-IPC boundary: no missing fields, coercion, or unbounded extra data. */
 export function parseServerProcessUsage(value: unknown): ServerProcessUsage {
   assert(
-    value && typeof value === 'object' && !Array.isArray(value),
+    value !== null && typeof value === 'object' && !Array.isArray(value),
     'Invalid server process usage'
   );
   assert.deepEqual(
-    Object.keys(value).sort(),
+    Object.keys(value).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
     ['compression', 'monotonicMs', 'system', 'user'],
     'Invalid server process usage fields'
   );

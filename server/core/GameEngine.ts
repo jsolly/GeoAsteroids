@@ -379,7 +379,7 @@ export class GameEngine {
     projectileId: string | null,
     rejectionReason: string | null
   ): void {
-    if (!this.fixtureCombat?.watches(ownerId)) {
+    if (this.fixtureCombat?.watches(ownerId) !== true) {
       return;
     }
     const shooter = this.getPlayer(ownerId);
@@ -672,7 +672,7 @@ export class GameEngine {
         began !== undefined &&
         (pilot.health <= 0 ||
           pilot.exploding ||
-          pilot.overlayHold ||
+          pilot.overlayHold === true ||
           pilot.furnaceTransit ||
           this.gameTime - began > CHARGED_WEAPON.expiryFrames)
       ) {
@@ -1149,10 +1149,19 @@ export class GameEngine {
         this.weaponCharges.delete(live.actor);
       }
       this.rememberClientRelease(live.actor.id, clientReleaseId);
-      if (live.actor.downedUntil && live.actor.downedUntil <= this.getServerTime()) {
+      if (
+        live.actor.downedUntil != null &&
+        live.actor.downedUntil !== 0 &&
+        !Number.isNaN(live.actor.downedUntil) &&
+        live.actor.downedUntil <= this.getServerTime()
+      ) {
         this.finishDowned(live.actor);
       }
-      if (!live.actor.downedUntil) {
+      if (
+        live.actor.downedUntil == null ||
+        live.actor.downedUntil === 0 ||
+        Number.isNaN(live.actor.downedUntil)
+      ) {
         this.applyRequestedPilotIdentity(live.actor, requestedKit, requestedName, true);
       }
       return live;
@@ -1172,7 +1181,7 @@ export class GameEngine {
       saved.name,
       socket,
       flight?.position,
-      savedDowned ? saved.kitId : (requestedKit ?? flight?.kitId)
+      savedDowned != null ? saved.kitId : (requestedKit ?? flight?.kitId)
     );
     if (saved.hullColor) {
       actor.color = saved.hullColor;
@@ -1184,7 +1193,7 @@ export class GameEngine {
     this.fitCargo(actor);
     actor.silk = saved.silk ?? 0;
     actor.equipment = [...(saved.equipment ?? [])];
-    if (flight && !savedDowned) {
+    if (flight && savedDowned == null) {
       this.restoreRecentFlight(actor, flight, requestedKit);
     }
     const registered = this.registerPilot(actor, socket, clientReleaseId);
@@ -1194,7 +1203,7 @@ export class GameEngine {
     }
     this.seedAsteroidInteractions();
     const downed = this.cooperative.get('downed', actor.id);
-    if (downed) {
+    if (downed != null) {
       actor.position = { ...downed.position };
       actor.health = 0;
       actor.downedUntil = downed.deadline;
@@ -1679,7 +1688,8 @@ export class GameEngine {
     this.updateSpiderBudget();
     for (const entity of this.entityManager.getAllEntities()) {
       if (
-        entity.harpoonTargetId &&
+        entity.harpoonTargetId != null &&
+        entity.harpoonTargetId !== '' &&
         previousIds.has(entity.harpoonTargetId) &&
         !this.spiderManager.getBody(entity.harpoonTargetId)
       ) {
@@ -1776,7 +1786,7 @@ export class GameEngine {
     if (!firstRock) {
       return;
     }
-    if (!this.decoratedFieldId) {
+    if (this.decoratedFieldId == null || this.decoratedFieldId === '') {
       seedAsteroidPhenomena(rocks);
       // Phenomena reshape and move live rows in place.
       this.asteroidManager.refile(rocks);
@@ -2062,7 +2072,8 @@ export class GameEngine {
     } else {
       this.applyShipDeath(damaged, attackerId);
     }
-    const finalDeath = !damaged.downedUntil;
+    const finalDeath =
+      damaged.downedUntil == null || damaged.downedUntil === 0 || Number.isNaN(damaged.downedUntil);
     this.logDamageState(damaged, attackerId, damage, healthBefore, finalDeath);
     return { applied: true, isDestroyed: finalDeath, entity: damaged };
   }
@@ -2220,7 +2231,12 @@ export class GameEngine {
     const towedOwners = new Map<string, string[]>();
     const towedRocks: AsteroidData[] = [];
     for (const entity of entities) {
-      if (entity.kitId !== 'hauler' || !isTowCableUtility(entity) || !entity.harpoonTargetId) {
+      if (
+        entity.kitId !== 'hauler' ||
+        !isTowCableUtility(entity) ||
+        entity.harpoonTargetId == null ||
+        entity.harpoonTargetId === ''
+      ) {
         continue;
       }
       const rock = this.asteroidManager.getAsteroid(entity.harpoonTargetId);
@@ -2243,7 +2259,7 @@ export class GameEngine {
       (rock) => rock.boost?.phase !== 'burning'
     )) {
       const haulerIds = towedOwners.get(hit.towedId);
-      if (!haulerIds?.length) {
+      if (haulerIds?.length == null || haulerIds?.length === 0 || Number.isNaN(haulerIds?.length)) {
         continue;
       }
       for (const haulerId of haulerIds) {
@@ -2253,7 +2269,7 @@ export class GameEngine {
         bumperKeys.add(`${otherHaulerId}:${hit.towedId}`);
       }
       const scorerId = haulerIds[0];
-      if (!scorerId) {
+      if (scorerId == null || scorerId === '') {
         continue;
       }
       for (const asteroidId of [hit.towedId, hit.otherId]) {
@@ -2326,7 +2342,7 @@ export class GameEngine {
       return true;
     }
     if (action.kind === 'give-up') {
-      if (!actor.downedUntil) {
+      if (actor.downedUntil == null || actor.downedUntil === 0 || Number.isNaN(actor.downedUntil)) {
         return false;
       }
       this.finishDowned(actor);
@@ -2334,7 +2350,10 @@ export class GameEngine {
     }
     if (action.kind === 'signal') {
       if (
-        (actor.health <= 0 && !actor.downedUntil) ||
+        (actor.health <= 0 &&
+          (actor.downedUntil == null ||
+            actor.downedUntil === 0 ||
+            Number.isNaN(actor.downedUntil))) ||
         actor.exploding ||
         now - (this.lastCrewSignalAt.get(id) ?? -Infinity) < COOPERATIVE.signalCooldownMs ||
         Math.hypot(action.position.x - actor.position.x, action.position.y - actor.position.y) >
@@ -2353,13 +2372,15 @@ export class GameEngine {
     const target = this.getPlayer(action.targetId);
     if (
       !target?.ws ||
-      !target.downedUntil ||
+      target.downedUntil == null ||
+      target.downedUntil === 0 ||
+      Number.isNaN(target.downedUntil) ||
       target.downedUntil <= now ||
       target.id === id ||
       actor.health <= 0 ||
       actor.exploding ||
-      actor.overlayHold ||
-      actor.downedUntil ||
+      actor.overlayHold === true ||
+      (actor.downedUntil != null && actor.downedUntil !== 0 && !Number.isNaN(actor.downedUntil)) ||
       Math.hypot(actor.position.x - target.position.x, actor.position.y - target.position.y) >
         COOPERATIVE.reviveRadius
     ) {
@@ -2428,7 +2449,7 @@ export class GameEngine {
   }
 
   private finishDowned(actor: GameEntity): void {
-    if (!actor.downedUntil) {
+    if (actor.downedUntil == null || actor.downedUntil === 0 || Number.isNaN(actor.downedUntil)) {
       return;
     }
     actor.downedUntil = null;
@@ -2449,7 +2470,12 @@ export class GameEngine {
       if (actor.crewSignal && actor.crewSignal.expiresAt <= now) {
         actor.crewSignal = null;
       }
-      if (actor.downedUntil && actor.downedUntil <= now) {
+      if (
+        actor.downedUntil != null &&
+        actor.downedUntil !== 0 &&
+        !Number.isNaN(actor.downedUntil) &&
+        actor.downedUntil <= now
+      ) {
         this.finishDowned(actor);
       }
     }
@@ -2463,10 +2489,12 @@ export class GameEngine {
         !actor.ws ||
         actor.health <= 0 ||
         actor.exploding ||
-        actor.overlayHold ||
+        actor.overlayHold === true ||
         actor.furnaceTransit ||
         !target?.ws ||
-        !target.downedUntil ||
+        target.downedUntil == null ||
+        target.downedUntil === 0 ||
+        Number.isNaN(target.downedUntil) ||
         Math.hypot(actor.position.x - target.position.x, actor.position.y - target.position.y) >
           COOPERATIVE.reviveRadius ||
         Math.hypot(actor.velocity.x, actor.velocity.y) > 0.01
@@ -2717,7 +2745,7 @@ export class GameEngine {
       action === 'cancel' ||
       pilot.health <= 0 ||
       pilot.exploding ||
-      pilot.overlayHold ||
+      pilot.overlayHold === true ||
       pilot.furnaceTransit
     ) {
       return null;
@@ -2983,7 +3011,7 @@ export class GameEngine {
       ) {
         laser.hasExploded = true;
         const targetBefore =
-          this.fixtureCombat?.watches(laser.ownerId) && auxiliary.kind === 'ship'
+          this.fixtureCombat?.watches(laser.ownerId) === true && auxiliary.kind === 'ship'
             ? { health: this.getPlayer(auxiliary.id)?.health ?? null }
             : null;
         if (auxiliary.kind === 'encounter') {
@@ -3017,7 +3045,7 @@ export class GameEngine {
           auxiliary.kind,
           auxiliary.id,
           targetBefore,
-          this.fixtureCombat?.watches(laser.ownerId) && auxiliary.kind === 'ship'
+          this.fixtureCombat?.watches(laser.ownerId) === true && auxiliary.kind === 'ship'
             ? { health: this.getPlayer(auxiliary.id)?.health ?? null }
             : null
         );
@@ -3030,9 +3058,10 @@ export class GameEngine {
         (!surface || spiderHit.distance < surface.distance)
       ) {
         const predators = spiderHit === crawlerHit ? this.beltCrawlers : this.spiderManager;
-        const before = this.fixtureCombat?.watches(laser.ownerId)
-          ? crawlerEvidence(predators.getBody(spiderHit.spiderId))
-          : null;
+        const before =
+          this.fixtureCombat?.watches(laser.ownerId) === true
+            ? crawlerEvidence(predators.getBody(spiderHit.spiderId))
+            : null;
         predators.resolveLaserHit(start, end, DAMAGE.LASER_HIT * laser.energy);
         laser.hasExploded = true;
         this.observeFixtureTerminal(
@@ -3040,7 +3069,7 @@ export class GameEngine {
           spiderHit === crawlerHit ? 'belt-crawler' : 'terrain-spider',
           spiderHit.spiderId,
           before,
-          this.fixtureCombat?.watches(laser.ownerId)
+          this.fixtureCombat?.watches(laser.ownerId) === true
             ? crawlerEvidence(predators.getBody(spiderHit.spiderId))
             : null
         );
@@ -3128,14 +3157,14 @@ export class GameEngine {
       // is still consumed once and terminal drops/score happen only once.
       let hit = this.applyLaserAsteroidHit(rock.id, laser.ownerId, 'laser', laser.miningDamage);
       if (
-        !laser.charged &&
+        laser.charged !== true &&
         laser.energy >= 2 &&
         rock.material === 'metal' &&
         this.getAsteroid(rock.id)
       ) {
         hit = this.applyLaserAsteroidHit(rock.id, laser.ownerId, 'laser', laser.miningDamage);
       }
-      if (this.fixtureCombat?.watches(laser.ownerId)) {
+      if (this.fixtureCombat?.watches(laser.ownerId) === true) {
         this.observeFixtureTerminal(
           laser,
           'asteroid',
@@ -3198,7 +3227,7 @@ export class GameEngine {
                 ),
               ].flatMap((id) => {
                 const row = this.cooperative.get('supply', id);
-                return row ? [{ id, value: row.availableValue }] : [];
+                return row != null ? [{ id, value: row.availableValue }] : [];
               }),
               hives: this.hives.snapshot(this.getServerTime()),
               commissioned: [...this.commissioned],
@@ -3314,7 +3343,10 @@ export class GameEngine {
       }
       return activated;
     }
-    if (isTowCableUtility(entity) && !entity.harpoonTargetId) {
+    if (
+      isTowCableUtility(entity) &&
+      (entity.harpoonTargetId == null || entity.harpoonTargetId === '')
+    ) {
       return activateAbilityOnHost(entity, { asteroids: [] }).activated;
     }
     const cargo = new Set(
@@ -3333,10 +3365,15 @@ export class GameEngine {
     };
     const priorTargetId = entity.harpoonTargetId;
     const activation = activateAbilityOnHost(entity, world);
-    if (activation.activated && entity.harpoonTargetId && isResourceTapUtility(entity)) {
+    if (
+      activation.activated &&
+      entity.harpoonTargetId != null &&
+      entity.harpoonTargetId !== '' &&
+      isResourceTapUtility(entity)
+    ) {
       this.spiderManager.provoke(entity.harpoonTargetId, entity.id);
     }
-    if (activation.activated && priorTargetId) {
+    if (activation.activated && priorTargetId != null && priorTargetId !== '') {
       const ignited = this.getAsteroid(priorTargetId);
       if (ignited?.boost?.phase === 'burning') {
         for (const ownerId of boostOwnerIds(ignited.boost)) {
@@ -3491,7 +3528,12 @@ export class GameEngine {
   private advanceContourBridges(now: number): void {
     this.contourBridges.expire(this.gameTime);
     for (const actor of this.entityManager.getAllEntities()) {
-      if (actor.health <= 0 || actor.exploding || actor.overlayHold || actor.furnaceTransit) {
+      if (
+        actor.health <= 0 ||
+        actor.exploding ||
+        actor.overlayHold === true ||
+        actor.furnaceTransit
+      ) {
         delete actor.contourTransit;
         continue;
       }
@@ -3623,7 +3665,8 @@ export class GameEngine {
   }
 
   private buildFurnace(scout: GameEntity): boolean {
-    if (this.furnaceBuildIssue(scout.id)) {
+    const furnaceIssue = this.furnaceBuildIssue(scout.id);
+    if (furnaceIssue != null && furnaceIssue !== '') {
       return false;
     }
     const lot = civicLotAt(scout.position);
@@ -3773,7 +3816,7 @@ export class GameEngine {
           },
           targetPoses
         );
-        if (pilot.harpoonTargetId) {
+        if (pilot.harpoonTargetId != null && pilot.harpoonTargetId !== '') {
           cargo.add(pilot.harpoonTargetId);
         }
       }
@@ -3787,7 +3830,8 @@ export class GameEngine {
     for (const actor of this.entityManager.getAllEntities()) {
       if (
         isTowCableUtility(actor) &&
-        actor.harpoonTargetId &&
+        actor.harpoonTargetId != null &&
+        actor.harpoonTargetId !== '' &&
         !actor.exploding &&
         actor.health > 0 &&
         actor.respawnTimer === undefined
@@ -3826,14 +3870,16 @@ export class GameEngine {
         });
         this.surveyNearbyAsteroids(entity, nearbyAsteroids, scanRange);
       }
-      const spider = entity.harpoonTargetId
-        ? this.spiderManager.getBody(entity.harpoonTargetId)
-        : undefined;
-      const target = entity.harpoonTargetId
-        ? (this.getAsteroid(entity.harpoonTargetId) ??
-          spider ??
-          (isTowCableUtility(entity) ? this.hives.body(entity.harpoonTargetId) : undefined))
-        : undefined;
+      const spider =
+        entity.harpoonTargetId != null && entity.harpoonTargetId !== ''
+          ? this.spiderManager.getBody(entity.harpoonTargetId)
+          : undefined;
+      const target =
+        entity.harpoonTargetId != null && entity.harpoonTargetId !== ''
+          ? (this.getAsteroid(entity.harpoonTargetId) ??
+            spider ??
+            (isTowCableUtility(entity) ? this.hives.body(entity.harpoonTargetId) : undefined))
+          : undefined;
       if (target && 'boost' in target && target.boost?.phase === 'burning') {
         clearHaulerLatch(entity);
         continue;
@@ -3906,7 +3952,13 @@ export class GameEngine {
 
   public setHaulerUtility(entityId: string, utilityId: unknown): boolean {
     const entity = this.entityManager.getEntity(entityId);
-    if (!entity || entity.downedUntil || entity.furnaceTransit) {
+    if (
+      !entity ||
+      (entity.downedUntil != null &&
+        entity.downedUntil !== 0 &&
+        !Number.isNaN(entity.downedUntil)) ||
+      entity.furnaceTransit
+    ) {
       return false;
     }
     const targetId = entity.harpoonTargetId;
@@ -3922,14 +3974,20 @@ export class GameEngine {
 
   public setScoutUtility(entityId: string, utilityId: unknown): boolean {
     const entity = this.entityManager.getEntity(entityId);
-    if (entity?.kitId !== 'scout' || entity.downedUntil || entity.furnaceTransit) {
+    if (
+      entity?.kitId !== 'scout' ||
+      (entity.downedUntil != null &&
+        entity.downedUntil !== 0 &&
+        !Number.isNaN(entity.downedUntil)) ||
+      entity.furnaceTransit
+    ) {
       return false;
     }
     return canEquipUtility(entity, utilityId) && setScoutUtilityOnHost(entity, utilityId);
   }
 
   private cancelArmedBoost(ownerId: string, targetId: string | null): boolean {
-    const target = targetId ? this.getAsteroid(targetId) : undefined;
+    const target = targetId != null && targetId !== '' ? this.getAsteroid(targetId) : undefined;
     if (target?.boost?.phase !== 'armed' || !boostOwnerIds(target.boost).includes(ownerId)) {
       return false;
     }
@@ -3960,7 +4018,8 @@ export class GameEngine {
       if (
         hauler.kitId !== 'hauler' ||
         !isTowCableUtility(hauler) ||
-        !hauler.harpoonTargetId ||
+        hauler.harpoonTargetId == null ||
+        hauler.harpoonTargetId === '' ||
         hauler.exploding ||
         hauler.health <= 0 ||
         hauler.respawnTimer !== undefined
@@ -4037,17 +4096,17 @@ export class GameEngine {
     if (
       actor.health <= 0 ||
       actor.exploding ||
-      actor.overlayHold ||
+      actor.overlayHold === true ||
       actor.rescue ||
       actor.kitId !== 'hauler' ||
       !isTowCableUtility(actor) ||
-      actor.harpoonTargetId
+      (actor.harpoonTargetId != null && actor.harpoonTargetId !== '')
     ) {
       return false;
     }
     const source = this.furnaces.intakeAt(actor.position);
     const ledger = source ? this.cooperative.get('supply', source.id) : undefined;
-    if (!source || !ledger || ledger.availableValue <= 0) {
+    if (!source || ledger == null || ledger.availableValue <= 0) {
       return false;
     }
     const value = Math.min(COOPERATIVE.shipmentValue, ledger.availableValue);
@@ -4114,7 +4173,7 @@ export class GameEngine {
       });
     }
     const hive = this.cooperative.get('hive', destinationId);
-    if (hive && hive.clearedAt !== null && hive.commissionedAt === null) {
+    if (hive != null && hive.clearedAt !== null && hive.commissionedAt === null) {
       const accepted = Math.min(value, COOPERATIVE.restoreValue - hive.restoredValue);
       value -= accepted;
       hive.restoredValue += accepted;

@@ -20,7 +20,7 @@ export function createPlayer(config: {
     ...(config.kitId !== undefined ? { kitId: config.kitId } : {}),
   });
   player.ship.position = resolveSpawnPosition(config.position);
-  if (config.color) {
+  if (config.color != null && config.color !== '') {
     player.color = config.color;
     player.ship.color = config.color;
   }

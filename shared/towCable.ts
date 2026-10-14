@@ -32,7 +32,8 @@ export function tickTowCable(
   }
   if (
     !rock ||
-    !host.harpoonTargetId ||
+    host.harpoonTargetId == null ||
+    host.harpoonTargetId === '' ||
     host.harpoonTargetId !== cable.targetId ||
     rock.id !== cable.targetId ||
     host.exploding ||

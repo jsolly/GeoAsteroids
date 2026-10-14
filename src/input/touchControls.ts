@@ -482,7 +482,7 @@ function onPlayfieldPointerUp(ev: PointerEvent): void {
   const tap =
     !hopped &&
     ev.type === 'pointerup' &&
-    steerTap?.canFire &&
+    steerTap?.canFire === true &&
     ev.timeStamp - steerTap.startedAt <= TAP_MAX_MS &&
     Math.hypot(ev.clientX - steerTap.x, ev.clientY - steerTap.y) <= TAP_SLOP_PX;
   steerFlick = null;

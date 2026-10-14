@@ -433,7 +433,7 @@ export function previewAsteroidReflections(
     }
     result.impacts.push(hit);
     const obstacle = prepared.find((entry) => entry.asteroid.id === hit.asteroidId);
-    if (obstacle && options.canReflect && !options.canReflect(obstacle.asteroid)) {
+    if (obstacle && options.canReflect && options.canReflect(obstacle.asteroid) !== true) {
       result.termination = 'blocked';
       break;
     }

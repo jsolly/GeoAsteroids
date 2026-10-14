@@ -131,7 +131,7 @@ export function encodeRelativeMotion(
     let header = gap + mask;
     let encoded = values;
     const predicted = prediction?.(ordinal, mask);
-    if (predicted && predicted.length === arity && predicted.every(Number.isSafeInteger)) {
+    if (predicted != null && predicted.length === arity && predicted.every(Number.isSafeInteger)) {
       const residuals = values.map((value, index) => value - (predicted[index] ?? Number.NaN));
       if (
         residuals.every(Number.isSafeInteger) &&
@@ -214,7 +214,7 @@ export function readRelativeMotion(
     }
     if (wireMask & 16) {
       const predicted = prediction?.(ordinal, mask);
-      if (!predicted || predicted.length !== arity) {
+      if (predicted == null || predicted.length !== arity) {
         throw new Error('Invalid snapshot motion prediction baseline');
       }
       for (let index = 0; index < values.length; index++) {

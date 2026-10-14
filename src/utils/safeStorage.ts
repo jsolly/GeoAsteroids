@@ -15,7 +15,7 @@ function normalizeFailureCause(error: unknown): string {
       cause = error.name || 'Error';
     } else if (typeof error === 'object' && error !== null) {
       const candidate = error as { code?: unknown; name?: unknown };
-      if (typeof candidate['name'] === 'string' && candidate['name']) {
+      if (typeof candidate['name'] === 'string' && candidate['name'] !== '') {
         cause = candidate['name'];
       } else if (typeof candidate['code'] === 'string' || typeof candidate['code'] === 'number') {
         cause = `code-${String(candidate['code'])}`;

@@ -262,7 +262,7 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
           ...(remainsOffer === 1 ? { worldRemains: 1 } : {}),
 
           ...(typeof rawToken === 'string' ? { resumeToken: rawToken } : {}),
-          ...(clientReleaseId ? { clientReleaseId } : {}),
+          ...(clientReleaseId != null && clientReleaseId !== '' ? { clientReleaseId } : {}),
         },
       };
     }
@@ -297,7 +297,7 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
       }
       if (kind === 'revive') {
         const targetId = readNonEmptyString(fields['targetId']);
-        return targetId && targetId.length <= 128
+        return targetId != null && targetId !== '' && targetId.length <= 128
           ? { ok: true, command: { type, id, action: { kind, targetId } } }
           : invalid(type, 'Invalid rescue target');
       }
@@ -392,7 +392,10 @@ export function decodeClientCommand(message: unknown): ClientCommandDecodeResult
     case 'collisionDamage': {
       const targetPlayerId = readNonEmptyString(fields['targetPlayerId']);
       const attackerId = readNonEmptyString(fields['attackerId']);
-      return targetPlayerId && attackerId
+      return targetPlayerId != null &&
+        targetPlayerId !== '' &&
+        attackerId != null &&
+        attackerId !== ''
         ? { ok: true, command: { type, targetPlayerId, attackerId } }
         : invalid(type, 'Missing required fields for collisionDamage');
     }

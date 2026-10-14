@@ -90,7 +90,7 @@ function outcomeWitness(value: object): object {
     );
   });
   const result: unknown = JSON.parse(encoded);
-  assert(result && typeof result === 'object' && !Array.isArray(result));
+  assert(result !== null && typeof result === 'object' && !Array.isArray(result));
   return result;
 }
 

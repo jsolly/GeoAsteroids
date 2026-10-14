@@ -112,7 +112,7 @@ export class EventLoop {
       const debugHudOn = debugIsOn();
       if (observing) {
         clientPerformance.setPhase(
-          this.lifecycle.getCurrPlayer()?.ship.exploding ? 'respawn' : 'play'
+          this.lifecycle.getCurrPlayer()?.ship.exploding === true ? 'respawn' : 'play'
         );
         clientPerformance.record('frameIntervalMs', dtMs);
       }

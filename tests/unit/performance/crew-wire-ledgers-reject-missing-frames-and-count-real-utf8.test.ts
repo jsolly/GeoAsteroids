@@ -132,7 +132,7 @@ test('captured crew streams reject missing baselines, duplicate frames and alter
   const decoder = new SnapshotDecoder();
   const frames = [capture(keyframe.text, decoder), capture(delta.text, decoder)];
   const first = frames[0];
-  if (!first) {
+  if (first == null) {
     throw new Error('Missing initial keyframe');
   }
   expect(replayWireLedger(frames)).toBe(2);

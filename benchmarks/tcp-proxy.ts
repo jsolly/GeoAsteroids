@@ -75,7 +75,7 @@ export async function startTcpProxy(
       this.arrivals.set(chunk, performance.now());
     }
     private cancel(timer: ReturnType<typeof setTimeout> | undefined) {
-      if (timer) {
+      if (timer != null) {
         clearTimeout(timer);
         timers.delete(timer);
       }
@@ -86,7 +86,7 @@ export async function startTcpProxy(
         return;
       }
       if (performance.now() < input.transmissionFinishedAt) {
-        if (this.inputTimer) {
+        if (this.inputTimer != null) {
           return;
         }
         const timer = setTimeout(
@@ -127,7 +127,7 @@ export async function startTcpProxy(
         if (next.deliveryAt > performance.now()) {
           this.outputTimer = setTimeout(
             () => {
-              if (this.outputTimer) {
+              if (this.outputTimer != null) {
                 timers.delete(this.outputTimer);
               }
               this.outputTimer = undefined;

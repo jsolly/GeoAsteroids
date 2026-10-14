@@ -57,7 +57,7 @@ export function findShipAsteroidOverlaps(
       continue;
     }
     for (const asteroid of asteroids) {
-      if (shouldSkip?.(ship.id, asteroid.id)) {
+      if (shouldSkip?.(ship.id, asteroid.id) === true) {
         continue;
       }
       if (circlesOverlap(ship.position, ship.radius, asteroid.position, asteroid.radius)) {

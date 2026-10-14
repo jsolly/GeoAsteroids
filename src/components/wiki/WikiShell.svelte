@@ -36,7 +36,7 @@
   let historyFailureReported = false;
 
   function savedScroll(state: unknown): { id?: string; y?: number } {
-    if (!state || typeof state !== 'object') {
+    if (state === null || typeof state !== 'object') {
       return {};
     }
     const record = state as Record<string, unknown>;
@@ -197,7 +197,7 @@
     const id = initial.id ?? crypto.randomUUID();
     const oldRestoration = history.scrollRestoration;
     memory = new WikiScrollMemory(id, writeScroll, remember, () => window.scrollY);
-    if (!initial.id) {
+    if (initial.id == null || initial.id === '') {
       remember(id, initial.y ?? 0);
     }
     history.scrollRestoration = 'manual';

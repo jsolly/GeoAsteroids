@@ -72,8 +72,15 @@ function normalized(source, path) {
   return result;
 }
 export function literalOnlyChange(before, after) {
-  const names = Object.keys(before).sort();
-  if (JSON.stringify(names) !== JSON.stringify(Object.keys(after).sort())) {
+  const names = Object.keys(before).sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0
+  );
+  if (
+    JSON.stringify(names) !==
+    JSON.stringify(
+      Object.keys(after).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
+    )
+  ) {
     return false;
   }
   let changed = false;

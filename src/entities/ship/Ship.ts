@@ -89,7 +89,7 @@ class Ship {
     ) {
       return;
     }
-    if (this.combatNetwork?.sendCharge('start')) {
+    if (this.combatNetwork?.sendCharge('start') === true) {
       this.weaponChargeStartedAt = performance.now();
     }
   }
@@ -194,7 +194,7 @@ class Ship {
   }) {
     this.combatNetwork = options?.combatNetwork;
     // Set initial spawn protection for local players to prevent immediate collisions
-    if (options?.isLocalPlayer) {
+    if (options?.isLocalPlayer === true) {
       applyShipSpawnProtection(this);
 
       logger.debug('SPAWN_PROTECTION', 'Initial spawn protection set for local player', {
@@ -220,7 +220,7 @@ class Ship {
     }
 
     applyShipKitToShip(this, options?.kitId ?? DEFAULT_SHIP_KIT_ID);
-    if (options?.color) {
+    if (options?.color != null && options?.color !== '') {
       this.color = options.color;
     }
   }
@@ -414,7 +414,7 @@ class Ship {
     }
     if (this.isLocalPlayer) {
       const network = this.combatNetwork;
-      if (network?.isConnected) {
+      if (network?.isConnected === true) {
         // The server owns the ability result and cooldown. An optimistic toggle
         // can be undone by an older snapshot or disagree about eligible cargo.
         const sent = network.sendAbility();
@@ -462,7 +462,7 @@ class Ship {
 
   private sendShootEvent(laser: Laser): void {
     const network = this.combatNetwork;
-    if (network?.isConnected) {
+    if (network?.isConnected === true) {
       network.sendShoot(laser);
     }
   }
@@ -522,7 +522,7 @@ class Ship {
       this.updateInvincibility();
       tickShipImpactFlash(this);
       tickAbilityHost(this);
-      if (!this.combatNetwork?.isConnected) {
+      if (this.combatNetwork?.isConnected !== true) {
         tickTowLine(this, getHarpoonField());
       }
     }
@@ -530,7 +530,10 @@ class Ship {
 
   /** Advance one 60 Hz simulation step, including movement and combat timers. */
   update(): void {
-    if (this.downedUntil || this.rescue) {
+    if (
+      (this.downedUntil != null && this.downedUntil !== 0 && !Number.isNaN(this.downedUntil)) ||
+      this.rescue
+    ) {
       this.velocity = { x: 0, y: 0 };
       this.thrusting = false;
       this.releaseContourLock();

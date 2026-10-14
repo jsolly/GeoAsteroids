@@ -41,8 +41,8 @@ export function updateRouteMusic(
   const riding =
     ship.health > 0 &&
     !ship.exploding &&
-    !ship.furnaceTransit &&
-    !ship.overlayHold &&
+    Boolean(ship.furnaceTransit) === false &&
+    ship.overlayHold !== true &&
     Math.hypot(ship.velocity.x, ship.velocity.y) > 0.3 &&
     onTravelRoute(getTerrainField(), ship.position);
   if (!riding) {

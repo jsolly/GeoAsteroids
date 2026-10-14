@@ -76,7 +76,7 @@ function buildIndex(level: ContourLevel): LevelIndex {
       }
       for (let y = minY; y <= maxY; y++) {
         let cell = column.get(y);
-        if (!cell) {
+        if (cell == null) {
           cell = [];
           column.set(y, cell);
         }

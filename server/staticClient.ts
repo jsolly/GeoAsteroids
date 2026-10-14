@@ -110,7 +110,7 @@ async function serve(root: string, req: IncomingMessage, res: ServerResponse): P
     return;
   }
   const file = await resolveFile(root, pathname);
-  if (!file) {
+  if (file == null || file === '') {
     reject(res, 404);
     return;
   }

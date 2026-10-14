@@ -282,7 +282,7 @@ export function identity(root, inputEnvironment = process.env) {
           key
         )
     )
-    .sort();
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   const unknown = relevant.filter((key) => !allowed.has(key));
   const environment = relevant.map((key) => [key, digest(env[key] ?? '')]);
   const ignoredInputs = readdirSync(root)
@@ -421,7 +421,7 @@ export function readReusable(path, current, candidate, validateReview, ancestors
         return null;
       }
       let donor = donors.get(proof.receipt);
-      if (!donor) {
+      if (donor == null) {
         donor = readReusable(
           proof.receipt,
           { ...current, buildHead: proof.buildHead },

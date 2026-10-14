@@ -153,7 +153,7 @@ async function recoverSession(database: IDBDatabase): Promise<Session | undefine
     try {
       const value: unknown = JSON.parse(sample);
       if (
-        !value ||
+        value === null ||
         typeof value !== 'object' ||
         !('metrics' in value) ||
         !('counters' in value) ||
@@ -256,9 +256,10 @@ export function createPhoneCollector(metrics: ClientPerformanceMetrics, changed:
       return;
     }
     phase = 'stopped';
-    status = session.incompleteReason
-      ? `Incomplete: ${session.incompleteReason}`
-      : 'Performance: stopped';
+    status =
+      session.incompleteReason != null && session.incompleteReason !== ''
+        ? `Incomplete: ${session.incompleteReason}`
+        : 'Performance: stopped';
     publish();
   };
   const save = (session: Session) => {
@@ -413,7 +414,7 @@ export function createPhoneCollector(metrics: ClientPerformanceMetrics, changed:
       device = session.metadata.device.slice(0, 256);
       conditions = session.metadata.conditions.slice(0, 512);
       finish(session, null);
-      if (!session.incompleteReason) {
+      if (session.incompleteReason == null || session.incompleteReason === '') {
         status = 'Performance: recovered';
         publish();
       }

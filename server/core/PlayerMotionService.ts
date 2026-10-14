@@ -491,7 +491,7 @@ export class PlayerMotionService {
       return { ok: false, error: 'Server still owns this motion transform' };
     }
     if (
-      !pose ||
+      pose == null ||
       pose.epoch !== session.epoch ||
       !Number.isSafeInteger(pose.sequence) ||
       pose.sequence < 0 ||

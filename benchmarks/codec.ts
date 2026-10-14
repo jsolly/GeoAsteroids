@@ -124,7 +124,7 @@ function worlds(options: CodecSampleOptions): ServerGameSnapshot[] {
   const result = Array.from({ length: count }, (_, index) => snapshotFixture(options.seed + index));
   for (const [index, world] of result.entries()) {
     assert.deepEqual(
-      Object.keys(world).toSorted(),
+      Object.keys(world).toSorted((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
       FULL_FIXTURE_KEYS,
       `Codec fixture at tick ${index} is missing a complete top-level field set`
     );

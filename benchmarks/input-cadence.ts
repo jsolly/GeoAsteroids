@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 function object(value: unknown): Record<string, unknown> {
-  assert(value && typeof value === 'object' && !Array.isArray(value));
+  assert(value !== null && typeof value === 'object' && !Array.isArray(value));
   return Object.fromEntries(Object.entries(value));
 }
 function number(value: unknown) {

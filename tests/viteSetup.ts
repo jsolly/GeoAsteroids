@@ -72,7 +72,7 @@ if (typeof window !== 'undefined') {
   };
 
   const maybePatchMediaProto = (proto: unknown) => {
-    if (!proto || typeof proto !== 'object') {
+    if (proto === null || typeof proto !== 'object') {
       return;
     }
     const p = proto as MediaProto;
@@ -114,7 +114,7 @@ if (typeof window !== 'undefined') {
   if (typeof global.window.Audio === 'undefined') {
     global.window.Audio = class {
       constructor(src?: string) {
-        if (src) {
+        if (src != null && src !== '') {
           this.src = src;
         }
       }

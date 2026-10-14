@@ -77,7 +77,7 @@ export class PlayerMotionReconciliation {
     ) {
       throw new RangeError('Invalid authoritative player motion snapshot');
     }
-    if (this.actorId && snapshot.id !== this.actorId) {
+    if (this.actorId != null && this.actorId !== '' && snapshot.id !== this.actorId) {
       this.reset();
     }
     const previous = this.motion;

@@ -85,7 +85,10 @@ function abilityCooldownRatio(
 export function readAbilityChrome(host: AbilityChromeHost): AbilityChromeState {
   const kit = getShipKit(host.kitId);
   const alive =
-    !host.furnaceTransit && !host.exploding && Number.isFinite(host.health) && host.health > 0;
+    Boolean(host.furnaceTransit) === false &&
+    !host.exploding &&
+    Number.isFinite(host.health) &&
+    host.health > 0;
   const cooling = Number.isFinite(host.abilityCooldownFrames) && host.abilityCooldownFrames > 0;
   const unavailable = !alive;
   const towing = kit.id === 'hauler' && Boolean(host.harpoonTargetId);

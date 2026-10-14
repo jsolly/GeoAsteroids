@@ -20,7 +20,7 @@
   ] satisfies { id: ShipKitId; name: string; description: string }[];
 
   function select(value: string) {
-    if (!disabled && (value === 'scout' || value === 'hauler')) {
+    if (disabled !== true && (value === 'scout' || value === 'hauler')) {
       onselectship(value);
     }
   }

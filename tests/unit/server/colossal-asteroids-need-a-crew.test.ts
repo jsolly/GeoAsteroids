@@ -74,7 +74,9 @@ describe('Colossal asteroids need a crew', () => {
     const actor = world.entity(pilot);
     const target = world.engine
       .getAllAsteroids()
-      .find((rock) => (targetId ? rock.id === targetId : rock.id.startsWith('colossal')));
+      .find((rock) =>
+        targetId != null && targetId !== '' ? rock.id === targetId : rock.id.startsWith('colossal')
+      );
     if (target && actor.haulerUtility === 'tow_cable') {
       actor.angle = Math.atan2(
         actor.position.y - target.position.y,
