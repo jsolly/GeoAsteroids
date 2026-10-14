@@ -39,11 +39,11 @@
     "public/sounds/tap-eject.m4a": "sha256:d56a555f6c6ca7216ecc64eaed2c28d3ef33cd73e56f4096b64fa442ecec351e",
     "public/wiki/media/cargo.gif": "sha256:19e84b37db309044cf223318edb14cb87b4343bdefff1dc2927e50414c807e39",
     "public/wiki/media/cargo.png": "sha256:0591c2c6e84f40451a81e9667ccdeeaaf45e6ef012e95809f4caaa6697f591f4",
-    "public/wiki/media/hauler.gif": "sha256:6e221fd27b8fd546fe19f98c7f77773bf1edc623b2d67e4571d0370d6b425d4b",
-    "public/wiki/media/hauler.png": "sha256:84eeef3527197c48b08698dbb457cd12586bb682df1ad105726d8188b4cf3fd8",
+    "public/wiki/media/hauler.gif": "sha256:cba554d89e4bfe367cee7d2f40077955b4a031a54e2eea2f483410472f77e219",
+    "public/wiki/media/hauler.png": "sha256:c9135efc3c806428ab0c6ccec48c3aa5ae228202fbace3d457308628e8c779e5",
     "public/wiki/media/loot.gif": "sha256:11e9be804d188df35cb4fac45bb7470a8c0d3cb55a4b6f37371a16b775276a74",
     "public/wiki/media/loot.png": "sha256:83f348e192b1f3916b4689814bba8ed2b4c70b859c839d02c8814c3ed1192234",
-    "public/wiki/media/manifest.json": "sha256:9bfcd4e9c30f9e08485aad88e515fe5efc0102c118e5123c1298e8212423d51c",
+    "public/wiki/media/manifest.json": "sha256:02a6c287e476ae5edde1df1ea4d6841046bce2f2228a4e8456737942338f1c43",
     "public/wiki/media/movement.gif": "sha256:47ec04acb0d1bb76308e54309fdbbf918cb919b7a70b471102ac8f17884e529a",
     "public/wiki/media/movement.png": "sha256:6de77a3568f4563f6c96722cb67cac60f0e004b703a7817e38906e023f2a5c1b",
     "public/wiki/media/pickups.gif": "sha256:746b5e657bb87f49e52e93ed35cf336d9145dd9c8c89b462ed386c324c292653",
@@ -4430,6 +4430,19 @@
       "topics": ["combat-survival", "controls", "hud-network", "teamwork", "terrain"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Accepted exact Linux-x64 Wiki artifact 11876515368 from CI 38525854919 at commit d72ba405. Archive SHA256 a805bae625a6c10b86dd15cd4ddf6a0ac631bcfac5aadf3e555ae6c41c31f385 verified; only Hauler GIF/poster/manifest asset changed after travel-tool speed update. Inspected poster and frames 0,24,47 against real tow simulation: outbound line, attached rotating rock, furnace delivery and shared reward; all other media remain byte-identical. No gameplay or generator source changed.",
+      "sources": [
+        "public/wiki/media/hauler.gif",
+        "public/wiki/media/hauler.png",
+        "public/wiki/media/manifest.json"
+      ],
+      "topics": ["hauler"],
+      "media": ["hauler"],
+      "owners": {
+        "public/wiki/media/manifest.json": "hauler"
+      }
     }
   ]
 }
