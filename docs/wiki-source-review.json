@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:32d123d933e17cbce5266783c1a16e65b3d947c455845ea765fccd1630fdaf74",
+    "package.json": "sha256:4da12be43c1ac10639c239c746d7e4fb81ed0b805837fab8daee8757164c6e77",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -5951,6 +5951,15 @@
     },
     {
       "note": "Reviewed Knip6.38.0 through6.41.0 and its exact scanner/parser/resolver lock changes against the field manual. Railway, Vite and Vitest discovery remain covered by the existing explicit entrypoints; all hint-error flags remain enabled, and no speculative entry removal was made. Clean install and peer resolution, unchanged Knip, Markdown/lint policy, TypeScript, benchmark types, Astro/Svelte diagnostics and all downstream static build contracts passed. Product rules, Wiki content and demonstration assets are unchanged; existing feature814 gameplay coverage and root fresh1280x900/390x844 Wiki navigation/layout/console proof remain applicable. This batch accepts only package.json and preserves the preceding markdownlint review; full gate and CI are still pending.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed Playwright1.63 to1.64 and exact playwright/core lock changes against current manual benchmark consumers. Changed device descriptors, JSX, snapshot and hidden-iframe APIs are unused; existing viewport/hasTouch/deviceScaleFactor calls remain valid. Clean install and peer resolution, unchanged Markdown/lint policy/Knip, TypeScript, benchmark types, Astro/Svelte diagnostics and all downstream static build contracts passed on the combined three-bump tree. No browser correctness suite was added; no browser benchmark or performance result is claimed. Product rules, Wiki content and demonstration assets are unchanged; root fresh1280x900/390x844 unchanged-feature Wiki proof remains applicable. This batch accepts only package.json and preserves both preceding review records; full gate and CI are still pending.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
