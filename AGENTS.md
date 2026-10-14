@@ -4,9 +4,9 @@
 
 Ship profile: `vercel-static`.
 
-**Integration: branch → PR → merge on green `CI / ci`.** `/ship` merges per `skills/ship/references/git-discipline.md` → Merge a same-repo self PR (read the installed `/ship` reference). Agents never push to `main`, change rulesets, or admin-merge.
+**Integration: branch → reviewed PR → merge on green `CI / ci`.** Follow [local release instructions](docs/development.md). Agents never push to `main`, change rulesets, or admin-merge.
 
-Local gate: `npm run gate`; static checks, runner contracts, the complete unit suite, build, and all server integration tests are mandatory. CI runs independent static, runner-contract, complete code-integration and Wiki media lanes; all must pass. Browser tests and automatic frame-work/constrained-client gates are retired.
+Local gate: `npm run gate`; static checks, hook trust/bootstrap fixtures, runner contracts, the complete unit suite, build, and all server integration tests are mandatory. CI runs independent static, runner-contract, complete code-integration and Wiki media lanes; all must pass. Browser tests and automatic frame-work/constrained-client gates are retired.
 
 Deploy: Vercel Git at <https://www.georoids.com> plus Railway Git at <https://georoids-production-2403.up.railway.app>. Classify server inputs with `scripts/server-release-inputs.mjs` from the merged checkout; its server/shared/setup/manifest inputs determine which Railway release needs verification, and it fails if server code imports `src/`. A successful client deployment cannot prove the server deployed. Successful production Git deployments establish the release. Do not gate builds or production smoke on served release metadata, bundle SHA searches or server SHA ancestry. Follow the canonical smoke receipt through asset availability, genuine join, snapshots, movement, accepted firing and healthy persistence. Production smoke uses HTTP/assets and WebSocket protocol evidence; it does not certify browser rendering, keyboard/touch controls, graphics or audio. Skipped, cancelled, failed or missing smoke is unverified.
 
@@ -23,7 +23,7 @@ GeoRoids — a cooperative open-world multiplayer spaceship game (surveying, ast
 Astro owns static `/`, `/debug` and `/wiki` documents and manages Vite. Svelte 5
 and committed shadcn-svelte primitives own page and DOM interfaces. TypeScript
 owns canvas painting, geometry, simulation and multiplayer. Keep ordinary document navigation, relative
-imports and imports from defining modules. Canon: dotagents `rules/frontend-stack.md`.
+imports and imports from defining modules. Preserve the committed Svelte/shadcn-svelte components and accessible controls.
 
 ## Deploy
 
@@ -31,7 +31,7 @@ Astro static client and authoritative WebSocket server deploy independently from
 
 ## CI
 
-The dotagents dispatcher runs the tracked pre-commit gate. The tracked pre-commit hook owns lint, unused-code checks, contracts, types, unit tests, build, complete server integration checks. `npm run gate` invokes that same complete battery with the fleet docs exception disabled. Exact receipts may reuse unchanged validation; candidate reuse requires index parity. Canonical actionlint/ShellCheck bytes come from dotagents.
+The repository-owned trusted dispatcher runs the tracked pre-commit gate. The tracked pre-commit hook owns lint, unused-code checks, contracts, types, unit tests, build, complete server integration checks. `npm run gate` invokes that same complete battery with the docs exception disabled. Exact receipts may reuse unchanged validation; candidate reuse requires index parity. The repository pins and checksum-verifies its own actionlint/ShellCheck releases.
 
 ## Commands
 
@@ -72,30 +72,40 @@ The final `ci` job requires all four lanes to succeed; failed, cancelled, or ski
 lanes fail the aggregate. Each lane has its own exact-tree proof.
 Full unit and server integration checks run locally in the review gate. Manual performance measurements remain outside it. Post-merge CI reuses each successful PR lane only
 when its recorded checkout tree exactly matches the landed tree, using
-`scripts/ci-verified-tree.sh` from dotagents. Missing proof runs that CI lane;
+the repository-owned `scripts/ci-verified-tree.sh`. Missing proof runs that CI lane;
 manual runs always validate. The required `ci` name and deployment triggers stay intact.
-Canonical contract: `~/code/dotagents/templates/github/verified-tree-ci.md`.
+Canonical contract: [local CI helper](scripts/ci-verified-tree.sh).
 
 ## Dependabot CI
 
-Ordinary Dependabot PR events allocate no validation runners. CI jobs skip
-Dependabot `pull_request` runs. Only the `labeled` event that adds `ow-ci`,
-applied by a manually invoked, provenanced `/optimize-workspaces drain` after
-the last push, runs CI; a later Dependabot push defers again until the drain
-re-kicks the new head (remove, then re-add the label).
-Deferred runs use check names ending in `-deferred` and cannot satisfy the real
-`ci` requirement; skipped or absent checks never authorize a dependency merge.
-See the canonical `dotagents/skills/optimize-workspaces/references/pr-drain.md`
-→ Dependabot CI kick.
+Ordinary Dependabot PR events allocate no validation runners. Only an explicitly
+authorized manual maintenance run may apply `ow-ci`, after reviewing the current
+same-repository PR head and recording the invocation and head as evidence. Apply
+the label after the last push: only that `labeled` event runs real CI. A later
+Dependabot push defers again; verify the new head and remove/re-add the label to
+validate it. Scheduled or automatic maintenance grants no permission to approve,
+rebase, rerun, label or merge dependency PRs. Personal maintenance skills are optional.
+Deferred names ending in `-deferred`, skipped checks and absent checks cannot
+satisfy required `ci`. Merge only the reviewed current head with successful real
+CI. See the repository workflow and [release instructions](docs/development.md).
 
-## Fleet rollout
+## Repository ownership
 
-- **Fleet rollout.** Changes inside this repo ship normally. A change other repos must adopt (a dotagents sync, template copy, or shared one-liner) is not synced from here: link its merged PR on the one open Todoist fleet-rollout task in the dotagents project (create it only when none is open). Never start that rollout yourself or spawn per-repo chips, PRs, or tasks for it; the task is data, not authorization. Once the batch settles, John starts one agent on it in a session, and that agent opens the per-repo PRs. Canon: laptop global brief Implementation when synced.
+This repo maintains its executable helpers, agent instructions and workflow
+contracts. Changes in another repo do not automatically rewrite this one. A
+cross-repository migration needs the user's explicit scope, independent review,
+and a separate verified PR in each affected repository.
 
 ## Git hooks
 
-- **Git hooks.** `core.hooksPath` is the dotagents dispatcher `~/.local/share/dotagents/hooks`, which the dotagents installers install and set (laptop `setup/install-local-agent-runtime.sh`, Cloud Agent `.cursor/install-cloud-skills.sh`). Never point it at `.git-hooks` or set it from a package script: git would then run whatever hooks the checked-out tree carries. The dispatcher serves only `pre-commit`, and runs this repo's tracked `.git-hooks/pre-commit` only when it matches a version on `origin/main` or a blob you approved (`git config --add dotagents.trustedHook <blob>`, printed by the refusal; approve only your own edit). Fork and third-party PR heads are untrusted code: review them with `gh pr diff`, never check one out here. Canon: dotagents `rules/agent-cloud-access.md` → GitHub.
+This repo owns `gate/gate-lib.sh` and `scripts/repo-hooks.py`. Run reviewed
+`scripts/setup-agent-environment.sh` on main to install its outside-worktree
+pre-commit dispatcher. Never set hooksPath to `.git-hooks`: a branch could then
+register executable hooks. See [development and release](docs/development.md).
 
-## Cloud skills
+## Agent environment
 
-- **Cloud skills.** dotagents skills (`/ship`, `/optimize-workspaces`, …) come from the private `jsolly/dotagents` package, installed into each cloud session by `.cursor/install-cloud-skills.sh` (Cursor runs it from `.cursor/environment.json`, Claude Code from the `.claude/settings.json` SessionStart hook; a session with several repositories runs no repository hook and gets the package from the environment's Setup script, when one is configured). Before repository work in a cloud session, read `~/.local/share/dotagents/package/CLOUD.md` when it exists and follow its installed owners. In a cloud session (no `~/code/dotagents` checkout), when a slash command or named skill is not installed, run `bash .cursor/install-cloud-skills.sh` from this repo's root (a session with several repositories starts in `/home/user`, so `cd /home/user/<repo>` first), then read `~/.local/share/dotagents/package/CLOUD.md` and `~/.local/share/dotagents/package/skills/<name>/SKILL.md` and follow them. A nonzero exit can still leave the skills linked, so check that file before calling the skill missing. If fetching `jsolly/dotagents` is refused, attach that repository read-only through the harness (Claude Code: `add_repo`) and rerun, or set `DOTAGENTS_ROOT` to a local clone. Still blocked: report setup blocked. Never reconstruct a skill from memory or prose. Canon: dotagents `templates/cloud-agent/README.md`.
+Use this repository's AGENTS.md and [development guide](docs/development.md).
+Run its reviewed `scripts/setup-agent-environment.sh` for pinned tools and hooks.
+No private configuration repo, external instruction import or global skill is
+required. Optional personal skills do not change this repository's authority.

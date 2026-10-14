@@ -10,12 +10,13 @@ import {
   renameSync,
   writeFileSync,
 } from 'node:fs';
-import { join, relative as relativePath, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import process from 'node:process';
 import { receiptEnvironment } from './validation-admission.mjs';
 
 export const RECEIPT_VERSION = 2;
 export const STAGES = [
+  ['repository hook trust', 'check:repo-hooks'],
   ['lint policy', 'check:lint-policy'],
   ['lint', 'check:lint'],
   ['knip', 'check:knip'],
@@ -181,6 +182,29 @@ function executable(name, env) {
   }
   throw new Error(`Missing runtime ${name}`);
 }
+function pythonRuntime(root, env) {
+  // Ask the execution launcher rather than duplicating its version/fallback policy.
+  const selected = spawnSync(
+    executable('bash', env),
+    [
+      join(root, 'scripts/repo-python.sh'),
+      '-c',
+      'import os, sys; print(os.path.realpath(sys.executable))',
+    ],
+    { cwd: root, env, encoding: 'utf8', timeout: 10_000, maxBuffer: 4096 }
+  );
+  const path = selected.stdout?.trim() ?? '';
+  if (
+    selected.status !== 0 ||
+    selected.error ||
+    selected.signal ||
+    !isAbsolute(path) ||
+    path.includes('\n')
+  ) {
+    throw new Error('Cannot identify supported Python runtime; run reviewed repository setup');
+  }
+  return realpathSync(path);
+}
 function consumedFile(path) {
   if (!present(path)) {
     return null;
@@ -195,6 +219,8 @@ export function identity(root, inputEnvironment = process.env) {
     const path = executable(name, env);
     return [name, path, fileRecord(path)];
   });
+  const python = pythonRuntime(root, env);
+  runtimes.push(['python', python, fileRecord(python)]);
   const allowed = new Set([
     'NODE_ENV',
     'NODE_OPTIONS',
@@ -217,7 +243,6 @@ export function identity(root, inputEnvironment = process.env) {
     'LC_ALL',
     'CI',
     'GEOROIDS_SERVER_ENV_FILE',
-    'DOTAGENTS_GATE_LIB',
     'FLEET_DOC_FAST',
     'VERCEL_GIT_COMMIT_SHA',
     'RAILWAY_GIT_COMMIT_SHA',
