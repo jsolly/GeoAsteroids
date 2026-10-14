@@ -30,12 +30,12 @@ export function readStoredResumeName(): string | undefined {
 
 export function readStoredResumeProvenance(): ResumeReleaseProvenance | undefined {
   const raw = getStoredItem(RESUME_PROVENANCE_STORAGE_KEY);
-  if (!raw) {
+  if (raw == null || raw === '') {
     return undefined;
   }
   try {
     const value: unknown = JSON.parse(raw);
-    if (!value || typeof value !== 'object') {
+    if (value === null || typeof value !== 'object') {
       return undefined;
     }
     const record = value as Record<string, unknown>;

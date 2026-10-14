@@ -59,7 +59,7 @@ export function deserializeWorkerError(error: SerializedWorkerError): Error {
     error.cause ? { cause: deserializeWorkerError(error.cause) } : {}
   );
   rebuilt.name = error.name;
-  if (error.stack) {
+  if (error.stack != null && error.stack !== '') {
     rebuilt.stack = error.stack;
   }
   if (error.code !== undefined) {

@@ -33,7 +33,7 @@ afterEach(async () => {
 function start(path = '/debug', inPlay = false) {
   window.history.replaceState(null, '', path);
   const update = vi.fn(() => {
-    if (model) {
+    if (model != null) {
       view.set(model.read(false));
     }
   });

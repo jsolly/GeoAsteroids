@@ -162,7 +162,7 @@ export function drawBeltEncounters(pilot: Position, roids: readonly Roid[]): voi
       continue;
     }
     const host = byId.get(spider.crawler.hostId);
-    if (host) {
+    if (host != null) {
       drawCrawler(ctx, spider, host, pilot, scale, time);
     }
   }

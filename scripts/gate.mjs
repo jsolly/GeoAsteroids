@@ -138,7 +138,7 @@ export async function runGate({
   const before = capture(root, environment);
   const candidate = candidateMatches(root, before.source);
   const cached = readReusable(receiptPath, before, candidate, validateReview);
-  if (cached) {
+  if (cached != null) {
     const final = capture(root, environment);
     if (!sameIdentity(before, final) || !final.reusable || !candidateMatches(root, final.source)) {
       throw new Error('Gate inputs changed during receipt validation');
@@ -291,12 +291,12 @@ export async function runGate({
       throw new Error('Candidate index changed during new-HEAD validation');
     }
     if (
-      !readReusable(
+      readReusable(
         donorPath,
         { ...after, buildHead: prior.identity.buildHead },
         true,
         validateReview
-      )
+      ) == null
     ) {
       throw new Error('Complete donor evidence changed during new-HEAD validation');
     }

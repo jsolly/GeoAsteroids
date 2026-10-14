@@ -260,7 +260,7 @@ async function stopAndSaveTrace(session: CDPSession, outputPath: string): Promis
         TRACE_IO_READ_TIMEOUT_MS,
         'Chromium trace IO.read'
       );
-      const data = Buffer.from(chunk.data, chunk.base64Encoded ? 'base64' : 'utf8');
+      const data = Buffer.from(chunk.data, chunk.base64Encoded === true ? 'base64' : 'utf8');
       assert(data.byteLength > 0 || chunk.eof, 'Chromium trace stream made no progress');
       assert(
         artifact.bytes + data.byteLength <= TRACE_MAX_BYTES,
@@ -351,7 +351,7 @@ async function stopActiveTraceSession(
       try {
         const artifact = await stopAndSaveTrace(session, outputPath);
         capturedArtifact = artifact;
-        assert(!artifact.dataLossOccurred, 'Chromium tracing reported data loss');
+        assert(artifact.dataLossOccurred !== true, 'Chromium tracing reported data loss');
       } catch (error) {
         if (error instanceof TraceCaptureError) {
           capturedArtifact = error.artifact;
@@ -622,11 +622,12 @@ function createMeasurement(): Measurement | undefined {
       samples[name] = metricValues;
     }
   }
-  const primaryMetric = samples['frameCpuMs']
-    ? 'frameCpuMs'
-    : samples['renderMs']
-      ? 'renderMs'
-      : Object.keys(samples)[0];
+  const primaryMetric =
+    samples['frameCpuMs'] != null
+      ? 'frameCpuMs'
+      : samples['renderMs'] != null
+        ? 'renderMs'
+        : Object.keys(samples)[0];
   try {
     validateSnapshotTimingRequirements([
       { phase: 'join', intervals: joinIntervals },
@@ -642,7 +643,7 @@ function createMeasurement(): Measurement | undefined {
       failures.push(new Error(`Real-time client report is missing ${name} samples`));
     }
   }
-  if (!primaryMetric) {
+  if (primaryMetric == null || primaryMetric === '') {
     return undefined;
   }
   return {
@@ -1152,7 +1153,7 @@ try {
           }
           const envelope: unknown = JSON.parse(text);
           if (
-            envelope &&
+            envelope !== null &&
             typeof envelope === 'object' &&
             'type' in envelope &&
             envelope.type === 'useAbility' &&
@@ -1182,7 +1183,7 @@ try {
           if (result.kind === 'message') {
             const envelope = result.message;
             if (
-              !envelope ||
+              envelope === null ||
               typeof envelope !== 'object' ||
               !('type' in envelope) ||
               !('data' in envelope)
@@ -1557,7 +1558,7 @@ try {
         });
         cpuSession.on('Network.webSocketHandshakeResponseReceived', ({ requestId, response }) => {
           const url = gameplaySockets.get(requestId);
-          if (url) {
+          if (url != null && url !== '') {
             const extensions =
               Object.entries(response.headers).find(
                 ([name]) => name.toLowerCase() === 'sec-websocket-extensions'
@@ -2417,7 +2418,11 @@ try {
           const healthSample: unknown = await response.json();
           validateHealth(healthSample);
           health.push({ measured: target === intervals, data: healthSample });
-          if (healthSample && typeof healthSample === 'object' && 'metrics' in healthSample) {
+          if (
+            healthSample !== null &&
+            typeof healthSample === 'object' &&
+            'metrics' in healthSample
+          ) {
             const metrics = healthSample.metrics;
             if (
               metrics &&
@@ -2572,7 +2577,7 @@ try {
         throw new AggregateError(endBoundaryFailures, 'Measurement end probes failed');
       }
       assert(
-        proxyTransport.measurement && serverProcessCpu.measurement,
+        proxyTransport.measurement != null && serverProcessCpu.measurement,
         'Incomplete measurement boundaries'
       );
       await stopDesktopFire();
@@ -2746,7 +2751,7 @@ try {
         await readFile(join(sessionPath, 'proxy-stats.json'), 'utf8')
       );
       assert(
-        proxyStats &&
+        proxyStats !== null &&
           typeof proxyStats === 'object' &&
           'bytesUp' in proxyStats &&
           typeof proxyStats.bytesUp === 'number' &&
@@ -3019,7 +3024,9 @@ try {
           assert(response.ok, 'Departure health request failed');
           const departureHealth: unknown = await response.json();
           assert(
-            departureHealth && typeof departureHealth === 'object' && 'world' in departureHealth
+            departureHealth !== null &&
+              typeof departureHealth === 'object' &&
+              'world' in departureHealth
           );
           const world = departureHealth.world;
           assert(

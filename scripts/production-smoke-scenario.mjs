@@ -264,7 +264,7 @@ export async function smoke({
                   message.data.projectileId.length > 0)),
             'Malformed authoritative shot acknowledgement'
           );
-          if (evidence.shot && message.data.requestId === shotRequestId) {
+          if (evidence.shot != null && message.data.requestId === shotRequestId) {
             requireEvidence(
               message.data.projectileId !== null,
               'Authoritative server rejected the smoke shot'

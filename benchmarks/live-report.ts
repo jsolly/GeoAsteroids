@@ -214,7 +214,7 @@ export function createLiveReport<TDetails extends object>(options: {
   return {
     schemaVersion: 1,
     kind: options.kind,
-    status: options.failed ? 'failed' : 'passed',
+    status: options.failed === true ? 'failed' : 'passed',
     metadata: options.metadata,
     ...(options.measurement ? { measurement: options.measurement } : {}),
     details: options.details,
@@ -278,7 +278,7 @@ function diagnosticText(value: unknown): string {
   if (value instanceof Error) {
     return `${value.name}: ${value.message}`;
   }
-  if (value && typeof value === 'object' && 'message' in value) {
+  if (value !== null && typeof value === 'object' && 'message' in value) {
     return String(value.message);
   }
   return String(value);
@@ -320,7 +320,7 @@ function finalizeRecordedDiagnostics(details: Record<string, unknown>): {
       let failedScenarios = 0;
       const scenarios = recordedScenarios.map((scenario: unknown, index: number) => {
         const label = `Scenario ${index + 1}`;
-        if (!scenario || typeof scenario !== 'object' || Array.isArray(scenario)) {
+        if (scenario === null || typeof scenario !== 'object' || Array.isArray(scenario)) {
           failures.push(`${label} is not a scenario record`);
           failedScenarios++;
           return scenario;
@@ -354,7 +354,12 @@ function finalizeRecordedDiagnostics(details: Record<string, unknown>): {
 }
 
 export function validateHealth(value: unknown): void {
-  if (!value || typeof value !== 'object' || !('status' in value) || value.status !== 'healthy') {
+  if (
+    value === null ||
+    typeof value !== 'object' ||
+    !('status' in value) ||
+    value.status !== 'healthy'
+  ) {
     throw new Error('Server health JSON is not healthy');
   }
   if (

@@ -366,7 +366,8 @@ export function serializeKitHullSvg(kitId: unknown, options: HullSvgOptions = {}
   const includeTitle = options.title !== false;
   const width = options.width ?? HULL_SVG_VIEWBOX;
   const height = options.height ?? HULL_SVG_VIEWBOX;
-  const classAttr = options.className ? ` class="${options.className}"` : '';
+  const classAttr =
+    options.className != null && options.className !== '' ? ` class="${options.className}"` : '';
   const bounds = outlineBounds(outline);
   const spanF = Math.max(bounds.maxF - bounds.minF, 0.01);
   const spanP = Math.max(bounds.maxP - bounds.minP, 0.01);

@@ -283,7 +283,10 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     logger.error('❌ WebSocket server error:', error);
   });
 
-  const persistence = options.worldPath ? openWorldPersistence(options.worldPath) : undefined;
+  const persistence =
+    options.worldPath != null && options.worldPath !== ''
+      ? openWorldPersistence(options.worldPath)
+      : undefined;
   const gameEngine = new GameEngine(
     options.seed,
     undefined,

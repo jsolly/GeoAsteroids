@@ -39,7 +39,7 @@ export class CooperativeContourBridges {
     const id = `contour-bridge:${++this.nextId}`;
     if (this.entries.size >= CONTOUR_BRIDGE.maximum) {
       const oldest = this.entries.keys().next().value;
-      if (oldest) {
+      if (oldest != null && oldest !== '') {
         this.entries.delete(oldest);
       }
     }
@@ -65,7 +65,7 @@ export class CooperativeContourBridges {
       !actor.contourLock ||
       actor.health <= 0 ||
       actor.exploding ||
-      actor.overlayHold ||
+      actor.overlayHold === true ||
       actor.furnaceTransit ||
       actor.contourTransit
     ) {

@@ -124,7 +124,7 @@ export function drawEoSatelliteOutline(
     return;
   }
   const outline: EoOutline = EO_OUTLINES[typeId];
-  if (!outline) {
+  if (outline == null) {
     return;
   }
   const scale = radius / 32;

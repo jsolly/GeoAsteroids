@@ -88,7 +88,7 @@ export function applyAsteroidKinematics(
   roid.jaggedness = updates.jaggedness;
   const localEscaped = !isPoseInAsteroidField(roid.position.x, roid.position.y);
   if (
-    options.snapPosition ||
+    options.snapPosition === true ||
     localEscaped ||
     shouldSnapAsteroidPose(roid.position, updates.position)
   ) {

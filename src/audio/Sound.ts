@@ -25,7 +25,7 @@ function nativeVoiceSource(
   }
   const voice: unknown = howl._soundById(id);
   if (
-    !voice ||
+    voice === null ||
     typeof voice !== 'object' ||
     !('_node' in voice) ||
     !('_ended' in voice) ||

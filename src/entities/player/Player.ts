@@ -157,7 +157,12 @@ export class Player {
     if (data.crewSignal !== undefined) {
       this.ship.crewSignal = data.crewSignal;
     }
-    if (wasDowned || this.ship.downedUntil) {
+    if (
+      wasDowned ||
+      (this.ship.downedUntil != null &&
+        this.ship.downedUntil !== 0 &&
+        !Number.isNaN(this.ship.downedUntil))
+    ) {
       this.ship.exploding = false;
     }
     const wasInTransit = this.ship.furnaceTransit !== null;
@@ -308,7 +313,13 @@ export class Player {
           });
         }
 
-        if (this.ship.health <= 0 && oldHealth > 0 && !this.ship.downedUntil) {
+        if (
+          this.ship.health <= 0 &&
+          oldHealth > 0 &&
+          (this.ship.downedUntil == null ||
+            this.ship.downedUntil === 0 ||
+            Number.isNaN(this.ship.downedUntil))
+        ) {
           logger.debug('HEALTH_UPDATE', 'Health reached 0, triggering explosion', {
             playerId: this.id,
             oldHealth,
@@ -386,12 +397,14 @@ export class Player {
     if (outgoingTow && !this.soundedTowOutbound) {
       playHarpoonLaunch(this.ship.position);
     }
-    if (target && target !== this.soundedHarpoonTarget) {
+    if (target != null && target !== '' && target !== this.soundedHarpoonTarget) {
       playHarpoonLatch(this.ship.harpoonLatchPos ?? this.ship.position);
       recordAsteroidLatch(target);
     } else if (
-      (this.soundedHarpoonTarget && !target) ||
-      (this.soundedTowOutbound && !outgoingTow && !target)
+      (this.soundedHarpoonTarget != null &&
+        this.soundedHarpoonTarget !== '' &&
+        (target == null || target === '')) ||
+      (this.soundedTowOutbound && !outgoingTow && (target == null || target === ''))
     ) {
       playHarpoonRelease(this.ship.position);
     }

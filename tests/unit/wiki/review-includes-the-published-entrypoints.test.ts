@@ -23,7 +23,7 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
   const fixture = mkdtempSync(join(tmpdir(), 'georoids-wiki-review-'));
   const baseline: unknown = JSON.parse(readFileSync('docs/wiki-source-review.json', 'utf8'));
   if (
-    !baseline ||
+    baseline === null ||
     typeof baseline !== 'object' ||
     !('hashes' in baseline) ||
     !baseline.hashes ||

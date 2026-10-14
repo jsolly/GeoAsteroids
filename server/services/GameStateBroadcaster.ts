@@ -160,7 +160,7 @@ export class GameStateBroadcaster {
     for (const data of this.gameEngine.drainShotSounds()) {
       this.broadcastToAll(
         { type: 'playerShotFired', data, timestamp: Date.now() },
-        data.charged ? undefined : data.ownerId
+        data.charged === true ? undefined : data.ownerId
       );
     }
     for (const data of this.gameEngine.drainTapEjections()) {
@@ -191,7 +191,7 @@ export class GameStateBroadcaster {
     let playerProjectiles: ReturnType<GameEngine['getPlayerProjectiles']> | undefined;
     for (const player of players) {
       const ws = player.ws;
-      if (!ws || (excludeId && player.id === excludeId)) {
+      if (!ws || (excludeId != null && excludeId !== '' && player.id === excludeId)) {
         continue;
       }
       const recipient = this.snapshotRecipients.get(ws);
@@ -238,7 +238,9 @@ export class GameStateBroadcaster {
                         frontierSite(id) ??
                         civicLot(id) ??
                         (id === TOWN_HEARTH.id ? TOWN_HEARTH : undefined);
-                      return source && isWithinWorldInterest(source.position, player.position);
+                      return (
+                        source != null && isWithinWorldInterest(source.position, player.position)
+                      );
                     }),
                     hives: gameState.campaign.hives.filter((hive) =>
                       isWithinWorldInterest(hive.position, player.position)
@@ -523,10 +525,10 @@ export class GameStateBroadcaster {
   ): number | undefined {
     const recipient = this.snapshotRecipients.get(ws);
     if (recipient) {
-      if (options.recovery && recipient.resyncRequested) {
+      if (options.recovery === true && recipient.resyncRequested) {
         return recipient.recoverySequence ?? recipient.sequence + 1;
       }
-      if (options.recovery && recipient.outstandingBytes > SNAPSHOT_APPLIED_WINDOW_BYTES) {
+      if (options.recovery === true && recipient.outstandingBytes > SNAPSHOT_APPLIED_WINDOW_BYTES) {
         // A rejected sole oversized frame cannot be followed by a second one
         // without violating the hard one-large-frame memory bound.
         this.closeSocketForRecovery(ws, 1013, 'Oversized snapshot recovery requires reconnect');
@@ -561,7 +563,7 @@ export class GameStateBroadcaster {
       result.isDestroyed
     );
 
-    if (result.destroyedAsteroidId) {
+    if (result.destroyedAsteroidId != null && result.destroyedAsteroidId !== '') {
       this.broadcastAsteroidDestruction(
         result.destroyedAsteroidId,
         result.origin !== undefined ? { origin: result.origin } : undefined
@@ -781,7 +783,7 @@ export class GameStateBroadcaster {
     const players = this.gameEngine.getAllPlayers();
 
     for (const player of players) {
-      if (excludeId && player.id === excludeId) {
+      if (excludeId != null && excludeId !== '' && player.id === excludeId) {
         continue;
       }
 

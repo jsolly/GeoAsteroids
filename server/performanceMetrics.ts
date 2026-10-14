@@ -370,7 +370,7 @@ export class ServerPerformanceMetrics {
       this.utilizationBaseline = this.eventLoopUtilization();
       this.startedAt = this.now();
       this.startedWall = this.wallNow();
-      if (options.autoStart) {
+      if (options.autoStart === true) {
         this.start();
       }
     }
@@ -448,10 +448,10 @@ export class ServerPerformanceMetrics {
     if (discardedValid) {
       this.counters.discardedDebtMs += s.discardedDebtMs;
     }
-    if (s.backwards) {
+    if (s.backwards === true) {
       this.counters.backwardClockJumps++;
     }
-    if (s.invalid) {
+    if (s.invalid === true) {
       this.counters.invalidClockSamples++;
     }
   }
@@ -632,7 +632,7 @@ export class ServerPerformanceMetrics {
     };
   }
   private eventLoop(): EventLoopSummary {
-    if (!this.delayMonitor || !this.utilizationBaseline) {
+    if (!this.delayMonitor || this.utilizationBaseline == null) {
       return {
         delay: {
           count: 0,

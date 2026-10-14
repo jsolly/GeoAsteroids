@@ -205,12 +205,15 @@ export function requestFurnaceTravel(id: string): void {
 
 export function applyTownStoreResult(data: unknown): void {
   status = (
-    data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+    data !== null &&
+    typeof data === 'object' &&
+    'message' in data &&
+    typeof data.message === 'string'
       ? data.message
       : ''
   ).slice(0, 500);
   const player = PlayerManager.getInstance().getLocalPlayer();
-  if (player && data && typeof data === 'object') {
+  if (player && data !== null && typeof data === 'object') {
     if ('score' in data && typeof data.score === 'number' && Number.isFinite(data.score)) {
       player.score = data.score;
     }
@@ -319,7 +322,7 @@ export function mountTownStore(): () => void {
           return;
         }
         const data: unknown = event.detail;
-        if (data && typeof data === 'object' && 'ok' in data && data.ok === true) {
+        if (data !== null && typeof data === 'object' && 'ok' in data && data.ok === true) {
           closeTownStore();
         } else {
           applyTownStoreResult(data);

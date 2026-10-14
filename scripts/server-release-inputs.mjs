@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
+import { nativeTypescriptCli } from './typescript-cli.mjs';
 
 const deploymentFiles = new Set([
   'server.ts',
@@ -70,13 +71,9 @@ function serverModuleGraph(cwd, tracked) {
         exclude: [],
       })
     );
-    const compiler = join(
-      dirname(fileURLToPath(import.meta.resolve('typescript/package.json'))),
-      'bin/tsc'
-    );
     return execFileSync(
       process.execPath,
-      [compiler, '--project', configPath, '--listFilesOnly', '--pretty', 'false'],
+      [nativeTypescriptCli(), '--project', configPath, '--listFilesOnly', '--pretty', 'false'],
       { cwd, encoding: 'utf8' }
     )
       .trim()

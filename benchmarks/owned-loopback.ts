@@ -80,7 +80,7 @@ export class OwnedLoopback {
       throw new Error('Owned loopback is closing');
     }
     const address = this.listener.address();
-    if (!address || typeof address === 'string') {
+    if (address === null || typeof address === 'string') {
       throw new Error('Loopback has no listening address');
     }
     const connection = once(this.listener, 'connection', {

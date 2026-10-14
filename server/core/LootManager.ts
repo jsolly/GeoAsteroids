@@ -417,7 +417,7 @@ export class LootManager {
         if (
           isEquipmentId(drop.kind) &&
           (!canCollectEquipment(entity, drop.kind) ||
-            claimedEquipment.get(entity.id)?.has(drop.kind))
+            claimedEquipment.get(entity.id)?.has(drop.kind) === true)
         ) {
           return false;
         }

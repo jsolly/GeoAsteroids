@@ -81,7 +81,7 @@ class PilotSocket {
       kitId: 'hauler',
       snapshotVersion: SNAPSHOT_VERSION,
       asteroidInteractions: 1,
-      ...(resumeToken ? { resumeToken } : {}),
+      ...(resumeToken != null && resumeToken !== '' ? { resumeToken } : {}),
     });
     return this.waitFor(() => {
       const data = this.messages.slice(after).find((message) => message.type === 'joined')?.data;

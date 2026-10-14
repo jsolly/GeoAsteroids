@@ -132,7 +132,7 @@ function safeValue(
   const result: Record<string, unknown> = {};
   for (const [rawKey, child] of Object.entries(value).slice(0, MAX_CONTEXT_KEYS)) {
     const key = cleanText(rawKey, 128);
-    if (!key) {
+    if (key == null || key === '') {
       continue;
     }
     result[key] =
@@ -151,14 +151,14 @@ function detachLogContext(value: unknown): Record<string, unknown> | undefined {
   const detached = safeValue(value, 0, new WeakSet());
   return Array.isArray(detached)
     ? { values: detached }
-    : typeof detached === 'object' && detached
+    : typeof detached === 'object' && detached != null
       ? detached
       : { value: detached };
 }
 
 function cleanId(value: unknown): string | undefined {
   const cleaned = cleanText(value, 128);
-  return cleaned ? cleaned : undefined;
+  return cleaned != null && cleaned !== '' ? cleaned : undefined;
 }
 
 export function createLogRecord(input: {
@@ -187,13 +187,17 @@ export function createLogRecord(input: {
     level: input.level,
     releaseId: cleanId(input.releaseId) ?? 'unknown',
     message: cleanText(input.message) ?? '',
-    ...(input.category ? { category: cleanText(input.category, 64) ?? '' } : {}),
+    ...(input.category != null && input.category !== ''
+      ? { category: cleanText(input.category, 64) ?? '' }
+      : {}),
     ...(context && Object.keys(context).length > 0 ? { context } : {}),
-    ...(sessionId ? { sessionId } : {}),
-    ...(playerId ? { playerId } : {}),
-    ...(connectionId ? { connectionId } : {}),
-    ...(input.receivedAt ? { receivedAt: cleanText(input.receivedAt, 64) ?? '' } : {}),
-    ...(receiverReleaseId ? { receiverReleaseId } : {}),
+    ...(sessionId != null && sessionId !== '' ? { sessionId } : {}),
+    ...(playerId != null && playerId !== '' ? { playerId } : {}),
+    ...(connectionId != null && connectionId !== '' ? { connectionId } : {}),
+    ...(input.receivedAt != null && input.receivedAt !== ''
+      ? { receivedAt: cleanText(input.receivedAt, 64) ?? '' }
+      : {}),
+    ...(receiverReleaseId != null && receiverReleaseId !== '' ? { receiverReleaseId } : {}),
   };
 }
 
@@ -204,7 +208,7 @@ export function parseLogRecord(line: string): DiagnosticLogRecord | undefined {
   } catch {
     return undefined;
   }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return undefined;
   }
   const record = value as Record<string, unknown>;
@@ -233,7 +237,7 @@ export function parseLogRecord(line: string): DiagnosticLogRecord | undefined {
     ...(typeof record['sessionId'] === 'string' ? { sessionId: record['sessionId'] } : {}),
     ...(typeof record['playerId'] === 'string' ? { playerId: record['playerId'] } : {}),
     ...(typeof record['connectionId'] === 'string' ? { connectionId: record['connectionId'] } : {}),
-    ...(receivedAt ? { receivedAt } : {}),
+    ...(receivedAt != null && receivedAt !== '' ? { receivedAt } : {}),
     ...(typeof record['receiverReleaseId'] === 'string'
       ? { receiverReleaseId: record['receiverReleaseId'] }
       : {}),

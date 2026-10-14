@@ -12,7 +12,7 @@ interface SessionSummary {
 }
 function parseSession(value: unknown): SessionSummary {
   assert(
-    value &&
+    value !== null &&
       typeof value === 'object' &&
       'cohort' in value &&
       typeof value.cohort === 'string' &&
@@ -21,7 +21,7 @@ function parseSession(value: unknown): SessionSummary {
       typeof value.scenario === 'string'
   );
   function number(name: string) {
-    assert(value && typeof value === 'object' && name in value);
+    assert(value !== null && typeof value === 'object' && name in value);
     const result: unknown = Reflect.get(value, name);
     assert(typeof result === 'number' && Number.isFinite(result) && result >= 0, `Invalid ${name}`);
     return result;
@@ -55,7 +55,7 @@ function median(values: number[]) {
 }
 /** Compare whole sessions from one fixed device/browser/workload; never pool device frames. */
 export function compareMobileSessions(value: unknown) {
-  assert(value && typeof value === 'object' && 'aa' in value && 'ab' in value);
+  assert(value !== null && typeof value === 'object' && 'aa' in value && 'ab' in value);
   const aa = pairs(value.aa);
   const ab = pairs(value.ab);
   const sessions = [...aa, ...ab].flatMap(({ a, b }) => [a, b]);

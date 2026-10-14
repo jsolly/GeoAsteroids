@@ -98,7 +98,7 @@ export function readWikiArticles(root = process.cwd()): WikiArticle[] {
       throw new Error(`${id}: expected YAML frontmatter and Markdown body`);
     }
     const data: unknown = parse(match[1] ?? '');
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       throw new Error(`${id}: invalid frontmatter`);
     }
     const get = (key: string): unknown => Reflect.get(data, key);
@@ -180,7 +180,7 @@ export function readWikiArticles(root = process.cwd()): WikiArticle[] {
         }
         const html = markdown.renderer.render(group.tokens, markdown.options, {});
         const name = group.heading ? byHeading.get(group.heading) : undefined;
-        if (!name) {
+        if (name == null || name === '') {
           return group.heading ? `<section aria-labelledby="${headingId}">${html}</section>` : html;
         }
         demonstrations.push(name);

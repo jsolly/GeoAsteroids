@@ -211,7 +211,7 @@ function tailClearsOtherGrates(from: Position, to: Position, tail: readonly Posi
   for (let index = 0; index < points.length - 1; index += 1) {
     const start = points[index];
     const end = points[index + 1];
-    if (!start || !end) {
+    if (start == null || !end) {
       continue;
     }
     const first = index === 0;
@@ -366,7 +366,7 @@ export function pipeToTownSquare(furnaceId: string): readonly Position[] {
     seen.add(id);
     const hop = PIPE_HOPS.get(id);
     const lot = LOT_BY_ID.get(id);
-    if (!hop || hop.length < 2 || !lot) {
+    if (!hop || hop.length < 2 || lot == null) {
       return [];
     }
     const points = path.length === 0 ? hop : hop.slice(1);
@@ -410,7 +410,7 @@ const MODULE_BUILDER_NAME = /^[A-Za-z0-9 ]{0,20}$/u;
 function litParentReady(ids: ReadonlySet<string>): boolean {
   for (const id of ids) {
     const lot = LOT_BY_ID.get(id);
-    if (!lot) {
+    if (lot == null) {
       return false;
     }
     if (lot.parentId !== TOWN_HEARTH.id && !ids.has(lot.parentId)) {

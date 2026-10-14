@@ -33,9 +33,12 @@ function counter(value: unknown): number {
 }
 
 export function parseProxyCounters(value: unknown): ProxyCounters {
-  assert(value && typeof value === 'object' && !Array.isArray(value), 'Invalid proxy counters');
+  assert(
+    value !== null && typeof value === 'object' && !Array.isArray(value),
+    'Invalid proxy counters'
+  );
   assert.deepEqual(
-    Object.keys(value).sort(),
+    Object.keys(value).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
     [
       'activeSockets',
       'bytesDown',
@@ -125,7 +128,7 @@ export async function startProxyControl(
       handled = true;
       try {
         const command: unknown = JSON.parse(Buffer.concat(chunks, bytes).toString('utf8'));
-        assert(command && typeof command === 'object' && !Array.isArray(command));
+        assert(command !== null && typeof command === 'object' && !Array.isArray(command));
         assert.deepEqual(Object.keys(command), ['operation']);
         assert('operation' in command && command.operation === 'readCounters');
         const reply = parseProxyCounters({

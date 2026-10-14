@@ -155,7 +155,7 @@ export function validExploration(value: unknown): value is ExplorationTile[] {
   const ids = new Set<string>();
   return value.every((tile: unknown) => {
     if (
-      !tile ||
+      tile === null ||
       typeof tile !== 'object' ||
       !('id' in tile) ||
       !('bits' in tile) ||

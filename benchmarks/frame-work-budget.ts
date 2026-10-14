@@ -7,7 +7,10 @@ export function evaluateFrameWorkBudget(
   frames: readonly Record<string, number>[]
 ) {
   assert(
-    budget && typeof budget === 'object' && 'viewport' in budget && 'maximumPerFrame' in budget
+    budget !== null &&
+      typeof budget === 'object' &&
+      'viewport' in budget &&
+      'maximumPerFrame' in budget
   );
   assert.equal(budget.viewport, viewport, 'Budget belongs to another viewport');
   const limits = budget.maximumPerFrame;

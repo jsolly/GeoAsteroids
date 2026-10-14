@@ -112,7 +112,7 @@ export interface SavedWorld {
 }
 
 function readVector(value: unknown): Position | undefined {
-  if (!value || typeof value !== 'object') {
+  if (value === null || typeof value !== 'object') {
     return undefined;
   }
   const vector = value as Record<string, unknown>;
@@ -196,7 +196,7 @@ function readReleaseProvenance(
 }
 
 function readPilot(value: unknown): PersistentPilot | undefined {
-  if (!value || typeof value !== 'object') {
+  if (value === null || typeof value !== 'object') {
     return undefined;
   }
   const pilot = value as Record<string, unknown>;
@@ -456,7 +456,7 @@ export class WorldStore {
     this.worldJson = String(row['json']);
     const value: unknown = JSON.parse(this.worldJson);
     if (
-      !value ||
+      value === null ||
       typeof value !== 'object' ||
       !('seed' in value) ||
       !('startedAt' in value) ||
@@ -519,7 +519,7 @@ export class WorldStore {
   load(): LoadedWorld {
     const row = this.db.prepare('SELECT json FROM economy WHERE id=1').get();
     const saved: unknown = row ? JSON.parse(String(row['json'])) : {};
-    if (!saved || typeof saved !== 'object') {
+    if (saved === null || typeof saved !== 'object') {
       throw new Error('Invalid saved economy');
     }
     const cooperative = readCooperativeWorld(this.db);

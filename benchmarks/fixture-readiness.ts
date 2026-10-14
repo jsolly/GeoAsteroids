@@ -25,7 +25,7 @@ export function observesPreparedFixture(
     observation.lastSnapshotGameTime >= requirement.gameTime &&
     observation.motionEpoch !== null &&
     Number.isSafeInteger(observation.motionEpoch) &&
-    (requirement.requireExactMotionEpoch
+    (requirement.requireExactMotionEpoch === true
       ? observation.motionEpoch === requirement.motionEpoch
       : observation.motionEpoch >= requirement.motionEpoch)
   );

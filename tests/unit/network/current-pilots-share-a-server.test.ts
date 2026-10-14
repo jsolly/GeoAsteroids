@@ -184,7 +184,7 @@ describe('current pilots share the production handler and broadcaster', () => {
           position: { x: 100, y: 100 },
           snapshotVersion: SNAPSHOT_VERSION,
           asteroidInteractions: 1,
-          ...(resumeToken ? { resumeToken } : {}),
+          ...(resumeToken != null && resumeToken !== '' ? { resumeToken } : {}),
         },
       },
       ws

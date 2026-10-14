@@ -11,7 +11,10 @@ import { inspectReleaseEvidence } from '../benchmarks/release-evidence';
 import { canonicalJson } from '../benchmarks/results';
 
 function record(value: unknown): Record<string, unknown> {
-  assert(value && typeof value === 'object' && !Array.isArray(value), 'Expected an object');
+  assert(
+    value !== null && typeof value === 'object' && !Array.isArray(value),
+    'Expected an object'
+  );
   return Object.fromEntries(Object.entries(value));
 }
 function number(value: unknown) {
@@ -509,7 +512,7 @@ async function summarize(path: unknown, arm: ReturnType<typeof parseArm>) {
   const frames = samples['frameIntervalMs'];
   const cpu = samples['frameCpuMs'];
   const input = samples['inputToRenderMs'];
-  assert(frames?.length && cpu && input);
+  assert(frames?.length && cpu != null && input);
   assert(geometry.size === 1, 'Viewport/DPR changed during timing session');
   device = canonicalJson({ identity: JSON.parse(device), geometry: [...geometry] });
   // Product arms may deliberately change release; source/build hashes identify their actual code.

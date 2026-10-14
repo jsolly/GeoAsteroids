@@ -11,7 +11,7 @@ export class GameStateManager {
   private constructor() {}
 
   static getInstance(): GameStateManager {
-    if (!GameStateManager.instance) {
+    if (GameStateManager.instance == null) {
       GameStateManager.instance = new GameStateManager();
     }
     return GameStateManager.instance;

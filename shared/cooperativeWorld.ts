@@ -27,7 +27,7 @@ function position(value: unknown): boolean {
 /** SQLite and worker input are untrusted. Invalid progress must stop loading, never reset it. */
 export function validCooperativeRecord(value: unknown): value is CooperativeRecord {
   if (
-    !value ||
+    value === null ||
     typeof value !== 'object' ||
     !('kind' in value) ||
     !('id' in value) ||

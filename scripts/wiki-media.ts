@@ -1892,7 +1892,9 @@ function buildDemos(): Demo[] {
 }
 
 function verifyCoverage(): void {
-  const metadataIds = Object.keys(media).sort();
+  const metadataIds = Object.keys(media).sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0
+  );
   const expectedIds = [...MEDIA_IDS].sort();
   invariant(
     JSON.stringify(metadataIds) === JSON.stringify(expectedIds),

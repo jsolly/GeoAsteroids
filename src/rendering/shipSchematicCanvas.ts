@@ -355,7 +355,7 @@ function drawToolLoop(
   ctx.strokeStyle = PALETTE.HUD_MUTED;
   ctx.shadowBlur = 0;
   drawDemoAsteroid(ctx, rockX, rockY, 14, boostFrame?.rockAngle ?? 0, boostFrame !== undefined);
-  if (selectedUtility === 'boost_coupling' && boostFrame?.cableVisible) {
+  if (selectedUtility === 'boost_coupling' && boostFrame?.cableVisible === true) {
     ctx.strokeStyle = PALETTE.LOOT;
     ctx.beginPath();
     ctx.moveTo(shipX + radius * 0.72, midY);
@@ -377,7 +377,7 @@ function drawToolLoop(
   }
   if (selectedUtility === 'boost_coupling') {
     ctx.strokeStyle = PALETTE.LOOT;
-    if (boostFrame?.headingVisible) {
+    if (boostFrame?.headingVisible === true) {
       drawBoostHeading(ctx, rockX, rockY);
     }
     drawBoostFlame(ctx, rockX, rockY, boostFrame?.flameStrength ?? 0, now);

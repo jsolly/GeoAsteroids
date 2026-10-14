@@ -32,7 +32,7 @@ export class InputManager {
   }
 
   static getInstance(): InputManager {
-    if (!InputManager.instance) {
+    if (InputManager.instance == null) {
       InputManager.instance = new InputManager();
     }
     return InputManager.instance;

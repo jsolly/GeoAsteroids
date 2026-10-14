@@ -48,7 +48,7 @@ async function start(serveClientFrom?: string): Promise<string> {
   const server = createServerInstance({
     port: 0,
     nodeEnv: 'test',
-    ...(serveClientFrom ? { serveClientFrom } : {}),
+    ...(serveClientFrom != null && serveClientFrom !== '' ? { serveClientFrom } : {}),
   });
   servers.push(server);
   return `http://127.0.0.1:${await server.listening}`;

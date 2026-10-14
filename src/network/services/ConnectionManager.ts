@@ -274,7 +274,7 @@ export class ConnectionManager {
       typeof sessionStorage === 'undefined' ? null : sessionStorage
     );
     const storedResumeToken = readStoredResumeToken();
-    if (storedResumeToken) {
+    if (storedResumeToken != null && storedResumeToken !== '') {
       this.resumeToken = storedResumeToken;
     }
   }
@@ -511,7 +511,7 @@ export class ConnectionManager {
       userRequested: this.disconnectReason === 'requested',
       reason: this.disconnectReason ?? 'unexpected',
       lastAcceptedSnapshotSequence,
-      ...(serverReleaseId ? { serverReleaseId } : {}),
+      ...(serverReleaseId != null && serverReleaseId !== '' ? { serverReleaseId } : {}),
     });
     // Failed handshakes are retried by the awaiting reconnect attempt; only
     // a previously open transport starts a new retry sequence here.
@@ -598,7 +598,7 @@ export class ConnectionManager {
     // still resume the private pilot credential so progress survives a return
     // to the menu or a kit change.
     this.hasConnectedOnce = false;
-    if (options?.newSession) {
+    if (options?.newSession === true) {
       this.clientId = replaceStoredClientId(
         typeof sessionStorage === 'undefined' ? null : sessionStorage
       );
@@ -912,7 +912,9 @@ export class ConnectionManager {
         worldRemains: 1,
 
         clientReleaseId: getClientReleaseId(),
-        ...(this.resumeToken ? { resumeToken: this.resumeToken } : {}),
+        ...(this.resumeToken != null && this.resumeToken !== ''
+          ? { resumeToken: this.resumeToken }
+          : {}),
       },
     };
 
@@ -951,7 +953,7 @@ export class ConnectionManager {
       }
       case 'playerShotFired':
         if (
-          data &&
+          data !== null &&
           typeof data === 'object' &&
           'ownerId' in data &&
           typeof data.ownerId === 'string' &&
@@ -968,7 +970,7 @@ export class ConnectionManager {
         break;
       case 'shotAcknowledged':
         if (
-          data &&
+          data !== null &&
           typeof data === 'object' &&
           'requestId' in data &&
           typeof data.requestId === 'string' &&
@@ -992,7 +994,7 @@ export class ConnectionManager {
         // Remove the previous map key before initializeAsteroidSync changes
         // the local Player object's id for the replacement session.
         const localPlayer = PlayerManager.getInstance().getLocalPlayer();
-        if (localPlayer?.id) {
+        if (localPlayer?.id != null && localPlayer?.id !== '') {
           this.forgetPlayer(localPlayer.id);
         }
         if (this.localPlayerId) {
@@ -1139,7 +1141,9 @@ export class ConnectionManager {
               ...(metadata.baseline !== undefined ? { receivedBaseline: metadata.baseline } : {}),
             }
           : {}),
-        ...(this.serverReleaseId ? { serverReleaseId: this.serverReleaseId } : {}),
+        ...(this.serverReleaseId != null && this.serverReleaseId !== ''
+          ? { serverReleaseId: this.serverReleaseId }
+          : {}),
       }
     );
     if (!this.currentProtocolReady) {
@@ -1233,7 +1237,9 @@ export class ConnectionManager {
         receivedAt: Date.now(),
         gameTime: data.gameTime,
         state: captureClientPlayerState(localAfter),
-        ...(this.serverReleaseId ? { serverReleaseId: this.serverReleaseId } : {}),
+        ...(this.serverReleaseId != null && this.serverReleaseId !== ''
+          ? { serverReleaseId: this.serverReleaseId }
+          : {}),
       });
     }
   }
@@ -1263,7 +1269,11 @@ export class ConnectionManager {
       }
       playLocalHaptic(isLocalAbility, 'ability');
     }
-    if (isHarpoonRelease && !isTowCableUtility(entity.ship) && !entity.ship.harpoonTargetId) {
+    if (
+      isHarpoonRelease &&
+      !isTowCableUtility(entity.ship) &&
+      (entity.ship.harpoonTargetId == null || entity.ship.harpoonTargetId === '')
+    ) {
       playHarpoonRelease(entity.ship.position);
     }
     if (
@@ -1301,7 +1311,7 @@ export class ConnectionManager {
     setWorldExploration(data.exploration);
 
     // Update local game state from server using unified entity system
-    if (data.entities) {
+    if (data.entities != null) {
       const localPlayer = PlayerManager.getInstance().getLocalPlayer();
       fillSnapshotEntityIds(data.entities, this.snapshotEntityIds);
 
@@ -1554,7 +1564,7 @@ export class ConnectionManager {
       ...releaseField('scoreReleaseId', data.scoreReleaseId),
       ...releaseField('clientReleaseId', getClientReleaseId()),
     });
-    if (data.serverReleaseId) {
+    if (data.serverReleaseId != null && data.serverReleaseId !== '') {
       this.serverReleaseId = data.serverReleaseId;
     } else {
       delete this.serverReleaseId;
@@ -1566,12 +1576,18 @@ export class ConnectionManager {
       joinedAt: Date.now(),
       playerId: data.id,
       snapshotVersion: SNAPSHOT_VERSION,
-      ...(data.serverReleaseId ? { serverReleaseId: data.serverReleaseId } : {}),
-      ...(data.credentialReleaseId ? { credentialReleaseId: data.credentialReleaseId } : {}),
+      ...(data.serverReleaseId != null && data.serverReleaseId !== ''
+        ? { serverReleaseId: data.serverReleaseId }
+        : {}),
+      ...(data.credentialReleaseId != null && data.credentialReleaseId !== ''
+        ? { credentialReleaseId: data.credentialReleaseId }
+        : {}),
       ...(data.credentialIssuedAt !== undefined
         ? { credentialIssuedAt: data.credentialIssuedAt }
         : {}),
-      ...(data.scoreReleaseId ? { scoreReleaseId: data.scoreReleaseId } : {}),
+      ...(data.scoreReleaseId != null && data.scoreReleaseId !== ''
+        ? { scoreReleaseId: data.scoreReleaseId }
+        : {}),
       ...(data.scoreUpdatedAt !== undefined ? { scoreUpdatedAt: data.scoreUpdatedAt } : {}),
     });
 
@@ -1588,7 +1604,7 @@ export class ConnectionManager {
     const localPlayer = PlayerManager.getInstance().getLocalPlayer();
     if (localPlayer) {
       localPlayer.resetCombatLifecycle();
-      if (data.position) {
+      if (data.position != null) {
         localPlayer.ship.position.x = data.position.x;
         localPlayer.ship.position.y = data.position.y;
       }
@@ -1598,7 +1614,7 @@ export class ConnectionManager {
       }
     }
     if (data.id) {
-      if (localPlayer?.id && localPlayer.id !== data.id) {
+      if (localPlayer?.id != null && localPlayer?.id !== '' && localPlayer.id !== data.id) {
         this.forgetPlayer(localPlayer.id);
       }
       this.localPlayerId = data.id;
@@ -1740,7 +1756,9 @@ export class ConnectionManager {
           damage: data.damage,
           ...(beforeHealth !== undefined ? { healthBefore: beforeHealth } : {}),
           healthAfter: data.remainingHealth,
-          ...(this.serverReleaseId ? { serverReleaseId: this.serverReleaseId } : {}),
+          ...(this.serverReleaseId != null && this.serverReleaseId !== ''
+            ? { serverReleaseId: this.serverReleaseId }
+            : {}),
         });
       }
     }

@@ -265,7 +265,20 @@ echo "✓ Biome policy rejects warn/info/on, malformed/unreadable configs, and a
 
 # Known secret patterns must still fail at the configured entropy threshold.
 # Strings are concatenated so this script is not itself a noSecrets hit.
-secret_probe="$tmp_dir/secret-probe.ts"
+# Biome resolves VCS ignores relative to the project root. Keep the unchanged
+# policy and probe in their own Git fixture, rather than linting an outside file
+# with the checkout's configuration.
+secret_root="$tmp_dir/secrets"
+mkdir "$secret_root"
+cp "$CONFIG" "$secret_root/biome.jsonc"
+cp "$ROOT/.gitignore" "$secret_root/.gitignore"
+(
+  for variable in $(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$variable"; done
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+  git -c core.hooksPath=/dev/null init --quiet "$secret_root"
+  [[ "$(git -C "$secret_root" rev-parse --path-format=absolute --git-common-dir)" == "$(cd "$secret_root" && pwd -P)/.git" ]] || exit 1
+)
+secret_probe="$secret_root/secret-probe.ts"
 node - "$secret_probe" <<'NODE'
 const fs = require('node:fs');
 const aws = `AKIA${'IOSFODNN7EXAMPLE'}`;
@@ -287,7 +300,7 @@ fs.writeFileSync(
 NODE
 
 secret_output="$tmp_dir/secret-output.txt"
-if "$BIOME" lint --error-on-warnings --only=security/noSecrets --reporter=github --config-path "$CONFIG" "$secret_probe" >"$secret_output" 2>&1; then
+if "$BIOME" lint --error-on-warnings --only=security/noSecrets --reporter=github --config-path "$secret_root/biome.jsonc" "$secret_probe" >"$secret_output" 2>&1; then
   echo "✗ noSecrets accepted known secret patterns; the rule is off or entropyThreshold is too high" >&2
   cat "$secret_output" >&2
   exit 1

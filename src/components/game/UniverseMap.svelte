@@ -65,7 +65,7 @@
 
   function closeFocus(event: Event) {
     event.preventDefault();
-    if (open || !restoreFocus) {
+    if (open || restoreFocus !== true) {
       return;
     }
     const target = focusReturnTarget(closeFocusTarget?.(), opener, fallbackFocusTarget?.());

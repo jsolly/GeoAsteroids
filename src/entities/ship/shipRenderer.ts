@@ -787,7 +787,7 @@ export function drawShipAtPosition(
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
 
   // Draw player name under ship if provided
-  if (playerName) {
+  if (playerName != null && playerName !== '') {
     drawPlayerName(playerName, screenX, screenY, shipR, shipColor);
   }
 }

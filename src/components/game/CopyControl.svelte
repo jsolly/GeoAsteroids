@@ -37,7 +37,7 @@
   }
   async function copy() {
     const text = typeof value === 'function' ? value() : value;
-    if (!text || !live) {
+    if (text === '' || !live) {
       return;
     }
     const ticket = ++generation;

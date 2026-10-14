@@ -77,7 +77,7 @@ function timed<T>(operation: () => T): number {
 
 function parsedData(text: string): unknown {
   const parsed: unknown = JSON.parse(text);
-  assert(parsed && typeof parsed === 'object' && 'data' in parsed);
+  assert(parsed !== null && typeof parsed === 'object' && 'data' in parsed);
   return parsed.data;
 }
 
@@ -141,7 +141,7 @@ function runProtocolExperiment(input: ProtocolExperimentOptions = DEFAULTS): Mea
     assert.deepEqual(world, originalWorlds[tick], `Protocol encoder mutated input at tick ${tick}`);
     if (tick > 0) {
       const frame = parsedData(current.delta);
-      assert(frame && typeof frame === 'object' && 'kind' in frame);
+      assert(frame !== null && typeof frame === 'object' && 'kind' in frame);
       assert.equal(frame.kind, 'delta');
     }
     history.push(current);

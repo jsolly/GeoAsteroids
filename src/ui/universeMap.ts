@@ -1059,7 +1059,7 @@ export function mountUniverseMap(
       return;
     }
     const point = canvasPoint(ev);
-    if (!point) {
+    if (point == null) {
       return;
     }
     if (ev.shiftKey) {

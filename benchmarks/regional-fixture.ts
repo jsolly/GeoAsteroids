@@ -70,7 +70,7 @@ export function captureRegionalManifest(engine: GameEngine, seed: number) {
 }
 
 export function validateRegionalManifest(value: unknown): void {
-  assert(value && typeof value === 'object', 'Missing regional manifest');
+  assert(value !== null && typeof value === 'object', 'Missing regional manifest');
   assert('scenario' in value && value.scenario === 'regional-combat', 'Wrong regional scenario');
   assert('field' in value);
   const field = parseRegionalStatus(value.field);
@@ -101,7 +101,7 @@ export function validateRegionalManifest(value: unknown): void {
 }
 
 export function parseRegionalStatus(value: unknown) {
-  assert(value && typeof value === 'object');
+  assert(value !== null && typeof value === 'object');
   assert('mode' in value && value.mode === 'regional', 'Regional benchmark field mode changed');
   assert(
     'activeSectors' in value &&

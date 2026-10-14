@@ -29,7 +29,7 @@ function oldLookup(tiles: readonly ExplorationTile[], cell: number): boolean {
     bit: offset % 8,
   };
   const bits = index.get(address.id);
-  if (!bits) {
+  if (bits == null || bits === '') {
     return false;
   }
   return (
