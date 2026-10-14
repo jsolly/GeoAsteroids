@@ -12,8 +12,38 @@ import { media } from '../src/wiki/media';
 const markdown = new MarkdownIt({ html: false, linkify: false, typographer: false });
 type Token = ReturnType<typeof markdown.parse>[number];
 markdown.renderer.rules['table_open'] = () =>
-  '<div class="table-scroll" role="region" aria-label="Article table" tabindex="0"><table>';
+  '<div class="table-scroll relative w-full overflow-x-auto" data-slot="table-container" role="region" aria-label="Article table" tabindex="0"><table data-slot="table" class="w-full caption-bottom text-sm">';
 markdown.renderer.rules['table_close'] = () => '</table></div>';
+// Match the committed shadcn-svelte table primitives; the named region is the only scroller.
+const tableElements = [
+  ['thead_open', 'table-header', '[&_tr]:border-b'],
+  ['tbody_open', 'table-body', '[&_tr:last-child]:border-0'],
+  [
+    'tr_open',
+    'table-row',
+    'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors has-aria-expanded:bg-muted/50',
+  ],
+  [
+    'th_open',
+    'table-head',
+    'text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+  ],
+  ['td_open', 'table-cell', 'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0'],
+] as const;
+for (const [rule, slot, classes] of tableElements) {
+  markdown.renderer.rules[rule] = (tokens, index, options, _env, renderer) => {
+    const token = tokens[index];
+    if (!token) {
+      throw new Error(`Missing Markdown table token at ${index}`);
+    }
+    token.attrSet('data-slot', slot);
+    token.attrSet('class', classes);
+    if (rule === 'th_open') {
+      token.attrSet('scope', 'col');
+    }
+    return renderer.renderToken(tokens, index, options);
+  };
+}
 const categories = new Set(['Start here', 'Ships', 'Systems', 'Arena', 'Combat']);
 const reservedIds = new Set(['content', 'ships']);
 

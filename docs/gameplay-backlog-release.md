@@ -3,21 +3,24 @@
 This bundle is reviewable in a draft PR. It does not authorize production
 activation, a Railway configuration change, or a merge.
 
-## Deployment order
+## Deployment and verification
 
-1. Land and verify the pickup receipt consumer from the small-fixes draft before
-   its server producer. That separate task requires client-first publication.
-2. Stack this bundle on the final small-fixes commit. Deploy its Vercel preview
-   to review the interface. A client preview against the current production
-   server cannot exercise the new authoritative mechanics.
-3. When a matching server preview is available, verify charged mining, salvage,
-   wildlife, remains, glowtoy cache persistence and cooperative bridges there.
-   The existing human-owned Railway preview environment setup remains a
-   prerequisite; do not create or modify production configuration for this work.
-4. Only after a later explicit merge/release instruction, deploy the compatible
-   client before the gameplay server. Classify the actual merged input tree with
+1. Land and verify the small-fixes bundle before this bundle. Its optional pickup
+   receipt ID is compatible across independent client and server deployments:
+   older clients ignore it, and the new client accepts receipts without it.
+2. The opt-in [Railway preview](agent-operations.md#railway-preview) runs a matching
+   client and authoritative server for pre-merge play. It uses the isolated
+   preview environment; the shared slot currently hosts the most recently
+   requested PR. A standalone Vercel preview against an older production server
+   cannot exercise all new mechanics.
+3. After the authorized merge, let Vercel and Railway publish independently from
+   main. Charged-weapon commands require server acknowledgement, and new remains
+   kinds require the client's capability offer, so either deployment arrival
+   order is supported. Classify the actual base and merged trees with
    `scripts/server-release-inputs.mjs`; this bundle requires a server release.
-   Confirm both production Git deployments and the canonical production smoke.
+4. Confirm both production Git deployments and a fresh canonical production
+   smoke before continuing to the dependent cooperative bundle. Configuration,
+   production data changes and campaign activation remain human-owned.
 
 ## Compatibility boundaries
 

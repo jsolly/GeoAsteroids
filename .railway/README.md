@@ -1,6 +1,6 @@
 # Railway Infrastructure as Code
 
-`.railway/railway.ts` is the single tracked Railway project definition. It
+`.railway/railway.ts` is the single tracked Railway project definition. It describes the production environment only. The `preview` environment is a one-time human duplicate of production that receives `railway up` uploads from `.github/workflows/railway-preview.yml`; never run `railway config apply` against it, and the workflow strips `.railway/` from each upload ([Railway preview](../docs/agent-operations.md#railway-preview)). The live service's display name is `Georoids`; this file and private DNS still call it `geoasteroids`. It
 describes the `geoasteroids` service, its GitHub source, Railpack build, server
 start command, healthcheck, replica placement, persistent world volume, and environment. The two existing service variables use `preserve()`; `GEOROIDS_WORLD_PATH` points at `/data/world.sqlite`. Client admission is always
 current-protocol-only in server code; no service variable controls it.
