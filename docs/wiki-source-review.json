@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:dcd78b7f195ae4e0c60df142837d05e7fbf599bfed9d370d40e1931f95ee51dd",
     "docs/sounds.md": "sha256:88bd06e26a7688c6b348dc635c1badffa83635a0413abd033eb63843f5975eb8",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:58a96619ca8787e6d070ad3ce5e75416b620466dcfe5592d779b1aa5ddfbc853",
+    "package.json": "sha256:f852fd1fb0dfb461c4790c1c0c57153f6e28b7fd9822f71283ddbd4d7760c124",
     "public/music/README.md": "sha256:bc37faf582c661603145329bc3759822344b5a49865dc2433b6a8451eca22f9e",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -61,20 +61,20 @@
     "scripts/client-build.ts": "sha256:41694fab4db6aa86a12904377865d51be81ae049074bea59942130d142fc818a",
     "scripts/generate-sounds.ts": "sha256:ebbc3a23666b38c0d405f61049fda9c651b3def1381eba9e22cf3095f42b8dd4",
     "scripts/wiki-check.ts": "sha256:e80695a318d70dba90376b8c2cec4451f5ea43cb98450f35aed505a60e6e1434",
-    "scripts/wiki-content.ts": "sha256:0d6f978032fa14ef606ac6d5f652398cf668aacbd16010be33f5ffbd3f7e6c82",
+    "scripts/wiki-content.ts": "sha256:40bb30338736ad8c274a558b58181b645b0c24d568a2e2aabc0d72415b308e44",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
     "scripts/wiki-media-requirements.txt": "sha256:5dd5a7db938c69c025039265a023c0253f450704efd947dd579e6958a14c964d",
     "scripts/wiki-media.ts": "sha256:5b9a0adf34b51550fc85d2d071c15938fb858d80478d6b443aa4609fc0d15c84",
     "scripts/wiki-satellite-demo.ts": "sha256:7ecaae18ab604448b3706caab776aaf48e7f4b18fc5781e97cae2838fca52f88",
-    "server.ts": "sha256:1847341c2cd9286dc2a2ef87693cdb199d290d58f16a3a195c4e34d158c24125",
+    "server.ts": "sha256:59210b7720b95338cebbb531e6f2548f60c6b8dee86847eec65c8d5b86347b5e",
     "server/communication/MessageHandler.ts": "sha256:0e4a3377aca1bc7a7a5a9a4c5fb1e6af754cf3d892e24f676393814e0239347a",
     "server/communication/WebSocketCore.ts": "sha256:824dcee22c88aadaaa97a372aaf955ac4094374d6dc7e48af7455d6caadaecf8",
     "server/communication/clientCommandDecoder.ts": "sha256:13070d162cea539c9c22d7b7292722741e687d4a995de583754a4758151720d9",
     "server/communication/connectionAdmission.ts": "sha256:a2a9327cb76fedd362cc156431b31c5d648a0dc222b44b1f87558acc56d5910a",
     "server/communication/inboundMessageLog.ts": "sha256:a9ce18d51630fbbcdaa5145c7ad0940cddb41c5353be47dd3fa540155e74090a",
     "server/communication/messageBudget.ts": "sha256:2fb41f10f624428212246737a3b67a554143c9b393ede8ed449be17a739e9a69",
-    "server/configuration.ts": "sha256:73b18759bebf97fb96ede60fafeb5b5145a0c4bd034db98366cc878ef9863395",
+    "server/configuration.ts": "sha256:8c31383fb0c11922ffec139e30fe0b09b2461b541113152da5052e7bb2c5d88f",
     "server/core/AsteroidManager.ts": "sha256:d519267d6fb1700ad9178a8357f6fe26bca8e1c781a6cf5531f034e3f3484ef9",
     "server/core/BeltCrawlerManager.ts": "sha256:b82be9d9d1b690d9351e08eb73ce4c854d719967028e049bf5cc4d7790dc4263",
     "server/core/CollisionAuthority.ts": "sha256:a3992d135d9875d97ab791bd79e84abf58a143f7a69c56fa3703cfcf87c3f156",
@@ -159,7 +159,7 @@
     "src/audio/spiderScore.ts": "sha256:90f229eae32eb1c00063e38ed90fda44b72aaefc397aab89586bb3f4c1e969af",
     "src/components/ui/button/button.svelte": "sha256:9225943b80347ddad9a06c5b00138d271294f5dac05e5d2f01ed436474d63f28",
     "src/components/ui/input/input.svelte": "sha256:fab152caba80865304d177a2dea67a12672f90a852f354928ddb3be3c0ec78a9",
-    "src/components/wiki/WikiShell.svelte": "sha256:63fd8949dd4ae8a19eab1241a7e9d50c6059bf5cb87005407ef6b11e15abd01f",
+    "src/components/wiki/WikiShell.svelte": "sha256:3b0f6f0479759f904735f714b897fafe8d4ee512769a903539c1d7cf17201576",
     "src/constants/index.ts": "sha256:ac539b8eafe57181fde3247b22b1d3c1acbdb866a41158bb2589b7032919065a",
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
@@ -269,7 +269,7 @@
     "src/rendering/titleTerrain.ts": "sha256:44a2c784851c9fa5c58285246bfc83d223b9ee324b5c9db3959a9a68d008ef0e",
     "src/rendering/travelCamera.ts": "sha256:61bd8496723072cb7772a4da5eb9698b610306f0198f7b1861d9ade5382e58c9",
     "src/rendering/vectorJuice.ts": "sha256:63f437010a3d3a2cca149b3dfd460e6c7694235a2b6f6fbcdd43d3fe5e040f9b",
-    "src/styles/theme.css": "sha256:1f63e7f1bc8e58cad03cde6f8018579be4cd7a8ff9cf8b6a527b1761f77f8141",
+    "src/styles/theme.css": "sha256:8b21d0d9eafe70c2451ba38fffee149394be0b588e4d8b8f2ef76a0a294b49c9",
     "src/ui/cargoFullHint.ts": "sha256:c2be7bdada00347e61f8483b6f8f4d39c851b2d5104964cb997b60b97328ce4c",
     "src/ui/constants.ts": "sha256:ac3573292fe80e325749303e4f95b07b20ab9c29f41851148fb6b6598a3b3576",
     "src/ui/debugHud.ts": "sha256:1c93b9f22bd96c32dc9bece74ab632195ff0580987e14bcc6ee8e3a1c090c3f6",
@@ -486,7 +486,7 @@
     "src/components/ui/table/table-row.svelte": "sha256:2f5bb881c3b3c04855e50b6e6cfb04a51070924e570801bdde25bcc242027e03",
     "src/components/ui/table/table.svelte": "sha256:8323a611466d1730f05192a968e78b06225c51d2286ae7791769cc479a689cff",
     "src/components/wiki/ShipHull.svelte": "sha256:9c9578c26ff706ce87374808d06c72d9e9466e343c9caff80e886f49cdf6d17b",
-    "src/components/wiki/ShipScorecard.svelte": "sha256:ebd6235ac5016abe3b5ab56bff424afd7b0cbf36d68c4c804a788b09bb3626b1",
+    "src/components/wiki/ShipScorecard.svelte": "sha256:63f578904badaa7007f9da834ed4b934f1f95c3aa1768b246d33de86c10a4412",
     "src/components/wiki/TopicCard.svelte": "sha256:8a9b045b3be8ef1565cb9278c57bc9397a994ae6f5350e6894db578e2653e28e",
     "src/components/wiki/WikiOverview.svelte": "sha256:eb2cffaad6bffa843949eb44e1d4055e714e19d5108e82a1cefc77d0473c6ca9",
     "shared/asteroidMotion.ts": "sha256:499997076ff8b67c98cc69d6911b477db3bbbfcdf6ba04a013cbeb9ee5eaa66a",
@@ -535,7 +535,7 @@
       "owners": {}
     },
     {
-      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main’s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
+      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main\u2019s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
@@ -2503,7 +2503,7 @@
       }
     },
     {
-      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75→50 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
+      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75\u219250 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
       "sources": [
         "docs/protocol/snapshot-v2.md",
         "docs/protocol/snapshot-v3.md",
@@ -4169,6 +4169,56 @@
       }
     },
     {
+      "note": "Reviewed package.json tooling-only changes: repository-owned worktree setup and hook-trust test command; dependencies, gameplay, Wiki content and demonstrations are unchanged. Lint, types and all 1969 unit tests passed. Checked the existing production Wiki at 1280x900 and 390x844, exercised search and mobile navigation, and observed no browser errors. No article or media update is needed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Scoped review of the opt-in Railway preview: package.json only adds the /preview comment-matcher contract to check:actions; server.ts and server/configuration.ts add GEOROIDS_PREVIEW_CLIENT, which serves the built client from the game server only in the Railway preview environment and fails startup elsewhere. Gameplay rules, controls, protocol, Wiki articles, generated references and demonstrations are unchanged; production keeps NODE_ENV and the local playground behavior. No Wiki page is affected.",
+      "sources": ["package.json", "server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Scoped re-review after preview hardening: server.ts passes explicit configuration fields and the dist/ client root only in preview mode; server/configuration.ts additionally keeps the local playground off whenever the preview client is enabled. Gameplay rules, controls, protocol, Wiki articles and demonstrations are unchanged; no Wiki page is affected.",
+      "sources": ["server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Refreshed opt-in preview startup on current main while preserving all 129 main review batches and both distinct historical preview review batches. Reviewed the three changed source inputs, the static-client handler and server route integration, all 11 field-manual articles, generated-reference imports and demonstration ownership. Preview selection and deployment contracts leave gameplay rules, player interfaces and media sources unchanged; no article or demonstration update is needed. Strict types and all 22 preview/configuration regression cases passed.",
+      "sources": ["package.json", "server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the package-script merge onto current main: preserved repository hook trust and all current required checks, and retained the opt-in preview comment-matcher contract in check:actions. Dependency versions, gameplay, player interfaces, Wiki articles and demonstration inputs are unchanged; no article or media update is needed. CI and preview-comment contracts passed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
       "note": "Reviewed exact-position furnace marks, named travel crew with accessible off-chart bearings, living crew health, Town Square death respawn, cleared nest markers and their resource-movement limit, pickup receipt identity, and accepted cargo-completion sound. Updated Combat, HUD, Loot, Scout, Teamwork and Terrain articles and visually inspected all six in Chrome at 1280x900 and 390x844 with clean warning/error logs. Existing demonstrations remain accurate; cargo media was inspected after lazy loading. Actual travel-component selection and keyboard zoom passed in the earlier desktop/mobile smoke. Biome, strict types, frontend diagnostics, and 49 focused component/network scenarios passed; removing the deposit bank-growth guard made the living cargo-loss regression fail. Full publication gate follows. Physical-device audio and haptics remain separately unverified.",
       "sources": [
         "server/core/EntityManager.ts",
@@ -4276,6 +4326,40 @@
         "terrain"
       ],
       "owners": {}
+    },
+    {
+      "note": "Verified desktop/mobile Wiki scorecards in a real browser, single active radar, search cleanup/remount, responsive resize, and 7.63:1 empty-dot ring contrast. Real Markdown table fixture preserves primitive styling, header alignment, one horizontal scroll region and keyboard scrolling; fixture restored byte-for-byte. Console has no warnings/errors. 21 component/compiler tests and attachment mutation rejection pass; frontend diagnostics, TypeScript and formatting pass. Gameplay rules/media unchanged.",
+      "sources": [
+        "scripts/wiki-content.ts",
+        "src/components/wiki/ShipScorecard.svelte",
+        "src/components/wiki/WikiShell.svelte",
+        "src/styles/theme.css"
+      ],
+      "topics": ["field-manual", "hauler", "scout"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-content.ts": "field-manual",
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/styles/theme.css": "field-manual",
+        "src/components/wiki/ShipScorecard.svelte": "scout"
+      }
+    },
+    {
+      "note": "Refreshed Wiki polish onto current main while preserving all main and distinct feature review history. Reviewed the four changed Wiki renderer, shell, scorecard, and theme sources against current field-manual, Scout, and Hauler content; current gameplay prose, media, and source ownership remain unchanged. TypeScript and frontend checks passed; 21 focused table and lifecycle tests passed. Native Chrome desktop and 390x844 mobile checks verified radar and ratings, search removal, and Scout remount; console had no errors or warnings. Existing lazy-image dimension advisories remain outside these changes.",
+      "sources": [
+        "scripts/wiki-content.ts",
+        "src/components/wiki/ShipScorecard.svelte",
+        "src/components/wiki/WikiShell.svelte",
+        "src/styles/theme.css"
+      ],
+      "topics": ["field-manual", "hauler", "scout"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-content.ts": "field-manual",
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/styles/theme.css": "field-manual",
+        "src/components/wiki/ShipScorecard.svelte": "field-manual"
+      }
     }
   ]
 }

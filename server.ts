@@ -1,6 +1,7 @@
 import { realpathSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { readServerConfiguration } from './server/configuration';
 import { createServerInstance } from './server/createServer';
 import { SERVER_RELEASE_ID } from './server/release';
@@ -25,7 +26,15 @@ if (!localWorld) {
     throw new Error('Production world database must be directly inside RAILWAY_VOLUME_MOUNT_PATH');
   }
 }
-const server = createServerInstance({ ...configuration, worldPath });
+const server = createServerInstance({
+  port: configuration.port,
+  nodeEnv: configuration.nodeEnv,
+  localPlayground: configuration.localPlayground,
+  worldPath,
+  ...(configuration.previewClient
+    ? { serveClientFrom: fileURLToPath(new URL('./dist/', import.meta.url)) }
+    : {}),
+});
 let shuttingDown = false;
 let requestedExitCode = 0;
 

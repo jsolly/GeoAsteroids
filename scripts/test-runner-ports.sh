@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Port selection and readiness for the owned integration service pair.
-((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; rerun bash ~/code/dotagents/setup/install-local-agent-runtime.sh; open a new shell." >&2; exit 1; }
+((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; open a fresh shell and rerun repository setup." >&2; exit 1; }
 
 servers_ready() {
     # An HTTP responder alone cannot prove that our service owns the port.
