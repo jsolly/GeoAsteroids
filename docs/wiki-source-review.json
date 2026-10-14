@@ -61,7 +61,7 @@
     "scripts/client-build.ts": "sha256:76dbf1d3fc4882e7483d7e46f2c260b6bb6a413a5e5bd24dc66a9f8368ad4d89",
     "scripts/generate-sounds.ts": "sha256:ebbc3a23666b38c0d405f61049fda9c651b3def1381eba9e22cf3095f42b8dd4",
     "scripts/wiki-check.ts": "sha256:e80695a318d70dba90376b8c2cec4451f5ea43cb98450f35aed505a60e6e1434",
-    "scripts/wiki-content.ts": "sha256:0d6f978032fa14ef606ac6d5f652398cf668aacbd16010be33f5ffbd3f7e6c82",
+    "scripts/wiki-content.ts": "sha256:40bb30338736ad8c274a558b58181b645b0c24d568a2e2aabc0d72415b308e44",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
     "scripts/wiki-media-requirements.txt": "sha256:5dd5a7db938c69c025039265a023c0253f450704efd947dd579e6958a14c964d",
@@ -161,7 +161,7 @@
     "src/audio/spiderScore.ts": "sha256:90f229eae32eb1c00063e38ed90fda44b72aaefc397aab89586bb3f4c1e969af",
     "src/components/ui/button/button.svelte": "sha256:9225943b80347ddad9a06c5b00138d271294f5dac05e5d2f01ed436474d63f28",
     "src/components/ui/input/input.svelte": "sha256:fab152caba80865304d177a2dea67a12672f90a852f354928ddb3be3c0ec78a9",
-    "src/components/wiki/WikiShell.svelte": "sha256:63fd8949dd4ae8a19eab1241a7e9d50c6059bf5cb87005407ef6b11e15abd01f",
+    "src/components/wiki/WikiShell.svelte": "sha256:3b0f6f0479759f904735f714b897fafe8d4ee512769a903539c1d7cf17201576",
     "src/constants/index.ts": "sha256:463259b85df867d24ce092464595528726a926b6ac4998d432046a228ccf79df",
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
@@ -271,7 +271,7 @@
     "src/rendering/titleTerrain.ts": "sha256:8bbd6a1e330b6753474e095ea344dc83ae11935a4ed00ee9e24a7d888e3762ce",
     "src/rendering/travelCamera.ts": "sha256:61bd8496723072cb7772a4da5eb9698b610306f0198f7b1861d9ade5382e58c9",
     "src/rendering/vectorJuice.ts": "sha256:63f437010a3d3a2cca149b3dfd460e6c7694235a2b6f6fbcdd43d3fe5e040f9b",
-    "src/styles/theme.css": "sha256:1f63e7f1bc8e58cad03cde6f8018579be4cd7a8ff9cf8b6a527b1761f77f8141",
+    "src/styles/theme.css": "sha256:8b21d0d9eafe70c2451ba38fffee149394be0b588e4d8b8f2ef76a0a294b49c9",
     "src/ui/cargoFullHint.ts": "sha256:c2be7bdada00347e61f8483b6f8f4d39c851b2d5104964cb997b60b97328ce4c",
     "src/ui/constants.ts": "sha256:ac3573292fe80e325749303e4f95b07b20ab9c29f41851148fb6b6598a3b3576",
     "src/ui/debugHud.ts": "sha256:1c93b9f22bd96c32dc9bece74ab632195ff0580987e14bcc6ee8e3a1c090c3f6",
@@ -494,7 +494,7 @@
     "src/components/ui/table/table-row.svelte": "sha256:2f5bb881c3b3c04855e50b6e6cfb04a51070924e570801bdde25bcc242027e03",
     "src/components/ui/table/table.svelte": "sha256:8323a611466d1730f05192a968e78b06225c51d2286ae7791769cc479a689cff",
     "src/components/wiki/ShipHull.svelte": "sha256:9c9578c26ff706ce87374808d06c72d9e9466e343c9caff80e886f49cdf6d17b",
-    "src/components/wiki/ShipScorecard.svelte": "sha256:ebd6235ac5016abe3b5ab56bff424afd7b0cbf36d68c4c804a788b09bb3626b1",
+    "src/components/wiki/ShipScorecard.svelte": "sha256:63f578904badaa7007f9da834ed4b934f1f95c3aa1768b246d33de86c10a4412",
     "src/components/wiki/TopicCard.svelte": "sha256:8a9b045b3be8ef1565cb9278c57bc9397a994ae6f5350e6894db578e2653e28e",
     "src/components/wiki/WikiOverview.svelte": "sha256:eb2cffaad6bffa843949eb44e1d4055e714e19d5108e82a1cefc77d0473c6ca9",
     "shared/asteroidMotion.ts": "sha256:c43565f457f5d4179c602373398e503a5167b830c47b04a8132023b2d3e68ff4",
@@ -3995,6 +3995,23 @@
       "media": [],
       "owners": {
         "src/components/wiki/ShipScorecard.svelte": "field-manual"
+      }
+    },
+    {
+      "note": "Verified desktop/mobile Wiki scorecards in a real browser, single active radar, search cleanup/remount, responsive resize, and 7.63:1 empty-dot ring contrast. Real Markdown table fixture preserves primitive styling, header alignment, one horizontal scroll region and keyboard scrolling; fixture restored byte-for-byte. Console has no warnings/errors. 21 component/compiler tests and attachment mutation rejection pass; frontend diagnostics, TypeScript and formatting pass. Gameplay rules/media unchanged.",
+      "sources": [
+        "scripts/wiki-content.ts",
+        "src/components/wiki/ShipScorecard.svelte",
+        "src/components/wiki/WikiShell.svelte",
+        "src/styles/theme.css"
+      ],
+      "topics": ["field-manual", "hauler", "scout"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-content.ts": "field-manual",
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/styles/theme.css": "field-manual",
+        "src/components/wiki/ShipScorecard.svelte": "scout"
       }
     }
   ]
