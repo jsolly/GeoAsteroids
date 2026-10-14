@@ -1,6 +1,8 @@
 import { WebSocket } from 'ws';
 import { logger } from '../../setup/serverLogger';
 import { canCollectEquipment, isEquipmentId } from '../../shared/equipment';
+import { frontierSite } from '../../shared/frontier';
+import { civicLot, TOWN_HEARTH } from '../../shared/furnaces';
 import {
   SNAPSHOT_BACKPRESSURE_BYTES,
   SNAPSHOT_VERSION,
@@ -227,6 +229,26 @@ export class GameStateBroadcaster {
         const canonical = new SnapshotEncoder(
           {
             ...gameState,
+            ...(gameState.campaign
+              ? {
+                  campaign: {
+                    ...gameState.campaign,
+                    supplies: gameState.campaign.supplies.filter(({ id }) => {
+                      const source =
+                        frontierSite(id) ??
+                        civicLot(id) ??
+                        (id === TOWN_HEARTH.id ? TOWN_HEARTH : undefined);
+                      return source && isWithinWorldInterest(source.position, player.position);
+                    }),
+                    hives: gameState.campaign.hives.filter((hive) =>
+                      isWithinWorldInterest(hive.position, player.position)
+                    ),
+                    meteors: gameState.campaign.meteors.filter((meteor) =>
+                      isWithinWorldInterest(meteor.position, player.position)
+                    ),
+                  },
+                }
+              : {}),
             contourBridges: (gameState.contourBridges ?? []).filter((bridge) =>
               isWithinWorldInterest(bridge.from, player.position)
             ),
@@ -236,6 +258,7 @@ export class GameStateBroadcaster {
                 (asset.kind !== 'ship-remains' && asset.kind !== 'nest-remains') ||
                 (recipient.worldRemains && isWithinWorldInterest(asset.position, player.position))
             ),
+
             entities: gameState.entities.map((entity) =>
               entity.id === player.id ||
               !entity.utilityFlight ||

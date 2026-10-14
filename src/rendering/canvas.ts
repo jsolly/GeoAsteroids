@@ -24,6 +24,7 @@ import { getLaserColor } from '../utils/colorUtils';
 import { isDebugMode } from '../utils/debugUtils';
 import { drawBeltEncounters } from './beltRenderer';
 import { drawFieryBoundary } from './boundaryRenderer';
+import { drawCampaign } from './campaignRenderer';
 import { paintOpaqueBackground } from './canvasBackground';
 import { canvasManager } from './canvasSurface';
 import { drawCargoHolds } from './cargoHoldRenderer';
@@ -36,6 +37,7 @@ import {
 } from './contourLaserRenderer';
 import { drawContourLayers, drawIsoContours, visibleContourLayers } from './contourRenderer';
 import { drawContourTrack } from './contourTrackRenderer';
+import { drawCrewSignals } from './crewSignalRenderer';
 import {
   drawFurnaceFoundations,
   drawFurnaceLabels,
@@ -200,6 +202,8 @@ function drawWorldLayers(
     }
   }
 
+  drawCampaign(currShip.position, Date.now() + currShip.furnaceClockOffsetMs);
+  drawCrewSignals(allPlayers, currShip.position);
   drawCargoHolds(allPlayers, currShip.position);
   drawCargoOffloads(allPlayers, currShip.position);
 

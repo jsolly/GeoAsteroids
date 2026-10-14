@@ -1,12 +1,6 @@
 import type { CivicModule, Position } from '../shared-types';
-import {
-  civicLot,
-  civicLotAt,
-  civicModuleName,
-  FURNACES,
-  nearestFurnace,
-  TOWN_HEARTH,
-} from './furnaces';
+import { frontierSite } from './frontier';
+import { civicLot, civicLotAt, civicModuleName, FURNACES, TOWN_HEARTH } from './furnaces';
 
 export const FURNACE_BUILD = {
   RADIUS: TOWN_HEARTH.radius,
@@ -38,15 +32,66 @@ interface Hearth {
   radius: number;
 }
 
+interface HearthBranch {
+  hearth: Hearth;
+  axis: 'x' | 'y';
+  left: HearthBranch | null;
+  right: HearthBranch | null;
+}
+function hearthTree(sites: Hearth[], depth = 0): HearthBranch | null {
+  if (sites.length === 0) {
+    return null;
+  }
+  const axis = depth % 2 === 0 ? 'x' : 'y';
+  sites.sort((a, b) => a.position[axis] - b.position[axis] || a.id.localeCompare(b.id));
+  const middle = Math.floor(sites.length / 2),
+    hearth = sites[middle];
+  if (!hearth) {
+    return null;
+  }
+  return {
+    hearth,
+    axis,
+    left: hearthTree(sites.slice(0, middle), depth + 1),
+    right: hearthTree(sites.slice(middle + 1), depth + 1),
+  };
+}
+
 /** Lit hearths only. Dark furnace lots stay out of intake, guidance, and spider safety. */
 export class FurnaceField {
   private modules: CivicModule[] = [];
+  private frontier: Hearth[] = [];
+  private readonly frontierIds = new Set<string>();
+  private tree: HearthBranch | null = null;
   private readonly lit = new Set<string>();
   private readonly labels = new Map<string, string>();
   private readonly cells = new Map<string, Hearth[]>();
 
   constructor() {
     this.reindex();
+  }
+
+  replaceFrontier(ids: readonly string[]): void {
+    const next = ids.flatMap((id) => {
+      const site = frontierSite(id);
+      return site ? [site] : [];
+    });
+    if (
+      next.length === this.frontier.length &&
+      next.every((site, i) => site.id === this.frontier[i]?.id)
+    ) {
+      return;
+    }
+    this.frontier = next;
+    this.frontierIds.clear();
+    for (const site of next) {
+      this.frontierIds.add(site.id);
+    }
+    this.reindex();
+  }
+
+  frontierHearths(): readonly Hearth[] {
+    return this.frontier;
   }
 
   litModules(): readonly CivicModule[] {
@@ -56,12 +101,15 @@ export class FurnaceField {
   /** Name shown for a lit module, or the plan name while the lot is still dark. */
   displayName(id: string): string {
     return (
-      this.labels.get(id) ?? civicLot(id)?.name ?? (id === TOWN_HEARTH.id ? TOWN_HEARTH.name : '')
+      this.labels.get(id) ??
+      frontierSite(id)?.name ??
+      civicLot(id)?.name ??
+      (id === TOWN_HEARTH.id ? TOWN_HEARTH.name : '')
     );
   }
 
   isLit(id: string): boolean {
-    return id === TOWN_HEARTH.id || this.lit.has(id);
+    return id === TOWN_HEARTH.id || this.lit.has(id) || this.frontierIds.has(id);
   }
 
   replaceLit(modules: readonly CivicModule[]): void {
@@ -103,6 +151,9 @@ export class FurnaceField {
   private reindex(): void {
     this.cells.clear();
     this.labels.clear();
+    for (const site of this.frontier) {
+      this.index(site);
+    }
     for (const site of FURNACES) {
       this.index(site);
     }
@@ -115,6 +166,7 @@ export class FurnaceField {
       this.labels.set(lot.id, name);
       this.index({ id: lot.id, name, position: lot.position, radius: lot.radius });
     }
+    this.tree = hearthTree([...this.cells.values()].flat());
   }
 
   private index(site: Hearth): void {
@@ -156,15 +208,28 @@ export class FurnaceField {
   }
 
   nearest(position: Position): Hearth {
-    let nearest: Hearth = nearestFurnace(position);
+    let nearest: Hearth = TOWN_HEARTH;
     let distance = Math.hypot(position.x - nearest.position.x, position.y - nearest.position.y);
-    for (const site of this.nearby(position, distance)) {
+    const visit = (branch: HearthBranch | null): void => {
+      if (!branch) {
+        return;
+      }
+      const site = branch.hearth;
       const candidate = Math.hypot(position.x - site.position.x, position.y - site.position.y);
-      if (candidate < distance) {
+      if (
+        candidate < distance ||
+        (candidate === distance && site.id.localeCompare(nearest.id) < 0)
+      ) {
         nearest = site;
         distance = candidate;
       }
-    }
+      const delta = position[branch.axis] - site.position[branch.axis];
+      visit(delta < 0 ? branch.left : branch.right);
+      if (Math.abs(delta) <= distance) {
+        visit(delta < 0 ? branch.right : branch.left);
+      }
+    };
+    visit(this.tree);
     return nearest;
   }
 }

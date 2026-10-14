@@ -12,6 +12,7 @@ import {
   contourLockVelocity,
   isContourLockState,
 } from '../../shared/contourLock';
+import { cargoCapacity } from '../../shared/economy';
 import { GAME_TICK_MS, MAX_CATCH_UP_TICKS, MAX_TICK_DEBT_MS } from '../../shared/gameClock';
 import { navigationCaptureRadius } from '../../shared/navigationSalvage';
 import { capMotionVelocity, finiteMotionVector, PLAYER_MOTION } from '../../shared/playerMotion';
@@ -192,10 +193,16 @@ export class PlayerMotionService {
     position = actor.position
   ): number {
     const kit = getShipKit(actor.kitId);
-    const cruise = cruiseSpeed(actor.mass, kit.maxVelocity);
+    const cruise = cruiseSpeed(
+      actor.mass,
+      kit.maxVelocity,
+      actor.cargo,
+      cargoCapacity(actor.kitId)
+    );
     const normal = locked
       ? contourLockSpeed(cruise) * contourDraftMultiplier(actor.contourDraftFrames)
       : terrainSpeedLimit(position, cruise);
+
     const impulse = this.sessions.get(actor.id)?.knockback;
     if (!impulse) {
       return normal;
@@ -218,8 +225,11 @@ export class PlayerMotionService {
     return Math.max(
       this.legalSpeed(actor, now, locked),
       locked
-        ? contourLockSpeed(cruiseSpeed(actor.mass, kit.maxVelocity))
-        : cruiseSpeed(actor.mass, kit.maxVelocity) * (1 + TERRAIN.CONTOUR_SPEED_BONUS)
+        ? contourLockSpeed(
+            cruiseSpeed(actor.mass, kit.maxVelocity, actor.cargo, cargoCapacity(actor.kitId))
+          )
+        : cruiseSpeed(actor.mass, kit.maxVelocity, actor.cargo, cargoCapacity(actor.kitId)) *
+            (1 + TERRAIN.CONTOUR_SPEED_BONUS)
     );
   }
 

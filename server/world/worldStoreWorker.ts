@@ -65,7 +65,13 @@ if (typeof path !== 'string' || path.length === 0) {
     try {
       switch (request.type) {
         case 'persist':
-          store.checkpoint(request.world, request.sectors, request.pilots, request.economy);
+          store.checkpoint(
+            request.world,
+            request.sectors,
+            request.pilots,
+            request.economy,
+            request.cooperative
+          );
           break;
         case 'reset':
           store.reset();

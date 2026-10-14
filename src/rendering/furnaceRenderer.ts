@@ -1,6 +1,6 @@
 import { WIRE_PALETTE } from '../../shared/constants/gameplay';
 import { explorationCellAt, isCellExplored } from '../../shared/exploration';
-import { CIVIC_LOTS, pipeHopToParent, TOWN_HEARTH } from '../../shared/furnaces';
+import { CIVIC_LOTS, pipeHopToParent, pipeToTownSquare, TOWN_HEARTH } from '../../shared/furnaces';
 import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import { activeFurnacePipePulses, furnacePipeFrame } from '../fx/furnacePipePulse';
@@ -608,6 +608,40 @@ export function drawFurnacePipes(viewerPosition: Position, now = performance.now
       resolveGlow(VISUAL.FURNACE_FLAME_GLOW),
       28
     );
+  }
+  // Frontier routes can span tens of thousands of units. Clip their axis-aligned
+  // segments before adding embers, and paint shared trunk segments only once.
+  const frontierSegments = new Set<string>();
+  for (const site of worldFurnaces.frontierHearths()) {
+    const route = pipeToTownSquare(site.id);
+    for (let i = 1; i < route.length; i++) {
+      const start = route[i - 1],
+        end = route[i];
+      if (!start || !end || !segmentNear(viewerPosition, start, end, reach)) {
+        continue;
+      }
+      const clip = (point: Position): Position => ({
+        x: Math.max(viewerPosition.x - reach, Math.min(viewerPosition.x + reach, point.x)),
+        y: Math.max(viewerPosition.y - reach, Math.min(viewerPosition.y + reach, point.y)),
+      });
+      const from = clip(start),
+        to = clip(end);
+      const key = [`${from.x},${from.y}`, `${to.x},${to.y}`].sort().join(':');
+      if (frontierSegments.has(key)) {
+        continue;
+      }
+      frontierSegments.add(key);
+      const count = projectHop(viewerPosition, [from, to]);
+      strokeFurnaceFireTrail(
+        ctx,
+        TRAIL_SCREEN,
+        count,
+        now,
+        2.2,
+        resolveGlow(VISUAL.FURNACE_FLAME_GLOW),
+        28
+      );
+    }
   }
   for (const pulse of activeFurnacePipePulses(now)) {
     const frame = furnacePipeFrame(pulse, now);

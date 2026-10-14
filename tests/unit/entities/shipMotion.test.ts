@@ -143,7 +143,7 @@ describe('shared ship motion helper', () => {
     ship.velocity = { x: 10, y: 0 };
     ship.angle = 0;
     ship.update();
-    expect(ship.velocity.x).toBeCloseTo(cruiseSpeed(8, getShipKit('hauler').maxVelocity));
+    expect(ship.velocity.x).toBeCloseTo(cruiseSpeed(8, getShipKit('hauler').maxVelocity, 0, 1));
     expect(ship.velocity.y).toBeCloseTo(0);
   });
 
@@ -178,3 +178,22 @@ describe('shared ship motion helper', () => {
     expect(ship.position).toEqual({ x: 0, y: 0 });
   });
 });
+
+test.each([0, 0.5, 1])(
+  'cargo load %s scales predicted cruise without changing the empty hull',
+  (load) => {
+    const ship = new Ship({ position: { x: 0, y: 0 }, isLocalPlayer: true, kitId: 'hauler' });
+    ship.cargo = 1500 * load;
+    ship.angle = 0;
+    ship.velocity = { x: 0, y: 0 };
+    ship.thrusting = true;
+    ship.spawnProtectionTimer = 0;
+    for (let frame = 0; frame < 600; frame++) {
+      ship.position = { x: 0, y: 0 };
+      ship.update();
+    }
+    expect(Math.hypot(ship.velocity.x, ship.velocity.y)).toBeCloseTo(
+      cruiseSpeed(ship.mass, ship.maxVelocity, 0, 1) * (1 - 0.3 * load)
+    );
+  }
+);

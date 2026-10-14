@@ -54,7 +54,7 @@ test('bracket keys use the same adjacent contour hop as touch without repeating 
   ship.velocity = contourLockVelocity(
     ship.position,
     ship.contourLock,
-    cruiseSpeed(ship.mass, getShipKit(ship.kitId).maxVelocity)
+    cruiseSpeed(ship.mass, getShipKit(ship.kitId).maxVelocity, 0, 1)
   ) ?? { x: 0, y: 0 };
   ship.angle = Math.atan2(-ship.velocity.y, ship.velocity.x);
   ship.abilityCooldownFrames = 100;

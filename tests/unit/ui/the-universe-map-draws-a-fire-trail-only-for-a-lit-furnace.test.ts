@@ -6,6 +6,7 @@ import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { Roid } from '../../../src/entities/roid/Roid';
 import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { NetworkManager } from '../../../src/network/networkManager';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import {
   setWorldExploration,
   setWorldMapAssets,
@@ -83,6 +84,49 @@ function mountUniverseMap() {
   };
   return { open, canvas, ctx, allLocations };
 }
+
+test('keyboard and semantic chart actions signal the panned center without repeating or stealing buttons', () => {
+  const { open } = mountUniverseMap();
+  const pilot = new Player({
+    id: 'chart-signal',
+    name: 'Navigator',
+    type: 'local',
+    input: new MockPlayerInput(),
+  });
+  pilot.ship.position = { x: 10000, y: 10000 };
+  vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
+  const send = vi.spyOn(ConnectionManager.getInstance(), 'sendMessage').mockReturnValue(true);
+  open();
+  if (!controller) {
+    throw new Error('Missing chart controller');
+  }
+  controller.keydown(new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true }));
+  expect(send).toHaveBeenLastCalledWith({
+    type: 'crewAction',
+    id: pilot.id,
+    data: { kind: 'signal', signal: 'help', position: { x: 10000, y: 10000 } },
+  });
+  controller.keydown(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
+  controller.keydown(new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true }));
+  const positioned = send.mock.calls[1]?.[0];
+  expect(positioned?.data).toMatchObject({ kind: 'signal', signal: 'help' });
+  if (positioned?.type !== 'crewAction' || positioned.data.kind !== 'signal') {
+    throw new Error('Missing signal position');
+  }
+  expect(positioned.data.position.x).toBeGreaterThan(10000);
+  expect(positioned.data.position.y).toBeCloseTo(10000);
+  controller.signalHelpAtCenter();
+  expect(send.mock.calls[2]?.[0]).toEqual(positioned);
+  controller.keydown(new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true, repeat: true }));
+  const buttonEvent = new KeyboardEvent('keydown', { code: 'Enter', shiftKey: true });
+  const button = document.createElement('button');
+  button.addEventListener('keydown', controller.keydown);
+  button.dispatchEvent(buttonEvent);
+  expect(send).toHaveBeenCalledTimes(3);
+  controller.dispose();
+  controller.signalHelpAtCenter();
+  expect(send).toHaveBeenCalledTimes(3);
+});
 
 test('a pilot pinches the universe chart, keeps dragging after lifting one finger, and locates home', () => {
   const { open, canvas, ctx } = mountUniverseMap();

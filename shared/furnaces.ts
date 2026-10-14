@@ -1,5 +1,6 @@
 import type { AsteroidData, CivicModule, Position } from '../shared-types';
 import { oreResource, oreYield } from './economy';
+import { frontierSite } from './frontier';
 import { WORLD } from './world';
 
 /** Respawn and fresh-join ring around the Town Square grate. */
@@ -348,6 +349,10 @@ export function pipeHopToParent(lotId: string): readonly Position[] {
  * The first point is the source. Town Square itself is a single point.
  */
 export function pipeToTownSquare(furnaceId: string): readonly Position[] {
+  const frontier = frontierSite(furnaceId);
+  if (frontier) {
+    return [frontier.position, { x: 0, y: frontier.position.y }, TOWN_HEARTH.position];
+  }
   if (furnaceId === TOWN_HEARTH.id) {
     return [TOWN_HEARTH.position];
   }

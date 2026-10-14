@@ -24,6 +24,7 @@ const initial: UniverseMapChrome = {
 let publish: (next: UniverseMapChrome) => void;
 const controller: UniverseMapController = {
   center: vi.fn(),
+  signalHelpAtCenter: vi.fn(),
   zoomBy: vi.fn(),
   keydown: vi.fn(),
   setLocationPage: vi.fn(),
@@ -152,6 +153,8 @@ test('pilots open an accessible Svelte map with canvas, North compass, full lege
   expect(locate.getAttribute('aria-pressed')).toBe('false');
   locate.click();
   expect(controller.center).toHaveBeenCalledTimes(1);
+  button('Signal help at center').click();
+  expect(controller.signalHelpAtCenter).toHaveBeenCalledOnce();
   button('Zoom in').click();
   button('Zoom out').click();
   expect(controller.zoomBy).toHaveBeenCalledTimes(2);

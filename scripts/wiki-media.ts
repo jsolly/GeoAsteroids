@@ -899,7 +899,7 @@ function makeMovementDemo(): Demo {
         (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS)
       );
     }
-    advanceCruiseVelocity(state, cruiseSpeed(1, SHIP.MAX_VELOCITY));
+    advanceCruiseVelocity(state, cruiseSpeed(1, SHIP.MAX_VELOCITY, 0, 1));
     state.position.x += state.velocity.x;
     state.position.y += state.velocity.y;
     if ((tick + 1) % SIM_TICKS_PER_FRAME === 0) {
@@ -1004,7 +1004,7 @@ function makeTerrainDemo(): Demo {
     throw new Error('wiki-media verification failed: terrain field has no steep contour');
   }
   const contours = extractIsoContours(field);
-  const cruise = cruiseSpeed(1, SHIP.MAX_VELOCITY);
+  const cruise = cruiseSpeed(1, SHIP.MAX_VELOCITY, 0, 1);
   const initialGradient = sampleGradient(field, start.x, start.y);
   const state = new Ship({ kitId: 'scout', position: copyPosition(start) });
   state.angle = headingAlongContour(initialGradient.x, initialGradient.y, 0);

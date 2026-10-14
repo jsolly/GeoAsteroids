@@ -42,6 +42,7 @@ import { getBuildInfoString } from '../utils/buildInfo';
 import { disposeGlobalErrorLogging, installGlobalErrorLogging } from '../utils/globalErrorLogging';
 import { logger } from '../utils/Logger';
 import { generatePilotNickname } from '../utils/pilotNickname';
+import { readCrewRescue, sendCrewAction, signalHere } from './crewRescue';
 import { createDebugPresentation } from './debugPresentation';
 import {
   equipInventorySatellite,
@@ -234,6 +235,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
           buildInfo: getBuildInfoString(),
         }),
         inPlay,
+        crew: readCrewRescue(),
         joining,
         joinError,
         failureNotice,
@@ -384,6 +386,8 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     });
     cleanup.push(() => eventLoop.dispose());
     const commands: GameCommands = {
+      crewAction: sendCrewAction,
+      signalHere,
       openTownStore() {
         if (!disposed) {
           openTownStore();
@@ -419,6 +423,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         if (disposed || !isGameOverlayOpen('universe-map')) {
           return {
             center() {},
+            signalHelpAtCenter() {},
             zoomBy() {},
             keydown() {},
             setLocationPage() {},
@@ -430,6 +435,7 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         mapControllers.add(map);
         return {
           center: map.center,
+          signalHelpAtCenter: map.signalHelpAtCenter,
           zoomBy: map.zoomBy,
           keydown: map.keydown,
           setLocationPage: map.setLocationPage,

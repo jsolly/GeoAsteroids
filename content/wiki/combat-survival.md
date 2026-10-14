@@ -40,6 +40,10 @@ Death loses your carried points. You respawn at Town Square with restored health
 
 Avoid damage for a short time and your hull repairs itself automatically. A hit that removes health or spills protective cargo restarts the wait; repairs stop at full health and never revive a destroyed ship. Bank cargo at a lit furnace, then spend banked points on placeholders at [Town Square](/wiki/#controls).
 
+## Downed and rescue
+
+On a campaign-enabled server, a lethal hit leaves you downed with a rescue beacon and a countdown. Another live pilot can hold Revive beside you, or activate it with a keyboard or assistive control to start or cancel; moving, damage, releasing a pointer hold, opening an overlay or either pilot disconnecting cancels the attempt. A completed rescue restores part of your hull with brief protection; Give up or an expired countdown causes the ordinary death and cargo loss, even if you reconnect after the deadline.
+
 ## Hull deployment
 
 Your hull pieces snap together on deployment and respawn while flight controls remain available. Reduced motion skips the assembly.

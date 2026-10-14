@@ -401,7 +401,7 @@ export class AsteroidManager {
         vertices: newVertices,
         offsets: newOffsets,
         ...(destroyed.material ? { material: destroyed.material } : {}),
-        ore: oreResource(destroyed),
+        ore: destroyed.supply ? null : oreResource(destroyed),
         surveyedBy: [...(destroyed.surveyedBy ?? [])],
       });
     }

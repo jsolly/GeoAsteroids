@@ -17,7 +17,7 @@ test('a grown Hauler reports its reduced cruise speed and retains a server knock
   actor.mass = 8;
   const now = world.engine.getServerTime();
   const kit = getShipKit('hauler');
-  const grownCruise = cruiseSpeed(8, kit.maxVelocity);
+  const grownCruise = cruiseSpeed(8, kit.maxVelocity, 0, 1);
   const pose = {
     epoch: actor.playerMotion?.epoch ?? 0,
     sequence: 1,

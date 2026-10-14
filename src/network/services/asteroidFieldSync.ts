@@ -192,6 +192,7 @@ const ASTEROID_POSE_SNAP_PX = 12;
 
 /** Local belt object that can receive an authoritative kinematic snapshot. */
 export interface AsteroidKinematicTarget {
+  supply?: AsteroidData['supply'];
   surveyedBy?: string[];
   miningContributors?: string[];
   position: { x: number; y: number };
@@ -249,6 +250,11 @@ export function applyAsteroidKinematics(
       roid.ore = updates.ore;
     } else {
       delete roid.ore;
+    }
+    if (updates.supply) {
+      roid.supply = { ...updates.supply };
+    } else {
+      delete roid.supply;
     }
     if (updates.surveyedBy) {
       roid.surveyedBy = [...updates.surveyedBy];

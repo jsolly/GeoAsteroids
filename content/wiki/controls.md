@@ -62,3 +62,7 @@ M or Map opens the shared universe chart centred on your ship. Drag to pan and p
 Tab reaches menu controls and the touch tool and Contour Lock buttons; Enter or Space activates a focused button. Focus the universe chart itself for arrow-key panning and +/− zoom, because a focused button keeps its normal keyboard behavior. On the furnace destination map, Tab selects a lit stop and Enter chooses it.
 
 Your device's reduced-motion setting skips the opening camera dive, steadies prominent loot and travel flames, and replaces Wiki animations with still images. The game still moves in real time. The universe chart also exposes a text list of revealed landmarks and crew coordinates for assistive technology.
+
+## Campaign controls
+
+Use Help here or Nest here to signal nearby crew; Shift-click Map on desktop or tap without dragging on touch to place a help signal. With a keyboard, pan with the arrow keys, then choose Signal help at center or press Shift+Enter on the chart; signals reach nearby crew only. Hold Revive near a downed pilot, or activate it with a keyboard or assistive control to start or cancel; see [rescue rules](/wiki/#combat-survival). At a stocked furnace, a Hauler with Tow Cable can choose Tow supply for [frontier restoration](/wiki/#teamwork).

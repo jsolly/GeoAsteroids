@@ -41,3 +41,19 @@ Exploration, built furnaces, and the asteroid field survive server restarts unti
 ## Build the settlement
 
 Everyone shares settlement progress. Reaching the next level requires deposited points and four materials, each scaling with the current level (per-level amounts are in the reference below). Deposits and every contributor's delivery reward count toward it. All requirements must be met; the recipe is consumed and surplus carries forward. The central docking station grows as the settlement levels up. Higher levels unlock more store placeholders; these spend banked points but grant no upgrade or gameplay effect.
+
+## Escort carriers
+
+A loaded carrier moves more slowly and draws nearby spiders. Escort the carrier and clear its route to a lit furnace.
+
+## Crew signals and rescue
+
+On a campaign-enabled server, use Help here or Nest here; Shift-click the chart, or tap it on touch, to place a nearby help signal. Downed pilots automatically broadcast a rescue beacon; hold Revive beside one, or activate it with a keyboard or assistive control to start or cancel the countdown; choose Give up to respawn. See [survival](/wiki/#combat-survival) for interruption and reconnect rules.
+
+## Restore the frontier
+
+Clear a queen to expose her furnace ruin, then haul physical supply from a lit settlement closer to Town Square. Deliver ore to stock a settlement, select Tow Cable, and use Tow supply while inside its intake; carry the shipment outward to the ruin. Finishing construction permanently lights the furnace and charts its surroundings; surplus becomes stock there, while destroyed shipments lose their supply.
+
+## Deep Scanner
+
+Physical ore delivered to Town Square also fills the shared Deep Scanner project while keeping ordinary contributor rewards. Finishing it reveals the outer hive frontier to everyone; banked points cannot fund this project or a frontier ruin. These campaign systems appear only after the server's reviewed world migration is activated.

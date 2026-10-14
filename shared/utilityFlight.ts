@@ -1,8 +1,9 @@
 import type { Position, UtilityFlight } from '../shared-types';
+import { GAME } from './constants/gameplay';
 
 export const UTILITY_FLIGHT = {
-  TOW_SPEED: 8,
-  PROBE_SPEED: 10,
+  TOW_SPEED: 1200 / GAME.FPS,
+  PROBE_SPEED: 1200 / GAME.FPS,
   REEL_SPEED: 12,
   REEL_MAX_FRAMES: 120,
   DISINTEGRATE_FRAMES: 24,

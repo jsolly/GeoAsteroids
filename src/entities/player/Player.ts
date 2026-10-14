@@ -3,10 +3,12 @@ import { applyShipKitToShip, hullRadiusForKit } from '../../../shared/shipKits';
 import { purchasedHullColor } from '../../../shared/townStore';
 import type {
   ContourLockState,
+  CrewSignal,
   EquipmentId,
   FurnaceTransit,
   HaulerUtilityId,
   Position,
+  RescueState,
   ScoutUtilityId,
   ShipKitId,
 } from '../../../shared-types';
@@ -46,7 +48,12 @@ export class Player {
   score: number = 0;
   silk = 0;
   lastUpdate: number = Date.now();
-  cargo = 0;
+  get cargo(): number {
+    return this.ship.cargo;
+  }
+  set cargo(value: number) {
+    this.ship.cargo = value;
+  }
   bankedCargo = 0;
   purchases: string[] = [];
   color: string; // Player's unique color for lasers and other visual elements
@@ -135,6 +142,9 @@ export class Player {
     silk?: number;
     equipment?: EquipmentId[];
     furnaceTransit?: FurnaceTransit | null;
+    downedUntil?: number | null;
+    rescue?: RescueState | null;
+    crewSignal?: CrewSignal | null;
     exploding?: boolean;
     thrusting?: boolean;
     contourLock?: ContourLockState;
@@ -156,6 +166,19 @@ export class Player {
     haulerUtility?: HaulerUtilityId;
     scoutUtility?: ScoutUtilityId;
   }): void {
+    const wasDowned = this.ship.downedUntil !== null;
+    if (data.downedUntil !== undefined) {
+      this.ship.downedUntil = data.downedUntil;
+    }
+    if (data.rescue !== undefined) {
+      this.ship.rescue = data.rescue;
+    }
+    if (data.crewSignal !== undefined) {
+      this.ship.crewSignal = data.crewSignal;
+    }
+    if (wasDowned || this.ship.downedUntil) {
+      this.ship.exploding = false;
+    }
     const wasInTransit = this.ship.furnaceTransit !== null;
     if (data.furnaceTransit !== undefined) {
       if (data.furnaceTransit) {
@@ -252,7 +275,9 @@ export class Player {
     }
 
     if (data.exploding === true || data.health === 0) {
-      this.reportDeath();
+      if (!this.ship.downedUntil) {
+        this.reportDeath();
+      }
     }
     if (data.score !== undefined) {
       this.score = data.score;
@@ -304,6 +329,7 @@ export class Player {
         // not revive a locally predicted death before the full respawn arrives.
         if (
           !isLocal ||
+          wasDowned ||
           (!wasDead && !wasExploding) ||
           serverHealth <= 0 ||
           (serverHealth >= (data.maxHealth ?? this.ship.maxHealth) &&
@@ -327,7 +353,7 @@ export class Player {
           });
         }
 
-        if (this.ship.health <= 0 && oldHealth > 0) {
+        if (this.ship.health <= 0 && oldHealth > 0 && !this.ship.downedUntil) {
           logger.debug('HEALTH_UPDATE', 'Health reached 0, triggering explosion', {
             playerId: this.id,
             oldHealth,

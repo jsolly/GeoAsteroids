@@ -18,6 +18,7 @@ import { calculateHealthRegenDelayFrames } from '../../shared/constants/health';
 import { CONTOUR_ASTEROID_SPEED } from '../../shared/contourAsteroid';
 import { CONTOUR_BRIDGE } from '../../shared/contourBridge';
 import { CONTOUR_LOCK } from '../../shared/contourLock';
+import { COOPERATIVE, QUEEN_COMBAT } from '../../shared/cooperativeRules';
 import { ECONOMY, settlementRecipe } from '../../shared/economy';
 import { SATELLITE_PROFILES } from '../../shared/eoSatellites';
 import { EQUIPMENT_DROPS } from '../../shared/equipment';
@@ -257,6 +258,18 @@ export const gameReference: Record<string, { heading: string; paragraphs: string
     },
   ],
   teamwork: [
+    {
+      heading: 'Cooperative campaign',
+      paragraphs: [
+        `Downed: ${COOPERATIVE.downedMs / 1000} seconds. Revive: hold ${COOPERATIVE.reviveMs / 1000} seconds within ${COOPERATIVE.reviveRadius} units; restores ${COOPERATIVE.reviveHealthFraction * 100}% hull.`,
+        `Queen: ${COOPERATIVE.queenHealth} HP; one child every ${COOPERATIVE.birthFrames / GAME.FPS} active seconds, at most ${COOPERATIVE.childrenPerHive} living children. Opposite shots from different pilots within ${QUEEN_COMBAT.oppositeWindowMs / 1000} seconds open the shield for ${QUEEN_COMBAT.shieldWindowMs / 1000} seconds (direction cosine at most ${QUEEN_COMBAT.oppositeCosine}). Tow Cable holds it open while attached.`,
+        `Sacs: two initially, three in the expanded frontier; ${COOPERATIVE.sacHealth} HP each, ${COOPERATIVE.sacSpacing} units apart, ${COOPERATIVE.sacWindowMs / 1000} seconds from the first pop.`,
+        `Restoration: ${COOPERATIVE.restoreValue} physical supply value; each shipment carries at most 1000. Commissioning permanently reveals ${COOPERATIVE.atlasRadius} units. Deep Scanner: ${COOPERATIVE.scannerValue} physical ore value at Town Square.`,
+        `Initial frontier: ${COOPERATIVE.initialInnerRadius}–${COOPERATIVE.initialOuterRadius} units from Town Square; expanded frontier: ${COOPERATIVE.initialOuterRadius}–${COOPERATIVE.expandedOuterRadius}.`,
+        'UTC hazards warn at :25–:30 and :55–:00, then run at :30–:33 and :00–:03. Spider population is capped at 48 including 12 reserved swarm slots; no offline replay.',
+        'Crew signals: one per pilot, a two-second placement interval, a 30-second lifetime and a 3600-unit placement radius. Cargo slows cruise linearly from full speed empty to 70% speed full. Travelling tow and probe heads move at 1200 world units per second.',
+      ],
+    },
     {
       heading: 'Shared field values',
       paragraphs: [

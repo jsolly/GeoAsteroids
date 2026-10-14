@@ -611,6 +611,14 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
         roid.health / roid.maxHealth
       );
     }
+    if (roid.supply) {
+      ctx.save();
+      ctx.fillStyle = '#78dddc';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Supply · ${roid.supply.value} ore`, screenPos.x, screenPos.y - r - 16);
+      ctx.restore();
+    }
     if (roid.contourRider) {
       ctx.save();
       ctx.strokeStyle = '#a4eeff';
@@ -626,6 +634,7 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
         );
         ctx.stroke();
       }
+
       ctx.restore();
     }
     drawRoidInteractionCues(ctx, roid, r, screenPos.x, screenPos.y);

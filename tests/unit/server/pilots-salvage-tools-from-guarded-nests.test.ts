@@ -311,7 +311,16 @@ test('a dead saved flight retains bank, equipment, paint, and silk', () => {
       equipment: [...EQUIPMENT_IDS],
       color: '#FBBF24',
     });
+    expect(resumed.actor.health).toBe(0);
+    expect(resumed.actor.respawnTimer).toBeGreaterThan(0);
     expect(engine.setScoutUtility(resumed.actor.id, 'survey_probe')).toBe(true);
+    for (let frame = 0; frame < 18; frame++) {
+      engine.advanceCombatFrame();
+    }
+    expect(resumed.actor.health).toBe(resumed.actor.maxHealth);
+    expect(resumed.actor.respawnTimer).toBeUndefined();
+    expect(resumed.actor.equipment).toEqual(EQUIPMENT_IDS);
+    expect(resumed.actor.score).toBe(900);
   } finally {
     store.close();
   }

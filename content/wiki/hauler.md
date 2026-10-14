@@ -50,3 +50,7 @@ Towing a living spider attracts rescuers that can bite through your cable. Bring
 ## Mining lasers
 
 Hauler hits metal and colossal deposits harder. Direct shots are safe for crew hulls; [ricochets](/wiki/#combat-survival) are dangerous.
+
+## Loaded flight
+
+A full hold reduces cruise speed to 70% of its empty speed. Spiders choose the most loaded eligible pilot first, so an escort can clear the route while the carrier heads for a furnace.
