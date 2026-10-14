@@ -42,9 +42,9 @@
     "public/wiki/media/hauler.png": "sha256:c9135efc3c806428ab0c6ccec48c3aa5ae228202fbace3d457308628e8c779e5",
     "public/wiki/media/loot.gif": "sha256:11e9be804d188df35cb4fac45bb7470a8c0d3cb55a4b6f37371a16b775276a74",
     "public/wiki/media/loot.png": "sha256:83f348e192b1f3916b4689814bba8ed2b4c70b859c839d02c8814c3ed1192234",
-    "public/wiki/media/manifest.json": "sha256:02a6c287e476ae5edde1df1ea4d6841046bce2f2228a4e8456737942338f1c43",
-    "public/wiki/media/movement.gif": "sha256:47ec04acb0d1bb76308e54309fdbbf918cb919b7a70b471102ac8f17884e529a",
-    "public/wiki/media/movement.png": "sha256:6de77a3568f4563f6c96722cb67cac60f0e004b703a7817e38906e023f2a5c1b",
+    "public/wiki/media/manifest.json": "sha256:4de4bab1c9313a31840257ec87952c8914d349684e3ce326fbfa1a37e84eb356",
+    "public/wiki/media/movement.gif": "sha256:f1763b2d9031f04393895ab27d0428e4d6fa332db5bd84e43c107437b2561d41",
+    "public/wiki/media/movement.png": "sha256:08512b0c01969d87fa888d95a09e39755eab38ff34395f2af628d6dc15515083",
     "public/wiki/media/pickups.gif": "sha256:746b5e657bb87f49e52e93ed35cf336d9145dd9c8c89b462ed386c324c292653",
     "public/wiki/media/pickups.png": "sha256:bdd11306ccd8c653e4225c5657d6f02746fc101c7d32a3ad0c12dcbe603a03dd",
     "public/wiki/media/reflection.gif": "sha256:a0df39fe1cb4a4c3b3fd9cf7124df655e474f7086d356440e6140bf6bf063890",
@@ -55,7 +55,7 @@
     "public/wiki/media/scout.png": "sha256:cb428581ce75e97da6fd025fe06135afa60311c9926f5452b90a0035252bfa08",
     "public/wiki/media/survival.gif": "sha256:c80725eef771af0914200c048dfb3d354161c0beaace56191fbff94e1dbd9b96",
     "public/wiki/media/survival.png": "sha256:cb90006f39af1cdbe46ec2de2455722049fbf19fb64fc412a0cdd7f40de3dda6",
-    "public/wiki/media/terrain.gif": "sha256:8715d9d28d297417224ca0bf523330f5cbd57a2835124ee5771bee4e867d3262",
+    "public/wiki/media/terrain.gif": "sha256:7472aa49b2c6b860d7b790e3c2bc9d83c986a04c2604b85c48e62aee1642579e",
     "public/wiki/media/terrain.png": "sha256:45e89a0f083c9c619b195543040ffabf80f4427a04e38e9a92c95fe4807d8133",
     "scripts/client-build.ts": "sha256:f3b3a08ce89986fe61ab554dde277df1b87ed7f62898fbcabfc7f858cf1e74c3",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
@@ -572,7 +572,7 @@
       "owners": {}
     },
     {
-      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main\u2019s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
+      "note": "Reviewed merged package manifest: preserve PR6 complete gate commands and main’s landed Knip 6.38.0 update. No gameplay controls, Wiki prose, demonstrations or runtime dependency behavior changed.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
@@ -2540,7 +2540,7 @@
       }
     },
     {
-      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75\u219250 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
+      "note": "Removed cooperative mining targets, timers, tags, split audio/shockwaves and the split demonstration. Reviewed first-hit ordinary mining, retained durable metal/colossal/rubble behavior and data, protocol3 negotiation and storage migration; updated asteroid/Hauler/controls guidance and references. Baseline76 passed; migrated focused gameplay/network/persistence checks passed after fixture corrections. Types, Biome, Knip and Markdown checks passed. All10 surviving demos reproduced byte-for-byte with Pillow12.3.0. Two simultaneous local Chromium clients at1280x900 and390x844 fired competing shots: one destruction/drop set, ordinary shatter and audio starts, metal health75→50 on both. Game and asteroid Wiki screenshots inspected at both widths; no console warnings/errors. No physical-phone or human listening claim. Full gate follows this scoped acceptance. Integrated cleared-nest main changes; preserved their independent review and current snapshot rows.",
       "sources": [
         "docs/protocol/snapshot-v2.md",
         "docs/protocol/snapshot-v3.md",
@@ -4953,6 +4953,20 @@
       "media": ["hauler"],
       "owners": {
         "public/wiki/media/manifest.json": "hauler"
+      }
+    },
+    {
+      "note": "Accepted exact Linux-x64 movement and terrain baseline artifact11877981105 from CI38530110262 at b6069408cce5532c63494f326cb3bdd4d854375f. Verified ZIP SHA2560b5317bbc47570093ce7605d152ccdfc7ee103a0105dd285dba938cfa4970c9f and all21 extracted files. Inspected movement/terrain frames0,24,47 and the changed movement poster: real Scout turn540, continued flight after steering release, contour capture and guided bonus, then release to normal cruise. Only movement GIF/poster, terrain GIF and manifest change; terrain poster and eight other demonstrations are byte-identical. Controls and terrain articles remain accurate. This batch accepts four asset paths; generator changes remain separately scoped.",
+      "sources": [
+        "public/wiki/media/manifest.json",
+        "public/wiki/media/movement.gif",
+        "public/wiki/media/movement.png",
+        "public/wiki/media/terrain.gif"
+      ],
+      "topics": ["controls", "terrain"],
+      "media": ["movement", "terrain"],
+      "owners": {
+        "public/wiki/media/manifest.json": "terrain"
       }
     }
   ]
