@@ -4,6 +4,7 @@ import { ASTEROID_INTERACTIONS } from '../../shared/asteroidPhenomena';
 import { colossalMiningHealth } from '../../shared/asteroidScale';
 import { BELT_CRAWLER } from '../../shared/beltCrawler';
 import { WORLD_BOUNDARY } from '../../shared/boundary';
+import { CHARGED_WEAPON } from '../../shared/chargedWeapon';
 import {
   DAMAGE,
   DEPOSIT_FIELD,
@@ -14,6 +15,8 @@ import {
   SHIP,
 } from '../../shared/constants/gameplay';
 import { calculateHealthRegenDelayFrames } from '../../shared/constants/health';
+import { CONTOUR_ASTEROID_SPEED } from '../../shared/contourAsteroid';
+import { CONTOUR_BRIDGE } from '../../shared/contourBridge';
 import { CONTOUR_LOCK } from '../../shared/contourLock';
 import { ECONOMY, settlementRecipe } from '../../shared/economy';
 import { SATELLITE_PROFILES } from '../../shared/eoSatellites';
@@ -29,8 +32,11 @@ import {
 } from '../../shared/furnaces';
 import { FURNACE_TRAVEL } from '../../shared/furnaceTravel';
 import { MAX_CATCH_UP_TICKS } from '../../shared/gameClock';
+import { GLOWTOY } from '../../shared/glowtoy';
 import { LOOT_BLAST } from '../../shared/lootBlast';
+import { NAVIGATION_SALVAGE } from '../../shared/navigationSalvage';
 import { PLAYER_MOTION } from '../../shared/playerMotion';
+import { ROLY_POLY } from '../../shared/rolyPoly';
 import { GROWTH } from '../../shared/shipGrowth';
 import { getShipKit, SHIP_ABILITY, SHIP_KIT_IDS } from '../../shared/shipKits';
 import { SURVEY_PROBE } from '../../shared/surveyProbe';
@@ -135,8 +141,8 @@ export const gameReference: Record<string, { heading: string; paragraphs: string
     {
       heading: 'Loot and salvage values',
       paragraphs: [
-        `Pickups leave ship mass, health capacity, current health, hull size, and flight tuning unchanged. The live loot limit is ${GROWTH.MAX_LOOT}. Shards, Tap canisters, and silk last ${seconds(GROWTH.LOOT_TTL_FRAMES)}; point drops from mined rocks last ${ECONOMY.pointLootFrames / GAME.FPS} seconds of real time and survive restarts; equipment and nest caches last ${EQUIPMENT_DROPS.NEST_LIFETIME_FRAMES / GAME.FPS / 60} minutes. A nest holds a tool with ${EQUIPMENT_DROPS.NEST_CHANCE * 100}% chance, and an ordinary laser-killed rock with ${EQUIPMENT_DROPS.ASTEROID_CHANCE * 100}%. Cargo capacity: Scout ${ECONOMY.scoutCapacity}, Hauler ${ECONOMY.haulerCapacity}.`,
-        `Shard drops have radius ${GROWTH.LOOT_RADIUS}. Tap canisters have radius ${GROWTH.TAP_LOOT_RADIUS} and score ${GROWTH.TAP_LOOT_SCORE}. A living ship magnetizes ordinary drops within ${GROWTH.LOOT_MAGNET_RANGE} units with acceleration ${GROWTH.LOOT_MAGNET_ACCEL}. Tap loot uses range ${GROWTH.TAP_LOOT_MAGNET_RANGE} and acceleration ${GROWTH.TAP_LOOT_MAGNET_ACCEL} toward a Hauler. Pickup overlap uses each kit's hull radius plus the drop radius.`,
+        `Pickups leave ship mass, health capacity and hull size unchanged. The live loot limit is ${GROWTH.MAX_LOOT}. Shards, Tap canisters, and silk last ${seconds(GROWTH.LOOT_TTL_FRAMES)}; point drops from mined rocks last ${ECONOMY.pointLootFrames / GAME.FPS} seconds of real time and survive restarts; equipment and nest caches last ${EQUIPMENT_DROPS.NEST_LIFETIME_FRAMES / GAME.FPS / 60} minutes. A nest holds a tool with ${EQUIPMENT_DROPS.NEST_CHANCE * 100}% chance, and an ordinary laser-killed rock with ${EQUIPMENT_DROPS.ASTEROID_CHANCE * 100}%. Cargo capacity: Scout ${ECONOMY.scoutCapacity}, Hauler ${ECONOMY.haulerCapacity}.`,
+        `Shard drops have radius ${GROWTH.LOOT_RADIUS}. Tap canisters have radius ${GROWTH.TAP_LOOT_RADIUS}: ice restores up to ${NAVIGATION_SALVAGE.iceRepair} HP, metal grants ${NAVIGATION_SALVAGE.metalCargo} cargo, rubble grants one fiber, and crystal refreshes ${seconds(NAVIGATION_SALVAGE.frames)} of ${NAVIGATION_SALVAGE.captureRadius}-unit Contour Lock acquisition reach. A living ship magnetizes ordinary drops within ${GROWTH.LOOT_MAGNET_RANGE} units with acceleration ${GROWTH.LOOT_MAGNET_ACCEL}. Tap loot uses range ${GROWTH.TAP_LOOT_MAGNET_RANGE} and acceleration ${GROWTH.TAP_LOOT_MAGNET_ACCEL} toward a Hauler. Pickup overlap uses each kit's hull radius plus the drop radius.`,
         `Furnace offloading transfers ${ECONOMY.offloadPoints} points every ${ECONOMY.offloadIntervalFrames / GAME.FPS} seconds. Cargo protects one HP per ${ECONOMY.cargoPointsPerHp} points ejected; hit spills pause magnetism and collection for ${ECONOMY.cargoSpillEjectFrames / GAME.FPS} seconds and launch at ${ECONOMY.cargoSpillSpeed} units per frame.`,
         `Shard score: ${GROWTH.SHARD_SCORE}. Reflected shots can reach a maximum laser energy of ${ASTEROID_INTERACTIONS.maxLaserEnergy}.`,
       ],
@@ -190,8 +196,17 @@ export const gameReference: Record<string, { heading: string; paragraphs: string
   ],
   terrain: [
     {
+      heading: 'Crew bridge and navigation values',
+      paragraphs: [
+        `A combo allows ${CONTOUR_BRIDGE.hopLimit} adjacent hops, resetting after ${CONTOUR_BRIDGE.comboWindowMs / 1000} seconds without a hop. The third bridge catches another locked pilot within ${CONTOUR_BRIDGE.catchRadius} units on the same source level and direction, transfers over ${seconds(CONTOUR_BRIDGE.transitFrames)}, and grants ${seconds(CONTOUR_BRIDGE.draftFrames)} at ${CONTOUR_BRIDGE.draftMultiplier} times contour speed. Each pilot crosses once. Crossings refresh the ${seconds(CONTOUR_BRIDGE.lifetimeFrames)} lifetime, capped at ${seconds(CONTOUR_BRIDGE.maximumLifetimeFrames)} from creation; at most ${CONTOUR_BRIDGE.maximum} trails exist. No cooldown or energy is replenished.`,
+        `Contour-riding rocks travel at ${CONTOUR_ASTEROID_SPEED * GAME.FPS} units per second. Their laser break drops one navigation crystal; collision breaks do not. Navigation salvage refreshes ${seconds(NAVIGATION_SALVAGE.frames)} of ${NAVIGATION_SALVAGE.captureRadius}-unit acquisition reach, leaving ordinary cruise and ${CONTOUR_LOCK.hopRadius}-unit hop reach unchanged.`,
+      ],
+    },
+    {
       heading: 'Terrain travel values',
       paragraphs: [
+        `Neutral roly-polys curl within ${ROLY_POLY.curlDistance} units and roll for ${seconds(ROLY_POLY.rollFrames)} after a hull nudge. At most ${ROLY_POLY.maximumActive} visited wildlife bodies are active; they award no cargo and deal no damage.`,
+        `Glowtoys charge under headlights within ${GLOWTOY.headlightRange} units or aft thrust within ${GLOWTOY.thrusterRange}. A laser adds ${GLOWTOY.laserCharge} charge per energy, up to 1. Charge above 0.7 attracts wandering spiders within ${GLOWTOY.attractionRadius} units and reveals its one-time ${GLOWTOY.cachePoints}-point cache within ${GLOWTOY.revealRadius} units. At most ${GLOWTOY.maximumActive} nearby glowtoys update each ${GLOWTOY.tickFrames} frames.`,
         `At full contour strength, following a line in either direction reaches ${(1 + TERRAIN.CONTOUR_SPEED_BONUS) * 100}% of normal cruise. Crossing perpendicular to the lines keeps normal cruise. Kit and mass scale the baseline together; Contour Lock adds guided travel along a nearby line.`,
       ],
     },
@@ -208,6 +223,7 @@ export const gameReference: Record<string, { heading: string; paragraphs: string
     {
       heading: 'Combat values',
       paragraphs: [
+        `Hold F or two playfield fingers, then release to fire a beam. Minimum charge is ${seconds(CHARGED_WEAPON.minimumFrames)}, full charge ${seconds(CHARGED_WEAPON.fullFrames)}, maximum energy ${CHARGED_WEAPON.maximumEnergy}, and cooldown ${seconds(CHARGED_WEAPON.cooldownFrames)}. The server owns elapsed charge; death, menus, cancellation and ${seconds(CHARGED_WEAPON.expiryFrames)} without release discard it.`,
         `A ship can have ${SHIP.MAX_LASERS} local lasers. Laser projectiles use hit radius ${LASER.HIT_RADIUS} and expire after ${LASER.MAX_TRAVEL_DISTANCE} world units of travel; a normal laser hit deals ${DAMAGE.LASER_HIT}. Unbounced ship lasers, ship-to-ship ramming, tow cables, and shot-triggered loot blasts leave crew hulls unharmed. After a bounce, a laser deals ${DAMAGE.LASER_HIT} times its energy to any live ship it hits, including its owner, and is consumed. An environmental asteroid impact deals ${DAMAGE.ASTEROID_COLLISION}; a towed ordinary rock uses that same impact against another ship and then breaks. A colossal deposit deals that impact without shattering. Boundary contact applies the current hull health as damage; cargo absorbs it first.`,
         `Spawn protection lasts ${frameValue(SHIP.INVINCIBILITY_DURATION_FRAMES)}.`,
       ],
@@ -215,7 +231,7 @@ export const gameReference: Record<string, { heading: string; paragraphs: string
     {
       heading: 'Lifecycle and health values',
       paragraphs: [
-        `Explosion duration is ${frameValue(SHIP.EXPLODE_DURATION_FRAMES)}; respawn delay is ${frameValue(SHIP.RESPAWN_DELAY_FRAMES)}. Players always respawn at the nearest lit hearth with a ${TOWN_SPAWN_RADIUS}-unit offset. Carried points are lost on death; banked points survive.`,
+        `Explosion duration is ${frameValue(SHIP.EXPLODE_DURATION_FRAMES)}; respawn delay is ${frameValue(SHIP.RESPAWN_DELAY_FRAMES)}. Players always respawn at Town Square with a ${TOWN_SPAWN_RADIUS}-unit offset. Carried points are lost on death; banked points survive.`,
         `Health regeneration restores ${SHIP.HEALTH_REGEN_FRACTION_PER_SECOND * 100}% of current max health per second after a ${SHIP.HEALTH_REGEN_DELAY} second delay (${calculateHealthRegenDelayFrames()} frames).`,
       ],
     },

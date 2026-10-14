@@ -24,9 +24,11 @@ Inside a lit furnace's visible footprint, the prompt offers travel; at Town Squa
 
 The minimap shows nearby space; M or Map opens the full shared chart. Both keep north at the top, matching the viewport and furnace destination map. Your ship marker turns to show its heading. Pinch the full chart to zoom and drag to pan; desktop also supports the mouse wheel and +/− keys. The north arrow and legend sit inside the chart, and Center on you restores the nearby ship view. Furnace marks keep their exact world position as you approach and cross them. The minimap shows furnaces once explored and pins off-radar crew to its rim, while the full chart always shows every lit furnace and foundation; their names appear on the chart only after you zoom in close, and only lit furnaces show fire trails. Explored ground has a pale blue tint; dark fog hides uncharted rocks and loot.
 
-## Ricochet Court
+## Wrecks and nest ruins
 
-Discovered spider nests stay red while any guard survives, even when those guards sleep offscreen. The marker disappears when the last guard dies.
+Red nest marks identify discovered guarded resources, even while their guards sleep offscreen; the marker disappears when its resource is collected or moved, or its last guard dies. Final guard deaths leave gray ruins, and pilot deaths leave broken hulls nearby. These temporary remains give no loot and block nothing; they expire and disappear after a server restart.
+
+## Ricochet Court
 
 The cyan open-corner marker northeast of Town Square is always visible on both maps. See [bank-shot duels](/wiki/#combat-survival) before entering.
 

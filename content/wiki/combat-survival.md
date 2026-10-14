@@ -20,6 +20,10 @@ media:
 
 Shots inherit your ship's motion; hold Space to repeat them, while a mouse click fires once. Direct crew shots mine rocks and kill spiders without hurting pilots. After a wall, reflective-rock, or court-panel bounce, a shot becomes a dangerous ricochet that can hit anyone.
 
+## Charged beam
+
+Hold two playfield fingers, or F on desktop, then release for a larger, stronger shot; a growing ring shows the charge. Longer holds increase mining damage up to a fixed maximum, followed by a short charge cooldown; a quick tap does not fire. Opening a menu, losing focus, cancelling a touch, or dying cancels the charge, and abandoned holds expire.
+
 ## Ricochet Court
 
 Meet at the cyan court northeast of Town Square for informal bank-shot duels; it stays marked on both maps before exploration. Its indestructible panels reflect lasers without changing their energy, while ships pass through safely. Banked shots can escape through the gaps and hurt anyone, with normal death and protection rules and no separate duel score.
@@ -35,3 +39,7 @@ Death loses your carried points. You respawn at Town Square with restored health
 ## Recovery
 
 Avoid damage for a short time and your hull repairs itself automatically. A hit that removes health or spills protective cargo restarts the wait; repairs stop at full health and never revive a destroyed ship. Bank cargo at a lit furnace, then spend banked points on placeholders at [Town Square](/wiki/#controls).
+
+## Hull deployment
+
+Your hull pieces snap together on deployment and respawn while flight controls remain available. Reduced motion skips the assembly.

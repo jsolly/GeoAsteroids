@@ -25,6 +25,7 @@ interface LaserData {
 export class Laser implements LaserData {
   serverId?: string;
   bounceCount = 0;
+  energy = 1;
   static get fxLaser(): Sound {
     return getLaserSound();
   }

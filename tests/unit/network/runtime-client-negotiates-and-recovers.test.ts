@@ -8,7 +8,8 @@ import {
   SNAPSHOT_VERSION,
   SnapshotEncoder,
 } from '../../../shared/snapshotProtocol';
-import type { AsteroidData } from '../../../shared-types';
+import { TERRAIN } from '../../../shared/terrainConfig';
+import type { AsteroidData, ContourBridge, RolyPolyState } from '../../../shared-types';
 import { Sound, setSound } from '../../../src/audio/Sound';
 import { bindGameAudio, resetGameAudio } from '../../../src/audio/spatialAudio';
 import { clientPerformance } from '../../../src/diagnostics/performanceMetrics';
@@ -31,6 +32,8 @@ import {
   unbindAsteroidFieldApply,
 } from '../../../src/network/services/asteroidFieldSync';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
+import { getContourBridges } from '../../../src/physics/terrain/contourBridgeSession';
+import { getRolyPolys } from '../../../src/physics/terrain/rolyPolySession';
 import { setSelectedShipKitId } from '../../../src/runtime/shipSelection';
 import { logger } from '../../../src/utils/Logger';
 import { snapshotFixture } from './snapshotFixture';
@@ -124,6 +127,174 @@ describe('actual ConnectionManager WebSocket message path', () => {
       resumeToken,
     });
   }
+
+  test('ability events preserve active effect timers and complete snapshots clear absent timers', async () => {
+    const player = entityFactory.createLocalPlayer(
+      'Runtime pilot',
+      { x: 900, y: 700 },
+      'scout',
+      manager.combatNetwork
+    );
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+    const ws = await connect();
+    acknowledge(ws);
+    const active = captureSnapshot(snapshotFixture());
+    const local = active.entities[0];
+    assert.ok(local);
+    Object.assign(local, {
+      id: manager.getClientId(),
+      name: player.name,
+      kitId: 'scout',
+      weaponChargeFrames: 60,
+      navigationAssistFrames: 1200,
+      contourDraftFrames: 120,
+    });
+    const remote = { ...structuredClone(local), id: 'effect-crew', name: 'Effect crew' };
+    active.entities = [local, remote];
+    ws.receive('snapshot', new SnapshotEncoder(active).encode(1));
+    const crew = manager.getPlayer(remote.id);
+    assert.ok(crew);
+    const timers = (pilot: Player) => [
+      pilot.ship.weaponChargeFrames,
+      pilot.ship.navigationAssistFrames,
+      pilot.ship.contourDraftFrames,
+    ];
+    for (const pilot of [player, crew]) {
+      expect(timers(pilot)).toEqual([60, 1200, 120]);
+      ws.receive('abilityUsed', {
+        id: pilot.id,
+        kitId: 'scout',
+        abilityActiveFrames: 0,
+        harpoonTargetId: null,
+      });
+      expect(timers(pilot)).toEqual([60, 1200, 120]);
+    }
+    const cleared = structuredClone(active);
+    for (const row of cleared.entities) {
+      row.weaponChargeFrames = 0;
+      row.navigationAssistFrames = 0;
+      row.contourDraftFrames = 0;
+    }
+    ws.receive('snapshot', new SnapshotEncoder(cleared).encode(2, { sequence: 1, state: active }));
+    expect(timers(player)).toEqual([0, 0, 0]);
+    expect(timers(crew)).toEqual([0, 0, 0]);
+    ws.receive('snapshot', new SnapshotEncoder(active).encode(3));
+    const absent = structuredClone(active);
+    for (const row of absent.entities) {
+      delete row.weaponChargeFrames;
+      delete row.navigationAssistFrames;
+      delete row.contourDraftFrames;
+    }
+    ws.receive('snapshot', new SnapshotEncoder(absent).encode(4, { sequence: 3, state: active }));
+    expect(timers(player)).toEqual([0, 0, 0]);
+    expect(timers(crew)).toEqual([0, 0, 0]);
+  });
+
+  test.each(['disconnect', 'sessionExpired'] as const)(
+    'encoded wildlife and bridge snapshots update, remove and clear across %s',
+    async (lifetime) => {
+      let ws = await connect();
+      acknowledge(ws);
+      const animal: RolyPolyState = {
+        id: 'animal-one',
+        position: { x: 50, y: 50 },
+        velocity: { x: 0.15, y: 0 },
+        phase: 'walking',
+      };
+      const bridge: ContourBridge = {
+        id: 'bridge-one',
+        ownerId: 'crew-one',
+        from: { x: 10, y: 20 },
+        to: { x: 40, y: 50 },
+        source: { height: 0, direction: 1 },
+        target: { height: TERRAIN.CONTOUR_INTERVAL, direction: 1 },
+        charged: true,
+        framesLeft: 180,
+      };
+      const initial = captureSnapshot(snapshotFixture());
+      initial.rolyPolys = [animal];
+      initial.contourBridges = [bridge];
+      ws.receive('snapshot', new SnapshotEncoder(initial).encode(1));
+      expect(getRolyPolys()).toEqual([animal]);
+      expect(getContourBridges()).toEqual([bridge]);
+      const updated = structuredClone(initial);
+      updated.rolyPolys = [{ ...animal, phase: 'curled', position: { x: 75, y: 50 } }];
+      updated.contourBridges = [{ ...bridge, charged: false, framesLeft: 90 }];
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(updated).encode(2, { sequence: 1, state: initial })
+      );
+      expect(getRolyPolys()).toEqual(updated.rolyPolys);
+      expect(getContourBridges()).toEqual(updated.contourBridges);
+      const removed = structuredClone(updated);
+      delete removed.rolyPolys;
+      delete removed.contourBridges;
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(removed).encode(3, { sequence: 2, state: updated })
+      );
+      expect(getRolyPolys()).toEqual([]);
+      expect(getContourBridges()).toEqual([]);
+      ws.receive('snapshot', new SnapshotEncoder(initial).encode(4));
+      expect(getRolyPolys()).toHaveLength(1);
+      expect(getContourBridges()).toHaveLength(1);
+      if (lifetime === 'disconnect') {
+        manager.disconnect();
+      } else {
+        ws.receive('sessionExpired', { reason: 'expired' });
+      }
+      expect(getRolyPolys()).toEqual([]);
+      expect(getContourBridges()).toEqual([]);
+      if (lifetime === 'disconnect') {
+        ws = await connect();
+      }
+      acknowledge(ws);
+      const fresh = captureSnapshot(snapshotFixture());
+      fresh.rolyPolys = [{ ...animal, id: 'animal-new' }];
+      fresh.contourBridges = [{ ...bridge, id: 'bridge-new' }];
+      ws.receive('snapshot', new SnapshotEncoder(fresh).encode(1));
+      expect(getRolyPolys()).toEqual(fresh.rolyPolys);
+      expect(getContourBridges()).toEqual(fresh.contourBridges);
+    }
+  );
+
+  test('charge commands wait for server support and forget it on reconnect', async () => {
+    const player = entityFactory.createLocalPlayer(
+      'Runtime pilot',
+      { x: 0, y: 0 },
+      'scout',
+      manager.combatNetwork
+    );
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+    vi.spyOn(PlayerManager.getInstance(), 'getLocalShip').mockReturnValue(player.ship);
+    let ws = await connect();
+    acknowledge(ws);
+    expect(ws.sent.find((row) => row.type === 'join')?.data?.['worldRemains']).toBe(1);
+    expect(manager.combatNetwork.sendCharge('start')).toBe(false);
+    expect(ws.sent.some((row) => row.type === 'chargeWeapon')).toBe(false);
+    ws.receive('joined', {
+      id: manager.getClientId(),
+      name: 'Runtime pilot',
+      position: { x: 0, y: 0 },
+      color: '#fff',
+      snapshotVersion: SNAPSHOT_VERSION,
+      asteroidInteractions: 1,
+      terrainSeed: 7,
+      resumeToken: 'a'.repeat(64),
+      chargedWeapons: 1,
+    });
+    player.ship.beginWeaponCharge();
+    expect(player.ship.weaponChargeStartedAt).not.toBeNull();
+    expect(ws.sent.filter((row) => row.type === 'chargeWeapon')).toHaveLength(1);
+    ws.close();
+    expect(player.ship.weaponChargeStartedAt).toBeNull();
+    expect(player.ship.weaponChargeFrames).toBe(0);
+    ws = await connect();
+    expect(manager.combatNetwork.sendCharge('release')).toBe(false);
+    acknowledge(ws);
+    expect(manager.combatNetwork.sendCharge('start')).toBe(false);
+    expect(ws.sent.some((row) => row.type === 'chargeWeapon')).toBe(false);
+  });
 
   test.each([1, 7])('a returning pilot moves after its saved epoch %i restarts', async (epoch) => {
     const player = entityFactory.createLocalPlayer(

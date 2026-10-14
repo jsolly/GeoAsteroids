@@ -26,6 +26,8 @@ const FULL_FIXTURE_FIELDS = {
   serverTime: false,
   settlement: true,
   spiderField: false,
+  rolyPolys: false,
+  contourBridges: false,
   terrainSeed: true,
 } satisfies Record<keyof ServerGameSnapshot, boolean>;
 const FULL_FIXTURE_KEYS = Object.entries(FULL_FIXTURE_FIELDS)

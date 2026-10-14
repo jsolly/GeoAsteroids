@@ -37,6 +37,7 @@ import {
   playOrbitalPickup,
 } from '../../audio/interactionSounds';
 import { playLootPickup, playTapEjection, resetResourceMusic } from '../../audio/resourceMusic';
+import { resetRouteMusic } from '../../audio/routeMusic';
 import { stopSatelliteOrbit, syncSatelliteOrbit } from '../../audio/satelliteOrbitSound';
 import { withoutWorldAudio } from '../../audio/spatialAudio';
 import { GameStateManager } from '../../core/services/GameStateManager';
@@ -60,6 +61,8 @@ import { shouldApplyDamagedHealth } from '../../entities/ship/shipUtils';
 import { playLocalHaptic } from '../../fx/haptics';
 import { reconcilePlayerInput } from '../../input/keybindings';
 import { setSettlement } from '../../network/worldExploration';
+import { setContourBridges } from '../../physics/terrain/contourBridgeSession';
+import { setRolyPolys } from '../../physics/terrain/rolyPolySession';
 import { setSpiderField } from '../../physics/terrain/spiderSession';
 import { setBeltRecovery } from '../../rendering/beltRenderer';
 import { getSelectedShipKitId } from '../../runtime/shipSelection';
@@ -183,6 +186,7 @@ export class ConnectionManager {
   // its new joined acknowledgment. This records the protocol established by
   // the prior acknowledgment without reopening compatibility fallback.
   private currentProtocolReady: boolean = false;
+  private chargedWeapons = false;
   private resumeToken?: string;
   private readonly motionReconciliation = new PlayerMotionReconciliation();
   private snapshotResyncPending: boolean = false;
@@ -233,6 +237,10 @@ export class ConnectionManager {
       get isConnected() {
         return connection.isConnected();
       },
+      sendCharge: (action) =>
+        this.chargedWeapons &&
+        this.joinAcknowledged &&
+        this.sendMessage({ type: 'chargeWeapon', id: this.getLocalPlayerId(), data: { action } }),
       sendShoot: (laser) => this.sendShootEvent(laser),
       sendAbility: () =>
         this.sendMessage({ type: 'useAbility', id: this.getLocalPlayerId(), data: {} }),
@@ -472,6 +480,7 @@ export class ConnectionManager {
     const localShip = PlayerManager.getInstance().getLocalShip();
     if (localShip) {
       localShip.releaseContourLock();
+      localShip.finishWeaponCharge(false);
       localShip.serverOwnsMotion = true;
     }
     this.resetSnapshotSession();
@@ -898,6 +907,7 @@ export class ConnectionManager {
         kitId: localPlayer?.ship.kitId ?? getSelectedShipKitId(),
         snapshotVersion: SNAPSHOT_VERSION,
         asteroidInteractions: ASTEROID_INTERACTIONS_CAPABILITY,
+        worldRemains: 1,
         clientReleaseId: getClientReleaseId(),
         ...(this.resumeToken ? { resumeToken: this.resumeToken } : {}),
       },
@@ -942,11 +952,15 @@ export class ConnectionManager {
           typeof data === 'object' &&
           'ownerId' in data &&
           typeof data.ownerId === 'string' &&
-          data.ownerId !== PlayerManager.getInstance().getLocalPlayer()?.id &&
+          (data.ownerId !== PlayerManager.getInstance().getLocalPlayer()?.id ||
+            ('charged' in data && data.charged === true)) &&
           'position' in data &&
           isFinitePosition(data.position)
         ) {
           playLaserSound(data.position);
+          if ('charged' in data && data.charged === true) {
+            playLocalHaptic(data.ownerId === this.getLocalPlayerId(), 'shot');
+          }
         }
         break;
       case 'shotAcknowledged':
@@ -967,6 +981,9 @@ export class ConnectionManager {
         break;
       case 'sessionExpired': {
         setSpiderField(undefined);
+        setRolyPolys();
+        setContourBridges();
+        resetRouteMusic();
         setBeltRecovery();
         // Remove the previous map key before initializeAsteroidSync changes
         // the local Player object's id for the replacement session.
@@ -986,6 +1003,7 @@ export class ConnectionManager {
         this.motionReconciliation.reset();
         this.joinAcknowledged = false;
         this.currentProtocolReady = false;
+        this.chargedWeapons = false;
         this.clientId = replaceStoredClientId();
         this.initializeAsteroidSync();
         break;
@@ -1066,6 +1084,9 @@ export class ConnectionManager {
     this.playedTapEjectionIds.clear();
     this.playedLootExplosionIds.clear();
     setSpiderField(undefined);
+    setRolyPolys();
+    setContourBridges();
+    resetRouteMusic();
     setBeltRecovery();
     AuthoritativeProjectileField.getInstance().clear();
     this.clearJoinCompletionTimer();
@@ -1074,6 +1095,7 @@ export class ConnectionManager {
     this.cargoDepositBaseline = null;
     clientPerformance.resetSnapshotWitness();
     this.currentProtocolReady = false;
+    this.chargedWeapons = false;
     this.snapshotResyncPending = false;
     this.lastAcceptedSnapshotSequence = 0;
     delete this.serverReleaseId;
@@ -1265,6 +1287,8 @@ export class ConnectionManager {
 
   private handleSnapshotState(data: ServerGameSnapshot): void {
     setSpiderField(data.spiderField);
+    setRolyPolys(data.rolyPolys);
+    setContourBridges(data.contourBridges);
     setBeltRecovery(data.beltRecovery);
     applyTerrainSeed(data.terrainSeed);
     setWorldMapAssets(data.mapAssets);
@@ -1337,6 +1361,9 @@ export class ConnectionManager {
         // Apply the parsed entity directly — no per-tick snapshot wrapper.
         // Kit / ability / deathCause / mass stay on the row.
         entityData.spawnProtectionTimer ??= 0;
+        entityData.weaponChargeFrames ??= 0;
+        entityData.navigationAssistFrames ??= 0;
+        entityData.contourDraftFrames ??= 0;
         if (entityData.playerMotion !== undefined) {
           entity.ship.playerMotion = entityData.playerMotion;
         } else {
@@ -1548,6 +1575,7 @@ export class ConnectionManager {
     this.motionReconciliation.reset();
     this.motionReconciliation.awaitAuthoritativePose();
     this.joinAcknowledged = true;
+    this.chargedWeapons = data.chargedWeapons === 1;
     this.currentProtocolReady = true;
     this.resumeToken = data.resumeToken;
     storeResumeCredential(data.resumeToken, data.name, {

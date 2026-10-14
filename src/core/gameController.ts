@@ -16,6 +16,7 @@ import type {
 import { playDestructionSound } from '../audio/destructionSounds';
 import { playFeedback } from '../audio/feedbackSounds';
 import { playRespawn } from '../audio/interactionSounds';
+import { updateRouteMusic } from '../audio/routeMusic';
 import { bindGameAudio, resetGameAudio } from '../audio/spatialAudio';
 import { mountSpiderScore } from '../audio/spiderScore';
 import { clientPerformance } from '../diagnostics/performanceMetrics';
@@ -730,6 +731,7 @@ export class GameController {
     const textAlpha = this.gameStateManager.getTextAlpha();
     const text = this.gameStateManager.getText();
 
+    updateRouteMusic(currPlayer.ship);
     // Render the current game state
     drawGame(currPlayer, this.currRoidBelt, currScore, textAlpha, text, playersToRender);
   }

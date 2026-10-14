@@ -1,5 +1,7 @@
+import { CHARGED_WEAPON } from '../../../shared/chargedWeapon';
 import { GAME, LASER, SHIP, WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { planFurnaceRoute } from '../../../shared/furnaceTravel';
+import { NAVIGATION_SALVAGE } from '../../../shared/navigationSalvage';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { haulerUtilityOf, isResourceTapUtility } from '../../../shared/shipUtilities';
 import { UTILITY_FLIGHT } from '../../../shared/utilityFlight';
@@ -115,6 +117,54 @@ export function strokeKitHullOutline(
       extra.closed
     );
   }
+}
+
+/** Existing hull edges arrive separately, then meet at their normal ship-space coordinates. */
+export function drawHullAssembly(
+  ctx: DrawingContext,
+  ship: Ship,
+  x: number,
+  y: number,
+  radius: number,
+  angle: number,
+  color: string,
+  now = performance.now()
+): boolean {
+  const progress = Math.max(0, (now - ship.hullAssemblyStartedAt) / 700);
+  if (progress >= 1 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    return false;
+  }
+  const outline = getKitHullOutline(ship.kitId);
+  const parts = [
+    outline.hull,
+    ...outline.extras,
+    ...(ship.kitId === 'hauler' ? getHaulerEquipment(haulerUtilityOf(ship)) : []),
+  ];
+  const separation = radius * 2.5 * (1 - progress) ** 3;
+  for (const part of parts) {
+    const points = projectHullPolyline(x, y, radius, angle, part);
+    const count = points.length - (part.closed ? 0 : 1);
+    for (let i = 0; i < count; i++) {
+      const from = points[i];
+      const to = points[(i + 1) % points.length];
+      if (!from || !to) {
+        continue;
+      }
+      const direction = Math.atan2((from.y + to.y) / 2 - y, (from.x + to.x) / 2 - x);
+      const dx = Math.cos(direction) * separation;
+      const dy = Math.sin(direction) * separation;
+      strokePhosphorPolyline(
+        ctx,
+        [
+          { x: from.x + dx, y: from.y + dy },
+          { x: to.x + dx, y: to.y + dy },
+        ],
+        color,
+        false
+      );
+    }
+  }
+  return true;
 }
 
 export function strokePhosphorSegment(
@@ -538,7 +588,8 @@ function drawCachedLaserBolt(
   x: number,
   y: number,
   velocityX: number,
-  velocityY: number
+  velocityY: number,
+  energy = 1
 ): void {
   const sprite = laserBoltSprite(cache, color);
   // A stationary bolt faces screen-right.
@@ -546,6 +597,7 @@ function drawCachedLaserBolt(
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
+  ctx.scale(Math.sqrt(energy), energy);
   ctx.shadowBlur = 0;
   ctx.drawImage(
     sprite.canvas,
@@ -563,6 +615,7 @@ export function drawLaserBolts(
     velocity: Velocity;
     explodeTime: number;
     bounceCount?: number;
+    energy?: number;
   }>,
   color: string,
   viewerPosition: Position
@@ -608,7 +661,8 @@ export function drawLaserBolts(
         screenPos.x,
         screenPos.y,
         velocity.x,
-        velocity.y
+        velocity.y,
+        laser.energy ?? 1
       );
     } else {
       const t = 1 - laser.explodeTime / Math.ceil(LASER.EXPLODE_DURATION * GAME.FPS);
@@ -706,6 +760,44 @@ export function drawShipAtPosition(
     return;
   }
 
+  if (ship.navigationAssistFrames > 0) {
+    ctx.save();
+    ctx.strokeStyle = '#a4eeff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(
+      screenX,
+      screenY,
+      shipR * 1.25,
+      -Math.PI / 2,
+      -Math.PI / 2 +
+        Math.PI * 2 * Math.min(1, ship.navigationAssistFrames / NAVIGATION_SALVAGE.frames)
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+  const charge =
+    ship.weaponChargeStartedAt === null
+      ? ship.weaponChargeFrames
+      : ((performance.now() - ship.weaponChargeStartedAt) * GAME.FPS) / 1000;
+  if (charge > 0) {
+    const fraction = Math.min(1, charge / CHARGED_WEAPON.fullFrames);
+    ctx.save();
+    ctx.strokeStyle = PALETTE.LASER_LOCAL;
+    ctx.shadowColor = PALETTE.LASER_LOCAL;
+    ctx.shadowBlur = resolveGlow(18);
+    ctx.lineWidth = 2 + fraction * 4;
+    ctx.beginPath();
+    ctx.arc(
+      screenX,
+      screenY,
+      shipR * (1.5 + fraction),
+      -Math.PI / 2,
+      -Math.PI / 2 + fraction * Math.PI * 2
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
   drawFloatingHealthCapsule(ctx, ship, screenX, screenY, shipR);
 
   if (ship.furnaceTransit) {
@@ -747,6 +839,19 @@ export function drawShipAtPosition(
       ship.kitId,
       haulerUtilityOf(ship)
     );
+    return;
+  }
+  if (
+    drawHullAssembly(
+      ctx,
+      ship,
+      screenX,
+      screenY,
+      shipR,
+      ship.angle - canvasManager.getCameraRotation(),
+      color ?? ship.color
+    )
+  ) {
     return;
   }
   if (ship.blinkCount > 0 && !ship.blinkOn) {

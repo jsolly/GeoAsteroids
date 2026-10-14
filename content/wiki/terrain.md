@@ -18,7 +18,15 @@ media:
 
 Follow the neutral gray contours in either direction for extra speed, most where lines are packed tightly and little where they are widely spaced; diagonal travel earns less, while perpendicular crossings and empty space keep normal cruise. Curved streamlines trail behind your ship as the terrain bonus builds, then fade as you turn across the grain. Ordinary terrain travel causes no damage, sideways pull, or shot deflection.
 
-Tap Contour Lock near a visible line to catch it and follow its curves at stronger speed, including shallow bends where the ordinary terrain bonus fades. Steering is ignored until you tap the control again, take damage, hit the wall or an asteroid (even while protected), are shoved hard, or open a menu; see [Controls](/wiki/#controls) for the full list. Lasers pass through invulnerable hulls. Locking has no charge or cooldown. On mobile, [flick to reverse or catch an adjacent line](/wiki/#controls) when it is within reach.
+Tap Contour Lock near a visible line to catch it and follow its curves at stronger speed, including shallow bends where the ordinary terrain bonus fades. Steering is ignored until you tap the control again, take damage, hit the wall or an asteroid (even while protected), are shoved hard, or open a menu; see [Controls](/wiki/#controls) for the full list. Lasers pass through invulnerable hulls. Locking has no charge or cooldown. [Flick or use the bracket keys to catch an adjacent line](/wiki/#controls) when it is within reach.
+
+## Cooperative hops
+
+Make up to three adjacent hops in a quick rhythm to leave visible connecting trails; the third creates a bright crew bridge. A teammate following the same line and direction automatically crosses that bridge and gets a brief burst of contour speed, refreshing the bridge for another teammate. Each pilot can use a bridge once; bridges fade quickly, hops never refill tool cooldowns, and a short pause starts a new combo.
+
+## Navigation crystals
+
+Some rocks marked by pale curved strokes glide along contours. Break one with lasers, or [tap crystal](/wiki/#hauler), to collect a navigation crystal that briefly widens Contour Lock pickup reach. The effect refreshes rather than stacks, leaves hop reach and ordinary speed unchanged, and ends on death.
 
 ## Outer boundary
 
@@ -47,3 +55,15 @@ Haulers can extract silk or tow a living spider, but the captive can still bite 
 ## Belt crawlers
 
 The eastern belt also has spiders that cling to rocks and hop between them. Their attacks and tool limits differ from terrain spiders; see [Belt spiders](/wiki/#asteroids).
+
+## Roly-polys
+
+Look for pale green segmented wildlife near the contours. Roly-polys curl when a ship approaches; nudge a curled shell to send it rolling along the slope's contour before it uncurls. They are neutral, cannot hurt your hull, and carry no mining or towing reward.
+
+## Light and wreck shadows
+
+Your headlights illuminate the route ahead, while your engine casts blue light that turns violet at contour speed. Recent wrecks interrupt those beams with ghostly shadows; their broken hull marks fade with the temporary wreck record. The light is shared by nearby pilots and can charge [glowtoys](/wiki/#asteroids).
+
+## Ride the music
+
+Follow the paired stone-like arches through the narrow passages between contour districts. With Music enabled, traveling along a passage gradually brings forward a richer mix of the same track, at the same point in the song. Leaving the route fades back to the quiet mix; threat music still takes priority.

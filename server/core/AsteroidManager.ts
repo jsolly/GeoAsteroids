@@ -5,6 +5,7 @@ import { asteroidMaterialAt, MATERIAL_OUTLINES } from '../../shared/asteroidMate
 import { containAsteroidPosition, stepAsteroidMotionInto } from '../../shared/asteroidMotion';
 import { isColossalAsteroid } from '../../shared/asteroidScale';
 import { DAMAGE, DEBUG, GAME, ROID } from '../../shared/constants/gameplay';
+import { stepContourAsteroid } from '../../shared/contourAsteroid';
 import { oreResource } from '../../shared/economy';
 import { FurnaceField } from '../../shared/furnaceField';
 import { WORLD } from '../../shared/world';
@@ -133,13 +134,15 @@ export class AsteroidManager {
         ? { ...asteroid.position, rotation: asteroid.rotation }
         : undefined;
       tickAsteroidBoost(asteroid, asteroid.size, this.furnaces);
-      stepAsteroidMotionInto(
-        asteroid.position,
-        asteroid.velocity,
-        1,
-        asteroid.position,
-        asteroid.velocity
-      );
+      if (!stepContourAsteroid(asteroid)) {
+        stepAsteroidMotionInto(
+          asteroid.position,
+          asteroid.velocity,
+          1,
+          asteroid.position,
+          asteroid.velocity
+        );
+      }
       asteroid.rotation += asteroid.angularVelocity;
       this.index.move(asteroid, previous);
     }

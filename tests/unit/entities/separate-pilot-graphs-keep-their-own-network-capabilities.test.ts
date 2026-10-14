@@ -14,6 +14,7 @@ function pilotGraph(id: string) {
   const combat = {
     isConnected: true,
     sendShoot: vi.fn<(laser: Laser) => void>(),
+    sendCharge: () => true,
     sendAbility: vi.fn<ShipCombatNetwork['sendAbility']>(() => true),
   };
   const manager = new PlayerManager(port, combat);

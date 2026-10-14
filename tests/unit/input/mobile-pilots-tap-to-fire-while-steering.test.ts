@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { sampleGradient } from '../../../shared/heightfield';
 import { getTerrainField } from '../../../shared/terrainField';
+import type { WeaponChargeAction } from '../../../shared-types';
 import * as feedback from '../../../src/audio/feedbackSounds';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
@@ -30,6 +31,7 @@ let canvas: HTMLCanvasElement;
 let actions: { ability: HTMLButtonElement; contourLock: HTMLButtonElement };
 let disposeActions: () => void;
 let touchMode = true;
+const sendCharge = vi.fn<(action: WeaponChargeAction) => boolean>(() => true);
 
 beforeAll(() => {
   const network = NetworkManager.getInstance();
@@ -38,11 +40,13 @@ beforeAll(() => {
 
 beforeEach(() => {
   resetControlSources();
+  sendCharge.mockClear();
   player = new Player({
     id: 'touch-pilot',
     name: 'Pilot',
     type: 'local',
     input: new MockPlayerInput(),
+    combatNetwork: { isConnected: true, sendShoot: () => {}, sendAbility: () => true, sendCharge },
   });
   // Keep ordinary tool scenarios away from contextual furnace actions.
   player.ship.position = { x: 2_000, y: 0 };
@@ -138,33 +142,49 @@ test('a quick playfield tap fires once while cruise continues', () => {
   expect(controlSources.touchFire).toBe(false);
 });
 
-test('a second finger fires while the first keeps its steering heading', () => {
-  const shoot = vi.spyOn(player.ship, 'shoot');
-  pointer('pointerdown', 1, 0);
-  pointer('pointermove', 1, 10, 60, 270);
-  const heading = player.ship.angle;
-  pointer('pointerdown', 2, 50, 320, 400);
-  expect(shoot).toHaveBeenCalledTimes(1);
-  expect(player.ship.angle).toBe(heading);
-  expect(player.ship.thrusting).toBe(true);
-  tickTouchControls(player);
-  expect(shoot).toHaveBeenCalledTimes(2);
-  pointer('pointerup', 2, 100, 320, 400);
-  expect(controlSources.touchFire).toBe(false);
-  expect(player.ship.thrusting).toBe(true);
-  pointer('pointerup', 1, 150);
-  expect(shoot).toHaveBeenCalledTimes(2);
-});
+test.each([1, 2])(
+  'two playfield fingers charge without leaking ordinary fire and release once when finger %i lifts',
+  (released) => {
+    const shoot = vi.spyOn(player.ship, 'shoot');
+    pointer('pointerdown', 1, 0);
+    pointer('pointermove', 1, 10, 60, 270);
+    const heading = player.ship.angle;
+    pointer('pointerdown', 2, 50, 320, 400);
+    expect(sendCharge).toHaveBeenCalledExactlyOnceWith('start');
+    tickTouchControls(player);
+    expect(shoot).not.toHaveBeenCalled();
+    expect(player.ship.angle).toBe(heading);
+    expect(player.ship.thrusting).toBe(true);
+    pointer('pointerup', released, 1000);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
+    pointer('pointerup', released === 1 ? 2 : 1, 1100);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
+    expect(controlSources.touchFire).toBe(false);
+    expect(shoot).not.toHaveBeenCalled();
+  }
+);
 
-test('lifting the movement finger preserves held fire until the firing finger lifts', () => {
-  pointer('pointerdown', 1, 0);
-  pointer('pointerdown', 2, 50, 320, 400);
-  pointer('pointerup', 1, 100);
-  expect(player.ship.thrusting).toBe(true);
-  expect(controlSources.touchFire).toBe(true);
-  pointer('pointerup', 2, 150, 320, 400);
-  expect(controlSources.touchFire).toBe(false);
-});
+test.each([1, 2])(
+  'live steering capture loss preserves a two-finger charge until finger %i lifts',
+  (released) => {
+    pointer('pointerdown', 1, 0);
+    touchChange('touchstart', [{ id: 1, x: 60, y: 300 }]);
+    pointer('pointermove', 1, 10, 60, 270);
+    pointer('pointerdown', 2, 50, 320, 400);
+    touchChange('touchstart', [
+      { id: 1, x: 60, y: 270 },
+      { id: 2, x: 320, y: 400 },
+    ]);
+    expect(sendCharge.mock.calls).toEqual([['start']]);
+    pointer('lostpointercapture', 1, 100, 60, 270);
+    expect(readTouchControlDiagnostics()).toMatchObject({ steerPointerHeld: true, liveTouches: 2 });
+    expect(sendCharge.mock.calls).toEqual([['start']]);
+    pointer('pointerup', released, 1000);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
+    pointer('pointerup', released === 1 ? 2 : 1, 1100);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['release']]);
+  }
+);
 
 test('dragging or holding the movement finger never creates a release shot', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
@@ -286,7 +306,7 @@ test('holding a finger starts steering, and release cancels its target without s
   }
 });
 
-test('an action tap during a pending hold still lets a second canvas finger start steering and fire', () => {
+test('an action tap during a pending hold still lets a second canvas finger start steering and charge', () => {
   const ability = actions.ability;
   if (!ability) {
     throw new Error('Missing ability button');
@@ -299,7 +319,8 @@ test('an action tap during a pending hold still lets a second canvas finger star
   expect(player.ship.thrusting).toBe(true);
   pointer('pointerdown', 3, 80, 320, 400);
   expect(player.ship.thrusting).toBe(true);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   pointer('pointerup', 3, 100, 320, 400);
   expect(controlSources.touchFire).toBe(false);
   expect(player.ship.thrusting).toBe(true);
@@ -378,7 +399,7 @@ test('losing pointer capture while a finger is still reported keeps the steering
   expect(player.ship.thrusting).toBe(true);
 });
 
-test('two live fingers still let the second tap fire while the first keeps steering', () => {
+test('two live fingers still let the second tap charge while the first keeps steering', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
   touchChange('touchstart', [{ id: 1 }]);
   pointer('pointerdown', 1, 0);
@@ -389,26 +410,30 @@ test('two live fingers still let the second tap fire while the first keeps steer
     { id: 2, x: 320, y: 400 },
   ]);
   pointer('pointerdown', 2, 50, 320, 400);
-  expect(shoot).toHaveBeenCalledTimes(1);
+  expect(shoot).not.toHaveBeenCalled();
+  expect(sendCharge).toHaveBeenCalledWith('start');
   expect(controlSources.pointerHeading).toBe(heading);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(readTouchControlDiagnostics().liveTouches).toBe(2);
 });
 
-test('a second pointerdown still fires when the live list has not yet added that finger', () => {
+test('a second pointerdown still charges when the live list has not yet added that finger', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
   touchChange('touchstart', [{ id: 1, x: 60, y: 270 }]);
   pointer('pointerdown', 1, 0);
   pointer('pointermove', 1, 10, 60, 270);
   const heading = controlSources.pointerHeading;
   pointer('pointerdown', 2, 50, 320, 400);
-  expect(shoot).toHaveBeenCalledTimes(1);
-  expect(controlSources.touchFire).toBe(true);
+  expect(shoot).not.toHaveBeenCalled();
+  expect(sendCharge).toHaveBeenCalledWith('start');
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(controlSources.pointerHeading).toBe(heading);
   expect(readTouchControlDiagnostics().liveTouches).toBe(1);
 });
 
-test('a Chromium pointer id that does not match the touch identifier still lets the second finger fire', () => {
+test('a Chromium pointer id that does not match the touch identifier still lets the second finger charge', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
   touchChange('touchstart', [
     { id: 11, x: 60, y: 300 },
@@ -419,8 +444,10 @@ test('a Chromium pointer id that does not match the touch identifier still lets 
   const heading = controlSources.pointerHeading;
   expect(heading).not.toBeNull();
   pointer('pointerdown', 4, 50, 320, 400);
-  expect(shoot).toHaveBeenCalledTimes(1);
-  expect(controlSources.touchFire).toBe(true);
+  expect(shoot).not.toHaveBeenCalled();
+  expect(sendCharge).toHaveBeenCalledWith('start');
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(controlSources.pointerHeading).toBe(heading);
   expect(readTouchControlDiagnostics().liveTouches).toBe(2);
 });
@@ -448,7 +475,7 @@ test('putting the thumb back near the last heading reclaims steer instead of onl
   });
 });
 
-test('after iPhone drops steer capture, the other finger keeps firing and a nearby thumb then steers again', () => {
+test('after iPhone drops steer capture, the other finger keeps charging and a nearby thumb then steers again', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
   touchChange('touchstart', [{ id: 11, x: 60, y: 300 }]);
   pointer('pointerdown', 3, 0, 60, 300);
@@ -465,8 +492,10 @@ test('after iPhone drops steer capture, the other finger keeps firing and a near
   expect(readTouchControlDiagnostics().steerPointerHeld).toBe(true);
 
   pointer('pointerdown', 4, 50, 320, 400);
-  expect(shoot).toHaveBeenCalledTimes(1);
-  expect(controlSources.touchFire).toBe(true);
+  expect(shoot).not.toHaveBeenCalled();
+  expect(sendCharge).toHaveBeenCalledWith('start');
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(controlSources.pointerHeading).toBe(heading);
 
   touchChange('touchstart', [{ id: 12, x: 320, y: 400 }]);
@@ -480,7 +509,7 @@ test('after iPhone drops steer capture, the other finger keeps firing and a near
   expect(readTouchControlDiagnostics().steerPointerHeld).toBe(true);
 });
 
-test('a nearby second finger keeps firing after the reserved steer id disappears, and the next thumb steers', () => {
+test('a nearby second finger keeps charging after the reserved steer id disappears, and the next thumb steers', () => {
   touchChange('touchstart', [{ id: 11, x: 60, y: 300 }]);
   pointer('pointerdown', 3, 0, 60, 300);
   pointer('pointermove', 3, 10, 60, 270);
@@ -492,11 +521,13 @@ test('a nearby second finger keeps firing after the reserved steer id disappears
     { id: 12, x: 80, y: 280 },
   ]);
   pointer('pointerdown', 4, 50, 80, 280);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(controlSources.pointerHeading).toBe(heading);
 
   touchChange('touchstart', [{ id: 12, x: 80, y: 280 }]);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(controlSources.pointerHeading).toBe(heading);
   expect(readTouchControlDiagnostics().steerPointerHeld).toBe(true);
 
@@ -505,11 +536,13 @@ test('a nearby second finger keeps firing after the reserved steer id disappears
     { id: 8, x: 50, y: 250 },
   ]);
   pointer('pointerdown', 8, 120, 50, 250);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   pointer('pointermove', 8, 140, 130, 160);
   expect(controlSources.pointerHeading).not.toBeNull();
   expect(controlSources.pointerHeading).not.toBe(heading);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(readTouchControlDiagnostics().steerPointerHeld).toBe(true);
 });
 
@@ -779,7 +812,7 @@ test('replacing action refs releases the old capture and stale cleanup cannot de
   next.contourLock.remove();
 });
 
-test('opening a menu releases held fire and a detached Contour Lock capture on its original button', () => {
+test('opening a menu releases held charge and a detached Contour Lock capture on its original button', () => {
   vi.spyOn(player.ship, 'canLockContour').mockReturnValue(true);
   vi.spyOn(player.ship, 'toggleContourLock').mockReturnValue(false);
   const captured = new Set<number>();
@@ -793,7 +826,8 @@ test('opening a menu releases held fire and a detached Contour Lock capture on i
   pointer('pointerdown', 501, 0);
   pointer('pointerdown', 502, 10, 320, 400);
   pointer('pointerdown', 503, 20, 200, 780, actions.contourLock);
-  expect(controlSources.touchFire).toBe(true);
+  expect(controlSources.touchFire).toBe(false);
+  expect(player.ship.weaponChargeStartedAt).not.toBeNull();
   expect(readActionControls(player).contourLock.pressed).toBe(true);
   actions.contourLock.remove();
   openGameOverlay('universe-map');
@@ -802,4 +836,34 @@ test('opening a menu releases held fire and a detached Contour Lock capture on i
   expect(controlSources.touchFire).toBe(false);
   expect(controlSources.pointerHeading).toBeNull();
   expect(readActionControls(player).contourLock).toMatchObject({ pressed: false, disabled: true });
+});
+
+test.each(['blur', 'pointercancel', 'touchcancel', 'overlay'])(
+  '%s cancels a charge without firing it',
+  (cause) => {
+    pointer('pointerdown', 1, 0);
+    pointer('pointerdown', 2, 50, 320, 400);
+    if (cause === 'blur') {
+      window.dispatchEvent(new Event('blur'));
+    } else if (cause === 'overlay') {
+      openGameOverlay('inventory');
+    } else if (cause === 'touchcancel') {
+      touchChange('touchcancel', []);
+    } else {
+      pointer('pointercancel', 2, 1000, 320, 400);
+    }
+    expect(sendCharge.mock.calls).toEqual([['start'], ['cancel']]);
+  }
+);
+
+test('an overlay pinch and a playfield finger paired with an action button never charge', () => {
+  actions.ability.setPointerCapture = vi.fn();
+  actions.ability.hasPointerCapture = () => false;
+  pointer('pointerdown', 1, 0);
+  pointer('pointerdown', 2, 50, 320, 400, actions.ability);
+  expect(sendCharge).not.toHaveBeenCalled();
+  openGameOverlay('universe-map');
+  pointer('pointerdown', 3, 100);
+  pointer('pointerdown', 4, 120, 320, 400);
+  expect(sendCharge).not.toHaveBeenCalled();
 });

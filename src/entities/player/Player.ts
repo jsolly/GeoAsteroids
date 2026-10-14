@@ -58,6 +58,7 @@ export class Player {
   // While alive it predicts locally and ignores the lagging server echo.
   private adoptServerPosition = false;
   private reportedDeath = false;
+  private observedAuthoritativePose = false;
 
   reportDeath(): void {
     if (this.type !== 'local' || this.reportedDeath) {
@@ -126,6 +127,9 @@ export class Player {
     angle?: number;
     cargo?: number;
     bankedCargo?: number;
+    weaponChargeFrames?: number;
+    navigationAssistFrames?: number;
+    contourDraftFrames?: number;
     purchases?: string[];
     score?: number;
     silk?: number;
@@ -176,6 +180,12 @@ export class Player {
     }
     if (data.silk !== undefined) {
       this.silk = data.silk;
+    }
+    if (!this.observedAuthoritativePose && data.position && data.health !== undefined) {
+      this.observedAuthoritativePose = true;
+      if (data.health > 0 && (data.spawnProtectionTimer ?? 0) > 0) {
+        this.ship.beginHullAssembly();
+      }
     }
     if (data.spawnProtectionTimer !== undefined) {
       this.serverSpawnProtectionTimer = data.spawnProtectionTimer;
@@ -246,6 +256,15 @@ export class Player {
     }
     if (data.score !== undefined) {
       this.score = data.score;
+    }
+    if (data.weaponChargeFrames !== undefined) {
+      this.ship.weaponChargeFrames = data.weaponChargeFrames;
+    }
+    if (data.navigationAssistFrames !== undefined) {
+      this.ship.navigationAssistFrames = data.navigationAssistFrames;
+    }
+    if (data.contourDraftFrames !== undefined) {
+      this.ship.contourDraftFrames = data.contourDraftFrames;
     }
     if (data.bankedCargo !== undefined) {
       this.bankedCargo = data.bankedCargo;
@@ -325,6 +344,7 @@ export class Player {
           (data.health === undefined || data.health > 0)
         ) {
           this.reportedDeath = false;
+          this.ship.beginHullAssembly();
           playRespawn(this.ship.position);
           playLocalHaptic(this.type === 'local', 'pickup');
           delete this.ship.lastExplodeCause;

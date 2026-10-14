@@ -1,8 +1,10 @@
 import { tickAsteroidBoost } from '../../../shared/asteroidBoost';
 import { stepAsteroidMotionInto } from '../../../shared/asteroidMotion';
 import { DEBUG, GAME, ROID } from '../../../shared/constants/gameplay';
+import { stepContourAsteroid } from '../../../shared/contourAsteroid';
 import type {
   AsteroidBoost,
+  AsteroidData,
   AsteroidMaterial,
   AsteroidPhenomenon,
   AsteroidProbe,
@@ -27,6 +29,8 @@ class Roid {
   miningContributors?: string[];
   /** Optional server-owned reflection metadata. */
   phenomenon?: AsteroidPhenomenon;
+  glowtoy?: AsteroidData['glowtoy'];
+  contourRider?: AsteroidData['contourRider'];
   boost?: AsteroidBoost | null;
   probe?: AsteroidProbe | null;
   /** Shared multi-pilot HP rock. Lasers chip; do not pending-lock. */
@@ -90,7 +94,9 @@ class RoidBelt {
 
     for (const roid of this.roids) {
       tickAsteroidBoost(roid, roid.r, worldFurnaces);
-      stepAsteroidMotionInto(roid.position, roid.velocity, 1, roid.position, roid.velocity);
+      if (!stepContourAsteroid(roid)) {
+        stepAsteroidMotionInto(roid.position, roid.velocity, 1, roid.position, roid.velocity);
+      }
     }
   }
 }

@@ -166,6 +166,7 @@ export class InputManager {
         const localPlayer = getLocalPlayer();
         if (localPlayer && ev.button === 0) {
           localPlayer.ship.canShoot = true;
+          localPlayer.ship.finishWeaponCharge(false);
         }
       },
       { signal }
@@ -198,6 +199,7 @@ export class InputManager {
     if (localPlayer) {
       getPressedKeysForPlayer(localPlayer).clear();
       localPlayer.ship.canShoot = true;
+      localPlayer.ship.finishWeaponCharge(false);
       reconcilePlayerInput(localPlayer);
     }
   }

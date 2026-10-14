@@ -7,6 +7,8 @@ import {
 } from '../../shared/asteroidPhenomena';
 import { applyColossalDeposit, sectorHostsColossal } from '../../shared/asteroidScale';
 import { DAMAGE, DEPOSIT_FIELD, ROID } from '../../shared/constants/gameplay';
+import { createHeightfield, sampleGradient, sampleHeight } from '../../shared/heightfield';
+import { TERRAIN } from '../../shared/terrainConfig';
 import { WORLD } from '../../shared/world';
 import type { AsteroidData, AsteroidMaterial, Position } from '../../shared-types';
 import { RNGService } from '../core/RNGService';
@@ -252,6 +254,37 @@ export function sectorDeposits(seed: number, x: number, y: number): AsteroidData
   seedAsteroidPhenomena(rocks);
   placeReflectiveClusters(rocks, x, y);
   placeColossalDeposit(rocks, x, y, seed);
+  if ((Math.abs(x) + Math.abs(y)) % 4 === 0) {
+    const terrain = createHeightfield(seed, { radius: WORLD.radius });
+    for (const rock of rocks) {
+      if (rock.phenomenon || rock.material === 'crystal') {
+        continue;
+      }
+      const value = sampleHeight(terrain, rock.position.x, rock.position.y);
+      const height = Math.round(value / TERRAIN.CONTOUR_INTERVAL) * TERRAIN.CONTOUR_INTERVAL;
+      const gradient = sampleGradient(terrain, rock.position.x, rock.position.y, 0.25);
+      const magnitude = Math.hypot(gradient.x, gradient.y);
+      if (magnitude < 1e-8 || Math.abs(height - value) / magnitude > 24) {
+        continue;
+      }
+      rock.contourRider = { height, direction: x % 2 === 0 ? 1 : -1 };
+      break;
+    }
+  }
+  const glowtoy = rocks.find((rock) => !rock.phenomenon && rock.material === 'crystal');
+  if (glowtoy) {
+    glowtoy.glowtoy = {
+      charge: 0,
+      cachePosition: { x: glowtoy.position.x + 420, y: glowtoy.position.y },
+      cacheRevealed: false,
+    };
+    if (
+      Math.hypot(glowtoy.glowtoy.cachePosition.x, glowtoy.glowtoy.cachePosition.y) >
+      WORLD.radius - 100
+    ) {
+      glowtoy.glowtoy.cachePosition.x = glowtoy.position.x - 420;
+    }
+  }
   // Phenomenon clusters may move a generated slot across an edge. Keep the slot owned by its deterministic sector;
   // later simulation drift is what transfers ownership during checkpointing.
   const maxX = (x + 1) * WORLD.sectorSize - SECTOR_EDGE_EPSILON;

@@ -1,5 +1,6 @@
 import { isColossalAsteroid } from '../../../shared/asteroidScale';
 import { ROID } from '../../../shared/constants/gameplay';
+import { isAsteroidLit } from '../../../shared/glowtoy';
 import type { AsteroidMaterial } from '../../../shared-types';
 import { PALETTE, VISUAL } from '../../constants';
 import type { Ship } from '../../entities/ship/Ship';
@@ -575,6 +576,27 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
     ) {
       continue;
     }
+    if (!isAsteroidLit(roid)) {
+      continue;
+    }
+    ctx.save();
+    if (roid.glowtoy) {
+      ctx.globalAlpha = Math.min(1, roid.glowtoy.charge * 2);
+      ctx.strokeStyle = '#a2ffcf';
+      ctx.lineWidth = 1 + roid.glowtoy.charge * 2;
+      ctx.beginPath();
+      ctx.arc(screenPos.x, screenPos.y, r + 5 + roid.glowtoy.charge * 8, 0, Math.PI * 2);
+      ctx.stroke();
+      if (!roid.glowtoy.cacheRevealed && roid.glowtoy.charge >= 0.7) {
+        const cache = canvasManager.worldToScreen(roid.glowtoy.cachePosition, ship.position);
+        ctx.setLineDash([2, 12]);
+        ctx.beginPath();
+        ctx.moveTo(screenPos.x, screenPos.y);
+        ctx.lineTo(cache.x, cache.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
     const offsets = drawingOffsets(roid.offsets);
     const vertices = Math.max(roid.vertices, 1);
     drawCachedRoidSilhouette(ctx, silhouettes, roid, screenPos, offsets, vertices);
@@ -589,8 +611,26 @@ export function drawRoidsRelative(ship: Ship, roids: Roid[]): void {
         roid.health / roid.maxHealth
       );
     }
+    if (roid.contourRider) {
+      ctx.save();
+      ctx.strokeStyle = '#a4eeff';
+      ctx.lineWidth = 1.5;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(
+          screenPos.x,
+          screenPos.y,
+          r + 5,
+          side > 0 ? -0.6 : Math.PI - 0.6,
+          side > 0 ? 0.6 : Math.PI + 0.6
+        );
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     drawRoidInteractionCues(ctx, roid, r, screenPos.x, screenPos.y);
     drawAsteroidBoost(ctx, roid, screenPos.x, screenPos.y, r);
+    ctx.restore();
   }
   ctx.shadowBlur = 0;
 }

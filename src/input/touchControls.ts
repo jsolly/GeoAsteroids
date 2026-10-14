@@ -133,6 +133,9 @@ function syncLiveTouches(ev: TouchEvent): void {
 /** iOS can drop pointerup after capture while the live touch list still tells the truth. */
 function onTouchListChange(ev: TouchEvent): void {
   syncLiveTouches(ev);
+  if (ev.type === 'touchcancel' || (ev.type === 'touchend' && liveTouchPoints.size < 2)) {
+    requireLocalPlayer()?.ship.finishWeaponCharge(ev.type === 'touchend');
+  }
   if (liveTouchPoints.size > 1) {
     steerFlick = null;
   }
@@ -303,6 +306,7 @@ function clearSteerHoldTimer(): void {
 
 /** Clear every pointer source when the browser takes the gesture away. */
 function resetTouchInteraction(player: Player | null, options?: { forgetTouches?: boolean }): void {
+  player?.ship.finishWeaponCharge(false);
   const canvas = inputHost?.canvas ?? null;
   const ability = abilityButton;
   const contourLock = contourLockButton;
@@ -397,7 +401,13 @@ function reservedSteerHasNoLiveFinger(): boolean {
 
 function onPlayfieldPointerDown(ev: PointerEvent): void {
   const canvas = inputHost?.canvas ?? null;
-  if (!canvas || !isTouchChromeVisible() || ev.pointerType !== 'touch' || ev.target !== canvas) {
+  if (
+    !canvas ||
+    !isTouchChromeVisible() ||
+    getOpenGameOverlay() !== null ||
+    ev.pointerType !== 'touch' ||
+    ev.target !== canvas
+  ) {
     return;
   }
   const player = requireLocalPlayer();
@@ -420,6 +430,9 @@ function onPlayfieldPointerDown(ev: PointerEvent): void {
     return;
   }
   beginSteerPointer(ev);
+  if (firePointerId !== null) {
+    player.ship.beginWeaponCharge();
+  }
 }
 
 function onSteerPointerMove(ev: PointerEvent): void {
@@ -444,11 +457,14 @@ function shouldIgnoreLostCapture(ev: PointerEvent): boolean {
 }
 
 function onPlayfieldPointerUp(ev: PointerEvent): void {
-  if (ev.pointerId === firePointerId) {
-    onFirePointerUp(ev);
+  if (shouldIgnoreLostCapture(ev) && ev.pointerId === steerPointerId) {
     return;
   }
-  if (shouldIgnoreLostCapture(ev) && ev.pointerId === steerPointerId) {
+  if (ev.pointerId === steerPointerId || ev.pointerId === firePointerId) {
+    requireLocalPlayer()?.ship.finishWeaponCharge(ev.type === 'pointerup');
+  }
+  if (ev.pointerId === firePointerId) {
+    onFirePointerUp(ev);
     return;
   }
   if (ev.pointerId !== steerPointerId) {
@@ -526,9 +542,10 @@ function onFirePointerDown(ev: PointerEvent): void {
   firePointerId = ev.pointerId;
   const player = requireLocalPlayer();
   if (player) {
-    setTouchFire(player, true);
+    setTouchFire(player, false);
+    player.ship.beginWeaponCharge();
   } else {
-    controlSources.touchFire = true;
+    controlSources.touchFire = false;
   }
 }
 

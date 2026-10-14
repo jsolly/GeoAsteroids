@@ -7,6 +7,7 @@ import {
   isCellExplored,
 } from '../../../shared/exploration';
 import { CIVIC_LOTS, pipeHopToParent } from '../../../shared/furnaces';
+import { isAsteroidLit } from '../../../shared/glowtoy';
 import { RICOCHET_COURT } from '../../../shared/ricochetCourt';
 import { SURVEY_PROBE } from '../../../shared/surveyProbe';
 import { activeScanners, scannedMaterial } from '../../../shared/surveyScan';
@@ -25,11 +26,16 @@ import type { SatellitePickup } from '../../entities/satellitePickup/SatellitePi
 import { getKitHullOutline, projectHullPolyline } from '../../entities/ship/hullOutlines';
 import type { Ship } from '../../entities/ship/Ship';
 import { strokePhosphorPolyline } from '../../entities/ship/shipRenderer';
-import { getWorldExploration, worldFurnaces } from '../../network/worldExploration';
+import {
+  getWorldExploration,
+  getWorldMapAssets,
+  worldFurnaces,
+} from '../../network/worldExploration';
 import { getSpiderField } from '../../physics/terrain/spiderSession';
 import { hexToRgba } from '../../utils/colorUtils';
 import { logger } from '../../utils/Logger';
 import { strokeFurnaceFireTrail } from '../furnaceRenderer';
+import { drawRemainsMark, isRemains } from '../remainsRenderer';
 import { resolveGlow } from '../renderQuality';
 import { drawCourtMapMark } from '../ricochetCourtRenderer';
 import { travelCameraRotation } from '../travelCamera';
@@ -262,6 +268,7 @@ function drawPilotEdgeMark(
 
 function canDrawAsteroidOnMiniMap(roid: Roid): boolean {
   return (
+    isAsteroidLit(roid) &&
     Number.isFinite(roid.position.x) &&
     Number.isFinite(roid.position.y) &&
     Number.isFinite(roid.r) &&
@@ -729,6 +736,17 @@ export function drawMiniMap(
     drawFurnaceMarks(ctx, geometry);
     if (projectPosition(geometry, RICOCHET_COURT.center)) {
       drawCourtMapMark(ctx, geometry.projection.x, geometry.projection.y, 7);
+    }
+    for (const asset of getWorldMapAssets()) {
+      if (isRemains(asset) && projectPosition(geometry, asset.position)) {
+        drawRemainsMark(
+          ctx,
+          geometry.projection.x,
+          geometry.projection.y,
+          5,
+          asset.kind === 'nest-remains'
+        );
+      }
     }
     const spiderField = getSpiderField();
     for (const spider of spiderField.spiders) {

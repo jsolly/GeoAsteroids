@@ -1,7 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { ExplorationMap } from '../../../shared/exploration';
 import { CIVIC_LOTS, civicLot, TOWN_HEARTH } from '../../../shared/furnaces';
+import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
+import { Roid } from '../../../src/entities/roid/Roid';
+import { MockPlayerInput } from '../../../src/input/MockPlayerInput';
 import { NetworkManager } from '../../../src/network/networkManager';
 import {
   setWorldExploration,
@@ -10,6 +13,7 @@ import {
 } from '../../../src/network/worldExploration';
 import { setSpiderField } from '../../../src/physics/terrain/spiderSession';
 import {
+  bindUniverseMapField,
   mountUniverseMap as mountMap,
   type UniverseMapChrome,
   type UniverseMapController,
@@ -26,6 +30,7 @@ function closeMap() {
 
 afterEach(() => {
   closeMap();
+  bindUniverseMapField(() => []);
   setSpiderField(undefined);
   worldFurnaces.replaceLit([]);
   setWorldMapAssets([]);
@@ -239,4 +244,41 @@ test('the shared chart turns a discovered nest dark gray after its last guard di
     expect(colors).toContain(cleared ? '#444444' : '#f43f5e');
     closeMap();
   }
+});
+
+test('universe chart hides an unlit glow crystal and shows its charged mark in explored ground', () => {
+  clock = 0;
+  const { open, canvas, ctx } = mountUniverseMap();
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 400));
+  const pilot = new Player({
+    id: 'glow-chart',
+    name: 'Observer',
+    type: 'local',
+    input: new MockPlayerInput(),
+  });
+  const origin = { x: 10000, y: 10000 };
+  pilot.ship.position = origin;
+  vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(pilot);
+  const ordinary = new Roid({ x: origin.x + 600, y: origin.y }, 14, 'chart-control');
+  const crystal = new Roid({ x: origin.x + 600, y: origin.y + 300 }, 14, 'chart-crystal');
+  crystal.glowtoy = { charge: 0, cachePosition: origin, cacheRevealed: true };
+  const exploration = new ExplorationMap();
+  exploration.reveal(origin, 1200);
+  setWorldExploration(exploration.snapshot());
+  setWorldMapAssets([]);
+  let shown: Roid[] = [];
+  bindUniverseMapField(() => shown);
+  const paint = (rocks: Roid[]) => {
+    shown = rocks;
+    open();
+    return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  };
+  const empty = paint([]);
+  const control = paint([ordinary]);
+  expect(control.some((value, i) => value !== empty[i])).toBe(true);
+  const unlit = paint([ordinary, crystal]);
+  expect(unlit.every((value, i) => value === control[i])).toBe(true);
+  crystal.glowtoy.charge = 0.8;
+  const lit = paint([ordinary, crystal]);
+  expect(lit.some((value, i) => value !== control[i])).toBe(true);
 });

@@ -22,6 +22,10 @@ Everyone flies on the same team, with informal duels at the [Ricochet Court](/wi
 
 Scan a rock before a Hauler tows or boosts it into a lit furnace. The delivering Haulers and recorded scanning pilots each earn rewards; each contributor receives the same base reward. Bring two Haulers for a colossal deposit.
 
+## Leapfrog on contours
+
+Follow a teammate's line through the bright bridge left by their third quick hop to glide onto the next line with a brief drafting boost. Your crossing keeps the connection open for the next pilot; each pilot gets one use, and the connection has a fixed maximum lifetime. See [cooperative hops](/wiki/#terrain).
+
 ## Shared chart
 
 Every pilot reveals part of the persistent crew map, with Scout covering more ground. Discovered resources and furnaces help teammates find work beyond their local radar. Open M or Map to plan a route together.

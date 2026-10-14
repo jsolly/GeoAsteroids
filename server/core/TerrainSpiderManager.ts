@@ -1,5 +1,6 @@
 import { segmentCircleContact } from '../../shared/asteroidPhenomena';
 import { FurnaceField } from '../../shared/furnaceField';
+import { GLOWTOY } from '../../shared/glowtoy';
 import { sampleGradient } from '../../shared/heightfield';
 import { SHIP_ABILITY } from '../../shared/shipKits';
 import { getTerrainField } from '../../shared/terrainField';
@@ -29,6 +30,7 @@ interface SpiderAdvanceOptions {
   resources: (players: readonly SpiderActor[]) => readonly SpiderResource[];
   resource: (id: string, home: Position) => SpiderResource | undefined;
   onNestCreated: (nest: SpiderFieldState['nests'][number]) => void;
+  lightSources?: readonly Position[];
 }
 
 export interface SpiderAttack {
@@ -148,7 +150,8 @@ export class TerrainSpiderManager {
 
   public constructor(
     private readonly random: () => number = Math.random,
-    private readonly furnaces = new FurnaceField()
+    private readonly furnaces = new FurnaceField(),
+    private readonly onNestCleared?: (position: Position) => void
   ) {}
 
   public snapshot(): SpiderFieldState {
@@ -257,6 +260,7 @@ export class TerrainSpiderManager {
       if (nest) {
         nest.guards = nest.guards.filter((guard) => guard.id !== spiderId);
         if (nest.guards.length === 0) {
+          this.onNestCleared?.(copyPosition(nest.home));
           const nestId = spider.territory.nestId;
           this.nestMarkers = this.nestMarkers.filter((marker) => marker.id !== nestId);
         }
@@ -330,7 +334,16 @@ export class TerrainSpiderManager {
         }
         spider.displaced = false;
       }
-      this.advanceSpider(spider, players, playerById, nowFrame, attacks, tows, options.releaseTow);
+      this.advanceSpider(
+        spider,
+        players,
+        playerById,
+        nowFrame,
+        attacks,
+        tows,
+        options.releaseTow,
+        options.lightSources
+      );
     }
 
     const rescueOwners = tows
@@ -598,7 +611,8 @@ export class TerrainSpiderManager {
     nowFrame: number,
     attacks: SpiderAttack[],
     tows: SpiderTow[],
-    releaseTow: SpiderAdvanceOptions['releaseTow']
+    releaseTow: SpiderAdvanceOptions['releaseTow'],
+    lightSources: SpiderAdvanceOptions['lightSources']
   ): void {
     spider.rescuing = false;
     const scanner = players
@@ -664,7 +678,33 @@ export class TerrainSpiderManager {
         territory.activity = 'returning';
         this.returnHome(spider, territory);
       } else {
-        this.scuttle(spider);
+        const light =
+          territory.kind === 'roaming'
+            ? lightSources
+                ?.filter(
+                  (position) =>
+                    this.canOccupy(position, spider.size) &&
+                    distanceBetween(spider.position, position) < GLOWTOY.attractionRadius
+                )
+                .sort(
+                  (a, b) =>
+                    distanceBetween(spider.position, a) - distanceBetween(spider.position, b)
+                )[0]
+            : undefined;
+        if (light) {
+          const angle = Math.atan2(light.y - spider.position.y, light.x - spider.position.x);
+          const next = {
+            x: spider.position.x + Math.cos(angle),
+            y: spider.position.y + Math.sin(angle),
+          };
+          if (this.canOccupy(next, spider.size)) {
+            spider.position = next;
+            spider.angle = angle;
+            spider.velocity = { x: Math.cos(angle), y: Math.sin(angle) };
+          }
+        } else {
+          this.scuttle(spider);
+        }
       }
       return;
     }
