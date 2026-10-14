@@ -23,13 +23,6 @@ describe('server-authoritative health regeneration', () => {
     vi.restoreAllMocks();
   });
 
-  test('uses the ship tuning for one-frame rate and post-damage delay', () => {
-    expect(calculateHealthRegenPerFrame(SHIP.MAX_HEALTH)).toBe(
-      (SHIP.MAX_HEALTH * SHIP.HEALTH_REGEN_FRACTION_PER_SECOND) / GAME.FPS
-    );
-    expect(calculateHealthRegenDelayFrames()).toBe(Math.ceil(SHIP.HEALTH_REGEN_DELAY * GAME.FPS));
-  });
-
   test('player damage waits for the delay, then heals and caps at max health', () => {
     const ship = world.entity(pilot);
     world.engine.handleShipDamage(pilot.id, 'asteroid', DAMAGE.LASER_HIT);

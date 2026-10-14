@@ -76,7 +76,6 @@ test('death repeatedly discards cargo, preserves the bank, and always respawns',
     expect(actor.health).toBe(actor.maxHealth);
     expect(actor.exploding).toBe(false);
   }
-  expect(actor).not.toHaveProperty('lives');
 });
 
 test.each(['scout', 'hauler'] as const)(

@@ -31,6 +31,7 @@ import {
 } from '../../../src/network/services/asteroidFieldSync';
 import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { setSelectedShipKitId } from '../../../src/runtime/shipSelection';
+import { logger } from '../../../src/utils/Logger';
 import { snapshotFixture } from './snapshotFixture';
 
 const LASER_SOUND_PATH_PATTERN = /sounds\/laser\.m4a$/u;
@@ -1506,5 +1507,3 @@ describe('actual ConnectionManager WebSocket message path', () => {
     expect(manager.isConnected()).toBe(false);
   });
 });
-
-import { logger } from '../../../src/utils/Logger';

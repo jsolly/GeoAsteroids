@@ -8,11 +8,6 @@ import type { ServerEntityData, ServerGameSnapshot } from '../../../shared-types
 import { closePlayerMotionScenario } from '../../support/playerMotionCleanup';
 import { WireClient } from '../../support/wireClient';
 
-interface Packet {
-  type: string;
-  data?: unknown;
-}
-
 const RESUME_TOKEN_PATTERN = /^[a-f0-9]{64}$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -20,14 +15,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 class PilotSocket {
-  readonly messages: Packet[] = [];
+  readonly messages: WireClient['messages'];
   private readonly wire: WireClient;
   readonly snapshots: ServerGameSnapshot[] = [];
-  readonly failures: Error[] = [];
   private readonly decoder = new SnapshotDecoder();
 
   constructor(readonly ws: WebSocket) {
     this.wire = new WireClient(ws);
+    this.messages = this.wire.messages;
     ws.on('message', (raw) => {
       try {
         const text = String(raw);
@@ -37,24 +32,19 @@ class PilotSocket {
         }
         if (result.kind === 'snapshot') {
           this.snapshots.push(result.state);
-          this.messages.push({ type: 'snapshot' });
-          this.send('snapshotAck', { sequence: result.metadata.sequence });
+          if (this.ws.readyState === WebSocket.OPEN) {
+            this.send('snapshotAck', { sequence: result.metadata.sequence });
+          }
           return;
         }
         if (!isRecord(result.message) || typeof result.message['type'] !== 'string') {
           throw new Error('Server packet is missing its type');
         }
-        const data = result.message['data'];
-        const packet: Packet = {
-          type: result.message['type'],
-          ...(Object.hasOwn(result.message, 'data') ? { data } : {}),
-        };
-        this.messages.push(packet);
-        if (packet.type === 'joined') {
+        if (result.message['type'] === 'joined') {
           this.decoder.reset();
         }
       } catch (error) {
-        this.failures.push(
+        this.wire.failures.push(
           error instanceof Error
             ? error
             : new Error(typeof error === 'string' ? error : JSON.stringify(error), { cause: error })
@@ -67,20 +57,8 @@ class PilotSocket {
     this.wire.send({ type, data });
   }
 
-  async waitFor<T>(read: () => T | undefined, label: string, timeout = 2500): Promise<T> {
-    const deadline = Date.now() + timeout;
-    while (Date.now() < deadline) {
-      this.wire.assertHealthy();
-      if (this.failures.length) {
-        throw this.failures[0];
-      }
-      const value = read();
-      if (value !== undefined) {
-        return value;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-    throw new Error(`Timed out: ${label}; last packet ${JSON.stringify(this.messages.at(-1))}`);
+  waitFor<T>(read: () => T | undefined, label: string, timeout = 2500): Promise<T> {
+    return this.wire.waitFor(read, label, timeout);
   }
 
   async barrier(): Promise<void> {
@@ -117,6 +95,7 @@ class PilotSocket {
 
   async close(): Promise<void> {
     await this.wire.close();
+    this.wire.assertHealthy();
   }
 }
 

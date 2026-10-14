@@ -30,7 +30,7 @@ The historical repository baseline is [`54d8c18d4ce25b3ea6af731582bd615666761a85
 | Protocol | [snapshot-v3.md](protocol/snapshot-v3.md) documents negotiated deltas, keyframes, atomic validation, unsupported-client rejection, resync, and required capabilities. | Extend the existing codec and compatibility tests. Do not propose delta snapshots as new work. |
 | Collision | [CollisionAuthority.ts](../server/core/CollisionAuthority.ts) maps entities into collision rows; [combat.ts](../shared/combat.ts) checks ship/asteroid combinations and ship pairs with nested loops. | Candidate growth and temporary allocations are plausible scaling costs, not measured bottlenecks yet. |
 | Mobile interaction | [touchControls.ts](../src/input/touchControls.ts) supports steering, firing, and ability input with stateful pointer handling and cached button state. | Test sustained multitouch and lifecycle transitions, beyond button visibility. |
-| Test enforcement | [ci.yml](../.github/workflows/ci.yml) runs static checks, runner contracts, unit tests, and build. It does not run gameplay browser or server integration suites. | Add bounded behavioral integration coverage to CI without weakening the existing gate. |
+| Test enforcement | [ci.yml](../.github/workflows/ci.yml) runs static checks, runner contracts, unit tests, and build. It does not run gameplay browser or server integration suites. | Add bounded behavioral integration coverage to CI without weakening the existing gate. Superseded: current CI runs static, runner-contract, complete server integration and Wiki media lanes; units run in the local gate. |
 | Diagnostics | [diagnostics.md](diagnostics.md) describes correlated bounded logs, release IDs, queue loss, and explicitly copied state. | Reuse these mechanisms; add aggregate timing metrics rather than per-frame logs. |
 
 ### What existing numbers establish
@@ -121,7 +121,7 @@ workloads exist. Keep coverage, pixel readback, screenshots and detailed tracing
 outside timed runs; capture a separate diagnostic trace when needed. MDN
 recommends measuring the actual expensive work before optimizing JavaScript.[^5]
 
-Compare run-level results, not thousands of autocorrelated frames as independent experiments. Initially report regressions without blocking. After at least 20 unchanged-control runs establish noise, gate a relative regression above 10% only when it also exceeds an agreed absolute floor, initially 0.5 ms for client CPU and 0.2 ms for server tick cost, and reproduces in a confirmatory pair. Preserve the first failure; reruns diagnose it rather than erase it. Hard correctness and queue-limit failures need no statistical allowance.
+Compare run-level results, not thousands of autocorrelated frames as independent experiments. Report timing changes with calibrated repeated comparisons; automatic timing gates are retired. Preserve initial failures and diagnostic artifacts. Hard correctness and queue-limit failures remain failures.
 
 ## Workload and device matrix
 
@@ -159,10 +159,7 @@ Test design, deterministic algorithm comparisons, mutation checks, coverage,
 runner settings and basic manual smoke instructions live in
 [tests/AGENTS.md](../tests/AGENTS.md). Performance experiment guidance remains here.
 
-The required `CI / ci` status aggregates independent static validation, runner
-contracts, complete server/entity code integration and Wiki media verification.
-All four lanes must succeed. `npm run gate` owns static checks, contracts, units, build and integration.
-Manual performance measurements remain separate from correctness validation.
+The complete publication gate and required CI lanes are described in [CI and local review](ci-and-local-review.md).
 
 ## Client optimization opportunities
 

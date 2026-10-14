@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Manual benchmark sessions own their service pair and queue native workloads.
-# The common-Git runner lock also preserves legacy ownership and authenticates
-# coordinator children; each standalone pair selects unused ports.
+# The common-Git runner lock remains for older entrypoints and failed-cleanup
+# evidence; each standalone pair selects unused ports.
 ((BASH_VERSINFO[0] >= 5)) || { echo "✗ $0 requires Bash >= 5, not $BASH_VERSION. Fix: brew install bash; rerun bash ~/code/dotagents/setup/install-local-agent-runtime.sh; open a new shell." >&2; exit 1; }
 set -uo pipefail
 ORIGINAL_RUNNER_ARGS=("$@")
@@ -156,13 +156,13 @@ acquire_lock() {
     fi
 
     if lock_cleanup_pending; then
-        echo "❌ Unresolved coordinated cleanup blocks this test-runner lock: $LOCK_DIR" >&2
+        echo "❌ Unresolved runner cleanup blocks this benchmark lock: $LOCK_DIR" >&2
         return 1
     fi
     local owner_pid
     owner_pid="$(read_lock_pid)"
     if valid_pid "$owner_pid" && kill -0 "$owner_pid" 2>/dev/null; then
-        echo "❌ Another GeoRoids test runner is already running (PID $owner_pid)." >&2
+        echo "❌ Another GeoRoids benchmark runner is already running (PID $owner_pid)." >&2
         echo "   Worktree: $(read_lock_worktree)" >&2
         echo "   Lock: $LOCK_DIR" >&2
         return 1
@@ -424,7 +424,7 @@ start_dev_servers() {
     if [ "${#occupied_ports[@]}" -gt 0 ]; then
         echo "❌ Test port(s) ${occupied_ports[*]} are already in use; refusing to attach to unowned services." >&2
         echo "   Stop the owning process after confirming it is safe, or choose unused ports with:" >&2
-        echo "   GEOROIDS_TEST_VITE_PORT=<port> GEOROIDS_TEST_SERVER_PORT=<port> ./scripts/test-runner.sh ..." >&2
+        echo "   GEOROIDS_TEST_VITE_PORT=<port> GEOROIDS_TEST_SERVER_PORT=<port> ./scripts/test-runner.sh --benchmark-client ... (or --benchmark-load)" >&2
         return 1
     fi
 
@@ -583,7 +583,7 @@ run_benchmark() {
     fi
 
     if [ "$TEST_TIMED_OUT" = true ]; then
-        echo "❌ Tests exceeded ${MAX_TEST_DURATION_SECONDS}s; terminating the owned test process tree" >&2
+        echo "❌ Benchmark exceeded ${MAX_TEST_DURATION_SECONDS}s; terminating the owned test process tree" >&2
         if [ -n "${TEST_PID:-}" ]; then
             if terminate_process_tree "$TEST_PID"; then
                 TEST_PID=""
@@ -595,9 +595,9 @@ run_benchmark() {
     TEST_PID=""
 
     if [ "$exit_code" -eq 0 ]; then
-        echo "✅ Tests completed successfully"
+        echo "✅ Benchmark completed successfully"
     else
-        echo "❌ Tests failed with exit code $exit_code"
+        echo "❌ Benchmark failed with exit code $exit_code"
     fi
     return "$exit_code"
 }

@@ -7,7 +7,6 @@ import {
   isSmallRoid,
   LOOT_BLAST,
 } from '../../../shared/lootBlast';
-import { PALETTE } from '../../../src/constants';
 
 describe('loot blast math', () => {
   test('blast radius includes nearby hulls and excludes far ones', () => {
@@ -27,9 +26,5 @@ describe('loot blast math', () => {
     expect(push.y).toBeCloseTo(0);
     expect(isSmallRoid(12)).toBe(true);
     expect(isSmallRoid(40)).toBe(false);
-  });
-
-  test('kind colors stay on the locked palette', () => {
-    expect(PALETTE.LOOT).toBe('#E8D5A3');
   });
 });

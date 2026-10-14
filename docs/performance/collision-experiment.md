@@ -4,10 +4,11 @@ Decision: reject this grid implementation for production. It preserved collision
 outcomes but cost substantially more than the existing loops in every fixture.
 This does not rule out a different index at a measured larger workload.
 
-Run from `/Users/johnsolly/.codex/worktrees/georoids-performance`:
+The decision's manual harness has since been retired. Retrieve its complete
+pre-retirement source from immutable revision `1649ce7325a4d65e0a7b23ccdeeabf3f3472ec2c`:
 
 ```sh
-NODE_ENV=production npx --no-install tsx benchmarks/collision-experiment.ts .performance/collision-experiment.json
+git show 1649ce7325a4d65e0a7b23ccdeeabf3f3472ec2c:benchmarks/collision-experiment.ts
 ```
 
 The experiment uses seed 42, 80 asteroids, 100 worlds per row, 128-unit cells,
@@ -35,5 +36,5 @@ claim about physical-device performance. Candidate indexing is only worth
 revisiting if real server profiles show the existing circle loops dominating.
 
 The raw diagnostic output is in `.performance/collision-experiment.json` in the
-implementation worktree. The executable fixture is retained in `benchmarks/`; the raw local
-report is ignored alongside other machine-specific observations.
+implementation worktree. The raw local report is historical evidence and remains ignored alongside
+other machine-specific observations. The retrieval pointer does not claim a new run.

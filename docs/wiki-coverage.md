@@ -315,7 +315,7 @@ playable production behavior.
 | Deep Scanner, scheduled global hazards, frontier restoration/supply routes | Absent; construction is named furnace lots and settlement recipes. | GameEngine action/tick paths, shared state/protocol, world persistence. `epochField.ts` validates a saved timestamp, not a scheduled event. |
 | Player pings/rescue signals | Absent; Survey Probe is an attached scanning beacon, network ping is transport heartbeat. | `MessageHandler` ping routes to health response, `src/network/services/connectionHealth.ts`; no placement action in input or protocol. |
 | Furnace pinch/drag and shortfall popup | Implemented; covered by the furnace travel and Build rows above. | This feature resolves its prior coverage handoff. Gradual cargo banking landed separately and is covered by the cargo dropoff row; travelling tow/probe launches remain covered by the Scout and Hauler inventory rows. |
-| Infrastructure, snapshot compression/sequence, disk workers, log internals | Non-player-facing internals excluded; player-visible connection/restart limitations are covered. | `shared/epochField.ts`, snapshot DTO/precision/protocol, `server/world/WorldPersistence.ts`; developer operational docs own maintenance. |
+| Infrastructure, snapshot compression/sequence, disk workers, log internals | Non-player-facing internals excluded; player-visible connection/restart limitations are covered. | `shared/epochField.ts`, snapshot DTO/precision/protocol, `server/world/worldPersistence.ts`; developer operational docs own maintenance. |
 
 ## Audit evidence home
 

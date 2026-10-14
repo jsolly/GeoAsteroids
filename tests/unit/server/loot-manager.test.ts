@@ -1,6 +1,4 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { instrumentLootIndex } from '../../../benchmarks/loot-index-instrumentation';
-
 import { EntityManager, type GameEntity } from '../../../server/core/EntityManager';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { type LootCatalogObserver, LootManager } from '../../../server/core/LootManager';
@@ -11,6 +9,7 @@ import { GROWTH, lootOverlap } from '../../../shared/shipGrowth';
 import { hullRadiusForKit } from '../../../shared/shipKits';
 import { nearbyWorldRows, WORLD } from '../../../shared/world';
 import type { SavedPointLoot, ShipKitId } from '../../../shared-types';
+import { instrumentLootIndex } from '../../support/lootIndexInstrumentation';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function collectorAt(position: { x: number; y: number }): GameEntity {

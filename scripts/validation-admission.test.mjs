@@ -552,7 +552,7 @@ test('an unexpected command signal retains admission even when the process group
   assert.equal(f.queue().length, 1);
 });
 
-test('unresolved legacy runner cleanup blocks the new queue without deleting its evidence', async (t) => {
+test('unresolved runner-lock cleanup blocks the new queue without deleting its evidence', async (t) => {
   const f = fixture(t);
   const lock = join(f.common, 'georoids-test-runner.lock');
   mkdirSync(lock);
