@@ -221,6 +221,15 @@ export function identity(root, inputEnvironment = process.env) {
   });
   const python = pythonRuntime(root, env);
   runtimes.push(['python', python, fileRecord(python)]);
+  // The actual npm lifecycle identifies the CLI and interpreter behind wrappers.
+  for (const name of ['npm_execpath', 'npm_node_execpath']) {
+    const value = env[name];
+    if (typeof value !== 'string' || !isAbsolute(value)) {
+      throw new Error('Missing actual npm runtime from validation lifecycle');
+    }
+    const path = realpathSync(value);
+    runtimes.push([name, path, fileRecord(path)]);
+  }
   const allowed = new Set([
     'NODE_ENV',
     'NODE_OPTIONS',
@@ -237,6 +246,8 @@ export function identity(root, inputEnvironment = process.env) {
     'NPM_CONFIG_USERCONFIG',
     'npm_config_https_proxy',
     'PATH',
+    'npm_execpath',
+    'npm_node_execpath',
     'HOME',
     'TMPDIR',
     'LANG',
@@ -286,8 +297,8 @@ export function identity(root, inputEnvironment = process.env) {
   // Ask the actual npm CLI for selected/default configuration homes, rather
   // than guessing a prefix from a separately installed Node executable.
   const npmConfig = spawnSync(
-    process.execPath,
-    [executable('npm', env), 'config', 'get', 'userconfig', 'globalconfig'],
+    executable('npm', env),
+    ['config', 'get', 'userconfig', 'globalconfig'],
     { cwd: root, env, encoding: 'utf8' }
   );
   if (npmConfig.status !== 0 || npmConfig.error || npmConfig.signal) {

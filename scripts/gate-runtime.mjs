@@ -19,7 +19,8 @@ export function lifecycleCommand(root, environment, entry, mode = '--validation-
   assert(npm, 'Missing npm validation runtime');
   // One actual npm lifecycle supplies the same effective defaults to manual and
   // hook launches. This invokes the existing battery, never the pre-commit hook.
-  return [process.execPath, realpathSync(npm), 'run', 'env', '--', process.execPath, entry, mode];
+  // npm may be an executable shell wrapper (mise), rather than a JavaScript file.
+  return [realpathSync(npm), 'run', 'env', '--', process.execPath, entry, mode];
 }
 
 export function canonicalEnvironment(root, environment) {

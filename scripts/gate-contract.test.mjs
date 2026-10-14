@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -593,7 +594,7 @@ test('installed payload identity records executable mode and symlink contents', 
   }
 });
 
-function pythonIdentityFixture(root) {
+function runtimeIdentityFixture(root) {
   mkdirSync(join(root, 'scripts'), { recursive: true });
   writeFileSync(
     join(root, 'scripts/repo-python.sh'),
@@ -605,7 +606,14 @@ function pythonIdentityFixture(root) {
   writeFileSync(bash, `#!/bin/sh\nexec "${shell.stdout}" "$@"\n`, { mode: 0o755 });
   const python = join(root, 'bin/python3');
   writeFileSync(python, `#!/bin/sh\nprintf '%s\\n' '${python}'\n`, { mode: 0o755 });
-  return { bash, python };
+  const npm = join(root, 'bin/npm');
+  const cli = join(root, 'bin/npm-cli.js');
+  writeFileSync(cli, readFileSync(npm));
+  const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+  writeFileSync(npm, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(cli)} "$@"\n`, {
+    mode: 0o755,
+  });
+  return { bash, python, npm, cli };
 }
 
 test('real identity covers installed bytes, ignored env, tool bytes, and unknown overrides', async () => {
@@ -626,10 +634,12 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     const payload = join(f.root, 'node_modules', 'native.node');
     writeFileSync(payload, 'native payload');
     writeFileSync(join(f.root, '.env.local'), 'SECRET=one');
-    const pythonTools = pythonIdentityFixture(f.root);
+    const pythonTools = runtimeIdentityFixture(f.root);
     const env = {
       PATH: join(f.root, 'bin'),
       HOME: fixtureHome,
+      npm_execpath: pythonTools.cli,
+      npm_node_execpath: process.execPath,
     };
     const first = identity(f.root, env);
     writeFileSync(
@@ -686,6 +696,16 @@ test('real identity covers installed bytes, ignored env, tool bytes, and unknown
     });
     assert.equal(sibling.reusable, false);
     assert(sibling.unknown.includes('NPM_CONFIG_HTTPS_PROXY'));
+    const beforeCli = identity(f.root, env);
+    const wrapper = fileRecord(pythonTools.npm);
+    writeFileSync(
+      pythonTools.cli,
+      `${readFileSync(pythonTools.cli, 'utf8')}\n// changed npm CLI bytes\n`
+    );
+    assert.notEqual(identity(f.root, env).runtime, beforeCli.runtime);
+    assert.deepEqual(fileRecord(pythonTools.npm), wrapper, 'the wrapper itself did not change');
+    unlinkSync(pythonTools.cli);
+    assert.throws(() => identity(f.root, env), /ENOENT/u);
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }
@@ -1015,10 +1035,12 @@ test('actual identity hashes hosted SHAs, npm config and resolved consumed file 
       join(f.root, '.gitignore'),
       '.performance/\nnode_modules/\nbin/\nhome/\n.env.local\n'
     );
-    const pythonTools = pythonIdentityFixture(f.root);
+    const pythonTools = runtimeIdentityFixture(f.root);
     const env = {
       PATH: join(f.root, 'bin'),
       HOME: join(f.root, 'home'),
+      npm_execpath: pythonTools.cli,
+      npm_node_execpath: process.execPath,
     };
     assert.ok(existsSync(pythonTools.python));
     const first = identity(f.root, env);
@@ -1407,6 +1429,21 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   const before = launch(selected);
   writeFileSync(config, 'loglevel=error\n');
   assert.notEqual(launch(selected).runtime, before.runtime);
+  // Tool managers can expose npm as a shell wrapper around the actual CLI.
+  const beforeWrapper = launch(base);
+  const originalNpm = base.PATH.split(':')
+    .map((path) => join(path, 'npm'))
+    .find(existsSync);
+  assert(originalNpm);
+  const quotedNpm = `'${realpathSync(originalNpm).replaceAll("'", "'\\''")}'`;
+  writeFileSync(join(f.root, 'bin/npm'), `#!/bin/sh\nexec ${quotedNpm} "$@"\n`, {
+    mode: 0o755,
+  });
+  const wrapped = launch(base);
+  assert.equal(wrapped.reusable, true, JSON.stringify(wrapped.unknown));
+  assert.notEqual(wrapped.runtime, beforeWrapper.runtime);
+  assert.deepEqual(launch(base, true), wrapped);
+  assert.deepEqual(launch({ ...base, GIT_PREFIX: '', PATH: `${core}:${base.PATH}` }), wrapped);
   writeFileSync(join(f.root, 'package.json'), '{"scripts":{"env":"echo bypass"}}');
   assert.throws(() => lifecycleCommand(f.root, base, probe), /built-in env/u);
   writeFileSync(join(f.root, 'package.json'), '{"scripts":{"preenv":"echo unexpected"}}');
