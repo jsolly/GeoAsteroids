@@ -304,6 +304,71 @@ test('a real transport join can retire and rejoin with one input and network own
   expect(frames.size).toBe(0);
 });
 
+test('the travel presentation follows living crew snapshots without changing earlier views', async () => {
+  RecordingTransport.created = [];
+  vi.stubGlobal('WebSocket', RecordingTransport);
+  const runtime = mountRuntime(scope.signal);
+  current = runtime;
+  const socket = await joinThroughTransport('Travel Pilot');
+  // This scenario exercises snapshot delivery and DOM presentation, outside canvas painting.
+  vi.spyOn(GameController.getInstance(), 'renderGame').mockImplementation(() => {});
+  const local = GameController.getInstance().getCurrPlayer();
+  const state = snapshotFixture();
+  const template = state.entities[0];
+  if (!local || !template) {
+    throw new Error('Missing travel pilot fixture');
+  }
+  template.velocity = { x: 0, y: 0 };
+  template.thrusting = false;
+  local.ship.position = { x: 40, y: 0 };
+  state.entities = [
+    { ...template, id: local.id, name: 'Travel Pilot', position: { x: 40, y: 0 } },
+    { ...template, id: 'crew', name: 'Ada', position: { x: 900, y: 300 } },
+    { ...template, id: 'dead', name: 'Dead pilot', health: 0 },
+    { ...template, id: 'exploding', name: 'Exploding pilot', health: 0, exploding: true },
+  ];
+  socket.receive('snapshot', new SnapshotEncoder(state).encode(2));
+  await settle();
+  const views: GamePresentation[] = [];
+  runtime.subscribe((view) => views.push(view));
+  keyboard('KeyB');
+  runtime.commands.selectTownView('travel');
+  const first = views.at(-1)?.townTravel;
+  if (!first) {
+    throw new Error('Expected the runtime to publish furnace travel');
+  }
+  expect(first.pilots).toEqual([
+    { id: local.id, name: 'Travel Pilot', position: { x: 40, y: 0 }, local: true },
+    { id: 'crew', name: 'Ada', position: { x: 900, y: 300 }, local: false },
+  ]);
+
+  const updated = structuredClone(state);
+  const crew = updated.entities[1];
+  if (!crew) {
+    throw new Error('Missing crew snapshot');
+  }
+  crew.name = 'Ada North';
+  crew.position = { x: 1200, y: 450 };
+  socket.receive('snapshot', new SnapshotEncoder(updated).encode(3));
+  await settle();
+  const frame = [...frames.entries()].at(-1);
+  if (!frame) {
+    throw new Error('Missing runtime presentation frame');
+  }
+  frames.delete(frame[0]);
+  frame[1](performance.now() + 200);
+  expect(views.at(-1)?.townTravel?.pilots).toContainEqual({
+    id: 'crew',
+    name: 'Ada North',
+    position: { x: 1200, y: 450 },
+    local: false,
+  });
+  expect(first.pilots).toEqual([
+    { id: local.id, name: 'Travel Pilot', position: { x: 40, y: 0 }, local: true },
+    { id: 'crew', name: 'Ada', position: { x: 900, y: 300 }, local: false },
+  ]);
+});
+
 test('foreign pickup churn does not flush sampled local inventory values between presentation ticks', async () => {
   vi.spyOn(NetworkManager.getInstance(), 'connect').mockResolvedValue();
   vi.spyOn(NetworkManager.getInstance(), 'joinAndWaitForWorld').mockResolvedValue(true);

@@ -57,3 +57,41 @@ test('a snapshot without a finite terrain seed is rejected instead of keeping a 
     expect(() => validateSnapshotDto(world)).toThrow('Incomplete or invalid public snapshot DTO');
   }
 });
+
+test.each(['serverTime', 'civicModules', 'spiderField', 'beltRecovery'])(
+  'pilots reject a missing required %s and recover with a complete keyframe',
+  (field) => {
+    const world = snapshotFixture();
+    const missing = structuredClone(world);
+    Reflect.deleteProperty(missing, field);
+    expect(() => validateSnapshotDto(missing)).toThrow('Incomplete or invalid public snapshot DTO');
+    expect(() => new SnapshotEncoder(missing)).toThrow();
+    const decoder = new SnapshotDecoder();
+    const first = new SnapshotEncoder(world);
+    decodeSnapshotMessage(decoder, snapshotMessage(first.encode(1)));
+    expect(() =>
+      decodeSnapshotMessage(
+        decoder,
+        JSON.stringify({
+          type: 'snapshot',
+          data: { version: 3, sequence: 2, kind: 'keyframe', state: missing },
+        })
+      )
+    ).toThrow('Incomplete or invalid public snapshot DTO');
+    decodeSnapshotMessage(decoder, snapshotMessage(first.encode(3)));
+    expect(() =>
+      decodeSnapshotMessage(
+        decoder,
+        snapshotMessage({
+          version: 3,
+          sequence: 4,
+          kind: 'delta',
+          baseline: 3,
+          patch: { clear: [field] },
+        })
+      )
+    ).toThrow('Incomplete or invalid public snapshot DTO');
+    const next = new SnapshotEncoder({ ...world, gameTime: 1 });
+    expect(decodeSnapshotMessage(decoder, snapshotMessage(next.encode(5)))).toEqual(next.state);
+  }
+);

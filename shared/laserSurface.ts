@@ -1,6 +1,6 @@
 import type { Position } from '../shared-types';
+import { findWorldBoundaryImpact } from './boundary';
 import { findCourtImpact } from './ricochetCourt';
-import { findWorldBoundaryImpact } from './worldBoundary';
 
 /** Fixed, non-amplifying laser surfaces shared by prediction and authority. */
 export function findLaserSurfaceImpact(start: Position, end: Position) {

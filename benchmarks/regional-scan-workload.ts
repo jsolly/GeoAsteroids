@@ -1,4 +1,8 @@
-import { SNAPSHOT_VERSION, type SnapshotMetadata } from '../shared/snapshotProtocol';
+import {
+  ASTEROID_INTERACTIONS_CAPABILITY,
+  SNAPSHOT_VERSION,
+  type SnapshotMetadata,
+} from '../shared/snapshotProtocol';
 import { WORLD } from '../shared/world';
 import type { ServerGameSnapshot } from '../shared-types';
 import {
@@ -20,7 +24,7 @@ export function bindRegionalPilotOwner(data: unknown, previousOwner: string | un
     !('snapshotVersion' in data) ||
     data.snapshotVersion !== SNAPSHOT_VERSION ||
     !('asteroidInteractions' in data) ||
-    data.asteroidInteractions !== 1 ||
+    data.asteroidInteractions !== ASTEROID_INTERACTIONS_CAPABILITY ||
     !('resumeToken' in data) ||
     typeof data.resumeToken !== 'string' ||
     data.resumeToken.length === 0

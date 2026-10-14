@@ -130,10 +130,10 @@ export function clientViteConfig() {
 
   // Hosted builds may omit .git; release polling still needs the deployed identity.
   const commitHash = clientReleaseSha();
-  define['import.meta.env.VITE_COMMIT_HASH'] = JSON.stringify(commitHash.slice(0, 7));
   define['import.meta.env.VITE_COMMIT_SHA'] = JSON.stringify(commitHash.toLowerCase());
 
-  // VITE_WEBSOCKET_URL comes from .env.local (dev) or Vercel env (production).
+  // Direct Astro reads endpoint env files; npm run dev clears the endpoint for its proxy.
+  // Production receives VITE_WEBSOCKET_URL from Vercel.
   // Do not define it here — vite `define` overrides env and breaks production builds.
 
   return {

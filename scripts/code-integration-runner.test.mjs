@@ -16,7 +16,7 @@ const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'code-integration-contract-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const files = ['server/one.test.ts', 'entities/input/two.test.ts']
+  const files = ['server/one.test.ts', 'server/nested/two.test.ts']
     .map((path) => join(root, 'tests/integration', path))
     .sort((a, b) => a.localeCompare(b));
   for (const path of files) {
@@ -47,17 +47,19 @@ function fixture(t) {
   };
   return { root, files, discovery, report };
 }
-test('complete code discovery includes both server and entity tests and refuses omitted selectors', (t) => {
+test('complete server discovery certifies full inventories and refuses retired or omitted selectors', (t) => {
   const f = fixture(t);
   assert.deepEqual(selectIntegration(f.root, []).files, f.files);
   assert.equal(
     selectIntegration(f.root, ['tests/integration', '--reporter=verbose']).fullInventory,
     true
   );
-  assert.equal(selectIntegration(f.root, ['tests/integration/server']).fullInventory, false);
+  assert.equal(selectIntegration(f.root, ['tests/integration/server']).fullInventory, true);
+  assert.equal(selectIntegration(f.root, [f.files[0]]).fullInventory, false);
   for (const selection of [
     'tests/integration/server/missing.test.ts',
     'tests/integration/browser',
+    'tests/integration/entities',
     '--testNamePattern=easy',
     '--exclude=hard',
     '--shard=1/2',

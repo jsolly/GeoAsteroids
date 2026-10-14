@@ -40,7 +40,7 @@ test('engine light shifts its emitted color and reach at contour speed', () => {
   vi.restoreAllMocks();
 });
 
-test('authoritative glow metadata survives DTO and client application and controls map/playfield visibility', () => {
+test('authoritative glow metadata survives DTO and client application', () => {
   const row = snapshotFixture().asteroids[0];
   if (!row) {
     throw new Error('Missing fixture asteroid');

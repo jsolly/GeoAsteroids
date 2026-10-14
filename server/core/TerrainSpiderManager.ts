@@ -26,11 +26,11 @@ interface SpiderAdvanceOptions {
   nowFrame: number;
   towedIds?: ReadonlySet<string>;
   spiderTows?: readonly { ownerId: string; spiderId: string }[];
-  releaseTow?: (ownerId: string, spiderId: string) => void;
-  resources?: (players: readonly SpiderActor[]) => readonly SpiderResource[];
-  resource?: (id: string, home: Position) => SpiderResource | undefined;
+  releaseTow: (ownerId: string, spiderId: string) => void;
+  resources: (players: readonly SpiderActor[]) => readonly SpiderResource[];
+  resource: (id: string, home: Position) => SpiderResource | undefined;
+  onNestCreated: (nest: SpiderFieldState['nests'][number]) => void;
   lightSources?: readonly Position[];
-  onNestCreated?: (nest: SpiderFieldState['nests'][number]) => void;
 }
 
 export interface SpiderAttack {
@@ -293,7 +293,7 @@ export class TerrainSpiderManager {
     this.removeDistantBodies(players);
     if (players.length > 0 && nowFrame >= this.nextNestFrame) {
       this.updateNests(
-        options.resources?.(players) ?? [],
+        options.resources(players),
         players,
         options.resource,
         options.onNestCreated
@@ -502,14 +502,9 @@ export class TerrainSpiderManager {
         candidates.set(cell, resource);
       }
     }
-    const available = resolveResource
-      ? undefined
-      : new Map(resources.map((resource) => [resource.id, resource]));
     const observedResources = new Map<string, SpiderResource>();
     const observeAnchor = (cell: string, resourceId: string, position: Position): void => {
-      const resource = resolveResource
-        ? resolveResource(resourceId, position)
-        : available?.get(resourceId);
+      const resource = resolveResource(resourceId, position);
       if (resource) {
         observedResources.set(cell, { ...resource, position: copyPosition(resource.position) });
       }
@@ -553,7 +548,7 @@ export class TerrainSpiderManager {
           nest.guards.push(guard);
         }
       }
-      onNestCreated?.({
+      onNestCreated({
         id,
         resourceId: resource.id,
         position: copyPosition(home),
@@ -660,7 +655,7 @@ export class TerrainSpiderManager {
         return;
       }
     }
-    if (releaseTow && this.rescueFriend(spider, tows, nowFrame, releaseTow)) {
+    if (this.rescueFriend(spider, tows, nowFrame, releaseTow)) {
       return;
     }
     if (spider.phase !== 'hunting') {
@@ -820,7 +815,7 @@ export class TerrainSpiderManager {
     spider: RuntimeSpider,
     tows: SpiderTow[],
     nowFrame: number,
-    releaseTow: NonNullable<SpiderAdvanceOptions['releaseTow']>
+    releaseTow: SpiderAdvanceOptions['releaseTow']
   ): boolean {
     const rescue = nearestRescueTow(
       spider.position,

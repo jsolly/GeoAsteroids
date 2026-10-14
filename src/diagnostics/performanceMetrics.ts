@@ -1,4 +1,5 @@
 import type { GpuFrameStats } from '../rendering/gpuRearRenderer';
+import { getClientReleaseId } from '../utils/buildInfo';
 import { logger } from '../utils/Logger';
 
 const SAMPLE_LIMIT = 4096;
@@ -395,7 +396,7 @@ export class ClientPerformanceMetrics {
         frames: { ...this.rendererFrames },
         gpuStats: renderer?.gpuStats ?? null,
       },
-      clientReleaseId: import.meta.env['VITE_COMMIT_HASH'] ?? 'unknown',
+      clientReleaseId: getClientReleaseId(),
       serverReleaseId: this.serverReleaseId ?? 'unknown',
       durationMs: now - this.startedAt,
       phase: this.phase,

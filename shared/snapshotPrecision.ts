@@ -3,7 +3,10 @@ import type { Position, ServerGameSnapshot } from '../shared-types';
 export const SNAPSHOT_KINEMATIC_FACTOR = 10_000;
 
 /** Round only the encoder's detached, validated world. Never pass live engine state. */
-export function quantizeSnapshotKinematics(state: ServerGameSnapshot): void {
+export function quantizeSnapshotKinematics(
+  state: Pick<ServerGameSnapshot, 'asteroids' | 'loot' | 'satellitePickups' | 'playerProjectiles'> &
+    Partial<Pick<ServerGameSnapshot, 'spiderField'>>
+): void {
   const factor = SNAPSHOT_KINEMATIC_FACTOR;
   const maximum = Number.MAX_SAFE_INTEGER / factor;
   const rounded = (value: number): number => {

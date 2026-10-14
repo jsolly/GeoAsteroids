@@ -1,4 +1,4 @@
-import { getGameBoundary } from '../../shared/boundary';
+import { WORLD_BOUNDARY } from '../../shared/boundary';
 import { createHeightfield } from '../../shared/heightfield';
 import { TERRAIN } from '../../shared/terrainConfig';
 import { PALETTE, VISUAL } from '../constants';
@@ -16,7 +16,7 @@ export function initTitleTerrain(canvas: HTMLCanvasElement): () => void {
   // The live world can span tens of thousands of units. The title is a local
   // composition, so sample a compact preview window instead of extracting the
   // entire world and cropping its lines down to nothing.
-  const worldBounds = getGameBoundary();
+  const worldBounds = WORLD_BOUNDARY;
   const bounds = {
     cx: worldBounds.cx,
     cy: worldBounds.cy,

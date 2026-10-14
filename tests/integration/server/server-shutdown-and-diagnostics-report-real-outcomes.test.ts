@@ -79,7 +79,13 @@ test('production exposes health while rejecting diagnostic log writes', async ()
   expect(await status.text()).not.toContain('id="serverLogBtn"');
   const health = await fetch(`${origin}/health`, { signal: AbortSignal.timeout(3000) });
   expect(health.status).toBe(200);
-  expect(await health.json()).toMatchObject({ status: 'healthy' });
+  const body = await health.json();
+  expect(body).toMatchObject({
+    status: 'healthy',
+    world: { players: 0, loop: { stalls: 0 } },
+    logging: { activeLogClients: 0 },
+  });
+  expect(body).not.toHaveProperty('players');
 });
 
 test('a network peer cannot trigger development log writes by claiming a forwarded loopback address', async () => {

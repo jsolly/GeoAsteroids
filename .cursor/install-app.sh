@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Install the GeoRoids application development environment on a Cloud Agent VM:
 # native libraries for the `canvas` dependency, Node 24 (package.json engines
-# require ^24.15.0; .nvmrc pins major 24), project dependencies, and the empty
-# .env the game server loads via --env-file=.env. Manual benchmarks and Wiki
-# media install their browsers on demand; code tests need no browser binaries.
+# require ^24.15.0; .nvmrc pins major 24), and project dependencies.
+# Playwright browsers are needed only for manual browser benchmarks and frame
+# measurements. Wiki media needs Python with scripts/wiki-media-requirements.txt
+# installed (WIKI_MEDIA_PYTHON); code tests need no browser binaries.
 #
 # Idempotent: safe to re-run from .cursor/environment.json `install`.
 set -euo pipefail
@@ -65,8 +66,5 @@ echo "install-app: using node $(node --version) (npm $(npm --version))"
 
 # --- project dependencies ---
 npm ci
-
-# --- empty .env required by the server's --env-file=.env ---
-[ -f .env ] || touch .env
 
 echo "install-app: done"
