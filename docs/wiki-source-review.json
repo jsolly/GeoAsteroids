@@ -8,7 +8,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:dcd78b7f195ae4e0c60df142837d05e7fbf599bfed9d370d40e1931f95ee51dd",
     "docs/sounds.md": "sha256:88bd06e26a7688c6b348dc635c1badffa83635a0413abd033eb63843f5975eb8",
     "index.css": "sha256:907b1f887e9ada0228bd8c3bcc54756217f87fd26400abed23f0822494f74170",
-    "package.json": "sha256:64148c230ec106bd547a89066c760017dc596db50cc7273b2c23ff2ffde0a538",
+    "package.json": "sha256:f852fd1fb0dfb461c4790c1c0c57153f6e28b7fd9822f71283ddbd4d7760c124",
     "public/music/README.md": "sha256:bc37faf582c661603145329bc3759822344b5a49865dc2433b6a8451eca22f9e",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -67,14 +67,14 @@
     "scripts/wiki-media-requirements.txt": "sha256:5dd5a7db938c69c025039265a023c0253f450704efd947dd579e6958a14c964d",
     "scripts/wiki-media.ts": "sha256:5b9a0adf34b51550fc85d2d071c15938fb858d80478d6b443aa4609fc0d15c84",
     "scripts/wiki-satellite-demo.ts": "sha256:7ecaae18ab604448b3706caab776aaf48e7f4b18fc5781e97cae2838fca52f88",
-    "server.ts": "sha256:1847341c2cd9286dc2a2ef87693cdb199d290d58f16a3a195c4e34d158c24125",
+    "server.ts": "sha256:59210b7720b95338cebbb531e6f2548f60c6b8dee86847eec65c8d5b86347b5e",
     "server/communication/MessageHandler.ts": "sha256:0e4a3377aca1bc7a7a5a9a4c5fb1e6af754cf3d892e24f676393814e0239347a",
     "server/communication/WebSocketCore.ts": "sha256:824dcee22c88aadaaa97a372aaf955ac4094374d6dc7e48af7455d6caadaecf8",
     "server/communication/clientCommandDecoder.ts": "sha256:13070d162cea539c9c22d7b7292722741e687d4a995de583754a4758151720d9",
     "server/communication/connectionAdmission.ts": "sha256:a2a9327cb76fedd362cc156431b31c5d648a0dc222b44b1f87558acc56d5910a",
     "server/communication/inboundMessageLog.ts": "sha256:a9ce18d51630fbbcdaa5145c7ad0940cddb41c5353be47dd3fa540155e74090a",
     "server/communication/messageBudget.ts": "sha256:2fb41f10f624428212246737a3b67a554143c9b393ede8ed449be17a739e9a69",
-    "server/configuration.ts": "sha256:73b18759bebf97fb96ede60fafeb5b5145a0c4bd034db98366cc878ef9863395",
+    "server/configuration.ts": "sha256:8c31383fb0c11922ffec139e30fe0b09b2461b541113152da5052e7bb2c5d88f",
     "server/core/AsteroidManager.ts": "sha256:d519267d6fb1700ad9178a8357f6fe26bca8e1c781a6cf5531f034e3f3484ef9",
     "server/core/BeltCrawlerManager.ts": "sha256:b82be9d9d1b690d9351e08eb73ce4c854d719967028e049bf5cc4d7790dc4263",
     "server/core/CollisionAuthority.ts": "sha256:a3992d135d9875d97ab791bd79e84abf58a143f7a69c56fa3703cfcf87c3f156",
@@ -4170,6 +4170,47 @@
     },
     {
       "note": "Reviewed package.json tooling-only changes: repository-owned worktree setup and hook-trust test command; dependencies, gameplay, Wiki content and demonstrations are unchanged. Lint, types and all 1969 unit tests passed. Checked the existing production Wiki at 1280x900 and 390x844, exercised search and mobile navigation, and observed no browser errors. No article or media update is needed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Scoped review of the opt-in Railway preview: package.json only adds the /preview comment-matcher contract to check:actions; server.ts and server/configuration.ts add GEOROIDS_PREVIEW_CLIENT, which serves the built client from the game server only in the Railway preview environment and fails startup elsewhere. Gameplay rules, controls, protocol, Wiki articles, generated references and demonstrations are unchanged; production keeps NODE_ENV and the local playground behavior. No Wiki page is affected.",
+      "sources": ["package.json", "server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Scoped re-review after preview hardening: server.ts passes explicit configuration fields and the dist/ client root only in preview mode; server/configuration.ts additionally keeps the local playground off whenever the preview client is enabled. Gameplay rules, controls, protocol, Wiki articles and demonstrations are unchanged; no Wiki page is affected.",
+      "sources": ["server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Refreshed opt-in preview startup on current main while preserving all 129 main review batches and both distinct historical preview review batches. Reviewed the three changed source inputs, the static-client handler and server route integration, all 11 field-manual articles, generated-reference imports and demonstration ownership. Preview selection and deployment contracts leave gameplay rules, player interfaces and media sources unchanged; no article or demonstration update is needed. Strict types and all 22 preview/configuration regression cases passed.",
+      "sources": ["package.json", "server.ts", "server/configuration.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "server.ts": "field-manual",
+        "server/configuration.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the package-script merge onto current main: preserved repository hook trust and all current required checks, and retained the opt-in preview comment-matcher contract in check:actions. Dependency versions, gameplay, player interfaces, Wiki articles and demonstration inputs are unchanged; no article or media update is needed. CI and preview-comment contracts passed.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],

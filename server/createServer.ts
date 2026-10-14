@@ -23,6 +23,7 @@ import {
 } from './performanceMetrics';
 import { SERVER_RELEASE_ID } from './release';
 import { ClientLogger } from './services/ClientLogger';
+import { createStaticClient } from './staticClient';
 import { renderStatusPage } from './statusPage';
 import {
   acceptTestPost,
@@ -37,9 +38,21 @@ type CreateServerOptions = {
   seed?: number;
   worldPath?: string;
   localPlayground?: boolean;
+  /** Built client directory served from this origin; set only for preview environments. */
+  serveClientFrom?: string;
   /** Explicit transport injection; the production entry keeps compression disabled. */
   perMessageDeflate?: false | WebSocket.PerMessageDeflateOptions;
 };
+
+function serveServerBanner(req: IncomingMessage, res: ServerResponse): void {
+  if (req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('GeoRoids Game Server - Running');
+    return;
+  }
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
+}
 
 export function createServerInstance(options: CreateServerOptions = {}) {
   const configuration = readServerConfiguration();
@@ -52,6 +65,12 @@ export function createServerInstance(options: CreateServerOptions = {}) {
     gameplayIngress: messageBudget.diagnostics(),
     serverWriter: getServerLogDiagnostics(),
   });
+
+  // Routes the server does not own: the game server banner, or a preview's built client.
+  const serveUnmatched =
+    options.serveClientFrom === undefined
+      ? serveServerBanner
+      : createStaticClient(options.serveClientFrom);
 
   // Create HTTP server for health checks
   const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -87,12 +106,6 @@ export function createServerInstance(options: CreateServerOptions = {}) {
 
     if (req.url === '/test/reset-world') {
       handleTestResetWorld(req, res, NODE_ENV, gameEngine);
-      return;
-    }
-
-    if (req.url === '/') {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('GeoRoids Game Server - Running');
       return;
     }
 
@@ -193,8 +206,7 @@ export function createServerInstance(options: CreateServerOptions = {}) {
       return;
     }
 
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+    serveUnmatched(req, res);
   });
 
   // Test and development runs skip both the connection and per-message budgets.
