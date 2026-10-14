@@ -346,15 +346,15 @@ export interface ServerGameState {
   cooperativeActive?: boolean;
   campaign?: CampaignSnapshot;
   /** Epoch milliseconds for client animation clocks. */
-  serverTime?: number;
+  serverTime: number;
   settlement: SettlementState;
   /** Furnaces the crew has lit, named for the Scout who paid. */
-  civicModules?: CivicModule[];
+  civicModules: CivicModule[];
   /** Server-owned terrain predators, pursuit targets, and remaining health. */
-  spiderField?: SpiderFieldState;
+  spiderField: SpiderFieldState;
   rolyPolys?: RolyPolyState[];
   contourBridges?: ContourBridge[];
-  beltRecovery?: import('./shared/asteroidBelt').BeltRecoveryWarning[];
+  beltRecovery: import('./shared/asteroidBelt').BeltRecoveryWarning[];
   /** Shared explored minimap cells, encoded as a fixed-width hexadecimal bitset. */
   exploration: ExplorationTile[];
   /** Revealed landmarks and valuable drops, independent of local simulation visibility. */

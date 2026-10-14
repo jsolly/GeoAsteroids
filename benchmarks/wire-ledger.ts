@@ -729,7 +729,7 @@ export async function runWireLedgerSample(
         },
         'scout'
       );
-      engine.seedAsteroidInteractions();
+      engine.ensureAsteroidField();
       const registered: ReturnType<GameEngine['registerPilot']> = engine.registerPilot(actor, peer);
       assert(registered.ok, 'Motion fixture registration failed');
       assert.equal(broadcaster.negotiateSnapshot(peer), SNAPSHOT_VERSION);

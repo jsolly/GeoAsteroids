@@ -34,7 +34,7 @@ Two separate deploy targets — client and server do not share a host.
 | --- | --- |
 | `VITE_WEBSOCKET_URL` | WebSocket endpoint baked into the client at build time. Currently `wss://georoids-production-2403.up.railway.app/ws`. Must match the live Railway public URL + `/ws`. |
 
-`VITE_BUILD_TIME`, short `VITE_COMMIT_HASH` and full `VITE_COMMIT_SHA` are injected by `scripts/client-build.ts` through `astro.config.ts` at build time — do not set them on Vercel. Only those metadata values and the required `VITE_WEBSOCKET_URL` are exposed to client code. The commit is the first valid 40-character SHA from `VERCEL_GIT_COMMIT_SHA`, then `RAILWAY_GIT_COMMIT_SHA`, then local Git. Empty hosted values do not block the later fallbacks. When host and local Git metadata are unavailable or invalid, the build generates one opaque 40-character hexadecimal token shared by the client and `release.json`. Version metadata never blocks a build.
+`VITE_BUILD_TIME` and full `VITE_COMMIT_SHA` are injected by `scripts/client-build.ts` through `astro.config.ts` at build time — do not set them on Vercel. Only those metadata values and the required `VITE_WEBSOCKET_URL` are exposed to client code. The commit is the first valid 40-character SHA from `VERCEL_GIT_COMMIT_SHA`, then `RAILWAY_GIT_COMMIT_SHA`, then local Git. Empty hosted values do not block the later fallbacks. When host and local Git metadata are unavailable or invalid, the build generates one opaque 40-character hexadecimal token shared by the client and `release.json`. Version metadata never blocks a build. The visible build label takes its first seven characters from that same validated identity.
 
 Local dev: `npm run dev` sets an empty `VITE_WEBSOCKET_URL` so `ConnectionManager` uses same-origin `/ws`. Astro's Vite configuration proxies `/ws` and `/logs` to the configured local game-server port. This also supports phones using a public HTTPS tunnel to the Astro port. Direct `astro dev` runs can override the endpoint in `.env.local` (see `.env.example`).
 
@@ -66,7 +66,7 @@ the start-command update takes effect on the next deployment. Railway's verified
 restart defaults are `ON_FAILURE` with 10 retries and are omitted from the IaC
 because the platform importer omits these default values.
 
-Smoke: `curl -i https://georoids-production-2403.up.railway.app/health`. The server exposes `RAILWAY_GIT_COMMIT_SHA` in health JSON `releaseId` for diagnostics; host deployment status and gameplay smoke establish production verification.
+Smoke: `curl -i https://georoids-production-2403.up.railway.app/health`. The player count is `world.players`, alongside `world.loop` and `world.persistence`; `/status` reads that same count. The server exposes `RAILWAY_GIT_COMMIT_SHA` in health JSON `releaseId` for diagnostics; host deployment status and gameplay smoke establish production verification.
 
 The former `geoasteroids-production-2403.up.railway.app` hostname returns a Railway edge 404. Use the current `georoids-production-2403.up.railway.app` host for client configuration and verification.
 

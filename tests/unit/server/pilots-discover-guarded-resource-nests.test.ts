@@ -12,6 +12,7 @@ import { GROWTH } from '../../../shared/shipGrowth';
 import { SPIDER } from '../../../shared/terrainSpider';
 import type { AsteroidData, Position } from '../../../shared-types';
 import { instrumentLootIndex } from '../../support/lootIndexInstrumentation';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 
 const home = { x: 15_000, y: 5_000 };
 const approach = { x: home.x - 2_000, y: home.y };
@@ -31,7 +32,7 @@ function setup(value: SpiderResource['value'] = 1) {
   let frame = 0;
   const step = (frames = 1) => {
     for (let i = 0; i < frames; i++) {
-      manager.advance({ players: [pilot], resources, nowFrame: ++frame });
+      manager.advance(spiderAdvanceFixture({ players: [pilot], resources, nowFrame: ++frame }));
     }
   };
   return { manager, pilot, resource, step };
@@ -132,11 +133,13 @@ test('nests never materialize beside a pilot or in a furnace yard', () => {
     exploding: false,
     radius: 0,
   };
-  worksYard.advance({
-    players: [worksPilot],
-    resources: () => [{ id: 'ore', position: { ...TOWN_HEARTH.position }, value: 1 }],
-    nowFrame: 1,
-  });
+  worksYard.advance(
+    spiderAdvanceFixture({
+      players: [worksPilot],
+      resources: () => [{ id: 'ore', position: { ...TOWN_HEARTH.position }, value: 1 }],
+      nowFrame: 1,
+    })
+  );
   expect(worksYard.snapshot().nests).toEqual([]);
   expect(worksYard.snapshot().spiders).toEqual([]);
   const lot = civicLot('street-1-0');
@@ -147,19 +150,21 @@ test('nests never materialize beside a pilot or in a furnace yard', () => {
   field.light(lot.id);
   const builtYard = new TerrainSpiderManager(() => 0.5, field);
   const { manager, step } = setup();
-  builtYard.advance({
-    players: [
-      {
-        id: 'pilot',
-        position: { x: lot.position.x - 2_000, y: lot.position.y },
-        health: 100,
-        exploding: false,
-        radius: 0,
-      },
-    ],
-    resources: () => [{ id: 'ore', position: { ...lot.position }, value: 1 }],
-    nowFrame: 1,
-  });
+  builtYard.advance(
+    spiderAdvanceFixture({
+      players: [
+        {
+          id: 'pilot',
+          position: { x: lot.position.x - 2_000, y: lot.position.y },
+          health: 100,
+          exploding: false,
+          radius: 0,
+        },
+      ],
+      resources: () => [{ id: 'ore', position: { ...lot.position }, value: 1 }],
+      nowFrame: 1,
+    })
+  );
   expect(builtYard.snapshot().nests).toEqual([]);
   expect(builtYard.snapshot().spiders).toEqual([]);
   step(60);
@@ -224,25 +229,31 @@ test('multiplayer nest creation and sleeping guards share the same active popula
     exploding: false,
     radius: 0,
   }));
-  manager.advance({
-    players: players.slice(0, 1),
-    resources: () => resources,
-    nowFrame: 1,
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      players: players.slice(0, 1),
+      resources: () => resources,
+      nowFrame: 1,
+    })
+  );
   const sleepingIds = manager.snapshot().spiders.map(({ id }) => id);
   expect(sleepingIds).toHaveLength(10);
-  manager.advance({
-    players: players.slice(1),
-    resources: () => resources,
-    nowFrame: 61,
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      players: players.slice(1),
+      resources: () => resources,
+      nowFrame: 61,
+    })
+  );
   expect(manager.snapshot().spiders).toHaveLength(40);
   expect(manager.snapshot().spiders.some(({ id }) => sleepingIds.includes(id))).toBe(false);
-  manager.advance({
-    players,
-    resources: () => resources,
-    nowFrame: 121,
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      players,
+      resources: () => resources,
+      nowFrame: 121,
+    })
+  );
   expect(manager.snapshot().spiders).toHaveLength(SPIDER.MAX_ACTIVE);
   expect(manager.snapshot().spiders.filter(({ id }) => sleepingIds.includes(id))).toHaveLength(8);
 });
@@ -293,7 +304,9 @@ test.each(['collected', 'moved', 'replaced'] as const)(
     };
     let resources: SpiderResource[] = [{ id: 'ore', position: { ...home }, value: 1 }];
     const advance = (nowFrame: number) =>
-      manager.advance({ players: [pilot], resources: () => resources, nowFrame });
+      manager.advance(
+        spiderAdvanceFixture({ players: [pilot], resources: () => resources, nowFrame })
+      );
     advance(1);
     expect(manager.snapshot().nests).toHaveLength(1);
     if (change === 'collected') {
@@ -325,11 +338,13 @@ test('map snapshots reuse the scheduled resource refresh and roaming spiders add
     return [{ id: 'ore', position: home, value: 1 }];
   };
   for (let nowFrame = 1; nowFrame <= 120; nowFrame++) {
-    manager.advance({
-      players: [pilot],
-      resources,
-      nowFrame,
-    });
+    manager.advance(
+      spiderAdvanceFixture({
+        players: [pilot],
+        resources,
+        nowFrame,
+      })
+    );
     manager.snapshot();
   }
   expect(reads).toBe(2);
@@ -366,20 +381,22 @@ test.each(['collected', 'moved'] as const)(
     };
     const advance = (nowFrame: number) => {
       field.update(rocks, [pilot.position]);
-      manager.advance({
-        players: [pilot],
-        nowFrame,
-        resources: () => spiderResources(rocks.getAllAsteroids(), [], []),
-        resource: (id, position) => {
-          const live = rocks.getAsteroid(id);
-          const resource = live ? spiderResources([live], [], [])[0] : undefined;
-          if (resource) {
-            return resource;
-          }
-          const dormant = field.dormantAsteroid(id, position);
-          return dormant ? spiderResources([dormant], [], [])[0] : undefined;
-        },
-      });
+      manager.advance(
+        spiderAdvanceFixture({
+          players: [pilot],
+          nowFrame,
+          resources: () => spiderResources(rocks.getAllAsteroids(), [], []),
+          resource: (id, position) => {
+            const live = rocks.getAsteroid(id);
+            const resource = live ? spiderResources([live], [], [])[0] : undefined;
+            if (resource) {
+              return resource;
+            }
+            const dormant = field.dormantAsteroid(id, position);
+            return dormant ? spiderResources([dormant], [], [])[0] : undefined;
+          },
+        })
+      );
     };
     const marker = {
       id: nestCellId,
@@ -428,21 +445,23 @@ test('nearby resource cells each have ten guards and seed treasure only on first
   };
   const created: string[] = [];
   const advance = (nowFrame: number) =>
-    manager.advance({
-      players: [pilot],
-      resources: () => resources,
-      nowFrame,
-      onNestCreated: (nest) => {
-        expect(
-          manager
-            .snapshot()
-            .spiders.filter(
-              (spider) => distance(spider.position, nest.position) <= SPIDER.NEST_PATROL_RADIUS
-            )
-        ).toHaveLength(10);
-        created.push(nest.resourceId);
-      },
-    });
+    manager.advance(
+      spiderAdvanceFixture({
+        players: [pilot],
+        resources: () => resources,
+        nowFrame,
+        onNestCreated: (nest) => {
+          expect(
+            manager
+              .snapshot()
+              .spiders.filter(
+                (spider) => distance(spider.position, nest.position) <= SPIDER.NEST_PATROL_RADIUS
+              )
+          ).toHaveLength(10);
+          created.push(nest.resourceId);
+        },
+      })
+    );
   advance(1);
   expect(manager.snapshot().nests).toHaveLength(2);
   expect(manager.snapshot().spiders).toHaveLength(20);
@@ -472,27 +491,29 @@ test('treasure that evicts an older guarded deposit changes its marker on the ne
   const older = loot.spawnShard(west, 0, 0.75);
   const created: string[] = [];
   const advance = (nowFrame: number) =>
-    manager.advance({
-      players: [pilot],
-      nowFrame,
-      resources: (players) =>
-        spiderResources(
-          [],
-          loot.getNestResourcesNear(
-            players.map((player) => player.position),
-            SPIDER.NEST_WAKE_DISTANCE
+    manager.advance(
+      spiderAdvanceFixture({
+        players: [pilot],
+        nowFrame,
+        resources: (players) =>
+          spiderResources(
+            [],
+            loot.getNestResourcesNear(
+              players.map((player) => player.position),
+              SPIDER.NEST_WAKE_DISTANCE
+            ),
+            []
           ),
-          []
-        ),
-      resource: (id) => {
-        const drop = loot.getNestResource(id);
-        return drop ? spiderResources([], [drop], [])[0] : undefined;
-      },
-      onNestCreated: (nest) => {
-        created.push(nest.resourceId);
-        loot.spawnNestCache(nest.position, nowFrame);
-      },
-    });
+        resource: (id) => {
+          const drop = loot.getNestResource(id);
+          return drop ? spiderResources([], [drop], [])[0] : undefined;
+        },
+        onNestCreated: (nest) => {
+          created.push(nest.resourceId);
+          loot.spawnNestCache(nest.position, nowFrame);
+        },
+      })
+    );
   const olderMarker = { id: '2,1', resourceId: older.id, cleared: false, position: west };
   advance(1);
   expect(manager.snapshot().nests).toEqual([olderMarker]);
@@ -525,13 +546,15 @@ test('treasure that evicts an older guarded deposit changes its marker on the ne
 
 test('resource-centered nests still leave the starter area safe', () => {
   const manager = new TerrainSpiderManager(() => 0.5);
-  manager.advance({
-    players: [
-      { id: 'pilot', position: { x: 2_500, y: 0 }, health: 100, exploding: false, radius: 0 },
-    ],
-    resources: () => [{ id: 'starter-ore', position: { x: 500, y: 0 }, value: 2 }],
-    nowFrame: 1,
-  });
+  manager.advance(
+    spiderAdvanceFixture({
+      players: [
+        { id: 'pilot', position: { x: 2_500, y: 0 }, health: 100, exploding: false, radius: 0 },
+      ],
+      resources: () => [{ id: 'starter-ore', position: { x: 500, y: 0 }, value: 2 }],
+      nowFrame: 1,
+    })
+  );
   expect(manager.snapshot().nests).toEqual([]);
   expect(manager.snapshot().spiders).toEqual([]);
 });

@@ -1296,7 +1296,7 @@ export class ConnectionManager {
     applyTerrainSeed(data.terrainSeed);
     setWorldMapAssets(data.mapAssets);
     setSettlement(data.settlement);
-    worldFurnaces.replaceLit(data.civicModules ?? []);
+    worldFurnaces.replaceLit(data.civicModules);
     setWorldExploration(data.exploration);
 
     // Update local game state from server using unified entity system
@@ -1393,9 +1393,7 @@ export class ConnectionManager {
           ? 0
           : (entityData.abilityActiveFrames ?? 0);
 
-        if (data.serverTime !== undefined) {
-          entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
-        }
+        entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
         if (isLocalPlayer && entityData.bankedCargo !== undefined) {
           const previous = this.cargoDepositBaseline;
           const banked = entityData.bankedCargo;

@@ -26,6 +26,7 @@ import { SPIDER } from '../../../shared/terrainSpider';
 import { WORLD } from '../../../shared/world';
 import type { AsteroidData } from '../../../shared-types';
 import { RecordingSocket } from '../../support/recordingSocket';
+import { spiderAdvanceFixture } from '../../support/spiderAdvanceFixture';
 
 const eastFurnace = civicLot('street-1-0');
 const secondRingFurnace = civicLot('street-2-0');
@@ -358,7 +359,7 @@ test('a lit furnace matches Town Square for spider occupancy', () => {
       exploding: false,
       radius: 0,
     };
-    manager.advance({ players: [witness], nowFrame: 1 });
+    manager.advance(spiderAdvanceFixture({ players: [witness], nowFrame: 1 }));
     const retreating = manager.snapshot().spiders.find((body) => body.id === inside.id);
     expect(retreating?.health).toBe(inside.health);
     expect(retreating?.position.x).toBeGreaterThan(inside.position.x);
@@ -378,7 +379,7 @@ test('a lit furnace matches Town Square for spider occupancy', () => {
       exploding: false,
       radius: 0,
     };
-    manager.advance({ players: [sheltered], nowFrame: 2 });
+    manager.advance(spiderAdvanceFixture({ players: [sheltered], nowFrame: 2 }));
     expect(manager.snapshot().spiders.find((body) => body.id === hunter.id)?.targetId).toBeNull();
   }
 });

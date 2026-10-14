@@ -60,3 +60,37 @@ full gate and release verification belong to the shipping step.
 No player behavior or Wiki semantics changed, so no Wiki article update is
 needed. The test-writing instructions are now consolidated in
 `tests/AGENTS.md`, including the prohibition on browser tests.
+
+## Named maintenance leftovers, 2026-10-14
+
+This change prepares the named leftovers from Todoist task
+[`6hjWGhqrx6rhMrrv`](https://app.todoist.com/app/task/6hjWGhqrx6rhMrrv).
+It does not establish production acceptance or close release-dependent tasks.
+
+| Item | Decision and retained contract |
+| --- | --- |
+| Fixture asteroid phenomena | Seed unmanaged fixtures once through `ensureAsteroidField`; keep managed regional seeding and make the seeding helper private. |
+| Complete snapshot fields | Require the four always-emitted world fields in types and decoder; keep partial internal rounding for immutable cached spider data. |
+| Spider boundaries | Require resource, resource-list, tow-release and nest-created callbacks; isolated scenarios supply explicit boundaries without extra resource scans. |
+| Build identity | Derive the short display label from the validated full release identity; retain full provenance and opaque archive tokens. |
+| Feedback audio | Keep all ten cue parameters unchanged in `AUDIO`; physical sound and haptic acceptance remains a separate human task. |
+| Health response | Own the production builder in `server/health.ts`, derive status once, and expose the player count only as `world.players`; status-page and benchmark consumers use that field. |
+| Unused Svelte files | Keep the existing Knip graph; a runner-owned contract proves an orphan fails, a live Astro import passes, and a comment-only mention fails. |
+| Dead helpers | Remove `isReleaseId` and `RegionalAsteroidField.hasVisited`; keep the validated parser and the visited-sector set used by persistence work-count tests. |
+
+Keep `shared/crewSpawn.ts`: the production join path calls `chooseCrewSpawn`.
+Keep snapshot `isPaused`: the server benchmark reads it. Retiring a wire field
+requires migrating its consumers and a client-first release; no internal pause
+state is being removed.
+
+Keep the owner-less burn normalizer until John's production count and retained
+backup dates satisfy its existing task; [world operations](persistent-world.md)
+records the older-backup restore caveat. Keep `deathCause` on the wire and
+`findShipAsteroidOverlaps` until the explicit W2/W3 merged-and-live gate in
+[task `6hjWGhm4rvX2f5pv`](https://app.todoist.com/app/task/6hjWGhm4rvX2f5pv)
+is met. Co-op rescue also uses the server's internal death cause, which must
+survive any later wire-only retirement.
+
+Other rows of the original unverified sweep remain unverified planning data on
+the existing Task40 and its linked Slop Plan. They are retained for a separately
+selected follow-up, not certified as dead code or silently removed by this change.

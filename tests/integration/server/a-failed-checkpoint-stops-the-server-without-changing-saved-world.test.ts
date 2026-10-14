@@ -88,7 +88,12 @@ test('a mid-checkpoint write failure rolls back the whole world and stops furthe
       signal: AbortSignal.timeout(3000),
     });
     expect(health.status).toBe(503);
-    expect(await health.json()).toHaveProperty('status', 'unhealthy');
+    const healthBody = await health.json();
+    expect(healthBody).toMatchObject({
+      status: 'unhealthy',
+      world: { players: 1, persistence: { failed: true } },
+    });
+    expect(healthBody).not.toHaveProperty('players');
     // The operator status JSON reports the same outage instead of a fixed healthy answer.
     const status = await fetch(`http://127.0.0.1:${port}/status`, {
       headers: { accept: 'application/json' },

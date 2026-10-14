@@ -273,7 +273,7 @@ export class MessageHandler {
         return;
       }
       resumeToken = registered.resumeToken;
-      this.gameEngine.seedAsteroidInteractions();
+      this.gameEngine.ensureAsteroidField();
     }
 
     const snapshotVersion = this.broadcaster.negotiateSnapshot(ws, command.worldRemains === 1);

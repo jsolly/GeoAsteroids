@@ -72,7 +72,9 @@ test('a stripped field does not refill across the last departure and an immediat
 
     engine.addPlayer('pilot', 'Pilot', new RecordingSocket());
     expect(engine.isGamePaused()).toBe(false);
-    expect(engine.getAllAsteroids()).toEqual(initial);
+    const joinedField = engine.getAllAsteroids();
+    expect(joinedField.map((rock) => rock.id)).toEqual(initial.map((rock) => rock.id));
+    expect(joinedField.some((rock) => rock.phenomenon?.kind === 'reflective')).toBe(true);
 
     for (const rock of initial) {
       engine.removeAsteroid(rock.id);
