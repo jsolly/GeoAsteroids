@@ -51,6 +51,18 @@ async function start(path: string) {
   return { server, origin: `http://127.0.0.1:${await server.listening}` };
 }
 
+test('debug route variants remain excluded from indexing without static client serving', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'georoids-report-noindex-'));
+  directories.push(directory);
+  const { origin } = await start(join(directory, 'reports.sqlite'));
+  for (const route of ['/debug', '/debug/', '/debug/?incident=test', '/debug/index.html']) {
+    const response = await fetch(`${origin}${route}`);
+    expect(response.status).toBe(404);
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  }
+  expect((await fetch(`${origin}/health`)).headers.get('X-Robots-Tag')).toBeNull();
+});
+
 test('a disconnected browser saves through HTTP, then retries after server restart without losing its receipt', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'georoids-report-http-'));
   directories.push(directory);

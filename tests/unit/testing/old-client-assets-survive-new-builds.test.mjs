@@ -68,6 +68,19 @@ test('a production build seeds missing old audio bytes and emits exact aliases a
   expect(alias.dest).toBe('/_vercel/immutable/legacy/howler.old.js');
   expect(config.routes).toContainEqual({ src: '^/(debug|wiki)/?$', dest: '/$1/index.html' });
   expect(config.routes[0].headers['Cache-Control']).toBe('no-store');
+  for (const path of ['/debug', '/debug/', '/debug/?incident=test', '/debug/index.html']) {
+    const pathname = new URL(path, 'https://www.georoids.com').pathname;
+    const matched = config.routes.find(
+      (route) => route.src && new RegExp(route.src, 'u').test(pathname)
+    );
+    expect(matched?.headers?.['X-Robots-Tag']).toBe('noindex, nofollow');
+    expect(matched?.continue).toBe(true);
+  }
+  expect(
+    config.routes.some(
+      (route) => route.headers?.['X-Robots-Tag'] && new RegExp(route.src, 'u').test('/wiki/')
+    )
+  ).toBe(false);
   expect(await readFile(join(output, 'static/index.html'), 'utf8')).toContain('Current flight');
 });
 

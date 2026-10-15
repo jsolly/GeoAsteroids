@@ -98,6 +98,11 @@ export async function buildVercelOutput({
       headers: { 'Cache-Control': 'no-store' },
       continue: true,
     },
+    {
+      src: '^/debug(?:/.*)?$',
+      headers: { 'X-Robots-Tag': 'noindex, nofollow' },
+      continue: true,
+    },
   ];
   for (const asset of inventory.assets) {
     const target = `${immutablePrefix}legacy/${asset.path.slice('_astro/'.length)}`;
