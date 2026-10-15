@@ -57,6 +57,9 @@ test('a production build seeds missing old audio bytes and emits exact aliases a
   const migrated = await readFile(join(output, 'static/_vercel/immutable/legacy/howler.old.js'));
   expect(contentHash(migrated)).toBe(asset.sha256);
   const manifest = JSON.parse(await readFile(join(output, 'immutable.json'), 'utf8'));
+  expect(await readFile(join(output, 'static/immutable-assets.json'), 'utf8')).toBe(
+    await readFile(join(output, 'immutable.json'), 'utf8')
+  );
   expect(manifest.hashes['/_vercel/immutable/legacy/howler.old.js']).toBe(asset.sha256);
   const config = JSON.parse(await readFile(join(output, 'config.json'), 'utf8'));
   const alias = config.routes.find((route) => route.dest?.includes('/legacy/'));

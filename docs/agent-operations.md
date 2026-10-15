@@ -67,6 +67,29 @@ Local, CI and Railway builds make no migration network requests. Older releases
 outside this inventory have no retroactive availability guarantee. Mutable public
 media is outside the generated-chunk contract.
 
+To verify native retention across two completed production deployments, capture
+the current canonical asset bytes before the next merge:
+
+```sh
+node scripts/verify-retained-assets.mjs capture /tmp/georoids-assets-before.json
+```
+
+After the newer Vercel Git deployment is READY, verify the original URLs:
+
+```sh
+node scripts/verify-retained-assets.mjs verify /tmp/georoids-assets-before.json /tmp/georoids-retention-proof.json
+```
+
+The checker requires at least one captured URL absent from the newer complete
+`immutable-assets.json` output inventory, then verifies every original URL's size,
+SHA-256 and content type with cache bypassed. Identical inventory reads bracket the
+downloads; a deployment changing during verification fails. Capture likewise rejects
+a changing document/module inventory. Keep the completed host deployment receipts
+with this evidence. This proves initial cross-deployment availability, not the
+passage of 30 days, browser rendering or legacy migration; verify legacy aliases
+against their separate pinned inventory. The public inventory is generated from the
+exact native manifest and served with `Cache-Control: no-store`.
+
 The repo adapts the merged website-update contract from dotagents
 `f861d7c961a7bb1e6229d4565b7c787d91279e1c` in these instructions and code tests;
 there is no runtime/build dependency on that repository. Manual browser evidence
