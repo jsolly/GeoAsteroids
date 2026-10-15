@@ -66,6 +66,13 @@ test('a replacement socket cancels abandoned charge while repeated joins on the 
 });
 
 test('charge releases one bounded stronger projectile using elapsed server frames and enforces cooldown', () => {
+  const partial = scenario();
+  partial.engine.chargeWeapon(partial.pilot.id, 'start');
+  partial.advance(45);
+  const partialShot = partial.engine.chargeWeapon(partial.pilot.id, 'release');
+  expect(partialShot?.energy).toBe(2.5);
+  expect(partialShot?.miningDamage).toBe(62.5);
+
   const { engine, pilot, advance } = scenario();
   expect(engine.chargeWeapon(pilot.id, 'release')).toBeNull();
   engine.chargeWeapon(pilot.id, 'start');

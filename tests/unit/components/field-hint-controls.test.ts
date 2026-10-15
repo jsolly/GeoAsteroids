@@ -3,9 +3,12 @@ import { fromStore, writable } from 'svelte/store';
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { civicLot } from '../../../shared/furnaces';
 import FieldHints from '../../../src/components/game/FieldHints.svelte';
+import { GameStateManager } from '../../../src/core/services/GameStateManager';
+import { InputManager } from '../../../src/core/services/InputManager';
 import { Player } from '../../../src/entities/player/Player';
 import { PlayerManager } from '../../../src/entities/player/PlayerManager';
 import { resetControlSources } from '../../../src/input/controlSources';
+import { getPressedKeysForPlayer } from '../../../src/input/keybindings';
 import {
   disposeTouchControls,
   initializeTouchControls,
@@ -162,7 +165,7 @@ test('a boarding click rechecks the ship footprint and hidden hints retire comma
   expect(openStore).not.toHaveBeenCalled();
 });
 
-test('the announcer precedes the first hint and keyboard activation cannot bubble into gameplay', () => {
+test('the announcer precedes hints and a focused button clears held fire on release', () => {
   const announcer = document.querySelector('[role="status"]');
   expect(announcer?.textContent).toBe('');
   const first = vi.fn();
@@ -175,23 +178,50 @@ test('the announcer precedes the first hint and keyboard activation cannot bubbl
   const keys = vi.fn();
   const scope = new AbortController();
   document.addEventListener('keydown', keys, { signal: scope.signal });
-  document.addEventListener('keyup', keys, { signal: scope.signal });
-  for (const code of ['Space', 'Enter']) {
-    for (const type of ['keydown', 'keyup']) {
-      const event = new KeyboardEvent(type, { code, bubbles: true, cancelable: true });
-      button.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
+  const gameState = GameStateManager.getInstance();
+  const wasRunning = gameState.getIsGameRunning();
+  const manager = InputManager.getInstance();
+  vi.spyOn(Date, 'now').mockReturnValue(1000);
+  gameState.setIsGameRunning(true);
+  try {
+    manager.initializeListeners(canvas);
+    for (const code of ['Space', 'Enter']) {
+      for (const type of ['keydown', 'keyup']) {
+        const event = new KeyboardEvent(type, { code, bubbles: true, cancelable: true });
+        button.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+      }
     }
+    scope.abort();
+    expect(keys).not.toHaveBeenCalled();
+    expect(pilot.ship.lasers).toHaveLength(0);
+    expect(getPressedKeysForPlayer(pilot).has('Space')).toBe(false);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+    expect(pilot.ship.lasers).toHaveLength(1);
+    expect(getPressedKeysForPlayer(pilot).has('Space')).toBe(true);
+    expect(pilot.ship.canShoot).toBe(false);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }));
+    expect.soft(getPressedKeysForPlayer(pilot).has('Space')).toBe(false);
+    expect.soft(pilot.ship.canShoot).toBe(true);
+    button.blur();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+    expect(pilot.ship.lasers).toHaveLength(2);
+
+    setFieldHint('furnace-travel-prompt', true, { action: { label: 'Enter', run: latest } });
+    button.click();
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledOnce();
+    hideFieldHints();
+    flushSync();
+    expect(announcer?.textContent).toBe('');
+  } finally {
+    scope.abort();
+    manager.detachRuntime();
+    gameState.setIsGameRunning(wasRunning);
   }
-  scope.abort();
-  expect(keys).not.toHaveBeenCalled();
-  setFieldHint('furnace-travel-prompt', true, { action: { label: 'Enter', run: latest } });
-  button.click();
-  expect(first).not.toHaveBeenCalled();
-  expect(latest).toHaveBeenCalledOnce();
-  hideFieldHints();
-  flushSync();
-  expect(announcer?.textContent).toBe('');
 });
 
 test('a dark furnace explains Hauler and Scout requirements and removes the hint when building becomes affordable', () => {

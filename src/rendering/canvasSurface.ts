@@ -1,7 +1,6 @@
 import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import type { Position } from '../../shared-types';
 import { clientPerformance } from '../diagnostics/performanceMetrics';
-import { Point } from '../physics/Point';
 import { shouldUseTouchControls } from '../ui/viewportChrome';
 import { logger } from '../utils/Logger';
 import { paintOpaqueBackground } from './canvasBackground';
@@ -70,7 +69,6 @@ class CanvasManager {
   private zoomUpdatedAt: number | null = null;
   private readonly screenViewport = { width: 1, height: 1 };
   private worldLayersZoomed = false;
-  private readonly screenPos = { x: 0, y: 0 };
   private gpuRenderer: GpuRearRenderer | null = null;
   private gpuFrameActive = false;
   private inputMediaQueries: MediaQueryList[] = [];
@@ -476,9 +474,8 @@ class CanvasManager {
     return projectWorldToScreenInto(out, worldPos, shipPos, this.viewport, scale);
   }
 
-  worldToScreen(worldPos: Position, shipPos: Position): Point {
-    const pos = this.worldToScreenInto(this.screenPos, worldPos, shipPos);
-    return new Point(pos.x, pos.y);
+  worldToScreen(worldPos: Position, shipPos: Position): Readonly<Position> {
+    return this.worldToScreenInto({ x: 0, y: 0 }, worldPos, shipPos);
   }
 }
 

@@ -13,13 +13,18 @@ test('only wrecks in the forward cone cast clipped shadows', () => {
   }
   const fill = vi.spyOn(ctx, 'fill');
   const clip = vi.spyOn(ctx, 'clip');
+  const moves = vi.spyOn(ctx, 'moveTo');
   drawHeadlight(ctx, { x: 0, y: 0 }, 0, 1, [
     { x: 100, y: 0 },
-    { x: -100, y: 0 },
+    { x: -200, y: 0 },
     { x: 100, y: 400 },
   ]);
   expect(clip).toHaveBeenCalledOnce();
   expect(fill).toHaveBeenCalledOnce();
+  expect(moves.mock.calls).toEqual([
+    [0, 0],
+    [100, -20],
+  ]);
   vi.restoreAllMocks();
 });
 

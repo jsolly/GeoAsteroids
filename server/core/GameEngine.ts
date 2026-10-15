@@ -2176,9 +2176,7 @@ export class GameEngine {
           destroyedAsteroids.add(hit.asteroidId);
           result.destroyedAsteroidId = hit.asteroidId;
           result.newAsteroids = destruction.newAsteroids;
-          if (destruction.destroyed) {
-            result.origin = destruction.destroyed.position;
-          }
+          result.origin = destruction.destroyed.position;
         }
       }
       const remaining = this.asteroidManager.getAsteroid(hit.asteroidId);
@@ -2555,7 +2553,7 @@ export class GameEngine {
         ? this.asteroidManager.destroyFromCollision(asteroidId)
         : this.asteroidManager.registerLaserHit(asteroidId, playerId, miningDamage);
 
-    if (result.outcome === 'destroyed' && result.destroyed) {
+    if (result.outcome === 'destroyed') {
       this.releaseTowsAttachedTo(asteroidId);
       if (cause === 'laser' && result.destroyed.contourRider) {
         this.lootManager.spawnTap(
@@ -2605,14 +2603,14 @@ export class GameEngine {
       return { ...empty, outcome: result.outcome };
     }
 
-    const origin = result.destroyed?.position ?? asteroid.position;
+    const origin = result.outcome === 'destroyed' ? result.destroyed.position : asteroid.position;
 
     return {
       applied: true,
       outcome: result.outcome,
       asteroidId,
       playerId,
-      points: result.destroyed ? pointsForRoidSize(result.destroyed.size) : 0,
+      points: result.outcome === 'destroyed' ? pointsForRoidSize(result.destroyed.size) : 0,
       newAsteroids: result.newAsteroids,
       origin,
     };
@@ -4011,6 +4009,18 @@ export class GameEngine {
     return ids;
   }
 
+  private deliveryFurnaceAt(position: Position) {
+    return (
+      this.furnaces.intakeAt(position) ??
+      this.hives
+        .ruinsNear(position)
+        .find(
+          (site) =>
+            Math.hypot(position.x - site.position.x, position.y - site.position.y) <= site.radius
+        )
+    );
+  }
+
   /** Furnace intake accepts towed or self-guided cargo once; loose rocks remain. */
   public processFurnaceDeliveries(): void {
     const deliveries: FurnaceDelivery[] = [];
@@ -4030,14 +4040,7 @@ export class GameEngine {
       if (!rock || rock.health <= 0) {
         continue;
       }
-      const furnace = [
-        ...this.furnaces.nearby(rock.position, FURNACE_BUILD.RADIUS),
-        ...this.hives.ruinsNear(rock.position),
-      ].find(
-        (site) =>
-          Math.hypot(rock.position.x - site.position.x, rock.position.y - site.position.y) <=
-          site.radius
-      );
+      const furnace = this.deliveryFurnaceAt(rock.position);
       if (
         !furnace ||
         Math.hypot(hauler.position.x - furnace.position.x, hauler.position.y - furnace.position.y) >
@@ -4053,14 +4056,7 @@ export class GameEngine {
       if (rock.health <= 0 || rock.boost?.phase !== 'burning') {
         continue;
       }
-      const furnace = [
-        ...this.furnaces.nearby(rock.position, FURNACE_BUILD.RADIUS),
-        ...this.hives.ruinsNear(rock.position),
-      ].find(
-        (site) =>
-          Math.hypot(rock.position.x - site.position.x, rock.position.y - site.position.y) <=
-          site.radius
-      );
+      const furnace = this.deliveryFurnaceAt(rock.position);
       if (furnace && this.canSupply(rock, furnace.id)) {
         deliveries.push(this.deliverAsteroid(rock, furnace, boostOwnerIds(rock.boost)));
       }

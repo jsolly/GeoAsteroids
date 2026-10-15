@@ -22,7 +22,6 @@ export function createPlayer(config: {
   player.ship.position = resolveSpawnPosition(config.position);
   if (config.color != null && config.color !== '') {
     player.color = config.color;
-    player.ship.color = config.color;
   }
   return player;
 }

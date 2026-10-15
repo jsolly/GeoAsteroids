@@ -5,7 +5,6 @@ import { PALETTE, VISUAL } from '../../../src/constants';
 import { LootField } from '../../../src/entities/loot/LootField';
 import { drawLootRelative, lootScreenRadius } from '../../../src/entities/loot/lootRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
-import { Point } from '../../../src/physics/Point';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { configureRenderQuality } from '../../../src/rendering/renderQuality';
 
@@ -88,9 +87,10 @@ test('cream loot uses a restrained stroke and a stronger void separation layer',
 test('dense metal shards get a second readable inner outline', () => {
   const { ctx, artwork } = traceContext();
   vi.spyOn(canvasManager, 'getContext').mockReturnValue(ctx);
-  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation(
-    (position) => new Point(position.x, position.y)
-  );
+  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((position) => ({
+    x: position.x,
+    y: position.y,
+  }));
 
   drawLootRelative(new Ship(), [
     {
@@ -125,9 +125,10 @@ test('dense metal shards get a second readable inner outline', () => {
 test('silk snapshots draw three looped filaments instead of mineral diamonds', () => {
   const { ctx, artwork } = traceContext();
   vi.spyOn(canvasManager, 'getContext').mockReturnValue(ctx);
-  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation(
-    (position) => new Point(position.x, position.y)
-  );
+  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((position) => ({
+    x: position.x,
+    y: position.y,
+  }));
   const field = LootField.getInstance();
   field.applySnapshot([
     { id: 'silk-1', position: { x: 30, y: 30 }, mass: 0, radius: 20, kind: 'silk' },
@@ -142,9 +143,10 @@ test('silk snapshots draw three looped filaments instead of mineral diamonds', (
 test('ordinary loot reuses artwork, keeps edge halos and rebuilds for display quality', () => {
   const { ctx, artwork } = traceContext();
   vi.spyOn(canvasManager, 'getContext').mockReturnValue(ctx);
-  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation(
-    (position) => new Point(position.x, position.y)
-  );
+  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((position) => ({
+    x: position.x,
+    y: position.y,
+  }));
   const images = vi.spyOn(ctx, 'drawImage');
   const ship = new Ship();
   const drops: LootData[] = [
@@ -192,9 +194,10 @@ test('rare equipment retains its identity and floats with a large labeled silhou
   ctx.moveTo = vi.fn();
   ctx.fillText = vi.fn();
   vi.spyOn(canvasManager, 'getContext').mockReturnValue(ctx);
-  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation(
-    (position) => new Point(position.x, position.y)
-  );
+  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((position) => ({
+    x: position.x,
+    y: position.y,
+  }));
   vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: false } as MediaQueryList);
   vi.spyOn(performance, 'now').mockReturnValue(0);
   const field = LootField.getInstance();

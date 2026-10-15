@@ -309,7 +309,7 @@ test('a rock engulfing the entire airborne segment kills the spider and persists
 
 test('a wounded hunter pursues across living rocks and repeatedly returns without spawning guards or growing tombstones', () => {
   const manager = new BeltCrawlerManager();
-  const source = { ...host(), size: 30, beltCrawlerHealth: [50] };
+  const source = { ...host(), size: 30, beltCrawlerHealth: [12] };
   const middle = { ...host(), id: 'middle', size: 30, position: { x: 240, y: 0 } };
   const last = { ...host(), id: 'last', size: 30, position: { x: 480, y: 0 } };
   const rocks = [source, middle, last];
@@ -323,7 +323,7 @@ test('a wounded hunter pursues across living rocks and repeatedly returns withou
       const bodies = manager.snapshot();
       expect(bodies).toHaveLength(1);
       expect(bodies[0]?.id).toBe(`belt-crawler:${source.id}:0`);
-      expect(bodies[0]?.health).toBe(BELT_CRAWLER.MAX_HEALTH);
+      expect(bodies[0]?.health).toBe(12);
       homes.add(bodies[0]?.crawler?.hostId ?? 'missing');
     }
     expect(manager.snapshot()[0]?.crawler?.hostId).toBe(cycle % 2 === 0 ? last.id : source.id);
@@ -333,12 +333,12 @@ test('a wounded hunter pursues across living rocks and repeatedly returns withou
   expect(rocks.every((rock) => (rock.beltCrawlerIds?.length ?? 0) <= 1)).toBe(true);
   expect(
     rocks.flatMap((rock) => rock.beltCrawlerHealth ?? []).filter((health) => health > 0)
-  ).toEqual([BELT_CRAWLER.MAX_HEALTH]);
+  ).toEqual([12]);
   manager.clear();
   manager.advance({ ...field(structuredClone(rocks)), players: [], nowFrame: frame + 1 });
   expect(manager.snapshot()).toHaveLength(1);
   expect(manager.snapshot()[0]).toMatchObject({
-    health: BELT_CRAWLER.MAX_HEALTH,
+    health: 12,
     crawler: { hostId: source.id },
   });
 });

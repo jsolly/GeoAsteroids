@@ -223,7 +223,12 @@ function ensureHowls(audio: AudioLibrary): void {
         if (howls[kind] !== howl) {
           return;
         }
-        logger.warn('SOUND', 'Music bed failed to load', { bed: kind, error });
+        logger.error(
+          'SOUND',
+          'Music bed failed to load',
+          error instanceof Error ? error : new Error(String(error)),
+          { bed: kind }
+        );
         handleBedLoadError(kind);
       },
       onplayerror: (id, error) => {

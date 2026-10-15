@@ -267,19 +267,31 @@ test('missing beds keep the Music checkbox without loading or logging', async ()
   expect(localStorage.getItem('musicOn')).toBe('true');
 });
 
-test('a failed bed load stays silent and does not rebuild Howls', async () => {
+test('a failed configured bed reports its cause once without rebuilding Howls', async () => {
   const errors = vi.spyOn(logger, 'error');
   setMusic(true);
   await settle();
   expect(FakeHowl.instances).toHaveLength(3);
-  FakeHowl.instances[0]?.options.onloaderror?.(0, 'decode');
+  const menu = FakeHowl.instances[0];
+  if (!menu) {
+    throw new Error('Expected the configured menu bed');
+  }
+  menu.options.onloaderror?.(0, 'decode');
+  expect(menu.playing()).toBe(false);
   document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
   setPlayView(true);
   setMusic(true);
   await settle();
   expect(FakeHowl.instances).toHaveLength(3);
-  expect(FakeHowl.instances[0]?.unload).toHaveBeenCalled();
-  expect(errors.mock.calls.some((call) => call[0] === 'SOUND')).toBe(false);
+  expect(menu.unload).toHaveBeenCalledOnce();
+  expect(menu.playing()).toBe(false);
+  expect(howlFor('in-game-bed')?.playing()).toBe(true);
+  expect(errors).toHaveBeenCalledExactlyOnceWith(
+    'SOUND',
+    'Music bed failed to load',
+    new Error('decode'),
+    { bed: 'menu' }
+  );
 });
 
 test('a title gesture loops the Ogg menu bed under Sound Effects off', async () => {
@@ -395,60 +407,103 @@ test('an interrupted phone session restarts the bed after a deferred device star
   expect(errors.mock.calls.some((call) => call[0] === 'SOUND')).toBe(false);
 });
 
-test('recovering stalled audio preserves the danger bed and muted effects without replaying cues', async () => {
-  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
-  const { readAudioDiagnostics } = await import('../../../src/audio/audioRuntime');
-  const { readMusicDiagnostics } = await import('../../../src/audio/musicBeds');
-  const cue = new Sound('sounds/laser.m4a', 2);
-  setSound(true);
-  setMusic(true);
-  await enterPlay();
-  pushMusicThreat();
-  await settle();
-  cue.play();
-  setSound(false);
-  const previousBeds = FakeHowl.instances.filter((howl) => howl.options.loop);
-  const previousContext = FakeContext.instances[0];
-  const registrations = vi.mocked(document.addEventListener).mock.calls.length;
-  expect(readMusicDiagnostics().currentBed).toBe('danger');
-  await vi.advanceTimersByTimeAsync(2000);
-  expect(readAudioDiagnostics().clockProgress).toBe('stalled');
-  trustedPointerDown();
-  await settle();
-  expect(previousContext?.close).toHaveBeenCalledOnce();
-  expect(previousBeds.every((bed) => bed.unload.mock.calls.length === 1)).toBe(true);
-  expect(vi.mocked(document.addEventListener).mock.calls).toHaveLength(registrations);
-  expect(readAudioDiagnostics()).toMatchObject({
-    soundEnabled: false,
-    musicEnabled: true,
-    contextState: 'running',
-  });
-  expect(readMusicDiagnostics()).toMatchObject({
-    currentBed: 'danger',
-    beds: [
-      { bed: 'menu', playing: false },
-      { bed: 'inGame', playing: false },
-      { bed: 'danger', playing: true },
-      { bed: 'route', playing: false },
-    ],
-  });
-  // Old asynchronous load failures must not unload the replacement bed.
-  for (const bed of previousBeds) {
-    bed.options.onloaderror?.(0, 'Late failure from discarded audio');
-    bed.options.onplayerror?.(0, 'Late failure from discarded audio');
+test.each(['resolves', 'rejects'])(
+  'recovering stalled audio preserves the danger bed and muted effects without replaying cues when close %s',
+  async (closeOutcome) => {
+    const errors = vi.spyOn(logger, 'error');
+    const warnings = vi.spyOn(logger, 'warn');
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'performance'] });
+    const { readAudioDiagnostics } = await import('../../../src/audio/audioRuntime');
+    const { readMusicDiagnostics } = await import('../../../src/audio/musicBeds');
+    const cue = new Sound('sounds/laser.m4a', 2);
+    setSound(true);
+    setMusic(true);
+    await enterPlay();
+    pushMusicThreat();
+    await settle();
+    cue.play();
+    setSound(false);
+    const previousBeds = FakeHowl.instances.filter((howl) => howl.options.loop);
+    const previousContext = FakeContext.instances[0];
+    if (!previousContext) {
+      throw new Error('Expected the context that owns the stalled audio');
+    }
+    const closeAttempt = Promise.withResolvers<void>();
+    const closeFailure = new Error('Audio device teardown failed');
+    previousContext.close.mockImplementationOnce(() => closeAttempt.promise);
+    const removeContextListener = vi.spyOn(previousContext, 'removeEventListener');
+    const registrations = vi.mocked(document.addEventListener).mock.calls.length;
+    expect(readMusicDiagnostics().currentBed).toBe('danger');
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(readAudioDiagnostics().clockProgress).toBe('stalled');
+    trustedPointerDown();
+    expect(previousContext.close).toHaveBeenCalledOnce();
+    expect(FakeContext.instances).toHaveLength(2);
+    expect(FakeContext.instances[1]?.resume).toHaveBeenCalledOnce();
+    expect(errors).not.toHaveBeenCalled();
+    await settle();
+    expect(previousBeds.every((bed) => bed.unload.mock.calls.length === 1)).toBe(true);
+    expect(previousBeds.every((bed) => !bed.playing())).toBe(true);
+    expect(previousBeds.every((bed) => bed.off.mock.calls.length === 1)).toBe(true);
+    expect(removeContextListener).toHaveBeenCalledExactlyOnceWith(
+      'statechange',
+      expect.any(Function)
+    );
+    expect(vi.mocked(document.addEventListener).mock.calls).toHaveLength(registrations);
+    expect(readAudioDiagnostics()).toMatchObject({
+      soundEnabled: false,
+      musicEnabled: true,
+      contextState: 'running',
+    });
+    expect(readMusicDiagnostics()).toMatchObject({
+      currentBed: 'danger',
+      beds: [
+        { bed: 'menu', playing: false },
+        { bed: 'inGame', playing: false },
+        { bed: 'danger', playing: true },
+        { bed: 'route', playing: false },
+      ],
+    });
+    if (closeOutcome === 'rejects') {
+      closeAttempt.reject(closeFailure);
+    } else {
+      previousContext.changeState('closed');
+      closeAttempt.resolve();
+    }
+    await settle();
+    if (closeOutcome === 'rejects') {
+      expect(errors).toHaveBeenCalledExactlyOnceWith(
+        'SOUND',
+        'Previous audio context failed to close',
+        closeFailure
+      );
+    } else {
+      expect(errors).not.toHaveBeenCalled();
+    }
+    const reportedErrors = errors.mock.calls.length;
+    const reportedWarnings = warnings.mock.calls.length;
+    // Old asynchronous load failures must not unload the replacement bed.
+    for (const bed of previousBeds) {
+      bed.options.onloaderror?.(0, 'Late failure from discarded audio');
+      bed.options.onplayerror?.(0, 'Late failure from discarded audio');
+    }
+    expect(readMusicDiagnostics().currentBed).toBe('danger');
+    expect(errors).toHaveBeenCalledTimes(reportedErrors);
+    expect(warnings).toHaveBeenCalledTimes(reportedWarnings);
+    expect(FakeHowl.instances.filter((howl) => howl.loaded && !howl.options.loop)).toHaveLength(0);
+    setSound(true);
+    await settle();
+    const freshCue = FakeHowl.instances.find((howl) => howl.loaded && !howl.options.loop);
+    expect(freshCue?.play).not.toHaveBeenCalled();
+    cue.play();
+    expect(freshCue?.play).toHaveBeenCalledOnce();
+    clearMusicThreat();
+    await settle();
+    expect(readMusicDiagnostics().currentBed).toBe('inGame');
+    expect(previousContext.close).toHaveBeenCalledOnce();
+    expect(errors).toHaveBeenCalledTimes(reportedErrors);
   }
-  expect(readMusicDiagnostics().currentBed).toBe('danger');
-  expect(FakeHowl.instances.filter((howl) => howl.loaded && !howl.options.loop)).toHaveLength(0);
-  setSound(true);
-  await settle();
-  const freshCue = FakeHowl.instances.find((howl) => howl.loaded && !howl.options.loop);
-  expect(freshCue?.play).not.toHaveBeenCalled();
-  cue.play();
-  expect(freshCue?.play).toHaveBeenCalledOnce();
-  clearMusicThreat();
-  await settle();
-  expect(readMusicDiagnostics().currentBed).toBe('inGame');
-});
+);
 
 test('an interrupted hidden session stays silent when the OS auto-resumes', async () => {
   setMusic(true);
@@ -607,11 +662,16 @@ test('a missing danger bed intensifies Drift until the threat clears', async () 
 });
 
 test('a failed danger load falls back to intensified Drift', async () => {
+  const errors = vi.spyOn(logger, 'error');
   setMusic(true);
   await settle();
   await enterPlay();
   const danger = howlFor('danger-bed');
-  danger?.options.onloaderror?.(0, 'decode');
+  if (!danger) {
+    throw new Error('Expected the configured danger bed');
+  }
+  const failure = new Error('Danger decode failed', { cause: new Error('Invalid audio frame') });
+  danger.options.onloaderror?.(0, failure);
   await settle();
   pushMusicThreat();
   await settle();
@@ -619,6 +679,18 @@ test('a failed danger load falls back to intensified Drift', async () => {
   const playfield = howlFor('in-game-bed');
   expect(playfield?.playing()).toBe(true);
   expect(playfield?.playbackRate).toBe(AUDIO.DANGER_FALLBACK_RATE);
+  clearMusicThreat();
+  document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  pushMusicThreat();
+  await settle();
+  expect(FakeHowl.instances).toHaveLength(3);
+  expect(danger.unload).toHaveBeenCalledOnce();
+  expect(danger.playing()).toBe(false);
+  expect(playfield?.playing()).toBe(true);
+  expect(playfield?.playbackRate).toBe(AUDIO.DANGER_FALLBACK_RATE);
+  expect(errors).toHaveBeenCalledExactlyOnceWith('SOUND', 'Music bed failed to load', failure, {
+    bed: 'danger',
+  });
 });
 
 test('a route crossfades a real remix at the current playhead, resumes in sync, and yields to threats', async () => {
@@ -663,6 +735,7 @@ test('a route crossfades a real remix at the current playhead, resumes in sync, 
 });
 
 test('route decode failure preserves the quiet bed and does not retry a broken remix', async () => {
+  const errors = vi.spyOn(logger, 'error');
   setMusic(true);
   await enterPlay();
   const { updateRouteMusic, resetRouteMusic } = await import('../../../src/audio/routeMusic');
@@ -677,8 +750,27 @@ test('route decode failure preserves the quiet bed and does not retry a broken r
   updateRouteMusic(ship, 900);
   await settle();
   const remix = FakeHowl.instances.find((row) => row.options.src?.includes('/music/route-bed.ogg'));
-  remix?.options.onloaderror?.(0, 'decode');
+  if (!remix) {
+    throw new Error('Expected the configured route remix');
+  }
+  const howls = FakeHowl.instances.length;
+  const plays = remix.play.mock.calls.length;
+  remix.options.onloaderror?.(0, 'decode');
   await settle();
+  expect(remix.playing()).toBe(false);
   expect(FakeHowl.instances[1]?.playing()).toBe(true);
   resetRouteMusic();
+  updateRouteMusic(ship, 1000);
+  updateRouteMusic(ship, 1900);
+  await settle();
+  expect(FakeHowl.instances).toHaveLength(howls);
+  expect(remix.play).toHaveBeenCalledTimes(plays);
+  expect(remix.unload).toHaveBeenCalledOnce();
+  expect(FakeHowl.instances[1]?.playing()).toBe(true);
+  expect(errors).toHaveBeenCalledExactlyOnceWith(
+    'SOUND',
+    'Music bed failed to load',
+    new Error('decode'),
+    { bed: 'route' }
+  );
 });

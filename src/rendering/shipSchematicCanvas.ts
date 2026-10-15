@@ -48,8 +48,14 @@ function resizeCanvas(canvas: HTMLCanvasElement, fallbackW: number, fallbackH: n
   const width = Math.max(1, Math.round(rect.width || fallbackW));
   const height = Math.max(1, Math.round(rect.height || fallbackH));
   const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
+  const backingWidth = Math.round(width * dpr);
+  const backingHeight = Math.round(height * dpr);
+  if (canvas.width !== backingWidth) {
+    canvas.width = backingWidth;
+  }
+  if (canvas.height !== backingHeight) {
+    canvas.height = backingHeight;
+  }
 }
 
 function strokePolyline(

@@ -407,5 +407,5 @@ test('resync diagnostics count successful sends only', async () => {
   second.receive('snapshot', { kind: 'delta', sequence: 2, baseline: 1 });
   expect(count).not.toHaveBeenCalledWith('resyncs');
   expect(manager.isConnected).toBe(false);
-  expect(first.close).toHaveBeenCalled();
+  expect(second.close).toHaveBeenCalled();
 });

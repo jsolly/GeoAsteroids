@@ -160,9 +160,11 @@ test.each([0.1, 1])(
 test('a buffered curved rail route retains the server-stall travel credit', () => {
   const { actor, state, cruise, pose, now } = railPilot();
   expect(pose(0).ok).toBe(true);
+  const frames = 96;
+  const blockedMs = (frames * 1000) / 60;
   let position = { ...actor.position };
   let velocity = { x: 0, y: 0 };
-  for (let frame = 0; frame < 60; frame++) {
+  for (let frame = 0; frame < frames; frame++) {
     const next = contourLockVelocity(position, state, cruise);
     if (!next) {
       throw new Error('Missing fixture rail');
@@ -170,9 +172,12 @@ test('a buffered curved rail route retains the server-stall travel credit', () =
     velocity = next;
     position = { x: position.x + velocity.x, y: position.y + velocity.y };
   }
-  world.engine.playerMotion.recordBlockedSpan(now, now + 1000);
-  const outcome = pose(1000, state, position, velocity);
+  expect(contourLockDistance(position, state)).toBeLessThan(CONTOUR_LOCK.railTolerance);
+  world.engine.playerMotion.recordBlockedSpan(now, now + blockedMs);
+  const outcome = pose(blockedMs, state, position, velocity);
   expect(outcome.ok, JSON.stringify(outcome)).toBe(true);
+  expect(outcome).toEqual({ ok: true, blockedMs });
+  expect(actor.position).toEqual(position);
 });
 
 test('a fabricated level between visible contours is refused', () => {

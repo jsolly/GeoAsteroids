@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
-import { mkdir, mkdtemp, open, readdir, readFile, readlink, rm, symlink } from 'node:fs/promises';
+import {
+  type FileHandle,
+  mkdir,
+  mkdtemp,
+  open,
+  readdir,
+  readFile,
+  readlink,
+  rm,
+  symlink,
+} from 'node:fs/promises';
 import { cpus, hostname, platform, release, totalmem } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -99,23 +109,27 @@ export function commands(directory: string, signal: AbortSignal) {
   ) => {
     signal.throwIfAborted();
     const prefix = join(directory, `command-${++sequence}`);
-    const stdout = await open(`${prefix}.stdout.log`, 'wx');
-    const stderr = await open(`${prefix}.stderr.log`, 'wx');
     const failures: unknown[] = [];
-    const child = spawn(program, args, {
-      cwd,
-      detached: true,
-      stdio: ['ignore', stdout.fd, stderr.fd],
-      env: {
-        ...process.env,
-        CI: '1',
-        NODE_ENV: 'production',
-        SERVER_LOG_LEVEL: 'error',
-        npm_config_audit: 'false',
-        npm_config_fund: 'false',
-      },
-    });
+    const logs: FileHandle[] = [];
+    let child: ChildProcess | undefined;
     try {
+      const stdout = await open(`${prefix}.stdout.log`, 'wx');
+      logs.push(stdout);
+      const stderr = await open(`${prefix}.stderr.log`, 'wx');
+      logs.push(stderr);
+      child = spawn(program, args, {
+        cwd,
+        detached: true,
+        stdio: ['ignore', stdout.fd, stderr.fd],
+        env: {
+          ...process.env,
+          CI: '1',
+          NODE_ENV: 'production',
+          SERVER_LOG_LEVEL: 'error',
+          npm_config_audit: 'false',
+          npm_config_fund: 'false',
+        },
+      });
       const [code, exitSignal] = await once(child, 'exit', {
         signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]),
       });
@@ -128,7 +142,7 @@ export function commands(directory: string, signal: AbortSignal) {
       failures.push(error);
     } finally {
       try {
-        if (child.pid && signalGroup(child.pid, 'SIGTERM')) {
+        if (child?.pid && signalGroup(child.pid, 'SIGTERM')) {
           const gracefulDeadline = Date.now() + 2_000;
           while (signalGroup(child.pid, 0) && Date.now() < gracefulDeadline) {
             await delay(20);
@@ -150,22 +164,30 @@ export function commands(directory: string, signal: AbortSignal) {
       } catch (error) {
         failures.push(error);
       }
-      await stdout.close();
-      await stderr.close();
+      for (const log of logs) {
+        try {
+          await log.close();
+        } catch (error) {
+          failures.push(error);
+        }
+      }
       await writeJson(`${prefix}.json`, {
         program,
         args,
         cwd,
         timeoutMs,
-        exitCode: child.exitCode,
-        signal: child.signalCode,
+        exitCode: child?.exitCode ?? null,
+        signal: child?.signalCode ?? null,
         errors: failures.map((error) => errorRecord(error)),
       });
     }
     if (failures.length) {
       throw new AggregateError(failures, `Command failed; logs: ${prefix}`);
     }
-    return { code: child.exitCode, stdout: await readFile(`${prefix}.stdout.log`, 'utf8') };
+    return {
+      code: child?.exitCode ?? null,
+      stdout: await readFile(`${prefix}.stdout.log`, 'utf8'),
+    };
   };
 }
 

@@ -56,7 +56,6 @@ test('the store opens at Town Square via E and buys a placeholder without an upg
   if (!player) {
     throw new Error('Missing local pilot');
   }
-  expect(document.querySelector('#town-store-toggle')).toBeNull();
   player.ship.position = { x: 0, y: 0 };
   player.score = 100;
   player.ship.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.hauler;

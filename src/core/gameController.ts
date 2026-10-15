@@ -391,6 +391,7 @@ export class GameController {
       () => {
         // Only stop the game when reconnection has permanently failed
         this.gameStateManager.setIsGameRunning(false);
+        this.stopPoseUpdates();
         setPlayView(false);
       },
       { signal }

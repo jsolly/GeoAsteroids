@@ -25,7 +25,7 @@ function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), 'wiki-editor-'));
   fixtures.push(root);
   cpSync('content', join(root, 'content'), { recursive: true });
-  cpSync('public/wiki', join(root, 'public/wiki'), { recursive: true });
+  cpSync('public/wiki/uploads', join(root, 'public/wiki/uploads'), { recursive: true });
   return root;
 }
 function addArticle(root: string, body: string): void {

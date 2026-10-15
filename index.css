@@ -163,15 +163,6 @@
     text-transform: uppercase;
   }
 
-  .universe-map-header h2 {
-    margin: 0;
-    color: var(--foreground);
-    font-family: system-ui, sans-serif;
-    font-size: clamp(1.25rem, 2.2vw, 1.6rem);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
   .universe-map-subtitle {
     margin: 0.3rem 0 0;
     color: var(--muted-foreground);

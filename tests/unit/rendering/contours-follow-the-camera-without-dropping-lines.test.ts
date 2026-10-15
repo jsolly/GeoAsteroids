@@ -162,7 +162,6 @@ test('capture and spider queries leave the stationary camera world paths reusabl
   vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(canvas);
   vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue(viewport);
   vi.spyOn(canvasManager, 'getPlayfieldScale').mockReturnValue(1);
-  const beginPath = vi.spyOn(ctx, 'beginPath');
   const strokes: Array<{
     path: TestPath2D;
     lineWidth: number;
@@ -208,7 +207,6 @@ test('capture and spider queries leave the stationary camera world paths reusabl
     expect(ctx.getTransform()).toMatchObject({ a: 3, b: 0, c: 0, d: 3, e: 0, f: 0 });
 
     const firstPaths = strokes.splice(0).map(({ path }) => path);
-    beginPath.mockClear();
     findContourCapture(firstCamera, 0);
     spiderFootContacts({ position: firstCamera, angle: 0 }, levels, 0);
     drawIsoContours({ x: 33, y: 32 });
@@ -218,7 +216,6 @@ test('capture and spider queries leave the stationary camera world paths reusabl
     }
 
     strokes.length = 0;
-    beginPath.mockClear();
     drawIsoContours({ x: 1e9, y: 1e9 });
     expect(strokes).toEqual([]);
 

@@ -1,9 +1,17 @@
-import { flushSync, mount, unmount } from 'svelte';
+import { flushSync, mount, tick, unmount } from 'svelte';
 import { fromStore, writable } from 'svelte/store';
 import { afterEach, expect, test, vi } from 'vitest';
 import DebugPanel from '../../../src/components/game/DebugPanel.svelte';
 import { LOCAL_STORAGE_KEYS } from '../../../src/constants/user-preferences';
+import { GameStateManager } from '../../../src/core/services/GameStateManager';
+import { InputManager } from '../../../src/core/services/InputManager';
+import { Player } from '../../../src/entities/player/Player';
+import { PlayerManager } from '../../../src/entities/player/PlayerManager';
+import { controlSources } from '../../../src/input/controlSources';
+import { getPressedKeysForPlayer } from '../../../src/input/keybindings';
+import { ConnectionManager } from '../../../src/network/services/ConnectionManager';
 import { createDebugPresentation } from '../../../src/runtime/debugPresentation';
+import { getOpenGameOverlay, openGameOverlay } from '../../../src/runtime/overlayState';
 import { getClientLogContext } from '../../../src/utils/clientLogContext';
 import { logger } from '../../../src/utils/Logger';
 import { LogLevel } from '../../../src/utils/logLevel';
@@ -148,12 +156,12 @@ test.each(['resolve', 'reject'] as const)(
     const timers = vi.getTimerCount();
     if (outcome === 'resolve') {
       accept();
+      await pending;
     } else {
       reject(new Error('Clipboard access denied'));
+      await expect(pending).rejects.toThrow('Clipboard access denied');
     }
-    for (let turn = 0; turn < 8; turn++) {
-      await Promise.resolve();
-    }
+    await tick();
     flushSync();
     expect(document.activeElement).toBe(input);
     expect(vi.getTimerCount()).toBe(timers);
@@ -175,4 +183,76 @@ test('the in-flight diagnostics toggle hides and restores the actual metric pane
   flushSync();
   expect(hud?.hidden).toBe(false);
   expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+});
+
+test('Copy diagnostics releases held fire and isolates cold presses', () => {
+  const network = ConnectionManager.getInstance();
+  const players = PlayerManager.getInstance({
+    networkPort: network,
+    combatNetwork: network.combatNetwork,
+  });
+  const pilot = new Player({ id: 'debug-pilot', name: 'Pilot', type: 'local' });
+  const local = vi.spyOn(players, 'getLocalPlayer').mockReturnValue(pilot);
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  const gameState = GameStateManager.getInstance();
+  const wasRunning = gameState.getIsGameRunning();
+  const previousOverlay = getOpenGameOverlay();
+  const previousSources = { ...controlSources };
+  const manager = InputManager.getInstance();
+  const canvas = document.createElement('canvas');
+  document.body.append(canvas);
+  const scope = new AbortController();
+  const keys = vi.fn();
+  try {
+    start('/debug', true);
+    const button = target?.querySelector<HTMLButtonElement>('#copy-debug-diagnostics');
+    if (!button) {
+      throw new Error('Missing in-play Copy diagnostics button');
+    }
+    expect(target?.querySelector<HTMLFieldSetElement>('#debug-hud')?.hidden).toBe(false);
+    expect(button.disabled).toBe(false);
+    expect(getOpenGameOverlay()).toBeNull();
+    gameState.setIsGameRunning(true);
+    manager.initializeListeners(canvas);
+    document.addEventListener('keydown', keys, { signal: scope.signal });
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    for (const code of ['Space', 'Enter']) {
+      const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true });
+      button.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(keys).not.toHaveBeenCalled();
+    expect(pilot.ship.lasers).toHaveLength(0);
+    expect(getPressedKeysForPlayer(pilot).has('Space')).toBe(false);
+    scope.abort();
+    button.blur();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+    expect(pilot.ship.lasers).toHaveLength(1);
+    expect(getPressedKeysForPlayer(pilot).has('Space')).toBe(true);
+    expect(pilot.ship.canShoot).toBe(false);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }));
+    expect.soft(getPressedKeysForPlayer(pilot).has('Space')).toBe(false);
+    expect.soft(pilot.ship.canShoot).toBe(true);
+    button.blur();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+    expect(pilot.ship.lasers).toHaveLength(2);
+  } finally {
+    scope.abort();
+    try {
+      manager.detachRuntime();
+    } finally {
+      gameState.setIsGameRunning(wasRunning);
+      if (previousOverlay !== null) {
+        openGameOverlay(previousOverlay);
+      }
+      Object.assign(controlSources, previousSources);
+      local.mockRestore();
+      clock.mockRestore();
+      canvas.remove();
+    }
+  }
 });

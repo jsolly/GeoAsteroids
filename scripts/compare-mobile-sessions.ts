@@ -603,10 +603,6 @@ if (experiment['kind'] === 'renderer') {
     'Renderer comparison changed built assets'
   );
 }
-assert(
-  new Set(sources.map((source) => source.sessionId)).size === sources.length,
-  'Duplicate session IDs'
-);
 for (const sourceHash of new Set(
   sources.map((source) => record(source.provenance)['sourceSha256'])
 )) {

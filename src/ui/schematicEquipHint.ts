@@ -25,7 +25,6 @@ const HINT_FONT = '13px Arial';
 const HINT_LINE_HEIGHT = 16;
 const HINT_ALPHA = 0.92;
 
-let initialized = false;
 let startedAt: number | null = null;
 let pending = false;
 let dismissed = false;
@@ -50,12 +49,11 @@ export function showSchematicEquipHint(): void {
 }
 
 export function initializeSchematicEquipHint(): void {
-  if (initialized || typeof window === 'undefined') {
+  if (listenerScope !== null || typeof window === 'undefined') {
     return;
   }
   listenerScope = new AbortController();
   const { signal } = listenerScope;
-  initialized = true;
   window.addEventListener('playViewOff', clearHint, { signal });
   const stopOverlay = subscribeGameOverlay((next) => {
     if (next === 'inventory') {
@@ -123,6 +121,5 @@ export function drawSchematicEquipHint(
 export function disposeSchematicEquipHint(): void {
   listenerScope?.abort();
   listenerScope = null;
-  initialized = false;
   clearHint();
 }

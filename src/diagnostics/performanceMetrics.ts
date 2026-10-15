@@ -110,8 +110,8 @@ export class ClientPerformanceMetrics {
     respawn: 0,
     hidden: 0,
   };
-  private readonly messageBytes: Record<string, number> = {};
-  private readonly messageCounts: Record<string, number> = {};
+  private readonly messageBytes = new Map<string, number>();
+  private readonly messageCounts = new Map<string, number>();
   private lastMessageAt: number | undefined;
   private probeSequence = 0;
   private readonly pendingProbes = new Map<number, number>();
@@ -146,8 +146,11 @@ export class ClientPerformanceMetrics {
     if (!this.enabled) {
       return;
     }
-    this.messageBytes[kind] = (this.messageBytes[kind] ?? 0) + encoder.encode(payload).byteLength;
-    this.messageCounts[kind] = (this.messageCounts[kind] ?? 0) + 1;
+    this.messageBytes.set(
+      kind,
+      (this.messageBytes.get(kind) ?? 0) + encoder.encode(payload).byteLength
+    );
+    this.messageCounts.set(kind, (this.messageCounts.get(kind) ?? 0) + 1);
     if (this.lastMessageAt !== undefined) {
       this.record('messageGapMs', now - this.lastMessageAt);
     }
@@ -391,8 +394,8 @@ export class ClientPerformanceMetrics {
         [this.phase]:
           this.phaseDurations[this.phase] + (this.enabled ? now - this.phaseStartedAt : 0),
       },
-      messageBytes: { ...this.messageBytes },
-      messageCounts: { ...this.messageCounts },
+      messageBytes: Object.fromEntries(this.messageBytes),
+      messageCounts: Object.fromEntries(this.messageCounts),
       graphicsSettings: { ...this.graphicsSettings },
       renderer: {
         requested: this.rendererRequested,
@@ -428,12 +431,8 @@ export class ClientPerformanceMetrics {
         this.phaseDurations[phase] = 0;
       }
       this.phaseStartedAt = now;
-      for (const key of Object.keys(this.messageBytes)) {
-        delete this.messageBytes[key];
-      }
-      for (const key of Object.keys(this.messageCounts)) {
-        delete this.messageCounts[key];
-      }
+      this.messageBytes.clear();
+      this.messageCounts.clear();
       for (const key of Object.keys(this.counters)) {
         delete this.counters[key];
       }

@@ -178,9 +178,29 @@ describe('A Hauler arms an asteroid, then sends it on a furnace-guided delivery'
     activate(alice);
     activate(alice);
     world.entity(alice).health = 0;
-    rock.position = { ...nearestFurnace(rock.position).position };
+    const furnace = nearestFurnace(rock.position);
+    const before = world.entity(alice).score;
+    const points = furnaceReward(rock);
+    rock.position = { x: furnace.position.x + furnace.radius + 1, y: furnace.position.y };
     world.engine.processFurnaceDeliveries();
-    expect(world.entity(alice).score).toBe(furnaceReward(rock));
+    expect(world.engine.getAsteroid(rock.id)).toBe(rock);
+    expect(world.entity(alice).score).toBe(before);
+    expect(world.engine.drainFurnaceDeliveries()).toEqual([]);
+
+    rock.position.x = furnace.position.x + furnace.radius;
+    world.engine.processFurnaceDeliveries();
+    expect(world.engine.getAsteroid(rock.id)).toBeUndefined();
+    expect(world.entity(alice).score).toBe(before + points);
+    const deliveries = world.engine.drainFurnaceDeliveries();
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]).toMatchObject({
+      furnaceId: furnace.id,
+      asteroidId: rock.id,
+      rewards: [{ playerId: alice.id, points }],
+    });
+    world.engine.processFurnaceDeliveries();
+    expect(world.engine.drainFurnaceDeliveries()).toEqual([]);
+    expect(world.entity(alice).score).toBe(before + points);
   });
 
   test.each(['tow_cable', 'resource_tap'] as const)(

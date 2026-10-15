@@ -308,9 +308,11 @@ function rebuildAudio(): void {
   needsPlaybackRestart = false;
   if (previous && previous.state !== 'closed') {
     void previous.close().catch((error: unknown) => {
-      logger.warn('SOUND', 'Previous audio context failed to close', {
-        message: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        'SOUND',
+        'Previous audio context failed to close',
+        error instanceof Error ? error : new Error(String(error))
+      );
     });
   }
   contextRestarts++;

@@ -13,6 +13,7 @@ OWNED_CHILD_PID_FILE="$TMP_DIR/owned-child.pid"
 MOCK_BIN="$TMP_DIR/mock-bin"
 PGREP_MOCK_BIN="$TMP_DIR/pgrep-mock-bin"
 LSOF_MOCK_BIN="$TMP_DIR/lsof-mock-bin"
+CWD_MOCK_BIN="$TMP_DIR/cwd-mock-bin"
 PS_MOCK_BIN="$TMP_DIR/ps-mock-bin"
 VITE_PORT=""
 SERVER_PORT=""
@@ -164,10 +165,6 @@ fi
 mkdir -p "$LSOF_MOCK_BIN"
 cat >"$LSOF_MOCK_BIN/lsof" <<'EOF'
 #!/usr/bin/env bash
-if [[ "${GEOROIDS_CONTRACT_MODE:-}" == process-cwd-status-one ]] && [[ " $* " == *" -d cwd "* ]]; then
-  echo "simulated lsof cwd inspection failure (status 1)" >&2
-  exit 1
-fi
 if [[ "${GEOROIDS_CONTRACT_MODE:-}" == port-inspection-status-one ]]; then
   echo "simulated lsof inspection failure (status 1)" >&2
   exit 1
@@ -280,7 +277,7 @@ chmod +x "$TMP_DIR/concurrently-contract-process"
 start_owned_process() {
   rm -f "$OWNED_PID_FILE" "$OWNED_CHILD_PID_FILE"
   (
-    cd "$ROOT"
+    cd "${1:-$ROOT}"
     GEOROIDS_CONTRACT_CHILD_PID_FILE="$OWNED_CHILD_PID_FILE" \
       "$TMP_DIR/concurrently-contract-process" &
     printf '%s\n' "$!" >"$OWNED_PID_FILE"
@@ -306,6 +303,53 @@ record_owned_state() {
   printf '%s\n' "$ROOT" >"$STATE_DIR/root"
 }
 
+start_owned_process "$TMP_DIR"
+record_owned_state
+if GEOROIDS_DEV_VITE_PORT="$VITE_PORT" GEOROIDS_DEV_SERVER_PORT="$SERVER_PORT" \
+  "$RUNNER" stop >"$TMP_DIR/wrong-cwd.log" 2>&1; then
+  echo "dev-server unexpectedly stopped a process from another directory" >&2
+  exit 1
+fi
+if ! grep -q "untrusted development PID" "$TMP_DIR/wrong-cwd.log"; then
+  echo "wrong-cwd refusal did not explain the ownership failure" >&2
+  cat "$TMP_DIR/wrong-cwd.log" >&2
+  exit 1
+fi
+if [[ ! -d "$STATE_DIR" ]] || ! kill -0 "$OWNED_PID" 2>/dev/null; then
+  echo "wrong-cwd refusal removed metadata or signaled the unowned process" >&2
+  exit 1
+fi
+owned_child_pid="$(<"$OWNED_CHILD_PID_FILE")"
+kill -0 "$owned_child_pid"
+kill -9 "$OWNED_PID" "$owned_child_pid"
+wait "$OWNED_REAPER_PID" 2>/dev/null || true
+OWNED_REAPER_PID=""
+assert_process_stopped "$OWNED_PID" "wrong-cwd root"
+assert_process_stopped "$owned_child_pid" "wrong-cwd child"
+OWNED_PID=""
+rm -f "$STATE_DIR/pid" "$STATE_DIR/start" "$STATE_DIR/root"
+rmdir "$STATE_DIR"
+
+mkdir -p "$CWD_MOCK_BIN"
+cat >"$CWD_MOCK_BIN/readlink" <<'EOF'
+#!/usr/bin/env bash
+case "${GEOROIDS_CONTRACT_MODE:-}" in
+  silent-error) exit 1 ;;
+  warned-success)
+    echo "simulated cwd inspection warning" >&2
+    exit 0
+    ;;
+esac
+echo "simulated cwd inspection failure (status 1)" >&2
+exit 1
+EOF
+cat >"$CWD_MOCK_BIN/lsof" <<'EOF'
+#!/usr/bin/env bash
+echo "simulated cwd inspection failure (status 1)" >&2
+exit 1
+EOF
+chmod +x "$CWD_MOCK_BIN/readlink" "$CWD_MOCK_BIN/lsof"
+
 mkdir -p "$PS_MOCK_BIN"
 cat >"$PS_MOCK_BIN/ps" <<'EOF'
 #!/usr/bin/env bash
@@ -319,7 +363,7 @@ chmod +x "$PS_MOCK_BIN/ps"
 
 start_owned_process
 record_owned_state
-if PATH="$LSOF_MOCK_BIN:$PATH" GEOROIDS_CONTRACT_MODE=process-cwd-status-one \
+if PATH="$CWD_MOCK_BIN:$PATH" \
   GEOROIDS_DEV_VITE_PORT="$VITE_PORT" GEOROIDS_DEV_SERVER_PORT="$SERVER_PORT" \
   "$RUNNER" stop >"$TMP_DIR/process-cwd-status-one.log" 2>&1; then
   echo "dev-server unexpectedly trusted a cwd inspection error" >&2
@@ -327,19 +371,50 @@ if PATH="$LSOF_MOCK_BIN:$PATH" GEOROIDS_CONTRACT_MODE=process-cwd-status-one \
 fi
 if ! grep -q "Could not inspect cwd for process PID" "$TMP_DIR/process-cwd-status-one.log" || \
   ! grep -q "exit 1" "$TMP_DIR/process-cwd-status-one.log" || \
-  ! grep -q "simulated lsof cwd inspection failure (status 1)" "$TMP_DIR/process-cwd-status-one.log"; then
-  echo "lsof cwd exit-1 inspection error did not preserve its PID, status, and cause" >&2
+  ! grep -q "simulated cwd inspection failure (status 1)" "$TMP_DIR/process-cwd-status-one.log"; then
+  echo "cwd exit-1 inspection error did not preserve its PID, status, and cause" >&2
   cat "$TMP_DIR/process-cwd-status-one.log" >&2
   exit 1
 fi
 [[ -d "$STATE_DIR" ]] || {
-  echo "lsof cwd exit-1 inspection error removed session metadata" >&2
+  echo "cwd exit-1 inspection error removed session metadata" >&2
   exit 1
 }
 kill -0 "$OWNED_PID" 2>/dev/null || {
-  echo "lsof cwd exit-1 inspection error signaled the owned process" >&2
+  echo "cwd exit-1 inspection error signaled the owned process" >&2
   exit 1
 }
+
+case "$OSTYPE" in
+  linux*)
+    for mode in silent-error warned-success; do
+      expected_exit=1
+      [[ "$mode" != warned-success ]] || expected_exit=0
+      if PATH="$CWD_MOCK_BIN:$PATH" GEOROIDS_CONTRACT_MODE="$mode" \
+        GEOROIDS_DEV_VITE_PORT="$VITE_PORT" GEOROIDS_DEV_SERVER_PORT="$SERVER_PORT" \
+        "$RUNNER" stop >"$TMP_DIR/cwd-$mode.log" 2>&1; then
+        echo "dev-server unexpectedly trusted cwd inspection $mode" >&2
+        exit 1
+      fi
+      if ! grep -q "Could not inspect cwd for process PID" "$TMP_DIR/cwd-$mode.log" || \
+        ! grep -q "with readlink (exit $expected_exit)" "$TMP_DIR/cwd-$mode.log" || \
+        ! grep -q "refusing to signal it" "$TMP_DIR/cwd-$mode.log"; then
+        echo "cwd inspection $mode did not fail closed as an inspection error" >&2
+        cat "$TMP_DIR/cwd-$mode.log" >&2
+        exit 1
+      fi
+      if [[ "$mode" == warned-success ]] && ! grep -q "simulated cwd inspection warning" "$TMP_DIR/cwd-$mode.log"; then
+        echo "cwd inspection warning lost its actionable cause" >&2
+        cat "$TMP_DIR/cwd-$mode.log" >&2
+        exit 1
+      fi
+      if [[ ! -d "$STATE_DIR" ]] || ! kill -0 "$OWNED_PID" 2>/dev/null; then
+        echo "cwd inspection $mode removed metadata or signaled the owned process" >&2
+        exit 1
+      fi
+    done
+    ;;
+esac
 
 if ! GEOROIDS_DEV_VITE_PORT="$VITE_PORT" GEOROIDS_DEV_SERVER_PORT="$SERVER_PORT" \
   "$RUNNER" stop >"$TMP_DIR/process-cwd-status-one-recovery.log" 2>&1; then

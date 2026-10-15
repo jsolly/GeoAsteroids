@@ -382,8 +382,16 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     });
     cleanup.push(() => eventLoop.dispose());
     const commands: GameCommands = {
-      crewAction: sendCrewAction,
-      signalHere,
+      crewAction(action) {
+        if (!disposed) {
+          sendCrewAction(action);
+        }
+      },
+      signalHere(kind) {
+        if (!disposed) {
+          signalHere(kind);
+        }
+      },
 
       closeTownStore() {
         if (!disposed) {

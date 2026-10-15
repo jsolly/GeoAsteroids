@@ -19,7 +19,6 @@ interface ContourRegion extends ContourBounds {
 }
 
 interface ContourPatch {
-  region: ContourRegion;
   levels: ContourLevel[];
   usedAt: number;
 }
@@ -89,7 +88,6 @@ function buildContourPatch(field: Heightfield, region: ContourRegion): ContourPa
   const levels = extractIsoContours(field, region.gridSize, TERRAIN.CONTOUR_INTERVAL, region);
   warmContourSpatialIndex(levels);
   return touchContourPatch({
-    region,
     levels,
     usedAt: 0,
   });

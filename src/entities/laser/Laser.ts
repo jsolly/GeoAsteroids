@@ -9,17 +9,7 @@ import {
 } from '../../audio/gameSounds';
 import { getVelocityMagnitude } from '../../utils/mathUtils';
 
-interface LaserData {
-  position: Position;
-  prevPosition: Position;
-  serverId?: string;
-  velocity: Velocity;
-  distTraveled: number;
-  explodeTime: number;
-  hasExploded: boolean;
-}
-
-export class Laser implements LaserData {
+export class Laser {
   serverId?: string;
   bounceCount = 0;
   energy = 1;

@@ -54,8 +54,7 @@ type ProbeScan = (pulse: SurveyProbePulse) => void;
 
 /** Owns transient Scout beacons while host DTOs carry their wire state. */
 export class SurveyProbeManager {
-  private readonly hosts = new Map<string, ProbeHost>();
-  private readonly pulseAt = new Map<string, number>();
+  private readonly hosts = new Map<string, { host: ProbeHost; lastPulseAt: number }>();
 
   public registerAsteroid(host: AsteroidData): void {
     const probe = host.probe;
@@ -64,29 +63,26 @@ export class SurveyProbeManager {
       return;
     }
     const previous = this.hosts.get(host.id);
-    const previousProbeId = previous?.probe?.id;
-    this.hosts.set(host.id, host);
-    if (previous !== host || previousProbeId !== probe.id || !this.pulseAt.has(host.id)) {
-      this.pulseAt.set(host.id, probe.attachedAt);
+    if (previous?.host === host && previous.host.probe?.id === probe.id) {
+      return;
     }
+    this.hosts.set(host.id, { host, lastPulseAt: probe.attachedAt });
   }
 
   public unregister(asteroidId: string): void {
     this.hosts.delete(asteroidId);
-    this.pulseAt.delete(asteroidId);
   }
 
   public clear(): void {
     this.hosts.clear();
-    this.pulseAt.clear();
   }
 
   public observerPositions(): Position[] {
-    return [...this.hosts.values()].map((host) => ({ ...host.position }));
+    return [...this.hosts.values()].map(({ host }) => ({ ...host.position }));
   }
 
   public prune(now: number, lookup: HostLookup): void {
-    for (const [asteroidId, host] of this.hosts) {
+    for (const [asteroidId, { host }] of this.hosts) {
       const probe = host.probe;
       const current = lookup(asteroidId);
       if (current !== host || !probe || probe.health <= 0 || now >= probe.expiresAt) {
@@ -187,7 +183,7 @@ export class SurveyProbeManager {
       return null;
     }
 
-    const ownerProbes = [...this.hosts.values()].filter(
+    const ownerProbes = Array.from(this.hosts.values(), (entry) => entry.host).filter(
       (candidate) => candidate.probe?.ownerId === scout.id
     );
     if (ownerProbes.length >= SURVEY_PROBE.MAX_PER_OWNER) {
@@ -231,8 +227,7 @@ export class SurveyProbeManager {
     };
     scout.utilityFlight = null;
     host.probe = probe;
-    this.hosts.set(host.id, host);
-    this.pulseAt.set(host.id, now);
+    this.hosts.set(host.id, { host, lastPulseAt: now });
     return { host, probe };
   }
 
@@ -243,17 +238,20 @@ export class SurveyProbeManager {
     scan: ProbeScan
   ): void {
     this.prune(now, lookup);
-    for (const [asteroidId, host] of this.hosts) {
+    for (const [asteroidId, entry] of this.hosts) {
+      const { host, lastPulseAt } = entry;
       const probe = host.probe;
       if (!probe) {
         continue;
       }
-      const lastPulseAt = this.pulseAt.get(asteroidId) ?? probe.attachedAt;
       if (now - lastPulseAt < SURVEY_PROBE.PULSE_MS) {
         continue;
       }
       this.emitPulse(host, probe, asteroidIndex(), scan);
-      this.pulseAt.set(asteroidId, now);
+      const current = this.hosts.get(asteroidId);
+      if (current) {
+        current.lastPulseAt = now;
+      }
     }
   }
 
@@ -288,7 +286,7 @@ export class SurveyProbeManager {
   public targetsIn(hosts: readonly ProbeHost[]): SurveyProbeTarget[] {
     const nearby = new Set(hosts);
     const targets: SurveyProbeTarget[] = [];
-    for (const host of this.hosts.values()) {
+    for (const { host } of this.hosts.values()) {
       const probe = host.probe;
       if (!probe || !nearby.has(host)) {
         continue;
@@ -305,7 +303,7 @@ export class SurveyProbeManager {
   }
 
   public damage(asteroidId: string, damage: number): boolean {
-    const host = this.hosts.get(asteroidId);
+    const host = this.hosts.get(asteroidId)?.host;
     const probe = host?.probe;
     if (!host || !probe || !Number.isFinite(damage) || damage <= 0) {
       return false;

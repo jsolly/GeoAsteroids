@@ -17,11 +17,11 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     world.dispose();
   });
 
-  function addRock(id = 'haul-rock'): void {
+  function addRock(id = 'haul-rock', velocity = { x: 0, y: 0 }): void {
     world.engine.addAsteroid({
       id,
       position: { x: 80, y: 0 },
-      velocity: { x: 0, y: 0 },
+      velocity,
       size: 20,
       jaggedness: 0.4,
       rotation: 0,
@@ -35,7 +35,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
 
   test('E attaches the nearest rock, preserves its initial momentum, and tows it when taut', () => {
     world.clearAsteroids();
-    addRock();
+    addRock('haul-rock', { x: 0.04, y: -0.03 });
     alice = world.join('Alice', { x: 0, y: 0 }, { kitId: 'hauler' });
     world.send(alice, {
       type: 'useAbility',
@@ -48,7 +48,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     expect(rock).toBeDefined();
     expect(world.entity(alice).kitId).toBe('hauler');
     expect(world.entity(alice).harpoonTargetId).toBe('haul-rock');
-    expect(rock?.velocity).toEqual({ x: 0, y: 0 });
+    expect(rock?.velocity).toEqual({ x: 0.04, y: -0.03 });
 
     world.engine.updatePlayer(alice.id, { position: { x: -100, y: 0 } });
     world.tick();
@@ -61,7 +61,7 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
 
   test('a second E releases the persistent tow without throwing the asteroid', () => {
     world.clearAsteroids();
-    addRock();
+    addRock('haul-rock', { x: 0.06, y: 0.02 });
     alice = world.join('Alice', { x: 0, y: 0 }, { kitId: 'hauler' });
     world.send(alice, {
       type: 'useAbility',
@@ -71,6 +71,8 @@ describe('A Hauler tows a nearby asteroid to a furnace', () => {
     resolveToolFlights(world.engine);
     const rock = world.engine.getAsteroid('haul-rock');
     expect(rock).toBeDefined();
+    expect(world.entity(alice).harpoonTargetId).toBe('haul-rock');
+    expect(rock?.velocity).toEqual({ x: 0.06, y: 0.02 });
     const beforeRelease = { ...rock?.velocity };
 
     world.send(alice, {

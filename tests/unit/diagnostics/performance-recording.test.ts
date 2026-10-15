@@ -297,6 +297,27 @@ test('UTF-8 payload sizes and release/cancel observations survive interval drain
     Object.values(interval.phaseDurationsMs).reduce((sum, duration) => sum + duration, 0)
   ).toBeCloseTo(interval.durationMs, 0);
   expect(recorder.read().messageBytes).toEqual({});
+
+  const messageKinds = ['constructor', 'toString', '__proto__'];
+  for (const [index, kind] of messageKinds.entries()) {
+    recorder.message(kind, 'é', 40 + index * 20);
+    recorder.message(kind, 'é', 50 + index * 20);
+  }
+  const namedInterval = recorder.read(true);
+  for (const kind of messageKinds) {
+    expect
+      .soft({
+        kind,
+        ownsBytes: Object.hasOwn(namedInterval.messageBytes, kind),
+        bytes: namedInterval.messageBytes[kind],
+        ownsCount: Object.hasOwn(namedInterval.messageCounts, kind),
+        count: namedInterval.messageCounts[kind],
+      })
+      .toEqual({ kind, ownsBytes: true, bytes: 4, ownsCount: true, count: 2 });
+  }
+  const emptyInterval = recorder.read();
+  expect(emptyInterval.messageBytes).toEqual({});
+  expect(emptyInterval.messageCounts).toEqual({});
 });
 
 test('a phone recording owns destructive drains while inspection remains available', () => {

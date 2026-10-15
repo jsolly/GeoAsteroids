@@ -139,7 +139,7 @@ function applyCampfirePath(
   x: number,
   y: number,
   size: number,
-  commands: readonly FlameCommand[] = FURNACE_CAMPFIRE_PATH
+  commands: readonly FlameCommand[]
 ): void {
   for (const command of commands) {
     if (command.t === 'M') {
@@ -156,24 +156,6 @@ function applyCampfirePath(
     }
   }
   ctx.closePath();
-}
-
-export function addFurnaceFlamePath(
-  ctx: FlamePathTarget,
-  x: number,
-  y: number,
-  size: number
-): void {
-  applyCampfirePath(ctx, x, y, size);
-}
-
-export function addFurnaceInnerFlamePath(
-  ctx: FlamePathTarget,
-  x: number,
-  y: number,
-  size: number
-): void {
-  applyCampfirePath(ctx, x, y, size, FURNACE_INNER_CAMPFIRE_PATH);
 }
 
 /** Compact fire landmark used by the local radar and the universe map. */

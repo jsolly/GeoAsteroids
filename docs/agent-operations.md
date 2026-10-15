@@ -242,6 +242,10 @@ Browser identity uses `crypto.randomUUID()` and requires HTTPS or a localhost se
 
 Start both with `npm run dev` (`./scripts/dev-server.sh`) for interactive development. The command refuses to attach to occupied ports; inspect the owner or choose isolated ports for the interactive session. The launcher keeps `astro dev --ignore-lock` in the foreground under its recorded process tree and owns both services, including content-triggered Astro restarts. Status: `npm run dev:check`. Stop: `npm run dev:kill`, which signals only the process tree recorded for this checkout. Code integration scenarios create their own port-zero loopback servers. Manual benchmark harnesses own separate configured service pairs and refuse occupied ports.
 
+Development-session ownership reads the target PID's working directory directly
+from procfs with `readlink` on Linux and with `lsof` elsewhere. An inspection error
+refuses signaling or metadata replacement; it never switches to another backend.
+
 **Background dev:** `nohup npm run dev > /tmp/geo-dev.log 2>&1 &` works; tail `/tmp/geo-dev.log` for startup errors.
 
 ### Hello-world smoke

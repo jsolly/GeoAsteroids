@@ -321,6 +321,16 @@ test('rubble shatter keeps its drifting wobble and fading ticks halfway through 
     ];
   });
   expect(strokes[0]?.points).toEqual(expected);
+  const [edgeStart, edgeEnd] = strokes[0]?.points ?? [];
+  if (!edgeStart || !edgeEnd) {
+    throw new Error('Missing drifting shatter edge');
+  }
+  // The midpoint isolates outward drift because spin and opposite endpoint wobble cancel.
+  const midpointReach = Math.hypot(
+    (edgeStart[0] + edgeEnd[0]) / 2 - 480,
+    (edgeStart[1] + edgeEnd[1]) / 2 - 330
+  );
+  expect(midpointReach).toBeCloseTo(14 / Math.SQRT2 + 14 * VISUAL.ROID_SHATTER_SPREAD * 0.875);
   expect(strokes[0]?.commands).toEqual(Array.from({ length: 4 }, () => ['move', 'line']).flat());
   expect(strokes[0]?.alpha).toBeCloseTo(1 - 0.5 * 0.85, 2);
   ctx.shadowBlur = VISUAL.ROID_GLOW;

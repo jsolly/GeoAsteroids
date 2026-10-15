@@ -24,4 +24,8 @@ test('Tap loot is a cream canister, not a diamond, and is larger than ordinary c
   expect(moves.length).toBeGreaterThan(1);
   expect(moves.some(([x, y]) => y < -20 && Math.abs(x) < 10)).toBe(true);
   expect(moves.some(([, y]) => y > 15)).toBe(true);
+  const tipY = Math.min(...moves.map(([, y]) => y));
+  const tipXs = moves.filter(([, y]) => y === tipY).map(([x]) => x);
+  expect(Math.min(...tipXs)).toBeLessThan(0);
+  expect(Math.max(...tipXs)).toBeGreaterThan(0);
 });

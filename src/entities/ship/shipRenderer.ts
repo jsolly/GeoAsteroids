@@ -35,10 +35,6 @@ import type { Ship } from './Ship';
 /** Hauler cable. Cream line separates the cable from the hull. */
 /** Latch tip / hook head. Game Director PASS: amber tip on the cream cable. */
 
-const thrusterGeom = {
-  rearCenter: { x: 0, y: 0 },
-};
-
 const laserScreen = { x: 0, y: 0 };
 const shipScreen = { x: 0, y: 0 };
 
@@ -175,11 +171,8 @@ export function drawGenericThruster(
   const outline = getKitHullOutline(kitId);
   const flicker = Math.floor(performance.now() / VISUAL.THRUSTER_FLICKER_MS) % 2 === 0;
   const lengthRatio = flicker ? VISUAL.THRUSTER_LENGTH_RATIO : VISUAL.THRUSTER_FLICKER_RATIO;
-  const rearCenter = thrusterGeom.rearCenter;
   for (const aft of outline.nozzles) {
     const rear = projectHullPoint(x, y, radius, angle, aft);
-    rearCenter.x = rear.x;
-    rearCenter.y = rear.y;
     const flame = thrusterFlameGeometry(
       x,
       y,
@@ -187,7 +180,7 @@ export function drawGenericThruster(
       radius,
       lengthRatio,
       VISUAL.THRUSTER_CORE_RATIO,
-      rearCenter
+      rear
     );
 
     strokeJuicePolyline(
@@ -782,7 +775,7 @@ export function drawShipAtPosition(
     ship.kitId,
     haulerUtilityOf(ship)
   );
-  drawAbilityFx(ctx, ship, screenX, screenY, shipR);
+  drawScoutScanFx(ctx, ship, screenX, screenY, shipR, canvasManager.getViewportSize());
 
   drawShipImpactFlash(ctx, ship, screenX, screenY, shipR);
 
@@ -976,17 +969,6 @@ export function drawScoutScanFx(
     ctx.stroke();
     ctx.restore();
   }
-}
-
-/** Ability rings only. Kit hulls come from the v2 outline bake. */
-function drawAbilityFx(
-  ctx: DrawingContext,
-  ship: Ship,
-  screenX: number,
-  screenY: number,
-  shipR: number
-): void {
-  drawScoutScanFx(ctx, ship, screenX, screenY, shipR, canvasManager.getViewportSize());
 }
 
 function drawShipImpactFlash(

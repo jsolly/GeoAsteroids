@@ -2,8 +2,6 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { WIRE_PALETTE } from '../../../shared/constants/gameplay';
 import { VISUAL } from '../../../src/constants';
 import {
-  addFurnaceFlamePath,
-  addFurnaceInnerFlamePath,
   drawFurnaceMapMark,
   FURNACE_CAMPFIRE_PATH,
   FURNACE_DISTANT_FLAME_PATH,
@@ -142,6 +140,8 @@ test('a radar furnace mark is a hairline three-tongue campfire in fire ink, not 
   expect(flame.curves).toBe(FURNACE_CAMPFIRE_PATH.filter((command) => command.t === 'C').length);
   expect(flame.color).toBe(canvasColor(ctx, FURNACE_MAP_INK));
   expect(flame.color).not.toBe(canvasColor(ctx, WIRE_PALETTE.SATELLITE));
+  expect(flame.points[0]?.x).toBeGreaterThanOrEqual(40);
+  expect(flame.points[0]?.y).toBe(40 - MINIMAP_FURNACE_MARK_SIZE);
 
   const xs = flame.points.map((point) => point.x);
   const ys = flame.points.map((point) => point.y);
@@ -203,49 +203,4 @@ test('a universe-map furnace mark nests a smaller inner campfire in the same fir
     Math.min(...inner.points.map((point) => point.y));
   expect(innerSpan).toBeLessThan(outerSpan);
   expect(fills).toEqual([]);
-});
-
-test('the shared flame path is a closed right-leaning campfire', () => {
-  const points: Array<{ x: number; y: number }> = [];
-  let curves = 0;
-  addFurnaceFlamePath(
-    {
-      moveTo(x, y) {
-        points.push({ x, y });
-      },
-      bezierCurveTo(_cp1x, _cp1y, _cp2x, _cp2y, x, y) {
-        curves += 1;
-        points.push({ x, y });
-      },
-      closePath() {},
-    },
-    0,
-    0,
-    1
-  );
-  expect(curves).toBe(FURNACE_CAMPFIRE_PATH.filter((command) => command.t === 'C').length);
-  expect(points[0]?.x).toBeGreaterThanOrEqual(0);
-  expect(points[0]?.y).toBe(-1);
-  expect(Math.max(...points.map((point) => point.x))).toBeGreaterThan(0.4);
-  const innerPoints: Array<{ x: number; y: number }> = [];
-  addFurnaceInnerFlamePath(
-    {
-      moveTo(x, y) {
-        innerPoints.push({ x, y });
-      },
-      bezierCurveTo(_cp1x, _cp1y, _cp2x, _cp2y, x, y) {
-        innerPoints.push({ x, y });
-      },
-      closePath() {},
-    },
-    0,
-    0,
-    1
-  );
-  const outerHeight =
-    Math.max(...points.map((point) => point.y)) - Math.min(...points.map((point) => point.y));
-  const innerHeight =
-    Math.max(...innerPoints.map((point) => point.y)) -
-    Math.min(...innerPoints.map((point) => point.y));
-  expect(innerHeight).toBeLessThan(outerHeight);
 });

@@ -46,15 +46,43 @@ function createRenderer() {
 }
 
 test('a GPU allocation failure rejects the renderer and reports its cause', () => {
-  const { destroy, error } = createRenderer();
-  const failure = new Error('GPU could not allocate program');
-  vi.spyOn(GpuResources.prototype, 'program').mockImplementation(() => {
-    throw failure;
+  const vertex: WebGLShader = {};
+  const fragment: WebGLShader = {};
+  const deleteShader = vi.fn<(shader: WebGLShader) => void>();
+  const gl = {
+    MAX_TEXTURE_SIZE: 0x0d33,
+    VERTEX_SHADER: 0x8b31,
+    FRAGMENT_SHADER: 0x8b30,
+    getParameter: () => 4096,
+    getExtension: () => null,
+    createShader: vi.fn().mockReturnValueOnce(vertex).mockReturnValueOnce(fragment),
+    shaderSource: () => undefined,
+    compileShader: () => undefined,
+    createProgram: () => null,
+    deleteShader,
+  };
+  overlay = document.createElement('canvas');
+  document.body.append(overlay);
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+    this: HTMLCanvasElement,
+    contextId: string,
+    options?: unknown
+  ) {
+    return contextId === 'webgl2'
+      ? (gl as unknown as WebGL2RenderingContext)
+      : getContext.call(this, contextId, options);
   });
+  const destroy = vi.spyOn(GpuResources.prototype, 'destroy');
+  const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+  const failure = new Error('GPU could not allocate program');
   renderer = GpuRearRenderer.create(overlay, () => undefined);
   expect(renderer).toBeNull();
   expect(document.querySelector('#gameGpuCanvas')).toBeNull();
   expect(destroy).toHaveBeenCalledOnce();
+  expect(deleteShader).toHaveBeenCalledTimes(2);
+  expect(deleteShader.mock.calls.filter(([shader]) => shader === vertex)).toHaveLength(1);
+  expect(deleteShader.mock.calls.filter(([shader]) => shader === fragment)).toHaveLength(1);
   expect(error).toHaveBeenCalledExactlyOnceWith(
     'RENDER',
     'GPU initialization failed; using Canvas',

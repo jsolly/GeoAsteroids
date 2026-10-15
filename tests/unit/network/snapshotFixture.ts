@@ -3,9 +3,7 @@ import { SATELLITE_PROFILES } from '../../../shared/eoSatellites';
 import { EMPTY_EXPLORATION } from '../../../shared/exploration';
 import type { AsteroidMaterial, ServerGameSnapshot, ShipKitId } from '../../../shared-types';
 
-export function snapshotFixture(tick = 0): ServerGameSnapshot {
-  const kits: ShipKitId[] = ['scout', 'hauler'];
-  const materials: AsteroidMaterial[] = ['ice', 'metal', 'rubble'];
+export function emptySnapshotFixture(tick = 0): ServerGameSnapshot {
   return {
     serverTime: 0,
     civicModules: [],
@@ -15,6 +13,22 @@ export function snapshotFixture(tick = 0): ServerGameSnapshot {
     settlement: emptySettlement(),
     exploration: EMPTY_EXPLORATION,
     mapAssets: [],
+    entities: [],
+    asteroids: [],
+    loot: [],
+    satellitePickups: [],
+    playerProjectiles: [],
+    gameTime: tick / 30,
+    isPaused: false,
+    terrainSeed: 2345,
+  };
+}
+
+export function snapshotFixture(tick = 0): ServerGameSnapshot {
+  const kits: ShipKitId[] = ['scout', 'hauler'];
+  const materials: AsteroidMaterial[] = ['ice', 'metal', 'rubble'];
+  return {
+    ...emptySnapshotFixture(tick),
     entities: Array.from({ length: 10 }, (_, i) => {
       const kitId = kits[i % kits.length];
       if (!kitId) {
@@ -68,7 +82,6 @@ export function snapshotFixture(tick = 0): ServerGameSnapshot {
       mass: 1,
       radius: 5,
       kind: i % 2 ? 'silk' : 'shard',
-      ...(i % 2 ? {} : {}),
     })),
     satellitePickups: SATELLITE_PROFILES.map((profile, i) => ({
       id: `pickup-${i}`,
@@ -85,9 +98,5 @@ export function snapshotFixture(tick = 0): ServerGameSnapshot {
       health: 50,
       maxHealth: 50,
     })),
-    playerProjectiles: [],
-    gameTime: tick / 30,
-    isPaused: false,
-    terrainSeed: 2345,
   };
 }

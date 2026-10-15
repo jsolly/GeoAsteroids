@@ -15,11 +15,16 @@ import type { RNGService } from './RNGService';
 
 export type AsteroidHitCause = 'laser' | 'collision';
 
-export type AsteroidHitOutcome = {
-  outcome: 'missing' | 'damaged' | 'ignored' | 'destroyed';
-  destroyed?: AsteroidData;
-  newAsteroids: AsteroidData[];
-};
+export type AsteroidHitOutcome =
+  | {
+      outcome: 'missing' | 'damaged' | 'ignored';
+      newAsteroids: AsteroidData[];
+    }
+  | {
+      outcome: 'destroyed';
+      destroyed: AsteroidData;
+      newAsteroids: AsteroidData[];
+    };
 
 export class AsteroidManager {
   private asteroids = new Map<string, AsteroidData>();
@@ -112,9 +117,7 @@ export class AsteroidManager {
   }
 
   public clearAsteroids(): void {
-    for (const id of [...this.asteroids.keys()]) {
-      this.removeAsteroid(id);
-    }
+    this.asteroids.clear();
     this.index.clear();
   }
 

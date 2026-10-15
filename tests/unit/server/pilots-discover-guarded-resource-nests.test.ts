@@ -47,7 +47,9 @@ test.each([0, 1, 2] as const)(
     const { manager, step } = setup(value);
     step();
     expect(manager.snapshot().spiders).toHaveLength(10);
-    step(600);
+    step();
+    expect(manager.snapshot().spiders).toHaveLength(10);
+    step(599);
     for (const spider of manager.snapshot().spiders) {
       expect(distance(spider.position, home)).toBeLessThanOrEqual(
         SPIDER.NEST_PATROL_RADIUS + SPIDER.SCUTTLE_SPEED

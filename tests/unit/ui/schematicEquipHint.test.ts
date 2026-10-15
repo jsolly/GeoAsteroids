@@ -4,6 +4,7 @@ import { STEERING } from '../../../src/constants';
 import type { DrawingContext } from '../../../src/rendering/drawingContext';
 import { closeGameOverlay, openGameOverlay } from '../../../src/runtime/overlayState';
 import {
+  disposeSchematicEquipHint,
   drawSchematicEquipHint,
   initializeSchematicEquipHint,
   SCHEMATIC_EQUIP_HINT_DURATION_MS,
@@ -118,5 +119,35 @@ describe('equip reminder after a pickup', () => {
     openGameOverlay('inventory');
     closeGameOverlay('inventory');
     expect(schematicEquipHintAlpha()).toBe(0);
+  });
+
+  test('disposing the reminder retires its events and restarting installs a fresh lifetime', () => {
+    try {
+      setFlightState(true);
+      showSchematicEquipHint();
+      expect(schematicEquipHintAlpha(1000)).toBe(1);
+      disposeSchematicEquipHint();
+      expect(schematicEquipHintAlpha(1000)).toBe(0);
+
+      showSchematicEquipHint();
+      expect(schematicEquipHintAlpha(1000)).toBe(1);
+      window.dispatchEvent(new Event('playViewOff'));
+      expect(schematicEquipHintAlpha(1000)).toBe(1);
+      openGameOverlay('inventory');
+      closeGameOverlay('inventory');
+      expect(schematicEquipHintAlpha(1000)).toBe(1);
+
+      initializeSchematicEquipHint();
+      initializeSchematicEquipHint();
+      window.dispatchEvent(new Event('playViewOff'));
+      expect(schematicEquipHintAlpha(1000)).toBe(0);
+      showSchematicEquipHint();
+      expect(schematicEquipHintAlpha(1000)).toBe(1);
+      openGameOverlay('inventory');
+      closeGameOverlay('inventory');
+      expect(schematicEquipHintAlpha(1000)).toBe(0);
+    } finally {
+      disposeSchematicEquipHint();
+    }
   });
 });

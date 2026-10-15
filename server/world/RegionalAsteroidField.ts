@@ -186,7 +186,7 @@ export class RegionalAsteroidField {
   ): AsteroidData[] {
     this.clockStart ??= now;
     const clockStart = this.clockStart;
-    const wanted = new Map<string, { x: number; y: number }>();
+    const wanted = new Set<string>();
     for (const observer of observers) {
       const start = sectorAt({
         x: observer.x - WORLD.interestRadius,
@@ -205,14 +205,14 @@ export class RegionalAsteroidField {
           ) {
             continue;
           }
-          wanted.set(id, { x, y });
+          wanted.add(id);
         }
       }
     }
     for (const rock of manager.getAllAsteroids()) {
       if (rock.boost?.phase === 'burning' || rock.probe) {
         const sector = sectorAt(rock.position);
-        wanted.set(sector.id, { x: sector.x, y: sector.y });
+        wanted.add(sector.id);
       }
     }
     // Resume saved deliveries once. The index is built at startup; ticks never
@@ -220,13 +220,13 @@ export class RegionalAsteroidField {
     for (const id of this.savedPoweredSectors) {
       const sector = parseSectorId(id);
       if (sector) {
-        wanted.set(id, sector);
+        wanted.add(id);
       }
     }
     this.savedPoweredSectors.clear();
-    this.sleepDistantSectors(manager, new Set(wanted.keys()), now);
+    this.sleepDistantSectors(manager, wanted, now);
     const created: AsteroidData[] = [];
-    for (const id of wanted.keys()) {
+    for (const id of wanted) {
       if (!this.active.has(id)) {
         created.push(...this.wake(manager, id));
       }
@@ -246,7 +246,7 @@ export class RegionalAsteroidField {
       created.push(...this.regrow(manager, id, intervals, observers));
       this.nextRegrowth.set(id, now + DEPOSIT_FIELD.REGROWTH_INTERVAL_MS);
     }
-    this.active = new Set(wanted.keys());
+    this.active = wanted;
     created.push(...this.reconcileBelt(manager, now));
     return created;
   }

@@ -40,11 +40,14 @@ test.each([
     const world = { x: -130, y: 260 };
     const out = { x: 0, y: 0 };
 
-    expect(canvasManager.worldToScreen(ship, ship)).toMatchObject(center);
+    const screenCenter = canvasManager.worldToScreen(ship, ship);
+    expect(screenCenter).toEqual(center);
     expect(canvasManager.worldToScreenInto(out, world, ship)).toBe(out);
     expect(out).toEqual(target);
     const screen = canvasManager.worldToScreen(world, ship);
-    expect(screen).toMatchObject(target);
+    expect(screen).toEqual(target);
+    expect(screen).not.toBe(screenCenter);
+    expect(screenCenter).toEqual(center);
   }
 );
 

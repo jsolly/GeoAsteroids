@@ -42,14 +42,6 @@ function sendOneChunk(socket: WebSocket, frames: readonly string[]): void {
   }
 }
 
-async function drainDeferredFrames(): Promise<void> {
-  for (let step = 0; step < 16; step += 1) {
-    await new Promise((resolve) => {
-      setImmediate(resolve);
-    });
-  }
-}
-
 afterEach(async () => {
   try {
     await closePlayerMotionScenario({
@@ -167,12 +159,18 @@ test('a bad log frame ends the socket so a following frame is not parsed', async
       '{broken',
       JSON.stringify({ type: 'unexpected', data: { message: 'discard this' } }),
     ]) {
-      const socket = await connect('/logs');
+      const connected = once(server.wss, 'connection', { signal: AbortSignal.timeout(2000) });
+      const [socket, [peer]] = await Promise.all([connect('/logs'), connected]);
       negativeSockets.add(socket);
+      if (!(peer instanceof WebSocket)) {
+        throw new Error('Missing owned log peer');
+      }
       const closed = once(socket, 'close', { signal: AbortSignal.timeout(2000) });
+      // Server close follows receiver completion, including buffered messages.
+      const peerClosed = once(peer, 'close', { signal: AbortSignal.timeout(2000) });
       sendOneChunk(socket, [frame, frame]);
-      expect((await closed)[0]).toBe(1006);
-      await drainDeferredFrames();
+      const [clientClose] = await Promise.all([closed, peerClosed]);
+      expect(clientClose[0]).toBe(1006);
       expect(socket.readyState).toBe(WebSocket.CLOSED);
     }
     const after = ClientLogger.getDiagnostics();
