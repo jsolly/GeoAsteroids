@@ -5,6 +5,7 @@
   import { setMediaSource, shouldAutoplayMedia } from '../../wiki/mediaPlayback';
   import { WikiScrollMemory } from '../../wiki/scrollMemory';
   import { searchArticles } from '../../wiki/search';
+  import UpdateNotice from '../UpdateNotice.svelte';
   import Button from '../ui/button/button.svelte';
   import Input from '../ui/input/input.svelte';
   import ShipHull from './ShipHull.svelte';
@@ -231,6 +232,8 @@
     };
   });
 </script>
+
+<UpdateNotice />
 
 <svelte:window
   onhashchange={navigate}

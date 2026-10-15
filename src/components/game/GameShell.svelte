@@ -5,6 +5,7 @@
   import type { GameRuntime } from '../../runtime/gameRuntime';
   import { mountRuntime, type RuntimeMountState } from '../../runtime/runtimeMount';
   import type { GamePreference, GamePresentation } from '../../runtime/uiTypes';
+  import UpdateNotice from '../UpdateNotice.svelte';
   import Button from '../ui/button/button.svelte';
   import ActionControls from './ActionControls.svelte';
   import CrewControls from './CrewControls.svelte';
@@ -176,6 +177,8 @@
     };
   });
 </script>
+
+<UpdateNotice activeGame={view.inPlay || view.joining} />
 
 <div id="safe-area-probe" aria-hidden="true"></div>
 <canvas id="title-terrain" bind:this={titleCanvas} aria-hidden="true"></canvas>

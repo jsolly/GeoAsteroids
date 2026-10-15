@@ -21,7 +21,6 @@ import {
 import { ConnectionManager } from '../network/services/ConnectionManager';
 
 import { readStoredResumeName } from '../network/services/resumeCredential';
-import { mountClientRelease } from '../release/clientReleaseEntry';
 import { canvasManager, type PlayfieldGeometry } from '../rendering/canvasSurface';
 import { mountShipSchematicCanvases } from '../rendering/shipSchematicCanvas';
 import { initTitleTerrain } from '../rendering/titleTerrain';
@@ -147,7 +146,6 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
     cleanup.push(() => signal.removeEventListener('abort', dispose));
     cleanup.push(() => logger.detachRuntime());
     logger.attachRuntime();
-    cleanup.push(mountClientRelease());
     cleanup.push(hideFieldHints, resetCargoFullHint);
     cleanup.push(
       mountSpawnFlyIn(hosts.spawnCanvas, (visible) => {

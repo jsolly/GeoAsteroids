@@ -158,7 +158,7 @@
     "src/audio/spiderScore.ts": "sha256:90f229eae32eb1c00063e38ed90fda44b72aaefc397aab89586bb3f4c1e969af",
     "src/components/ui/button/button.svelte": "sha256:9225943b80347ddad9a06c5b00138d271294f5dac05e5d2f01ed436474d63f28",
     "src/components/ui/input/input.svelte": "sha256:fab152caba80865304d177a2dea67a12672f90a852f354928ddb3be3c0ec78a9",
-    "src/components/wiki/WikiShell.svelte": "sha256:81e85641509e57f8889ea4f5ac4798da7a1ac981fb79958855371306684af787",
+    "src/components/wiki/WikiShell.svelte": "sha256:709595d33ccf48709c70657437d126273cfd95cc514d58118f8162ef84eee286",
     "src/constants/index.ts": "sha256:a81cd30fb2cff45b94d779ee0fbd13373d7f803e388d8efe4a511d2965c0a400",
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
@@ -288,7 +288,7 @@
     "src/utils/safeStorage.ts": "sha256:e3d362890bdaca7f8458227114fe2422b6cd0774095ab7e9dc64bce311313cfa",
     "src/utils/spawnPosition.ts": "sha256:47ed09b507d9b1124bb6a0215ceb7f4708b81815f32c2da30bd617e0d2d0a4c7",
     "src/wiki/article.ts": "sha256:b62f1df19562aa8d5f970a31a162080adaf833e1ac97f68c2a229f4b8dde13fe",
-    "src/wiki/articleSources.json": "sha256:164a99fdb15b17d64cf6f8653fe618463e54d15417b92920a529cae6667a994a",
+    "src/wiki/articleSources.json": "sha256:58e6ac44c9ea1845fa9ba72b6031dff7be6fdb53088b43929ce23b9e60975aa3",
     "src/wiki/contentLoader.ts": "sha256:abe0ee24945205113a07ededf0b8b54888a7d08e619b9d7a018d80a273e5afa4",
     "src/wiki/gameReference.ts": "sha256:3342b3c7b0cab7b7c9134a9817e7da30e35b556357b43f110c849154a67f1981",
     "src/wiki/media.ts": "sha256:ccea87e637e20748afc3a89b108d426f583e591bcd51700494d7db67bd37937a",
@@ -413,7 +413,7 @@
     "public/sounds/contour-lock-released.m4a": "sha256:83b3338feda3cb161d923470ec09b7a0139c4665b821aa1adbdb324e1f85bd67",
     "src/components/GameDocument.astro": "sha256:23b51b07c0082087356afdccb6a68c9e066eea8199eaa5a07b3812e4421d9d81",
     "src/components/game/GameOverlay.svelte": "sha256:0cc1e00c923ce84a5c95bbb0576b4e676ccca32d8eab74757cb74ff3f1e83450",
-    "src/components/game/GameShell.svelte": "sha256:9c12113ff2065f4569dd3408aa984d5b21f577ff7c9ee924ce70cec46bc44c41",
+    "src/components/game/GameShell.svelte": "sha256:e90b6e920887d70ff9147cc5f78b0c894f1479992c7c440458f5b377cb408c91",
     "src/components/game/InventoryPanel.svelte": "sha256:784caec9a55d8f03bffcd63e2890b0133c7088f563d0c35fc76b4f4b7c206fec",
     "src/components/game/Preferences.svelte": "sha256:df781e7ca2cd79c303154149ccfd20589d8b700057080a7111cc4ba8365c6993",
     "src/components/game/ShipPicker.svelte": "sha256:b2ba71669aa83714d541b4a69763160f800e366d26bbf7cf2d4a5a5f2b1c085c",
@@ -433,7 +433,7 @@
     "src/components/ui/sheet/sheet-overlay.svelte": "sha256:83806c9ba22588cccc1930bf035142d276b8afedca7b9dfe0fb02d5c1d4196ad",
     "src/components/ui/sheet/sheet-portal.svelte": "sha256:c2b1d448ec83bbdfede5264727ec70626b0be097bc5900a99ce362f3b481a196",
     "src/rendering/shipSchematicCanvas.ts": "sha256:6bd8bab01d2e1745f9da8d26233d31913f5cebb821bb0c765accbde9923db046",
-    "src/runtime/gameRuntime.ts": "sha256:36a1f588accde185582b0438e0fdbe2ce80fd9fa1f04cff8a0dfd054ae043948",
+    "src/runtime/gameRuntime.ts": "sha256:678bee790561b98b15172257cd804c6c7a14e23f5817bfbedf4314f31df0b81d",
     "src/runtime/inventory.ts": "sha256:4f904519e088022b139b5f1185566b0100d7d6d2f2c155453ee4103ed3706634",
     "src/runtime/overlayState.ts": "sha256:88087923597ee35025f8e05e61f940e7e67fd32b96e383c66d87cc4a710132ba",
     "src/runtime/shipSelection.ts": "sha256:0607fe92e1635e9f5419ab8be6dceb688397033a8ac12ad3f1b8e6330db44ef7",
@@ -441,8 +441,8 @@
     "src/utils/pilotNickname.ts": "sha256:a2b8486d229b47f242d58b0f759242e681c19def9f0ae780e2fe398712ab33d9",
     "tests/unit/runtime/inventory-replaces-the-map-without-releasing-flight.test.ts": "sha256:5521b482f0f4963737633ddac9966a5de382b9d8d21e2b44299621421c1284b2",
     "src/diagnostics/phoneCollector.ts": "sha256:e59ff99e803e5aa7466338a099d92b0487dfd31ba6b04e46dece95186f165ad5",
-    "src/release/clientReleaseEntry.ts": "sha256:74aee796da8280b49a7d397ac9434daad95c75dce1ac78f3016f228eee3b4add",
-    "src/release/clientReleaseWatcher.ts": "sha256:ad6e9be71475fcd04acd55003ffb5a4e496337cc377eebfde6d11ce19b4204ee",
+    "src/release/clientReleaseEntry.ts": "sha256:74417e3658fbbc62a5928dcb481242830eea21898845dd78c837bbc9ced02c1f",
+    "src/release/clientReleaseWatcher.ts": "sha256:d38808673a021c49999d808da39e04fe2c199d376408e2e1e1ed00ff0de96034",
     "src/runtime/inventoryOverlay.ts": "sha256:6b6ad682e4daf00be55f0ceebfd9300de5d15e49ce1226d84524412422e7a4a3",
     "src/runtime/presentation.ts": "sha256:3b009b5d5428a131b74ed3ef8649b115d3e308a0d822e02ab901872dc269b7eb",
     "src/runtime/runtimeMount.ts": "sha256:7f91c3fdce76412ce2276d6e5f9f1c3091b28b7807d184243a4290b449acb640",
@@ -546,7 +546,8 @@
     "src/rendering/remainsRenderer.ts": "sha256:f43d3df268dd839054c2214c394930cf559d99714cd8a99117cea399b482ab19",
     "shared/travelRoutes.ts": "sha256:278e477cade7c3dcb9a911dbed47aa3d0a9c46afe5686bfdb5cc567ff28df68e",
     "tests/unit/server/charged-beams-use-server-time-and-cancel-on-death.test.ts": "sha256:88a7a22fe6feb765c078a330f02e175db549bd47bad8a0dce29ad9f2e84fb413",
-    "tests/unit/rendering/ship-light-casts-wreck-shadows-and-colors-speed.test.ts": "sha256:1476e3dfe24147762c632608e10347e74d8177d018ac1d2803d2d1acc1071474"
+    "tests/unit/rendering/ship-light-casts-wreck-shadows-and-colors-speed.test.ts": "sha256:1476e3dfe24147762c632608e10347e74d8177d018ac1d2803d2d1acc1071474",
+    "src/components/UpdateNotice.svelte": "sha256:49d6704926dfbcd3525f9daaef08f887a3ff3277d5335afbdd6d0be118d43b4c"
   },
   "reviews": [
     {
@@ -6239,6 +6240,57 @@
       "note": "Reviewed the Hauler, Asteroids, Damage/scoring/survival and Teamwork articles and unchanged demonstration definitions against the exact strengthened authoritative-combat test. The existing ignored-client-report story now attempts another pilot boundary report, retaining both health assertions and the positive own-boundary story. A controlled missing reporter/target equality term passes the old selected story and fails the amended retained target-health assertion; healthy complete17 cases pass. Production collision ownership, player rules, generated facts, captions and media do not change, so no article or media regeneration is needed. This is source and code-only evidence, not browser, native, sound, visual, device, media reproduction or performance acceptance. Campaign remains inactive; migration, backup, activation and physical acceptance stay human-owned.",
       "sources": ["tests/unit/server/authoritative-combat.test.ts"],
       "topics": ["asteroids", "combat-survival", "hauler", "teamwork"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed explicit per-tab update notice on game/debug/manual. Updated HUD network instructions; no gameplay or demonstration changes. Focused release/consent tests pass; native desktop/mobile checks exercised A-to-B builds, preserved search/focus, keyboard cancel, explicit flight warning/reload, offline and malformed response handling. Existing dark presentation checked under light and dark preferences.",
+      "sources": [
+        "src/components/UpdateNotice.svelte",
+        "src/components/game/GameShell.svelte",
+        "src/components/wiki/WikiShell.svelte",
+        "src/release/clientReleaseEntry.ts",
+        "src/release/clientReleaseWatcher.ts",
+        "src/runtime/gameRuntime.ts"
+      ],
+      "topics": ["controls", "field-manual", "hud-network"],
+      "media": [],
+      "owners": {
+        "src/components/wiki/WikiShell.svelte": "field-manual",
+        "src/components/game/GameShell.svelte": "controls"
+      }
+    },
+    {
+      "note": "Mapped shared update notice and release watcher/browser boundary to the owning HUD/network topic. Updated instructions describe explicit per-tab confirmation, active flight disconnection, and preserved other tabs; no media changed.",
+      "sources": ["src/wiki/articleSources.json"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "src/wiki/articleSources.json": "hud-network"
+      }
+    },
+    {
+      "note": "Reviewed final foreground watcher, explicit reload guard, cancellation, stale recovery and per-target Later controls. All 25 focused tests and framework diagnostics pass. Native two-build game/Wiki checks preserve flight and search, exercise keyboard reopen, offline failure, changed-target revalidation and stale reload retry; desktop/mobile captures inspected. No gameplay GIF changes. Intentional offline emulation also interrupted existing lazy audio/log imports; canonical-origin old chunk retention remains an explicit documented gap.",
+      "sources": [
+        "src/components/UpdateNotice.svelte",
+        "src/release/clientReleaseEntry.ts",
+        "src/release/clientReleaseWatcher.ts"
+      ],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed watcher restart reconciliation: one validated current response clears a retained notice after rollback or BFCache/application restart without repeating the callback on every poll. All 26 focused tests pass, including the new restart-to-current regression. The earlier native two-build evidence and documented retention limit remain applicable; no visible controls or gameplay media changed.",
+      "sources": ["src/release/clientReleaseWatcher.ts"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Removed the unused public export from the module-private reload-result type after the full gate identified it. Runtime behavior, controls and earlier 26 focused/native browser checks are unchanged; no Wiki prose or media changes needed.",
+      "sources": ["src/release/clientReleaseWatcher.ts"],
+      "topics": ["hud-network"],
       "media": [],
       "owners": {}
     }
