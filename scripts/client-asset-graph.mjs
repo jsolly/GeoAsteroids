@@ -4,7 +4,9 @@ import { createRequire } from 'node:module';
 function assetPath(value, javascript = false) {
   assert(
     typeof value === 'string' &&
-      /^(?:assets|_astro)\/[a-zA-Z0-9_.-]+\.(?:js|css)$/u.test(value) &&
+      /^(?:assets|_astro|_vercel\/immutable\/[a-f0-9]{24})\/[a-zA-Z0-9_.-]+\.(?:js|css)$/u.test(
+        value
+      ) &&
       (!javascript || value.endsWith('.js')),
     'Client bundle asset is not first-party'
   );

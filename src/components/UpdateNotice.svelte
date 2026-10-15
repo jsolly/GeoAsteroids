@@ -11,6 +11,11 @@
   const dialogId = $props.id();
   let release = $state<string | null>(null);
   const available = $derived(release !== null);
+  const noticeText = $derived(
+    activeGame === true
+      ? 'An update is available. Updating reloads this tab, disconnects your flight and requires rejoining. Later keeps this tab open, but a server update may disconnect you or require a reload to rejoin.'
+      : 'An update is available. Update and reload loads the latest version and clears unfinished input. This tab will not reload automatically.'
+  );
   let applying = $state(false);
   let failure = $state('');
 
@@ -186,9 +191,7 @@
 
 <p class="sr-only" role="status" aria-atomic="true">
   {#key release}
-    {available && !deferred && !confirming
-      ? 'An update is available. Reload when you are ready.'
-      : ''}
+    {available && !deferred && !confirming ? noticeText : ''}
   {/key}
   {confirming ? '' : failure}
 </p>
@@ -203,7 +206,7 @@
 >
   {#if available}
     <aside bind:this={notice} class="update-notice" aria-label="Website update">
-      <p hidden={deferred}>An update is available. Reload when you are ready.</p>
+      <p hidden={deferred}>{noticeText}</p>
       {#if failure && !deferred}<p>{failure}</p>{/if}
       <div class="flex flex-wrap gap-2">
         <Button
@@ -229,10 +232,13 @@
       {#if release === null}
         No reload is needed.
       {:else if activeGame === true}
-        Reloading disconnects your current flight. You will need to rejoin. The game continues while
-        this prompt is open.
+        Reloading loads the latest version and disconnects your current flight. You will need to
+        rejoin, and unfinished input will be lost. The game continues while this prompt is open.
+        Keeping this tab open does not prevent a server update from disconnecting you or requiring a
+        reload to rejoin. This tab will not reload automatically.
       {:else}
-        Any unfinished input on this page will be lost.
+        Reloading loads the latest version. Any unfinished input on this page will be lost. This tab
+        will not reload automatically.
       {/if}
     </DialogDescription>
     <div class="flex flex-wrap justify-end gap-2">
