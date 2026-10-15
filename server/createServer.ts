@@ -127,6 +127,10 @@ export function createServerInstance(options: CreateServerOptions = {}) {
 
   // Create HTTP server for health checks
   const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+    const pathname = req.url?.split('?', 1)[0];
+    if (pathname === '/debug' || pathname?.startsWith('/debug/')) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
     if (reportHttp(req, res)) {
       return;
     }

@@ -288,7 +288,7 @@
     "src/utils/safeStorage.ts": "sha256:e3d362890bdaca7f8458227114fe2422b6cd0774095ab7e9dc64bce311313cfa",
     "src/utils/spawnPosition.ts": "sha256:47ed09b507d9b1124bb6a0215ceb7f4708b81815f32c2da30bd617e0d2d0a4c7",
     "src/wiki/article.ts": "sha256:b62f1df19562aa8d5f970a31a162080adaf833e1ac97f68c2a229f4b8dde13fe",
-    "src/wiki/articleSources.json": "sha256:1e0c14890c403f0eb4c92f05907c02866155cc1a923ab3a8fe061ed85e6d36f1",
+    "src/wiki/articleSources.json": "sha256:c80d97d22008c3fc66be14891ab6d19d5efd51d9a3d73f304844abaa5e5aa596",
     "src/wiki/contentLoader.ts": "sha256:abe0ee24945205113a07ededf0b8b54888a7d08e619b9d7a018d80a273e5afa4",
     "src/wiki/gameReference.ts": "sha256:3342b3c7b0cab7b7c9134a9817e7da30e35b556357b43f110c849154a67f1981",
     "src/wiki/media.ts": "sha256:ccea87e637e20748afc3a89b108d426f583e591bcd51700494d7db67bd37937a",
@@ -551,7 +551,10 @@
     "shared/debugReports.ts": "sha256:18361ef763d8deb776023942bbe320da2f46ad0573d942276512607bcf1485db",
     "src/components/game/DebugReportForm.svelte": "sha256:8fba14fdd7e9dea0eb196b6e10c07256a16b9f8eb7cfa89aab17e418b82d8614",
     "src/diagnostics/debugReportClient.ts": "sha256:a5c9ad047183d75781c8be22a4ed1cf89f61752df49ddeb8a36385cdda11d398",
-    "src/diagnostics/debugReportStorage.ts": "sha256:21114a7c8b67da1165bfaf33b2f5ee53c353efd3ea80bedbbfc1f9b9aacb212d"
+    "src/diagnostics/debugReportStorage.ts": "sha256:21114a7c8b67da1165bfaf33b2f5ee53c353efd3ea80bedbbfc1f9b9aacb212d",
+    "scripts/build-vercel-output.mjs": "sha256:084559299214645fac9f3d1c0300cf5d2445ba6cf4f5cc30c5f6755b3e5d65f3",
+    "server/createServer.ts": "sha256:de76d0c6bbd6ed8857b11bc9157d3ecba631dc9cd4e234c0c480f9cf19557c29",
+    "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8"
   },
   "reviews": [
     {
@@ -6362,6 +6365,20 @@
       "topics": ["hud-network"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Live release checks found missing HTTP noindex headers on trailing-slash Vercel routes and server-only Railway responses. Reviewed explicit emitted routing and HTTP boundary protection; real output and loopback route regression tests passed. Wiki guidance remains accurate.",
+      "sources": [
+        "scripts/build-vercel-output.mjs",
+        "server/createServer.ts",
+        "server/staticClient.ts",
+        "src/wiki/articleSources.json"
+      ],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "src/wiki/articleSources.json": "hud-network"
+      }
     }
   ]
 }

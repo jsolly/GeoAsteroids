@@ -533,7 +533,10 @@
     "shared/debugReports.ts",
     "src/components/game/DebugReportForm.svelte",
     "src/diagnostics/debugReportClient.ts",
-    "src/diagnostics/debugReportStorage.ts"
+    "src/diagnostics/debugReportStorage.ts",
+    "scripts/build-vercel-output.mjs",
+    "server/createServer.ts",
+    "server/staticClient.ts"
   ],
   "scout": [
     "shared/shipKits.ts",
