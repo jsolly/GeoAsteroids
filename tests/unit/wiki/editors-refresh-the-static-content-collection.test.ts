@@ -12,7 +12,7 @@ test('editor additions, edits and deletions refresh the collection while malform
   const root = mkdtempSync(join(tmpdir(), 'wiki-loader-'));
   try {
     cpSync('content', join(root, 'content'), { recursive: true });
-    cpSync('public/wiki', join(root, 'public/wiki'), { recursive: true });
+    cpSync('public/wiki/uploads', join(root, 'public/wiki/uploads'), { recursive: true });
     const entries = new Map<string, WikiArticle>();
     const watcher = new EventEmitter();
     const report = vi.fn();

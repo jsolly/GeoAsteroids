@@ -178,6 +178,90 @@ describe('authoritative Scout probes', () => {
     expect(materializations).toBe(1);
   });
 
+  test('registration keeps the pulse clock for an edited host and restarts it for a replacement host', () => {
+    const manager = new SurveyProbeManager();
+    const host = asteroidAt('registered-host', { x: 300, y: 0 });
+    const index = new AsteroidSpatialIndex([host]);
+    assert.ok(fireProbe(manager, probePilot({ x: 0, y: 0 }), index, 1_000));
+    assert.ok(host.probe);
+    let current = host;
+    let pulses = 0;
+    const tick = (now: number) =>
+      manager.tick(
+        now,
+        () => index,
+        () => current,
+        () => pulses++
+      );
+
+    tick(4_000);
+    expect(pulses).toBe(1);
+    host.health -= 1;
+    manager.registerAsteroid(host);
+    tick(6_999);
+    expect(pulses).toBe(1);
+    tick(7_000);
+    expect(pulses).toBe(2);
+
+    host.probe = { ...host.probe, id: 'replacement-probe', attachedAt: 7_500 };
+    manager.registerAsteroid(host);
+    tick(9_999);
+    expect(pulses).toBe(2);
+    tick(10_000);
+    expect(pulses).toBe(3);
+
+    current = { ...host, probe: { ...host.probe, attachedAt: 10_500 } };
+    manager.registerAsteroid(current);
+    index.add(current);
+    tick(13_000);
+    expect(pulses).toBe(3);
+    tick(13_499);
+    expect(pulses).toBe(3);
+    tick(13_500);
+    expect(pulses).toBe(4);
+  });
+
+  test('a scan can replace or clear its registration without duplicate pulses or restored membership', () => {
+    const manager = new SurveyProbeManager();
+    const host = asteroidAt('replaced-during-pulse', { x: 300, y: 0 });
+    const index = new AsteroidSpatialIndex([host]);
+    assert.ok(fireProbe(manager, probePilot({ x: 0, y: 0 }), index, 1_000));
+    const probe = host.probe;
+    assert.ok(probe);
+    const replacement = { ...host, position: { x: 500, y: 0 } };
+    let current = host;
+    let pulses = 0;
+    const tick = (now: number) =>
+      manager.tick(
+        now,
+        () => index,
+        () => current,
+        () => {
+          pulses++;
+          if (pulses === 1) {
+            manager.unregister(host.id);
+            current = replacement;
+            index.add(replacement);
+            manager.registerAsteroid(replacement);
+          } else {
+            manager.clear();
+          }
+        }
+      );
+
+    tick(4_000);
+    expect(pulses).toBe(1);
+    expect(manager.observerPositions()).toEqual([{ x: 500, y: 0 }]);
+    tick(6_999);
+    expect(pulses).toBe(1);
+    tick(7_000);
+    expect(pulses).toBe(2);
+    expect(manager.observerPositions()).toEqual([]);
+    expect(replacement.probe).toBe(probe);
+    tick(10_000);
+    expect(pulses).toBe(2);
+  });
+
   test('a large host is identified immediately even when its center is outside pulse range', () => {
     const { engine, scout } = launchWorld();
     assert.ok(scout);

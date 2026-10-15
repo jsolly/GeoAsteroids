@@ -180,6 +180,38 @@ test('loading gestures are discarded and ready gestures call the runtime synchro
   expect(runtime.commands.selectShip).toHaveBeenCalledExactlyOnceWith('hauler');
 });
 
+test.each(['  Early pilot  ', ''])(
+  'a pilot keeps the pre-ready name draft %j through runtime initialization',
+  async (draft) => {
+    const imported = deferred();
+    boundary.imported.mockReturnValue(imported.promise);
+    await start();
+    const input = element('#playerNameInput', HTMLInputElement);
+    expect(input.disabled).toBe(false);
+    input.value = 'Temporary pilot';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.value = draft;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await settle();
+    expect(input.value).toBe(draft);
+    expect(runtime.commands.join).not.toHaveBeenCalled();
+    imported.release();
+    await vi.dynamicImportSettled();
+    await settle();
+    expect(input.value).toBe(draft);
+    publish({
+      ...initialView,
+      menu: { ...initialView.menu, initialName: 'Another saved pilot', buildInfo: 'new-build' },
+    });
+    await settle();
+    expect(input.value).toBe(draft);
+    const button = element('#start-game', HTMLButtonElement);
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(runtime.commands.join).toHaveBeenCalledExactlyOnceWith(draft);
+  }
+);
+
 test('a failed initialization exposes retry and the second attempt subscribes once', async () => {
   boundary.create.mockImplementationOnce(() => {
     throw new Error('Canvas unavailable');
@@ -190,6 +222,9 @@ test('a failed initialization exposes retry and the second attempt subscribes on
   expect(document.body.textContent).toContain('Canvas unavailable');
   expect(element('#start-game', HTMLButtonElement).disabled).toBe(true);
   expect(runtime.subscribe).not.toHaveBeenCalled();
+  const input = element('#playerNameInput', HTMLInputElement);
+  input.value = '  Retry pilot  ';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
   const retry = [...document.querySelectorAll('button')].find(
     (button) => button.textContent?.trim() === 'Retry'
   );
@@ -202,6 +237,9 @@ test('a failed initialization exposes retry and the second attempt subscribes on
   expect(boundary.create).toHaveBeenCalledTimes(2);
   expect(runtime.subscribe).toHaveBeenCalledTimes(1);
   expect(document.body.textContent).not.toContain('Canvas unavailable');
+  expect(input.value).toBe('  Retry pilot  ');
+  element('#start-game', HTMLButtonElement).click();
+  expect(runtime.commands.join).toHaveBeenCalledExactlyOnceWith('  Retry pilot  ');
 });
 
 test('unmount during module loading aborts startup before creating a runtime', async () => {
@@ -250,6 +288,8 @@ test('play and geometry update body classes synchronously and preserve shell can
   }
   const gameCanvas = hosts.canvas;
   expect(hosts.titleCanvas).toBe(element('#title-terrain', HTMLCanvasElement));
+  expect(hosts.titleCanvas.getAttribute('aria-hidden')).toBe('true');
+  expect(document.querySelector('#title-starfield')).toBeNull();
   const spawnCanvas = hosts.spawnCanvas;
   expect(spawnCanvas).toBe(element('#spawn-fly-in', HTMLCanvasElement));
   hosts.placeChrome({
@@ -266,6 +306,7 @@ test('play and geometry update body classes synchronously and preserve shell can
   expect(document.body.classList.contains('in-play')).toBe(true);
   expect(document.body.classList.contains('touch-play')).toBe(true);
   await settle();
+  expect(document.querySelector('#town-store-toggle')).toBeNull();
   const area = element('#gameArea', HTMLDivElement);
   expect(area.hidden).toBe(false);
   expect(area.style.width).toBe('390px');

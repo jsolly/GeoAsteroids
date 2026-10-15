@@ -3,7 +3,6 @@ import type { LootData } from '../../../shared-types';
 import { drawLootRelative } from '../../../src/entities/loot/lootRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { drawLaserBolts } from '../../../src/entities/ship/shipRenderer';
-import { Point } from '../../../src/physics/Point';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { configureRenderQuality } from '../../../src/rendering/renderQuality';
 
@@ -25,9 +24,10 @@ function scene() {
   vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(canvas);
   vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue({ width: 400, height: 200 });
   const scale = vi.spyOn(canvasManager, 'getPlayfieldScale').mockReturnValue(1);
-  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation(
-    (position) => new Point(position.x, position.y)
-  );
+  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((position) => ({
+    x: position.x,
+    y: position.y,
+  }));
   vi.spyOn(canvasManager, 'worldToScreenInto').mockImplementation((out, position) =>
     Object.assign(out, position)
   );

@@ -200,7 +200,9 @@ test.each(['pointercancel', 'lostpointercapture'])(
   (type) => {
     pointer('pointerdown', 1, 0);
     pointer('pointerdown', 2, 50, 320, 400);
+    expect(sendCharge.mock.calls).toEqual([['start']]);
     pointer(type, 2, 100);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['cancel']]);
     expect(controlSources.touchFire).toBe(false);
     expect(player.ship.thrusting).toBe(true);
   }

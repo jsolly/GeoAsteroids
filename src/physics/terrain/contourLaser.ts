@@ -11,6 +11,10 @@ export interface ContourLaserTick {
 
 const gradientScratch = { x: 0, y: 0 };
 
+/**
+ * Iso-tangent under a live shot. Same seed + same world point → same tick on
+ * every client. Does not move the bolt or change hit tests.
+ */
 export function contourLaserTickInto(
   out: ContourLaserTick,
   field: Heightfield,
@@ -48,31 +52,4 @@ export function contourLaserTickInto(
     Number.isFinite(out.by)
     ? out
     : null;
-}
-
-/**
- * Iso-tangent under a live shot. Same seed + same world point → same tick on
- * every client. Does not move the bolt or change hit tests.
- */
-export function contourLaserTick(
-  field: Heightfield,
-  x: number,
-  y: number,
-  halfLen: number = VISUAL.CONTOUR_LASER_LENGTH / 2
-): ContourLaserTick | null {
-  return contourLaserTickInto({ ax: 0, ay: 0, bx: 0, by: 0 }, field, x, y, halfLen);
-}
-
-export function contourLaserTicksForShots(
-  field: Heightfield,
-  shots: readonly { x: number; y: number }[]
-): ContourLaserTick[] {
-  const ticks: ContourLaserTick[] = [];
-  for (const shot of shots) {
-    const tick = contourLaserTick(field, shot.x, shot.y);
-    if (tick) {
-      ticks.push(tick);
-    }
-  }
-  return ticks;
 }

@@ -1,11 +1,16 @@
 // @vitest-environment node
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { type FileHandle, mkdtemp, open, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { expect, it as test } from 'vitest';
+import { expect, it as test, vi } from 'vitest';
 import { commands } from '../../../benchmarks/run';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...actual, open: vi.fn(actual.open) };
+});
 
 function running(pid: number): boolean {
   try {
@@ -104,5 +109,96 @@ test('a failed compiler preserves its exit status and diagnostic output', async 
     expect(record).toMatchObject({ exitCode: 7, signal: null });
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('a second log collision closes the first real file and retains the setup failure', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'georoids-benchmark-log-collision-'));
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  const handles: FileHandle[] = [];
+  const openedFds: number[] = [];
+  vi.mocked(open).mockImplementation(async (...args) => {
+    const handle = await actual.open(...args);
+    handles.push(handle);
+    openedFds.push(handle.fd);
+    return handle;
+  });
+  try {
+    await writeFile(join(directory, 'command-1.stderr.log'), 'occupied', { flag: 'wx' });
+    const failure: unknown = await commands(directory, new AbortController().signal)(
+      process.execPath,
+      ['--version']
+    ).then(
+      () => undefined,
+      (error: unknown) => error
+    );
+    const errors: unknown[] = failure instanceof AggregateError ? failure.errors : [failure];
+    expect(errors).toEqual([expect.objectContaining({ code: 'EEXIST' })]);
+    expect(handles).toHaveLength(1);
+    expect(openedFds[0]).toBeGreaterThanOrEqual(0);
+    expect(handles[0]?.fd).toBe(-1);
+    expect(await readFile(join(directory, 'command-1.stderr.log'), 'utf8')).toBe('occupied');
+    expect(failure).toBeInstanceOf(AggregateError);
+    const record: unknown = JSON.parse(await readFile(join(directory, 'command-1.json'), 'utf8'));
+    expect(record).toMatchObject({
+      exitCode: null,
+      signal: null,
+      errors: [{ message: expect.stringContaining('EEXIST') }],
+    });
+  } finally {
+    vi.mocked(open).mockImplementation(actual.open);
+    try {
+      await Promise.all(handles.map((handle) => handle.close()));
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+});
+
+test('log close failures close both real files and remain in the command failure record', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'georoids-benchmark-log-close-'));
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  const handles: FileHandle[] = [];
+  const restores: Array<() => void> = [];
+  vi.mocked(open).mockImplementation(async (...args) => {
+    const handle = await actual.open(...args);
+    const message = handles.length === 0 ? 'stdout close failed' : 'stderr close failed';
+    handles.push(handle);
+    const close = handle.close.bind(handle);
+    const spy = vi.spyOn(handle, 'close').mockImplementation(async () => {
+      await close();
+      throw new Error(message);
+    });
+    restores.push(() => spy.mockRestore());
+    return handle;
+  });
+  try {
+    const failure: unknown = await commands(directory, new AbortController().signal)(
+      process.execPath,
+      ['-e', "process.stdout.write('completed')"]
+    ).then(
+      () => undefined,
+      (error: unknown) => error
+    );
+    expect(handles).toHaveLength(2);
+    expect(handles.map((handle) => handle.fd)).toEqual([-1, -1]);
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(await readFile(join(directory, 'command-1.stdout.log'), 'utf8')).toBe('completed');
+    const record: unknown = JSON.parse(await readFile(join(directory, 'command-1.json'), 'utf8'));
+    expect(record).toMatchObject({
+      exitCode: 0,
+      signal: null,
+      errors: [{ message: 'stdout close failed' }, { message: 'stderr close failed' }],
+    });
+  } finally {
+    vi.mocked(open).mockImplementation(actual.open);
+    for (const restore of restores) {
+      restore();
+    }
+    try {
+      await Promise.all(handles.map((handle) => handle.close()));
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 });

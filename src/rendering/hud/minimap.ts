@@ -48,15 +48,6 @@ import {
 import type { HudLayout } from './hudLayout';
 import { addResourceMapPath, asteroidMapInk, drawResourceMapMark } from './resourceMapMark';
 
-type RadarMark = {
-  kind: 'local' | 'other';
-  x: number;
-  y: number;
-  heading: number;
-  color: string;
-  kitId: ShipKitId;
-};
-
 const LOOT_MARK_KINDS = [
   'shard',
   'tap',
@@ -215,38 +206,6 @@ function strokeRadarHull(
       VISUAL.SHIP_GLOW,
       extra.closed
     );
-  }
-}
-
-function drawRadarMark(ctx: CanvasRenderingContext2D, mark: RadarMark): void {
-  const { kind } = mark;
-  switch (kind) {
-    case 'local': {
-      strokeRadarHull(
-        ctx,
-        mark.x,
-        mark.y,
-        VISUAL.MINIMAP_LOCAL_SIZE,
-        mark.heading,
-        mark.color,
-        mark.kitId
-      );
-      return;
-    }
-    case 'other': {
-      strokeRadarHull(
-        ctx,
-        mark.x,
-        mark.y,
-        VISUAL.MINIMAP_DOT,
-        mark.heading,
-        mark.color,
-        mark.kitId
-      );
-      return;
-    }
-    default:
-      throw new Error(`Unexpected radar mark kind: ${kind}`);
   }
 }
 
@@ -784,27 +743,29 @@ export function drawMiniMap(
         drawPilotEdgeMark(ctx, geometry, player.ship.position, player.color, player.ship.kitId);
         continue;
       }
-      drawRadarMark(ctx, {
-        kind: 'other',
-        x: geometry.projection.x,
-        y: geometry.projection.y,
-        heading: player.ship.angle,
-        color: player.color,
-        kitId: player.ship.kitId,
-      });
+      strokeRadarHull(
+        ctx,
+        geometry.projection.x,
+        geometry.projection.y,
+        VISUAL.MINIMAP_DOT,
+        player.ship.angle,
+        player.color,
+        player.ship.kitId
+      );
     }
 
     if (!ship.exploding) {
       const p = projectPosition(geometry, ship.position);
       if (p) {
-        drawRadarMark(ctx, {
-          kind: 'local',
-          x: geometry.projection.x,
-          y: geometry.projection.y,
-          heading: ship.angle,
-          color: ship.color,
-          kitId: ship.kitId,
-        });
+        strokeRadarHull(
+          ctx,
+          geometry.projection.x,
+          geometry.projection.y,
+          VISUAL.MINIMAP_LOCAL_SIZE,
+          ship.angle,
+          ship.color,
+          ship.kitId
+        );
       }
     }
   } catch (error: unknown) {

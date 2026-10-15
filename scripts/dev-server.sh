@@ -57,7 +57,11 @@ port_in_use() {
 
 require_process_tools() {
     local required_command
-    for required_command in lsof pgrep ps; do
+    local required_commands=(lsof pgrep ps)
+    case "$OSTYPE" in
+        linux*) required_commands+=(readlink) ;;
+    esac
+    for required_command in "${required_commands[@]}"; do
         if ! command -v "$required_command" > /dev/null 2>&1; then
             echo "❌ $required_command is required to identify owned development ports and processes" >&2
             return 1
@@ -89,6 +93,18 @@ process_command() {
 process_cwd() {
     local output
     local lsof_status
+    case "$OSTYPE" in
+        linux*)
+            # Read this PID directly; unrelated inaccessible mounts do not
+            # affect procfs cwd inspection. Never fall back after a failed read.
+            if process_inspect readlink -v "/proc/$1/cwd"; then
+                printf '%s\n' "$PROCESS_INSPECTION_OUTPUT"
+                return 0
+            fi
+            report_process_inspection_failure "cwd for process PID" readlink "$1"
+            return 2
+            ;;
+    esac
     if process_inspect lsof -a -p "$1" -d cwd -Fn; then
         output="$PROCESS_INSPECTION_OUTPUT"
         printf '%s\n' "$output" | sed -n 's/^n//p'

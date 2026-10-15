@@ -53,21 +53,6 @@ export function handleMouseDown(ev: MouseEvent, player: Player): void {
   }
 }
 
-export function handleMouseUp(ev: MouseEvent, player: Player): void {
-  if (isSyntheticTouchMouse(ev)) {
-    return;
-  }
-  // Early return for dead/exploding players
-  if (player.ship.health <= 0 || player.ship.exploding) {
-    return;
-  }
-
-  if (ev.button === 0) {
-    // Allow next laser shot on release (mirrors Space key previous behavior)
-    player.ship.canShoot = true;
-  }
-}
-
 export function preventContextMenu(ev: MouseEvent): void {
   ev.preventDefault();
 }

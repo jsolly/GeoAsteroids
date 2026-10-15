@@ -1,8 +1,20 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { WikiScrollMemory } from '../../../src/wiki/scrollMemory';
 
+const memories: WikiScrollMemory[] = [];
+beforeEach(() => {
+  vi.useFakeTimers();
+});
 afterEach(() => {
-  vi.useRealTimers();
+  try {
+    for (const scroll of memories) {
+      scroll.dispose();
+    }
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    memories.length = 0;
+    vi.useRealTimers();
+  }
 });
 
 function memory(start = 'index'): {
@@ -15,7 +27,7 @@ function memory(start = 'index'): {
   const remembered: Array<{ id: string; y: number }> = [];
   let y = 0;
   let visitNumber = 0;
-  return {
+  const result = {
     writes,
     remembered,
     visit: () => {
@@ -34,6 +46,8 @@ function memory(start = 'index'): {
       () => y
     ),
   };
+  memories.push(result.scroll);
+  return result;
 }
 
 test('back returns to the scrolled index after an article opens at the top', () => {
@@ -116,7 +130,6 @@ test('back to the ship comparison keeps the old offset instead of jumping to the
 });
 
 test('a link click that never leaves still remembers the next scroll', async () => {
-  vi.useFakeTimers();
   const { scroll, writes, visit } = memory('hauler');
   scroll.prepareForLink(40);
   scroll.noteScroll(12);

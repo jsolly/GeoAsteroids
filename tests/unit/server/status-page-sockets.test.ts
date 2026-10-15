@@ -26,10 +26,12 @@ class StatusPageSocket {
   private static readonly attempts = new Map<'game' | 'logs', number>();
   private static throwNextSend = false;
   static sent: string[] = [];
+  static created: StatusPageSocket[] = [];
 
   static reset(): void {
     StatusPageSocket.attempts.clear();
     StatusPageSocket.sent = [];
+    StatusPageSocket.created = [];
     StatusPageSocket.throwNextSend = false;
   }
 
@@ -46,6 +48,7 @@ class StatusPageSocket {
 
   constructor(url: string) {
     this.url = url;
+    StatusPageSocket.created.push(this);
     const kind = url.includes('/ws') ? 'game' : 'logs';
     const attempt = (StatusPageSocket.attempts.get(kind) ?? 0) + 1;
     StatusPageSocket.attempts.set(kind, attempt);
@@ -300,6 +303,34 @@ test.each([
   }
 );
 
+test('testing all connections cannot reopen logs after an operator disconnect', async () => {
+  StatusPageSocket.reset();
+  const status = createStatusDocument();
+  try {
+    await settleMicrotasks();
+    button(status.window, 'testAllBtn').click();
+    await settleMicrotasks();
+    button(status.window, 'connectLogsBtn').click();
+    await settleMicrotasks();
+    button(status.window, 'connectLogsBtn').click();
+    await settleMicrotasks();
+    expect(text(status.window, 'logStatus')).toBe('Connected');
+
+    button(status.window, 'disconnectLogsBtn').click();
+    expect(text(status.window, 'logStatus')).toBe('Disconnected');
+    await settleMicrotasks();
+    status.advanceTimers(200);
+    await settleMicrotasks();
+    status.advanceTimers(500);
+    await settleMicrotasks();
+    expect(text(status.window, 'logStatus')).toBe('Disconnected');
+    expect(button(status.window, 'connectLogsBtn').disabled).toBe(false);
+    expect(button(status.window, 'disconnectLogsBtn').disabled).toBe(true);
+  } finally {
+    status.dispose();
+  }
+});
+
 test('both status log controls send fresh bounded client records accepted by real ingress', async () => {
   StatusPageSocket.reset();
   const logDirectory = await mkdtemp(path.join(os.tmpdir(), 'georoids-status-logs-'));
@@ -313,12 +344,16 @@ test('both status log controls send fresh bounded client records accepted by rea
     await settleMicrotasks();
     expect(text(status.window, 'logStatus')).toBe('Connected');
 
+    const persistentLogSocket = StatusPageSocket.created.at(-1);
     const sentAfter = Date.now();
     button(status.window, 'testLogBtn').click();
     button(status.window, 'clientLogBtn').click();
     await settleMicrotasks();
     const sentBefore = Date.now();
     expect(StatusPageSocket.sent).toHaveLength(2);
+    const oneShotSocket = StatusPageSocket.created.at(-1);
+    expect(oneShotSocket).toBeInstanceOf(StatusPageSocket);
+    expect(oneShotSocket).not.toBe(persistentLogSocket);
     expect(status.window.document.querySelectorAll('script')).toHaveLength(1);
     expect(Reflect.get(status.window, 'statusInjected')).toBeUndefined();
 
@@ -360,6 +395,8 @@ test('both status log controls send fresh bounded client records accepted by rea
       'Test client log from /status page',
     ]);
     expect(new Set(written.map((record) => record.sessionId))).toEqual(sessions);
+    expect(oneShotSocket?.readyState).toBe(StatusPageSocket.CLOSED);
+    expect(persistentLogSocket?.readyState).toBe(StatusPageSocket.OPEN);
   } finally {
     status.dispose();
     await ClientLogger.flushPending();

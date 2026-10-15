@@ -8,12 +8,7 @@ import {
   togglePlayerContourLock,
 } from '../../../src/input/keybindings';
 
-import {
-  handleMouseDown,
-  handleMouseMove,
-  handleMouseUp,
-  preventContextMenu,
-} from '../../../src/input/mouse';
+import { handleMouseDown, handleMouseMove, preventContextMenu } from '../../../src/input/mouse';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { closeGameOverlay, openGameOverlay } from '../../../src/runtime/overlayState';
 
@@ -151,14 +146,12 @@ test('mouse movement turns the ship toward the cursor at a capped rate', () => {
   expect(Math.abs(player.ship.angle - Math.PI / 2)).toBeLessThan(1e-6);
 });
 
-test('left click fires once and release re-arms without interrupting cruise', () => {
+test('left click fires once without interrupting cruise', () => {
   const shoot = vi.spyOn(player.ship, 'shoot');
   handleMouseDown(new MouseEvent('mousedown', { button: 0 }), player);
   expect(shoot).toHaveBeenCalledOnce();
   expect(player.ship.canShoot).toBe(false);
   expect(player.ship.lasers).toHaveLength(1);
-  handleMouseUp(new MouseEvent('mouseup', { button: 0 }), player);
-  expect(player.ship.canShoot).toBe(true);
   expect(player.ship.thrusting).toBe(true);
 });
 
@@ -174,11 +167,6 @@ test('right click toggles contour lock once per press without firing or interrup
   expect(player.ship.contourLocked).toBe(true);
   expect(player.ship.thrusting).toBe(true);
   expect(shoot).not.toHaveBeenCalled();
-
-  handleMouseUp(new MouseEvent('mouseup', { button: 2 }), player);
-  expect(toggle).toHaveBeenCalledOnce();
-  expect(player.ship.contourLocked).toBe(true);
-  expect(player.ship.thrusting).toBe(true);
 
   handleMouseDown(new MouseEvent('mousedown', { button: 2 }), player);
   expect(toggle).toHaveBeenCalledTimes(2);

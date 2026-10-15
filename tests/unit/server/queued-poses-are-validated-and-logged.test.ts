@@ -201,6 +201,7 @@ function join(id: string) {
 }
 
 test('a pre-acknowledgment pose is ignored without a spurious enhanced-movement warning', () => {
+  const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
   const { socket, messages } = join('enhanced-pilot');
   const pilot = engine.getPlayer('enhanced-pilot');
   if (!pilot) {
@@ -217,4 +218,9 @@ test('a pre-acknowledgment pose is ignored without a spurious enhanced-movement 
   );
   expect(engine.getPlayer('enhanced-pilot')?.position).toEqual(before);
   expect(messages.some((message) => message.type === 'error')).toBe(false);
+  expect(
+    warn.mock.calls.filter(
+      ([category, event]) => category === 'STATE' && event === 'motion_command_rejected'
+    )
+  ).toEqual([]);
 });

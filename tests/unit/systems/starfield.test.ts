@@ -1,12 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { projectWorldToScreenInto } from '../../../src/rendering/playfieldCamera';
 import { drawStarfield } from '../../../src/rendering/starfield';
 
 const view = vi.hoisted(() => ({
   width: 1920,
   height: 1080,
   scale: 1,
-  rotation: 0,
   points: [] as number[][],
 }));
 vi.mock('../../../src/rendering/canvasSurface', () => ({
@@ -20,19 +18,10 @@ vi.mock('../../../src/rendering/canvasSurface', () => ({
     }),
     getViewportSize: () => view,
     getPlayfieldScale: () => view.scale,
-    getCameraRotation: () => view.rotation,
-    worldToScreenInto: (
-      out: { x: number; y: number },
-      point: { x: number; y: number },
-      camera: { x: number; y: number }
-    ) => {
-      return projectWorldToScreenInto(out, point, camera, view, view.scale);
-    },
   },
 }));
 afterEach(() => {
   view.scale = 1;
-  view.rotation = 0;
   view.points = [];
 });
 
@@ -78,14 +67,6 @@ test('zooming out fills all visible world tiles, including the viewport edges', 
   view.scale = 0.5;
   const stars = sky(0, 0);
   expect(stars.length).toBeGreaterThan(70);
-  expect(stars.some(([x]) => x !== undefined && x < 150)).toBe(true);
-  expect(stars.some(([x]) => x !== undefined && x > 1770)).toBe(true);
-});
-
-test('turning east keeps stars at the wide viewport edges', () => {
-  view.rotation = -Math.PI / 2;
-  view.scale = 0.5;
-  const stars = sky(0, 0);
   expect(stars.some(([x]) => x !== undefined && x < 150)).toBe(true);
   expect(stars.some(([x]) => x !== undefined && x > 1770)).toBe(true);
 });

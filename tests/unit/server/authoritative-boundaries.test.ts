@@ -88,5 +88,6 @@ describe('server authority boundaries', () => {
     assert.ok(result, 'rubble collision result');
 
     expect(result.newAsteroids).toEqual([]);
+    expect(result.origin).toEqual({ x: 0, y: 0 });
   });
 });

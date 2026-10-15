@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
-import { ROID, WIRE_PALETTE } from '../../../shared/constants/gameplay';
+import { ROID } from '../../../shared/constants/gameplay';
 import { PALETTE, VISUAL } from '../../../src/constants';
+import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { Player } from '../../../src/entities/player/Player';
 import { getRoidStrokeWidth } from '../../../src/entities/roid/roidRenderer';
 import { Ship } from '../../../src/entities/ship/Ship';
@@ -13,7 +14,7 @@ test('laser colors never use white', () => {
   expect(laserBoltColor(PALETTE.LASER_LOCAL, 1).toLowerCase()).not.toBe('#ffffff');
 });
 
-test('players and ships use the role palette instead of white', () => {
+test('players keep their hull color through creation and authoritative updates', () => {
   const local = new Player({
     id: 'p-local',
     name: 'Local',
@@ -25,10 +26,50 @@ test('players and ships use the role palette instead of white', () => {
     type: 'remote',
   });
 
-  expect(local.color).toBe(PALETTE.LOCAL);
-  expect(local.ship.color).toBe(PALETTE.LOCAL);
-  expect(remote.color).toBe(WIRE_PALETTE.REMOTE);
-  expect(new Ship().color).toBe(PALETTE.LOCAL);
+  expect(local.color).toBe('#5EEAD4');
+  expect(local.ship.color).toBe('#5EEAD4');
+  expect(remote.color).toBe('#7DD3FC');
+  expect(remote.ship.color).toBe('#7DD3FC');
+  expect(new Ship().color).toBe('#5EEAD4');
+
+  const custom = createPlayer({
+    id: 'p-custom',
+    name: 'Custom',
+    type: 'local',
+    position: { x: 0, y: 0 },
+    color: '#123456',
+  });
+  expect(custom.color).toBe('#123456');
+  expect(custom.ship.color).toBe('#123456');
+
+  custom.updateFromServer({ color: '#123456' });
+  expect(custom.color).toBe('#5EEAD4');
+  expect(custom.ship.color).toBe('#5EEAD4');
+  local.updateFromServer({ color: '#FBBF24' });
+  expect(local.color).toBe('#FBBF24');
+  expect(local.ship.color).toBe('#FBBF24');
+  local.updateFromServer({});
+  expect(local.color).toBe('#FBBF24');
+  expect(local.ship.color).toBe('#FBBF24');
+
+  remote.updateFromServer({ color: '#123456' });
+  expect(remote.color).toBe('#123456');
+  expect(remote.ship.color).toBe('#123456');
+  remote.updateFromServer({ kitId: 'hauler' });
+  expect(remote.ship.kitId).toBe('hauler');
+  expect(remote.color).toBe('#123456');
+  expect(remote.ship.color).toBe('#123456');
+  remote.updateFromServer({ kitId: 'scout', color: '#ABCDEF' });
+  expect(remote.ship.kitId).toBe('scout');
+  expect(remote.color).toBe('#ABCDEF');
+  expect(remote.ship.color).toBe('#ABCDEF');
+
+  custom.color = '#C084FC';
+  expect(custom.color).toBe('#C084FC');
+  expect(custom.ship.color).toBe('#C084FC');
+  custom.ship.color = '#F97316';
+  expect(custom.color).toBe('#F97316');
+  expect(custom.ship.color).toBe('#F97316');
 });
 
 test('hexToRgba preserves locked hex channels', () => {

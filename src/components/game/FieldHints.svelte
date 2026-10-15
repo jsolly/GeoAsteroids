@@ -26,8 +26,7 @@
           event.stopPropagation();
           onactivate(hint.id);
         }}
-        onkeydown={gate}
-        onkeyup={gate}>{hint.actionLabel}</Button
+        onkeydown={gate}>{hint.actionLabel}</Button
       >
     {:else}
       <span

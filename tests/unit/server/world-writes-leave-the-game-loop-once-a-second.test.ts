@@ -60,7 +60,7 @@ function world(persistence: WorldPersistence) {
   return { engine, miner, frame };
 }
 
-test('a mining break and its score reach the database on the next one-second flush, not on the tick', () => {
+test('a mining break and a changed score reach the database on the next one-second flush, not on the tick', () => {
   const store = new WorldStore(':memory:');
   cleanups.push(() => store.close());
   const commits = vi.spyOn(WorldStore.prototype, 'checkpoint');
@@ -70,14 +70,17 @@ test('a mining break and its score reach the database on the next one-second flu
   // Storage starts out holding the intact deposit and a score of zero.
   engine.checkpointWorld();
   expect(store.loadSector('0,0')?.some((rock) => rock.id === target.id)).toBe(true);
+  expect(store.loadPilots().find((pilot) => pilot.id === miner.id)?.score).toBe(0);
   commits.mockClear();
 
+  miner.score = 77;
   expect(engine.handleAsteroidHit(target.id, miner.id, 'laser').outcome).toBe('damaged');
   expect(engine.handleAsteroidHit(target.id, miner.id, 'laser').outcome).toBe('destroyed');
-  expect(miner.score).toBe(0);
-  // The break is a terminal, score-bearing event, yet nothing touches storage yet.
+  expect(miner.score).toBe(77);
+  // Neither the broken deposit nor the changed score touches storage yet.
   expect(commits).not.toHaveBeenCalled();
   expect(store.loadSector('0,0')?.some((rock) => rock.id === target.id)).toBe(true);
+  expect(store.loadPilots().find((pilot) => pilot.id === miner.id)?.score).toBe(0);
 
   for (let tick = 1; tick < GAME.FPS; tick++) {
     frame();
@@ -86,8 +89,7 @@ test('a mining break and its score reach the database on the next one-second flu
   frame();
   expect(commits).toHaveBeenCalledTimes(1);
   expect(store.loadSector('0,0')?.some((rock) => rock.id === target.id)).toBe(false);
-  expect(miner.score).toBeGreaterThanOrEqual(0);
-  expect(store.loadPilots().find((pilot) => pilot.id === miner.id)?.score).toBe(miner.score);
+  expect(store.loadPilots().find((pilot) => pilot.id === miner.id)?.score).toBe(77);
 
   // Another second of ordinary flight is one more batch, and the last
   // pilot's departure flushes at once so a pause leaves nothing pending.
@@ -170,7 +172,7 @@ test('a commit still in flight defers the next flush, which then carries everyth
   persistence.pendingBatches = 1;
   expect(engine.handleAsteroidHit(target.id, miner.id, 'laser').outcome).toBe('damaged');
   expect(engine.handleAsteroidHit(target.id, miner.id, 'laser').outcome).toBe('destroyed');
-  expect(miner.score).toBeGreaterThanOrEqual(0);
+  expect(miner.score).toBe(0);
   for (let tick = 0; tick < GAME.FPS; tick++) {
     frame();
   }
@@ -178,6 +180,7 @@ test('a commit still in flight defers the next flush, which then carries everyth
 
   // Explicit flushes coalesce too: the last pilot leaving and a repeated
   // request add nothing while the writer is busy...
+  miner.score = 123;
   engine.removePlayer(miner.id);
   expect(engine.getDiagnostics().isPaused).toBe(true);
   engine.checkpointWorld();
@@ -192,9 +195,7 @@ test('a commit still in flight defers the next flush, which then carries everyth
   const deferred = persistence.batches[1];
   assert(deferred);
   expect(deferred.sectors.get('0,0')).toEqual([]);
-  expect(deferred.pilots.map((pilot) => [pilot.id, pilot.score])).toEqual([
-    [miner.id, miner.score],
-  ]);
+  expect(deferred.pilots.map((pilot) => [pilot.id, pilot.score])).toEqual([[miner.id, 123]]);
   expect(deferred.world).toBeUndefined();
   expect(engine.getDiagnostics().persistence).toMatchObject({ mode: 'worker', pendingBatches: 0 });
 });

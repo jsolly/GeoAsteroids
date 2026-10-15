@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 
 function assetPath(value, javascript = false) {
   assert(
@@ -57,35 +58,42 @@ export function clientAssetGraph(manifest, entries) {
   return [...reachable].sort();
 }
 
-function attribute(tag, name) {
-  return new RegExp(`(?:^|\\s)${name}\\s*=\\s*["']([^"']+)["']`, 'iu').exec(tag)?.[1];
-}
-
 /** Astro hydration loads island entries from attributes, alongside ordinary scripts. */
 export function clientDocumentAssets(html) {
-  const scripts = [...html.matchAll(/<script\b[^>]*>/giu)]
-    .filter(([tag]) => attribute(tag, 'type') === 'module')
-    .flatMap(([tag]) => attribute(tag, 'src') ?? []);
-  const islands = [...html.matchAll(/<astro-island\b[^>]*>/giu)].flatMap(([tag]) => {
-    const component = attribute(tag, 'component-url');
-    const renderer = attribute(tag, 'renderer-url');
-    assert(component && renderer, 'Client island entry is missing');
-    return [component, renderer];
-  });
-  const links = [...html.matchAll(/<link\b[^>]*>/giu)]
-    .filter(([tag]) => ['modulepreload', 'stylesheet'].includes(attribute(tag, 'rel')))
-    .map(([tag]) => attribute(tag, 'href'));
-  const modules = [...new Set([...scripts, ...islands])];
-  assert(modules.length > 0, 'Client module entry is missing');
-  const path = (value, javascript = false) => {
-    assert(
-      typeof value === 'string' && value.startsWith('/') && !value.startsWith('//'),
-      'Client bundle asset is not first-party'
-    );
-    return assetPath(value.slice(1), javascript);
-  };
-  return {
-    modules: modules.map((value) => path(value, true)),
-    assets: [...new Set([...modules, ...links])].map((value) => path(value)),
-  };
+  const require = createRequire(import.meta.url);
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM(html);
+  try {
+    const elements = (selector) =>
+      [...dom.window.document.querySelectorAll(selector)].filter(
+        (element) => !element.closest('noscript')
+      );
+    const scripts = elements('script')
+      .filter((element) => element.getAttribute('type') === 'module')
+      .flatMap((element) => element.getAttribute('src') || []);
+    const islands = elements('astro-island').flatMap((element) => {
+      const component = element.getAttribute('component-url');
+      const renderer = element.getAttribute('renderer-url');
+      assert(component && renderer, 'Client island entry is missing');
+      return [component, renderer];
+    });
+    const links = elements('link')
+      .filter((element) => ['modulepreload', 'stylesheet'].includes(element.getAttribute('rel')))
+      .map((element) => element.getAttribute('href'));
+    const modules = [...new Set([...scripts, ...islands])];
+    assert(modules.length > 0, 'Client module entry is missing');
+    const path = (value, javascript = false) => {
+      assert(
+        typeof value === 'string' && value.startsWith('/') && !value.startsWith('//'),
+        'Client bundle asset is not first-party'
+      );
+      return assetPath(value.slice(1), javascript);
+    };
+    return {
+      modules: modules.map((value) => path(value, true)),
+      assets: [...new Set([...modules, ...links])].map((value) => path(value)),
+    };
+  } finally {
+    dom.window.close();
+  }
 }

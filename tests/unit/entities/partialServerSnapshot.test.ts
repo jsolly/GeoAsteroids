@@ -45,8 +45,8 @@ test('respawnTimer 0 does not latch the local ship as dead', () => {
   const player = localPilot();
   player.ship.health = 100;
   player.ship.exploding = false;
-  const origin = { x: 40, y: 50 };
-  player.ship.position = origin;
+  player.ship.position = { x: 40, y: 50 };
+  const origin = { ...player.ship.position };
 
   player.updateFromServer({
     respawnTimer: 0,

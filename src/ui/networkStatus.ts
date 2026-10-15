@@ -7,7 +7,6 @@ import { logger } from '../utils/Logger';
 export interface NetworkStatusView {
   readonly message: string;
 }
-let initialized = false;
 let lossAnnounced = false;
 let current: NetworkStatusView | null = null;
 const subscribers = new Set<() => void>();
@@ -49,13 +48,12 @@ export function hideNetworkBanner(): void {
  * ConnectionManager. Idempotent — safe to call more than once.
  */
 export function mountNetworkStatus(): () => void {
-  if (initialized || typeof window === 'undefined') {
+  if (listenerScope !== null || typeof window === 'undefined') {
     return () => {};
   }
   const scope = new AbortController();
   listenerScope = scope;
   const { signal } = scope;
-  initialized = true;
 
   window.addEventListener('networkConnected', () => hideNetworkBanner(), { signal });
   window.addEventListener('networkReconnected', () => hideNetworkBanner(), { signal });
@@ -85,7 +83,6 @@ export function mountNetworkStatus(): () => void {
     }
     scope.abort();
     listenerScope = null;
-    initialized = false;
     hideNetworkBanner();
   };
 }

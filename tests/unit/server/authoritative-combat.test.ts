@@ -316,7 +316,8 @@ describe('server-authoritative combat', () => {
     });
   });
 
-  test('client asteroid and ship-ship reports are ignored', () => {
+  test('client asteroid, ship-ship, and cross-target boundary reports are ignored', () => {
+    engine.createAsteroids(0);
     const wsCore = new WebSocketCore(engine);
     const novaWs = new RecordingSocket();
     const retroWs = new RecordingSocket();
@@ -345,6 +346,13 @@ describe('server-authoritative combat', () => {
         data: { targetPlayerId: 'retro', attackerId: 'asteroid' },
       },
       retroWs
+    );
+    wsCore.handleClientMessage(
+      {
+        type: 'collisionDamage',
+        data: { targetPlayerId: 'retro', attackerId: 'boundary' },
+      },
+      novaWs
     );
 
     const serverOwnedAsteroid = testAsteroid({

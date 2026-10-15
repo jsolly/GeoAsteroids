@@ -3,7 +3,6 @@ import { Player } from '../../../src/entities/player/Player';
 import { reconcilePlayerInput } from '../../../src/input/keybindings';
 
 import { handleMouseMove } from '../../../src/input/mouse';
-import { Point } from '../../../src/physics/Point';
 import { canvasManager, type PlayfieldGeometry } from '../../../src/rendering/canvasSurface';
 
 let canvas: HTMLCanvasElement;
@@ -174,9 +173,10 @@ describe('the playfield viewport stays in CSS-logical coordinates', () => {
     expect(transform.d).toBe(2);
 
     const shipPosition = { x: 120, y: -80 };
-    expect(canvasManager.worldToScreen({ ...shipPosition }, shipPosition)).toEqual(
-      new Point(600, 450)
-    );
+    expect(canvasManager.worldToScreen({ ...shipPosition }, shipPosition)).toEqual({
+      x: 600,
+      y: 450,
+    });
 
     const player = new Player({
       id: 'dpr-aim',

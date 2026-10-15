@@ -34,11 +34,13 @@ test('a latch shakes only the drawn asteroid and settles after a quarter second'
   const pose = { ...roid.position };
   const velocity = { ...roid.velocity };
   drawRoidsRelative(ship, [roid]);
+  expect(placement).toHaveBeenCalledTimes(1);
   const resting = [...(placement.mock.calls[0] ?? [])];
   placement.mockClear();
   recordAsteroidLatch('cargo');
   clock.mockReturnValue(1015);
   drawRoidsRelative(ship, [roid]);
+  expect(placement).toHaveBeenCalledTimes(1);
   expect(placement.mock.calls[0]).not.toEqual(resting);
   expect(roid.position).toEqual(pose);
   expect(roid.velocity).toEqual(velocity);

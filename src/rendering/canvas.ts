@@ -1,5 +1,5 @@
 import { SHIP_ABILITY } from '../../shared/shipKits';
-import { activeScanners } from '../../shared/surveyScan';
+import { isActiveScanner } from '../../shared/surveyScan';
 import type { Position } from '../../shared-types';
 import { PALETTE } from '../constants';
 import { LootField } from '../entities/loot/LootField';
@@ -60,11 +60,11 @@ const SCAN_VIEW_MARGIN = 1.15;
 
 /** Zoom out while the local Scout's scan pulse runs so the full scan area is visible. */
 export function scanCameraZoom(
-  ship: Parameters<typeof activeScanners>[0],
+  ship: Parameters<typeof isActiveScanner>[0],
   width: number,
   height: number
 ) {
-  if (activeScanners(ship, []).length === 0) {
+  if (!isActiveScanner(ship)) {
     return 1;
   }
   return Math.min(

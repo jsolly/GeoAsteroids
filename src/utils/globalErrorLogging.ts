@@ -3,16 +3,13 @@ let listenerScope: AbortController | null = null;
 import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import { logger } from './Logger';
 
-let installed = false;
-
 /** Install one bounded page-level capture for errors outside local subsystem guards. */
 export function installGlobalErrorLogging(): void {
-  if (installed || typeof window === 'undefined') {
+  if (listenerScope !== null || typeof window === 'undefined') {
     return;
   }
   listenerScope = new AbortController();
   const { signal } = listenerScope;
-  installed = true;
   window.addEventListener(
     'error',
     (event) => {
@@ -42,5 +39,4 @@ export function installGlobalErrorLogging(): void {
 export function disposeGlobalErrorLogging(): void {
   listenerScope?.abort();
   listenerScope = null;
-  installed = false;
 }

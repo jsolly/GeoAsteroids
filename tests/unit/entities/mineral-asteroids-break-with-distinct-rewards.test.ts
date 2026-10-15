@@ -56,7 +56,13 @@ describe('mineral asteroids break with distinct rewards', () => {
     engine.addAsteroid(mineral('ice'));
     engine.addAsteroid(mineral('metal'));
     engine.handleAsteroidHit('ice', 'pilot', 'laser');
-    expect(engine.handleAsteroidHit('metal', 'pilot', 'laser').outcome).toBe('damaged');
+    expect(engine.applyLaserAsteroidHit('metal', 'pilot', 'laser')).toMatchObject({
+      applied: true,
+      outcome: 'damaged',
+      points: 0,
+      newAsteroids: [],
+      origin: { x: 400, y: 300 },
+    });
     expect(engine.getAsteroid('metal')?.health).toBe(DAMAGE.LASER_HIT * 2);
     expect(engine.handleAsteroidHit('metal', 'pilot', 'laser').outcome).toBe('damaged');
     expect(engine.handleAsteroidHit('metal', 'pilot', 'laser').outcome).toBe('destroyed');

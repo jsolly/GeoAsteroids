@@ -485,8 +485,7 @@ export class PlayerMotionService {
       !session ||
       !this.validActor(session.actor) ||
       session.actor.furnaceTransit ||
-      session.actor.contourTransit ||
-      !['free', 'handoff'].includes(session.mode)
+      session.actor.contourTransit
     ) {
       return { ok: false, error: 'Server still owns this motion transform' };
     }

@@ -1,7 +1,13 @@
-import { expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
 import { Ship } from '../../../src/entities/ship/Ship';
 import { drawHaulerHarpoonVfx, harpoonTetherStyle } from '../../../src/entities/ship/shipRenderer';
+import { canvasManager } from '../../../src/rendering/canvasSurface';
+
+afterEach(() => {
+  publishHarpoonField([]);
+  vi.restoreAllMocks();
+});
 
 test('tethers stay solid and hairline in screen space at every zoom', () => {
   expect(harpoonTetherStyle().dash).toEqual([]);
@@ -15,12 +21,14 @@ function paintRecorder(): {
   fills: string[];
   strokeWidths: number[];
   arcRadii: number[];
+  arcCenters: number[][];
   lines: number[][];
 } {
   const strokes: string[] = [];
   const fills: string[] = [];
   const strokeWidths: number[] = [];
   const arcRadii: number[] = [];
+  const arcCenters: number[][] = [];
   const lines: number[][] = [];
   let pen = { x: 0, y: 0 };
   const state = {
@@ -72,9 +80,12 @@ function paintRecorder(): {
       pen = { x, y };
     },
     arc: (...args: unknown[]) => {
-      const radius = args[2];
+      const [x, y, radius] = args;
       if (typeof radius === 'number') {
         arcRadii.push(radius);
+      }
+      if (typeof x === 'number' && typeof y === 'number') {
+        arcCenters.push([x, y]);
       }
     },
     setLineDash: () => undefined,
@@ -86,36 +97,46 @@ function paintRecorder(): {
       fills.push(state.fillStyle);
     },
   } as unknown as CanvasRenderingContext2D;
-  return { ctx, strokes, fills, strokeWidths, arcRadii, lines };
+  return { ctx, strokes, fills, strokeWidths, arcRadii, arcCenters, lines };
 }
 
 test('tether VFX resolves the exact server asteroid id', () => {
-  publishHarpoonField([
-    { id: 'server-asteroid-10', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 } },
-  ]);
+  const distractor = {
+    id: 'other-rock',
+    position: { x: -40, y: 70 },
+    velocity: { x: 0, y: 0 },
+  };
+  const target = {
+    id: 'server-asteroid-10',
+    position: { x: 140, y: -60 },
+    velocity: { x: 0, y: 0 },
+  };
+  publishHarpoonField([distractor, target]);
+  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((point, cameraPosition) => ({
+    x: point.x - cameraPosition.x,
+    y: point.y - cameraPosition.y,
+  }));
+  const camera = { x: 10, y: 20 };
   const hauler = new Ship({ kitId: 'hauler' });
   hauler.harpoonTargetId = 'server-asteroid-10';
-  const { ctx, strokes, fills, strokeWidths, arcRadii } = paintRecorder();
-  drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
-  expect(strokes).toContain('#E8D5A3');
-  expect(strokes).toContain('#FDE68A');
-  expect(fills).toContain('#FDE68A');
-  expect(strokeWidths.every((width) => width <= 2)).toBe(true);
-  expect(arcRadii).toEqual([3.5]);
-});
+  hauler.harpoonLatchPos = { x: 900, y: 900 };
+  const first = paintRecorder();
+  drawHaulerHarpoonVfx(first.ctx, hauler, 7, 9, camera);
+  expect(first.lines).toEqual([[7, 9, 130, -80]]);
+  expect(first.arcCenters).toEqual([[130, -80]]);
+  expect(hauler.harpoonLatchPos).toEqual({ x: 140, y: -60 });
+  expect(first.strokes).toContain('#E8D5A3');
+  expect(first.strokes).toContain('#FDE68A');
+  expect(first.fills).toContain('#FDE68A');
+  expect(first.strokeWidths).toEqual([1.5, 1.5]);
+  expect(first.arcRadii).toEqual([3.5]);
 
-test('a Hauler target paints cream from the live field rock', () => {
-  publishHarpoonField([{ id: 'near', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 } }]);
-  const hauler = new Ship({ kitId: 'hauler' });
-  hauler.harpoonTargetId = 'near';
-  const { ctx, strokes, fills, strokeWidths, arcRadii } = paintRecorder();
-  drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
-  expect(strokes).toContain('#E8D5A3');
-  expect(strokes).toContain('#FDE68A');
-  expect(fills).toContain('#FDE68A');
-  expect(strokeWidths.every((width) => width <= 2)).toBe(true);
-  expect(arcRadii).toEqual([3.5]);
-  expect(hauler.harpoonLatchPos?.x).toBe(40);
+  publishHarpoonField([distractor, { ...target, position: { x: -60, y: 120 } }]);
+  const refreshed = paintRecorder();
+  drawHaulerHarpoonVfx(refreshed.ctx, hauler, 7, 9, camera);
+  expect(refreshed.lines).toEqual([[7, 9, -70, 100]]);
+  expect(refreshed.arcCenters).toEqual([[-70, 100]]);
+  expect(hauler.harpoonLatchPos).toEqual({ x: -60, y: 120 });
 });
 
 test('tether VFX still paints from a stored latch pose when the field id is stale', () => {
@@ -141,17 +162,6 @@ test('cream cable still paints while the Hauler hull is exploding', () => {
   const { ctx, strokes, fills } = paintRecorder();
   drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
   expect(strokes).toContain('#E8D5A3');
-  expect(fills).toContain('#FDE68A');
-});
-
-test('Hauler latch paints opaque cream line and amber tip', () => {
-  publishHarpoonField([{ id: 'rock-1', position: { x: 40, y: 0 }, velocity: { x: 0, y: 0 } }]);
-  const hauler = new Ship({ kitId: 'hauler' });
-  hauler.harpoonTargetId = 'rock-1';
-  const { ctx, strokes, fills } = paintRecorder();
-  drawHaulerHarpoonVfx(ctx, hauler, 0, 0, { x: 0, y: 0 });
-  expect(strokes).toContain('#E8D5A3');
-  expect(strokes).toContain('#FDE68A');
   expect(fills).toContain('#FDE68A');
 });
 

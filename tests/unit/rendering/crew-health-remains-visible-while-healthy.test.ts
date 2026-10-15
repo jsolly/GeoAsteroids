@@ -42,6 +42,7 @@ test('crew health remains visible through damage, repair and protected blinking'
     drawShipAtPosition(ship, { x: 0, y: 0 });
   }
   expect(healthSegments).toHaveLength(3);
+  expect(healthSegments[0]).toBeGreaterThan(0);
   expect(healthSegments[1]).toBeCloseTo((healthSegments[0] ?? 0) / 2);
   expect(healthSegments[2]).toBe(healthSegments[0]);
   ship.blinkCount = 2;

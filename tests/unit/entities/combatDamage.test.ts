@@ -59,22 +59,25 @@ describe('Crew survival against world hazards', () => {
   });
 
   test('a boundary death preserves the pilot score', () => {
-    engine.addPlayer('p1', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
+    const player = engine.addPlayer('p1', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
+    player.score = 210;
     engine.entityManager.updateEntity('p1', { spawnProtectionTimer: 0 });
 
     expect(engine.handleShipDamage('p1', 'boundary', 100).isDestroyed).toBe(true);
-    expect(engine.getPlayer('p1')?.score).toBe(0);
+    expect(engine.getPlayer('p1')?.score).toBe(210);
   });
 
   test('ignored hits during respawn keep health and score unchanged', () => {
-    engine.addPlayer('p1', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
+    const player = engine.addPlayer('p1', 'Pilot', new RecordingSocket(), { x: 0, y: 0 });
+    player.score = 350;
     engine.entityManager.updateEntity('p1', { spawnProtectionTimer: 0 });
     engine.handleShipDamage('p1', 'asteroid', 100);
     const afterDeath = engine.getPlayer('p1');
     expect(afterDeath?.respawnTimer).toBe(SHIP.RESPAWN_DELAY_FRAMES);
+    expect(afterDeath?.score).toBe(350);
 
     expect(engine.handleShipDamage('p1', 'asteroid', 25).isDestroyed).toBe(false);
     expect(engine.getPlayer('p1')?.health).toBe(0);
-    expect(engine.getPlayer('p1')?.score).toBe(0);
+    expect(engine.getPlayer('p1')?.score).toBe(350);
   });
 });

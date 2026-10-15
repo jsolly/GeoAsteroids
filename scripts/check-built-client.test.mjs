@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { checkBuiltClient } from './check-built-client.mjs';
+import { clientDocumentAssets } from './client-asset-graph.mjs';
 
 const sha = 'a'.repeat(40);
 function fixture(run) {
@@ -111,5 +112,35 @@ test('Astro island component and renderer entries prove the dynamic gameplay gra
       html.replace('/_astro/renderer.js', 'https://example.com/renderer.js')
     );
     assert.throws(() => checkBuiltClient(root), /not first-party/u);
+  });
+});
+
+const moduleEntry = '<script type="module" src="/_astro/page.js"></script>';
+for (const [name, html] of [
+  ['comment', `<!--${moduleEntry}-->`],
+  ['template', `<template>${moduleEntry}</template>`],
+  ['noscript', `<html><body><noscript>${moduleEntry}</noscript></body></html>`],
+]) {
+  test(`an entry inside ${name} does not prove active client gameplay`, () => {
+    assert.throws(() => clientDocumentAssets(html), /Client module entry is missing/u);
+  });
+}
+
+test('active client assets preserve entry groups and declared asset order', () => {
+  const html =
+    '<link rel="stylesheet" href="/_astro/page.css">' +
+    '<link rel="modulepreload" href="/_astro/preload.js">' +
+    '<astro-island component-url="/_astro/island.js" renderer-url="/_astro/renderer.js"></astro-island>' +
+    moduleEntry +
+    moduleEntry;
+  assert.deepEqual(clientDocumentAssets(html), {
+    modules: ['_astro/page.js', '_astro/island.js', '_astro/renderer.js'],
+    assets: [
+      '_astro/page.js',
+      '_astro/island.js',
+      '_astro/renderer.js',
+      '_astro/page.css',
+      '_astro/preload.js',
+    ],
   });
 });

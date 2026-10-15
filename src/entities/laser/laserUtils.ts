@@ -5,21 +5,15 @@ import type { Ship } from '../ship/Ship';
 import { calculateLaserStartPosition } from '../ship/shipUtils';
 import { Laser } from './Laser';
 
-function generateLaserVelocity(shipAngle: number, shipVelocity: Velocity): Velocity {
-  const baseVelocity: Velocity = {
-    x: (Math.cos(shipAngle) * LASER.SPEED) / GAME.FPS,
-    y: (-Math.sin(shipAngle) * LASER.SPEED) / GAME.FPS,
-  };
-  return addVectors(baseVelocity, shipVelocity);
-}
-
 export function createLaser(ship: Ship): Laser {
-  return createLaserAtAngle(ship, ship.angle);
-}
-
-function createLaserAtAngle(ship: Ship, angle: number): Laser {
+  const angle = ship.angle;
   const laserStartPosition = calculateLaserStartPosition(ship.position, angle, ship.r);
-  const laserVelocity = generateLaserVelocity(angle, ship.velocity);
+  const shipVelocity = ship.velocity;
+  const baseVelocity: Velocity = {
+    x: (Math.cos(angle) * LASER.SPEED) / GAME.FPS,
+    y: (-Math.sin(angle) * LASER.SPEED) / GAME.FPS,
+  };
+  const laserVelocity = addVectors(baseVelocity, shipVelocity);
 
   return new Laser(laserStartPosition, laserVelocity, 0, 0, false);
 }

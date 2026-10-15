@@ -63,6 +63,7 @@
   });
   let startup = $state.raw<RuntimeMountState<GameRuntime>>({ kind: 'loading' });
   let playerName = $state('');
+  let playerNameInitialized = false;
   let touchControls = $state(false);
   let returnToFlight = false;
   let canvas: HTMLCanvasElement;
@@ -108,7 +109,6 @@
 
   onMount(() => {
     let live = true;
-    let receivedInitialName = false;
     let unsubscribe: (() => void) | undefined;
     const wasInPlay = document.body.classList.contains('in-play');
     const wasTouchPlay = document.body.classList.contains('touch-play');
@@ -157,9 +157,9 @@
               returnToFlight = false;
             }
             view = next;
-            if (!receivedInitialName) {
+            if (!playerNameInitialized) {
               playerName = next.menu.initialName;
-              receivedInitialName = true;
+              playerNameInitialized = true;
             }
             syncBody();
           });
@@ -183,7 +183,13 @@
   <div id="start-screen" hidden={view.inPlay}>
     <StartScreen
       view={view.menu}
-      bind:playerName
+      bind:playerName={
+        () => playerName,
+        (name) => {
+          playerName = name;
+          playerNameInitialized = true;
+        }
+      }
       ready={startup.kind === 'ready'}
       joining={view.joining}
       initializationError={startup.kind === 'error' ? startup.message : null}

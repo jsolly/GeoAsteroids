@@ -457,13 +457,8 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
             }
             updateConnectionDetails();
 
-            // Wait a moment, then connect both
-            setTimeout(() => {
-                connectGame();
-                setTimeout(() => {
-                    connectLogs();
-                }, 500);
-            }, 200);
+            connectGame();
+            connectLogs();
         }
 
         function clearLogs() {
@@ -631,7 +626,7 @@ export function renderStatusPage(diagnosticsEnabled: boolean): string {
                         button.textContent = originalText;
                         button.disabled = false;
                     }, 2000);
-                    setTimeout(() => closeStatusSocket(socket, 'Client log'), 100);
+                    closeStatusSocket(socket, 'Client log');
                 },
                 onerror: function(socket, error) {
                     if (failClientLog(\`connection failed: \${socketErrorMessage(error)}; retry is available\`)) {

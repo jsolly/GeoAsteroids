@@ -234,6 +234,11 @@ async function joinThroughTransport(name: string): Promise<RecordingTransport> {
   if (!socket) {
     throw new Error('Expected a socket owned by this runtime');
   }
+  await acceptTransportJoin(socket, name);
+  return socket;
+}
+
+async function acceptTransportJoin(socket: RecordingTransport, name: string): Promise<void> {
   socket.readyState = RecordingTransport.OPEN;
   socket.onopen?.();
   await settle();
@@ -263,7 +268,6 @@ async function joinThroughTransport(name: string): Promise<RecordingTransport> {
   expect(clientPerformance.read().serverReleaseId).toBe('7'.repeat(40));
   await settle();
   expect(GameController.getInstance().getIsGameRunning()).toBe(true);
-  return socket;
 }
 
 test('disposing a connecting runtime retires its socket and ignores a late open', async () => {
@@ -282,6 +286,66 @@ test('disposing a connecting runtime retires its socket and ignores a late open'
   expect(ConnectionManager.getInstance().getSocket()).toBeNull();
   expect(frames.size).toBe(0);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+test('retired crew commands cannot reach the replacement runtime', async () => {
+  await joinWithAcceptedWorld();
+  const retired = current;
+  const retiredShip = GameController.getInstance().getCurrPlayer()?.ship;
+  if (!retired || !retiredShip) {
+    throw new Error('Missing first runtime pilot');
+  }
+  retired.dispose();
+  await joinWithAcceptedWorld();
+  const runtime = current;
+  const pilot = GameController.getInstance().getCurrPlayer();
+  if (!runtime || !pilot) {
+    throw new Error('Missing replacement runtime pilot');
+  }
+  const ship = pilot.ship;
+  expect(ship).not.toBe(retiredShip);
+  const send = vi.spyOn(ConnectionManager.getInstance(), 'sendMessage').mockReturnValue(true);
+  const position = { ...ship.position };
+  runtime.commands.crewAction({ kind: 'revive', targetId: 'current-friend' });
+  expect(ship.rescue?.targetId).toBe('current-friend');
+  runtime.commands.crewAction({ kind: 'release' });
+  expect(ship.rescue).toBeNull();
+  runtime.commands.signalHere('help');
+  runtime.commands.signalHere('nest');
+  expect(send.mock.calls.map(([message]) => message)).toEqual([
+    { type: 'crewAction', id: pilot.id, data: { kind: 'revive', targetId: 'current-friend' } },
+    { type: 'crewAction', id: pilot.id, data: { kind: 'release' } },
+    { type: 'crewAction', id: pilot.id, data: { kind: 'signal', signal: 'help', position } },
+    { type: 'crewAction', id: pilot.id, data: { kind: 'signal', signal: 'nest', position } },
+  ]);
+
+  runtime.commands.crewAction({ kind: 'revive', targetId: 'current-friend' });
+  const rescue = ship.rescue;
+  expect(rescue?.targetId).toBe('current-friend');
+  ship.velocity = { x: 4, y: -2 };
+  ship.thrusting = true;
+  ship.contourLock = { height: 0.1, direction: 1 };
+  const before = structuredClone({
+    rescue,
+    position: ship.position,
+    velocity: ship.velocity,
+    thrusting: ship.thrusting,
+    contourLock: ship.contourLock,
+  });
+  send.mockClear();
+  retired.commands.crewAction({ kind: 'release' });
+  expect(ship.rescue).toBe(rescue);
+  retired.commands.crewAction({ kind: 'revive', targetId: 'retired-friend' });
+  retired.commands.signalHere('help');
+  retired.commands.signalHere('nest');
+  expect({
+    rescue: ship.rescue,
+    position: ship.position,
+    velocity: ship.velocity,
+    thrusting: ship.thrusting,
+    contourLock: ship.contourLock,
+  }).toEqual(before);
+  expect(send).not.toHaveBeenCalled();
 });
 
 test('a real transport join can retire and rejoin with one input and network owner', async () => {
@@ -498,6 +562,67 @@ test('a failed touch mount removes its partial playfield listeners before a new 
   expect(vi.getTimerCount()).toBe(0);
 });
 
+test.each(['alive', 'dead', 'exploding'])(
+  'document left release rearms the %s pilot and cancels charge while right release preserves held actions',
+  async (state) => {
+    await joinWithAcceptedWorld();
+    const player = GameController.getInstance().getCurrPlayer();
+    if (!player) {
+      throw new Error('Missing mouse pilot');
+    }
+    const ship = player.ship;
+    const shoot = vi.spyOn(ship, 'shoot');
+    const toggle = vi.spyOn(ship, 'toggleContourLock');
+    const sendCharge = vi
+      .spyOn(ConnectionManager.getInstance().combatNetwork, 'sendCharge')
+      .mockReturnValue(true);
+    hosts.canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+    expect(shoot).toHaveBeenCalledOnce();
+    expect(ship.lasers).toHaveLength(1);
+    expect(ship.canShoot).toBe(false);
+    expect(ship.thrusting).toBe(true);
+
+    ship.beginWeaponCharge();
+    const startedAt = ship.weaponChargeStartedAt;
+    expect(startedAt).not.toBeNull();
+    ship.weaponChargeFrames = 20;
+    const contourLock = { height: 0.1, direction: 1 } satisfies NonNullable<
+      typeof ship.contourLock
+    >;
+    ship.contourLock = contourLock;
+    document.dispatchEvent(new MouseEvent('mouseup', { button: 2 }));
+    expect(toggle).not.toHaveBeenCalled();
+    expect(ship.contourLock).toBe(contourLock);
+    expect(shoot).toHaveBeenCalledOnce();
+    expect(ship.lasers).toHaveLength(1);
+    expect(ship.thrusting).toBe(true);
+    expect(ship.canShoot).toBe(false);
+    expect(ship.weaponChargeStartedAt).toBe(startedAt);
+    expect(ship.weaponChargeFrames).toBe(20);
+    expect(sendCharge.mock.calls).toEqual([['start']]);
+
+    if (state === 'dead') {
+      ship.health = 0;
+    }
+    if (state === 'exploding') {
+      ship.exploding = true;
+    }
+    document.dispatchEvent(new MouseEvent('mouseup', { button: 0 }));
+    expect(ship.canShoot).toBe(true);
+    expect(ship.weaponChargeStartedAt).toBeNull();
+    expect(ship.weaponChargeFrames).toBe(0);
+    expect(sendCharge.mock.calls).toEqual([['start'], ['cancel']]);
+    expect(shoot).toHaveBeenCalledOnce();
+    expect(ship.lasers).toHaveLength(1);
+    if (state === 'alive') {
+      expect(ship.thrusting).toBe(true);
+      hosts.canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+      expect(shoot).toHaveBeenCalledTimes(2);
+      expect(ship.lasers).toHaveLength(2);
+    }
+  }
+);
+
 test('M opens the shared overlay once, releases held controls, ignores repeats and closes through the command port', async () => {
   await joinWithAcceptedWorld();
   if (!current) {
@@ -672,10 +797,12 @@ test('a failed rendered frame closes an open map and publishes a restart notice 
   expect(vi.getTimerCount()).toBe(0);
 });
 
-test('wall-clock pose updates continue without render frames and stop with the runtime', async () => {
+test('wall-clock poses survive recovery and stop when play ends', async () => {
   RecordingTransport.created = [];
   vi.stubGlobal('WebSocket', RecordingTransport);
   current = mountRuntime(scope.signal);
+  const views: GamePresentation[] = [];
+  current.subscribe((view) => views.push(view));
   const socket = await joinThroughTransport('Pose Pilot');
   const player = GameController.getInstance().getCurrPlayer();
   if (!player || !current) {
@@ -686,12 +813,12 @@ test('wall-clock pose updates continue without render frames and stop with the r
   const pose = { position: { x: 120, y: -45 }, velocity: { x: 2, y: -3 }, angle: 0.75 };
   Object.assign(player.ship, pose);
   socket.send.mockClear();
-  const updates = () =>
-    socket.send.mock.calls
+  const updates = (transport: RecordingTransport) =>
+    transport.send.mock.calls
       .map(([text]) => JSON.parse(text))
       .filter((message) => message.type === 'update');
   await vi.advanceTimersByTimeAsync(50);
-  expect(updates()).toEqual(
+  expect(updates(socket)).toEqual(
     Array.from({ length: 3 }, () =>
       expect.objectContaining({
         type: 'update',
@@ -699,11 +826,60 @@ test('wall-clock pose updates continue without render frames and stop with the r
       })
     )
   );
-  GameController.getInstance().stopAfterFrameFailure();
+
+  const state = vi.spyOn(player, 'getStateForNetwork');
+  socket.close();
+  expect(GameController.getInstance().getIsGameRunning()).toBe(true);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(state).toHaveBeenCalled();
+  expect(RecordingTransport.created).toHaveLength(2);
+  const recovered = RecordingTransport.created.at(-1);
+  if (!recovered || recovered === socket) {
+    throw new Error('Expected a distinct reconnect transport');
+  }
+  await acceptTransportJoin(recovered, 'Pose Pilot');
+  recovered.send.mockClear();
+  await vi.advanceTimersByTimeAsync(50);
+  expect(updates(recovered)).toHaveLength(3);
+
+  recovered.receive('joined', {
+    id: acceptedId,
+    name: 'Pose Pilot',
+    position: { x: 500, y: 600 },
+    color: '#fff',
+    snapshotVersion: SNAPSHOT_VERSION - 1,
+    asteroidInteractions: 1,
+    terrainSeed: 7,
+    serverReleaseId: '7'.repeat(40),
+    resumeToken: 'a'.repeat(64),
+  });
+  expect(recovered.close).toHaveBeenCalledOnce();
+  expect(ConnectionManager.getInstance().getSocket()).toBeNull();
+  expect(GameController.getInstance().getIsGameRunning()).toBe(false);
+  expect(views.at(-1)?.inPlay).toBe(false);
+  state.mockClear();
   await vi.advanceTimersByTimeAsync(100);
-  expect(updates()).toHaveLength(3);
+  expect(state).not.toHaveBeenCalled();
+  expect(updates(recovered)).toHaveLength(3);
+
+  const retry = await joinThroughTransport('Pose Pilot');
+  const retryPlayer = GameController.getInstance().getCurrPlayer();
+  if (!retryPlayer) {
+    throw new Error('Missing retry pilot');
+  }
+  expect(retryPlayer).not.toBe(player);
+  const retryState = vi.spyOn(retryPlayer, 'getStateForNetwork');
+  retry.send.mockClear();
+  await vi.advanceTimersByTimeAsync(50);
+  expect(updates(retry)).toHaveLength(3);
+  GameController.getInstance().stopAfterFrameFailure();
+  retryState.mockClear();
+  await vi.advanceTimersByTimeAsync(100);
+  expect(retryState).not.toHaveBeenCalled();
+  expect(updates(retry)).toHaveLength(3);
   current.dispose();
   expect(vi.getTimerCount()).toBe(0);
   await vi.advanceTimersByTimeAsync(100);
-  expect(updates()).toHaveLength(3);
+  expect(retryState).not.toHaveBeenCalled();
+  expect(updates(retry)).toHaveLength(3);
 });

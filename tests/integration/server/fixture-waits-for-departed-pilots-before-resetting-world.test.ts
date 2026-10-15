@@ -6,6 +6,7 @@ import { expect, test } from 'vitest';
 import { prepareFixture, startFixtureControl } from '../../../benchmarks/fixture-control';
 import { createServerInstance } from '../../../server/createServer';
 import { SNAPSHOT_VERSION } from '../../../shared/snapshotProtocol';
+import { asteroidRow } from '../../support/asteroid-row';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 test('a departed pilot leaves the diagnostic world untouched until it rejoins', async () => {
@@ -14,6 +15,8 @@ test('a departed pilot leaves the diagnostic world untouched until it rejoins', 
   let closeControl: (() => Promise<void>) | undefined;
   try {
     await server.listening;
+    server.gameEngine.stopGameLoop();
+    server.gameEngine.addAsteroid(asteroidRow({ x: 100, y: 100 }, 25, 'preserved-rock'));
     const socket = join(directory, 'fixture.sock');
     closeControl = await startFixtureControl(server, socket, 42);
     const before = JSON.stringify(server.gameEngine.getAllAsteroids());
@@ -38,8 +41,9 @@ test('a retained pilot with a closed transport leaves the diagnostic world untou
   try {
     await server.listening;
     server.gameEngine.stopGameLoop();
+    server.wsCore.stopPeriodicGameStateBroadcast();
     const transport = new RecordingSocket();
-    server.gameEngine.addPlayer('retained-pilot', 'Pilot', transport);
+    const retained = server.gameEngine.addPlayer('retained-pilot', 'Pilot', transport);
     transport.close();
     const socket = join(directory, 'fixture.sock');
     closeControl = await startFixtureControl(server, socket, 42);
@@ -50,6 +54,7 @@ test('a retained pilot with a closed transport leaves the diagnostic world untou
         participants: ['retained-pilot'],
       })
     ).toEqual({ kind: 'pending', missing: ['retained-pilot'] });
+    expect(server.gameEngine.getPlayer(retained.id)).toBe(retained);
     expect(JSON.stringify(server.gameEngine.getAllAsteroids())).toBe(before);
   } finally {
     await closeControl?.();

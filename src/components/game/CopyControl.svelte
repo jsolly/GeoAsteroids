@@ -99,7 +99,6 @@
   disabled={typeof value === 'string' && !value}
   aria-label={result === 'Copied!' ? `Copied ${name}` : (result ?? `Copy ${name}`)}
   onkeydown={isolateActivation}
-  onkeyup={isolateActivation}
   onclick={(event) => {
     event.stopPropagation();
     void copy();

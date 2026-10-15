@@ -35,7 +35,9 @@ test('sparse contour geometry still anchors feet and empty terrain invents no co
     { index: 0, height: 0, segments: [{ ax: -1000, ay: 500, bx: 1000, by: 500 }] },
   ];
   const spider = { position: { x: 0, y: 0 }, angle: 0 };
-  expect(spiderFootContacts(spider, sparse, 0).every((foot) => foot.y === 500)).toBe(true);
+  const feet = spiderFootContacts(spider, sparse, 0);
+  expect(feet).toHaveLength(8);
+  expect(feet.every((foot) => foot.y === 500)).toBe(true);
   expect(spiderFootContacts(spider, [], 0)).toEqual([]);
 });
 
@@ -52,5 +54,7 @@ test('toes prefer their own side and keep the first equally near contour contact
     ...Array.from({ length: 4 }, () => ({ x: -10, y: 10 })),
   ]);
   const reversed = contacts.map((level) => ({ ...level, segments: level.segments.toReversed() }));
-  expect(spiderFootContacts(spider, reversed, 0, 0).every((foot) => foot.x === 10)).toBe(true);
+  const reversedFeet = spiderFootContacts(spider, reversed, 0, 0);
+  expect(reversedFeet).toHaveLength(8);
+  expect(reversedFeet.every((foot) => foot.x === 10)).toBe(true);
 });

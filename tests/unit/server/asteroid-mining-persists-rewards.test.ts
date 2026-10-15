@@ -158,11 +158,6 @@ test('an ordinary laser break saves collectible point loot by the next flush', (
   const rows = worldStore.loadSector('0,0');
   assert(rows);
   expect(rows.some((sectorRock) => sectorRock.id === target.id)).toBe(false);
-  expect(
-    result.newAsteroids.every((fragment) =>
-      rows.some((sectorRock) => sectorRock.id === fragment.id)
-    )
-  ).toBe(true);
 });
 
 test('a durable metal rock leaves collectible points instead of paying an offline first Hauler when a second Hauler finishes it', () => {

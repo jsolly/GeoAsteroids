@@ -53,7 +53,12 @@ export class Player {
 
   bankedCargo = 0;
   purchases: string[] = [];
-  color: string; // Player's unique color for lasers and other visual elements
+  get color(): string {
+    return this.ship.color;
+  }
+  set color(value: string) {
+    this.ship.color = value;
+  }
 
   // For the local player: from the moment it dies until it is confirmed alive
   // again, trust the server for position (so the respawn point is adopted).
@@ -91,11 +96,10 @@ export class Player {
     this.id = params.id;
     this.name = params.name;
     this.type = params.type;
-    this.color = getPlayerColor(this.type);
 
     this.ship = new Ship({
       ...(params.combatNetwork !== undefined ? { combatNetwork: params.combatNetwork } : {}),
-      color: this.color,
+      color: getPlayerColor(this.type),
       isLocalPlayer: this.type === 'local',
       frictionCoefficient: 0.01,
       ...(params.kitId !== undefined ? { kitId: params.kitId } : {}),
@@ -174,9 +178,7 @@ export class Player {
     }
     // Local selection is established at join. Preserve it during runtime reconciliation.
     if (data.kitId && data.kitId !== this.ship.kitId && this.type !== 'local') {
-      const color = this.ship.color;
       applyShipKitToShip(this.ship, data.kitId);
-      this.ship.color = color;
     }
     if (data.equipment !== undefined) {
       this.ship.equipment = [...data.equipment];
@@ -270,12 +272,10 @@ export class Player {
       this.ship.contourLock = data.contourLock ? { ...data.contourLock } : null;
     }
     if (data.color !== undefined) {
-      const color =
+      this.color =
         this.type === 'local' && !purchasedHullColor(data.color)
           ? getPlayerColor('local')
           : data.color;
-      this.color = color;
-      this.ship.color = color;
     }
     if (data.health !== undefined) {
       {

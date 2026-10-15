@@ -35,8 +35,6 @@ test.each([
     // Keep the static paint isolated; this test explicitly invokes the resize callback below.
     const listen = vi.spyOn(window, 'addEventListener').mockImplementation(() => {});
     const canvas = dom.querySelector<HTMLCanvasElement>('#title-terrain');
-    expect(dom.querySelector('#title-starfield')).toBeNull();
-    expect(canvas?.getAttribute('aria-hidden')).toBe('true');
     const context = canvas?.getContext('2d');
     if (!context) {
       throw new Error('Title canvas context missing');

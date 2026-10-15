@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { SHIP } from '../../../shared/constants/gameplay';
 import { Ship } from '../../../src/entities/ship/Ship';
 
 describe('Ship Damage System', () => {
@@ -9,9 +8,6 @@ describe('Ship Damage System', () => {
     ship = new Ship({
       position: { x: 100, y: 100 },
     });
-    ship.health = SHIP.MAX_HEALTH;
-    ship.maxHealth = SHIP.MAX_HEALTH;
-    ship.exploding = false; // Ensure not exploding for tests
   });
 
   describe('takeDamage', () => {

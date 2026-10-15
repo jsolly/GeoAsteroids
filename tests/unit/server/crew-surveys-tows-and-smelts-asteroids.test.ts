@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { GameEngine } from '../../../server/core/GameEngine';
 import { explorationCellAt, isCellExplored } from '../../../shared/exploration';
-import { FURNACES } from '../../../shared/furnaces';
+import { CIVIC_LOTS, FURNACES } from '../../../shared/furnaces';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { captureSnapshot } from '../../../shared/snapshotProtocol';
 import type { AsteroidData } from '../../../shared-types';
@@ -58,10 +58,30 @@ test('a Scout identifies cargo and both pilots receive the full furnace reward e
   resolveToolFlights(engine);
   expect(actor('hauler').harpoonTargetId).toBe(rock.id);
   const furnace = FURNACES[0];
+  const darkFoundation = CIVIC_LOTS[0];
   assert(furnace);
+  assert(darkFoundation);
+  rock.position = { ...darkFoundation.position };
+  actor('hauler').position = {
+    x: darkFoundation.position.x + 100,
+    y: darkFoundation.position.y,
+  };
+  engine.processFurnaceDeliveries();
+  expect(engine.getAsteroid(rock.id)).toBe(rock);
+  expect(actor('hauler').score).toBe(initial.hauler);
+  expect(actor('scout').score).toBe(initial.scout);
+  expect(engine.drainFurnaceDeliveries()).toEqual([]);
+
   // Arrange arrival; processFurnaceDeliveries performs consumption and scoring.
-  rock.position = { ...furnace.position };
   actor('hauler').position = { x: furnace.position.x + 100, y: furnace.position.y };
+  rock.position = { x: furnace.position.x + furnace.radius + 1, y: furnace.position.y };
+  engine.processFurnaceDeliveries();
+  expect(engine.getAsteroid(rock.id)).toBe(rock);
+  expect(actor('hauler').score).toBe(initial.hauler);
+  expect(actor('scout').score).toBe(initial.scout);
+  expect(engine.drainFurnaceDeliveries()).toEqual([]);
+
+  rock.position.x = furnace.position.x + furnace.radius;
   engine.processFurnaceDeliveries();
   const points = 300;
   expect(actor('hauler').score).toBe(initial.hauler + points);

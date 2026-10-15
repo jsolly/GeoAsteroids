@@ -96,11 +96,18 @@ assert.equal(baseline.first.git['lockfileSha256'], candidate.first.git['lockfile
 assert.deepEqual(baseline.first.environment, candidate.first.environment);
 assert.deepEqual(baseline.first.result['parameters'], candidate.first.result['parameters']);
 for (const key of ['before', 'after']) {
-  assert.deepEqual(
-    record(baseline.first.result['witness'])[key],
-    record(candidate.first.result['witness'])[key],
-    'Game outcome changed'
-  );
+  const baselineOutcome = record(baseline.first.result['witness'])[key];
+  const candidateOutcome = record(candidate.first.result['witness'])[key];
+  for (const outcome of [baselineOutcome, candidateOutcome]) {
+    assert(
+      outcome !== null &&
+        typeof outcome === 'object' &&
+        !Array.isArray(outcome) &&
+        Object.keys(outcome).length > 0,
+      `Missing ${key} game outcome witness`
+    );
+  }
+  assert.deepEqual(baselineOutcome, candidateOutcome, 'Game outcome changed');
 }
 const samePixels =
   baseline.first.result['frameImageSha256'] === candidate.first.result['frameImageSha256'];

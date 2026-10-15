@@ -64,16 +64,18 @@ beforeEach(async () => {
     scope.signal
   );
   views = [];
+  const joined = Promise.withResolvers<void>();
   runtime.subscribe((view) => {
     views.push(view);
     // GameShell performs this body-mode projection in the mounted product.
     document.body.classList.toggle('in-play', view.inPlay);
+    if (view.inPlay && !view.joining) {
+      joined.resolve();
+    }
   });
   runtime.commands.selectShip('hauler');
   runtime.commands.join('Overlay Pilot');
-  for (let turn = 0; turn < 12; turn++) {
-    await Promise.resolve();
-  }
+  await joined.promise;
   expect(GameController.getInstance().getIsGameRunning()).toBe(true);
 });
 

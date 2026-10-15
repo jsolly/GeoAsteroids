@@ -54,6 +54,9 @@ test('the destination map preserves bearings, shows pipes, and sends only chosen
   mountMap(container, TOWN_HEARTH, [east], travel);
   const current = container.querySelector<HTMLButtonElement>('[aria-current="location"]');
   const destination = container.querySelector<HTMLButtonElement>(`[data-furnace-id="${east.id}"]`);
+  if (!current || !destination) {
+    throw new Error('Missing furnace marker');
+  }
   expect(current?.disabled).toBe(true);
   expect(current?.textContent).toContain('Here');
   expect(container.querySelector('.furnace-travel-viewport')?.scrollTop).toBe(0);
@@ -67,6 +70,15 @@ test('the destination map preserves bearings, shows pipes, and sends only chosen
     Number.parseFloat(current?.style.left ?? '')
   );
   expect(container.querySelector('polyline')?.getAttribute('points')).toBeTruthy();
+  const dx = Number.parseFloat(destination.style.left) - Number.parseFloat(current.style.left);
+  const dy = Number.parseFloat(destination.style.top) - Number.parseFloat(current.style.top);
+  expect(dy / dx).toBeCloseTo(east.position.y / east.position.x);
+  const points = [...container.querySelectorAll('polyline')].flatMap((line) =>
+    (line.getAttribute('points') ?? '').split(' ')
+  );
+  expect(points).toContain(
+    `${Number.parseFloat(destination.style.left)},${Number.parseFloat(destination.style.top)}`
+  );
   current?.click();
   expect(travel).not.toHaveBeenCalled();
   destination?.dispatchEvent(new Event('pointerdown', { bubbles: true }));
@@ -109,32 +121,6 @@ test('an isolated source remains visible with an explanation instead of an empty
   expect(container.querySelector('[aria-current="location"]')).not.toBeNull();
   expect(container.textContent).toContain('No other furnaces are lit yet');
   expect(container.querySelector('[data-furnace-id]')).toBeNull();
-});
-
-test('pilots see an eastern destination to the right with pipes attached', () => {
-  const container = document.createElement('div');
-  const east = CIVIC_LOTS.find((site) => site.id === 'street-1-0');
-  if (!east) {
-    throw new Error('Missing east street');
-  }
-  mountMap(container, TOWN_HEARTH, [east], vi.fn());
-  const current = container.querySelector<HTMLElement>('[aria-current="location"]');
-  const destination = container.querySelector<HTMLElement>('[data-furnace-id="street-1-0"]');
-  if (!current || !destination) {
-    throw new Error('Missing furnace marker');
-  }
-  expect(Number.parseFloat(destination.style.left)).toBeGreaterThan(
-    Number.parseFloat(current.style.left)
-  );
-  const dx = Number.parseFloat(destination.style.left) - Number.parseFloat(current.style.left);
-  const dy = Number.parseFloat(destination.style.top) - Number.parseFloat(current.style.top);
-  expect(dy / dx).toBeCloseTo(east.position.y / east.position.x);
-  const points = [...container.querySelectorAll('polyline')].flatMap((line) =>
-    (line.getAttribute('points') ?? '').split(' ')
-  );
-  expect(points).toContain(
-    `${Number.parseFloat(destination.style.left)},${Number.parseFloat(destination.style.top)}`
-  );
 });
 
 test('crew markers preserve world bearings and names without becoming boarding targets', () => {

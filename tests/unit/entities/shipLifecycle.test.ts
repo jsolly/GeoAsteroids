@@ -306,8 +306,8 @@ describe('remote ship lifecycle is the same 60 Hz clock', () => {
       name: 'Remote',
       type: 'remote',
     });
-    const origin = { x: 40, y: 80 };
-    player.ship.position = origin;
+    player.ship.position = { x: 40, y: 80 };
+    const origin = { ...player.ship.position };
     player.ship.velocity = { x: 5, y: 0 };
     player.ship.thrusting = true;
     player.ship.updateLifecycle(10);

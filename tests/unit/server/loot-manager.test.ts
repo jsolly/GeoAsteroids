@@ -13,11 +13,7 @@ import { instrumentLootIndex } from '../../support/lootIndexInstrumentation';
 import { RecordingSocket } from '../../support/recordingSocket';
 
 function collectorAt(position: { x: number; y: number }): GameEntity {
-  return {
-    exploding: false,
-    health: 100,
-    position,
-  } as GameEntity;
+  return pilot('collector', position);
 }
 
 describe('LootManager destroy-drop shards', () => {
@@ -131,7 +127,12 @@ test.each(['tap', 'silk'] as const)(
       expect(manager.collectOverlaps([collector])).toEqual([]);
     }
     manager.expire(GROWTH.TAP_LOOT_EJECT_FRAMES, [collector]);
-    expect(manager.collectOverlaps([collector]).map((entry) => entry.loot.id)).toEqual([drop.id]);
+    const collected = manager.collectOverlaps([collector]);
+    expect(collected.map((entry) => entry.loot.id)).toEqual([drop.id]);
+    expect(collector.cargo).toBe(kind === 'tap' ? 2 : 0);
+    expect(collected[0]?.loot.points).toBe(kind === 'tap' ? 2 : undefined);
+    expect(manager.get(drop.id)).toBeUndefined();
+    expect(manager.getCount()).toBe(0);
   }
 );
 

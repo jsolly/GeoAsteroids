@@ -139,14 +139,24 @@ describe('authoritative asteroid motion', () => {
       clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
       clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
 
+      // Observe prediction before the next snapshot replaces both client states.
+      expect(Math.abs(clientA.position.x - clientB.position.x)).toBeLessThan(8);
+      expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(8);
+      if (tick === 0) {
+        expect(clientA.position.x).toBeCloseTo(WORLD.radius - 2, 8);
+        expect(clientB.position.x).toBeCloseTo(WORLD.radius - 2, 8);
+      }
+      if (tick === 1) {
+        expect(clientA.velocity.x).toBeLessThan(0);
+        expect(clientB.velocity.x).toBeLessThan(0);
+      }
+
       if (tick % 2 === 1) {
         clientA = { position: { ...server.position }, velocity: { ...server.velocity } };
         clientB = { position: { ...server.position }, velocity: { ...server.velocity } };
       }
     }
 
-    expect(Math.abs(clientA.position.x - clientB.position.x)).toBeLessThan(8);
-    expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(8);
     expect(clientA.position.x).toBeGreaterThan(0);
     expect(clientB.position.x).toBeGreaterThan(0);
   });
@@ -164,14 +174,22 @@ describe('authoritative asteroid motion', () => {
       clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
       clientB = stepAsteroidMotion(clientB.position, clientB.velocity, 0.5);
 
+      const elapsedTicks = tick + 1;
+      const expectedPosition = {
+        x: start.position.x + start.velocity.x * elapsedTicks,
+        y: start.position.y + start.velocity.y * elapsedTicks,
+      };
+      expect(clientA.position).toEqual(expectedPosition);
+      expect(clientB.position).toEqual(expectedPosition);
+      expect(Math.abs(clientA.position.x - clientB.position.x)).toBeLessThan(1);
+      expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(1);
+
       if (tick % 2 === 1) {
         clientA = { position: { ...server.position }, velocity: { ...server.velocity } };
         clientB = { position: { ...server.position }, velocity: { ...server.velocity } };
       }
     }
 
-    expect(Math.abs(clientA.position.x - clientB.position.x)).toBeLessThan(1);
-    expect(Math.abs(clientA.position.y - clientB.position.y)).toBeLessThan(1);
     expect(Math.hypot(clientA.position.x, clientA.position.y)).toBeLessThanOrEqual(fieldRadius + 1);
     expect(Math.hypot(clientB.position.x, clientB.position.y)).toBeLessThanOrEqual(fieldRadius + 1);
   });

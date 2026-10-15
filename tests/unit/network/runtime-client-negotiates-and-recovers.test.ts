@@ -23,7 +23,7 @@ import { publishHarpoonField } from '../../../src/entities/ship/harpoonField';
 import { resetHapticsForTests, setHaptics } from '../../../src/fx/haptics';
 import { resetControlSources } from '../../../src/input/controlSources';
 import { keyDown, keyUp } from '../../../src/input/keybindings';
-import { handleMouseDown, handleMouseUp } from '../../../src/input/mouse';
+import { handleMouseDown } from '../../../src/input/mouse';
 import { setTouchHeading } from '../../../src/input/touchControls';
 import {
   applyAsteroidKinematics,
@@ -38,7 +38,7 @@ import { getRolyPolys } from '../../../src/physics/terrain/rolyPolySession';
 import { sendCrewAction } from '../../../src/runtime/crewRescue';
 import { setSelectedShipKitId } from '../../../src/runtime/shipSelection';
 import { logger } from '../../../src/utils/Logger';
-import { snapshotFixture } from './snapshotFixture';
+import { emptySnapshotFixture, snapshotFixture } from './snapshotFixture';
 
 const LASER_SOUND_PATH_PATTERN = /sounds\/laser\.m4a$/u;
 const LOOT_PICKUP_SOUND_PATH_PATTERN = /sounds\/loot-pickup\.m4a$/u;
@@ -568,7 +568,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
-    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1));
+    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(emptySnapshotFixture())).encode(1));
     setSound(true);
     bindGameAudio({
       getListenerPosition: () => ({ x: 0, y: 0 }),
@@ -642,7 +642,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       expect(played).toHaveLength(4);
       reconnected.receive(
         'snapshot',
-        new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1)
+        new SnapshotEncoder(captureSnapshot(emptySnapshotFixture())).encode(1)
       );
       reconnected.receive('lootCollected', collection);
       expect(played).toHaveLength(4);
@@ -657,7 +657,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
   test('each partial collection sounds once while replayed and malformed receipts stay silent', async () => {
     const ws = await connect();
     acknowledge(ws);
-    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1));
+    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(emptySnapshotFixture())).encode(1));
     setSound(true);
     bindGameAudio({
       getListenerPosition: () => ({ x: 0, y: 0 }),
@@ -783,7 +783,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
         position: { x: 10, y: 0 },
       });
       expect(notes).not.toHaveBeenCalled();
-      const state = captureSnapshot(snapshotFixture());
+      const state = captureSnapshot(emptySnapshotFixture());
       state.loot = [
         { id: 'existing-tap', kind: 'tap', position: { x: 10, y: 0 }, mass: 0.1, radius: 5 },
       ];
@@ -815,7 +815,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
-    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1));
+    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(emptySnapshotFixture())).encode(1));
     setSound(true);
     const played: string[] = [];
     vi.spyOn(Sound.prototype, 'play').mockImplementation(function (this: Sound) {
@@ -833,7 +833,10 @@ describe('actual ConnectionManager WebSocket message path', () => {
     played.length = 0;
     ws.receive('playerDamaged', damage);
     expect(played).toEqual([]);
+    player.ship.contourLock = { height: 0, direction: 1 };
+    played.length = 0;
     ws.receive('playerDamaged', { ...damage, damage: 0 });
+    expect(player.ship.contourLock).toEqual({ height: 0, direction: 1 });
     expect(played).toEqual([]);
     setSound(false);
   });
@@ -850,7 +853,10 @@ describe('actual ConnectionManager WebSocket message path', () => {
       vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
       const ws = await connect();
       acknowledge(ws);
-      ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1));
+      ws.receive(
+        'snapshot',
+        new SnapshotEncoder(captureSnapshot(emptySnapshotFixture())).encode(1)
+      );
       setSound(true);
       bindGameAudio({
         getListenerPosition: () => player.ship.position,
@@ -1022,7 +1028,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
     acknowledge(ws);
-    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(snapshotFixture())).encode(1));
+    ws.receive('snapshot', new SnapshotEncoder(captureSnapshot(emptySnapshotFixture())).encode(1));
     setSound(true);
     bindGameAudio({
       getListenerPosition: () => ({ x: 0, y: 0 }),
@@ -1162,7 +1168,6 @@ describe('actual ConnectionManager WebSocket message path', () => {
       source: 'right mouse',
       press: (player: Player) =>
         handleMouseDown(new MouseEvent('mousedown', { button: 2 }), player),
-      release: (player: Player) => handleMouseUp(new MouseEvent('mouseup', { button: 2 }), player),
     },
     {
       source: 'touch steering',
@@ -1170,7 +1175,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
       release: (player: Player) => setTouchHeading(player, null),
     },
   ])(
-    'late Hauler snapshots preserve cruise across $source press and release',
+    'late Hauler snapshots preserve cruise through $source input until authoritative death',
     async ({ press, release }) => {
       const clock = vi.spyOn(Date, 'now').mockReturnValue(10_000);
       const player = createPlayer({
@@ -1216,7 +1221,7 @@ describe('actual ConnectionManager WebSocket message path', () => {
         thrusting: true,
       });
 
-      release(player);
+      release?.(player);
       local.thrusting = true;
       clock.mockReturnValue(10_034);
       ws.receive('snapshot', new SnapshotEncoder(state).encode(3));

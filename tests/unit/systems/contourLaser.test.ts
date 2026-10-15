@@ -3,11 +3,7 @@ import { createHeightfield, sampleGradient } from '../../../shared/heightfield';
 import { TERRAIN } from '../../../shared/terrainConfig';
 import { ensureTerrain } from '../../../shared/terrainField';
 import { PALETTE, VISUAL } from '../../../src/constants';
-import {
-  contourLaserTick,
-  contourLaserTickInto,
-  contourLaserTicksForShots,
-} from '../../../src/physics/terrain/contourLaser';
+import { contourLaserTickInto } from '../../../src/physics/terrain/contourLaser';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import {
   drawContourLaserTicks,
@@ -62,16 +58,21 @@ function steepPoint(seed: number): { x: number; y: number } {
 describe('contour lasers stay a terrain blush, not a new authority path', () => {
   test('the same seed and shot pose produce the same iso-tangent', () => {
     const at = steepPoint(TERRAIN.DEFAULT_SEED);
-    const a = contourLaserTick(createHeightfield(TERRAIN.DEFAULT_SEED, BOUNDS), at.x, at.y);
-    const b = contourLaserTick(createHeightfield(TERRAIN.DEFAULT_SEED, BOUNDS), at.x, at.y);
-    expect(a).not.toBeNull();
+    const a = { ax: 0, ay: 0, bx: 0, by: 0 };
+    const b = { ax: 0, ay: 0, bx: 0, by: 0 };
+    expect(
+      contourLaserTickInto(a, createHeightfield(TERRAIN.DEFAULT_SEED, BOUNDS), at.x, at.y)
+    ).toBe(a);
+    expect(
+      contourLaserTickInto(b, createHeightfield(TERRAIN.DEFAULT_SEED, BOUNDS), at.x, at.y)
+    ).toBe(b);
     expect(b).toEqual(a);
   });
 
   test('the tick is perpendicular to the height gradient and finite', () => {
     const field = createHeightfield(TERRAIN.DEFAULT_SEED, BOUNDS);
     const at = steepPoint(TERRAIN.DEFAULT_SEED);
-    const tick = contourLaserTick(field, at.x, at.y);
+    const tick = contourLaserTickInto({ ax: 0, ay: 0, bx: 0, by: 0 }, field, at.x, at.y);
     expect(tick).not.toBeNull();
     if (!tick) {
       throw new Error('expected a contour tick on a steep face');
@@ -86,15 +87,11 @@ describe('contour lasers stay a terrain blush, not a new authority path', () => 
 
   test('invalid poses and the flat spawn do not light a tick', () => {
     const field = createHeightfield(TERRAIN.DEFAULT_SEED, BOUNDS);
-    expect(contourLaserTick(field, 0, 0)).toBeNull();
-    expect(contourLaserTick(field, Number.NaN, 5)).toBeNull();
-    expect(contourLaserTick(field, 5, 5, 0)).toBeNull();
-    expect(
-      contourLaserTicksForShots(field, [
-        { x: 0, y: 0 },
-        { x: Number.NaN, y: 1 },
-      ])
-    ).toEqual([]);
+    const out = { ax: 1, ay: 2, bx: 3, by: 4 };
+    expect(contourLaserTickInto(out, field, 0, 0)).toBeNull();
+    expect(contourLaserTickInto(out, field, Number.NaN, 5)).toBeNull();
+    expect(contourLaserTickInto(out, field, 5, 5, 0)).toBeNull();
+    expect(out).toEqual({ ax: 1, ay: 2, bx: 3, by: 4 });
   });
 
   test('the reusable output object is filled only for a valid tangent', () => {
