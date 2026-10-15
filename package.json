@@ -13,7 +13,7 @@
     "dev": "./scripts/dev-server.sh",
     "dev:check": "./scripts/check-dev-servers.sh",
     "dev:kill": "./scripts/dev-server.sh --stop",
-    "build": "npm run check:wiki && astro sync && node scripts/typescript-cli.mjs -p tsconfig.build.json && astro build && node scripts/check-built-client.mjs",
+    "build": "npm run check:wiki && astro sync && node scripts/typescript-cli.mjs -p tsconfig.build.json && astro build && node scripts/check-built-client.mjs && node scripts/build-vercel-output.mjs",
     "start": "astro dev --ignore-lock",
     "preview": "astro preview --ignore-lock",
     "test": "node scripts/validation-admission.mjs unit -- vitest run --project unit --project components",

@@ -46,13 +46,26 @@ Astro emits content-addressed JS/CSS and atomically published static documents a
 `dist/index.html`, `dist/debug/index.html` and `dist/wiki/index.html`. The game
 imports its runtime immediately on mount; the Wiki's chart code is in its initial
 module graph. Audio (`howler`) and client log forwarding still import chunks on
-demand. This change retains all existing public assets. Vercel old-deployment
-retention at the canonical origin has not been established for this static
-configuration. Browser acceptance proves that mounted A tabs keep their flight
-and input after B, but does not certify later audio/logging chunk availability.
-Those lazy imports, slow pre-hydration clients and future removed asset URLs
-remain an explicit retention gap. A notice cannot repair missing old chunks,
-and automatic reload is not a substitute for asset retention.
+demand. Generated JS/CSS now uses `/_vercel/immutable/<salt-digest>/` URLs.
+`scripts/build-vercel-output.mjs` emits Vercel's Build Output API static tree and
+full SHA-256 immutable manifest. The provider serves these files across deployments
+even when the current build omits them, including overlapping builds. No service
+worker or previous-build cache is required; documents and release metadata stay current.
+
+Retain availability for at least 30 days. The provider exposes no expiry field in
+this manifest, so files may remain longer. Do not rotate `VERCEL_HASH_SALT`, remove
+retention routing, delete historical deployments or promote pre-migration outputs
+during this window. Supported rollbacks rebuild Git main with retention intact.
+This protects asset loading, not compatibility with a newer server protocol.
+
+The migration inventory in `scripts/legacy-client-assets.json` pins all 13 generated
+JS/CSS assets of production `c45e47bd281684f6ff94e89ff4c61a545967bba9`.
+Exact `/_astro/` aliases route these original URLs to the shared immutable registry.
+Production builds verify existing registry bytes, bootstrapping only missing entries
+from the pinned first-party deployment; errors or checksum changes fail the build.
+Local, CI and Railway builds make no migration network requests. Older releases
+outside this inventory have no retroactive availability guarantee. Mutable public
+media is outside the generated-chunk contract.
 
 The repo adapts the merged website-update contract from dotagents
 `f861d7c961a7bb1e6229d4565b7c787d91279e1c` in these instructions and code tests;
@@ -71,7 +84,7 @@ Two separate production deploy targets — client and server do not share a host
 | --- | --- |
 | **Project** | `georoids` (`jsollys-projects`) |
 | **Production URLs** | **Canonical:** <https://www.georoids.com>; **apex:** <https://georoids.com> (redirects to www); **Vercel default:** `https://georoids-jsollys-projects.vercel.app` |
-| **Build** | `npm run build` → `dist/` (Astro static output; Vite is managed by Astro) |
+| **Build** | `npm run build` → `dist/` for local/Railway serving, plus `.vercel/output/` with static files, routes and the shared immutable manifest for Vercel. Astro manages Vite. |
 | **Trigger** | Merge to `main` after the pre-commit gate and PR CI; Vercel GitHub integration. Branch pushes do **not** create Preview deployments (`vercel.json` `git.deploymentEnabled`); Vercel is production-only. The opt-in preview path is the [Railway preview](#railway-preview). |
 | **Local deploy** | None — no `npm run deploy` or CLI deploy step in the release process |
 

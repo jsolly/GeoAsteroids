@@ -34,6 +34,10 @@ test('availability preserves unfinished input and leaves reload behind explicit 
   expect(input.value).toBe('Unfinished pilot name');
   expect(document.querySelector('[role=dialog]')).toBeNull();
   expect(document.querySelector('[role="status"]')?.textContent).toContain('update is available');
+  expect(document.querySelector('aside')?.textContent).toContain('requires rejoining');
+  expect(document.querySelector('aside')?.textContent).toContain(
+    'server update may disconnect you'
+  );
   expect(release.reload).not.toHaveBeenCalled();
   const later = [...document.querySelectorAll('button')].find(
     (button) => button.textContent?.trim() === 'Later'
@@ -57,6 +61,12 @@ test('availability preserves unfinished input and leaves reload behind explicit 
   expect(release.reload).not.toHaveBeenCalled();
   expect(document.querySelector('[role=dialog]')?.textContent).toContain(
     'disconnects your current flight'
+  );
+  expect(document.querySelector('[role=dialog]')?.textContent).toContain(
+    'loads the latest version'
+  );
+  expect(document.querySelector('[role=dialog]')?.textContent).toContain(
+    'not reload automatically'
   );
   const cancel = [...document.querySelectorAll('button')].find((button) =>
     button.textContent?.includes('Keep this page open')

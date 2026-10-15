@@ -2,13 +2,13 @@
   "note": "Scoped PR 5 review of exactly 35 changed sources: 31 Node-only browser test annotations, controlled spatial-audio admission/evidence, test log-path isolation, sharded test commands, and test Vite cache isolation. Reviewed the 11 linked topics and unchanged demonstration rules/assets; desktop and touch Wiki browser scenario passed on main 26dec1c9. Gameplay controls and rules are unchanged. All other accepted source hashes are retained. Subsequent scoped review of only the tow-bite browser fixture: finite admission protection and atomic live placement/release retain keyboard/touch latching, lethal bites and peer broadcasts. Hauler, terrain and combat-survival text and unchanged illustrations match actual current-health lethal damage; all four browser scenarios and 32 unit cases pass. The prior desktop/touch Wiki evidence remains applicable because no Wiki UI or asset changed. Final tow-preservation correction supersedes the earlier insufficient owner-bite proof: exactly two reviewed source hashes cover explicit test-only current-session/unique-owner validation and preserved captive placement. Normal motion, controls, terrain, HUD/network, Scout, teamwork, Hauler and survival rules and illustrations are unchanged. Final 35 unit cases and all four keyboard/touch browser scenarios pass with exact captive release receipts; prior desktop/touch Wiki UI proof remains applicable. No other hashes are accepted. Subsequent scoped review accepts only the regeneration server test hash after a Node environment directive; its test body and gameplay rule are unchanged. The entire server category passed 10 files/26 cases. Survival recovery text and illustrations remain accurate; all 466 other hashes are retained. Subsequent scoped knip 6.35.1 to 6.38.0 dev-tool review: only package.json source hash changes; no gameplay rules, wiki content, runtime imports, demonstration generators, GIFs or posters change. Existing unused-code gates remain strict.",
   "hashes": {
     ".prettierrc.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
-    "astro.config.ts": "sha256:add972d8f27001af0742bec72153a349a9eae0beda5d881b10ee4b0a5a390cea",
+    "astro.config.ts": "sha256:b00ade52dcad468e20e5b9027b51f4bd85c29014734c14c1e6b4165ba2566e9b",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
     "docs/diagnostics.md": "sha256:671c1287c5d6a44274d61cfd4ac5836112105bb31b8aaf0c8ddc13064ea2b409",
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:4613a18ab6a45927de364db10ef801db5d0f8dda0ae2305353ecda5ffaa4296d",
-    "package.json": "sha256:9f3f1ecef31d798ef27e39b632e642aa24cd8373e7d024d4b9a9631bdfe17f6b",
+    "package.json": "sha256:fd92ec468c47a302ffa92bde1fb46a9963ee7513ac7e0e0fb08851533e39e3e0",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -547,7 +547,7 @@
     "shared/travelRoutes.ts": "sha256:278e477cade7c3dcb9a911dbed47aa3d0a9c46afe5686bfdb5cc567ff28df68e",
     "tests/unit/server/charged-beams-use-server-time-and-cancel-on-death.test.ts": "sha256:88a7a22fe6feb765c078a330f02e175db549bd47bad8a0dce29ad9f2e84fb413",
     "tests/unit/rendering/ship-light-casts-wreck-shadows-and-colors-speed.test.ts": "sha256:1476e3dfe24147762c632608e10347e74d8177d018ac1d2803d2d1acc1071474",
-    "src/components/UpdateNotice.svelte": "sha256:49d6704926dfbcd3525f9daaef08f887a3ff3277d5335afbdd6d0be118d43b4c"
+    "src/components/UpdateNotice.svelte": "sha256:5b84008e476dfc180e1c0afda269f8b208e057cdad614c71f393a2d88a0b3328"
   },
   "reviews": [
     {
@@ -6290,6 +6290,30 @@
     {
       "note": "Removed the unused public export from the module-private reload-result type after the full gate identified it. Runtime behavior, controls and earlier 26 focused/native browser checks are unchanged; no Wiki prose or media changes needed.",
       "sources": ["src/release/clientReleaseWatcher.ts"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed immutable generated asset paths and post-build packaging; documented 30-day minimum, lazy feature availability and server protocol limitation. Gameplay rules and demonstration media are unchanged.",
+      "sources": ["astro.config.ts", "package.json"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "astro.config.ts": "hud-network",
+        "package.json": "hud-network"
+      }
+    },
+    {
+      "note": "Reviewed update notice and confirmation against server shutdown close code 1001 and required current-protocol join behavior. Copy explains explicit reload, disconnection/rejoin, lost input and possible server interruption when deferred; no automatic reload. Gameplay and GIFs unchanged.",
+      "sources": ["src/components/UpdateNotice.svelte"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed multiplayer warning copy and explicit active-game boolean: reload loads the update, disconnects flight, requires rejoining and loses input; Later never reloads automatically but cannot prevent server interruption. Gameplay rules and media unchanged.",
+      "sources": ["src/components/UpdateNotice.svelte"],
       "topics": ["hud-network"],
       "media": [],
       "owners": {}
