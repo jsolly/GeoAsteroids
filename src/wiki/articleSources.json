@@ -406,6 +406,9 @@
     "tests/unit/rendering/ship-deployment-assembles-existing-hull-parts.test.ts"
   ],
   "hud-network": [
+    "src/components/UpdateNotice.svelte",
+    "src/release/clientReleaseEntry.ts",
+    "src/release/clientReleaseWatcher.ts",
     "shared/gameClock.ts",
     "shared/playerMotion.ts",
     "src/core/eventLoop.ts",

@@ -44,7 +44,7 @@ The title screen has separate Sound, Music, and Haptics settings, saved in this 
 
 The game retries about fifteen seconds, then returns to the title screen; choose Enter Game. A brief interruption restores your ship, and carrying cargo preserves your field position even after a longer absence. Progress is tied to this browser's saved pilot, so a private window, cleared site data, blocked storage, or another device starts a new pilot. A crash or restart can undo about the last second of play, with no warning beyond the Reconnecting banner.
 
-Published client updates refresh open tabs automatically after two checks about thirty seconds apart, with no prompt; a per-version guard prevents a cached old client from repeatedly reloading. Right after a release an old tab may show a generic connection error until it refreshes; reload if it does not.
+When an update is available, choose **Later** to keep playing or finish your input; **Update available** reopens the notice. Choose **Update and reload** and confirm when ready; reloading disconnects your flight and requires rejoining, while other tabs stay open. If the update cannot be checked or the old version returns, keep this page open and retry when ready.
 
 ## Can't join
 

@@ -12,7 +12,54 @@ Follow the repository-owned Production smoke workflow and inspect its exact-rele
 
 Manual production smoke requires a full `PRODUCTION_SMOKE_RELEASE_SHA` and unique `PRODUCTION_SMOKE_REQUEST_ID` to select the scenario checkout and correlate its receipt. Use the workflow dispatch inputs `release_sha` and `request_id`. The production runner starts no local server. After a new Railway deployment, follow a fresh smoke. Skipped, cancelled, missing, failed or timed-out smoke remains unverified. Artifacts retain HTTP/assets and protocol observations, descriptive release metadata, accepted-shot evidence, persistence health and owned-pilot cleanup.
 
-Open clients check the static same-origin `release.json` for the full build identity, confirm a changed identity twice and retain a per-loaded-build refresh guard. This product refresh behavior is distinct from host deployment proof. `release.json` is served with `Cache-Control: no-store`. Astro emits static documents at `dist/index.html`, `dist/debug/index.html` and `dist/wiki/index.html`; `/debug` and `/wiki` also accept trailing slashes and retain query parameters. No route-rewrite middleware or client router is required.
+Open clients compare their embedded full build identity with static same-origin
+`release.json`, served with `Cache-Control: no-store`. The game, debug page and
+Wiki share a shell-owned notice, with no service worker. Successful checks require
+JSON content type, the expected schema and a final same-origin URL; errors,
+redirects, malformed data and offline responses never indicate an update. Two
+matching observations confirm each different release, including rollbacks.
+
+The foreground timer uses a thirty-second cadence with twenty-percent jitter,
+chosen to surface game protocol releases promptly. Failures back off to at most
+six minutes. Hidden/offline tabs stop the timer and abort pending requests;
+visible return, focus and reconnect trigger coalesced, throttled checks. A failed
+check preserves an already confirmed notice. Later dismisses only that target
+in this document; Update available reopens it, and another confirmed release
+announces again. There are no cross-tab reload messages.
+
+Update and reload opens the session/unfinished-input confirmation. Cancel keeps
+the flight and input; the game continues while the prompt is open. After consent,
+a fresh online metadata check must still match the target before this tab reloads
+once. A third release, failed check, blocked tab recovery storage or cancellation
+keeps the page usable and offers retry. Application suspends polling, owns an
+abort signal and is cancelled by dismissal, page hide or unmount, so late results
+cannot overwrite a later attempt. A per-tab attempt marker detects stale HTML
+after reload and explains manual retry; a newer loaded build clears the marker.
+No update path clears unrelated storage or caches.
+
+Migration: clients already running the prior automatic-refresh implementation
+retain it until they load this release. The new implementation never reloads
+from polling. Production deployment status and the canonical smoke remain
+separate release proof; the notice is a product feature.
+
+Astro emits content-addressed JS/CSS and atomically published static documents at
+`dist/index.html`, `dist/debug/index.html` and `dist/wiki/index.html`. The game
+imports its runtime immediately on mount; the Wiki's chart code is in its initial
+module graph. Audio (`howler`) and client log forwarding still import chunks on
+demand. This change retains all existing public assets. Vercel old-deployment
+retention at the canonical origin has not been established for this static
+configuration. Browser acceptance proves that mounted A tabs keep their flight
+and input after B, but does not certify later audio/logging chunk availability.
+Those lazy imports, slow pre-hydration clients and future removed asset URLs
+remain an explicit retention gap. A notice cannot repair missing old chunks,
+and automatic reload is not a substitute for asset retention.
+
+The repo adapts the merged website-update contract from dotagents
+`f861d7c961a7bb1e6229d4565b7c787d91279e1c` in these instructions and code tests;
+there is no runtime/build dependency on that repository. Manual browser evidence
+follows `tests/AGENTS.md`, rather than adding an automated browser suite. `/debug`
+and `/wiki` also accept trailing slashes and retain query parameters; ordinary
+document navigation needs no rewrite middleware or client router.
 
 ## Deploy
 
