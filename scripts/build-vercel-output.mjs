@@ -94,7 +94,7 @@ export async function buildVercelOutput({
   assert(Object.keys(hashes).length > 0, 'Immutable client output is empty');
   const routes = [
     {
-      src: '^/(?:release|client-assets)\\.json$',
+      src: '^/(?:release|client-assets|immutable-assets)\\.json$',
       headers: { 'Cache-Control': 'no-store' },
       continue: true,
     },
@@ -121,10 +121,11 @@ export async function buildVercelOutput({
     join(output, 'config.json'),
     `${JSON.stringify({ version: 3, routes }, null, 2)}\n`
   );
-  await writeFile(
-    join(output, 'immutable.json'),
-    `${JSON.stringify({ version: 1, hashes }, null, 2)}\n`
-  );
+  const immutableManifest = `${JSON.stringify({ version: 1, hashes }, null, 2)}\n`;
+  await writeFile(join(output, 'immutable.json'), immutableManifest);
+  // This complete emitted inventory lets production verification prove omission,
+  // rather than confusing an unreferenced file with an absent file.
+  await writeFile(join(staticRoot, 'immutable-assets.json'), immutableManifest);
   return { immutableFiles: Object.keys(hashes).length, legacyAliases: inventory.assets.length };
 }
 
