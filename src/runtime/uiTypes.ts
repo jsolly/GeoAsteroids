@@ -1,4 +1,10 @@
-import type { CrewAction, HaulerUtilityId, ScoutUtilityId, ShipKitId } from '../../shared-types';
+import type {
+  CrewAction,
+  DebugDiagnosticSnapshot,
+  HaulerUtilityId,
+  ScoutUtilityId,
+  ShipKitId,
+} from '../../shared-types';
 import type { PhoneCollectorDownload, PhoneCollectorView } from '../diagnostics/phoneCollector';
 import type { ActionControlsView, TouchActionElements } from '../input/touchControls';
 import type { FieldHintId, FieldHintView } from '../ui/fieldHint';
@@ -63,6 +69,7 @@ export interface GameCommands {
   activateHint(id: FieldHintId): void;
   toggleDebugHud(): void;
   readDiagnostics(): string;
+  captureDiagnostics(): DebugDiagnosticSnapshot;
   startPhoneCollection(device: string, conditions: string): void;
   stopPhoneCollection(): void;
   recoverPhoneCollection(): void;

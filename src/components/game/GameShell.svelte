@@ -1,8 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { ShipKitId } from '../../../shared-types';
+  import type { DebugDiagnosticSnapshot, ShipKitId } from '../../../shared-types';
+  import { debugIsOn } from '../../constants/user-preferences';
+  import {
+    createDebugReportClient,
+    type DebugReportClientView,
+  } from '../../diagnostics/debugReportClient';
   import type { PlayfieldGeometry } from '../../rendering/canvasSurface';
   import type { GameRuntime } from '../../runtime/gameRuntime';
+  import { closeGameOverlay, openGameOverlay } from '../../runtime/overlayState';
   import { mountRuntime, type RuntimeMountState } from '../../runtime/runtimeMount';
   import type { GamePreference, GamePresentation } from '../../runtime/uiTypes';
   import UpdateNotice from '../UpdateNotice.svelte';
@@ -10,6 +16,7 @@
   import ActionControls from './ActionControls.svelte';
   import CrewControls from './CrewControls.svelte';
   import DebugPanel from './DebugPanel.svelte';
+  import DebugReportForm from './DebugReportForm.svelte';
   import FieldHints from './FieldHints.svelte';
   import GameOverlay from './GameOverlay.svelte';
   import InventoryPanel from './InventoryPanel.svelte';
@@ -63,6 +70,24 @@
     },
   });
   let startup = $state.raw<RuntimeMountState<GameRuntime>>({ kind: 'loading' });
+  let reportDescription = $state('');
+  let reportSnapshot = $state.raw<DebugDiagnosticSnapshot | null>(null);
+  let reportView = $state.raw<DebugReportClientView>({
+    state: 'idle',
+    message: 'Checking saved reports…',
+    submission: null,
+    reportId: null,
+    canSend: false,
+  });
+  let reports: ReturnType<typeof createDebugReportClient> | null = null;
+  function openReport() {
+    if (startup.kind === 'ready') {
+      if (reportView.reportId === null) {
+        reportSnapshot = startup.runtime.commands.captureDiagnostics();
+      }
+      openGameOverlay('debug-report');
+    }
+  }
   let playerName = $state('');
   let playerNameInitialized = false;
   let touchControls = $state(false);
@@ -110,6 +135,12 @@
 
   onMount(() => {
     let live = true;
+    if (debugIsOn()) {
+      reports = createDebugReportClient((next) => {
+        reportView = next;
+      });
+      void reports.restore();
+    }
     let unsubscribe: (() => void) | undefined;
     const wasInPlay = document.body.classList.contains('in-play');
     const wasTouchPlay = document.body.classList.contains('touch-play');
@@ -170,6 +201,7 @@
     retry = lifetime.retry;
     return () => {
       live = false;
+      reports?.dispose();
       unsubscribe?.();
       lifetime.dispose();
       document.body.classList.toggle('in-play', wasInPlay);
@@ -208,6 +240,7 @@
           inPlay={false}
           ontoggle={startup.runtime.commands.toggleDebugHud}
           diagnostics={startup.runtime.commands.readDiagnostics}
+          onreport={openReport}
         />
       {/if}
     </StartScreen>
@@ -259,6 +292,7 @@
           inPlay={true}
           ontoggle={startup.runtime.commands.toggleDebugHud}
           diagnostics={startup.runtime.commands.readDiagnostics}
+          onreport={openReport}
         />{/if}
     {/if}
   </div>
@@ -301,6 +335,34 @@
         onclose={() => closeTownStore(true)}
       />
     {/if}
+  </GameOverlay>
+  <GameOverlay
+    open={view.overlay === 'debug-report'}
+    title="Report a problem"
+    description="Send your description and captured diagnostics to the GeoRoids project team."
+    onclose={() => closeGameOverlay('debug-report')}
+    fallbackFocusTarget={() => (view.inPlay ? canvas : null)}
+    restoreFocus={view.overlay === null}
+  >
+    <DebugReportForm
+      bind:description={reportDescription}
+      snapshot={reportSnapshot}
+      view={reportView}
+      onsend={(description, diagnostics) => {
+        void reports?.send(description, diagnostics);
+      }}
+      onretry={() => {
+        void reports?.retry();
+      }}
+      onnew={async () => {
+        if (await reports?.newReport()) {
+          reportDescription = '';
+          reportSnapshot = null;
+          closeGameOverlay('debug-report');
+        }
+      }}
+      onclose={() => closeGameOverlay('debug-report')}
+    />
   </GameOverlay>
   {#if startup.kind === 'ready'}
     <UniverseMap

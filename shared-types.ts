@@ -595,3 +595,32 @@ export interface CampaignSnapshot {
   hazard: HazardPhase;
   meteors: { id: string; position: Position }[];
 }
+/** Explicit JSON values crossing the debug-report boundary. */
+export type DebugJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | DebugJsonValue[]
+  | { [key: string]: DebugJsonValue };
+
+export interface DebugDiagnosticSnapshot {
+  state: { [key: string]: DebugJsonValue };
+  recentLogs: string[];
+}
+
+export interface DebugReportSubmission {
+  version: 1;
+  id: string;
+  receiptToken: string;
+  description: string;
+  submittedAt: string;
+  diagnostics: DebugDiagnosticSnapshot;
+}
+
+export type DebugReportState = 'pending' | 'delivered' | 'blocked';
+
+export interface DebugReportReceipt {
+  id: string;
+  state: DebugReportState;
+}

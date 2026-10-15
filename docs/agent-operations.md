@@ -119,7 +119,7 @@ Two separate production deploy targets — client and server do not share a host
 
 `VITE_BUILD_TIME` and full `VITE_COMMIT_SHA` are injected by `scripts/client-build.ts` through `astro.config.ts` at build time — do not set them on Vercel. Only those metadata values and the required `VITE_WEBSOCKET_URL` are exposed to client code. The commit is the first valid 40-character SHA from `VERCEL_GIT_COMMIT_SHA`, then `RAILWAY_GIT_COMMIT_SHA`, then local Git. Empty hosted values do not block the later fallbacks. When host and local Git metadata are unavailable or invalid, the build generates one opaque 40-character hexadecimal token shared by the client and `release.json`. Version metadata never blocks a build. The visible build label takes its first seven characters from that same validated identity.
 
-Local dev: `npm run dev` sets an empty `VITE_WEBSOCKET_URL` so `ConnectionManager` uses same-origin `/ws`. Astro's Vite configuration proxies `/ws` and `/logs` to the configured local game-server port. This also supports phones using a public HTTPS tunnel to the Astro port. Direct `astro dev` runs can override the endpoint in `.env.local` (see `.env.example`).
+Local dev: `npm run dev` sets an empty `VITE_WEBSOCKET_URL` so `ConnectionManager` uses same-origin `/ws`. Astro's Vite configuration proxies `/ws`, `/logs` and `/debug-reports` to the configured local game-server port. Direct `astro dev` runs can override the endpoint in `.env.local` (see `.env.example`). Report submissions allow the documented local origins; other tunnel origins are rejected; use a documented loopback origin or the configured Railway public domain for reporting.
 
 ### Railway (game server)
 
@@ -176,6 +176,59 @@ One-time setup is human-owned production configuration:
 
 Never point this workflow at production, apply `.railway/railway.ts` to `preview`, or use a workspace or account token for it. Preview `deployment_status` events start `production-smoke.yml`, which skips them because its `if:` requires the production environment URL.
 
+## Debug report operations
+
+The **Debug reports** section already exists in Todoist project
+`6hWp83X3jfHJpW8v`, section `6hmMfqqQ4rwgJFGv`. Runtime delivery requires
+John to configure `TODOIST_API_TOKEN` as a Railway server secret for account
+`17333018`, `todoist@jsolly.com`. The connected chat's Todoist login cannot
+supply credentials to the running game. The worker verifies the account,
+project and section before publishing. Do not expose the token through client
+environment variables, logs or source. A personal API token grants access to
+its account; protect and rotate it as a server credential.
+
+`GEOROIDS_DEBUG_REPORTS_SECTION_ID` defaults to the verified section above.
+`GEOROIDS_DEBUG_REPORTS_PATH` defaults beside `GEOROIDS_WORLD_PATH`, giving
+`/data/debug-reports.sqlite` in production. It must be a separate database on
+the mounted Railway volume. Include that file and its journals in volume
+backup policy. `GEOROIDS_DEBUG_REPORTS_ENABLED=0` disables reporting without
+changing gameplay. Local development uses ignored `.data/debug-reports.sqlite`.
+Automated tests use explicit temporary stores, never the developer's queue.
+
+Only the report worker parses, redacts and persists report bodies or contacts
+Todoist. The main server accepts at most two concurrent uploads and eight
+worker requests, with a ten-second request deadline. New reports are limited
+to 2 MiB, three per client address per hour and 30 globally per UTC day.
+These limits are independent of gameplay admission. Railway public HTTP
+ingress supplies `X-Real-IP`; local development uses the socket address and
+ignores forwarded address headers. Before release, verify that Railway replaces
+client-supplied `X-Real-IP` values. Do not expose this reporting listener through
+an untrusted internal proxy that can choose that header.
+
+The report database has a 128 MiB main-file limit, a 16 MiB WAL safety limit,
+and a 100 MiB or 200-report pending limit. New acceptance reserves at least
+256 MiB free space for the world database. Full or unavailable storage rejects
+new reports explicitly. Delivered payloads are reclaimed; minimal duplicate
+and receipt records persist. Pending reports are never evicted.
+
+`GET /health` includes aggregate `debugReports` counts, the oldest pending
+timestamp and a safe delivery error. Reporting failure does not make gameplay
+unhealthy. Credential, permission and Todoist project-capacity failures keep
+reports blocked. Repair the credential or capacity and let the worker retry;
+configuration changes require a service restart. Transient failures retry with
+backoff and jitter, respecting Todoist's retry delay. Do not complete unrelated
+tasks to make space. A caller can check only its own report state using the
+receipt capability; there is no public report-content endpoint.
+
+For release acceptance, submit one explicitly identified test report through
+`/debug`, read the resulting task and all comment pages through the Todoist
+connector, and verify the reconstructed UTF-8 size and SHA-256 against the
+task manifest. Confirm **VERIFIED READY**, then record and close that test
+report. This live test is separate from local loopback API tests and the normal
+production smoke. Follow [diagnostic review](diagnostics.md#review-reports-as-an-agent)
+for real reports. Agents do not configure production credentials or deploy
+infrastructure.
+
 ## Commands
 
 Use `npm run dev` for live rebuilding.
@@ -218,11 +271,11 @@ browser smoke policy live in [tests/AGENTS.md](../tests/AGENTS.md).
 
 - **Client** (`src/`, served and built by Astro with Vite): rendering, input, prediction, HUD. Static game and debug routes share `src/components/GameDocument.astro` → `src/components/game/GameShell.svelte` → `src/runtime/gameRuntime.ts`, which composes an injected `EventLoop` and bootstraps `GameController` (singleton) which wires `GameStateManager`, `PlayerManager`, `InputManager`, `ConnectionManager`, `CollisionManager`.
 - **Server** (`server.ts` → `server/`): authoritative game loop. `GameEngine` owns world state via `EntityManager`, `AsteroidManager`, deterministic `RNGService`. `WebSocketCore` (`server/communication/`) routes messages through `MessageHandler`. `GameStateBroadcaster` periodically pushes state.
-- **Two WebSocket paths on the same server**: `/ws` for gameplay, `/logs` for forwarded client logs (`ClientLogger` writes them to `logs/client.log`). HTTP routes on the same port: `/health`, `/status` (HTML or JSON depending on Accept/UA), `/test-server-log` (development/test only).
+- **Two WebSocket paths on the same server**: `/ws` for gameplay, `/logs` for forwarded client logs (`ClientLogger` writes them to `logs/client.log`). HTTP routes on the same port: `/health`, `/status` (HTML or JSON depending on Accept/UA), `/debug-reports` and capability-protected report status, `/test-server-log` (development/test only).
 
 The Svelte shell owns the start screen, preferences, inventory, store, furnace travel, map controls, touch actions, field hints, network banners and diagnostics, including their responsive dialogs. It imports the browser-only runtime after mounting; initialization failure offers Retry and never queues Enter Game. The command port delegates to gameplay operations, while frozen presentation values update at most ten times per second and semantic transitions publish immediately. Canvas dimensions and pixels remain engine-owned; a separate geometry callback places shell controls. TypeScript painters receive explicit canvas elements from Svelte; the shell owns DOM state and styles. Map and touch adapters own their scoped gestures, while bounded presentation snapshots carry only visible controls and diagnostic values. Teardown retires the runtime, subscriptions, listeners, timers, painters, and owned connections. No legacy migration hosts remain. Renderer unit suites share only a canvas and safe-area probe; DOM scenarios mount the real Svelte components.
 
-Astro's Vite development server proxies `/ws` and `/logs` to the owned local game-server port, normally `3001`, so the client connects through the Astro origin. The Wiki route is a separate Svelte-enhanced static manual and does not initialize the game; see [Wiki maintenance](wiki-maintenance.md).
+Astro's Vite development server proxies `/ws`, `/logs` and `/debug-reports` to the owned local game-server port, normally `3001`, so the client connects through the Astro origin. The Wiki route is a separate Svelte-enhanced static manual and does not initialize the game; see [Wiki maintenance](wiki-maintenance.md).
 
 Gameplay requires snapshot v3 and asteroid interactions. The client adds
 `snapshotVersion=3` and `asteroidInteractions=1` to the WebSocket URL and sends both capabilities at join.

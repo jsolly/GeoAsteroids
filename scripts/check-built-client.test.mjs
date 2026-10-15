@@ -16,7 +16,10 @@ function fixture(run) {
   const game =
     '<!doctype html><html><head><title>GeoRoids</title><link rel="canonical" href="https://www.georoids.com/"></head><body><canvas id="gameCanvas"></canvas><script type="module" src="/_astro/page.js"></script></body></html>';
   write('dist/index.html', game);
-  write('dist/debug/index.html', game);
+  write(
+    'dist/debug/index.html',
+    game.replace('</head>', '<meta name="robots" content="noindex, nofollow"></head>')
+  );
   write(
     'dist/wiki/index.html',
     '<!doctype html><html><head><title>Wiki</title><link rel="canonical" href="https://www.georoids.com/wiki/"></head><body><main id="content"><h1>Overview</h1><section id="ships">Ships</section><section id="controls" data-panel="article"><h2>Controls</h2>Fly the ship.</section></main></body></html>'
@@ -101,7 +104,10 @@ test('Astro island component and renderer entries prove the dynamic gameplay gra
       '<script type="module">/* hydration bootstrap */</script><astro-island component-url="/_astro/page.js" renderer-url="/_astro/renderer.js"><canvas id="island-fallback"></canvas></astro-island>'
     );
     write('dist/index.html', html);
-    write('dist/debug/index.html', html);
+    write(
+      'dist/debug/index.html',
+      html.replace('</head>', '<meta name="robots" content="noindex, nofollow"></head>')
+    );
     const manifest = JSON.parse(readFileSync(join(root, 'dist/client-assets.json'), 'utf8'));
     manifest.modules['_astro/renderer.js'] = [];
     write('dist/client-assets.json', JSON.stringify(manifest));

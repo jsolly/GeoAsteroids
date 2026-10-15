@@ -109,6 +109,9 @@ async function serve(root: string, req: IncomingMessage, res: ServerResponse): P
     reject(res, 400);
     return;
   }
+  if (pathname === '/debug' || pathname.startsWith('/debug/')) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  }
   const file = await resolveFile(root, pathname);
   if (file == null || file === '') {
     reject(res, 404);
