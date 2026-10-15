@@ -529,7 +529,11 @@
     "src/rendering/remainsRenderer.ts",
     "tests/unit/server/remains-stay-local-and-expire-without-awarding-loot.test.ts",
     "tests/unit/rendering/remains-draw-broken-ribs-without-solid-hulls.test.ts",
-    "tests/unit/rendering/crew-health-remains-visible-while-healthy.test.ts"
+    "tests/unit/rendering/crew-health-remains-visible-while-healthy.test.ts",
+    "shared/debugReports.ts",
+    "src/components/game/DebugReportForm.svelte",
+    "src/diagnostics/debugReportClient.ts",
+    "src/diagnostics/debugReportStorage.ts"
   ],
   "scout": [
     "shared/shipKits.ts",

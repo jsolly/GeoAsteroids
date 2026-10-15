@@ -140,6 +140,10 @@ export function clientViteConfig() {
       port: testVitePort,
       strictPort: true, // Fail if port is not available
       proxy: {
+        '/debug-reports': {
+          target: `http://localhost:${testServerPort}`,
+          changeOrigin: true,
+        },
         '/ws': {
           target: `ws://localhost:${testServerPort}`,
           ws: true,

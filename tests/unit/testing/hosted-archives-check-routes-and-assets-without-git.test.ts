@@ -38,7 +38,10 @@ function archive() {
     '<canvas id="gameCanvas"></canvas><script type="module" src="/_astro/game.js"></script>'
   );
   writeFileSync(join(root, 'dist/index.html'), game);
-  writeFileSync(join(root, 'dist/debug/index.html'), game);
+  writeFileSync(
+    join(root, 'dist/debug/index.html'),
+    game.replace('</head>', '<meta name="robots" content="noindex, nofollow"></head>')
+  );
   writeFileSync(
     join(root, 'dist/wiki/index.html'),
     document(

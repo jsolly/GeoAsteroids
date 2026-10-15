@@ -5,6 +5,7 @@
   "entry": [
     "server.ts",
     "server/world/worldStoreWorker.ts",
+    "server/debugReports/worker.ts",
     ".railway/**/*.ts",
     "scripts/**/*.ts",
     "src/pages/**/*.astro",

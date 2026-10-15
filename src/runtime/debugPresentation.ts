@@ -1,6 +1,6 @@
 import { debugIsOn, LOCAL_STORAGE_KEYS } from '../constants/user-preferences';
 import { GameController } from '../core/gameController';
-import { buildClientDiagnostics } from '../diagnostics/clientDiagnostics';
+import { buildClientDiagnostics, captureClientDiagnostics } from '../diagnostics/clientDiagnostics';
 import { readDebugHudMetrics } from '../diagnostics/debugHudMetrics';
 import {
   formatDebugFps,
@@ -91,6 +91,9 @@ export function createDebugPresentation(changed: () => void) {
     },
     diagnostics(): string {
       return enabled && !disposed ? buildClientDiagnostics() : '';
+    },
+    captureDiagnostics() {
+      return captureClientDiagnostics();
     },
     dispose(): void {
       disposed = true;

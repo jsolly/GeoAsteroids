@@ -1,9 +1,18 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import type { StoredDebugReport } from '../../../src/diagnostics/debugReportStorage';
 import type { GameRuntime, GameRuntimeHosts } from '../../../src/runtime/gameRuntime';
 import type { TownStoreView } from '../../../src/runtime/townStore';
 import type { GamePresentation, InventoryView } from '../../../src/runtime/uiTypes';
 
-const boundary = vi.hoisted(() => ({ create: vi.fn(), imported: vi.fn() }));
+const boundary = vi.hoisted(() => ({
+  create: vi.fn(),
+  imported: vi.fn(),
+  readReport: vi.fn<() => Promise<StoredDebugReport | null>>(),
+  writeReport: vi.fn<(value: StoredDebugReport | null) => Promise<void>>(),
+}));
+vi.mock('../../../src/diagnostics/debugReportStorage', () => ({
+  createDebugReportStorage: () => ({ read: boundary.readReport, write: boundary.writeReport }),
+}));
 vi.mock('../../../src/runtime/gameRuntime', async () => {
   await boundary.imported();
   return { createGameRuntime: boundary.create };
@@ -88,6 +97,9 @@ function element<T extends Element>(selector: string, type: { new (...args: neve
   return found;
 }
 beforeEach(async () => {
+  window.history.replaceState(null, '', '/');
+  boundary.readReport.mockReset().mockResolvedValue(null);
+  boundary.writeReport.mockReset().mockRejectedValue(new Error('test browser storage failure'));
   vi.resetModules();
   svelte = await import('svelte');
   document.body.innerHTML = '';
@@ -121,6 +133,10 @@ beforeEach(async () => {
       activateHint: vi.fn(),
       toggleDebugHud: vi.fn(),
       readDiagnostics: vi.fn(() => ''),
+      captureDiagnostics: vi.fn(() => ({
+        state: { version: 1, capturedAt: new Date().toISOString(), sessionId: 'test-page' },
+        recentLogs: [],
+      })),
       startPhoneCollection: vi.fn(),
       stopPhoneCollection: vi.fn(),
       recoverPhoneCollection: vi.fn(),
@@ -550,3 +566,90 @@ test.each(['inventory', 'town-store'] satisfies ('inventory' | 'town-store')[])(
     expect(document.activeElement).not.toBe(document.body);
   }
 );
+
+test('canceling an unsubmitted report recaptures the current incident before reopening and sends that snapshot', async () => {
+  window.history.replaceState(null, '', '/debug');
+  const overlays = await import('../../../src/runtime/overlayState');
+  const diagnosticView: GamePresentation = {
+    ...initialView,
+    debug: {
+      playerId: '',
+      sessionId: 'test-page',
+      hudHidden: false,
+      fps: '60',
+      rtt: '0',
+      snapshot: '0',
+      motion: '',
+      world: '',
+      releases: '',
+    },
+  };
+  vi.mocked(runtime.subscribe).mockImplementation((listener) => {
+    listener(diagnosticView);
+    return overlays.subscribeGameOverlay((overlay) => listener({ ...diagnosticView, overlay }));
+  });
+  let incident = 'before-cancel';
+  vi.mocked(runtime.commands.captureDiagnostics).mockImplementation(() => {
+    expect(overlays.getOpenGameOverlay()).toBeNull();
+    return {
+      state: { version: 1, capturedAt: new Date().toISOString(), sessionId: incident },
+      recentLogs: [],
+    };
+  });
+  await start();
+  await vi.dynamicImportSettled();
+  await settle();
+  vi.useFakeTimers();
+  const button = (label: string) => {
+    const found = [...document.querySelectorAll('button')].find(
+      (item) => item.textContent?.trim() === label
+    );
+    if (!found) {
+      throw new Error(`Missing ${label}`);
+    }
+    return found;
+  };
+  button('Report a problem').click();
+  await settle();
+  const firstField = element('#debug-report-description', HTMLTextAreaElement);
+  firstField.value = 'Controls stopped responding';
+  firstField.dispatchEvent(new Event('input', { bubbles: true }));
+  await settle();
+  button('Cancel').click();
+  await settle();
+  await vi.runAllTimersAsync();
+  await settle();
+  incident = 'after-cancel';
+  button('Report a problem').click();
+  await settle();
+  expect(element('#debug-report-description', HTMLTextAreaElement).value).toBe(
+    'Controls stopped responding'
+  );
+  expect(document.querySelector('pre')?.textContent).toContain('after-cancel');
+  expect(document.querySelector('pre')?.textContent).not.toContain('before-cancel');
+  button('Send').click();
+  await settle();
+  expect(boundary.writeReport).toHaveBeenCalledWith({
+    kind: 'submission',
+    submission: expect.objectContaining({
+      description: 'Controls stopped responding',
+      diagnostics: expect.objectContaining({
+        state: expect.objectContaining({ sessionId: 'after-cancel' }),
+      }),
+    }),
+  });
+  expect(runtime.commands.captureDiagnostics).toHaveBeenCalledTimes(2);
+  button('Cancel').click();
+  await settle();
+  await vi.runAllTimersAsync();
+  await settle();
+  incident = 'after-submission';
+  button('Report a problem').click();
+  await settle();
+  expect(runtime.commands.captureDiagnostics).toHaveBeenCalledTimes(2);
+  expect(document.querySelector('pre')?.textContent).toContain('after-cancel');
+  expect(document.querySelector('pre')?.textContent).not.toContain('after-submission');
+  button('Cancel').click();
+  await settle();
+  await vi.runAllTimersAsync();
+});

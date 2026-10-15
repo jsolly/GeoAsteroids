@@ -1,8 +1,11 @@
+import { formatDebugDiagnostics, sanitizeDebugDiagnostics } from '../../shared/debugReports';
 import { getTerrainSeed } from '../../shared/terrainField';
+import type { DebugDiagnosticSnapshot } from '../../shared-types';
 import { readAudioDiagnostics } from '../audio/audioRuntime';
 import { readMusicDiagnostics } from '../audio/musicBeds';
 import { GameController } from '../core/gameController';
 import { readTouchControlDiagnostics } from '../input/touchControls';
+import { readStoredResumeName, readStoredResumeToken } from '../network/services/resumeCredential';
 import { canvasManager } from '../rendering/canvasSurface';
 import { getClientReleaseId } from '../utils/buildInfo';
 import { getClientLogContext } from '../utils/clientLogContext';
@@ -11,7 +14,7 @@ import { readDebugHudMetrics } from './debugHudMetrics';
 import { clientPerformance } from './performanceMetrics';
 
 /** Explicit fields only: never serialize the player, transport or browser storage. */
-export function buildClientDiagnostics(): string {
+export function captureClientDiagnostics(): DebugDiagnosticSnapshot {
   const game = GameController.getInstance();
   const network = game.getNetworkManager();
   const player = game.getCurrPlayer();
@@ -72,5 +75,17 @@ export function buildClientDiagnostics(): string {
       loot: game.getLoot().length,
     },
   };
-  return `GeoRoids diagnostics\n${JSON.stringify(state, null, 2)}\nRecent client logs (up to 80, oldest first):\n${logger.getRecentDiagnostics().join('\n')}`;
+  return sanitizeDebugDiagnostics(
+    {
+      state: JSON.parse(JSON.stringify(state)),
+      recentLogs: logger.getRecentDiagnostics().slice(-80),
+    },
+    [readStoredResumeName(), readStoredResumeToken()].filter((value): value is string =>
+      Boolean(value)
+    )
+  );
+}
+
+export function buildClientDiagnostics(): string {
+  return formatDebugDiagnostics(captureClientDiagnostics());
 }

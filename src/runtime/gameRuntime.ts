@@ -469,6 +469,9 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
       readDiagnostics() {
         return disposed ? '' : debug.diagnostics();
       },
+      captureDiagnostics() {
+        return debug.captureDiagnostics();
+      },
       startPhoneCollection(device, conditions) {
         if (!disposed) {
           void phone?.start(device, conditions);

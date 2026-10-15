@@ -54,6 +54,8 @@ A disconnected-from-server banner can mean your nickname is in use by an online 
 
 ## Diagnostics
 
+On `/debug`, choose **Report a problem**, describe what happened, and choose **Send** to save a diagnostic report for the GeoRoids team. **Saved, pending delivery** means the server has your report; **Delivered** means it reached the team's review inbox. Do not include secrets, and keep or download the report if saving is not confirmed.
+
 Visit `/debug` for player and page session IDs, frame rate, and connection health. Logging defaults to Info; add `?log-level=debug`, `info`, or `warn` to change it for that visit. Use Copy Diagnostics when reporting trouble, including silent audio or unexpected Contour Lock releases. Lock-release records name the cause; server position or heading rejections also record rail distance, alignment, and the acquisition window.
 
 ## Graphics option

@@ -18,6 +18,12 @@ export function checkBuiltClient(root = process.cwd()) {
       const document = dom.window.document;
       assert(document.title.trim(), `Missing title: ${path}`);
       assert(document.querySelector('link[rel="canonical"]'), `Missing canonical URL: ${path}`);
+      const robots = document.querySelector('meta[name="robots"]')?.getAttribute('content') ?? '';
+      if (path === 'debug/index.html') {
+        assert.equal(robots, 'noindex, nofollow', 'Debug route must be excluded from search');
+      } else {
+        assert(!robots.includes('noindex'), `Public route must remain indexable: ${path}`);
+      }
       const ids = [...document.querySelectorAll('[id]')].map((element) => element.id);
       assert.equal(new Set(ids).size, ids.length, `Duplicate anchors: ${path}`);
       if (path === 'wiki/index.html') {
