@@ -4,7 +4,7 @@
     ".prettierrc.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
     "astro.config.ts": "sha256:b00ade52dcad468e20e5b9027b51f4bd85c29014734c14c1e6b4165ba2566e9b",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
-    "docs/diagnostics.md": "sha256:38ed60b46d3ae66aa07d9dbcbfb92ef680456a05558eef41d63cfaabf7279c48",
+    "docs/diagnostics.md": "sha256:c0e515be8e68e3bae91e57800a747f1e2e1e3da4ff3639fb29f602d8db975061",
     "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:6f758f11ca56b4b312836cc3d3330633e8d904de918be510d7498cba00abbb4c",
@@ -549,12 +549,13 @@
     "tests/unit/rendering/ship-light-casts-wreck-shadows-and-colors-speed.test.ts": "sha256:1476e3dfe24147762c632608e10347e74d8177d018ac1d2803d2d1acc1071474",
     "src/components/UpdateNotice.svelte": "sha256:5b84008e476dfc180e1c0afda269f8b208e057cdad614c71f393a2d88a0b3328",
     "shared/debugReports.ts": "sha256:18361ef763d8deb776023942bbe320da2f46ad0573d942276512607bcf1485db",
-    "src/components/game/DebugReportForm.svelte": "sha256:c97b12b4e49f86d16ee0e2e9e8249c77eb751f92cecf3f94ae7356218d559f99",
+    "src/components/game/DebugReportForm.svelte": "sha256:bd3d7d4e09a6b2ab5a5797dc32672af1a58930bf1d4ca879f1045c17be8f9f9f",
     "src/diagnostics/debugReportClient.ts": "sha256:a5c9ad047183d75781c8be22a4ed1cf89f61752df49ddeb8a36385cdda11d398",
     "src/diagnostics/debugReportStorage.ts": "sha256:21114a7c8b67da1165bfaf33b2f5ee53c353efd3ea80bedbbfc1f9b9aacb212d",
     "scripts/build-vercel-output.mjs": "sha256:084559299214645fac9f3d1c0300cf5d2445ba6cf4f5cc30c5f6755b3e5d65f3",
-    "server/createServer.ts": "sha256:de76d0c6bbd6ed8857b11bc9157d3ecba631dc9cd4e234c0c480f9cf19557c29",
-    "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8"
+    "server/createServer.ts": "sha256:7499d6311193e05d8e0d91b5cdb332edbb49f19efc4dcec08d7b6a5603f6798e",
+    "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8",
+    "src/diagnostics/reportInputDiagnostics.ts": "sha256:6dca366e212141f3b034b4f3109625a80f32c916cec4c33c66edde00b1d8518e"
   },
   "reviews": [
     {
@@ -6395,6 +6396,27 @@
         "tests/unit/input/playfield-taps-do-not-open-copy-banners.test.ts"
       ],
       "topics": ["controls", "hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed same-origin preview report admission and bounded editor-event metadata against the diagnostics article and HUD Wiki. Focused report persistence/origin integration and editor privacy/disposal/component submission tests passed; frontend diagnostics passed. No gameplay demonstration changes.",
+      "sources": [
+        "docs/diagnostics.md",
+        "server/createServer.ts",
+        "src/components/game/DebugReportForm.svelte",
+        "src/diagnostics/reportInputDiagnostics.ts"
+      ],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "src/diagnostics/reportInputDiagnostics.ts": "hud-network"
+      }
+    },
+    {
+      "note": "Reviewed import ordering and explicit block formatting only; report behavior and existing source verification remain unchanged.",
+      "sources": ["src/components/game/DebugReportForm.svelte"],
+      "topics": ["hud-network"],
       "media": [],
       "owners": {}
     }

@@ -54,7 +54,7 @@ A disconnected-from-server banner can mean your nickname is in use by an online 
 
 ## Diagnostics
 
-On `/debug`, open **Report a problem** on the title screen or from the bug icon during play, describe the issue, then **Send**. **Saved, pending delivery** confirms server storage; **Delivered** confirms the team's inbox. Keep secrets out and save a copy until storage is confirmed.
+On `/debug`, open **Report a problem** on the title screen or from the bug icon during play, describe the issue, then **Send**. **Saved, pending delivery** confirms server storage; **Delivered** confirms the team's inbox. Reports include editor event counts and focus state to diagnose keyboard trouble, without recording keys or clipboard content; keep secrets out and save a copy until storage is confirmed.
 
 The bug icon expands or collapses player and page session IDs, frame rate, and connection health; this browser remembers your choice. Logging defaults to Info; add `?log-level=debug`, `info`, or `warn` to change it for that visit. Use Copy Diagnostics when reporting trouble, including silent audio or unexpected Contour Lock releases. Lock-release records name the cause; server position or heading rejections also record rail distance, alignment, and the acquisition window.
 
