@@ -31,7 +31,12 @@ test('mobile sessions detect changed Wiki, build scripts and inherited compiler 
     { path: 'src/wiki/contentLoader.ts', scope: 'harnessSha256' },
     { path: 'scripts/wiki-check.ts', scope: 'harnessSha256' },
     { path: 'scripts/benchmark-build-receipt.mjs', scope: 'harnessSha256' },
-    { path: 'tsconfig/fleet/strict-tsc.json', scope: 'harnessSha256' },
+    { path: 'config/typescript/strict-tsc.json', scope: 'harnessSha256' },
+    { path: 'config/typescript/project.json', scope: 'harnessSha256' },
+    { path: 'config/typescript/build.json', scope: 'harnessSha256' },
+    { path: 'config/app/astro.ts', scope: 'harnessSha256' },
+    { path: 'config/app/svelte.js', scope: 'harnessSha256' },
+    { path: 'config/server/debug-reports.json', scope: 'productSha256' },
   ] as const;
   try {
     git('init', '-q');

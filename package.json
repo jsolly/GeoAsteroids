@@ -26,7 +26,7 @@
     "check:ts": "astro sync && node scripts/typescript-cli.mjs --noEmit",
     "check:benchmarks": "node scripts/typescript-cli.mjs -p tsconfig.benchmarks.json",
     "check:md": "bash scripts/lint-md.sh",
-    "check:yaml": "uvx yamllint@1.38.0 --strict .",
+    "check:yaml": "uvx yamllint@1.38.0 -c config/quality/yamllint.yaml --strict .",
     "check:lint": "biome check --error-on-warnings .",
     "check:fix": "biome check --write --error-on-warnings .",
     "fix": "npm run check:fix && npm run check:ts && npm run check:benchmarks && npm run test",

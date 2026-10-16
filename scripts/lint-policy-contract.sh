@@ -10,7 +10,7 @@
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG="${BIOME_CONFIG_PATH:-$ROOT/biome.jsonc}"
+CONFIG="${BIOME_CONFIG_PATH:-$ROOT/config/quality/biome.settings.jsonc}"
 BIOME="$ROOT/node_modules/.bin/biome"
 
 check_config() {
@@ -146,8 +146,9 @@ const fs = require('node:fs');
 const configPath = process.argv[2];
 const biome = process.argv[3];
 const root = process.argv[4];
+const nativeConfigPath = process.env.BIOME_CONFIG_PATH ?? root;
 
-const rage = spawnSync(biome, ['rage', '--linter', `--config-path=${configPath}`], {
+const rage = spawnSync(biome, ['rage', '--linter', `--config-path=${nativeConfigPath}`], {
   cwd: root,
   encoding: 'utf8',
 });

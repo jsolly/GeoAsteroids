@@ -1,38 +1,3 @@
 {
-  "extends": "./tsconfig/fleet/strict-tsc.json",
-  "compilerOptions": {
-    "exactOptionalPropertyTypes": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "verbatimModuleSyntax": true,
-    "noUncheckedSideEffectImports": true,
-    "target": "ESNext",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
-  },
-  "include": [
-    ".railway",
-    "src",
-    "tests",
-    "scripts",
-    "vitest.config.ts",
-    "astro.config.ts",
-    "setup",
-    "server",
-    "server.ts",
-    "shared",
-    "shared-types.ts",
-    ".astro/types.d.ts"
-  ]
+  "extends": "./config/typescript/project.json"
 }
