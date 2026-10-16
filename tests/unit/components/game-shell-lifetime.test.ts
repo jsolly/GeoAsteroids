@@ -295,7 +295,7 @@ test('unmount after runtime creation disposes it before a ready subscription can
 });
 
 test('play and geometry update body classes synchronously and preserve shell canvases through menu transitions', async () => {
-  document.body.classList.add('touch-play');
+  document.body.classList.add('touch-play', 'game-overlay-open');
   await start();
   await vi.dynamicImportSettled();
   await settle();
@@ -318,9 +318,14 @@ test('play and geometry update body classes synchronously and preserve shell can
     schematicY: 148,
   });
   expect(document.body.classList.contains('touch-play')).toBe(false);
+  expect(document.body.classList.contains('game-overlay-open')).toBe(false);
   publish({ ...initialView, inPlay: true });
   expect(document.body.classList.contains('in-play')).toBe(true);
   expect(document.body.classList.contains('touch-play')).toBe(true);
+  publish({ ...initialView, inPlay: true, overlay: 'debug-report' });
+  expect(document.body.classList.contains('game-overlay-open')).toBe(true);
+  publish({ ...initialView, inPlay: true });
+  expect(document.body.classList.contains('game-overlay-open')).toBe(false);
   await settle();
   expect(document.querySelector('#town-store-toggle')).toBeNull();
   const area = element('#gameArea', HTMLDivElement);
@@ -347,7 +352,7 @@ test('play and geometry update body classes synchronously and preserve shell can
   shell = undefined;
   expect(teardownOrder).toEqual(['unsubscribe', 'dispose']);
   expect(signal?.aborted).toBe(true);
-  expect(document.body.className).toBe('existing touch-play');
+  expect(document.body.className).toBe('existing touch-play game-overlay-open');
   hosts.placeChrome({
     width: 1,
     height: 1,
@@ -358,7 +363,7 @@ test('play and geometry update body classes synchronously and preserve shell can
     schematicY: 0,
   });
   publish({ ...initialView, inPlay: true });
-  expect(document.body.className).toBe('existing touch-play');
+  expect(document.body.className).toBe('existing touch-play game-overlay-open');
 });
 
 test('inventory Return focuses the playfield while a later Escape restores the inventory opener', async () => {
@@ -652,4 +657,58 @@ test('canceling an unsubmitted report recaptures the current incident before reo
   button('Cancel').click();
   await settle();
   await vi.runAllTimersAsync();
+});
+
+test('a report draft keeps its focused textarea across flight publications and keyboard viewport changes', async () => {
+  window.history.replaceState(null, '', '/debug');
+  await start();
+  await vi.dynamicImportSettled();
+  await settle();
+  vi.useFakeTimers();
+  const flight: GamePresentation = {
+    ...initialView,
+    inPlay: true,
+    overlay: 'debug-report',
+    debug: {
+      playerId: 'test-pilot',
+      sessionId: 'test-page',
+      hudHidden: false,
+      fps: '60',
+      rtt: '0',
+      snapshot: '0',
+      motion: '',
+      world: '',
+      releases: '',
+    },
+  };
+  publish(flight);
+  await settle();
+  await vi.runAllTimersAsync();
+  await settle();
+  const field = element('#debug-report-description', HTMLTextAreaElement);
+  field.focus();
+  field.value = 'The keyboard';
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  field.setSelectionRange(4, 12);
+  await settle();
+  const geometry = {
+    width: 800,
+    height: 700,
+    touchControls: true,
+    mobileControlsTop: 80,
+    mapX: 0,
+    mapY: 0,
+    schematicY: 0,
+  };
+  hosts?.placeChrome(geometry);
+  window.dispatchEvent(new Event('resize'));
+  window.visualViewport?.dispatchEvent(new Event('resize'));
+  publish({ ...flight, controls: { ...flight.controls, touchMode: true } });
+  await settle();
+  await vi.runAllTimersAsync();
+  await settle();
+  expect(element('#debug-report-description', HTMLTextAreaElement)).toBe(field);
+  expect(document.activeElement).toBe(field);
+  expect(field.value).toBe('The keyboard');
+  expect([field.selectionStart, field.selectionEnd]).toEqual([4, 12]);
 });

@@ -144,9 +144,11 @@
     let unsubscribe: (() => void) | undefined;
     const wasInPlay = document.body.classList.contains('in-play');
     const wasTouchPlay = document.body.classList.contains('touch-play');
+    const wasOverlayOpen = document.body.classList.contains('game-overlay-open');
     const syncBody = () => {
       document.body.classList.toggle('in-play', view.inPlay);
       document.body.classList.toggle('touch-play', view.inPlay && touchControls);
+      document.body.classList.toggle('game-overlay-open', view.overlay !== null);
     };
     syncBody();
     const lifetime = mountRuntime<GameRuntime>(
@@ -206,6 +208,7 @@
       lifetime.dispose();
       document.body.classList.toggle('in-play', wasInPlay);
       document.body.classList.toggle('touch-play', wasTouchPlay);
+      document.body.classList.toggle('game-overlay-open', wasOverlayOpen);
     };
   });
 </script>

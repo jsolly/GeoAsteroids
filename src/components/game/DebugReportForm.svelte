@@ -60,7 +60,7 @@
       <label for="debug-report-description">What happened?</label>
       <textarea
         id="debug-report-description"
-        class="min-h-32 rounded-md border border-input bg-background p-3 text-sm"
+        class="min-h-32 rounded-md border border-input bg-background p-3 text-base"
         required
         minlength="1"
         maxlength="4000"

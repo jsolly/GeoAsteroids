@@ -2,7 +2,10 @@
 
 ## Send a problem report
 
-Visit `/debug` and choose **Report a problem**, before joining or during play.
+Visit `/debug` and choose **Report a problem** on the title screen. During play,
+tap or click the bug icon to expand the diagnostics panel and find the report button;
+tap it again to collapse the whole panel. The panel starts collapsed and this browser
+remembers your later choice.
 Describe what happened and choose **Send**. The form captures diagnostics when
 it opens, before typing changes the input state. Inspect **Diagnostic preview**
 or use **Copy report** or **Download report** to keep your own copy.
