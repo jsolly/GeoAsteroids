@@ -856,7 +856,7 @@ test('every gate stage writes generated caches in its issued artifact session', 
     });
     assert.deepEqual(f.calls, []);
     assert.equal(sessions.length, STAGES.length);
-    for (const config of ['./client-build.ts', '../vitest.config.ts']) {
+    for (const config of ['./client-build.ts', '../config/testing/vitest.ts']) {
       assert.match(
         readFileSync(new URL(config, import.meta.url), 'utf8'),
         /GEOROIDS_TEST_SESSION_DIR/u

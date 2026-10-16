@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
-import ts from 'typescript';
+import unusedConfig from '../config/quality/knip.js';
 import { checkUnusedTypescript, frontendEntry } from './check-unused-typescript.mjs';
 
-test('frontend imports preserve exact TypeScript export usage without hiding new or removed consumers', () => {
+test('frontend imports and inherited tool entries preserve exact TypeScript export usage', () => {
   const root = mkdtempSync(join(tmpdir(), 'georoids-frontend-prune-contract-'));
   const write = (path, body) => writeFileSync(join(root, path), body);
   const run = () => checkUnusedTypescript(root);
@@ -23,14 +23,25 @@ test('frontend imports preserve exact TypeScript export usage without hiding new
   };
   try {
     mkdirSync(join(root, 'src'));
+    mkdirSync(join(root, 'config/typescript'), { recursive: true });
+    write('tsconfig.prune.json', JSON.stringify({ extends: './config/typescript/prune.json' }));
     write(
-      'tsconfig.prune.json',
+      'config/typescript/base.json',
       JSON.stringify({
         compilerOptions: { module: 'ESNext', moduleResolution: 'bundler', noUnusedLocals: true },
-        include: ['src/**/*.ts'],
-        files: ['src/main.ts'],
       })
     );
+    write(
+      'config/typescript/prune.json',
+      JSON.stringify({
+        extends: './base.json',
+        include: ['../../src/**/*.ts'],
+        files: ['../../tool.config.ts'],
+      })
+    );
+    // This consumer is outside include: losing inherited files exposes onlyTool as unused.
+    write('tool.config.ts', 'import {onlyTool} from "./src/tool-only"; console.log(onlyTool);');
+    write('src/tool-only.ts', 'export const onlyTool = 1;');
     write('src/main.ts', 'console.log("entry");');
     const live = 'export const shown = 42; export type Shape = {size:number};';
     write('src/values.ts', live);
@@ -80,10 +91,7 @@ test('frontend imports preserve exact TypeScript export usage without hiding new
 test('the unused-file gate rejects an orphaned Svelte component and follows its Astro consumer', () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'georoids-svelte-prune-contract-')));
   const write = (path, body) => writeFileSync(join(root, path), body);
-  const config = ts.parseConfigFileTextToJson(
-    'knip.jsonc',
-    readFileSync(new URL('../knip.jsonc', import.meta.url), 'utf8')
-  ).config;
+  const config = unusedConfig;
   assert.ok(config, 'Cannot read the committed unused-file configuration');
   const run = () =>
     spawnSync(

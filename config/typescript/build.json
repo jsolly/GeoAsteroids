@@ -1,0 +1,13 @@
+{
+  "extends": "./project.json",
+  "include": [
+    "../../src",
+    "../../server",
+    "../../server.ts",
+    "../../setup",
+    "../../shared",
+    "../../shared-types.ts",
+    "../../astro.config.ts",
+    "../../.astro/types.d.ts"
+  ]
+}

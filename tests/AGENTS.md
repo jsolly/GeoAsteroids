@@ -136,7 +136,7 @@ the runner command; a nonempty `--` tail is rejected.
 ```
 
 Keep `pool: 'forks'`, `maxWorkers: 1`, `isolate: true`, `fileParallelism: false`,
-`sequence.concurrent: false` and `maxConcurrency: 1` in `vitest.config.ts`.
+`sequence.concurrent: false` and `maxConcurrency: 1` in `config/testing/vitest.ts` (discovered through native `vitest.config.ts`).
 
 Code checks may overlap across different worktrees. Validation in the same
 checkout admits one gate, review or standalone harness at a time because builds

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
@@ -26,7 +26,10 @@ test('shared modules and manifests require a server release; client sources do n
       ),
       encoding: 'utf8',
     }).trim();
-  const write = (name, text) => writeFileSync(join(cwd, name), text);
+  const write = (name, text) => {
+    mkdirSync(dirname(join(cwd, name)), { recursive: true });
+    writeFileSync(join(cwd, name), text);
+  };
   const commit = (message) => {
     git(
       'add',
@@ -36,7 +39,8 @@ test('shared modules and manifests require a server release; client sources do n
       'astro.config.mjs',
       'src/runtime.ts',
       'src/render.ts',
-      'shared/state.ts'
+      'shared/state.ts',
+      'config'
     );
     git('commit', '-qm', message);
     return git('rev-parse', 'HEAD');
@@ -49,7 +53,17 @@ test('shared modules and manifests require a server release; client sources do n
     mkdirSync(join(cwd, 'shared'));
     write('package.json', '{"private":true}');
     write('astro.config.mjs', 'export default {};');
-    write('tsconfig.json', '{"compilerOptions":{"module":"ESNext","moduleResolution":"bundler"}}');
+    write('tsconfig.json', '{"extends":"./config/typescript/project.json"}');
+    write(
+      'config/typescript/project.json',
+      '{"extends":"./strict-tsc.json","compilerOptions":{"module":"ESNext","moduleResolution":"bundler"}}'
+    );
+    write('config/typescript/strict-tsc.json', '{}');
+    write('config/typescript/build.json', '{"extends":"./project.json"}');
+    write('config/app/astro.ts', 'export default {};');
+    write('config/app/svelte.js', 'export default {};');
+    write('config/server/debug-reports.json', '{}');
+    write('config/quality/prettier.json', '{}');
     write('server.ts', "import { factor } from './shared/state'; console.log(factor);");
     write(
       'src/runtime.ts',
@@ -79,6 +93,24 @@ test('shared modules and manifests require a server release; client sources do n
     write('astro.config.mjs', 'export default {output: "static"};');
     const config = commit('Astro build configuration');
     assert.equal(requiresServerDeployment(runtime, config, cwd), true);
+    let previous = config;
+    for (const path of [
+      'config/typescript/project.json',
+      'config/typescript/build.json',
+      'config/typescript/strict-tsc.json',
+      'config/app/astro.ts',
+      'config/app/svelte.js',
+      'config/server/debug-reports.json',
+    ]) {
+      assert.ok(serverReleaseInputs(cwd).includes(path), path);
+      write(path, `${readFileSync(join(cwd, path), 'utf8')}\n`);
+      const changed = commit(`central build settings: ${path}`);
+      assert.equal(requiresServerDeployment(previous, changed, cwd), true, path);
+      previous = changed;
+    }
+    write('config/quality/prettier.json', '{"singleQuote":true}');
+    const quality = commit('quality settings only');
+    assert.equal(requiresServerDeployment(previous, quality, cwd), false);
     assert.throws(() => requiresServerDeployment(initial, ui, cwd), /target commit checkout/u);
     assert.throws(
       () => requiresServerDeployment('--all', config, cwd),

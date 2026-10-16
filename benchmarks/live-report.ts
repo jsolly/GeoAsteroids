@@ -99,6 +99,9 @@ function liveInputHashes(root = ROOT) {
       'benchmarks',
       'scripts',
       'tsconfig',
+      'config/app',
+      'config/server',
+      'config/typescript',
       'content',
       'docs/wiki-source-review.json',
       'public',
@@ -148,6 +151,8 @@ function liveInputHashes(root = ROOT) {
     path.startsWith('scripts/') ||
     path.startsWith('tests/') ||
     path.startsWith('tsconfig') ||
+    path.startsWith('config/app/') ||
+    path.startsWith('config/typescript/') ||
     [
       'astro.config.ts',
       'svelte.config.js',
