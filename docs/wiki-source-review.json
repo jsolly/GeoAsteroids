@@ -6,7 +6,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:466d9bf94b7f001cb0d4750a418685f547806a39b328f7fda2b9d23a8f6b9bc6",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:4613a18ab6a45927de364db10ef801db5d0f8dda0ae2305353ecda5ffaa4296d",
-    "package.json": "sha256:a2020386f922d49e22968396a5652710c1a9a5ef3dce5eec0e5416b94ef58bb6",
+    "package.json": "sha256:95b912a5172552fc34c21be4d4c65c4e2a85a57bc0b30bc0f8301979219b4af3",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -6511,6 +6511,15 @@
     },
     {
       "note": "Reviewed the @lucide/svelte 1.55.0 to 1.56.0 minor (additive icon set update) against the repo's direct icon imports. Existing imported icons remain available; no player-visible rule, Wiki content or demonstration asset is affected. Clean install, Biome, TypeScript and Astro/Svelte diagnostics passed, and unit/component tests with coverage passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed railway SDK 3.11.0 to 3.15.0 (upstream v3.12-v3.15 commits: additive IaC tracing block, deploy.preDeployTimeoutSeconds, typed image auto-update window, fn() codeFile, sandbox exec controls; tsx moved to the SDK's devDependencies) against .railway/railway.ts. The definition uses only existing defineRailway/service/volume/preserve/github/project APIs and typechecks under the project config; tsx stays a direct runtime dependency for the start command. No gameplay, Wiki content or demonstration asset is affected. Clean install, Biome, TypeScript and Astro/Svelte diagnostics passed, and unit/component tests with coverage passed on the combined five-bump tree. This batch accepts only package.json.",
       "sources": ["package.json"],
       "topics": ["field-manual"],
       "media": [],
