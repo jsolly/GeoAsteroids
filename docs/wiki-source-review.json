@@ -218,7 +218,7 @@
     "src/network/worldExploration.ts": "sha256:9d5077d511e0d99c1c2243d7f1019d2df3e071ea22acd08f1620be6f773da5ed",
     "src/pages/debug/index.astro": "sha256:67afd4a29476a2bb630f5681f853866f8dc18b1458e47a7b55502aab066bcb41",
     "src/pages/index.astro": "sha256:98f27a0d6da8910842b5884b0919abe5a7213379a89f6096ba82e75cb6557040",
-    "src/pages/wiki.astro": "sha256:d56c822737f808de4010d499d20399d6cc2246d2fd5407f76e1e170aea4d9cbc",
+    "src/pages/wiki.astro": "sha256:30b20fe2ccf7e6a5b85ea6bc604d454f6fe785564daf2954cd92e14f49025e61",
     "src/physics/terrain/contourCapture.ts": "sha256:42ba129cd5221fef152fb7a730d8ffe69df9e13f215a76594d41379bcf539dad",
     "src/physics/terrain/contourLaser.ts": "sha256:13428129bbf5c8d90250fdfe0c6f4de634412a810b2d3ff0a581981975852a1b",
     "src/physics/terrain/contours.ts": "sha256:f0529da1eb0356612622469f7306ecae486efa71f442a247ef8c34a46940fcfa",
@@ -408,7 +408,7 @@
     "public/sounds/contour-flick-success.m4a": "sha256:74a49bfd234ba15162410e88afa41ee0be0b9d01fcc0f65cdc602daa2ef1393a",
     "public/sounds/contour-lock-acquired.m4a": "sha256:928afee6bf5a0bff7da80205e8a473dd811b1a16ff7e56f67a18897e4cff6c6e",
     "public/sounds/contour-lock-released.m4a": "sha256:83b3338feda3cb161d923470ec09b7a0139c4665b821aa1adbdb324e1f85bd67",
-    "src/components/GameDocument.astro": "sha256:df0a02598078551d8e1d54b056e0bf5017d8fa27dc1ab8262a8d7b5b5ce03aa9",
+    "src/components/GameDocument.astro": "sha256:67a3fe71ca560db23e5764c6aa87644ddd3af6cc1e1021e61cfe30cb591e42f2",
     "src/components/game/GameOverlay.svelte": "sha256:0cc1e00c923ce84a5c95bbb0576b4e676ccca32d8eab74757cb74ff3f1e83450",
     "src/components/game/GameShell.svelte": "sha256:b9d634879389f2374d4a7d1c211b79a67dc4d5ab66287036a862aec9660e0146",
     "src/components/game/InventoryPanel.svelte": "sha256:784caec9a55d8f03bffcd63e2890b0133c7088f563d0c35fc76b4f4b7c206fec",
@@ -549,7 +549,7 @@
     "src/components/game/DebugReportForm.svelte": "sha256:8fba14fdd7e9dea0eb196b6e10c07256a16b9f8eb7cfa89aab17e418b82d8614",
     "src/diagnostics/debugReportClient.ts": "sha256:a5c9ad047183d75781c8be22a4ed1cf89f61752df49ddeb8a36385cdda11d398",
     "src/diagnostics/debugReportStorage.ts": "sha256:21114a7c8b67da1165bfaf33b2f5ee53c353efd3ea80bedbbfc1f9b9aacb212d",
-    "scripts/build-vercel-output.mjs": "sha256:084559299214645fac9f3d1c0300cf5d2445ba6cf4f5cc30c5f6755b3e5d65f3",
+    "scripts/build-vercel-output.mjs": "sha256:883d4ef2393e4a4d6385e8743ab96ae3b26e9d19d52116e38c2aef8cfb22c084",
     "server/createServer.ts": "sha256:de76d0c6bbd6ed8857b11bc9157d3ecba631dc9cd4e234c0c480f9cf19557c29",
     "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8",
     "config/app/astro.ts": "sha256:dc520ac45e54a1d1f1835fb3bdf5faedcb1c11aa52b6d83cc0d1d989002bf260",
@@ -557,7 +557,10 @@
     "config/quality/prettier.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
     "config/typescript/frontend.json": "sha256:a5ba9f4bc0471de88c6e709b575d078ce426d9a01b45f4e18fbfe6bca4f02202",
     "config/typescript/project.json": "sha256:55190e036dbebd91f34f90dcc8742fc6c1bddc73ab5ecfb1c072e4f5a967c014",
-    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119"
+    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119",
+    "src/components/Context7Note.astro": "sha256:6127e526e0e9dad4bf3a088d62d19e8ee25de7c238852ee7bf60eb335967265c",
+    "src/components/Context7Verification.astro": "sha256:1786a9ca8e2cf86fe7260058b76a3fc314321fb79b3dcc38d6713d1aa2dbda91",
+    "src/constants/context7.ts": "sha256:3a72e118e92f520684a84ec4c8cd91841f68ca8e83ec7b9a5cc547813ca2a18b"
   },
   "reviews": [
     {
@@ -6449,6 +6452,44 @@
       "topics": ["hud-network"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Reviewed addition of the Context7 Ask head tag and visually hidden agent note to the game and wiki document shells. The tag and note are non-visible (aria-hidden) and add no visible content; player rules, wiki articles, demonstration inputs and media assets are unchanged. Complete build verified separately.",
+      "sources": [
+        "src/components/Context7Note.astro",
+        "src/components/Context7Verification.astro",
+        "src/components/GameDocument.astro",
+        "src/constants/context7.ts",
+        "src/pages/wiki.astro"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/pages/wiki.astro": "field-manual",
+        "src/components/GameDocument.astro": "field-manual",
+        "src/components/Context7Note.astro": "field-manual",
+        "src/components/Context7Verification.astro": "field-manual",
+        "src/constants/context7.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed adding the Context7 Link search header to the Vercel build output routes and sorting imports in the game shell. Nothing visible changes; player rules, wiki articles, demonstration inputs and media assets are unchanged. Build and unit tests verified separately.",
+      "sources": ["scripts/build-vercel-output.mjs", "src/components/GameDocument.astro"],
+      "topics": ["field-manual", "hud-network"],
+      "media": [],
+      "owners": {
+        "scripts/build-vercel-output.mjs": "field-manual",
+        "src/components/GameDocument.astro": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed adding a gitleaks allow marker and comment to the Context7 site key constant. Nothing visible changes; player rules, wiki articles, demonstration inputs and media assets are unchanged.",
+      "sources": ["src/constants/context7.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/constants/context7.ts": "field-manual"
+      }
     }
   ]
 }
