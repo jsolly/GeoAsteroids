@@ -1,5 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
+import Context7Note from '../components/Context7Note.astro';
+import Context7Verification from '../components/Context7Verification.astro';
 import WikiShell from '../components/wiki/WikiShell.svelte';
 import '../styles/theme.css';
 
@@ -39,8 +41,10 @@ const articles = (await getCollection('wiki'))
       content="A Scout flying through space in the GeoRoids movement demonstration."
     />
     <meta name="twitter:card" content="summary_large_image" />
+    <Context7Verification />
   </head>
   <body>
+    <Context7Note />
     <WikiShell {articles} client:load />
   </body>
 </html>
