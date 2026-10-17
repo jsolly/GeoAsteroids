@@ -27,7 +27,6 @@ const config = {
     '.railway/**/*.ts',
     'scripts/**/*.ts',
     'tests/**/*.ts',
-    'vitest*.config.ts',
     'config/app/**/*.ts',
     'config/testing/**/*.ts',
   ],
@@ -42,9 +41,11 @@ const config = {
     'shadcn-svelte',
     'ts-prune',
   ],
-  astro: { config: ['astro.config.ts', 'config/app/astro.ts'] },
-  svelte: { config: ['svelte.config.js', 'config/app/svelte.js'] },
-  vitest: { config: ['vitest.config.ts', 'config/testing/vitest.ts'] },
+  astro: { config: ['config/app/astro.ts'] },
+  svelte: { entry: ['config/app/svelte.js', 'vite.config.{js,mjs,ts,cjs,mts,cts}'] },
+  vitest: { config: ['config/testing/vitest.ts'] },
+  biome: { config: ['config/quality/biome.settings.jsonc'] },
+  prettier: { config: ['config/quality/prettier.json'] },
 };
 
 export default config;

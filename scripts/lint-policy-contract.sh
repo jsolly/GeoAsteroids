@@ -146,9 +146,8 @@ const fs = require('node:fs');
 const configPath = process.argv[2];
 const biome = process.argv[3];
 const root = process.argv[4];
-const nativeConfigPath = process.env.BIOME_CONFIG_PATH ?? root;
 
-const rage = spawnSync(biome, ['rage', '--linter', `--config-path=${nativeConfigPath}`], {
+const rage = spawnSync(biome, ['rage', '--linter', `--config-path=${configPath}`], {
   cwd: root,
   encoding: 'utf8',
 });

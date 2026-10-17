@@ -97,7 +97,9 @@ CI. See the repository workflow and [release instructions](docs/development.md).
 
 Relocatable tracked settings live under `config/<domain>/`, with one owner per
 setting and minimal native discovery adapters. See [configuration guidance](config/README.md)
-for native exceptions and path/scope verification. This repository owns them.
+for active native exceptions and path/scope verification. Commands select the
+canonical owners directly; the native TypeScript entries retain required
+framework/loader discovery and Svelte diagnostic scope. This repository owns them.
 
 ## Repository ownership
 

@@ -251,7 +251,7 @@ error.
 Run from `/Users/johnsolly/code/GeoRoids` (or the integrated checkout):
 
 ```sh
-npx vitest run --dir tests/unit tests/unit/network/pilots-recover-complete-snapshots.test.ts tests/unit/network/current-pilots-share-a-server.test.ts tests/unit/network/runtime-client-negotiates-and-recovers.test.ts
+npm run test -- tests/unit/network/pilots-recover-complete-snapshots.test.ts tests/unit/network/current-pilots-share-a-server.test.ts tests/unit/network/runtime-client-negotiates-and-recovers.test.ts
 npm run benchmark -- measure codec --revision HEAD --seed 42
 npm run benchmark -- measure transport --revision HEAD --seed 42
 ```

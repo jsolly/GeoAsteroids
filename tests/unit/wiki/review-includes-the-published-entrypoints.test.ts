@@ -37,7 +37,6 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
     cpSync('src', join(fixture, 'src'), { recursive: true });
     cpSync('content', join(fixture, 'content'), { recursive: true });
     cpSync('public/wiki', join(fixture, 'public/wiki'), { recursive: true });
-    cpSync('biome.jsonc', join(fixture, 'biome.jsonc'));
     mkdirSync(join(fixture, 'config/quality'), { recursive: true });
     cpSync(
       'config/quality/biome.settings.jsonc',
@@ -117,6 +116,7 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       [
         resolve(root, 'node_modules/@biomejs/biome/bin/biome'),
         'check',
+        `--config-path=${join(fixture, 'config/quality/biome.settings.jsonc')}`,
         '--vcs-enabled=false',
         '--error-on-warnings',
         reviewPath,
@@ -124,7 +124,7 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       { cwd: fixture, stdio: 'pipe' }
     );
     const beforeFormatterFailure = readFileSync(reviewPath, 'utf8');
-    const formatterConfig = join(fixture, 'biome.jsonc');
+    const formatterConfig = join(fixture, 'config/quality/biome.settings.jsonc');
     const originalConfig = readFileSync(formatterConfig);
     try {
       writeFileSync(formatterConfig, '{ invalid formatter config');
@@ -232,7 +232,6 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       'src/components/wiki/ReviewFixture.svelte',
       'src/pages/review-fixture.astro',
       'src/styles/review-fixture.css',
-      'astro.config.ts',
       'config/app/astro.ts',
       'config/app/svelte.js',
       'config/quality/prettier.json',

@@ -120,13 +120,9 @@ const sourcePaths = new Set([
     .flatMap(files)
     .filter((path) => /\.(ts|svelte|astro|css)$/u.test(path)),
   'index.css',
-  'astro.config.ts',
-  'astro.config.mjs',
-  'svelte.config.js',
   'src/content.config.ts',
   'src/env.d.ts',
   'components.json',
-  'prettier.config.js',
   'config/quality/prettier.json',
   'config/app/astro.ts',
   'config/app/svelte.js',
@@ -326,7 +322,7 @@ if (accepting) {
       [
         resolve(root, 'node_modules/@biomejs/biome/bin/biome'),
         'format',
-        `--config-path=${root}`,
+        `--config-path=${resolve(root, 'config/quality/biome.settings.jsonc')}`,
         '--vcs-enabled=false',
         '--stdin-file-path=docs/wiki-source-review.json',
       ],

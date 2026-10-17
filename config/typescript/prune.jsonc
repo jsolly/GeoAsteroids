@@ -1,19 +1,17 @@
 {
   "extends": "./project.json",
-  // Native adapters import the settings modules; both stay in the tool-consumed graph.
   "include": [
     "../../.railway",
     "../../src",
     "../../tests",
     "../../scripts",
     "../../benchmarks",
-    "../../vitest.config.ts",
-    "../../astro.config.ts",
+    "../testing/vitest.ts",
+    "../app/astro.ts",
     "../../setup",
     "../../server",
     "../../server.ts",
     "../../shared",
     "../../shared-types.ts"
-  ],
-  "files": ["../../astro.config.ts", "../../vitest.config.ts"]
+  ]
 }
