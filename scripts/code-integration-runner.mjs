@@ -17,7 +17,7 @@ import { runAdmitted, verifyChild } from './validation-admission.mjs';
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const serial = [
-  '--config=vitest.config.ts',
+  '--config=config/testing/vitest.ts',
   '--configLoader=runner',
   '--pool=forks',
   '--maxWorkers=1',

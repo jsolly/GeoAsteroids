@@ -1,4 +1,4 @@
-export type GameOverlayId = 'inventory' | 'town-store' | 'universe-map';
+export type GameOverlayId = 'inventory' | 'town-store' | 'universe-map' | 'debug-report';
 type OverlayListener = (next: GameOverlayId | null, previous: GameOverlayId | null) => void;
 
 let current: GameOverlayId | null = null;

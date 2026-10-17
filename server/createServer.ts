@@ -14,6 +14,12 @@ import { GameplayMessageBudget } from './communication/messageBudget';
 import { WebSocketCore } from './communication/WebSocketCore';
 import { readServerConfiguration } from './configuration';
 import { GameEngine } from './core/GameEngine';
+import { DebugReportWorker } from './debugReports/client';
+import {
+  type DebugReportConfiguration,
+  readDebugReportConfiguration,
+} from './debugReports/configuration';
+import { createDebugReportHttp } from './debugReports/http';
 import { buildHealthResponse } from './health';
 import {
   acquireServerPerformanceMetrics,
@@ -42,6 +48,8 @@ type CreateServerOptions = {
   serveClientFrom?: string;
   /** Explicit transport injection; the production entry keeps compression disabled. */
   perMessageDeflate?: false | WebSocket.PerMessageDeflateOptions;
+  /** Isolated report store for owned tests; false never touches real reporting storage. */
+  debugReports?: DebugReportConfiguration | false;
 };
 
 function serveServerBanner(req: IncomingMessage, res: ServerResponse): void {
@@ -58,6 +66,51 @@ export function createServerInstance(options: CreateServerOptions = {}) {
   const configuration = readServerConfiguration();
   const PORT = options.port ?? configuration.port;
   const NODE_ENV = options.nodeEnv ?? configuration.nodeEnv;
+  const reportConfiguration =
+    options.debugReports === false
+      ? undefined
+      : (options.debugReports ?? readDebugReportConfiguration(process.env, NODE_ENV));
+  const reportWorker =
+    reportConfiguration !== undefined ? new DebugReportWorker(reportConfiguration) : undefined;
+  const reportHttp = createDebugReportHttp(reportWorker, {
+    allowedOrigins: [
+      'https://www.georoids.com',
+      ...(NODE_ENV !== 'production' ? ['http://127.0.0.1:5173', 'http://localhost:5173'] : []),
+      ...(process.env['RAILWAY_PUBLIC_DOMAIN']
+        ? [`https://${process.env['RAILWAY_PUBLIC_DOMAIN']}`]
+        : []),
+    ],
+    railwayIngress: NODE_ENV === 'production' && Boolean(process.env['RAILWAY_ENVIRONMENT_ID']),
+    health: () => {
+      const world = gameEngine.getDiagnostics();
+      const persistence = world.persistence;
+      return {
+        releaseId: SERVER_RELEASE_ID,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        healthy: gameEngine.isPersistenceHealthy(),
+        world: {
+          isPaused: world.isPaused,
+          gameTime: world.gameTime,
+          players: world.players,
+          asteroids: world.asteroids,
+          loot: world.loot,
+          satellitePickups: world.satellitePickups,
+          loop: { ...world.loop },
+          persistence: persistence
+            ? {
+                mode: persistence.mode,
+                pendingBatches: persistence.pendingBatches,
+                committedBatches: persistence.committedBatches,
+                failed: persistence.failed,
+                lastCommitMs: persistence.lastCommitMs ?? null,
+                lastCommittedAt: persistence.lastCommittedAt ?? null,
+              }
+            : null,
+        },
+      };
+    },
+  });
   const logClients = new Set<WebSocket>();
   const loggingDiagnostics = () => ({
     activeLogClients: logClients.size,
@@ -74,6 +127,13 @@ export function createServerInstance(options: CreateServerOptions = {}) {
 
   // Create HTTP server for health checks
   const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+    const pathname = req.url?.split('?', 1)[0];
+    if (pathname === '/debug' || pathname?.startsWith('/debug/')) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+    if (reportHttp(req, res)) {
+      return;
+    }
     // Add CORS headers for production
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -100,7 +160,12 @@ export function createServerInstance(options: CreateServerOptions = {}) {
         serverPerformanceMetricsEnabled() ? serverPerformanceMetrics.read() : undefined
       );
       res.writeHead(health.statusCode, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(health.body));
+      res.end(
+        JSON.stringify({
+          ...health.body,
+          debugReports: reportWorker?.diagnostics() ?? { enabled: false },
+        })
+      );
       return;
     }
 
@@ -501,6 +566,13 @@ export function createServerInstance(options: CreateServerOptions = {}) {
         await gameEngine.shutdownPersistence();
       } catch (cause) {
         errors.push(new Error('Persistent world checkpoint failed', { cause }));
+      }
+      if (reportWorker) {
+        try {
+          await reportWorker.close();
+        } catch (cause) {
+          errors.push(new Error('Debug report worker shutdown failed', { cause }));
+        }
       }
       if (!(await ClientLogger.flushPending())) {
         errors.push(new Error('Timed out flushing forwarded client logs'));

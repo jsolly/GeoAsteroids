@@ -9,11 +9,13 @@
     inPlay,
     ontoggle,
     diagnostics,
+    onreport = () => {},
   }: {
     view: DebugView;
     inPlay: boolean;
     ontoggle: () => void;
     diagnostics: () => string;
+    onreport?: () => void;
   } = $props();
   let player = $state<HTMLInputElement | null>(null);
   let session = $state<HTMLInputElement | null>(null);
@@ -64,6 +66,9 @@
       aria-expanded={!view.hudHidden}
       onclick={ontoggle}>{view.hudHidden ? 'Show HUD' : 'Hide HUD'}</Button
     >
+    <Button variant="outline" class="mt-2 min-h-11 w-full" onclick={onreport}
+      >Report a problem</Button
+    >
     <fieldset id="debug-hud" hidden={view.hudHidden} class="mt-3">
       <legend class="sr-only">Debug health</legend>
       <dl class="grid gap-1">
@@ -90,6 +95,7 @@
     aria-label="Diagnostic identity"
     class="mt-5 grid gap-4 rounded-lg border border-border bg-background/50 p-4"
   >
+    <Button variant="outline" class="min-h-11" onclick={onreport}>Report a problem</Button>
     <div class="grid gap-2">
       <label for="debug-player-id" class="text-sm">Player ID</label>
       <div class="flex gap-2">

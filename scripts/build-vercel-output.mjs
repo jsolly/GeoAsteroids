@@ -98,6 +98,18 @@ export async function buildVercelOutput({
       headers: { 'Cache-Control': 'no-store' },
       continue: true,
     },
+    {
+      src: '^/debug(?:/.*)?$',
+      headers: { 'X-Robots-Tag': 'noindex, nofollow' },
+      continue: true,
+    },
+    {
+      src: '^/(?:debug/?|wiki/?)?$',
+      headers: {
+        Link: '<https://context7.com/api/v2/ask?siteKey=ask_10533b7684feb0762503b0e7>; rel="search"; type="text/plain"; title="Search georoids.com"',
+      },
+      continue: true,
+    },
   ];
   for (const asset of inventory.assets) {
     const target = `${immutablePrefix}legacy/${asset.path.slice('_astro/'.length)}`;

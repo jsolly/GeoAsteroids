@@ -1,0 +1,4 @@
+{
+  "extends": "./project.json",
+  "include": ["../../benchmarks", "../../src/types/*.d.ts"]
+}

@@ -10,7 +10,7 @@
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG="${BIOME_CONFIG_PATH:-$ROOT/biome.jsonc}"
+CONFIG="${BIOME_CONFIG_PATH:-$ROOT/config/quality/biome.settings.jsonc}"
 BIOME="$ROOT/node_modules/.bin/biome"
 
 check_config() {

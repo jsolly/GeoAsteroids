@@ -48,7 +48,8 @@ function fixture(t) {
     join(scripts, 'review-receipt.mjs'),
     `import {writeFileSync,existsSync} from 'node:fs'; const [kind,directory,destination,mode,worktree,pid,started,code,cleaned,timedOut,held,session]=process.argv.slice(2); writeFileSync(destination,JSON.stringify({kind:'georoids-runner-final',mode,worktree,ownerPid:Number(pid),exitCode:Number(code),cleanupSucceeded:cleaned==='true',lockReleased:held==='false',sessionRemoved:!session||!existsSync(session),timedOut:timedOut==='true'}));`
   );
-  writeFileSync(join(root, '.env.example'), '');
+  mkdirSync(join(root, 'config/app'), { recursive: true });
+  writeFileSync(join(root, 'config/app/.env.example'), '');
   writeFileSync(join(root, 'package-lock.json'), '{"lockfileVersion":3}');
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
