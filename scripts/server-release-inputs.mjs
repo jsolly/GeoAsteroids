@@ -16,7 +16,9 @@ const deploymentFiles = new Set([
   '.npmrc',
   'tsconfig.json',
   'tsconfig.build.json',
+  // Retired names remain inputs for historical release diffs.
   'config/typescript/project.json',
+  'config/typescript/tsconfig.json',
   'config/typescript/build.json',
   'config/typescript/strict-tsc.json',
   'config/app/astro.ts',

@@ -236,6 +236,8 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       'config/app/svelte.js',
       'config/quality/prettier.json',
       'config/typescript/frontend.json',
+      'config/typescript/tsconfig.json',
+      'tsconfig.json',
       'scripts/client-build.ts',
     ]) {
       const target = join(fixture, path);

@@ -1,4 +1,4 @@
 {
-  "extends": "./project.json",
+  "extends": "./tsconfig.json",
   "include": ["../../benchmarks", "../../src/types/*.d.ts"]
 }

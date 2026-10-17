@@ -57,7 +57,7 @@
     "public/wiki/media/terrain.png": "sha256:45e89a0f083c9c619b195543040ffabf80f4427a04e38e9a92c95fe4807d8133",
     "scripts/client-build.ts": "sha256:abe7ea029d9606ce316a76b6cef432aa7002420783f8dc739622af74a90e5892",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
-    "scripts/wiki-check.ts": "sha256:b3656545781597999c18bf934e1fb45e58f8b95c2bc4b427f534dd378c167a00",
+    "scripts/wiki-check.ts": "sha256:47cacf3acc0d7115a2905482fd6e4fcdbda56dd6a8042444ff1460d2810631d0",
     "scripts/wiki-content.ts": "sha256:190a89be185ac685e37e7ae3d962d1fabb059a2a39fc3eee2f9cc09567e8a162",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
@@ -555,12 +555,12 @@
     "config/app/astro.ts": "sha256:dc520ac45e54a1d1f1835fb3bdf5faedcb1c11aa52b6d83cc0d1d989002bf260",
     "config/app/svelte.js": "sha256:9f2f3ce97f92d71c67e146ef4f859f1675ef3a536fbcd82b597481b35263d2dd",
     "config/quality/prettier.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
-    "config/typescript/frontend.json": "sha256:a5ba9f4bc0471de88c6e709b575d078ce426d9a01b45f4e18fbfe6bca4f02202",
-    "config/typescript/project.json": "sha256:55190e036dbebd91f34f90dcc8742fc6c1bddc73ab5ecfb1c072e4f5a967c014",
-    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119",
+    "config/typescript/frontend.json": "sha256:f9e833a50ba954e61d8e8c326857d5c0c67498c4de31b9ec0608b1a0f4f29cd2",
     "src/components/Context7Note.astro": "sha256:6127e526e0e9dad4bf3a088d62d19e8ee25de7c238852ee7bf60eb335967265c",
     "src/components/Context7Verification.astro": "sha256:1786a9ca8e2cf86fe7260058b76a3fc314321fb79b3dcc38d6713d1aa2dbda91",
-    "src/constants/context7.ts": "sha256:3a72e118e92f520684a84ec4c8cd91841f68ca8e83ec7b9a5cc547813ca2a18b"
+    "src/constants/context7.ts": "sha256:3a72e118e92f520684a84ec4c8cd91841f68ca8e83ec7b9a5cc547813ca2a18b",
+    "config/typescript/tsconfig.json": "sha256:bcfd4a8c97fd1c4c0a49e85badf4f98457895b76698b50b0cdc688ce2403f01d",
+    "tsconfig.json": "sha256:1d3be74b9a82eac608077229d85ae81baa5fca7983b0e0813d2ff45bfd95ffdb"
   },
   "reviews": [
     {
@@ -6525,6 +6525,27 @@
       "media": [],
       "owners": {
         "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed native compiler-policy discovery and preserved all six TypeScript 6/API and TypeScript 7/CLI input sets and options. Verified cold native selection/emission, four meaningful mutation controls, physical Astro policy/app edits and restoration, unchanged actual Node --import tsx import side effects, focused Wiki/benchmark contracts, and server release classification. The only unchanged-source OXC output difference is equivalent enum constant folding. Root frontend adapter retains Svelte selected-directory scope; ineffective root Railway include removed without expanding inputs. No gameplay source, Wiki article or media changes were needed. Full release gates and CI remain separate validation.",
+      "sources": [
+        "config/typescript/frontend.json",
+        "config/typescript/project.json",
+        "config/typescript/strict-tsc.json",
+        "config/typescript/tsconfig.json",
+        "scripts/wiki-check.ts",
+        "tsconfig.json"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-check.ts": "field-manual",
+        "config/typescript/frontend.json": "field-manual",
+        "config/typescript/project.json": "field-manual",
+        "config/typescript/strict-tsc.json": "field-manual",
+        "config/typescript/tsconfig.json": "field-manual",
+        "tsconfig.json": "field-manual"
       }
     }
   ]
