@@ -856,11 +856,94 @@ test('every gate stage writes generated caches in its issued artifact session', 
     });
     assert.deepEqual(f.calls, []);
     assert.equal(sessions.length, STAGES.length);
-    for (const config of ['./client-build.ts', '../config/testing/vitest.ts']) {
-      assert.match(
-        readFileSync(new URL(config, import.meta.url), 'utf8'),
-        /GEOROIDS_TEST_SESSION_DIR/u
+    assert.match(
+      readFileSync(new URL('./client-build.ts', import.meta.url), 'utf8'),
+      /GEOROIDS_TEST_SESSION_DIR/u
+    );
+    const sourceRoot = fileURLToPath(new URL('../', import.meta.url));
+    const consumer = join(f.root, 'consumer');
+    const installation = join(consumer, 'node_modules');
+    mkdirSync(installation, { recursive: true });
+    // Keep the fixture installation real so a misplaced cache cannot write
+    // through a node_modules directory link into the checkout under test.
+    for (const name of readdirSync(join(sourceRoot, 'node_modules'))) {
+      if (name.startsWith('.')) {
+        continue;
+      }
+      symlinkSync(join(sourceRoot, 'node_modules', name), join(installation, name));
+    }
+    for (const name of [
+      'package.json',
+      'package-lock.json',
+      'config/testing/vitest.ts',
+      'config/app/svelte.js',
+      'tests/viteSetup.ts',
+      'tests/support/canvas.html',
+      'src/utils/logLevel.ts',
+      'tsconfig.json',
+      'config/typescript/tsconfig.json',
+    ]) {
+      const target = join(consumer, name);
+      mkdirSync(resolve(target, '..'), { recursive: true });
+      writeFileSync(target, readFileSync(join(sourceRoot, name)));
+    }
+    writeFileSync(join(consumer, 'src/cache-proof.ts'), 'export const marker: number = 17;\n');
+    for (const name of [
+      'tests/unit/cache.test.ts',
+      'tests/unit/components/cache.test.ts',
+      'tests/integration/cache.test.ts',
+    ]) {
+      const target = join(consumer, name);
+      mkdirSync(resolve(target, '..'), { recursive: true });
+      const depth = name.includes('/components/') ? '../../../' : '../../';
+      writeFileSync(
+        target,
+        `import { expect, test } from 'vitest';\nimport { marker } from '${depth}src/cache-proof';\ntest('loads the cached module', () => expect(marker).toBe(17));\n`
       );
+    }
+    const installedFiles = (directory, prefix = '') =>
+      readdirSync(directory, { withFileTypes: true })
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .flatMap((entry) => {
+          const path = join(directory, entry.name);
+          const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+          return entry.isDirectory() ? installedFiles(path, name) : [[name, fileRecord(path)]];
+        });
+    const originalFiles = installedFiles(installation);
+    const issuedSession = join(f.root, '.performance/consumer-session');
+    for (const issued of [true, false]) {
+      const env = { ...process.env };
+      delete env.GEOROIDS_TEST_SESSION_DIR;
+      if (issued) {
+        env.GEOROIDS_TEST_SESSION_DIR = issuedSession;
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          join(sourceRoot, 'node_modules/vitest/vitest.mjs'),
+          'run',
+          '--config',
+          'config/testing/vitest.ts',
+          '--project',
+          'unit',
+          '--project',
+          'components',
+          '--project',
+          'integration',
+        ],
+        { cwd: consumer, env, encoding: 'utf8' }
+      );
+      assert.ifError(result.error);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout, /3 passed/u);
+      const moduleCache = issued
+        ? join(issuedSession, 'cache/vitest-modules')
+        : join(installation, '.vitest-cache');
+      assert(existsSync(join(moduleCache, '_metadata.json')), moduleCache);
+      assert(readdirSync(moduleCache).some((name) => /^[a-f0-9]{40}$/u.test(name)));
+      if (issued) {
+        assert.deepEqual(installedFiles(installation), originalFiles);
+      }
     }
   } finally {
     rmSync(f.root, { recursive: true, force: true });
