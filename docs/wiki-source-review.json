@@ -1,13 +1,12 @@
 {
   "note": "Scoped PR 5 review of exactly 35 changed sources: 31 Node-only browser test annotations, controlled spatial-audio admission/evidence, test log-path isolation, sharded test commands, and test Vite cache isolation. Reviewed the 11 linked topics and unchanged demonstration rules/assets; desktop and touch Wiki browser scenario passed on main 26dec1c9. Gameplay controls and rules are unchanged. All other accepted source hashes are retained. Subsequent scoped review of only the tow-bite browser fixture: finite admission protection and atomic live placement/release retain keyboard/touch latching, lethal bites and peer broadcasts. Hauler, terrain and combat-survival text and unchanged illustrations match actual current-health lethal damage; all four browser scenarios and 32 unit cases pass. The prior desktop/touch Wiki evidence remains applicable because no Wiki UI or asset changed. Final tow-preservation correction supersedes the earlier insufficient owner-bite proof: exactly two reviewed source hashes cover explicit test-only current-session/unique-owner validation and preserved captive placement. Normal motion, controls, terrain, HUD/network, Scout, teamwork, Hauler and survival rules and illustrations are unchanged. Final 35 unit cases and all four keyboard/touch browser scenarios pass with exact captive release receipts; prior desktop/touch Wiki UI proof remains applicable. No other hashes are accepted. Subsequent scoped review accepts only the regeneration server test hash after a Node environment directive; its test body and gameplay rule are unchanged. The entire server category passed 10 files/26 cases. Survival recovery text and illustrations remain accurate; all 466 other hashes are retained. Subsequent scoped knip 6.35.1 to 6.38.0 dev-tool review: only package.json source hash changes; no gameplay rules, wiki content, runtime imports, demonstration generators, GIFs or posters change. Existing unused-code gates remain strict.",
   "hashes": {
-    "astro.config.ts": "sha256:9ce5b438fc4a0e56809b5c02265d234df6f49cbfa8a6d7fa5c94bbeaf95522c3",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
     "docs/diagnostics.md": "sha256:45ec24de311d7b6f8aa1f5c01e1854d4f0f7deb2aabc07260780537076758c49",
-    "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
+    "docs/protocol/snapshot-v3.md": "sha256:466d9bf94b7f001cb0d4750a418685f547806a39b328f7fda2b9d23a8f6b9bc6",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:4613a18ab6a45927de364db10ef801db5d0f8dda0ae2305353ecda5ffaa4296d",
-    "package.json": "sha256:e9861226c62748f5a2d8394801ee30f37578006563b5e85ac262217a3b4d111b",
+    "package.json": "sha256:10e9b48a03b2337d4df65d3ae64e3a583b8909c75b37899f20ae1df42ca7d381",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -56,9 +55,9 @@
     "public/wiki/media/survival.png": "sha256:cb90006f39af1cdbe46ec2de2455722049fbf19fb64fc412a0cdd7f40de3dda6",
     "public/wiki/media/terrain.gif": "sha256:7472aa49b2c6b860d7b790e3c2bc9d83c986a04c2604b85c48e62aee1642579e",
     "public/wiki/media/terrain.png": "sha256:45e89a0f083c9c619b195543040ffabf80f4427a04e38e9a92c95fe4807d8133",
-    "scripts/client-build.ts": "sha256:df234610d0af846df460519c4158fdd5f6d4a4b1c0a417a6e523795467e78fc2",
+    "scripts/client-build.ts": "sha256:abe7ea029d9606ce316a76b6cef432aa7002420783f8dc739622af74a90e5892",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
-    "scripts/wiki-check.ts": "sha256:b04ca0cf81bbd675ad036122c85564c7854e26d9f0eebc68d1d2bd748e38aeaa",
+    "scripts/wiki-check.ts": "sha256:b3656545781597999c18bf934e1fb45e58f8b95c2bc4b427f534dd378c167a00",
     "scripts/wiki-content.ts": "sha256:190a89be185ac685e37e7ae3d962d1fabb059a2a39fc3eee2f9cc09567e8a162",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
@@ -295,7 +294,6 @@
     "src/wiki/scrollMemory.ts": "sha256:ccbbe47812fc19f4c2048eb3db605d5351e070cab3257269bee95478fcc9df39",
     "src/wiki/search.ts": "sha256:1ea0f78400fe463ce11c6e1b7f8b2d503729599b222b2409606cf16035f87e41",
     "src/wiki/shipScorecard.ts": "sha256:dc01a90bb902a2d41e8fdcf81b70f486c260a57d41cc50e70ee91015af300927",
-    "svelte.config.js": "sha256:3a39bc11cd6876f6d4b75847c4f52c7eac966781b8319eaebe40ae3a705e01cb",
     "tests/unit/audio/title-and-play-loop-music-beds.test.ts": "sha256:5b117d30340357b3d24641a8690be93e5b79b6875dd04d4f965301a3098e6e6d",
     "tests/unit/diagnostics/debugHudMetrics.test.ts": "sha256:30bef1e4766b95b7c5923bb6816b958581d68ec2f7cf79194ef132adf28216e0",
     "tests/unit/entities/asteroids.test.ts": "sha256:fd39b80d39f4fa18bb382b54e0671010ac211d2d6c693c574b45371962a7d428",
@@ -554,13 +552,12 @@
     "scripts/build-vercel-output.mjs": "sha256:084559299214645fac9f3d1c0300cf5d2445ba6cf4f5cc30c5f6755b3e5d65f3",
     "server/createServer.ts": "sha256:de76d0c6bbd6ed8857b11bc9157d3ecba631dc9cd4e234c0c480f9cf19557c29",
     "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8",
-    "config/app/astro.ts": "sha256:cce6892ee22a630ddcdadd2a7a2ccea02d748361f883224a85686bdadd574e2b",
+    "config/app/astro.ts": "sha256:dc520ac45e54a1d1f1835fb3bdf5faedcb1c11aa52b6d83cc0d1d989002bf260",
     "config/app/svelte.js": "sha256:9f2f3ce97f92d71c67e146ef4f859f1675ef3a536fbcd82b597481b35263d2dd",
     "config/quality/prettier.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
     "config/typescript/frontend.json": "sha256:a5ba9f4bc0471de88c6e709b575d078ce426d9a01b45f4e18fbfe6bca4f02202",
-    "config/typescript/project.json": "sha256:cf55dc1b76655c336c420ecb22b1eff078abacd97e6c67182cbc00023e657b61",
-    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119",
-    "prettier.config.js": "sha256:7238fe130a57c07819fca4b9f6a546b4332cb8cde41184b3428c8b779823780f"
+    "config/typescript/project.json": "sha256:55190e036dbebd91f34f90dcc8742fc6c1bddc73ab5ecfb1c072e4f5a967c014",
+    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119"
   },
   "reviews": [
     {
@@ -6420,6 +6417,38 @@
         "config/typescript/strict-tsc.json": "field-manual",
         "prettier.config.js": "field-manual"
       }
+    },
+    {
+      "note": "Reviewed direct configuration consumers, full TypeScript import graphs, unchanged test-file scopes and formatting, canonical Svelte preprocessing in Astro/Vitest/checker, and Wiki invalidation/atomic-formatting fixtures. Player rules, demonstration inputs and media assets are unchanged. Complete build and full CI are verified separately.",
+      "sources": [
+        "astro.config.ts",
+        "config/app/astro.ts",
+        "config/typescript/project.json",
+        "package.json",
+        "prettier.config.js",
+        "scripts/client-build.ts",
+        "scripts/wiki-check.ts",
+        "svelte.config.js"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "astro.config.ts": "field-manual",
+        "package.json": "field-manual",
+        "scripts/client-build.ts": "field-manual",
+        "scripts/wiki-check.ts": "field-manual",
+        "svelte.config.js": "field-manual",
+        "config/app/astro.ts": "field-manual",
+        "config/typescript/project.json": "field-manual",
+        "prettier.config.js": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the protocol guide test command update to the repository-owned runner and explicit canonical test configuration. Ran that exact command: all three files and 84 networking tests passed. Protocol rules, player-facing behavior and demonstration inputs/assets are unchanged.",
+      "sources": ["docs/protocol/snapshot-v3.md"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
     }
   ]
 }

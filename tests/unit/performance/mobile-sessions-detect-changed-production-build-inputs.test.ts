@@ -22,8 +22,6 @@ test('mobile sessions detect changed Wiki, build scripts and inherited compiler 
     { path: 'src/pages/wiki.astro', scope: 'productSha256' },
     { path: 'src/components/wiki/WikiShell.svelte', scope: 'productSha256' },
     { path: 'src/styles/theme.css', scope: 'productSha256' },
-    { path: 'astro.config.ts', scope: 'harnessSha256' },
-    { path: 'svelte.config.js', scope: 'harnessSha256' },
     { path: 'components.json', scope: 'harnessSha256' },
     { path: 'content/wiki/hud-network.md', scope: 'productSha256' },
     { path: 'docs/wiki-source-review.json', scope: 'productSha256' },

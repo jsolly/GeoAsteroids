@@ -117,9 +117,9 @@ Two separate production deploy targets — client and server do not share a host
 | --- | --- |
 | `VITE_WEBSOCKET_URL` | WebSocket endpoint baked into the client at build time. Currently `wss://georoids-production-2403.up.railway.app/ws`. Must match the live Railway public URL + `/ws`. |
 
-`VITE_BUILD_TIME` and full `VITE_COMMIT_SHA` are injected by `scripts/client-build.ts` through `astro.config.ts` at build time — do not set them on Vercel. Only those metadata values and the required `VITE_WEBSOCKET_URL` are exposed to client code. The commit is the first valid 40-character SHA from `VERCEL_GIT_COMMIT_SHA`, then `RAILWAY_GIT_COMMIT_SHA`, then local Git. Empty hosted values do not block the later fallbacks. When host and local Git metadata are unavailable or invalid, the build generates one opaque 40-character hexadecimal token shared by the client and `release.json`. Version metadata never blocks a build. The visible build label takes its first seven characters from that same validated identity.
+`VITE_BUILD_TIME` and full `VITE_COMMIT_SHA` are injected by `scripts/client-build.ts` through `config/app/astro.ts` at build time — do not set them on Vercel. Only those metadata values and the required `VITE_WEBSOCKET_URL` are exposed to client code. The commit is the first valid 40-character SHA from `VERCEL_GIT_COMMIT_SHA`, then `RAILWAY_GIT_COMMIT_SHA`, then local Git. Empty hosted values do not block the later fallbacks. When host and local Git metadata are unavailable or invalid, the build generates one opaque 40-character hexadecimal token shared by the client and `release.json`. Version metadata never blocks a build. The visible build label takes its first seven characters from that same validated identity.
 
-Local dev: `npm run dev` sets an empty `VITE_WEBSOCKET_URL` so `ConnectionManager` uses same-origin `/ws`. Astro's Vite configuration proxies `/ws`, `/logs` and `/debug-reports` to the configured local game-server port. Direct `astro dev` runs can override the endpoint in `.env.local` (see `config/app/.env.example`). Report submissions allow the documented local origins; other tunnel origins are rejected; use a documented loopback origin or the configured Railway public domain for reporting.
+Local dev: `npm run dev` sets an empty `VITE_WEBSOCKET_URL` so `ConnectionManager` uses same-origin `/ws`. Astro's Vite configuration proxies `/ws`, `/logs` and `/debug-reports` to the configured local game-server port. Direct `astro dev --config config/app/astro.ts` runs can override the endpoint in `.env.local` (see `config/app/.env.example`). Report submissions allow the documented local origins; other tunnel origins are rejected; use a documented loopback origin or the configured Railway public domain for reporting.
 
 ### Railway (game server)
 
@@ -244,14 +244,14 @@ npm run build              # Wiki checks + strict tsc + Astro build + built rout
 npm run check:ts           # strict client/server/shared TypeScript
 npm run check:frontend     # Astro and Svelte diagnostics; warnings fail
 npm run check:format       # pinned Prettier checks Astro/Svelte formats
-npm run check:lint         # biome check --error-on-warnings .
+npm run check:lint         # Biome with config/quality/biome.settings.jsonc
 npm run check:lint-policy  # reject inherited warn/info Biome severities
 npm run check:knip         # fail on unused files/exports/dependencies and config hints
 npm run check:ts-prune     # fail on unconsumed TypeScript exports
 npm run check:md           # markdownlint-cli2
 npm run check:yaml         # yamllint --strict
 npm run check:actions      # actionlint + ShellCheck
-npm run check:fix          # biome check --write --error-on-warnings .
+npm run check:fix          # Biome write with config/quality/biome.settings.jsonc
 npm run fix                # biome write + tsc + unit tests
 npm run check:wiki         # flag gameplay changes that need a Wiki review (runs in build)
 npm run gate               # complete battery; see docs/ci-and-local-review.md
@@ -376,7 +376,7 @@ retain their scenario-owned fixtures.
 
 Browser identity uses `crypto.randomUUID()` and requires HTTPS or a localhost secure context.
 
-Start both with `npm run dev` (`./scripts/dev-server.sh`) for interactive development. The command refuses to attach to occupied ports; inspect the owner or choose isolated ports for the interactive session. The launcher keeps `astro dev --ignore-lock` in the foreground under its recorded process tree and owns both services, including content-triggered Astro restarts. Status: `npm run dev:check`. Stop: `npm run dev:kill`, which signals only the process tree recorded for this checkout. Code integration scenarios create their own port-zero loopback servers. Manual benchmark harnesses own separate configured service pairs and refuse occupied ports.
+Start both with `npm run dev` (`./scripts/dev-server.sh`) for interactive development. The command refuses to attach to occupied ports; inspect the owner or choose isolated ports for the interactive session. The launcher keeps `astro dev --config config/app/astro.ts --ignore-lock` in the foreground under its recorded process tree and owns both services, including content-triggered Astro restarts. Status: `npm run dev:check`. Stop: `npm run dev:kill`, which signals only the process tree recorded for this checkout. Code integration scenarios create their own port-zero loopback servers. Manual benchmark harnesses own separate configured service pairs and refuse occupied ports.
 
 Development-session ownership reads the target PID's working directory directly
 from procfs with `readlink` on Linux and with `lsof` elsewhere. An inspection error
