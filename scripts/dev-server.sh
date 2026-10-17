@@ -203,11 +203,11 @@ ensure_env_local() {
     if [ -f .env.local ]; then
         return 0
     fi
-    if [ -f .env.example ] && cp .env.example .env.local; then
-        echo "📋 Created .env.local from .env.example"
+    if [ -f config/app/.env.example ] && cp config/app/.env.example .env.local; then
+        echo "📋 Created .env.local from config/app/.env.example"
         return 0
     fi
-    echo "❌ .env.local is missing and .env.example could not be copied" >&2
+    echo "❌ .env.local is missing and config/app/.env.example could not be copied" >&2
     return 1
 }
 
@@ -380,7 +380,7 @@ start() {
             --prefix-colors "blue.bold,green.bold" \
             --prefix "[{name}]" \
             --names "astro,network" \
-            "astro dev --ignore-lock --port $DEV_VITE_PORT" \
+            "astro dev --config config/app/astro.ts --ignore-lock --port $DEV_VITE_PORT" \
             "tsx --env-file=.env.local server.ts"
     ) &
     DEV_PID=$!

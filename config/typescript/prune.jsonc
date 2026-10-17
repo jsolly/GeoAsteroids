@@ -1,0 +1,17 @@
+{
+  "extends": "./project.json",
+  "include": [
+    "../../.railway",
+    "../../src",
+    "../../tests",
+    "../../scripts",
+    "../../benchmarks",
+    "../testing/vitest.ts",
+    "../app/astro.ts",
+    "../../setup",
+    "../../server",
+    "../../server.ts",
+    "../../shared",
+    "../../shared-types.ts"
+  ]
+}

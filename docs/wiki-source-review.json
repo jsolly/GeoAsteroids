@@ -1,14 +1,12 @@
 {
   "note": "Scoped PR 5 review of exactly 35 changed sources: 31 Node-only browser test annotations, controlled spatial-audio admission/evidence, test log-path isolation, sharded test commands, and test Vite cache isolation. Reviewed the 11 linked topics and unchanged demonstration rules/assets; desktop and touch Wiki browser scenario passed on main 26dec1c9. Gameplay controls and rules are unchanged. All other accepted source hashes are retained. Subsequent scoped review of only the tow-bite browser fixture: finite admission protection and atomic live placement/release retain keyboard/touch latching, lethal bites and peer broadcasts. Hauler, terrain and combat-survival text and unchanged illustrations match actual current-health lethal damage; all four browser scenarios and 32 unit cases pass. The prior desktop/touch Wiki evidence remains applicable because no Wiki UI or asset changed. Final tow-preservation correction supersedes the earlier insufficient owner-bite proof: exactly two reviewed source hashes cover explicit test-only current-session/unique-owner validation and preserved captive placement. Normal motion, controls, terrain, HUD/network, Scout, teamwork, Hauler and survival rules and illustrations are unchanged. Final 35 unit cases and all four keyboard/touch browser scenarios pass with exact captive release receipts; prior desktop/touch Wiki UI proof remains applicable. No other hashes are accepted. Subsequent scoped review accepts only the regeneration server test hash after a Node environment directive; its test body and gameplay rule are unchanged. The entire server category passed 10 files/26 cases. Survival recovery text and illustrations remain accurate; all 466 other hashes are retained. Subsequent scoped knip 6.35.1 to 6.38.0 dev-tool review: only package.json source hash changes; no gameplay rules, wiki content, runtime imports, demonstration generators, GIFs or posters change. Existing unused-code gates remain strict.",
   "hashes": {
-    ".prettierrc.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
-    "astro.config.ts": "sha256:b00ade52dcad468e20e5b9027b51f4bd85c29014734c14c1e6b4165ba2566e9b",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
-    "docs/diagnostics.md": "sha256:671c1287c5d6a44274d61cfd4ac5836112105bb31b8aaf0c8ddc13064ea2b409",
-    "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
+    "docs/diagnostics.md": "sha256:45ec24de311d7b6f8aa1f5c01e1854d4f0f7deb2aabc07260780537076758c49",
+    "docs/protocol/snapshot-v3.md": "sha256:466d9bf94b7f001cb0d4750a418685f547806a39b328f7fda2b9d23a8f6b9bc6",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:4613a18ab6a45927de364db10ef801db5d0f8dda0ae2305353ecda5ffaa4296d",
-    "package.json": "sha256:fd92ec468c47a302ffa92bde1fb46a9963ee7513ac7e0e0fb08851533e39e3e0",
+    "package.json": "sha256:184cf33af27aa5032e27766173fffb5ee60bcd625b39773e12a724a97a56b95f",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -57,9 +55,9 @@
     "public/wiki/media/survival.png": "sha256:cb90006f39af1cdbe46ec2de2455722049fbf19fb64fc412a0cdd7f40de3dda6",
     "public/wiki/media/terrain.gif": "sha256:7472aa49b2c6b860d7b790e3c2bc9d83c986a04c2604b85c48e62aee1642579e",
     "public/wiki/media/terrain.png": "sha256:45e89a0f083c9c619b195543040ffabf80f4427a04e38e9a92c95fe4807d8133",
-    "scripts/client-build.ts": "sha256:b6a600212d4276cc51918a14f9488fe4ec781ff31feb51802d1fe46a054b950f",
+    "scripts/client-build.ts": "sha256:abe7ea029d9606ce316a76b6cef432aa7002420783f8dc739622af74a90e5892",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
-    "scripts/wiki-check.ts": "sha256:8afd85c2c7672147bbd475b630774546d97ac48cfa974c4f82551849f22efe9a",
+    "scripts/wiki-check.ts": "sha256:b3656545781597999c18bf934e1fb45e58f8b95c2bc4b427f534dd378c167a00",
     "scripts/wiki-content.ts": "sha256:190a89be185ac685e37e7ae3d962d1fabb059a2a39fc3eee2f9cc09567e8a162",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
@@ -103,7 +101,7 @@
     "server/world/worldPersistence.ts": "sha256:0846eb3503a381325733e295f7541760baf03c5d7cf1b9e64db2248c1bfba38c",
     "server/world/worldStoreWorker.ts": "sha256:10691d33041b176ff3a78464a58eab107990ac70f38339cadf521524748cc2c7",
     "server/world/worldStoreWorkerProtocol.ts": "sha256:88d2be9701f0d600bdb35c04c70ce7a113f87adf270f5998113ec063c1ba90d8",
-    "shared-types.ts": "sha256:81ebf7bfa6e837e2aad6f4cc50c3a64a9d8c3e9c601810ebfe9949fd99c09dda",
+    "shared-types.ts": "sha256:8147a43367feffc5a161ee01f8ca372e2c5190fa4cd513ae9a7ce2b4d65ba7dd",
     "shared/asteroidBelt.ts": "sha256:94d55e4288a9d968066ac05f666ae0cfe757739166a00ff1dd7a368339378b49",
     "shared/asteroidBoost.ts": "sha256:98594cb2fc30bac61c5a7ce16e9015c9aeb2c5517caa9bbe05711991dbae5b9c",
     "shared/asteroidMaterials.ts": "sha256:fcdc8ed77c790da388f773cb55f54bf890562df76acc44d9bb2b5c2e41cab84b",
@@ -166,7 +164,7 @@
     "src/core/gameController.ts": "sha256:5aadcf0ec8f8745a364e7a9a8a8a439a1e989901559c97aca1043698f54298dc",
     "src/core/services/GameStateManager.ts": "sha256:f7558f319c4164fe7e008b526556e61e65a89cd13bb81637c4582842cf8fd8a7",
     "src/core/services/InputManager.ts": "sha256:4bda2decc191b6a716d58fac1a7c3d0ce67476eb3666bc65d81de2660e8b7d43",
-    "src/diagnostics/clientDiagnostics.ts": "sha256:5bb514dbca1b1a9fdcc007dbcba7c082fccac7d02990bc5f85e549b4281a1a68",
+    "src/diagnostics/clientDiagnostics.ts": "sha256:c5e53dfbc231297a421dd3ddbbc59d66a63e62d1eebb1d7bc55e6a81c20ed2f6",
     "src/diagnostics/debugHudMetrics.ts": "sha256:c2188e5bc06730ab3511b8a8089e091c4bbf4ed7a934868476c3645bbc43644d",
     "src/diagnostics/performanceMetrics.ts": "sha256:6cd88c5404e1432028549e9e2ed81808b123c7865603d490356df04cdb1ff662",
     "src/entities/laser/AuthoritativeProjectileField.ts": "sha256:01f08320e6968fa4e8b07d798fe226117b29042aecada94cfb373517334aad67",
@@ -218,9 +216,9 @@
     "src/network/services/playerPresence.ts": "sha256:75f2eb20530e566d3b067d95a2305c1bd63430d3621cca956f6a433f09967ba9",
     "src/network/services/resumeCredential.ts": "sha256:2b3e3af4b7284c5f9e6e4da257f04e55126127f6b4b1e75394c8f11b36cf291e",
     "src/network/worldExploration.ts": "sha256:9d5077d511e0d99c1c2243d7f1019d2df3e071ea22acd08f1620be6f773da5ed",
-    "src/pages/debug/index.astro": "sha256:9d2989374bab057befea1479251eda6c1bff2a645b6e7788a87aadba85adf4db",
+    "src/pages/debug/index.astro": "sha256:67afd4a29476a2bb630f5681f853866f8dc18b1458e47a7b55502aab066bcb41",
     "src/pages/index.astro": "sha256:98f27a0d6da8910842b5884b0919abe5a7213379a89f6096ba82e75cb6557040",
-    "src/pages/wiki.astro": "sha256:d56c822737f808de4010d499d20399d6cc2246d2fd5407f76e1e170aea4d9cbc",
+    "src/pages/wiki.astro": "sha256:30b20fe2ccf7e6a5b85ea6bc604d454f6fe785564daf2954cd92e14f49025e61",
     "src/physics/terrain/contourCapture.ts": "sha256:42ba129cd5221fef152fb7a730d8ffe69df9e13f215a76594d41379bcf539dad",
     "src/physics/terrain/contourLaser.ts": "sha256:13428129bbf5c8d90250fdfe0c6f4de634412a810b2d3ff0a581981975852a1b",
     "src/physics/terrain/contours.ts": "sha256:f0529da1eb0356612622469f7306ecae486efa71f442a247ef8c34a46940fcfa",
@@ -288,7 +286,7 @@
     "src/utils/safeStorage.ts": "sha256:e3d362890bdaca7f8458227114fe2422b6cd0774095ab7e9dc64bce311313cfa",
     "src/utils/spawnPosition.ts": "sha256:47ed09b507d9b1124bb6a0215ceb7f4708b81815f32c2da30bd617e0d2d0a4c7",
     "src/wiki/article.ts": "sha256:b62f1df19562aa8d5f970a31a162080adaf833e1ac97f68c2a229f4b8dde13fe",
-    "src/wiki/articleSources.json": "sha256:58e6ac44c9ea1845fa9ba72b6031dff7be6fdb53088b43929ce23b9e60975aa3",
+    "src/wiki/articleSources.json": "sha256:c80d97d22008c3fc66be14891ab6d19d5efd51d9a3d73f304844abaa5e5aa596",
     "src/wiki/contentLoader.ts": "sha256:abe0ee24945205113a07ededf0b8b54888a7d08e619b9d7a018d80a273e5afa4",
     "src/wiki/gameReference.ts": "sha256:3342b3c7b0cab7b7c9134a9817e7da30e35b556357b43f110c849154a67f1981",
     "src/wiki/media.ts": "sha256:ccea87e637e20748afc3a89b108d426f583e591bcd51700494d7db67bd37937a",
@@ -296,7 +294,6 @@
     "src/wiki/scrollMemory.ts": "sha256:ccbbe47812fc19f4c2048eb3db605d5351e070cab3257269bee95478fcc9df39",
     "src/wiki/search.ts": "sha256:1ea0f78400fe463ce11c6e1b7f8b2d503729599b222b2409606cf16035f87e41",
     "src/wiki/shipScorecard.ts": "sha256:dc01a90bb902a2d41e8fdcf81b70f486c260a57d41cc50e70ee91015af300927",
-    "svelte.config.js": "sha256:9f2f3ce97f92d71c67e146ef4f859f1675ef3a536fbcd82b597481b35263d2dd",
     "tests/unit/audio/title-and-play-loop-music-beds.test.ts": "sha256:5b117d30340357b3d24641a8690be93e5b79b6875dd04d4f965301a3098e6e6d",
     "tests/unit/diagnostics/debugHudMetrics.test.ts": "sha256:30bef1e4766b95b7c5923bb6816b958581d68ec2f7cf79194ef132adf28216e0",
     "tests/unit/entities/asteroids.test.ts": "sha256:fd39b80d39f4fa18bb382b54e0671010ac211d2d6c693c574b45371962a7d428",
@@ -405,15 +402,15 @@
     "tests/unit/ui/town-store-opens-beside-town-square.test.ts": "sha256:70962ee2a3389d8def9ad10e06855371eb839abb77fae84a2f0667196f5b80a5",
     "tests/unit/ui/universeMap.test.ts": "sha256:0d682c53509551abbdbaa0a715db90ab2b4c5e3afed618a004601a67a35be205",
     "tests/unit/utils/player-name.test.ts": "sha256:a59789dd3f31954dd58d8a1ceb3368dabd75522bff56f8d42786003913221cc0",
-    "tsconfig.frontend.json": "sha256:591ebcd86d1208910f385d8291a712740f14b10a2e06f3a56c06c324e12a2101",
+    "tsconfig.frontend.json": "sha256:0ff24e47ee1b05c42c624560a219b8f100713daae7295d3cf009d4b3ed892848",
     "scripts/client-release-sha.ts": "sha256:e4d51752d83d1324cd254fbc9720a8f10970e323ad245b3541226a3463aee9ba",
     "public/sounds/contour-flick-blocked.m4a": "sha256:2aa9b534ae23d19f9df1470b46b54d410831bf41b1e43cc98f5e04df70925a0d",
     "public/sounds/contour-flick-success.m4a": "sha256:74a49bfd234ba15162410e88afa41ee0be0b9d01fcc0f65cdc602daa2ef1393a",
     "public/sounds/contour-lock-acquired.m4a": "sha256:928afee6bf5a0bff7da80205e8a473dd811b1a16ff7e56f67a18897e4cff6c6e",
     "public/sounds/contour-lock-released.m4a": "sha256:83b3338feda3cb161d923470ec09b7a0139c4665b821aa1adbdb324e1f85bd67",
-    "src/components/GameDocument.astro": "sha256:23b51b07c0082087356afdccb6a68c9e066eea8199eaa5a07b3812e4421d9d81",
+    "src/components/GameDocument.astro": "sha256:67a3fe71ca560db23e5764c6aa87644ddd3af6cc1e1021e61cfe30cb591e42f2",
     "src/components/game/GameOverlay.svelte": "sha256:0cc1e00c923ce84a5c95bbb0576b4e676ccca32d8eab74757cb74ff3f1e83450",
-    "src/components/game/GameShell.svelte": "sha256:e90b6e920887d70ff9147cc5f78b0c894f1479992c7c440458f5b377cb408c91",
+    "src/components/game/GameShell.svelte": "sha256:b9d634879389f2374d4a7d1c211b79a67dc4d5ab66287036a862aec9660e0146",
     "src/components/game/InventoryPanel.svelte": "sha256:784caec9a55d8f03bffcd63e2890b0133c7088f563d0c35fc76b4f4b7c206fec",
     "src/components/game/Preferences.svelte": "sha256:df781e7ca2cd79c303154149ccfd20589d8b700057080a7111cc4ba8365c6993",
     "src/components/game/ShipPicker.svelte": "sha256:b2ba71669aa83714d541b4a69763160f800e366d26bbf7cf2d4a5a5f2b1c085c",
@@ -433,9 +430,9 @@
     "src/components/ui/sheet/sheet-overlay.svelte": "sha256:83806c9ba22588cccc1930bf035142d276b8afedca7b9dfe0fb02d5c1d4196ad",
     "src/components/ui/sheet/sheet-portal.svelte": "sha256:c2b1d448ec83bbdfede5264727ec70626b0be097bc5900a99ce362f3b481a196",
     "src/rendering/shipSchematicCanvas.ts": "sha256:6bd8bab01d2e1745f9da8d26233d31913f5cebb821bb0c765accbde9923db046",
-    "src/runtime/gameRuntime.ts": "sha256:678bee790561b98b15172257cd804c6c7a14e23f5817bfbedf4314f31df0b81d",
+    "src/runtime/gameRuntime.ts": "sha256:fa36690a83a2663b066761ac7b70ed0655e39dc31ef2662dd621d5a476742538",
     "src/runtime/inventory.ts": "sha256:4f904519e088022b139b5f1185566b0100d7d6d2f2c155453ee4103ed3706634",
-    "src/runtime/overlayState.ts": "sha256:88087923597ee35025f8e05e61f940e7e67fd32b96e383c66d87cc4a710132ba",
+    "src/runtime/overlayState.ts": "sha256:30b41c06b5811337a6fb4f7b493c31f9886eca9ab3fd14823e65917153f135da",
     "src/runtime/shipSelection.ts": "sha256:0607fe92e1635e9f5419ab8be6dceb688397033a8ac12ad3f1b8e6330db44ef7",
     "src/runtime/townStore.ts": "sha256:e397ae292108d93a2f25ef7fe34a76e4ed706fe761c3896413071365cbc28dbe",
     "src/utils/pilotNickname.ts": "sha256:a2b8486d229b47f242d58b0f759242e681c19def9f0ae780e2fe398712ab33d9",
@@ -446,15 +443,15 @@
     "src/runtime/inventoryOverlay.ts": "sha256:6b6ad682e4daf00be55f0ceebfd9300de5d15e49ce1226d84524412422e7a4a3",
     "src/runtime/presentation.ts": "sha256:3b009b5d5428a131b74ed3ef8649b115d3e308a0d822e02ab901872dc269b7eb",
     "src/runtime/runtimeMount.ts": "sha256:7f91c3fdce76412ce2276d6e5f9f1c3091b28b7807d184243a4290b449acb640",
-    "src/runtime/uiTypes.ts": "sha256:f6bf552099aebd517bfb4d9b56e1448f072e457dbfee789434da2b78b2bdeebf",
+    "src/runtime/uiTypes.ts": "sha256:3881aa8111c22bce128ac943f28f947375a6617dde0b013e7c45e3938058050d",
     "src/components/game/ActionControls.svelte": "sha256:932ef522d07044422346af064eb6de62ef50ea115d049fc82828b2011ecedcb1",
     "src/components/game/CopyControl.svelte": "sha256:f371385a8a0b9b76ad1fa5030e9a5d8f42c15757669525824f1dc7baff1b0c83",
-    "src/components/game/DebugPanel.svelte": "sha256:fde83942b51cea568f8df83798d923e1fe638604fb51fa5f35a859c83e3078d2",
+    "src/components/game/DebugPanel.svelte": "sha256:2c095596ce13d4ebb8b1af83f332ec5e74d0a932dd3a9e552c51855a6dd21d89",
     "src/components/game/FieldHints.svelte": "sha256:0e5c04183edf7d65d25b249646dfa4ad9bc18c98831bbb59363f0d004075d609",
     "src/components/game/FurnaceTravelMap.svelte": "sha256:be236cc2753114ec1cf8293d5250cb85ca61a92f1ed821dbb46d2d3fa2fde2aa",
     "src/components/game/PhoneCollector.svelte": "sha256:296e6787bf691061acec4175523e857af29bc6c732fcec0ea911dd591daa4879",
     "src/components/game/UniverseMap.svelte": "sha256:3345bef54807c88dde95b36965515c2dc7902900370c52e17a922ada27852682",
-    "src/runtime/debugPresentation.ts": "sha256:027ea93c3a3ead911a1a61a9c446a0a4806e715c77d54cdf6d35c847d5797aa4",
+    "src/runtime/debugPresentation.ts": "sha256:b33432018ec394f18bf6954135f0bd36a490b0a18226d7c401362f4f87b0fe6a",
     "tests/unit/components/debug-controls.test.ts": "sha256:9cf7e86d6e94783684a533dc62eca0f50c21aa54cd2d36e6ffcca67398e0d505",
     "shared/shipUtilities.ts": "sha256:856565c7cd9efe53477f84fa86f503e60764ff6de547f3e4826ed871d79d2b5b",
     "src/components/ui/table/table-body.svelte": "sha256:09b78e9184fe01f58dd7266b3be1ef5769a780fb6b7132d08123fc1469cf1ca2",
@@ -547,7 +544,23 @@
     "shared/travelRoutes.ts": "sha256:278e477cade7c3dcb9a911dbed47aa3d0a9c46afe5686bfdb5cc567ff28df68e",
     "tests/unit/server/charged-beams-use-server-time-and-cancel-on-death.test.ts": "sha256:88a7a22fe6feb765c078a330f02e175db549bd47bad8a0dce29ad9f2e84fb413",
     "tests/unit/rendering/ship-light-casts-wreck-shadows-and-colors-speed.test.ts": "sha256:1476e3dfe24147762c632608e10347e74d8177d018ac1d2803d2d1acc1071474",
-    "src/components/UpdateNotice.svelte": "sha256:5b84008e476dfc180e1c0afda269f8b208e057cdad614c71f393a2d88a0b3328"
+    "src/components/UpdateNotice.svelte": "sha256:5b84008e476dfc180e1c0afda269f8b208e057cdad614c71f393a2d88a0b3328",
+    "shared/debugReports.ts": "sha256:18361ef763d8deb776023942bbe320da2f46ad0573d942276512607bcf1485db",
+    "src/components/game/DebugReportForm.svelte": "sha256:8fba14fdd7e9dea0eb196b6e10c07256a16b9f8eb7cfa89aab17e418b82d8614",
+    "src/diagnostics/debugReportClient.ts": "sha256:a5c9ad047183d75781c8be22a4ed1cf89f61752df49ddeb8a36385cdda11d398",
+    "src/diagnostics/debugReportStorage.ts": "sha256:21114a7c8b67da1165bfaf33b2f5ee53c353efd3ea80bedbbfc1f9b9aacb212d",
+    "scripts/build-vercel-output.mjs": "sha256:883d4ef2393e4a4d6385e8743ab96ae3b26e9d19d52116e38c2aef8cfb22c084",
+    "server/createServer.ts": "sha256:de76d0c6bbd6ed8857b11bc9157d3ecba631dc9cd4e234c0c480f9cf19557c29",
+    "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8",
+    "config/app/astro.ts": "sha256:dc520ac45e54a1d1f1835fb3bdf5faedcb1c11aa52b6d83cc0d1d989002bf260",
+    "config/app/svelte.js": "sha256:9f2f3ce97f92d71c67e146ef4f859f1675ef3a536fbcd82b597481b35263d2dd",
+    "config/quality/prettier.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
+    "config/typescript/frontend.json": "sha256:a5ba9f4bc0471de88c6e709b575d078ce426d9a01b45f4e18fbfe6bca4f02202",
+    "config/typescript/project.json": "sha256:55190e036dbebd91f34f90dcc8742fc6c1bddc73ab5ecfb1c072e4f5a967c014",
+    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119",
+    "src/components/Context7Note.astro": "sha256:6127e526e0e9dad4bf3a088d62d19e8ee25de7c238852ee7bf60eb335967265c",
+    "src/components/Context7Verification.astro": "sha256:1786a9ca8e2cf86fe7260058b76a3fc314321fb79b3dcc38d6713d1aa2dbda91",
+    "src/constants/context7.ts": "sha256:3a72e118e92f520684a84ec4c8cd91841f68ca8e83ec7b9a5cc547813ca2a18b"
   },
   "reviews": [
     {
@@ -6317,6 +6330,175 @@
       "topics": ["hud-network"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Reviewed report capture, privacy, recovery, HTTP delivery and overlay controls. Focused diagnostics/component/backend tests: 60 passed; TypeScript and Biome passed. Manually submitted prejoin desktop and in-flight mobile reports, verified saved blocked receipts, outage preservation and same-ID reload recovery. Wiki Diagnostics text checked at 1280x900 and 390x844. Gameplay rules and generated demonstrations unchanged.",
+      "sources": [
+        "docs/diagnostics.md",
+        "scripts/client-build.ts",
+        "shared-types.ts",
+        "shared/debugReports.ts",
+        "src/components/GameDocument.astro",
+        "src/components/game/DebugPanel.svelte",
+        "src/components/game/DebugReportForm.svelte",
+        "src/components/game/GameShell.svelte",
+        "src/diagnostics/clientDiagnostics.ts",
+        "src/diagnostics/debugReportClient.ts",
+        "src/diagnostics/debugReportStorage.ts",
+        "src/pages/debug/index.astro",
+        "src/runtime/debugPresentation.ts",
+        "src/runtime/gameRuntime.ts",
+        "src/runtime/overlayState.ts",
+        "src/runtime/uiTypes.ts",
+        "src/wiki/articleSources.json"
+      ],
+      "topics": ["controls", "field-manual", "hud-network", "teamwork", "terrain"],
+      "media": [],
+      "owners": {
+        "scripts/client-build.ts": "hud-network",
+        "src/pages/debug/index.astro": "hud-network",
+        "src/wiki/articleSources.json": "hud-network",
+        "src/components/GameDocument.astro": "hud-network",
+        "src/runtime/uiTypes.ts": "hud-network"
+      }
+    },
+    {
+      "note": "Reviewed Cancel and reopen capture, immutable pending retries and restored receipt-only controls with executed component tests and desktop/mobile browser checks. Wiki reporting guidance remains accurate.",
+      "sources": [
+        "src/components/game/DebugReportForm.svelte",
+        "src/components/game/GameShell.svelte"
+      ],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Live release checks found missing HTTP noindex headers on trailing-slash Vercel routes and server-only Railway responses. Reviewed explicit emitted routing and HTTP boundary protection; real output and loopback route regression tests passed. Wiki guidance remains accurate.",
+      "sources": [
+        "scripts/build-vercel-output.mjs",
+        "server/createServer.ts",
+        "server/staticClient.ts",
+        "src/wiki/articleSources.json"
+      ],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "src/wiki/articleSources.json": "hud-network"
+      }
+    },
+    {
+      "note": "Reviewed repository-owned config relocation and minimal native adapters. Resolved Astro, Vitest and Prettier settings match; five TypeScript compiler options and selected file sets match, with include paths explicitly rebased. Lint, types, frontend formatting, 33 tooling contracts and 36 Wiki/fingerprint tests passed, including moved-entry invalidation. Independent actual Biome scope/ignore and Knip framework-import controls passed. Brief native Wiki checks at 1280x900 and 390x844 observed readable static content/styles and controls hash navigation. Both unchanged baseline build and candidate dev page remained unhydrated in this browser context with no module requests; interactive search is unverified, not claimed as passing. No player rules, articles, demonstrations, media or gameplay behavior changed. CI linux-x64 media verification remains required.",
+      "sources": [
+        ".prettierrc.json",
+        "astro.config.ts",
+        "config/app/astro.ts",
+        "config/app/svelte.js",
+        "config/quality/prettier.json",
+        "config/typescript/frontend.json",
+        "config/typescript/project.json",
+        "config/typescript/strict-tsc.json",
+        "package.json",
+        "prettier.config.js",
+        "scripts/wiki-check.ts",
+        "svelte.config.js",
+        "tsconfig.frontend.json"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        ".prettierrc.json": "field-manual",
+        "astro.config.ts": "field-manual",
+        "package.json": "field-manual",
+        "scripts/wiki-check.ts": "field-manual",
+        "svelte.config.js": "field-manual",
+        "tsconfig.frontend.json": "field-manual",
+        "config/app/astro.ts": "field-manual",
+        "config/app/svelte.js": "field-manual",
+        "config/quality/prettier.json": "field-manual",
+        "config/typescript/frontend.json": "field-manual",
+        "config/typescript/project.json": "field-manual",
+        "config/typescript/strict-tsc.json": "field-manual",
+        "prettier.config.js": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed direct configuration consumers, full TypeScript import graphs, unchanged test-file scopes and formatting, canonical Svelte preprocessing in Astro/Vitest/checker, and Wiki invalidation/atomic-formatting fixtures. Player rules, demonstration inputs and media assets are unchanged. Complete build and full CI are verified separately.",
+      "sources": [
+        "astro.config.ts",
+        "config/app/astro.ts",
+        "config/typescript/project.json",
+        "package.json",
+        "prettier.config.js",
+        "scripts/client-build.ts",
+        "scripts/wiki-check.ts",
+        "svelte.config.js"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "astro.config.ts": "field-manual",
+        "package.json": "field-manual",
+        "scripts/client-build.ts": "field-manual",
+        "scripts/wiki-check.ts": "field-manual",
+        "svelte.config.js": "field-manual",
+        "config/app/astro.ts": "field-manual",
+        "config/typescript/project.json": "field-manual",
+        "prettier.config.js": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the protocol guide test command update to the repository-owned runner and explicit canonical test configuration. Ran that exact command: all three files and 84 networking tests passed. Protocol rules, player-facing behavior and demonstration inputs/assets are unchanged.",
+      "sources": ["docs/protocol/snapshot-v3.md"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed addition of the Context7 Ask head tag and visually hidden agent note to the game and wiki document shells. The tag and note are non-visible (aria-hidden) and add no visible content; player rules, wiki articles, demonstration inputs and media assets are unchanged. Complete build verified separately.",
+      "sources": [
+        "src/components/Context7Note.astro",
+        "src/components/Context7Verification.astro",
+        "src/components/GameDocument.astro",
+        "src/constants/context7.ts",
+        "src/pages/wiki.astro"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/pages/wiki.astro": "field-manual",
+        "src/components/GameDocument.astro": "field-manual",
+        "src/components/Context7Note.astro": "field-manual",
+        "src/components/Context7Verification.astro": "field-manual",
+        "src/constants/context7.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed adding the Context7 Link search header to the Vercel build output routes and sorting imports in the game shell. Nothing visible changes; player rules, wiki articles, demonstration inputs and media assets are unchanged. Build and unit tests verified separately.",
+      "sources": ["scripts/build-vercel-output.mjs", "src/components/GameDocument.astro"],
+      "topics": ["field-manual", "hud-network"],
+      "media": [],
+      "owners": {
+        "scripts/build-vercel-output.mjs": "field-manual",
+        "src/components/GameDocument.astro": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed adding a gitleaks allow marker and comment to the Context7 site key constant. Nothing visible changes; player rules, wiki articles, demonstration inputs and media assets are unchanged.",
+      "sources": ["src/constants/context7.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/constants/context7.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the vitest 5.0.3 to 5.0.4 patch with its coupled exact @vitest/coverage-v8 5.0.4 pin (peer requires matching versions; folded from Dependabot #831) and the resulting lock changes. Test tooling only; no runtime, gameplay, Wiki content or demonstration asset is affected. Clean install with matched peers, TypeScript and Astro/Svelte diagnostics passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
     }
   ]
 }

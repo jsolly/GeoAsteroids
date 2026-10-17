@@ -80,7 +80,7 @@ function refreshWikiFacts(): Plugin {
         ) {
           // Let Astro rebuild its container, routes and content-module graph.
           // Restarting just Vite discards Astro's outer HTTP middleware.
-          server.watcher.emit('change', resolve(server.config.root, 'astro.config.ts'));
+          server.watcher.emit('change', resolve(server.config.root, 'config/app/astro.ts'));
         }
       };
       server.watcher.on('all', refresh);
@@ -140,6 +140,10 @@ export function clientViteConfig() {
       port: testVitePort,
       strictPort: true, // Fail if port is not available
       proxy: {
+        '/debug-reports': {
+          target: `http://localhost:${testServerPort}`,
+          changeOrigin: true,
+        },
         '/ws': {
           target: `ws://localhost:${testServerPort}`,
           ws: true,

@@ -377,11 +377,11 @@ ensure_env_local() {
     if [ -f .env.local ]; then
         return 0
     fi
-    if [ -f .env.example ] && cp .env.example .env.local; then
-        echo "📋 Created .env.local from .env.example"
+    if [ -f config/app/.env.example ] && cp config/app/.env.example .env.local; then
+        echo "📋 Created .env.local from config/app/.env.example"
         return 0
     fi
-    echo "❌ .env.local is missing and .env.example could not be copied" >&2
+    echo "❌ .env.local is missing and config/app/.env.example could not be copied" >&2
     return 1
 }
 
@@ -482,7 +482,7 @@ start_dev_servers() {
         [ "$gameplay_port" -eq "$proxy_port" ] || return 1
     fi
     export GEOROIDS_BENCHMARK_WS_URL="ws://localhost:$gameplay_port/ws"
-    local client_command="astro dev --ignore-lock --port $TEST_VITE_PORT"
+    local client_command="astro dev --config config/app/astro.ts --ignore-lock --port $TEST_VITE_PORT"
     local server_entry=benchmarks/realtime-server.ts
     local server_env=.env.local
     if [ "$BUILD_MODE" = production ]; then
@@ -499,7 +499,7 @@ start_dev_servers() {
                 node scripts/benchmark-build-receipt.mjs record "$REPO_ROOT" "$GEOROIDS_BENCHMARK_WS_URL" "$BENCHMARK_SESSION/build-inputs.json" || return 1
             fi
         fi
-        client_command="astro preview --ignore-lock --host 127.0.0.1 --port $TEST_VITE_PORT"
+        client_command="astro preview --config config/app/astro.ts --ignore-lock --host 127.0.0.1 --port $TEST_VITE_PORT"
     fi
     echo "🚀 Starting servers owned by this runner..."
     REGISTERING_CHILD=true

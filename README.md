@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Astro serves the client at `http://localhost:5173`; the game server listens on port 3001. `npm run dev` routes `/ws` and `/logs` through Astro's Vite proxy to the local server, including custom dev ports. A public HTTPS tunnel to Astro therefore also carries the game WebSocket, so phones never connect to their own `localhost`. Direct Astro and production endpoint configuration is documented in `.env.example`.
+Astro serves the client at `http://localhost:5173`; the game server listens on port 3001. `npm run dev` routes `/ws` and `/logs` through Astro's Vite proxy to the local server, including custom dev ports. A public HTTPS tunnel to Astro therefore also carries the game WebSocket, so phones never connect to their own `localhost`. Direct Astro and production endpoint configuration is documented in `config/app/.env.example`.
 
 Choose a ship, enter the game, steer with the mouse or left/right arrow keys while thrust stays on, Space to fire, E to scan as Scout or attach/release cargo as Hauler. Mobile players use the on-screen controls. The minimap follows your ship through the 120,000-unit-wide world. Shared fog records discoveries; Scouts reveal more terrain, and discovered furnaces remain marked.
 

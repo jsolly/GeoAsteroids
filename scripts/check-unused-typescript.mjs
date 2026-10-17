@@ -105,6 +105,14 @@ export function frontendEntry(root) {
       }
     }
   }
+  // The tools consume defaults; named exports still need real callers.
+  for (const config of ['config/app/astro.ts', 'config/testing/vitest.ts']) {
+    const path = join(root, config);
+    if (existsSync(path)) {
+      const alias = `toolConfig${serial++}`;
+      lines.push(`import ${alias} from ${JSON.stringify(path)}; console.log(${alias});`);
+    }
+  }
   // Astro invokes this exact framework export; other content-config exports remain checked.
   const contentConfig = join(root, 'src/content.config.ts');
   if (existsSync(contentConfig)) {
@@ -115,7 +123,10 @@ export function frontendEntry(root) {
   return `${lines.join('\n')}\n`;
 }
 
-export function checkUnusedTypescript(root = process.cwd(), configName = 'tsconfig.prune.json') {
+export function checkUnusedTypescript(
+  root = process.cwd(),
+  configName = 'config/typescript/prune.jsonc'
+) {
   const configPath = resolve(root, configName);
   const config = ts.readConfigFile(configPath, ts.sys.readFile);
   assert(!config.error, 'Cannot read ts-prune configuration');

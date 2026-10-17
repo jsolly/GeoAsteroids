@@ -57,11 +57,20 @@ third-party/fork PR code in a trusted clone; review its diff through GitHub. Do 
 run its npm lifecycle or setup scripts. Use a separate disposable environment when
 execution of untrusted code has been explicitly authorized.
 
+The sole current hook identity is `config/agents/repository.json`. Missing,
+symlinked or duplicate current/retired identities fail before registration.
+After merge, use ordinary reviewed main setup. Older feature branches must first
+merge the configuration migration before repairing their setup.
+
 After independent semantic/security review of your own gate change, get its exact
 digest with `bash scripts/repo-python.sh scripts/repo-hooks.py digest`. Use the installed snapshot's
 `approve --root <absolute-repo-root> --digest <reviewed-digest>` command, with actual
 values, to approve only those bytes; never approve a fork's bundle. Approvals are
-repo-local. Revoke explicit approvals with `git config --local --unset-all
+repo-local. For an installed legacy snapshot, use the reviewed current helper's
+`approve-upgrade` operation with that exact digest. It authenticates the installed
+legacy bundle against protected source or an existing exact approval before
+authorizing the replacement; ordinary `approve` cannot bypass that check. The
+legacy implementation remains solely a frozen test fixture. Revoke explicit approvals with `git config --local --unset-all
 repo.trustedGateBundle`; current reviewed main remains trusted. Changing origin
 invalidates the bundle identity. No environment variable selects another library.
 
