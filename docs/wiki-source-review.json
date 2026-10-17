@@ -6,7 +6,7 @@
     "docs/protocol/snapshot-v3.md": "sha256:466d9bf94b7f001cb0d4750a418685f547806a39b328f7fda2b9d23a8f6b9bc6",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:4613a18ab6a45927de364db10ef801db5d0f8dda0ae2305353ecda5ffaa4296d",
-    "package.json": "sha256:10e9b48a03b2337d4df65d3ae64e3a583b8909c75b37899f20ae1df42ca7d381",
+    "package.json": "sha256:184cf33af27aa5032e27766173fffb5ee60bcd625b39773e12a724a97a56b95f",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -6489,6 +6489,15 @@
       "media": [],
       "owners": {
         "src/constants/context7.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the vitest 5.0.3 to 5.0.4 patch with its coupled exact @vitest/coverage-v8 5.0.4 pin (peer requires matching versions; folded from Dependabot #831) and the resulting lock changes. Test tooling only; no runtime, gameplay, Wiki content or demonstration asset is affected. Clean install with matched peers, TypeScript and Astro/Svelte diagnostics passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
       }
     }
   ]
