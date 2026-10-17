@@ -712,3 +712,134 @@ test('a report draft keeps its focused textarea across flight publications and k
   expect(field.value).toBe('The keyboard');
   expect([field.selectionStart, field.selectionEnd]).toEqual([4, 12]);
 });
+
+async function startWithReportReceipt(state: 'pending' | 'blocked' | 'delivered') {
+  window.history.replaceState(null, '', '/debug');
+  const overlays = await import('../../../src/runtime/overlayState');
+  const diagnosticView: GamePresentation = {
+    ...initialView,
+    debug: {
+      playerId: '',
+      sessionId: 'test-page',
+      hudHidden: false,
+      fps: '60',
+      rtt: '0',
+      snapshot: '0',
+      motion: '',
+      world: '',
+      releases: '',
+    },
+  };
+  vi.mocked(runtime.subscribe).mockImplementation((listener) => {
+    listener(diagnosticView);
+    return overlays.subscribeGameOverlay((overlay) => listener({ ...diagnosticView, overlay }));
+  });
+  const id = crypto.randomUUID();
+  boundary.writeReport.mockResolvedValue(undefined);
+  boundary.readReport.mockResolvedValue({
+    kind: 'receipt',
+    receipt: { id, state },
+    receiptToken: 'a'.repeat(64),
+  });
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({ id, state }), { status: 200 })
+  );
+  await start();
+  await vi.dynamicImportSettled();
+  await settle();
+  boundary.writeReport.mockClear();
+  return { overlays, id };
+}
+
+function reportButton(label: string) {
+  const found = [...document.querySelectorAll('button')].find(
+    (button) => button.textContent?.trim() === label
+  );
+  if (!found) {
+    throw new Error(`Missing ${label}`);
+  }
+  return found;
+}
+
+test('Report a problem starts a fresh editor on the first click after a delivered report', async () => {
+  const { overlays } = await startWithReportReceipt('delivered');
+  boundary.writeReport.mockResolvedValue(undefined);
+  vi.mocked(runtime.commands.captureDiagnostics).mockImplementation(() => {
+    expect(overlays.getOpenGameOverlay()).toBeNull();
+    return { state: { sessionId: 'new-incident' }, recentLogs: [] };
+  });
+  reportButton('Report a problem').click();
+  reportButton('Report a problem').click();
+  await settle();
+  const field = element('#debug-report-description', HTMLTextAreaElement);
+  expect(field.value).toBe('');
+  expect(field.disabled).toBe(false);
+  expect(document.querySelector('pre')?.textContent).toContain('new-incident');
+  expect(document.body.textContent).not.toContain('Delivered');
+  expect(boundary.writeReport).toHaveBeenCalledExactlyOnceWith(null);
+  expect(runtime.commands.captureDiagnostics).toHaveBeenCalledTimes(1);
+  field.value = 'Second incident';
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  await settle();
+  expect(reportButton('Send').disabled).toBe(false);
+});
+
+test.each(['pending', 'blocked'] as const)(
+  'a %s receipt remains recoverable and New report opens a focused editor in the same dialog',
+  async (state) => {
+    const { overlays, id } = await startWithReportReceipt(state);
+    boundary.writeReport.mockResolvedValue(undefined);
+    reportButton('Report a problem').click();
+    await settle();
+    const dialog = element('[role="dialog"]', HTMLDivElement);
+    expect(document.querySelector('textarea')).toBeNull();
+    expect(dialog.textContent).toContain(id);
+    expect(boundary.writeReport).not.toHaveBeenCalled();
+    expect(reportButton('Retry / check delivery').disabled).toBe(false);
+    vi.mocked(runtime.commands.captureDiagnostics).mockReturnValue({
+      state: { sessionId: 'another-incident' },
+      recentLogs: [],
+    });
+    reportButton('New report').click();
+    await settle();
+    const field = element('#debug-report-description', HTMLTextAreaElement);
+    expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+    expect(overlays.getOpenGameOverlay()).toBe('debug-report');
+    expect(field.value).toBe('');
+    expect(document.activeElement).toBe(field);
+    expect(document.querySelector('pre')?.textContent).toContain('another-incident');
+    field.value = 'Another incident';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    await settle();
+    expect(reportButton('Send').disabled).toBe(false);
+  }
+);
+
+test('a failed delivered-receipt reset keeps the receipt and recovery controls visible', async () => {
+  const { id } = await startWithReportReceipt('delivered');
+  boundary.writeReport.mockRejectedValue(new Error('storage quota'));
+  reportButton('Report a problem').click();
+  await settle();
+  expect(document.querySelector('textarea')).toBeNull();
+  expect(document.body.textContent).toContain(id);
+  expect(document.querySelector('[role="dialog"] [role="status"]')?.textContent).toContain(
+    'Browser storage could not start a new report'
+  );
+  expect(reportButton('New report').disabled).toBe(false);
+});
+
+test('finishing a receipt reset after shell disposal does not reopen the report', async () => {
+  const { overlays } = await startWithReportReceipt('delivered');
+  const reset = deferred();
+  boundary.writeReport.mockReturnValue(reset.promise);
+  reportButton('Report a problem').click();
+  if (!shell) {
+    throw new Error('Missing shell');
+  }
+  await svelte.unmount(shell);
+  shell = undefined;
+  reset.release();
+  await settle();
+  expect(overlays.getOpenGameOverlay()).toBeNull();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+});

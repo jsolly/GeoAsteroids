@@ -22,6 +22,9 @@ of the shared `jsolly/GeoRoids` Todoist project can read the report.
 
 **Saved, pending delivery** means the separate Railway report database committed
 the report. **Delivered** means Todoist contains the verified complete bundle.
+Opening **Report a problem** after delivery starts a fresh report. For a pending or
+blocked receipt, **New report** opens the editor in the same dialog and captures
+fresh diagnostics.
 **Saved, delivery blocked** means the report is retained but needs credential,
 permission or project-capacity repair. The browser stores an immutable submission
 before sending; reload or retry reuses its identity, including after a lost response.

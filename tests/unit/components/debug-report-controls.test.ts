@@ -60,7 +60,7 @@ test('typing a report and sending crosses browser storage before HTTP and expose
         sending = client.send(description, diagnostics);
       },
       onretry: () => {},
-      onnew: () => {},
+      onnew: async () => false,
       onclose: () => {},
     },
   });
@@ -132,7 +132,7 @@ test.each(['pending', 'blocked', 'delivered'] as const)(
         view: restoredView,
         onsend: () => {},
         onretry: () => {},
-        onnew: () => {},
+        onnew: async () => false,
         onclose: () => {},
       },
     });

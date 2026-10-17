@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { formatDebugDiagnostics } from '../../../shared/debugReports';
   import type { DebugDiagnosticSnapshot } from '../../../shared-types';
   import type { DebugReportClientView } from '../../diagnostics/debugReportClient';
@@ -21,16 +22,21 @@
     onsend: (description: string, diagnostics: DebugDiagnosticSnapshot) => void;
     onretry: () => void;
     onclose: () => void;
-    onnew: () => void;
+    onnew: () => Promise<boolean>;
   } = $props();
   const receiptOnly = $derived(view.reportId !== null && view.submission === null);
   const locked = $derived(view.submission !== null || view.state === 'sending');
+  let descriptionField: HTMLTextAreaElement | undefined;
   let inputDiagnostics = $state.raw<ReturnType<typeof createReportInputDiagnostics> | null>(null);
   function recordInput(field: HTMLTextAreaElement) {
+    descriptionField = field;
     const recorder = createReportInputDiagnostics(field);
     inputDiagnostics = recorder;
     return () => {
       recorder.dispose();
+      if (descriptionField === field) {
+        descriptionField = undefined;
+      }
       if (inputDiagnostics === recorder) {
         inputDiagnostics = null;
       }
@@ -73,6 +79,14 @@
     const captured = diagnostics();
     if (captured && view.canSend && description.trim()) {
       onsend(description, captured);
+    }
+  }
+  async function startNewReport() {
+    if (await onnew()) {
+      await tick();
+      if (descriptionField?.isConnected) {
+        descriptionField.focus();
+      }
     }
   }
   function download() {
@@ -137,9 +151,7 @@
     {#if view.reportId && !view.submission && view.state !== 'sending'}<Button
         type="button"
         variant="outline"
-        onclick={() => {
-          onnew();
-        }}>New report</Button
+        onclick={startNewReport}>New report</Button
       >{/if}
     <Button type="button" variant="outline" onclick={onclose}
       >{receiptOnly ? 'Close' : 'Cancel'}</Button

@@ -80,13 +80,50 @@
     canSend: false,
   });
   let reports: ReturnType<typeof createDebugReportClient> | null = null;
-  function openReport() {
-    if (startup.kind === 'ready') {
+  let openingReport = false;
+  async function openReport() {
+    if (startup.kind !== 'ready' || openingReport) {
+      return;
+    }
+    const runtime = startup.runtime;
+    const client = reports;
+    const previousOverlay = view.overlay;
+    const delivered = reportView.state === 'delivered';
+    const snapshot =
+      reportView.reportId === null || delivered ? runtime.commands.captureDiagnostics() : null;
+    openingReport = true;
+    try {
+      if (delivered && (await client?.newReport()) === true) {
+        reportDescription = '';
+      }
+      if (
+        reports !== client ||
+        startup.kind !== 'ready' ||
+        startup.runtime !== runtime ||
+        view.overlay !== previousOverlay
+      ) {
+        return;
+      }
       if (reportView.reportId === null) {
-        reportSnapshot = startup.runtime.commands.captureDiagnostics();
+        reportSnapshot = snapshot;
       }
       openGameOverlay('debug-report');
+    } finally {
+      openingReport = false;
     }
+  }
+  async function startNewReport() {
+    if (startup.kind !== 'ready') {
+      return false;
+    }
+    const client = reports;
+    const snapshot = startup.runtime.commands.captureDiagnostics();
+    if ((await client?.newReport()) !== true || reports !== client) {
+      return false;
+    }
+    reportDescription = '';
+    reportSnapshot = snapshot;
+    return true;
   }
   let playerName = $state('');
   let playerNameInitialized = false;
@@ -204,6 +241,7 @@
     return () => {
       live = false;
       reports?.dispose();
+      reports = null;
       unsubscribe?.();
       lifetime.dispose();
       document.body.classList.toggle('in-play', wasInPlay);
@@ -357,13 +395,7 @@
       onretry={() => {
         void reports?.retry();
       }}
-      onnew={async () => {
-        if (await reports?.newReport()) {
-          reportDescription = '';
-          reportSnapshot = null;
-          closeGameOverlay('debug-report');
-        }
-      }}
+      onnew={startNewReport}
       onclose={() => closeGameOverlay('debug-report')}
     />
   </GameOverlay>

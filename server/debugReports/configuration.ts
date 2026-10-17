@@ -1,6 +1,6 @@
 import { lstatSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import destination from './destination.json' with { type: 'json' };
+import destination from '../../config/server/debug-reports.json' with { type: 'json' };
 
 export interface DebugReportConfiguration {
   path: string;

@@ -23,7 +23,7 @@ dist/*
 # Logs
 /logs
 
-# Environment Variables (keep .env.example tracked)
+# Environment Variables (keep config/app/.env.example tracked)
 .env
 .env.local
 .env.*.local
