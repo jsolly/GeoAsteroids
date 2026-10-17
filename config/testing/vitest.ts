@@ -1,13 +1,18 @@
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { configDefaults, defineConfig } from 'vitest/config';
 
+const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
+
 export default defineConfig({
-  plugins: [svelte()],
+  root: repositoryRoot,
+  plugins: [svelte({ configFile: fileURLToPath(new URL('../app/svelte.js', import.meta.url)) })],
   ...(process.env['GEOROIDS_TEST_SESSION_DIR']
     ? { cacheDir: `${process.env['GEOROIDS_TEST_SESSION_DIR']}/cache/vitest` }
     : {}),
   test: {
+    root: repositoryRoot,
     environment: 'jsdom',
     setupFiles: ['tests/viteSetup.ts'],
     globals: true,

@@ -117,7 +117,8 @@ npm run test:integration:server     # server integration
 npm run test:coverage               # unit coverage, no percentage merge threshold
 ```
 
-Focused units may use `npx vitest run tests/unit/<scenario>.test.ts`.
+Focused units use `npm run test -- tests/unit/<scenario>.test.ts`, preserving
+the repository's configuration and validation admission.
 Always use `./scripts/test-runner.sh` for server integration; never raw
 Vitest on `tests/integration/`. The runner owns one isolated Vitest worker and
 per-run artifacts, stops only its process tree and defaults to a 1200-second
@@ -136,7 +137,7 @@ the runner command; a nonempty `--` tail is rejected.
 ```
 
 Keep `pool: 'forks'`, `maxWorkers: 1`, `isolate: true`, `fileParallelism: false`,
-`sequence.concurrent: false` and `maxConcurrency: 1` in `vitest.config.ts`.
+`sequence.concurrent: false` and `maxConcurrency: 1` in `config/testing/vitest.ts` (selected explicitly by the package and integration runners).
 
 Code checks may overlap across different worktrees. Validation in the same
 checkout admits one gate, review or standalone harness at a time because builds

@@ -98,19 +98,17 @@ function liveInputHashes(root = ROOT) {
       'setup',
       'benchmarks',
       'scripts',
-      'tsconfig',
+      'config/app',
+      'config/server',
+      'config/typescript',
       'content',
       'docs/wiki-source-review.json',
       'public',
       'shared-types.ts',
       'server.ts',
       'index.css',
-      'astro.config.ts',
-      'svelte.config.js',
       'components.json',
-      'tsconfig.build.json',
       'tsconfig.json',
-      'tsconfig.benchmarks.json',
       'package.json',
       'package-lock.json',
       'tests/unit/network/snapshotFixture.ts',
@@ -148,14 +146,11 @@ function liveInputHashes(root = ROOT) {
     path.startsWith('scripts/') ||
     path.startsWith('tests/') ||
     path.startsWith('tsconfig') ||
-    [
-      'astro.config.ts',
-      'svelte.config.js',
-      'components.json',
-      'src/wiki/contentLoader.ts',
-      'package.json',
-      'package-lock.json',
-    ].includes(path);
+    path.startsWith('config/app/') ||
+    path.startsWith('config/typescript/') ||
+    ['components.json', 'src/wiki/contentLoader.ts', 'package.json', 'package-lock.json'].includes(
+      path
+    );
   return {
     sourceSha256: digest(paths),
     productSha256: digest(paths.filter((path) => !isHarness(path))),

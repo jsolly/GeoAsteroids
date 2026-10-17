@@ -1,4 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "include": ["benchmarks", "src/types/*.d.ts"]
-}
