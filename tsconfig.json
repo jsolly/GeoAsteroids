@@ -1,3 +1,16 @@
 {
-  "extends": "./config/typescript/project.json"
+  "extends": "./config/typescript/tsconfig.json",
+  "include": [
+    "src",
+    "tests",
+    "scripts",
+    "config/testing/vitest.ts",
+    "config/app/astro.ts",
+    "setup",
+    "server",
+    "server.ts",
+    "shared",
+    "shared-types.ts",
+    ".astro/types.d.ts"
+  ]
 }
