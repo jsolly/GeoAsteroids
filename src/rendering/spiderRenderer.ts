@@ -2,6 +2,7 @@ import { probePosition } from '../../shared/surveyProbe';
 import { SPIDER, spiderHash, spiderScale } from '../../shared/terrainSpider';
 import type { Position, TerrainSpider } from '../../shared-types';
 import { updateSpiderScore } from '../audio/spiderScore';
+import { clientPerformance } from '../diagnostics/performanceMetrics';
 import { drawSurveyProbe } from '../entities/roid/surveyProbeRenderer';
 import type { ContourLevel } from '../physics/terrain/contours';
 import { getSpiderField, spiderDanger } from '../physics/terrain/spiderSession';
@@ -206,6 +207,7 @@ export function drawTerrainSpiders(position: Position, playerId: string, alive: 
   const levels = getTerrainContours(position, radius + 32 / scale);
   ctx.save();
   canvasManager.applyWorldTransform(ctx, position);
+  let visibleSpiders = 0;
   for (const spider of field.spiders) {
     if (
       Math.hypot(position.x - spider.position.x, position.y - spider.position.y) <
@@ -214,11 +216,13 @@ export function drawTerrainSpiders(position: Position, playerId: string, alive: 
       if (spider.crawler) {
         continue;
       }
+      visibleSpiders++;
       drawInfestedContours(ctx, spider, time, scale, levels);
       drawSpider(ctx, spider, time, scale, levels);
     }
   }
   ctx.restore();
+  clientPerformance.recordVisibleSpiders(visibleSpiders);
   for (const spider of field.spiders) {
     if (spider.probe) {
       const screen = canvasManager.worldToScreen(probePosition(spider, spider.probe), position);

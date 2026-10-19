@@ -18,6 +18,7 @@ import {
   projectWorldToScreenInto,
 } from './playfieldCamera';
 import { configureRenderQuality } from './renderQuality';
+import { SCAN_SCENERY_MAX_PIXELS, ScanSceneryCache, scanSceneryMode } from './scanSceneryCache';
 
 /** Placement values only; the shell owns all surrounding DOM styles. */
 export interface PlayfieldGeometry {
@@ -66,10 +67,14 @@ class CanvasManager {
   private readonly viewport = { width: 1, height: 1 };
   private devicePixelRatio = 1;
   private zoom = 1;
+  private scanWideZoom = 1;
+  private sceneryPolicy: 'native' | 'cache' = 'native';
+  private sceneryCache = new ScanSceneryCache();
   private zoomUpdatedAt: number | null = null;
   private readonly screenViewport = { width: 1, height: 1 };
   private worldLayersZoomed = false;
   private gpuRenderer: GpuRearRenderer | null = null;
+  private gpuRequested = false;
   private gpuFrameActive = false;
   private inputMediaQueries: MediaQueryList[] = [];
 
@@ -85,9 +90,12 @@ class CanvasManager {
     if (!canvas) {
       throw new Error('The game canvas is missing.');
     }
+    this.sceneryPolicy = scanSceneryMode(window.location.search);
+    this.sceneryCache = new ScanSceneryCache();
     this.canvas = canvas;
     this.publishGeometry = publishGeometry;
     const gpuRequested = new URLSearchParams(window.location.search).get('renderer') === 'webgl2';
+    this.gpuRequested = gpuRequested;
     this.context = canvas.getContext('2d', { alpha: false });
     if (!this.context) {
       this.destroy();
@@ -200,6 +208,8 @@ class CanvasManager {
     }
     this.devicePixelRatio = dpr;
     clientPerformance.setGraphicsSettings({
+      scanScenery: this.sceneryPolicy,
+      scanSceneryMaxPixels: SCAN_SCENERY_MAX_PIXELS,
       deviceDpr,
       effectiveDpr: dpr,
       maxDpr: quality.maxDpr,
@@ -267,7 +277,12 @@ class CanvasManager {
     this.inputMediaQueries = [];
     clientPerformance.setRendererObservation('canvas', null);
     this.gpuRenderer?.destroy();
+    this.sceneryCache.dispose();
+    this.sceneryPolicy = 'native';
+    this.scanWideZoom = 1;
+    clientPerformance.setScanScene('flight');
     this.gpuRenderer = null;
+    this.gpuRequested = false;
     this.gpuFrameActive = false;
     this.canvas = null;
     this.context = null;
@@ -419,6 +434,48 @@ class CanvasManager {
     const blend = 1 - Math.exp(-Math.min(dtSeconds, 0.1) / seconds);
     const next = Math.exp(Math.log(this.zoom) + (Math.log(target) - Math.log(this.zoom)) * blend);
     this.zoom = Math.abs(next - target) < 0.002 ? target : next;
+    if (target < 1) {
+      this.scanWideZoom = target;
+    }
+    clientPerformance.setScanScene(
+      target < 1 ? (this.zoom === target ? 'wide' : 'enter') : this.zoom < 1 ? 'return' : 'flight'
+    );
+    if (this.zoom === 1) {
+      this.sceneryCache.reset();
+    }
+  }
+
+  /** Paint only a complete cached rear; false leaves the native rear responsible. */
+  drawScanScenery(position: Position): boolean {
+    if (this.sceneryPolicy !== 'cache' || this.zoom === 1) {
+      return false;
+    }
+    const ctx = this.requireContext();
+    const outcome = this.gpuRequested
+      ? ({ kind: 'fallback', reason: 'backend' } as const)
+      : this.sceneryCache.draw(ctx, position, {
+          screen: this.worldLayersZoomed ? this.screenViewport : this.viewport,
+          viewport: this.viewport,
+          zoom: this.zoom,
+          wideZoom: this.scanWideZoom,
+          dpr: this.devicePixelRatio,
+          scale: PLAYFIELD_CLOSE_SCALE,
+        });
+    clientPerformance.setSceneryFrame(outcome);
+    if (outcome.kind === 'cached') {
+      clientPerformance.count('scanSceneryHits');
+    } else if (outcome.kind === 'built') {
+      clientPerformance.count('scanSceneryMisses');
+      clientPerformance.count('scanSceneryBuilds');
+    } else if (outcome.kind === 'fallback') {
+      clientPerformance.count('scanSceneryMisses');
+      clientPerformance.count('scanSceneryFallbacks');
+    }
+    return outcome.kind === 'cached' || outcome.kind === 'built';
+  }
+
+  getScanSceneryStats() {
+    return this.sceneryCache.getStats();
   }
 
   /**

@@ -91,23 +91,33 @@ function drawWorldLayers(
   const localId = currPlayer.id;
   const viewport = canvasManager.getViewportSize();
 
-  const gpuContours = canvasManager.canDrawGpuRear()
-    ? visibleContourLayers(currShip.position)
-    : undefined;
-  const gpuDrawn =
-    gpuContours !== undefined &&
-    canvasManager.drawGpuRear({
-      position: currShip.position,
-      contours: gpuContours,
-      starTiles: visibleStarTiles(currShip.position),
-    }) &&
-    canvasManager.composeGpuRear(ctx);
-  if (!gpuDrawn) {
-    paintOpaqueBackground(ctx);
-    drawStarfield(currShip.position);
-    drawIsoContours(currShip.position);
-  } else if (gpuContours !== undefined && canvasManager.requiresNativeGpuContours()) {
-    canvasManager.recordNativeGpuContours(drawContourLayers(currShip.position, gpuContours));
+  if (!canvasManager.drawScanScenery(currShip.position)) {
+    const gpuContours = canvasManager.canDrawGpuRear()
+      ? visibleContourLayers(currShip.position, viewport, canvasManager.getPlayfieldScale())
+      : undefined;
+    const gpuDrawn =
+      gpuContours !== undefined &&
+      canvasManager.drawGpuRear({
+        position: currShip.position,
+        contours: gpuContours,
+        starTiles: visibleStarTiles(currShip.position, viewport, canvasManager.getPlayfieldScale()),
+      }) &&
+      canvasManager.composeGpuRear(ctx);
+    if (!gpuDrawn) {
+      paintOpaqueBackground(ctx);
+      drawStarfield(ctx, currShip.position, viewport, canvasManager.getPlayfieldScale());
+      drawIsoContours(ctx, currShip.position, viewport, canvasManager.getPlayfieldScale());
+    } else if (gpuContours !== undefined && canvasManager.requiresNativeGpuContours()) {
+      canvasManager.recordNativeGpuContours(
+        drawContourLayers(
+          ctx,
+          currShip.position,
+          viewport,
+          canvasManager.getPlayfieldScale(),
+          gpuContours
+        )
+      );
+    }
   }
   if (!currShip.exploding && currShip.health > 0 && !currShip.furnaceTransit) {
     drawContourTrack(currShip.position, currShip.angle, currShip.contourLock);
