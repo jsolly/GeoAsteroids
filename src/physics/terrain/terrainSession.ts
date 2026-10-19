@@ -222,3 +222,15 @@ export function peekBuiltContourPatch(
   const region = contourRegionFor(center, viewRadius);
   return contourPatches.get(regionKey(region))?.levels;
 }
+
+/** Read complete built geometry and its coverage without extracting or prefetching. */
+export function peekBuiltContourRegion(center: Position, viewRadius: number) {
+  const current = syncContourCache();
+  if (fieldRadiusIsSmallEnoughForFullContours(current.field)) {
+    const bounds = current.contourRegion;
+    return bounds ? { levels: current.contours, bounds } : undefined;
+  }
+  const bounds = contourRegionFor(center, viewRadius);
+  const patch = contourPatches.get(regionKey(bounds));
+  return patch ? { levels: patch.levels, bounds } : undefined;
+}

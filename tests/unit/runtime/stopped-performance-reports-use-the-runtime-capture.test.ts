@@ -8,7 +8,9 @@ import type { GamePresentation } from '../../../src/runtime/uiTypes';
 import { installPhoneRecordingStorage } from '../../support/phoneRecordingStorage';
 
 // Set the real feature flag before the metrics singleton and runtime are imported.
-vi.hoisted(() => window.history.replaceState(null, '', '/debug?performance=collect'));
+vi.hoisted(() =>
+  window.history.replaceState(null, '', '/debug?performance=collect&scanScenery=cache')
+);
 
 // Logging transport is external to the runtime and recorder under test.
 vi.mock('../../../src/utils/logForwarder', () => ({
@@ -75,12 +77,28 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   await vi.advanceTimersByTimeAsync(0);
   expect(views.at(-1)?.phone?.phase).toBe('recording');
   clientPerformance.setPhase('play');
-  clientPerformance.record('frameIntervalMs', 16);
+  clientPerformance.recordFrameInterval(16, 16);
+  clientPerformance.setScanScene('enter');
+  clientPerformance.setSceneryFrame({ kind: 'built', cause: 'cold' });
+  clientPerformance.recordVisibleSpiders(2);
+  clientPerformance.recordFrameWork(1, 10, 11);
   clientPerformance.recordRendererFrame('canvas');
   await vi.advanceTimersByTimeAsync(1000);
-  clientPerformance.record('frameIntervalMs', 40);
+  clientPerformance.recordFrameInterval(40, 56);
+  clientPerformance.setScanScene('wide');
+  clientPerformance.setSceneryFrame({ kind: 'cached' });
+  clientPerformance.recordVisibleSpiders(3);
+  clientPerformance.recordFrameWork(1, 4, 5);
   clientPerformance.recordRendererFrame('canvas');
   await vi.advanceTimersByTimeAsync(1000);
+  clientPerformance.recordFrameInterval(30, 86);
+  clientPerformance.setScanScene('return');
+  clientPerformance.setSceneryFrame({ kind: 'built', cause: 'pan' });
+  clientPerformance.recordVisibleSpiders(1);
+  clientPerformance.recordFrameWork(1, 6, 7);
+  clientPerformance.recordRendererFrame('canvas');
+  await vi.advanceTimersByTimeAsync(1000);
+  clientPerformance.recordFrameInterval(50, 136);
   runtime.commands.stopPhoneCollection();
   expect(views.at(-1)?.phone?.phase).toBe('stopped');
   const captured = runtime.commands.captureDiagnostics();
@@ -95,13 +113,64 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   expect(wire).not.toContain(nameCanary);
   expect(wire).not.toContain(tokenCanary);
   const parsed = parseDebugReportSubmission(JSON.parse(wire));
+  expect(parsed.diagnostics.state['graphics']).toMatchObject({
+    scanScenery: 'cache',
+    sceneryCache: { scope: 'canvas-lifetime', ownedPixels: 0, peakOwnedPixels: 0, sourceRadius: 0 },
+  });
   expect(parsed.diagnostics.state['metrics']).toMatchObject({
     performance: {
       complete: true,
       stopped: true,
       device: 'KFTUWI *',
       conditions: 'Token canary [redacted]',
-      metrics: { 'play.frameIntervalMs': { count: 2, sum: 56, p95: 40, p99: 40 } },
+      provenance: {
+        graphics: { scanScenery: 'cache', scanSceneryMaxPixels: 8_000_000 },
+      },
+      metrics: {
+        'play.frameIntervalMs': { count: 4, sum: 136, p95: 50, p99: 50 },
+        'play.scanFrameIntervalMs': { count: 3, sum: 120 },
+        'play.scanEnterFrameIntervalMs': {
+          count: 1,
+          sum: 40,
+          framesPerSecond: 25,
+        },
+        'play.scanWideFrameIntervalMs': { count: 1, sum: 30 },
+        'play.scanReturnFrameIntervalMs': {
+          count: 1,
+          sum: 50,
+          framesPerSecond: 20,
+        },
+      },
+      slowFrameContext: {
+        availability: 'complete',
+        observedSlowIntervals: 3,
+        values: [
+          {
+            intervalMs: 50,
+            previousFrame: {
+              stage: 'return',
+              scenery: { kind: 'built', cause: 'pan' },
+              visibleSpiders: 1,
+            },
+          },
+          {
+            intervalMs: 40,
+            previousFrame: {
+              stage: 'enter',
+              scenery: { kind: 'built', cause: 'cold' },
+              visibleSpiders: 2,
+            },
+          },
+          {
+            intervalMs: 30,
+            previousFrame: {
+              stage: 'wide',
+              scenery: { kind: 'cached' },
+              visibleSpiders: 3,
+            },
+          },
+        ],
+      },
     },
   });
 });

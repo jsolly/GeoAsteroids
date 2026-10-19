@@ -557,7 +557,12 @@ test('terrain and contour laser renderers emit finite muted strokes at runtime',
   try {
     configureRenderQuality('', false);
     ensureTerrain(TERRAIN.DEFAULT_SEED, { cx: 0, cy: 0, radius: 3100 });
-    drawIsoContours({ x: -303, y: 337 });
+    drawIsoContours(
+      ctx,
+      { x: -303, y: 337 },
+      canvasManager.getViewportSize(),
+      canvasManager.getPlayfieldScale()
+    );
     expect(strokes.some((path) => path.points.length > 0)).toBe(true);
     expect(
       strokes

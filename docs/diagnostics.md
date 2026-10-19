@@ -338,3 +338,44 @@ contour strokes. Measure repeated primitives, state changes and text work before
 adding caches or layers. Preserve smooth vector motion and the existing visual
 style; image-coordinate rounding advice does not justify quantizing ship or
 asteroid simulation coordinates.
+
+## Compare cached Scan scenery
+
+The Canvas renderer has an opt-in scenery-cache prototype. Open
+`/debug?performance=collect&scanScenery=cache` to collect it, and use
+`scanScenery=native` with the same collection, DPR, glow and orientation as the
+control. Outside performance mode the parameter has no effect. The default
+renderer stays native. A requested WebGL2 backend bypasses this Canvas prototype,
+even when GPU initialization fails and the existing renderer falls back to Canvas.
+
+The prototype reuses only the background, stars and neutral contours through the
+wide Mineral Scan. Moving ships, spiders, rocks, shots, controls, labels and radar
+stay live. Static stars and thin contour lines can look softer or change pixel
+coverage while the cached image scales; gameplay coordinates and glow settings
+are unchanged. Inspect contour navigation and hazard readability before treating
+this as an acceptable device preset.
+
+One active buffer and one temporary replacement share an 8-million-pixel limit,
+approximately 32 MB of RGBA before browser overhead. Each backing dimension is
+limited to 4096. A missing terrain source, coverage gap, limit or drawing failure
+uses the complete existing renderer. Allocation and painting failures disable the
+cache for that projection until resize, DPR, terrain or scan-session invalidation;
+source misses can recover once the existing renderer has built the needed patch.
+The first cold scan can still pay existing contour extraction and a measured
+raster build. A requested cache mode is not evidence that frames used it.
+
+Compare scan entry, stable wide view and return separately. Cache hits, builds,
+misses and native fallback counts describe the actual rendering path; build
+latency includes selection, allocation and paint. Scan-conditioned frame
+intervals describe the preceding completed scene, while conditioned CPU work
+describes the scene just rendered. These observations do not prove GPU
+presentation or identify a complete event timeline. Physical-device frame cadence
+and live steering/firing remain required for performance acceptance.
+
+Copied diagnostics include `graphics.sceneryCache`: current and peak owned backing
+pixels plus the last source-patch radius, scoped to the canvas lifetime. These
+changing observations are separate from the recording's fixed graphics settings.
+Stopped phone reports retain the 16 largest recorded intervals over 25 ms across
+all chunks, with the preceding completed frame's Scan stage, scenery path, visible
+spider count and CPU work. The report includes the total number of slow intervals;
+the retained examples are neither a complete event timeline nor causal attribution.

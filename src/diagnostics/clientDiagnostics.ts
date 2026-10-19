@@ -45,7 +45,14 @@ export function captureClientDiagnostics(): DebugDiagnosticSnapshot {
           effectiveDpr: canvas.width / viewport.width,
         }
       : null,
-    graphics: { maxDpr: graphics['maxDpr'], glow: graphics['glow'], source: graphics['source'] },
+    graphics: {
+      maxDpr: graphics['maxDpr'],
+      glow: graphics['glow'],
+      source: graphics['source'],
+      scanScenery: graphics['scanScenery'],
+      scanSceneryMaxPixels: graphics['scanSceneryMaxPixels'],
+      sceneryCache: { scope: 'canvas-lifetime', ...canvasManager.getScanSceneryStats() },
+    },
     audio: { ...readAudioDiagnostics(), ...readMusicDiagnostics() },
     metrics: readDebugHudMetrics(performance.now()),
     connected: network.isConnected,

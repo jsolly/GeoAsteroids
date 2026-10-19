@@ -310,6 +310,134 @@ test('a report summarizes the stopped measured session across chunks without war
   expect(recovered.readDiagnostics()).toMatchObject({ complete: true, recovered: true });
 });
 
+test('recorded scan chunks retain the global worst intervals and keep cache activity out of provenance', async () => {
+  storage();
+  const metrics = new ClientPerformanceMetrics(true);
+  metrics.setPhase('play');
+  metrics.setGraphicsSettings({ scanScenery: 'cache', scanSceneryMaxPixels: 8_000_000 });
+  const subject = collector(metrics);
+  await subject.start('KFTUWI', 'Scan scenery comparison');
+  metrics.setScanScene('enter');
+  metrics.setSceneryFrame({ kind: 'built', cause: 'cold' });
+  metrics.recordVisibleSpiders(2);
+  metrics.count('scanSceneryMisses');
+  metrics.count('scanSceneryBuilds');
+  metrics.recordFrameWork(1, 9, 10);
+  metrics.recordFrameInterval(400, 400);
+  await vi.advanceTimersByTimeAsync(1000);
+  metrics.setScanScene('wide');
+  metrics.setSceneryFrame({ kind: 'cached' });
+  metrics.recordVisibleSpiders(3);
+  metrics.recordFrameWork(2, 3, 5);
+  for (let interval = 30; interval < 50; interval++) {
+    metrics.count('scanSceneryHits');
+    metrics.recordFrameInterval(interval, 1000 + interval);
+  }
+  metrics.setScanScene('return');
+  metrics.setSceneryFrame({ kind: 'built', cause: 'pan' });
+  metrics.recordVisibleSpiders(1);
+  metrics.count('scanSceneryMisses');
+  metrics.count('scanSceneryBuilds');
+  metrics.recordFrameWork(1, 6, 7);
+  for (let interval = 50; interval < 70; interval++) {
+    metrics.recordFrameInterval(interval, 1000 + interval);
+  }
+  await vi.advanceTimersByTimeAsync(1000);
+  subject.stop();
+  const summary = subject.readDiagnostics();
+  expect(summary).toMatchObject({
+    complete: true,
+    incompleteReasons: [],
+    provenance: { graphics: { scanScenery: 'cache', scanSceneryMaxPixels: 8_000_000 } },
+    counters: { scanSceneryHits: 20, scanSceneryMisses: 2, scanSceneryBuilds: 2 },
+    metrics: {
+      'play.frameIntervalMs': { count: 41, sum: 2380, max: 400, p95: 68, p99: 400 },
+      'play.scanFrameIntervalMs': { count: 41, sum: 2380, framesPerSecond: 41000 / 2380 },
+      'play.scanEnterFrameIntervalMs': { count: 1, sum: 400, framesPerSecond: 2.5 },
+      'play.scanWideFrameIntervalMs': { count: 20, sum: 790, p50: 39, p95: 48 },
+      'play.scanReturnFrameIntervalMs': { count: 20, sum: 1190, p50: 59, p95: 68 },
+    },
+    slowFrameContext: {
+      availability: 'complete',
+      chunksWithContext: 3,
+      observedSlowIntervals: 41,
+      selectionLimit: 16,
+    },
+  });
+  const witnesses = summary['slowFrameContext'];
+  expect(witnesses).toMatchObject({
+    values: [
+      {
+        atMs: 400,
+        intervalMs: 400,
+        previousFrame: {
+          stage: 'enter',
+          scenery: { kind: 'built', cause: 'cold' },
+          visibleSpiders: 2,
+          updateMs: 1,
+          renderMs: 9,
+          frameCpuMs: 10,
+        },
+      },
+      ...Array.from({ length: 15 }, (_, index) => ({
+        atMs: 1069 - index,
+        intervalMs: 69 - index,
+        previousFrame: {
+          stage: 'return',
+          scenery: { kind: 'built', cause: 'pan' },
+          visibleSpiders: 1,
+          updateMs: 1,
+          renderMs: 6,
+          frameCpuMs: 7,
+        },
+      })),
+    ],
+  });
+  const raw = await artifact(subject);
+  expect(
+    raw.content.samples.map(
+      (sample: ReturnType<ClientPerformanceMetrics['read']>) => sample.slowFrames.observedCount
+    )
+  ).toEqual([1, 40, 0]);
+  const recovered = collector();
+  await recovered.recover();
+  expect(recovered.readDiagnostics()['slowFrameContext']).toEqual(witnesses);
+});
+
+test('legacy raw chunks remain complete metric evidence without claiming slow-frame context', async () => {
+  const saved = storage();
+  const metrics = new ClientPerformanceMetrics(true);
+  metrics.setPhase('play');
+  const subject = collector(metrics);
+  await subject.start('Phone', 'Legacy recording');
+  metrics.recordFrameInterval(40, 40);
+  subject.stop();
+  await artifact(subject);
+  const id = saved.rows.get('latest');
+  const serialized = saved.rows.get(`${id}:0`);
+  if (typeof serialized !== 'string') {
+    throw new Error('Missing persisted sample');
+  }
+  const sample: Record<string, unknown> = JSON.parse(serialized);
+  delete sample['slowFrames'];
+  saved.rows.set(`${id}:0`, JSON.stringify(sample));
+  const recovered = collector();
+  await recovered.recover();
+  expect(recovered.readDiagnostics()).toMatchObject({
+    complete: true,
+    recovered: true,
+    metrics: { 'play.frameIntervalMs': { count: 1, sum: 40, p95: 40 } },
+    slowFrameContext: {
+      availability: 'unavailable',
+      chunksWithContext: 0,
+      observedSlowIntervals: 0,
+      selectionLimit: 16,
+      values: [],
+    },
+  });
+  expect((await artifact(recovered)).content.samples).toEqual([sample]);
+});
+
 test('reports with unfinished, interrupted, or truncated recordings never claim complete percentiles', async () => {
   storage();
   const metrics = new ClientPerformanceMetrics(true);
@@ -354,33 +482,49 @@ test('reports with unfinished, interrupted, or truncated recordings never claim 
   });
 });
 
-test('a corrupt recovered summary fails safely while its local artifact remains available', async () => {
-  const saved = storage();
-  const metrics = new ClientPerformanceMetrics(true);
-  metrics.setPhase('play');
-  const subject = collector(metrics);
-  await subject.start('Phone', 'Corrupt persisted data');
-  metrics.record('frameIntervalMs', 16);
-  subject.stop();
-  await artifact(subject);
-  const id = saved.rows.get('latest');
-  saved.rows.set(`${id}:0`, JSON.stringify({ metrics: {}, counters: {}, durationMs: 0 }));
-  const recovered = collector();
-  await recovered.recover();
-  expect(recovered.readDiagnostics()).toMatchObject({
-    complete: false,
-    incompleteReasons: ['Performance summary unavailable; recording remains local'],
-  });
-  expect(await recovered.download()).not.toBeNull();
-});
+test.each(['missing metadata', 'scan stage', 'build cause', 'selection'])(
+  'a persisted sample with malformed %s fails its summary while its local artifact remains available',
+  async (malformed) => {
+    const saved = storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    const subject = collector(metrics);
+    await subject.start('Phone', 'Corrupt persisted data');
+    metrics.setScanScene('enter');
+    metrics.setSceneryFrame({ kind: 'built', cause: 'cold' });
+    metrics.recordFrameWork(1, 3, 4);
+    metrics.recordFrameInterval(40, 40);
+    subject.stop();
+    const original = await artifact(subject);
+    const sample = original.content.samples[0];
+    if (malformed === 'missing metadata') {
+      delete sample.phaseDurationsMs;
+    } else if (malformed === 'scan stage') {
+      sample.slowFrames.values[0].previousFrame.stage = 'teleport';
+    } else if (malformed === 'build cause') {
+      sample.slowFrames.values[0].previousFrame.scenery.cause = 'cache-hit';
+    } else {
+      sample.slowFrames.values.pop();
+    }
+    const id = saved.rows.get('latest');
+    saved.rows.set(`${id}:0`, JSON.stringify(sample));
+    const recovered = collector();
+    await recovered.recover();
+    expect(recovered.readDiagnostics()).toMatchObject({
+      complete: false,
+      incompleteReasons: ['Performance summary unavailable; recording remains local'],
+    });
+    expect((await artifact(recovered)).content.samples).toEqual([sample]);
+  }
+);
 
-test.each(['graphics', 'renderer', 'server release'])(
+test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
   'changing %s between real recording chunks preserves counts but invalidates percentiles',
   async (changed) => {
     storage();
     const metrics = new ClientPerformanceMetrics(true);
     metrics.setPhase('play');
-    metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'full' });
+    metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'full', scanScenery: 'native' });
     let serverRelease = 'server-before';
     metrics.observeServerRelease(() => serverRelease);
     const subject = collector(metrics);
@@ -389,7 +533,9 @@ test.each(['graphics', 'renderer', 'server release'])(
     metrics.recordRendererFrame('canvas');
     await vi.advanceTimersByTimeAsync(1000);
     if (changed === 'graphics') {
-      metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'off' });
+      metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'off', scanScenery: 'native' });
+    } else if (changed === 'scan scenery') {
+      metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'full', scanScenery: 'cache' });
     } else if (changed === 'renderer') {
       metrics.setRendererObservation('webgl2', () => ({ backend: 'webgl2', gpuStats: null }));
     } else {

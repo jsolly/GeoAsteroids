@@ -18,11 +18,28 @@ type Aggregate = {
 };
 const PHASES = ['menu', 'play', 'respawn', 'hidden'];
 const COUNTER_NAME = /^[a-zA-Z]{1,64}$/u;
-const METRICS = new Set([
+const FRAME_INTERVAL_METRICS = new Set([
   'frameIntervalMs',
+  'scanFrameIntervalMs',
+  'flightFrameIntervalMs',
+  'scanEnterFrameIntervalMs',
+  'scanWideFrameIntervalMs',
+  'scanReturnFrameIntervalMs',
+  'unclassifiedFrameIntervalMs',
+]);
+const METRICS = new Set([
+  ...FRAME_INTERVAL_METRICS,
   'updateMs',
   'renderMs',
   'frameCpuMs',
+  'scanUpdateMs',
+  'scanRenderMs',
+  'scanFrameCpuMs',
+  'scanParseMs',
+  'scanKeyframeDecodeMs',
+  'scanDeltaDecodeMs',
+  'scanApplyMs',
+  'scanSceneryBuildMs',
   'inputToRenderMs',
   'rttMs',
   'messageGapMs',
@@ -43,6 +60,21 @@ const GRAPHICS_KEYS = [
   'cssHeight',
   'backingWidth',
   'backingHeight',
+  'scanScenery',
+  'scanSceneryMaxPixels',
+];
+const SLOW_FRAME_LIMIT = 16;
+const SCENERY_FALLBACK_REASONS = [
+  'source',
+  'coverage',
+  'pixel-limit',
+  'dimension-limit',
+  'allocation',
+  'paint',
+  'composite',
+  'unsupported',
+  'backend',
+  'disabled',
 ];
 
 function object(value: unknown): Record<string, unknown> {
@@ -93,6 +125,57 @@ function text(value: unknown, limit: number): string {
   return value.slice(0, limit);
 }
 
+function sceneryFrame(value: unknown): Record<string, DebugJsonValue> {
+  const row = object(value);
+  const kind = row['kind'];
+  if (kind === 'native' || kind === 'cached') {
+    return { kind };
+  }
+  if (kind === 'built' && (row['cause'] === 'cold' || row['cause'] === 'pan')) {
+    return { kind, cause: row['cause'] };
+  }
+  if (
+    kind === 'fallback' &&
+    typeof row['reason'] === 'string' &&
+    SCENERY_FALLBACK_REASONS.includes(row['reason'])
+  ) {
+    return { kind, reason: row['reason'] };
+  }
+  throw new Error('Invalid scenery frame');
+}
+
+function previousFrame(value: unknown) {
+  if (value === null) {
+    return null;
+  }
+  const row = object(value);
+  const stage = row['stage'];
+  if (stage !== 'flight' && stage !== 'enter' && stage !== 'wide' && stage !== 'return') {
+    throw new Error('Invalid scan stage');
+  }
+  return {
+    stage,
+    scenery: sceneryFrame(row['scenery']),
+    visibleSpiders: count(row['visibleSpiders']),
+    updateMs: number(row['updateMs']),
+    renderMs: number(row['renderMs']),
+    frameCpuMs: number(row['frameCpuMs']),
+  };
+}
+
+function slowFrame(value: unknown) {
+  const row = object(value);
+  const intervalMs = number(row['intervalMs']);
+  if (intervalMs <= 25) {
+    throw new Error('Invalid slow-frame interval');
+  }
+  return {
+    atMs: number(row['atMs']),
+    intervalMs,
+    previousFrame: previousFrame(row['previousFrame']),
+  };
+}
+
 /** Reads existing chunks only when a report opens. Recording and raw exports stay untouched. */
 export function summarizePhoneRecording(recording: Recording): Record<string, DebugJsonValue> {
   const reasons = new Set<string>();
@@ -112,6 +195,9 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
   let provenance: Record<string, DebugJsonValue> | null = null;
   let provenanceKey = '';
   const rendererFrames = { canvas: 0, webgl2: 0 };
+  const slowFrames: ReturnType<typeof slowFrame>[] = [];
+  let slowFrameChunks = 0;
+  let observedSlowIntervals = 0;
   for (const serialized of recording.samples) {
     const sample = object(JSON.parse(serialized));
     durationMs += number(sample['durationMs']);
@@ -123,6 +209,27 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
     const frames = object(renderer['frames']);
     rendererFrames.canvas = count(rendererFrames.canvas + count(frames['canvas']));
     rendererFrames.webgl2 = count(rendererFrames.webgl2 + count(frames['webgl2']));
+    if (sample['slowFrames'] !== undefined) {
+      const context = object(sample['slowFrames']);
+      const observed = count(context['observedCount']);
+      const values = context['values'];
+      if (
+        context['limit'] !== SLOW_FRAME_LIMIT ||
+        !Array.isArray(values) ||
+        values.length !== Math.min(observed, SLOW_FRAME_LIMIT)
+      ) {
+        throw new Error('Invalid slow-frame selection');
+      }
+      slowFrameChunks++;
+      observedSlowIntervals = count(observedSlowIntervals + observed);
+      for (const value of values) {
+        slowFrames.push(slowFrame(value));
+        slowFrames.sort(
+          (left, right) => right.intervalMs - left.intervalMs || left.atMs - right.atMs
+        );
+        slowFrames.length = Math.min(SLOW_FRAME_LIMIT, slowFrames.length);
+      }
+    }
     const current = {
       clientReleaseId: text(sample['clientReleaseId'], 128),
       serverReleaseId: text(sample['serverReleaseId'], 128),
@@ -217,7 +324,7 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
       over25Ms: complete ? sorted.filter((value) => value > 25).length : null,
       over33Ms: count(aggregate.over33Ms),
       framesPerSecond:
-        key.endsWith('.frameIntervalMs') && aggregate.sum > 0
+        FRAME_INTERVAL_METRICS.has(key.substring(key.indexOf('.') + 1)) && aggregate.sum > 0
           ? number((1000 * aggregate.count) / aggregate.sum)
           : null,
     };
@@ -258,6 +365,20 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
     provenance,
     rendererFrames,
     counters,
+    slowFrameContext: {
+      availability:
+        slowFrameChunks === 0
+          ? 'unavailable'
+          : slowFrameChunks === recording.samples.length
+            ? 'complete'
+            : 'partial',
+      chunksWithContext: slowFrameChunks,
+      observedSlowIntervals,
+      selectionLimit: SLOW_FRAME_LIMIT,
+      selection:
+        'Largest recorded intervals over 25 ms; CPU, scan stage, scenery and spiders belong to the preceding completed render. This is not a complete event timeline or GPU timing.',
+      values: slowFrames,
+    },
     metrics,
     rawSamples: 'Retained locally; this report contains summaries only',
   };
