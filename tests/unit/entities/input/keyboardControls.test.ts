@@ -62,39 +62,42 @@ test('KeyE preserves the joined Scout when the title menu has a stale Hauler sel
   publishHarpoonField([{ id: 'rock-1', position: { x: 80, y: 0 }, velocity: { x: 0, y: 0 } }]);
   expect(player.ship.kitId).toBe('scout');
   const health = player.ship.health;
-  const speed = player.ship.maxVelocity;
   press('KeyE');
   expect(player.ship.kitId).toBe('scout');
   expect(player.ship.health).toBe(health);
-  expect(player.ship.maxVelocity).toBe(speed);
   expect(player.ship.harpoonTargetId).toBeNull();
 });
 
-test('a cargo pilot hovers on a furnace, steering releases that visit and an empty hold resumes cruise', () => {
-  player.cargo = 400;
-  player.ship.position = { x: 0, y: 0 };
-  player.ship.velocity = { x: 3, y: 1 };
-  reconcilePlayerInput(player);
-  player.ship.update();
-  expect(player.ship.cargoHover).toBe(true);
-  expect(player.ship.velocity).toEqual({ x: 0, y: 0 });
-  expect(player.ship.thrusting).toBe(false);
-  press('ArrowLeft');
-  expect(player.ship.cargoHover).toBe(false);
-  expect(player.ship.thrusting).toBe(true);
-  release('ArrowLeft');
-  reconcilePlayerInput(player);
-  expect(player.ship.cargoHover).toBe(false);
-  player.ship.position = { x: 200, y: 0 };
-  reconcilePlayerInput(player);
-  player.ship.position = { x: 0, y: 0 };
-  reconcilePlayerInput(player);
-  expect(player.ship.cargoHover).toBe(true);
-  player.cargo = 0;
-  reconcilePlayerInput(player);
-  expect(player.ship.cargoHover).toBe(false);
-  expect(player.ship.thrusting).toBe(true);
-});
+test.each(['scout', 'hauler'] as const)(
+  'a loaded high-mass %s stops at a furnace until steering or unloading',
+  (kitId) => {
+    player = new Player({ id: 'carrier', name: 'Carrier', type: 'local', kitId });
+    player.ship.mass = 8;
+    player.cargo = 400;
+    player.ship.position = { x: 0, y: 0 };
+    player.ship.velocity = { x: 3, y: 1 };
+    reconcilePlayerInput(player);
+    player.ship.update();
+    expect(player.ship.cargoHover).toBe(true);
+    expect(player.ship.velocity).toEqual({ x: 0, y: 0 });
+    expect(player.ship.thrusting).toBe(false);
+    press('ArrowLeft');
+    expect(player.ship.cargoHover).toBe(false);
+    expect(player.ship.thrusting).toBe(true);
+    release('ArrowLeft');
+    reconcilePlayerInput(player);
+    expect(player.ship.cargoHover).toBe(false);
+    player.ship.position = { x: 200, y: 0 };
+    reconcilePlayerInput(player);
+    player.ship.position = { x: 0, y: 0 };
+    reconcilePlayerInput(player);
+    expect(player.ship.cargoHover).toBe(true);
+    player.cargo = 0;
+    reconcilePlayerInput(player);
+    expect(player.ship.cargoHover).toBe(false);
+    expect(player.ship.thrusting).toBe(true);
+  }
+);
 
 test.each(['scout', 'hauler'] as const)(
   '%s catches the furnace rim despite its approach heading and releases on fresh steering',
@@ -185,4 +188,16 @@ test('a dead pilot cannot restart thrust, turn, or fire', () => {
   expect(shoot).not.toHaveBeenCalled();
   expect(player.ship.angularVelocity).toBe(0);
   expect(player.ship.thrusting).toBe(false);
+});
+
+test.each(['scout', 'hauler'] as const)('a %s turns at the same 540-degree pace', (kitId) => {
+  player = new Player({ id: 'turner', name: 'Turner', type: 'local', kitId });
+  player.ship.mass = 8;
+  player.ship.position = { x: 2000, y: 0 };
+  player.ship.angle = 0;
+  press('ArrowLeft');
+  player.ship.update();
+  expect(player.ship.angle).toBeCloseTo(TURN, 10);
+  release('ArrowLeft');
+  expect(player.ship.angularVelocity).toBe(0);
 });

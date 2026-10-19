@@ -5,7 +5,6 @@ import {
   canReachContour,
   contourLockVelocity,
 } from '../../../shared/contourLock';
-import { cargoCapacity } from '../../../shared/economy';
 import { onDarkFurnaceFootprint } from '../../../shared/furnaceField';
 import { furnaceTravelPose } from '../../../shared/furnaceTravel';
 import { navigationCaptureRadius } from '../../../shared/navigationSalvage';
@@ -19,12 +18,10 @@ import {
   tickAbilityHost,
   tickTowLine,
 } from '../../../shared/shipAbilities';
-import { cruiseSpeed } from '../../../shared/shipFlight';
-import { GROWTH, thrustScaleFromMass } from '../../../shared/shipGrowth';
+import { GROWTH } from '../../../shared/shipGrowth';
 import {
   applyShipKitToShip,
   DEFAULT_SHIP_KIT_ID,
-  getShipKit,
   hullRadiusForKit,
   SHIP_ABILITY,
 } from '../../../shared/shipKits';
@@ -165,9 +162,6 @@ class Ship {
   crewSignal: CrewSignal | null = null;
   isLocalPlayer: boolean = false; // Track if this is the local player
   kitId: ShipKitId = DEFAULT_SHIP_KIT_ID;
-  thrust: number = SHIP.THRUST;
-  maxVelocity: number = SHIP.MAX_VELOCITY;
-  turnSpeed: number = getShipKit(DEFAULT_SHIP_KIT_ID).turnSpeed;
   abilityCooldownFrames: number = 0;
   abilityActiveFrames: number = 0;
 
@@ -294,7 +288,7 @@ class Ship {
     }
     this.contourLock = null;
     this.contourLockInputVersion++;
-    const speed = cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId));
+    const speed = SHIP.MAX_VELOCITY;
     if (this.knockbackVelocityLimit <= speed) {
       const target = terrainCruiseVelocity(this.position, this.angle, speed);
       this.capVelocity(Math.hypot(target.x, target.y));
@@ -308,8 +302,7 @@ class Ship {
       !this.exploding &&
       this.health > 0 &&
       !this.movementLocked &&
-      this.knockbackVelocityLimit <=
-        cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId)) &&
+      this.knockbackVelocityLimit <= SHIP.MAX_VELOCITY &&
       findContourCapture(
         this.position,
         this.angle,
@@ -350,9 +343,9 @@ class Ship {
     ) {
       return false;
     }
-    const cruise = cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId));
+    const cruise = SHIP.MAX_VELOCITY;
 
-    const acceleration = (this.thrust * thrustScaleFromMass(this.mass)) / GAME.FPS;
+    const acceleration = SHIP.THRUST / GAME.FPS;
     if (
       !capture ||
       !canReachContour(
@@ -376,11 +369,7 @@ class Ship {
   }
 
   private acquireContour(capture: ContourLockState): boolean {
-    const target = contourLockVelocity(
-      this.position,
-      capture,
-      cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId))
-    );
+    const target = contourLockVelocity(this.position, capture, SHIP.MAX_VELOCITY);
     if (!target) {
       return false;
     }
@@ -587,7 +576,7 @@ class Ship {
     this.navigationAssistFrames = Math.max(0, this.navigationAssistFrames - 1);
     this.contourDraftFrames = Math.max(0, this.contourDraftFrames - 1);
     this.angle += this.angularVelocity;
-    const speed = cruiseSpeed(this.mass, this.maxVelocity, this.cargo, cargoCapacity(this.kitId));
+    const speed = SHIP.MAX_VELOCITY;
     if (this.knockbackVelocityLimit > speed) {
       this.releaseContourLock();
     }
@@ -597,7 +586,7 @@ class Ship {
         this.contourLock,
         speed * contourDraftMultiplier(this.contourDraftFrames),
         Math.hypot(this.velocity.x, this.velocity.y),
-        (this.thrust * thrustScaleFromMass(this.mass)) / GAME.FPS
+        SHIP.THRUST / GAME.FPS
       );
       if (target) {
         this.velocity = target;
@@ -621,8 +610,6 @@ class Ship {
         this.angle,
         this.thrusting,
         this.frictionCoefficient,
-        this.thrust,
-        this.mass,
         velocityLimit
       );
     }

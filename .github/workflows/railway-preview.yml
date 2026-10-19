@@ -1,6 +1,7 @@
 ---
-# Opt-in full-stack Preview: an owner or member comments `/preview` on a same-repo
-# pull request, or the repository owner dispatches this workflow with a PR number.
+# Opt-in full-stack Preview: an owner, member or collaborator with repository write
+# access comments `/preview` on a same-repo pull request, or the repository owner
+# dispatches this workflow with a PR number.
 # The PR head is uploaded to the single Railway `preview` environment, whose game
 # server also serves the built client (GEOROIDS_PREVIEW_CLIENT=1), so one URL runs
 # client and server from the same commit against a disposable world. Last request
@@ -50,7 +51,8 @@ jobs:
         contains(github.event.comment.body, '/preview') &&
         (
           github.event.comment.author_association == 'OWNER' ||
-          github.event.comment.author_association == 'MEMBER'
+          github.event.comment.author_association == 'MEMBER' ||
+          github.event.comment.author_association == 'COLLABORATOR'
         )
       )
       )
@@ -62,6 +64,7 @@ jobs:
     env:
       EVENT_NAME: ${{ github.event_name }}
       COMMENT_BODY: ${{ github.event.comment.body }}
+      COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       DISPATCH_PR: ${{ inputs.pr_number }}
     steps:
@@ -95,6 +98,19 @@ jobs:
             exit 1
           fi
           echo "pr_number=${pr_number}" >>"$GITHUB_OUTPUT"
+
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            if [[ ! "$COMMENT_AUTHOR" =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ ]]; then
+              fail "Preview request rejected: invalid comment author."
+            fi
+            # Association alone does not prove write access. GitHub maps maintain to write.
+            permission="$(gh api --method GET "repos/${REPO}/collaborators/${COMMENT_AUTHOR}/permission" --jq '.permission')" \
+              || fail "Preview request rejected: the comment author's repository permission could not be verified (${RUN_URL})."
+            case "$permission" in
+              write|admin) ;;
+              *) fail "Preview request rejected: the comment author needs repository write access." ;;
+            esac
+          fi
 
           pr_json="$(gh api "repos/${REPO}/pulls/${pr_number}")" \
             || fail "Preview request rejected: #${pr_number} could not be read as a pull request (${RUN_URL})."

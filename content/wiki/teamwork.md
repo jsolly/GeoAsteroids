@@ -44,7 +44,7 @@ Everyone shares settlement progress. Reaching the next level requires deposited 
 
 ## Escort carriers
 
-A loaded carrier moves more slowly and draws nearby spiders. Escort the carrier and clear its route to a lit furnace.
+A loaded carrier draws nearby spiders. Escort the carrier and clear its route to a lit furnace.
 
 ## Crew signals and rescue
 

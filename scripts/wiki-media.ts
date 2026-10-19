@@ -55,7 +55,7 @@ import {
   tickAbilityHost,
   tickTowLine,
 } from '../shared/shipAbilities';
-import { cruiseSpeed, cruiseVelocity } from '../shared/shipFlight';
+import { cruiseVelocity } from '../shared/shipFlight';
 import { GROWTH, lootOverlap } from '../shared/shipGrowth';
 import { getShipKit, hullRadiusForKit } from '../shared/shipKits';
 import { SnapshotDecoder } from '../shared/snapshotProtocol';
@@ -884,8 +884,6 @@ function makeMovementDemo(): Demo {
     position: { x: -500, y: 160 },
     velocity: { x: 0, y: 0 },
     angle: 0,
-    mass: 1,
-    thrust: SHIP.THRUST,
   };
   const positions: Position[] = [copyPosition(state.position)];
   const speeds: number[] = [0];
@@ -896,10 +894,10 @@ function makeMovementDemo(): Demo {
       state.angle += steeringTurn(
         state.angle,
         Math.PI / 6,
-        (getShipKit('scout').turnSpeed * Math.PI) / (180 * GAME.FPS)
+        (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS)
       );
     }
-    advanceCruiseVelocity(state, cruiseSpeed(1, SHIP.MAX_VELOCITY, 0, 1));
+    advanceCruiseVelocity(state, SHIP.MAX_VELOCITY);
     state.position.x += state.velocity.x;
     state.position.y += state.velocity.y;
     if ((tick + 1) % SIM_TICKS_PER_FRAME === 0) {
@@ -958,7 +956,7 @@ function makeMovementDemo(): Demo {
 
 const TERRAIN_LOCK_START_FRAME = 14;
 const TERRAIN_CROSSING_START_FRAME = 30;
-const TERRAIN_TURN_PER_TICK = (getShipKit('scout').turnSpeed * Math.PI) / (180 * GAME.FPS);
+const TERRAIN_TURN_PER_TICK = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
 
 /** Nose angle whose cruiseVelocity (canvas y-down) points along `(dirX, dirY)`. */
 function headingForDirection(dirX: number, dirY: number): number {
@@ -1004,7 +1002,7 @@ function makeTerrainDemo(): Demo {
     throw new Error('wiki-media verification failed: terrain field has no steep contour');
   }
   const contours = extractIsoContours(field);
-  const cruise = cruiseSpeed(1, SHIP.MAX_VELOCITY, 0, 1);
+  const cruise = SHIP.MAX_VELOCITY;
   const initialGradient = sampleGradient(field, start.x, start.y);
   const state = new Ship({ kitId: 'scout', position: copyPosition(start) });
   state.angle = headingAlongContour(initialGradient.x, initialGradient.y, 0);

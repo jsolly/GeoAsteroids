@@ -45,7 +45,7 @@ test('CI preserves four mandatory lanes and failure propagation', () => {
       undefined,
       `${name} must start without waiting for another lane`
     );
-    assert.ok(ci.jobs[name]['timeout-minutes'] <= 4);
+    assert.equal(ci.jobs[name]['timeout-minutes'], name === 'static-checks' ? 6 : 4);
     // The committed Wiki media baseline belongs to linux-x64; every other lane runs on arm64.
     assert.equal(
       ci.jobs[name]['runs-on'],
@@ -312,7 +312,10 @@ test('CI preserves four mandatory lanes and failure propagation', () => {
   assert.match(previewResolve.if, /github\.event\.comment\.user\.type == 'User'/u);
   assert.match(previewResolve.if, /author_association == 'OWNER'/u);
   assert.match(previewResolve.if, /author_association == 'MEMBER'/u);
-  assert.doesNotMatch(previewResolve.if, /COLLABORATOR|CONTRIBUTOR/u);
+  assert.match(previewResolve.if, /author_association == 'COLLABORATOR'/u);
+  assert.doesNotMatch(previewResolve.if, /CONTRIBUTOR/u);
+  assert.equal(previewResolve.env.COMMENT_AUTHOR, `\${{ github.event.comment.user.login }}`);
+  assert.doesNotMatch(previewResolve.steps[1].run, /\$\{\{/u);
   assert.equal(previewResolve.environment, undefined);
   assert.doesNotMatch(JSON.stringify(previewResolve), /secrets\./u);
   assert.deepEqual(
@@ -399,8 +402,18 @@ const log = value => fs.appendFileSync(process.env.FIXTURE_CALLS, JSON.stringify
 if (command === 'gh') {
   if (args[0] === 'api') {
     log({ command, args });
-    if (process.env.FIXTURE_API_FAIL === '1') process.exit(1);
-    process.stdout.write(process.env.FIXTURE_PR);
+    if (args[1] === '--method') {
+      if (JSON.stringify(args) !== JSON.stringify(['api', '--method', 'GET',
+          'repos/jsolly/GeoRoids/collaborators/solly-agent/permission', '--jq', '.permission']))
+        throw new Error('Unexpected permission lookup');
+      if (process.env.FIXTURE_PERMISSION_FAIL === '1') process.exit(1);
+      process.stdout.write(process.env.FIXTURE_PERMISSION);
+    } else {
+      if (JSON.stringify(args) !== JSON.stringify(['api', 'repos/jsolly/GeoRoids/pulls/814']))
+        throw new Error('Unexpected PR lookup');
+      if (process.env.FIXTURE_API_FAIL === '1') process.exit(1);
+      process.stdout.write(process.env.FIXTURE_PR);
+    }
   } else if (args[0] === 'pr' && args[1] === 'comment') log({ command, args });
   else throw new Error('Unexpected gh invocation');
 } else if (command === 'jq') {
@@ -458,6 +471,11 @@ if (command === 'gh') {
       for (const path of [bin, temporary, join(workspace, 'public'), join(workspace, '.railway')]) {
         mkdirSync(path, { recursive: true });
       }
+      mkdirSync(join(workspace, 'scripts'));
+      writeFileSync(
+        join(workspace, 'scripts/vercel-preview-comment.sh'),
+        read('scripts/vercel-preview-comment.sh')
+      );
       writeFileSync(join(workspace, '.railway/production.txt'), 'must not upload');
       if (overrides.symlink === true) {
         symlinkSync(join(temporary, 'outside'), join(workspace, 'link'));
@@ -477,7 +495,7 @@ if (command === 'gh') {
       const pr = {
         state: overrides.closed === true ? 'closed' : 'open',
         head: {
-          sha: requestedSha,
+          sha: overrides.badHead === true ? 'main' : requestedSha,
           ref: 'codex/preview-test',
           repo: { full_name: overrides.fork === true ? 'other/GeoRoids' : 'jsolly/GeoRoids' },
         },
@@ -494,7 +512,10 @@ if (command === 'gh') {
         RAILWAY_TOKEN: 'fixture',
         REPO: 'jsolly/GeoRoids',
         RUN_URL: 'https://github.com/jsolly/GeoRoids/actions/runs/1',
-        EVENT_NAME: 'workflow_dispatch',
+        EVENT_NAME: overrides.comment === undefined ? 'workflow_dispatch' : 'issue_comment',
+        COMMENT_BODY: overrides.comment ?? '',
+        COMMENT_AUTHOR: overrides.author ?? 'solly-agent',
+        ISSUE_NUMBER: '814',
         DISPATCH_PR: '814',
         RUNNER_TEMP: temporary,
         GITHUB_WORKSPACE: workspace,
@@ -510,6 +531,8 @@ if (command === 'gh') {
         FIXTURE_CHECKOUT_SHA: overrides.mismatch === true ? 'b'.repeat(40) : requestedSha,
         FIXTURE_SERVED_SHA: overrides.stale === true ? 'c'.repeat(40) : requestedSha,
         FIXTURE_API_FAIL: overrides.apiFailure === true ? '1' : '0',
+        FIXTURE_PERMISSION: overrides.permission ?? 'write',
+        FIXTURE_PERMISSION_FAIL: overrides.permissionFailure === true ? '1' : '0',
         FIXTURE_UPLOAD_FAIL: overrides.uploadFailure === true ? '1' : '0',
         FIXTURE_HEALTH_FAIL: overrides.healthFailure === true ? '1' : '0',
         FIXTURE_HTML_FAIL: overrides.htmlFailure === true ? '1' : '0',
@@ -546,7 +569,7 @@ if (command === 'gh') {
         .split('\n')
         .filter(Boolean)
         .map((line) => JSON.parse(line));
-      return { resolve, deploy, calls, workspace, temporary };
+      return { resolve, resolved, deploy, calls, workspace, temporary };
     };
     for (const [name, options, uploads] of [
       ['unreadable-pr', { apiFailure: true }, 0],
@@ -575,6 +598,48 @@ if (command === 'gh') {
         /^Preview for /u,
         `${name}: never report success`
       );
+    }
+    for (const permission of ['write', 'admin']) {
+      const result = runPreview(`comment-${permission}`, { comment: '/preview', permission });
+      assert.equal(result.resolve.status, 0, result.resolve.stderr);
+      assert.equal(result.deploy?.status, 0, result.deploy?.stderr);
+      assert.equal(
+        result.calls[0].args[3],
+        'repos/jsolly/GeoRoids/collaborators/solly-agent/permission'
+      );
+      assert.equal(result.calls[1].args[1], 'repos/jsolly/GeoRoids/pulls/814');
+    }
+    for (const [name, options] of [
+      ...['read', 'triage', 'none', '', 'null', '{"permission":"write"}', 'write\nadmin'].map(
+        (permission, index) => [`denied-permission-${index}`, { permission }]
+      ),
+      ['permission-api-error', { permissionFailure: true }],
+      ['invalid-author', { author: '../solly-agent' }],
+      ['comment-fork', { fork: true }],
+      ['comment-closed', { closed: true }],
+      ['comment-bad-head', { badHead: true }],
+    ]) {
+      const result = runPreview(name, { comment: '/preview', ...options });
+      assert.notEqual(result.resolve.status, 0, `${name} must reject`);
+      assert.equal(result.resolved.skip, undefined, `${name} must not authorize deployment`);
+      assert.equal(result.resolved.head_sha, undefined, `${name} must not release a head`);
+      assert.equal(result.deploy, undefined, `${name} must not start the secret-bearing job`);
+      assert.equal(
+        result.calls.some((call) => call.command === 'npm'),
+        false
+      );
+    }
+    for (const [index, comment] of [
+      'please /preview',
+      '/preview now',
+      '/preview-extra',
+      'quoted\n/preview',
+    ].entries()) {
+      const result = runPreview(`non-request-${index}`, { comment });
+      assert.equal(result.resolve.status, 0, result.resolve.stderr);
+      assert.equal(result.resolved.skip, 'true');
+      assert.equal(result.deploy, undefined);
+      assert.deepEqual(result.calls, [], 'non-requests must not reach GitHub or Railway');
     }
     const success = runPreview('matching-deployment');
     assert.equal(success.deploy.status, 0, success.deploy.stderr);
