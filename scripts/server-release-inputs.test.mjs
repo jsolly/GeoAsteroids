@@ -4,8 +4,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
-import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 import { requiresServerDeployment, serverReleaseInputs } from './server-release-inputs.mjs';
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -53,12 +53,14 @@ test('shared modules and manifests require a server release; client sources do n
     mkdirSync(join(cwd, 'shared'));
     write('package.json', '{"private":true}');
     write('astro.config.mjs', 'export default {};');
+    // Retired owners model historical diffs; the current native owner is checked too.
     write('tsconfig.json', '{"extends":"./config/typescript/project.json"}');
     write(
       'config/typescript/project.json',
       '{"extends":"./strict-tsc.json","compilerOptions":{"module":"ESNext","moduleResolution":"bundler"}}'
     );
     write('config/typescript/strict-tsc.json', '{}');
+    write('config/typescript/tsconfig.json', '{}');
     write('config/typescript/build.json', '{"extends":"./project.json"}');
     write('config/app/astro.ts', 'export default {};');
     write('config/app/svelte.js', 'export default {};');
@@ -96,6 +98,7 @@ test('shared modules and manifests require a server release; client sources do n
     let previous = config;
     for (const path of [
       'config/typescript/project.json',
+      'config/typescript/tsconfig.json',
       'config/typescript/build.json',
       'config/typescript/strict-tsc.json',
       'config/app/astro.ts',

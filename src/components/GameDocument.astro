@@ -1,6 +1,8 @@
 ---
 import '../styles/theme.css';
 import '../../index.css';
+import Context7Note from './Context7Note.astro';
+import Context7Verification from './Context7Verification.astro';
 import GameShell from './game/GameShell.svelte';
 
 interface Props {
@@ -42,8 +44,10 @@ const { noindex = false } = Astro.props;
       content="A Scout flying through space in the GeoRoids movement demonstration."
     />
     <meta name="twitter:card" content="summary_large_image" />
+    <Context7Verification />
   </head>
   <body>
+    <Context7Note />
     <GameShell client:load />
   </body>
 </html>

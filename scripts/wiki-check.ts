@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import process from 'node:process';
@@ -7,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { listShipKits } from '../shared/shipKits';
 import { media } from '../src/wiki/media';
 import { readWikiArticles } from './wiki-content';
+import { wikiSourceDigest } from './wiki-source-digest';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const articles = readWikiArticles(root);
@@ -120,19 +120,15 @@ const sourcePaths = new Set([
     .flatMap(files)
     .filter((path) => /\.(ts|svelte|astro|css)$/u.test(path)),
   'index.css',
-  'astro.config.ts',
-  'astro.config.mjs',
-  'svelte.config.js',
   'src/content.config.ts',
   'src/env.d.ts',
   'components.json',
-  'prettier.config.js',
   'config/quality/prettier.json',
   'config/app/astro.ts',
   'config/app/svelte.js',
   'config/typescript/frontend.json',
-  'config/typescript/project.json',
-  'config/typescript/strict-tsc.json',
+  'config/typescript/tsconfig.json',
+  'tsconfig.json',
   'tsconfig.frontend.json',
   'middleware.ts',
   'package.json',
@@ -140,6 +136,7 @@ const sourcePaths = new Set([
   'scripts/client-build.ts',
   'scripts/client-release-sha.ts',
   'scripts/wiki-content.ts',
+  'scripts/wiki-source-digest.ts',
   'scripts/wiki-satellite-demo.ts',
   'shared-types.ts',
   'server/configuration.ts',
@@ -155,9 +152,7 @@ const sourcePaths = new Set([
 const hashes: Record<string, string> = {};
 for (const path of [...sourcePaths].sort()) {
   if (existsSync(resolve(root, path))) {
-    hashes[path] = `sha256:${createHash('sha256')
-      .update(readFileSync(resolve(root, path)))
-      .digest('hex')}`;
+    hashes[path] = wikiSourceDigest(path, readFileSync(resolve(root, path)));
   }
 }
 // Parse every selector before touching the accepted review. Old note/hash baselines
@@ -326,7 +321,7 @@ if (accepting) {
       [
         resolve(root, 'node_modules/@biomejs/biome/bin/biome'),
         'format',
-        `--config-path=${root}`,
+        `--config-path=${resolve(root, 'config/quality/biome.settings.jsonc')}`,
         '--vcs-enabled=false',
         '--stdin-file-path=docs/wiki-source-review.json',
       ],

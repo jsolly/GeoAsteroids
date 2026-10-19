@@ -36,6 +36,20 @@ Reports appear as tasks in **jsolly/GeoRoids → Debug reports**. Submission doe
 not start an agent or authorize repairs. Ask an agent to "Review GeoRoids debug
 reports" and state whether to investigate or implement fixes.
 
+## Record a device performance session
+
+Open `/debug?performance=collect` and enter the game. In **Performance collection**,
+fill in the device and test conditions, warm up before choosing **Start**, then
+play the planned route with the same graphics settings and workload. Choose
+**Stop** before opening **Report a problem** and sending a description that names
+the run and settings.
+
+The report includes a bounded timing summary of that collection, including its
+sample counts and completeness. **Download** retains the full recording for
+further analysis; starting another collection replaces the saved session, so
+download it first. An incomplete collection cannot establish a performance result.
+Reports from ordinary sessions do not include a collection summary.
+
 ## Review reports as an agent
 
 1. Find the **Debug reports** section in Todoist project `6hWp83X3jfHJpW8v`.

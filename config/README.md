@@ -1,58 +1,81 @@
 # Configuration
 
-Relocatable tracked settings have one repository-owned home under `config/<domain>/`:
+Move optional top-level tracked settings into `config/<domain>/` or their owner;
+keep existing nested configuration with its component. Test configuration may live
+under `tests/`. Give each setting one repository-owned home.
 
-- `app/astro.ts` and `app/svelte.js` own framework/build settings. Native
-  `astro.config.ts` and `svelte.config.js` delegate. Astro's helper import is
-  explicitly rebased; roots, proxy routes, asset retention and the native
-  development restart target remain unchanged.
+- `app/astro.ts` and `app/svelte.js` own framework/build settings. Package,
+  development, integration and benchmark commands select the owners explicitly.
+  Astro and Vitest select the same Svelte configuration by an absolute module-relative
+  path. Astro's watch registration reloads its full container when the config changes
+  or the Wiki refresh watcher signals that owner.
 - `app/.env.example` is the non-secret development/benchmark template. Runners
-  copy it to native `.env.local` only when that file is missing. Existing local
-  environment settings, databases and platform secrets stay with their owners.
-- `server/debug-reports.json` owns static debug-report routing. The server's import,
-  release classifier and benchmark product fingerprint follow it; routing values
-  and external services are unchanged.
-- `typescript/` owns the project, build, frontend, benchmark, unused-code and
-  strict configurations. Includes/files and inheritance paths are rebased.
-  Native root `tsconfig*.json` adapters preserve tool discovery and commands.
-- `testing/vitest.ts` owns projects, environment conditions, artifact-session
-  cache selection, coverage and worker isolation. Native `vitest.config.ts`
-  delegates; unit, component and integration discovery remain intact.
-- `quality/biome.settings.jsonc` owns rules and root-scoped overrides. Native
-  `biome.jsonc` extends it; the non-discovery filename avoids a nested project.
-  The severity audit parses the owner and inventories the native root policy.
-- `quality/prettier.json` owns Astro/Svelte plugins and formatting overrides.
-  Native `prettier.config.js` imports it for ordinary CLI/editor discovery.
-- `quality/knip.js` owns unused-code settings. Native `knip.config.js` delegates;
-  framework analysis explicitly includes native entries and settings modules.
-- `quality/yamllint.yaml` and `quality/.markdownlint-cli2.jsonc` are selected
-  explicitly by the YAML command and root-anchored Markdown helper.
+  create native `.env.local` only when missing. Existing local environment settings,
+  databases and platform secrets stay with their owners.
+- `server/debug-reports.json` owns debug-report routing. Server imports, release
+  classification and benchmark product fingerprints follow that owner.
+- `typescript/tsconfig.json` owns compiler policy, with empty `files` and `include`
+  so it does not independently select inputs during native discovery. Root
+  `tsconfig.json` owns the original explicit project membership; Vite, TSX and
+  the server release graph discover it natively. Keep generic config siblings,
+  compiler-policy descendants, benchmarks and `dist/` outside that root scope.
+  Removing the ineffective root `.railway` include preserves the existing selected
+  TypeScript inputs; Railway definitions keep their native owner.
+  Nested build, frontend, benchmark and unused-code owners retain their own input
+  lists and inherit this policy. Package commands select them explicitly.
+  Root `tsconfig.frontend.json` remains a minimal adapter: its directory preserves
+  the pinned Svelte checker's workspace and explicit Svelte-owner scope. Moving
+  it into `config/typescript/` would omit preprocessing for `src/`; moving it into
+  `src/` narrows the existing repository-wide scope. `--workspace .` does not
+  override that selected-config directory. No duplicate compiler settings remain.
+- `testing/vitest.ts` owns the existing projects, roots, conditions, per-session
+  caches, coverage and worker isolation. Package and integration runners select it.
+  `config/testing/tooling.ts` owns isolated Node tooling projects;
+  `config/testing/pytest.ini` owns Python hook-test discovery and strict options.
+- `quality/biome.settings.jsonc` owns the full root-scoped Biome policy. CLI checks,
+  the severity inventory and atomic Wiki review formatting select that same file.
+- `quality/prettier.json` owns Astro/Svelte plugins and basename formatting
+  overrides. The formatting command selects it explicitly. `quality/knip.js`
+  selects the actual framework/testing/quality owners and retains Svelte's Vite globs.
+- `quality/yamllint.yaml` and `quality/.markdownlint-cli2.jsonc` are selected by
+  the existing YAML command and root-anchored Markdown helper.
+- `agents/repository.json` owns hook identity and the trusted file inventory.
+  The authenticated upgrade procedure is in [development](../docs/development.md#hook-trust).
 
 Required native exceptions remain: package manifests and lockfiles, `.npmrc`,
 `.nvmrc`, `.mise.toml`, Git files, `.worktreeinclude`, `.github/`, native agent
-registrations, `.repo-independent.json`, the delegation files above,
-`components.json`, `.pages.yml`, `src/content.config.ts` and `vercel.json`.
-The Railway infrastructure definition stays in `.railway/`; this migration
-neither applies infrastructure nor changes production persistence or previews.
-Executable helpers, gameplay/application data, Wiki provenance and media
-baselines, fixtures, public assets and helper dependency manifests keep their owners.
-Unused VS Code launch setup is retired; no VS Code wiring is required.
+registrations, the two TypeScript adapters above, `components.json`, `.pages.yml`,
+`src/content.config.ts` and `vercel.json`. Each has an active native consumer.
+Railway infrastructure definitions stay in `.railway/`. Application/setup code,
+executable helpers, gameplay data, Wiki provenance/media, fixtures and public
+assets retain their owners. No VS Code setup or editor extension is required.
 
-Release classification includes authoritative server/build settings, while
-retaining native historical paths when inspecting older commit diffs. The server
-module graph still rejects client imports. Wiki source review and benchmark
-fingerprints include moved owners; old review batches remain historical evidence.
-Configuration changes cannot bypass either contract or the four required CI lanes.
+The unused-export helper creates actual default-export consumers in its existing
+disposable frontend entry. Canonical Astro/Vitest modules remain analyzed;
+arbitrary named exports are never exempted by listing entire modules in `files`.
+Generic inherited tool entries keep their existing contract.
 
-Create only used domains. Preserve effective roots, selected inputs, scopes,
-imports, plugins, caches and outputs. Compare resolved TypeScript/Astro/Vitest and
-native Prettier behavior; check actual Biome scope and Knip dependency discovery,
-then run the full repository gate and CI. CI's linux-x64 Wiki media verification
-remains required; a macOS baseline is never accepted in its place. No gameplay
-rule, control or Wiki article behavior is changed by this relocation.
+Validation sessions own both Vite's cache and Vitest's enabled module cache.
+`test.fsModuleCachePath` follows the issued session so a cold test run cannot
+change the installed dependency inventory. The existing gate cache contract runs
+all three real Vitest projects in a cold fixture and preserves native defaults
+when no session was issued.
 
-After merge, verify the intended Vercel production deployment, classify server
-release inputs from the actual base/merge SHAs, verify any required Railway Git
-release, and follow its exact-release production smoke. This does not authorize
-an automatic Preview or a production infrastructure apply. No external checkout,
-home links, shared runtime package, generator or automatic synchronization is needed.
+Historical root paths remain in the server release classifier when old commit
+diffs require them. Current benchmark and Wiki inventories use the actual owners;
+older review batches and benchmark measurements remain historical evidence.
+Configuration moves cannot bypass source review, the server/client import boundary,
+the complete local gate or any of the four required CI lanes. The Wiki media lane
+must pass on linux-x64; a macOS run cannot replace it.
+
+Compare effective roots, inputs, formatting, plugins, test scopes and actual build
+artifacts before merging. Use both the TypeScript 6 API and selected TypeScript 7
+CLI, plus actual Vite/Rolldown per-file resolution and output. The existing
+`scripts/typescript-toolchain.test.mjs` checks native policy, scoped inputs and
+nearer overrides in an isolated fixture. It covers cold discovery; acceptance
+also changes and restores the physical compiler-policy and Astro owners while
+serving the same module with native caches. Initial startup alone proves no reload. Verify the intended Vercel release, classify server inputs
+from the actual base/merge SHAs, verify any required Railway Git release, then follow
+the exact-release production smoke. This authorizes no Preview, unrelated staged
+Railway patch or infrastructure apply. No private checkout, home link, shared runtime,
+generator or automatic synchronization is required.

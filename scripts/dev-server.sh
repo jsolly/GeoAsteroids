@@ -380,7 +380,7 @@ start() {
             --prefix-colors "blue.bold,green.bold" \
             --prefix "[{name}]" \
             --names "astro,network" \
-            "astro dev --ignore-lock --port $DEV_VITE_PORT" \
+            "astro dev --config config/app/astro.ts --ignore-lock --port $DEV_VITE_PORT" \
             "tsx --env-file=.env.local server.ts"
     ) &
     DEV_PID=$!

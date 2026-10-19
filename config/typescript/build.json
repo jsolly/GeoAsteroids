@@ -1,5 +1,5 @@
 {
-  "extends": "./project.json",
+  "extends": "./tsconfig.json",
   "include": [
     "../../src",
     "../../server",
@@ -7,7 +7,7 @@
     "../../setup",
     "../../shared",
     "../../shared-types.ts",
-    "../../astro.config.ts",
+    "../app/astro.ts",
     "../../.astro/types.d.ts"
   ]
 }

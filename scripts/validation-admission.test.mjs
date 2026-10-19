@@ -13,9 +13,9 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
 const helper = fileURLToPath(new URL('./validation-admission.mjs', import.meta.url));
 const childScript = `
@@ -104,7 +104,7 @@ function fixture(t) {
   const common = join(root, '.git');
   const wrappers = [];
   const workers = [];
-  t.after(async () => {
+  t.onTestFinished(async () => {
     for (const worker of workers) {
       if (existsSync(worker)) {
         const owned = JSON.parse(readFileSync(worker, 'utf8'));
@@ -1022,7 +1022,7 @@ for (const failure of ['error', 'permission', 'malformed']) {
     a.finish();
     assert.equal((await a.child.completed).code, 0, a.child.output);
     assertReleased(f, [a]);
-    t.diagnostic(b.child.output);
+    console.info(b.child.output);
   });
 }
 

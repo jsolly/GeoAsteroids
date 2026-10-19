@@ -1,6 +1,17 @@
 {
-  "extends": "./strict-tsc.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "include": [],
   "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true,
@@ -20,19 +31,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
-  },
-  "include": [
-    "../../.railway",
-    "../../src",
-    "../../tests",
-    "../../scripts",
-    "../../vitest.config.ts",
-    "../../astro.config.ts",
-    "../../setup",
-    "../../server",
-    "../../server.ts",
-    "../../shared",
-    "../../shared-types.ts",
-    "../../.astro/types.d.ts"
-  ]
+  }
 }

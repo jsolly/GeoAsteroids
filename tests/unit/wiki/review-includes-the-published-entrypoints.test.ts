@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import {
   cpSync,
   existsSync,
@@ -14,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { expect, test } from 'vitest';
+import { wikiSourceDigest } from '../../../scripts/wiki-source-digest';
 
 const WIKI_INDEX_ENTRYPOINT_PATTERN = /src\/pages\/wiki\.astro/u;
 const NEW_GAME_RULE_PATH_PATTERN = /src\/entities\/new-game-rule\.ts/u;
@@ -37,7 +37,6 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
     cpSync('src', join(fixture, 'src'), { recursive: true });
     cpSync('content', join(fixture, 'content'), { recursive: true });
     cpSync('public/wiki', join(fixture, 'public/wiki'), { recursive: true });
-    cpSync('biome.jsonc', join(fixture, 'biome.jsonc'));
     mkdirSync(join(fixture, 'config/quality'), { recursive: true });
     cpSync(
       'config/quality/biome.settings.jsonc',
@@ -54,12 +53,7 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
     const hashes = Object.fromEntries(
       Object.keys(baseline.hashes)
         .filter((path) => existsSync(join(fixture, path)))
-        .map((path) => [
-          path,
-          `sha256:${createHash('sha256')
-            .update(readFileSync(join(fixture, path)))
-            .digest('hex')}`,
-        ])
+        .map((path) => [path, wikiSourceDigest(path, readFileSync(join(fixture, path)))])
     );
     const reviewPath = join(fixture, 'docs/wiki-source-review.json');
     writeFileSync(
@@ -117,6 +111,7 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       [
         resolve(root, 'node_modules/@biomejs/biome/bin/biome'),
         'check',
+        `--config-path=${join(fixture, 'config/quality/biome.settings.jsonc')}`,
         '--vcs-enabled=false',
         '--error-on-warnings',
         reviewPath,
@@ -124,7 +119,7 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       { cwd: fixture, stdio: 'pipe' }
     );
     const beforeFormatterFailure = readFileSync(reviewPath, 'utf8');
-    const formatterConfig = join(fixture, 'biome.jsonc');
+    const formatterConfig = join(fixture, 'config/quality/biome.settings.jsonc');
     const originalConfig = readFileSync(formatterConfig);
     try {
       writeFileSync(formatterConfig, '{ invalid formatter config');
@@ -232,11 +227,12 @@ test('a changed wiki entrypoint or newly added game rule requires a new document
       'src/components/wiki/ReviewFixture.svelte',
       'src/pages/review-fixture.astro',
       'src/styles/review-fixture.css',
-      'astro.config.ts',
       'config/app/astro.ts',
       'config/app/svelte.js',
       'config/quality/prettier.json',
       'config/typescript/frontend.json',
+      'config/typescript/tsconfig.json',
+      'tsconfig.json',
       'scripts/client-build.ts',
     ]) {
       const target = join(fixture, path);

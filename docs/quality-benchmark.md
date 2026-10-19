@@ -35,10 +35,11 @@ deleted. Declarations used within their defining modules remain.
 
 ts-prune's 71 unique results comprised 70 unconsumed type/interface export keywords
 and the `vitest.browser.config.ts` default export. The 70 export keywords have now
-been removed, preserving the live supporting types. The gate declares Vite and
-Vitest configuration modules as tool entry points in `tsconfig.prune.json`, so their
-required default exports are not falsely reported. There is no findings baseline,
-ignore pattern, or source suppression.
+been removed, preserving the live supporting types. The current gate selects
+`config/typescript/prune.jsonc`. Its disposable frontend entry imports the canonical
+Astro and Vitest default exports. Those required exports remain consumed while
+unused named exports still fail. There is no findings baseline, ignore pattern,
+or source suppression.
 
 The first comparison used ts-prune's original ts-morph 13 parser. It reported 163
 symbols and took a median 1.798 seconds, versus Knip's 0.413 seconds. Of the 98
@@ -48,7 +49,9 @@ The remaining results were the same 70 supporting type exports and one tool entr
 
 The override keeps ts-prune's analyzer while supplying a parser that understands
 `satisfies` and bundler module resolution. ts-morph 28 uses TypeScript 6.0; the
-measured application used TypeScript 5.9. The application now pins TypeScript 6.0.3, the same major as ts-morph 28's TypeScript 6.0; the parser override remains separately pinned. The installed CLI contract tests exercise
+measured application used TypeScript 5.9. The application uses TypeScript 6's API for
+frameworks and selects TypeScript 7's CLI through `scripts/typescript-cli.mjs`.
+The parser override remains separately pinned. The installed CLI contract tests exercise
 namespace imports and `satisfies`, then prove that adding an unused export causes
 each tool to exit with an error. This is a repository-tested dependency override,
 not an upstream ts-prune release. [ts-morph release notes](https://github.com/dsherret/ts-morph/releases/tag/28.0.0)

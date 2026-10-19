@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
-import { test } from 'node:test';
+import { test } from 'vitest';
 import unusedConfig from '../config/quality/knip.js';
 import { checkUnusedTypescript, frontendEntry } from './check-unused-typescript.mjs';
 
@@ -24,7 +24,6 @@ test('frontend imports and inherited tool entries preserve exact TypeScript expo
   try {
     mkdirSync(join(root, 'src'));
     mkdirSync(join(root, 'config/typescript'), { recursive: true });
-    write('tsconfig.prune.json', JSON.stringify({ extends: './config/typescript/prune.json' }));
     write(
       'config/typescript/base.json',
       JSON.stringify({
@@ -32,10 +31,10 @@ test('frontend imports and inherited tool entries preserve exact TypeScript expo
       })
     );
     write(
-      'config/typescript/prune.json',
+      'config/typescript/prune.jsonc',
       JSON.stringify({
         extends: './base.json',
-        include: ['../../src/**/*.ts'],
+        include: ['../../src/**/*.ts', '../../config/app/**/*.ts', '../../config/testing/**/*.ts'],
         files: ['../../tool.config.ts'],
       })
     );
@@ -71,6 +70,17 @@ test('frontend imports and inherited tool entries preserve exact TypeScript expo
     fails('orphanConfig');
     write('src/content.config.ts', 'export const collections = {};');
     passes();
+    mkdirSync(join(root, 'config/app'));
+    mkdirSync(join(root, 'config/testing'));
+    write('config/app/astro.ts', 'export default {}; export const orphanAstro = 1;');
+    write('config/testing/vitest.ts', 'export default {};');
+    fails('orphanAstro');
+    write('config/app/astro.ts', 'export default {};');
+    passes();
+    write('config/testing/vitest.ts', 'export default {}; export const orphanVitest = 1;');
+    fails('orphanVitest');
+    write('config/testing/vitest.ts', 'export default {};');
+    passes();
     write('src/values.ts', `${live} export const mentionedOnly = 1;`);
     write(
       'src/Comment.svelte',
@@ -79,7 +89,7 @@ test('frontend imports and inherited tool entries preserve exact TypeScript expo
     fails('mentionedOnly');
     assert.equal(frontendEntry(root).includes('mentionedOnly'), false);
     write(
-      'tsconfig.prune.json',
+      'config/typescript/prune.jsonc',
       JSON.stringify({ compilerOptions: { noUnusedLocals: false }, include: ['src/**/*.ts'] })
     );
     assert.throws(() => checkUnusedTypescript(root), /requires noUnusedLocals/u);

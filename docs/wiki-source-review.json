@@ -1,13 +1,12 @@
 {
   "note": "Scoped PR 5 review of exactly 35 changed sources: 31 Node-only browser test annotations, controlled spatial-audio admission/evidence, test log-path isolation, sharded test commands, and test Vite cache isolation. Reviewed the 11 linked topics and unchanged demonstration rules/assets; desktop and touch Wiki browser scenario passed on main 26dec1c9. Gameplay controls and rules are unchanged. All other accepted source hashes are retained. Subsequent scoped review of only the tow-bite browser fixture: finite admission protection and atomic live placement/release retain keyboard/touch latching, lethal bites and peer broadcasts. Hauler, terrain and combat-survival text and unchanged illustrations match actual current-health lethal damage; all four browser scenarios and 32 unit cases pass. The prior desktop/touch Wiki evidence remains applicable because no Wiki UI or asset changed. Final tow-preservation correction supersedes the earlier insufficient owner-bite proof: exactly two reviewed source hashes cover explicit test-only current-session/unique-owner validation and preserved captive placement. Normal motion, controls, terrain, HUD/network, Scout, teamwork, Hauler and survival rules and illustrations are unchanged. Final 35 unit cases and all four keyboard/touch browser scenarios pass with exact captive release receipts; prior desktop/touch Wiki UI proof remains applicable. No other hashes are accepted. Subsequent scoped review accepts only the regeneration server test hash after a Node environment directive; its test body and gameplay rule are unchanged. The entire server category passed 10 files/26 cases. Survival recovery text and illustrations remain accurate; all 466 other hashes are retained. Subsequent scoped knip 6.35.1 to 6.38.0 dev-tool review: only package.json source hash changes; no gameplay rules, wiki content, runtime imports, demonstration generators, GIFs or posters change. Existing unused-code gates remain strict.",
   "hashes": {
-    "astro.config.ts": "sha256:9ce5b438fc4a0e56809b5c02265d234df6f49cbfa8a6d7fa5c94bbeaf95522c3",
     "components.json": "sha256:d0937034ab85db4f61325c777c23bbc891a79126f09c5f13beb5187a0ff99c79",
-    "docs/diagnostics.md": "sha256:99148fdd86afade2138b3748a3d6d59f88249e83ad8a368ece0e1b99e275f412",
-    "docs/protocol/snapshot-v3.md": "sha256:2425524552ccba918805914510591327178fbea73e69e6ec5dbbefeab28b7d7d",
+    "docs/diagnostics.md": "sha256:efe92c5bf3b87e75c9d6e2621faef8a318708d8fc99cb0617f51b297779c1037",
+    "docs/protocol/snapshot-v3.md": "sha256:466d9bf94b7f001cb0d4750a418685f547806a39b328f7fda2b9d23a8f6b9bc6",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
     "index.css": "sha256:6f758f11ca56b4b312836cc3d3330633e8d904de918be510d7498cba00abbb4c",
-    "package.json": "sha256:e9861226c62748f5a2d8394801ee30f37578006563b5e85ac262217a3b4d111b",
+    "package.json": "sha256:7f37664cb85dabb7c462eb70530ef219e1e1768a25f5db24d45a49d9fd894f83",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
     "public/music/danger-bed.ogg": "sha256:17dda03d81b59cb1ce53fe769dceae65ccecac19b2ce71bc415d1905c7c12f9f",
@@ -56,9 +55,9 @@
     "public/wiki/media/survival.png": "sha256:cb90006f39af1cdbe46ec2de2455722049fbf19fb64fc412a0cdd7f40de3dda6",
     "public/wiki/media/terrain.gif": "sha256:7472aa49b2c6b860d7b790e3c2bc9d83c986a04c2604b85c48e62aee1642579e",
     "public/wiki/media/terrain.png": "sha256:45e89a0f083c9c619b195543040ffabf80f4427a04e38e9a92c95fe4807d8133",
-    "scripts/client-build.ts": "sha256:df234610d0af846df460519c4158fdd5f6d4a4b1c0a417a6e523795467e78fc2",
+    "scripts/client-build.ts": "sha256:abe7ea029d9606ce316a76b6cef432aa7002420783f8dc739622af74a90e5892",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
-    "scripts/wiki-check.ts": "sha256:b04ca0cf81bbd675ad036122c85564c7854e26d9f0eebc68d1d2bd748e38aeaa",
+    "scripts/wiki-check.ts": "sha256:c4146d2130c4d46fcbffdeca2b205821c57d0bab2e860954fefbe24a7f3ecfc7",
     "scripts/wiki-content.ts": "sha256:190a89be185ac685e37e7ae3d962d1fabb059a2a39fc3eee2f9cc09567e8a162",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
@@ -219,7 +218,7 @@
     "src/network/worldExploration.ts": "sha256:9d5077d511e0d99c1c2243d7f1019d2df3e071ea22acd08f1620be6f773da5ed",
     "src/pages/debug/index.astro": "sha256:67afd4a29476a2bb630f5681f853866f8dc18b1458e47a7b55502aab066bcb41",
     "src/pages/index.astro": "sha256:98f27a0d6da8910842b5884b0919abe5a7213379a89f6096ba82e75cb6557040",
-    "src/pages/wiki.astro": "sha256:d56c822737f808de4010d499d20399d6cc2246d2fd5407f76e1e170aea4d9cbc",
+    "src/pages/wiki.astro": "sha256:30b20fe2ccf7e6a5b85ea6bc604d454f6fe785564daf2954cd92e14f49025e61",
     "src/physics/terrain/contourCapture.ts": "sha256:42ba129cd5221fef152fb7a730d8ffe69df9e13f215a76594d41379bcf539dad",
     "src/physics/terrain/contourLaser.ts": "sha256:13428129bbf5c8d90250fdfe0c6f4de634412a810b2d3ff0a581981975852a1b",
     "src/physics/terrain/contours.ts": "sha256:f0529da1eb0356612622469f7306ecae486efa71f442a247ef8c34a46940fcfa",
@@ -295,7 +294,6 @@
     "src/wiki/scrollMemory.ts": "sha256:ccbbe47812fc19f4c2048eb3db605d5351e070cab3257269bee95478fcc9df39",
     "src/wiki/search.ts": "sha256:1ea0f78400fe463ce11c6e1b7f8b2d503729599b222b2409606cf16035f87e41",
     "src/wiki/shipScorecard.ts": "sha256:dc01a90bb902a2d41e8fdcf81b70f486c260a57d41cc50e70ee91015af300927",
-    "svelte.config.js": "sha256:3a39bc11cd6876f6d4b75847c4f52c7eac966781b8319eaebe40ae3a705e01cb",
     "tests/unit/audio/title-and-play-loop-music-beds.test.ts": "sha256:5b117d30340357b3d24641a8690be93e5b79b6875dd04d4f965301a3098e6e6d",
     "tests/unit/diagnostics/debugHudMetrics.test.ts": "sha256:30bef1e4766b95b7c5923bb6816b958581d68ec2f7cf79194ef132adf28216e0",
     "tests/unit/entities/asteroids.test.ts": "sha256:fd39b80d39f4fa18bb382b54e0671010ac211d2d6c693c574b45371962a7d428",
@@ -410,7 +408,7 @@
     "public/sounds/contour-flick-success.m4a": "sha256:74a49bfd234ba15162410e88afa41ee0be0b9d01fcc0f65cdc602daa2ef1393a",
     "public/sounds/contour-lock-acquired.m4a": "sha256:928afee6bf5a0bff7da80205e8a473dd811b1a16ff7e56f67a18897e4cff6c6e",
     "public/sounds/contour-lock-released.m4a": "sha256:83b3338feda3cb161d923470ec09b7a0139c4665b821aa1adbdb324e1f85bd67",
-    "src/components/GameDocument.astro": "sha256:df0a02598078551d8e1d54b056e0bf5017d8fa27dc1ab8262a8d7b5b5ce03aa9",
+    "src/components/GameDocument.astro": "sha256:67a3fe71ca560db23e5764c6aa87644ddd3af6cc1e1021e61cfe30cb591e42f2",
     "src/components/game/GameOverlay.svelte": "sha256:ad2eb07bba13999a7612c37f07d5b20237720c6411b9e41d1aca5874f02ef66b",
     "src/components/game/GameShell.svelte": "sha256:3882e0297aa9554b8ff93f9dd18f11db938a99fd72e74d5f358a8af953b4711b",
     "src/components/game/InventoryPanel.svelte": "sha256:784caec9a55d8f03bffcd63e2890b0133c7088f563d0c35fc76b4f4b7c206fec",
@@ -432,14 +430,14 @@
     "src/components/ui/sheet/sheet-overlay.svelte": "sha256:83806c9ba22588cccc1930bf035142d276b8afedca7b9dfe0fb02d5c1d4196ad",
     "src/components/ui/sheet/sheet-portal.svelte": "sha256:c2b1d448ec83bbdfede5264727ec70626b0be097bc5900a99ce362f3b481a196",
     "src/rendering/shipSchematicCanvas.ts": "sha256:6bd8bab01d2e1745f9da8d26233d31913f5cebb821bb0c765accbde9923db046",
-    "src/runtime/gameRuntime.ts": "sha256:fa36690a83a2663b066761ac7b70ed0655e39dc31ef2662dd621d5a476742538",
+    "src/runtime/gameRuntime.ts": "sha256:0de2ae2c33a1a9a8e4d640892a6112b1c37b4adc959ffae78227ae43ddc56996",
     "src/runtime/inventory.ts": "sha256:4f904519e088022b139b5f1185566b0100d7d6d2f2c155453ee4103ed3706634",
     "src/runtime/overlayState.ts": "sha256:30b41c06b5811337a6fb4f7b493c31f9886eca9ab3fd14823e65917153f135da",
     "src/runtime/shipSelection.ts": "sha256:0607fe92e1635e9f5419ab8be6dceb688397033a8ac12ad3f1b8e6330db44ef7",
     "src/runtime/townStore.ts": "sha256:e397ae292108d93a2f25ef7fe34a76e4ed706fe761c3896413071365cbc28dbe",
     "src/utils/pilotNickname.ts": "sha256:a2b8486d229b47f242d58b0f759242e681c19def9f0ae780e2fe398712ab33d9",
     "tests/unit/runtime/inventory-replaces-the-map-without-releasing-flight.test.ts": "sha256:5521b482f0f4963737633ddac9966a5de382b9d8d21e2b44299621421c1284b2",
-    "src/diagnostics/phoneCollector.ts": "sha256:e59ff99e803e5aa7466338a099d92b0487dfd31ba6b04e46dece95186f165ad5",
+    "src/diagnostics/phoneCollector.ts": "sha256:2f2fe5a36202e7a1f19adde6d3dd186cde11c54f51ccc190daec265213024300",
     "src/release/clientReleaseEntry.ts": "sha256:74417e3658fbbc62a5928dcb481242830eea21898845dd78c837bbc9ced02c1f",
     "src/release/clientReleaseWatcher.ts": "sha256:d38808673a021c49999d808da39e04fe2c199d376408e2e1e1ed00ff0de96034",
     "src/runtime/inventoryOverlay.ts": "sha256:6b6ad682e4daf00be55f0ceebfd9300de5d15e49ce1226d84524412422e7a4a3",
@@ -551,17 +549,21 @@
     "src/components/game/DebugReportForm.svelte": "sha256:e4c36e2e7a3d9d15e5b7c30e188e566b4acd0f7a29613c1a68b1b7d81f10a9f1",
     "src/diagnostics/debugReportClient.ts": "sha256:a5c9ad047183d75781c8be22a4ed1cf89f61752df49ddeb8a36385cdda11d398",
     "src/diagnostics/debugReportStorage.ts": "sha256:21114a7c8b67da1165bfaf33b2f5ee53c353efd3ea80bedbbfc1f9b9aacb212d",
-    "scripts/build-vercel-output.mjs": "sha256:084559299214645fac9f3d1c0300cf5d2445ba6cf4f5cc30c5f6755b3e5d65f3",
+    "scripts/build-vercel-output.mjs": "sha256:883d4ef2393e4a4d6385e8743ab96ae3b26e9d19d52116e38c2aef8cfb22c084",
     "server/createServer.ts": "sha256:7499d6311193e05d8e0d91b5cdb332edbb49f19efc4dcec08d7b6a5603f6798e",
     "server/staticClient.ts": "sha256:76d1794966d9a6a2580c3c5bf8525adc5592e5bae6ed1859c9733cd9b27a77c8",
-    "config/app/astro.ts": "sha256:cce6892ee22a630ddcdadd2a7a2ccea02d748361f883224a85686bdadd574e2b",
+    "config/app/astro.ts": "sha256:dc520ac45e54a1d1f1835fb3bdf5faedcb1c11aa52b6d83cc0d1d989002bf260",
     "config/app/svelte.js": "sha256:9f2f3ce97f92d71c67e146ef4f859f1675ef3a536fbcd82b597481b35263d2dd",
     "config/quality/prettier.json": "sha256:d3fba49b5ca2805dbf4273dfc63273b3c1fdae87f98a8dbea3cd94fd3bdda0b6",
-    "config/typescript/frontend.json": "sha256:a5ba9f4bc0471de88c6e709b575d078ce426d9a01b45f4e18fbfe6bca4f02202",
-    "config/typescript/project.json": "sha256:cf55dc1b76655c336c420ecb22b1eff078abacd97e6c67182cbc00023e657b61",
-    "config/typescript/strict-tsc.json": "sha256:18c63c930c268ca09f4b9fac16bb576022d8ab57acf548e74fcc4c781a67d119",
-    "prettier.config.js": "sha256:7238fe130a57c07819fca4b9f6a546b4332cb8cde41184b3428c8b779823780f",
-    "src/diagnostics/reportInputDiagnostics.ts": "sha256:6dca366e212141f3b034b4f3109625a80f32c916cec4c33c66edde00b1d8518e"
+    "config/typescript/frontend.json": "sha256:f9e833a50ba954e61d8e8c326857d5c0c67498c4de31b9ec0608b1a0f4f29cd2",
+    "src/components/Context7Note.astro": "sha256:6127e526e0e9dad4bf3a088d62d19e8ee25de7c238852ee7bf60eb335967265c",
+    "src/components/Context7Verification.astro": "sha256:1786a9ca8e2cf86fe7260058b76a3fc314321fb79b3dcc38d6713d1aa2dbda91",
+    "src/constants/context7.ts": "sha256:3a72e118e92f520684a84ec4c8cd91841f68ca8e83ec7b9a5cc547813ca2a18b",
+    "scripts/wiki-source-digest.ts": "sha256:00b9839528d372a5a8ec7a6bfe761f23e68837c3f2f3b7afe3fd7b1bcfaedc94",
+    "config/typescript/tsconfig.json": "sha256:bcfd4a8c97fd1c4c0a49e85badf4f98457895b76698b50b0cdc688ce2403f01d",
+    "tsconfig.json": "sha256:1d3be74b9a82eac608077229d85ae81baa5fca7983b0e0813d2ff45bfd95ffdb",
+    "src/diagnostics/reportInputDiagnostics.ts": "sha256:6dca366e212141f3b034b4f3109625a80f32c916cec4c33c66edde00b1d8518e",
+    "src/diagnostics/phoneRecordingSummary.ts": "sha256:86ab96e0461ff57395ad829a4c13149dafdf3d23eba4cc4d2c9aadd4d30d4411"
   },
   "reviews": [
     {
@@ -6423,6 +6425,171 @@
       }
     },
     {
+      "note": "Reviewed direct configuration consumers, full TypeScript import graphs, unchanged test-file scopes and formatting, canonical Svelte preprocessing in Astro/Vitest/checker, and Wiki invalidation/atomic-formatting fixtures. Player rules, demonstration inputs and media assets are unchanged. Complete build and full CI are verified separately.",
+      "sources": [
+        "astro.config.ts",
+        "config/app/astro.ts",
+        "config/typescript/project.json",
+        "package.json",
+        "prettier.config.js",
+        "scripts/client-build.ts",
+        "scripts/wiki-check.ts",
+        "svelte.config.js"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "astro.config.ts": "field-manual",
+        "package.json": "field-manual",
+        "scripts/client-build.ts": "field-manual",
+        "scripts/wiki-check.ts": "field-manual",
+        "svelte.config.js": "field-manual",
+        "config/app/astro.ts": "field-manual",
+        "config/typescript/project.json": "field-manual",
+        "prettier.config.js": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the protocol guide test command update to the repository-owned runner and explicit canonical test configuration. Ran that exact command: all three files and 84 networking tests passed. Protocol rules, player-facing behavior and demonstration inputs/assets are unchanged.",
+      "sources": ["docs/protocol/snapshot-v3.md"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed addition of the Context7 Ask head tag and visually hidden agent note to the game and wiki document shells. The tag and note are non-visible (aria-hidden) and add no visible content; player rules, wiki articles, demonstration inputs and media assets are unchanged. Complete build verified separately.",
+      "sources": [
+        "src/components/Context7Note.astro",
+        "src/components/Context7Verification.astro",
+        "src/components/GameDocument.astro",
+        "src/constants/context7.ts",
+        "src/pages/wiki.astro"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/pages/wiki.astro": "field-manual",
+        "src/components/GameDocument.astro": "field-manual",
+        "src/components/Context7Note.astro": "field-manual",
+        "src/components/Context7Verification.astro": "field-manual",
+        "src/constants/context7.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed adding the Context7 Link search header to the Vercel build output routes and sorting imports in the game shell. Nothing visible changes; player rules, wiki articles, demonstration inputs and media assets are unchanged. Build and unit tests verified separately.",
+      "sources": ["scripts/build-vercel-output.mjs", "src/components/GameDocument.astro"],
+      "topics": ["field-manual", "hud-network"],
+      "media": [],
+      "owners": {
+        "scripts/build-vercel-output.mjs": "field-manual",
+        "src/components/GameDocument.astro": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed adding a gitleaks allow marker and comment to the Context7 site key constant. Nothing visible changes; player rules, wiki articles, demonstration inputs and media assets are unchanged.",
+      "sources": ["src/constants/context7.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "src/constants/context7.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the vitest 5.0.3 to 5.0.4 patch with its coupled exact @vitest/coverage-v8 5.0.4 pin (peer requires matching versions; folded from Dependabot #831) and the resulting lock changes. Test tooling only; no runtime, gameplay, Wiki content or demonstration asset is affected. Clean install with matched peers, TypeScript and Astro/Svelte diagnostics passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the concurrently 10.0.5 to 10.0.6 patch and its shell-quote 1.12.0 lock change against the repo's dev-server scripts. Development tooling only; no runtime, gameplay, Wiki content or demonstration asset is affected. Clean install, Biome, TypeScript and Astro/Svelte diagnostics passed, and unit/component tests with coverage passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the @lucide/svelte 1.55.0 to 1.56.0 minor (additive icon set update) against the repo's direct icon imports. Existing imported icons remain available; no player-visible rule, Wiki content or demonstration asset is affected. Clean install, Biome, TypeScript and Astro/Svelte diagnostics passed, and unit/component tests with coverage passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed railway SDK 3.11.0 to 3.15.0 (upstream v3.12-v3.15 commits: additive IaC tracing block, deploy.preDeployTimeoutSeconds, typed image auto-update window, fn() codeFile, sandbox exec controls; tsx moved to the SDK's devDependencies) against .railway/railway.ts. The definition uses only existing defineRailway/service/volume/preserve/github/project APIs and typechecks under the project config; tsx stays a direct runtime dependency for the start command. No gameplay, Wiki content or demonstration asset is affected. Clean install, Biome, TypeScript and Astro/Svelte diagnostics passed, and unit/component tests with coverage passed on the combined five-bump tree. This batch accepts only package.json.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed native compiler-policy discovery and preserved all six TypeScript 6/API and TypeScript 7/CLI input sets and options. Verified cold native selection/emission, four meaningful mutation controls, physical Astro policy/app edits and restoration, unchanged actual Node --import tsx import side effects, focused Wiki/benchmark contracts, and server release classification. The only unchanged-source OXC output difference is equivalent enum constant folding. Root frontend adapter retains Svelte selected-directory scope; ineffective root Railway include removed without expanding inputs. No gameplay source, Wiki article or media changes were needed. Full release gates and CI remain separate validation.",
+      "sources": [
+        "config/typescript/frontend.json",
+        "config/typescript/project.json",
+        "config/typescript/strict-tsc.json",
+        "config/typescript/tsconfig.json",
+        "scripts/wiki-check.ts",
+        "tsconfig.json"
+      ],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-check.ts": "field-manual",
+        "config/typescript/frontend.json": "field-manual",
+        "config/typescript/project.json": "field-manual",
+        "config/typescript/strict-tsc.json": "field-manual",
+        "config/typescript/tsconfig.json": "field-manual",
+        "tsconfig.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the Wiki checker change only: the package.json digest now ignores version strings inside dependencies, devDependencies, optionalDependencies, peerDependencies and overrides, so dependency-only bumps no longer need a review. Package names, scripts, engines and all other manifest fields still invalidate it. package.json content is unchanged; its accepted hash is re-recorded in the new digest form. No Wiki article cites package.json or lists dependencies; player rules, Wiki content and demonstrations are unchanged.",
+      "sources": ["package.json", "scripts/wiki-check.ts", "scripts/wiki-source-digest.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual",
+        "scripts/wiki-check.ts": "field-manual",
+        "scripts/wiki-source-digest.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Merged main (#842 native compiler-policy discovery) into the dependency-only digest change. The two edits to the Wiki checker are independent: #842's input sets and this branch's package.json digest both remain. No Wiki article, rule or media change.",
+      "sources": ["scripts/wiki-check.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-check.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed test-runner script changes in package.json. Vitest now orchestrates Node tooling contracts and existing shell fixtures; pinned pytest runs the existing Python hook fixtures. Game scripts, rules, controls, frontend behavior and Wiki demonstrations are unchanged. Static checks, all 153 tooling cases, all 30 Python cases and all 2122 unit/component cases passed; no player-facing Wiki content or media changes are needed.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the pytest script pin change to 9.0.2 so existing unittest subTest contexts retain continuation and separate failure reporting. All 30 original Python cases plus the new two-failure subtest regression pass. The regression rejects pytest 8.4.2 without a subtest plugin. Player rules, interfaces, Wiki content and demonstrations are unchanged.",
+      "sources": ["package.json"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "package.json": "field-manual"
+      }
+    },
+    {
       "note": "Reviewed exactly ten changed sources for the compact diagnostics toggle and report dialog focus, viewport, gesture and selection handling. Updated diagnostics instructions and confirmed controls and gameplay demonstrations remain unchanged. Six focused test files with 100 cases passed; TypeScript, Astro/Svelte diagnostics, Knip, changed-file Biome and Markdownlint passed. The old selection handler mutation was rejected. Physical Fire/iPhone keyboard behavior and native desktop/mobile browser verification remain pending; this source acceptance does not certify them.",
       "sources": [
         "docs/diagnostics.md",
@@ -6484,6 +6651,21 @@
       "topics": ["hud-network"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Reviewed the opt-in collection-to-report workflow against the diagnostics guide and HUD Wiki: warm up, Start, Stop, then Send. Reports carry bounded timing summaries with session and graphics provenance, counts, phase coverage and explicit completeness; ordinary reports are unchanged and raw recordings remain local for Download. TypeScript, Astro/Svelte diagnostics, Markdown and all 13 focused collector cases passed, including the real sanitizer and report-parser roundtrip. No gameplay rule or demonstration media changes. Full gate, hosted CI and the new-preview tablet check remain separate.",
+      "sources": [
+        "docs/diagnostics.md",
+        "src/diagnostics/phoneCollector.ts",
+        "src/diagnostics/phoneRecordingSummary.ts",
+        "src/runtime/gameRuntime.ts"
+      ],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "src/diagnostics/phoneCollector.ts": "hud-network",
+        "src/diagnostics/phoneRecordingSummary.ts": "hud-network"
+      }
     }
   ]
 }
