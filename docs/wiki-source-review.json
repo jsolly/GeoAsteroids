@@ -171,7 +171,7 @@
     "src/entities/laser/Laser.ts": "sha256:d482cbf287826e87b2aa4d17db13fd7495af82d44c24ca653434f8de0738ea16",
     "src/entities/laser/laserUtils.ts": "sha256:e7e20a0c5f6f6cb577898bb0f531b19866c833c44a090d56da833d1c71c97b01",
     "src/entities/loot/LootField.ts": "sha256:696cc5e32f6ba4c925861543d00f4863576785bac82bb0908b8595e615d7f2a9",
-    "src/entities/loot/lootRenderer.ts": "sha256:977184c834521d30b2baefda560372eecc591e7bfda8dfb7b5d3ef5da9a465cc",
+    "src/entities/loot/lootRenderer.ts": "sha256:01ade3c3514a7ee3e698654cbc429ad08b4df417aa212186983ddc9819838313",
     "src/entities/player/Player.ts": "sha256:b5af8d7ff9f74f58fedece0ff00d28f44b3426aab5150ad6c577f7b5929070ed",
     "src/entities/player/PlayerManager.ts": "sha256:63fcf0400ddc1a83ae272b29a47299923ba7d341cafde26e5545397a00e7dcdf",
     "src/entities/player/playerNetworkPort.ts": "sha256:f1cef578976be6117b2d6503f4e8c4305269d76ae232b61b77c971561a4e623c",
@@ -179,7 +179,7 @@
     "src/entities/roid/Roid.ts": "sha256:af53d19dcab45b16545e6149d973393dc18e3e910bf673e7ec4e8b032e3fbad6",
     "src/entities/roid/latchShudder.ts": "sha256:016855ebe48fdbe349677c8b742c8af1c684253ac8af454c5366865c102d1154",
     "src/entities/roid/materialArt.ts": "sha256:e60a0bc53a0d2a914a3b52f1bcdf1a07f6b5c869e152b7acb175eee8a8a2bd75",
-    "src/entities/roid/roidRenderer.ts": "sha256:cbf138d0845d04b4fb4bc589a3f8ba6c30b7467e0574fec11d3f6f883c156f21",
+    "src/entities/roid/roidRenderer.ts": "sha256:1719c44c4d9d4cb58132858116350d026870ee40ceab50b54ed68450c1f9eb64",
     "src/entities/roid/surveyProbeRenderer.ts": "sha256:5d3c4a0b3b03f712c0d1c16e5acc230d8a6d7c400311c9ea646589512c63c9dc",
     "src/entities/satellite/eoOutlines.ts": "sha256:2d608104c782cfbc85e9d9cc622994d4f07fec9aa60d7e5da0cd62551651c25e",
     "src/entities/satellitePickup/SatellitePickup.ts": "sha256:75977a7cbd30d1f36aa4831fff97737a02712ccf2d32fe98b955fcb8d26fb0ab",
@@ -194,7 +194,7 @@
     "src/entities/ship/hullOutlines.ts": "sha256:718553fb39087692e5fa82a735e879f1ae2e1a264fac560485f20e48bff3d07b",
     "src/entities/ship/scoutUtility.ts": "sha256:c2ef29531a11668a2f1a70bd6cac9c59d253eea67bd1339e1aefde754f600970",
     "src/entities/ship/shipCombatNetwork.ts": "sha256:5511f0c71b9b1a59dff44ab63006a19f7c1f3b28b466417e5c233503284876a9",
-    "src/entities/ship/shipRenderer.ts": "sha256:8c1a9414e94490cf4997b797a191c96460d97ad3262ce6b4bd975e176331eb23",
+    "src/entities/ship/shipRenderer.ts": "sha256:94dfa40ce837aa122fe9d176ed96ee8c8f8de0cdf2a7f74550987d6d6fc2a8e0",
     "src/entities/ship/shipUtils.ts": "sha256:0fa989d7fe3c2130679a29177f070fdde927ce7303f02da2a1cd2b490e553c0d",
     "src/fx/furnacePipePulse.ts": "sha256:386a89e1ebe677b72468a2c6af654246e53487d650ce455b78c669f45280b3d1",
     "src/fx/haptics.ts": "sha256:0103890d5445814ec8159706fdcd71ffd9af748d2a152b2f5687817f25975d15",
@@ -228,7 +228,7 @@
     "src/rendering/boundaryRenderer.ts": "sha256:5d3208fc26a8352f8292664504956a1c1757a16ab03845d816ee5de50496819b",
     "src/rendering/canvas.ts": "sha256:02788d8fdfdc81b165864efeb6fd58827ed32377ad163bfc03e99b447561a65b",
     "src/rendering/canvasBackground.ts": "sha256:aa0fcb20a82cd5c7e9bf65c8661bb2da121a346a08f16dff223095546636ef75",
-    "src/rendering/canvasSurface.ts": "sha256:c3622f755fce1be67ce478ab91c31c5c7273752995c20aa042327ef443c9292f",
+    "src/rendering/canvasSurface.ts": "sha256:5ca43148b8925b51f9d513c04e6b2a8eab29dde106b26a0c6c37574367af57b8",
     "src/rendering/cargoHoldRenderer.ts": "sha256:9d9fa3eb3da559c7d0c05fc2997460742e2ad3fb4e0c55841c0304408e435f5c",
     "src/rendering/cargoOffloadRenderer.ts": "sha256:c4b2f3a0bda19a35fc03b6016d8c77ef81cd2aa02519610cf020f574569e826d",
     "src/rendering/contourLaserRenderer.ts": "sha256:04532b8a5538ee8d683acf10ad4d7a73e5d181d03cb31e5bcc2c2968d15979a9",
@@ -254,8 +254,8 @@
     "src/rendering/rasterSurface.ts": "sha256:9a3d40c04f3245c7f73a6680f8e3d83fe025ad83b72d3ed0054957f7ae26d834",
     "src/rendering/renderQuality.ts": "sha256:db30b72fcf8016e57878c49f9408e792e6e71d9d9e3062203e691b56d7077059",
     "src/rendering/ricochetCourtRenderer.ts": "sha256:31a3dc6c279e3264cea263868787f08c89cbd149b90199a9d6c83ee73674feac",
-    "src/rendering/spiderFootContacts.ts": "sha256:6cf50e646ea9ad492d0c7873fd5c94e7e00610e8333c3105556010a1a4e976ce",
-    "src/rendering/spiderRenderer.ts": "sha256:03ce276a886d94f5380cdf7430d6114765bf67e0df89cd345669a5e8cb08d2ef",
+    "src/rendering/spiderFootContacts.ts": "sha256:242a4dd6d0056d31cb1f3e803352df26a2178b62c090f1261ab58e4a8ebb4505",
+    "src/rendering/spiderRenderer.ts": "sha256:d499d4695e4e028f4c35154f5454439cc982d1699aab2bf110abfb87f03b58df",
     "src/rendering/starfield.ts": "sha256:1ba61d152f97a728a0c826c7f1487f05be58ef783701d87e4935e923405f8d0c",
     "src/rendering/titleTerrain.ts": "sha256:44a2c784851c9fa5c58285246bfc83d223b9ee324b5c9db3959a9a68d008ef0e",
     "src/rendering/vectorJuice.ts": "sha256:63f437010a3d3a2cca149b3dfd460e6c7694235a2b6f6fbcdd43d3fe5e040f9b",
@@ -6586,6 +6586,29 @@
       "owners": {
         "package.json": "field-manual"
       }
+    },
+    {
+      "note": "Reviewed reduced-glow scan raster reuse and per-spider contour ownership against mapped articles, demo source mappings and existing loot/scout/hauler posters. Controls, scan range, world geometry, live clipping/feet and full-glow halo rules are unchanged; no editorial update is needed. Canonical lint and TypeScript passed; focused rendering suites passed 32 cases and the final public-resize version passed all five scan cases. Embedded-browser Scout join, steer, fire and scan plus gameplay and terrain-manual desktop/mobile captures passed with no warnings or errors. Physical Fire performance and linux-x64 media reproducibility remain pending.",
+      "sources": [
+        "src/entities/loot/lootRenderer.ts",
+        "src/entities/roid/roidRenderer.ts",
+        "src/entities/ship/shipRenderer.ts",
+        "src/rendering/canvasSurface.ts",
+        "src/rendering/spiderFootContacts.ts",
+        "src/rendering/spiderRenderer.ts"
+      ],
+      "topics": [
+        "asteroids",
+        "controls",
+        "hauler",
+        "hud-network",
+        "loot-growth",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": ["hauler", "loot", "scout"],
+      "owners": {}
     }
   ]
 }

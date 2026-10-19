@@ -461,6 +461,19 @@ class CanvasManager {
     }
   }
 
+  /**
+   * Zero-blur world sprites retain flight resolution while the scan camera eases.
+   * Full glow keeps the exact transformed resolution: Canvas blur is measured in
+   * backing pixels, so a flight-resolution halo would shrink with the camera.
+   */
+  getRasterPixelRatio(ctx: CanvasRenderingContext2D, glow: number): number {
+    if (this.worldLayersZoomed && glow === 0) {
+      return this.devicePixelRatio;
+    }
+    const transform = ctx.getTransform();
+    return Math.hypot(transform.a, transform.b);
+  }
+
   getPlayfieldScale(): number {
     return PLAYFIELD_CLOSE_SCALE;
   }

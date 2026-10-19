@@ -88,9 +88,8 @@ function isOrdinaryLootKind(kind: LootData['kind']): kind is OrdinaryLootKind {
 }
 
 function prepareOrdinaryLootSprites(ctx: CanvasRenderingContext2D): OrdinaryLootSprites {
-  const transform = ctx.getTransform();
-  const dpr = Math.hypot(transform.a, transform.b);
   const glow = resolveGlow(VISUAL.LOOT_GLOW);
+  const dpr = canvasManager.getRasterPixelRatio(ctx, glow);
   if (
     !ordinaryLootSprites ||
     ordinaryLootSprites.dpr !== dpr ||
