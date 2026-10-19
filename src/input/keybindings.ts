@@ -1,4 +1,4 @@
-import { GAME } from '../../shared/constants/gameplay';
+import { GAME, SHIP } from '../../shared/constants/gameplay';
 import { sampleGradient } from '../../shared/heightfield';
 import { getTerrainField } from '../../shared/terrainField';
 import type { Player } from '../entities/player/Player';
@@ -73,14 +73,10 @@ function updateCruise(player: Player): void {
   }
 }
 
-// Helper to set angular velocity from the aggregate turn-key state. Supports
+// Set angular velocity from the aggregate turn-key state. Supports
 // both arrow keys (ArrowLeft/ArrowRight) and WASD (KeyA/KeyD); opposing keys
 // held together cancel out. Using the per-player pressed set rather than
 // another player's state) keeps combinations correct across arrow/WASD mixes.
-function turnSpeedForShip(player: Player): number {
-  return (player.ship.turnSpeed * Math.PI) / (180 * GAME.FPS);
-}
-
 function updateTurnFromKeys(player: Player): void {
   if (player.ship.movementLocked || player.ship.health <= 0 || player.ship.exploding) {
     player.ship.angularVelocity = 0;
@@ -93,7 +89,7 @@ function updateTurnFromKeys(player: Player): void {
   const pressed = getPressedKeysForPlayer(player);
   const turningLeft = pressed.has('ArrowLeft') || pressed.has('KeyA');
   const turningRight = pressed.has('ArrowRight') || pressed.has('KeyD');
-  const turnSpeed = turnSpeedForShip(player);
+  const turnSpeed = (SHIP.TURN_SPEED * Math.PI) / (180 * GAME.FPS);
 
   if (turningLeft && !turningRight) {
     player.ship.angularVelocity = turnSpeed;

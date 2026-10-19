@@ -1,6 +1,7 @@
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { readWikiArticles } from '../../../scripts/wiki-content';
+import { SHIP } from '../../../shared/constants/gameplay';
 import { getShipKit, listShipKits } from '../../../shared/shipKits';
 import WikiShell from '../../../src/components/wiki/WikiShell.svelte';
 import { serializeKitHullSvg } from '../../../src/entities/ship/hullOutlines';
@@ -195,9 +196,9 @@ test('a reader opening the manual sees the hangar, the ship comparison and every
     kits.map((kit) => [
       kit.name,
       `${kit.maxHealth}`,
-      `${kit.thrust}`,
-      `${kit.maxVelocity}`,
-      `${kit.turnSpeed}`,
+      `${SHIP.THRUST}`,
+      `${SHIP.MAX_VELOCITY}`,
+      `${SHIP.TURN_SPEED}`,
       `${kit.shotCooldown} ms`,
     ])
   );

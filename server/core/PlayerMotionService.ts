@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import { checkBoundaryCollision } from '../../shared/boundary';
-import { GAME } from '../../shared/constants/gameplay';
+import { GAME, SHIP } from '../../shared/constants/gameplay';
 import { CONTOUR_BRIDGE, contourDraftMultiplier } from '../../shared/contourBridge';
 import {
   CONTOUR_LOCK,
@@ -12,12 +12,10 @@ import {
   contourLockVelocity,
   isContourLockState,
 } from '../../shared/contourLock';
-import { cargoCapacity } from '../../shared/economy';
 import { GAME_TICK_MS, MAX_CATCH_UP_TICKS, MAX_TICK_DEBT_MS } from '../../shared/gameClock';
 import { navigationCaptureRadius } from '../../shared/navigationSalvage';
 import { capMotionVelocity, finiteMotionVector, PLAYER_MOTION } from '../../shared/playerMotion';
-import { cruiseSpeed } from '../../shared/shipFlight';
-import { getShipKit, hullRadiusForKit } from '../../shared/shipKits';
+import { hullRadiusForKit } from '../../shared/shipKits';
 import { TERRAIN } from '../../shared/terrainConfig';
 import { terrainSpeedLimit } from '../../shared/terrainTravel';
 import type { ContourLockState, PlayerMotionState, Position } from '../../shared-types';
@@ -192,13 +190,7 @@ export class PlayerMotionService {
     locked = actor.contourLock !== null,
     position = actor.position
   ): number {
-    const kit = getShipKit(actor.kitId);
-    const cruise = cruiseSpeed(
-      actor.mass,
-      kit.maxVelocity,
-      actor.cargo,
-      cargoCapacity(actor.kitId)
-    );
+    const cruise = SHIP.MAX_VELOCITY;
     const normal = locked
       ? contourLockSpeed(cruise) * contourDraftMultiplier(actor.contourDraftFrames)
       : terrainSpeedLimit(position, cruise);
@@ -221,15 +213,11 @@ export class PlayerMotionService {
     now: number,
     locked = actor.contourLock !== null
   ): number {
-    const kit = getShipKit(actor.kitId);
     return Math.max(
       this.legalSpeed(actor, now, locked),
       locked
-        ? contourLockSpeed(
-            cruiseSpeed(actor.mass, kit.maxVelocity, actor.cargo, cargoCapacity(actor.kitId))
-          )
-        : cruiseSpeed(actor.mass, kit.maxVelocity, actor.cargo, cargoCapacity(actor.kitId)) *
-            (1 + TERRAIN.CONTOUR_SPEED_BONUS)
+        ? contourLockSpeed(SHIP.MAX_VELOCITY)
+        : SHIP.MAX_VELOCITY * (1 + TERRAIN.CONTOUR_SPEED_BONUS)
     );
   }
 

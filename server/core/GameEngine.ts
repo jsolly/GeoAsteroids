@@ -79,7 +79,6 @@ import {
   tickTapExtract,
   tickTowLine,
 } from '../../shared/shipAbilities';
-import { cruiseSpeed } from '../../shared/shipFlight';
 import { canCollectLoot, GROWTH } from '../../shared/shipGrowth';
 import {
   applyShipKitStats,
@@ -3562,12 +3561,7 @@ export class GameEngine {
       const velocity = contourLockVelocity(
         actor.position,
         transit.target,
-        cruiseSpeed(
-          actor.mass,
-          getShipKit(actor.kitId).maxVelocity,
-          actor.cargo,
-          cargoCapacity(actor.kitId)
-        ) * CONTOUR_BRIDGE.draftMultiplier
+        SHIP.MAX_VELOCITY * CONTOUR_BRIDGE.draftMultiplier
       );
       actor.velocity = velocity ?? { x: 0, y: 0 };
       actor.angle = Math.atan2(-actor.velocity.y, actor.velocity.x);
