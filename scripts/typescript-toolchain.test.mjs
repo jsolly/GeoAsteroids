@@ -13,9 +13,9 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
-import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import { test } from 'vitest';
 import { nativeTypescriptCli } from './typescript-cli.mjs';
 
 const launcher = fileURLToPath(new URL('./typescript-cli.mjs', import.meta.url));

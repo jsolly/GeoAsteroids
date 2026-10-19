@@ -43,7 +43,7 @@ const config = {
   ],
   astro: { config: ['config/app/astro.ts'] },
   svelte: { entry: ['config/app/svelte.js', 'vite.config.{js,mjs,ts,cjs,mts,cts}'] },
-  vitest: { config: ['config/testing/vitest.ts'] },
+  vitest: { config: ['config/testing/vitest.ts', 'config/testing/tooling.ts'] },
   biome: { config: ['config/quality/biome.settings.jsonc'] },
   prettier: { config: ['config/quality/prettier.json'] },
 };

@@ -4,8 +4,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
-import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 import { requiresServerDeployment, serverReleaseInputs } from './server-release-inputs.mjs';
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));

@@ -30,6 +30,8 @@ under `tests/`. Give each setting one repository-owned home.
   override that selected-config directory. No duplicate compiler settings remain.
 - `testing/vitest.ts` owns the existing projects, roots, conditions, per-session
   caches, coverage and worker isolation. Package and integration runners select it.
+  `config/testing/tooling.ts` owns isolated Node tooling projects;
+  `config/testing/pytest.ini` owns Python hook-test discovery and strict options.
 - `quality/biome.settings.jsonc` owns the full root-scoped Biome policy. CLI checks,
   the severity inventory and atomic Wiki review formatting select that same file.
 - `quality/prettier.json` owns Astro/Svelte plugins and basename formatting

@@ -627,5 +627,42 @@ else:
         self.assertFalse((self.root / 'node_modules').exists())
 
 
-if __name__ == '__main__':
-    unittest.main()
+class PytestSubtestReporting(unittest.TestCase):
+    def test_two_failing_subcases_both_execute_report_and_clean_up(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'pytest.ini').write_text('[pytest]\n')
+            fixture = root / 'test_subtest_contract.py'
+            fixture.write_text(r'''import unittest
+from pathlib import Path
+
+class SubtestFailures(unittest.TestCase):
+    def test_both_failures(self):
+        events = Path(__file__).with_name('events.txt')
+        def record(event):
+            with events.open('a') as stream:
+                stream.write(event + '\n')
+        self.addCleanup(record, 'cleanup')
+        for label in ('first', 'second'):
+            with self.subTest(label=label):
+                record(label)
+                self.fail('failure-' + label)
+        record('continued')
+''')
+            environment = {key: value for key, value in os.environ.items()
+                           if not key.startswith('PYTEST_')}
+            environment['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
+            result = subprocess.run([
+                sys.executable, '-I', '-m', 'pytest', '-q', '--noconftest',
+                '-c', str(root / 'pytest.ini'), '--rootdir', str(root), str(fixture),
+            ], cwd=root, env=environment, text=True, capture_output=True, check=False)
+            output = result.stdout + result.stderr
+            self.assertEqual(result.returncode, 1, output)
+            self.assertEqual((root / 'events.txt').read_text().splitlines(),
+                             ['first', 'second', 'continued', 'cleanup'])
+            self.assertIn('failure-first', output)
+            self.assertIn('failure-second', output)
+            failures = [line for line in output.splitlines() if line.startswith('SUBFAILED')]
+            self.assertEqual(len(failures), 2, output)
+            self.assertIn("label='first'", failures[0])
+            self.assertIn("label='second'", failures[1])
