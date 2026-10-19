@@ -15,15 +15,15 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
-import test, { after } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { afterAll, test } from 'vitest';
 import { runGate } from './gate.mjs';
 import { candidateMatches, digest, fileRecord, STAGES, sourceRows } from './gate-receipt.mjs';
 import { canonicalEnvironment, lifecycleCommand } from './gate-runtime.mjs';
 import { literalOnlyChange } from './literal-only-change.mjs';
 
-// This file runs in a dedicated node:test process. Isolate every fixture Git
+// This file runs in a dedicated Vitest fork. Isolate every fixture Git
 // call, including production helpers under test, from a committing parent's
 // exported index/repository/config and from the user's global configuration.
 const fixtureHome = mkdtempSync(join(tmpdir(), 'georoids-gate-home-'));
@@ -36,7 +36,7 @@ process.env.HOME = fixtureHome;
 process.env.XDG_CONFIG_HOME = join(fixtureHome, 'xdg');
 process.env.GIT_CONFIG_GLOBAL = '/dev/null';
 process.env.GIT_CONFIG_NOSYSTEM = '1';
-after(() => rmSync(fixtureHome, { recursive: true, force: true }));
+afterAll(() => rmSync(fixtureHome, { recursive: true, force: true }));
 
 // Independent acceptance contract: never derive this battery from STAGES.
 const REQUIRED_COMMANDS = [
@@ -876,6 +876,7 @@ test('every gate stage writes generated caches in its issued artifact session', 
       'package.json',
       'package-lock.json',
       'config/testing/vitest.ts',
+      'config/testing/tooling.ts',
       'config/app/svelte.js',
       'tests/viteSetup.ts',
       'tests/support/canvas.html',
@@ -945,14 +946,49 @@ test('every gate stage writes generated caches in its issued artifact session', 
         assert.deepEqual(installedFiles(installation), originalFiles);
       }
     }
+    // Execute the tooling configuration too: its caches must preserve the
+    // installed tree just as the game projects do during an admitted gate.
+    for (const name of [
+      'code-integration-runner',
+      'ci-contract',
+      'server-release-inputs',
+      'dev-server',
+      'lint-policy',
+    ]) {
+      const target = join(consumer, 'scripts', `${name}.test.mjs`);
+      mkdirSync(resolve(target, '..'), { recursive: true });
+      writeFileSync(
+        target,
+        "import { expect, test } from 'vitest';\nimport { marker } from '../src/cache-proof';\ntest('loads tooling code', () => expect(marker).toBe(17));\n"
+      );
+    }
+    const beforeTooling = installedFiles(installation);
+    const toolingSession = join(f.root, '.performance/tooling-consumer-session');
+    const tooling = spawnSync(
+      process.execPath,
+      [
+        join(sourceRoot, 'node_modules/vitest/vitest.mjs'),
+        'run',
+        '--config',
+        'config/testing/tooling.ts',
+      ],
+      {
+        cwd: consumer,
+        env: { ...process.env, GEOROIDS_TEST_SESSION_DIR: toolingSession },
+        encoding: 'utf8',
+      }
+    );
+    assert.ifError(tooling.error);
+    assert.equal(tooling.status, 0, tooling.stdout + tooling.stderr);
+    assert.match(tooling.stdout, /5 passed/u);
+    assert.deepEqual(installedFiles(installation), beforeTooling);
+    assert(existsSync(join(toolingSession, 'cache/tooling-vitest-modules/_metadata.json')));
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }
 });
 
-test('hostile inherited Git repository, index and config never affect parent state', {
-  skip: process.env.GEOROIDS_GATE_HOSTILE_CHILD === '1',
-}, () => {
+test('hostile inherited Git repository, index and config never affect parent state', () => {
   const f = fixture();
   try {
     f.git('config', '--local', 'fixture.guard', 'original');
@@ -972,22 +1008,38 @@ test('hostile inherited Git repository, index and config never affect parent sta
       readFileSync(join(f.root, '.git', name)),
     ]);
     const childEnvironment = { ...process.env };
-    delete childEnvironment.NODE_TEST_CONTEXT;
-    const result = spawnSync(process.execPath, ['--test', fileURLToPath(import.meta.url)], {
-      env: {
-        ...childEnvironment,
-        GEOROIDS_GATE_HOSTILE_CHILD: '1',
-        GIT_DIR: join(f.root, '.git'),
-        GIT_WORK_TREE: f.root,
-        GIT_INDEX_FILE: join(f.root, '.git/index'),
-        GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: 'fixture.guard',
-        GIT_CONFIG_VALUE_0: 'hostile',
-        GIT_CONFIG_GLOBAL: join(f.root, '.git/config'),
-      },
-      encoding: 'utf8',
-      maxBuffer: 16 * 1024 * 1024,
-    });
+    // The child starts a new runner and receives its own worker identity.
+    for (const key of Object.keys(childEnvironment)) {
+      if (key.startsWith('VITEST')) {
+        delete childEnvironment[key];
+      }
+    }
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL('../node_modules/vitest/vitest.mjs', import.meta.url)),
+        'run',
+        '--config',
+        'config/testing/tooling.ts',
+        'scripts/gate-contract.test.mjs',
+        '--reporter=verbose',
+        '--testNamePattern=^(?!hostile inherited Git repository, index and config never affect parent state$)',
+      ],
+      {
+        env: {
+          ...childEnvironment,
+          GIT_DIR: join(f.root, '.git'),
+          GIT_WORK_TREE: f.root,
+          GIT_INDEX_FILE: join(f.root, '.git/index'),
+          GIT_CONFIG_COUNT: '1',
+          GIT_CONFIG_KEY_0: 'fixture.guard',
+          GIT_CONFIG_VALUE_0: 'hostile',
+          GIT_CONFIG_GLOBAL: join(f.root, '.git/config'),
+        },
+        encoding: 'utf8',
+        maxBuffer: 16 * 1024 * 1024,
+      }
+    );
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.match(result.stdout, /every gate stage writes generated caches/u);
     for (const [name, bytes] of tracked) {
@@ -1335,7 +1387,7 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
     join(f.root, 'scripts/repo-python.sh'),
     readFileSync(new URL('./repo-python.sh', import.meta.url))
   );
-  t.after(() => rmSync(f.root, { recursive: true, force: true }));
+  t.onTestFinished(() => rmSync(f.root, { recursive: true, force: true }));
   mkdirSync(join(f.root, 'bin'));
   mkdirSync(join(f.root, 'node_modules'));
   writeFileSync(join(f.root, '.gitignore'), '.performance/\nnode_modules/\nbin/\n');
@@ -1394,6 +1446,7 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
         !key.startsWith('GIT_') &&
         !key.startsWith('GEOROIDS_') &&
         !key.startsWith('NODE_') &&
+        !key.startsWith('VITEST') &&
         !/^npm_config_/iu.test(key)
     )
   );
@@ -1615,7 +1668,7 @@ test('stalled npm script-shell setup is owned, cancelled and cleaned without exp
       const env = Object.fromEntries(
         Object.entries(process.env).filter(
           ([key]) =>
-            !key.startsWith('GIT_') && !key.startsWith('GEOROIDS_') && !key.startsWith('NODE_TEST_')
+            !key.startsWith('GIT_') && !key.startsWith('GEOROIDS_') && !key.startsWith('VITEST')
         )
       );
       Object.assign(env, {

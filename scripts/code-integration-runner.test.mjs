@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import test from 'node:test';
+import { test } from 'vitest';
 import {
   selectIntegration,
   validateCodeIntegrationReceipt,
@@ -15,7 +15,7 @@ import {
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'code-integration-contract-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  t.onTestFinished(() => rmSync(root, { recursive: true, force: true }));
   const files = ['server/one.test.ts', 'server/nested/two.test.ts']
     .map((path) => join(root, 'tests/integration', path))
     .sort((a, b) => a.localeCompare(b));

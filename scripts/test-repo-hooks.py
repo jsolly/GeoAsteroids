@@ -625,7 +625,3 @@ else:
         self.assertEqual(result.returncode, 17)
         self.assertEqual(len(self.commands()), 1)
         self.assertFalse((self.root / 'node_modules').exists())
-
-
-if __name__ == '__main__':
-    unittest.main()

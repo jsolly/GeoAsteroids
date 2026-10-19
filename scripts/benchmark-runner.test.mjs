@@ -13,18 +13,18 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
-import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
 const source = dirname(fileURLToPath(import.meta.url));
 function fixture(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'manual-benchmark-contract-')));
-  t.after(() => {
+  t.onTestFinished(() => {
     if (
       existsSync(join(root, '.git/georoids-validation-checkout.lock')) ||
       existsSync(join(root, '.git/georoids-test-runner.lock'))
     ) {
-      t.diagnostic(`Unproven fixture cleanup retained at ${root}`);
+      console.info(`Unproven fixture cleanup retained at ${root}`);
       return;
     }
     rmSync(root, { recursive: true, force: true });

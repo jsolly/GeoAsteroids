@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import process from 'node:process';
-import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
 const selector = fileURLToPath(new URL('./test-ports.mjs', import.meta.url));
 function select(ports) {

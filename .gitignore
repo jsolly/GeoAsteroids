@@ -58,3 +58,7 @@ production-smoke-artifacts/
 
 # Generated Astro metadata
 /.astro/
+
+# Python test discovery and assertion caches
+__pycache__/
+.pytest_cache/

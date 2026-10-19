@@ -13,6 +13,11 @@ smoke](#basic-manual-browser-smoke).
 
 - `unit/`: deterministic rules, executed DOM/canvas behavior, protocol and failure boundaries.
 - `integration/server/`: server modules and owned loopback protocol interactions.
+- `scripts/*.test.mjs`: Node tooling contracts, orchestrated by Vitest with
+  `config/testing/tooling.ts`. These use Node without jsdom or game setup.
+- `scripts/test-repo-hooks.py`: hook/bootstrap fixtures, discovered by pinned
+  pytest using `config/testing/pytest.ini`. Existing TestCase assertions and
+  cleanup remain supported by pytest; there is no unittest runner entry point.
 
 Native browser rendering, real keyboard/touch behavior and audio are outside
 automated code coverage. Basic manual smoke checks do not certify those exhaustively.
@@ -115,6 +120,9 @@ npm run test:all                    # units and complete integration
 npm run test:integration            # complete server integration
 npm run test:integration:server     # server integration
 npm run test:coverage               # unit coverage, no percentage merge threshold
+npm run check:test-runner           # Vitest runner and tooling contracts
+npm run check:actions               # Vitest CI/gate/smoke contracts and action lint
+npm run check:repo-hooks            # pinned pytest, all hook/bootstrap cases
 ```
 
 Focused units use `npm run test -- tests/unit/<scenario>.test.ts`, preserving
@@ -138,6 +146,14 @@ the runner command; a nonempty `--` tail is rejected.
 
 Keep `pool: 'forks'`, `maxWorkers: 1`, `isolate: true`, `fileParallelism: false`,
 `sequence.concurrent: false` and `maxConcurrency: 1` in `config/testing/vitest.ts` (selected explicitly by the package and integration runners).
+
+The tooling projects retain single-fork isolation and sequential tests. Shell
+fixtures for dev-server ownership, lint policy and preview matching execute under
+Vitest and propagate failed assertions, signals and cleanup failures. Their shell
+bodies remain fixtures because they exercise shell process behavior. The
+integration wrapper remains an admission, discovery, result-parity and cleanup
+supervisor around Vitest, rather than a competing test runner. See the
+[runner inventory](runner-inventory.md).
 
 Code checks may overlap across different worktrees. Validation in the same
 checkout admits one gate, review or standalone harness at a time because builds

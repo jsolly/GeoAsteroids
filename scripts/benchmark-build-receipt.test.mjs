@@ -4,8 +4,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
 const helper = fileURLToPath(new URL('./benchmark-build-receipt.mjs', import.meta.url));
 const websocketUrl = 'ws://localhost:59995/ws';
