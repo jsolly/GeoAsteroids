@@ -1447,6 +1447,7 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
         !key.startsWith('GEOROIDS_') &&
         !key.startsWith('NODE_') &&
         !key.startsWith('VITEST') &&
+        !key.startsWith('VITE_') &&
         !/^npm_config_/iu.test(key)
     )
   );
@@ -1554,6 +1555,9 @@ test('manual, nested npm and hook launches execute identical runtime inputs with
   const unknown = launch({ ...base, GEOROIDS_UNCLASSIFIED_INPUT: 'enabled' });
   assert.equal(unknown.reusable, false);
   assert(unknown.unknown.includes('GEOROIDS_UNCLASSIFIED_INPUT'));
+  const viteUnknown = launch({ ...base, VITE_WEBSOCKET_URL: 'wss://fixture.invalid' });
+  assert.equal(viteUnknown.reusable, false);
+  assert(viteUnknown.unknown.includes('VITE_WEBSOCKET_URL'));
   const replUnknown = launch({ ...base, NODE_REPL_NEW_OVERRIDE: 'enabled' });
   assert.equal(replUnknown.reusable, false);
   assert(replUnknown.unknown.includes('NODE_REPL_NEW_OVERRIDE'));
