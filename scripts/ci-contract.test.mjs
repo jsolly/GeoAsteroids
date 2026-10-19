@@ -243,7 +243,7 @@ test('CI preserves four mandatory lanes and failure propagation', () => {
   );
   assert.equal(
     manifest.scripts['check:repo-hooks'],
-    'uvx --from pytest==8.4.2 pytest -c config/testing/pytest.ini --rootdir=.'
+    'uvx --from pytest==9.0.2 pytest -c config/testing/pytest.ini --rootdir=.'
   );
   assert.ok(
     manifest.devDependencies.playwright,

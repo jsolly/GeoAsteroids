@@ -49,7 +49,11 @@ pinned actionlint and ShellCheck tools after the contract tests; those are lint
 checks, not test runners.
 
 The 30 Python hook/bootstrap cases previously ran through `unittest.main()`.
-Pinned official pytest 8.4.2 now discovers and runs all 30. The TestCase assertion,
+Pinned official pytest 9.0.2 discovers and runs all 30 original cases plus a
+runner compatibility regression. Native subtest support preserves the existing
+10 `self.subTest` contexts. The regression runs two deliberately failing subcases
+and verifies both execute, report separately, continue and clean up. It rejects
+pytest 8.4.2 without its subtest plugin. The TestCase assertion,
 mock and cleanup APIs remain intact, as supported by pytest. The direct unittest
 runner entry point is removed. `uvx` provisions the exact pytest version, matching
 the repository's existing approach for Python lint tools.

@@ -31,7 +31,7 @@
     "check:fix": "biome check --config-path=config/quality/biome.settings.jsonc --write --error-on-warnings .",
     "fix": "npm run check:fix && npm run check:ts && npm run check:benchmarks && npm run test",
     "format": "biome format --config-path=config/quality/biome.settings.jsonc --write .",
-    "check:repo-hooks": "uvx --from pytest==8.4.2 pytest -c config/testing/pytest.ini --rootdir=.",
+    "check:repo-hooks": "uvx --from pytest==9.0.2 pytest -c config/testing/pytest.ini --rootdir=.",
     "check:actions": "vitest run --config config/testing/tooling.ts --project actions --project smoke && bash scripts/check-actions.sh",
     "gate": "FLEET_DOC_FAST=0 bash .git-hooks/pre-commit",
     "check:lint-policy": "vitest run --config config/testing/tooling.ts --project lint-policy",
