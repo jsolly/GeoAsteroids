@@ -6,6 +6,11 @@ import { parseSampleArguments, sampleOptions } from '../../../benchmarks/sample'
 
 test('compiled client scenes keep their coupled frames and reject graphics scenarios on other runners', () => {
   expect(sampleOptions('client').scene).toBe('stationary');
+  expect(sampleOptions('client', '42', 'fire-tablet', 'webgl2-direct', '1.5')).toMatchObject({
+    viewport: 'fire-tablet',
+    renderer: 'webgl2-direct',
+    dpr: 1.5,
+  });
   for (const scene of ['scan-transition', 'scan-wide', 'spider-field'] as const) {
     expect(sampleOptions('client', '42', 'tablet', 'canvas', '3', false, scene).scene).toBe(scene);
     const traits = clientSceneTraits(scene);

@@ -259,6 +259,7 @@ export function readWikiArticles(root = process.cwd()): WikiArticle[] {
       if (
         EXTERNAL_OR_MAILTO_LINK_PATTERN.test(href) ||
         href === '/' ||
+        href.startsWith('/?') ||
         href === '/wiki/' ||
         href === '/wiki'
       ) {

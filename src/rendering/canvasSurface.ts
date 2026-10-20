@@ -19,6 +19,7 @@ import {
   projectWorldToScreenInto,
 } from './playfieldCamera';
 import { discardRasterSurface, prepareRasterSurface, type RasterSurface } from './rasterSurface';
+import type { RendererBackend } from './rendererBackend';
 import { configureRenderQuality } from './renderQuality';
 import { classifyScanDevice, resolveScanDetail } from './scanDetailPolicy';
 import { SCAN_SCENERY_MAX_PIXELS, ScanSceneryCache, scanSceneryMode } from './scanSceneryCache';
@@ -131,9 +132,15 @@ class CanvasManager {
     };
     this.deviceCategory = classifyScanDevice(deviceHints);
     this.scanDetail = resolveScanDetail(window.location.search, deviceHints);
-    const gpuRequested = new URLSearchParams(window.location.search).get('renderer') === 'webgl2';
+    const requested = new URLSearchParams(window.location.search).get('renderer');
+    const direct = requested === 'webgl2-direct';
+    const gpuRequested = requested === 'webgl2' || direct;
     this.gpuRequested = gpuRequested;
-    this.context = canvas.getContext('2d', { alpha: false });
+    this.context = canvas.getContext('2d', { alpha: direct });
+    if (direct) {
+      canvas.dataset['gpuPresentation'] = 'direct';
+    }
+
     if (!this.context) {
       this.destroy();
       throw new Error('A canvas rendering context is unavailable.');
@@ -141,11 +148,15 @@ class CanvasManager {
 
     if (gpuRequested) {
       try {
-        this.gpuRenderer = GpuRearRenderer.create(this.canvas, () => {
-          if (this.gpuRenderer?.available() !== true) {
-            this.gpuFrameActive = false;
-          }
-        });
+        this.gpuRenderer = GpuRearRenderer.create(
+          this.canvas,
+          () => {
+            if (this.gpuRenderer?.available() !== true) {
+              this.gpuFrameActive = false;
+            }
+          },
+          direct ? 'direct' : 'copied'
+        );
       } catch (error) {
         this.gpuRenderer = null;
         logger.error(
@@ -183,10 +194,13 @@ class CanvasManager {
     });
 
     this.handleCanvasResize();
-    clientPerformance.setRendererObservation(gpuRequested ? 'webgl2' : 'canvas', () => ({
-      backend: this.getRendererBackend(),
-      gpuStats: this.getGpuFrameStats(),
-    }));
+    clientPerformance.setRendererObservation(
+      direct ? 'webgl2-direct' : gpuRequested ? 'webgl2' : 'canvas',
+      () => ({
+        backend: this.getRendererBackend(),
+        gpuStats: this.getGpuFrameStats(),
+      })
+    );
   }
 
   private viewportSize(): { width: number; height: number } {
@@ -338,6 +352,9 @@ class CanvasManager {
     this.gpuRenderer = null;
     this.gpuRequested = false;
     this.gpuFrameActive = false;
+    if (this.canvas) {
+      delete this.canvas.dataset['gpuPresentation'];
+    }
     this.canvas = null;
     this.context = null;
     this.viewport.width = 1;
@@ -352,8 +369,10 @@ class CanvasManager {
     clearHudLayoutCache();
   }
 
-  getRendererBackend(): 'canvas' | 'webgl2' {
-    return this.gpuFrameActive && this.gpuRenderer?.available() === true ? 'webgl2' : 'canvas';
+  getRendererBackend(): RendererBackend {
+    return this.gpuFrameActive && this.gpuRenderer?.available() === true
+      ? this.gpuRenderer.backend
+      : 'canvas';
   }
 
   getGpuFrameStats() {
@@ -380,18 +399,22 @@ class CanvasManager {
     } finally {
       ctx.restore();
     }
-    paintOpaqueBackground(ctx);
-    const nativeStars = drawStarLayers(
-      ctx,
-      scene.starTiles,
-      scene.position,
-      this.viewport,
-      PLAYFIELD_CLOSE_SCALE
-    );
+    let nativeStars = { nativeStars: 0, nativeStarRects: 0 };
+    if (this.gpuRenderer?.backend === 'webgl2') {
+      paintOpaqueBackground(ctx);
+      nativeStars = drawStarLayers(
+        ctx,
+        scene.starTiles,
+        scene.position,
+        this.viewport,
+        PLAYFIELD_CLOSE_SCALE
+      );
+    }
     const drawn =
       this.gpuRenderer?.draw({
         position: scene.position,
         contours: scene.contours,
+        starTiles: scene.starTiles,
         rearSource: ctx.canvas,
         ...nativeStars,
         width: viewport.width,
@@ -601,6 +624,7 @@ class CanvasManager {
       serverNow: Date.now() + scene.localPlayer.ship.furnaceClockOffsetMs,
     };
     this.gpuFrameActive = false;
+    this.gpuRenderer?.hideSurface();
     if (!this.simpleScanSurfaceFailed) {
       try {
         const dpr = Math.min(

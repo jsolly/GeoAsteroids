@@ -18,6 +18,7 @@ const VIEWPORTS = {
   'touch-portrait': { width: 390, height: 844 },
   'touch-landscape': { width: 844, height: 390 },
   tablet: { width: 1024, height: 768 },
+  'fire-tablet': { width: 800, height: 1094 },
 };
 
 async function deadline<T>(promise: Promise<T>, milliseconds: number, label: string): Promise<T> {
@@ -97,7 +98,7 @@ export async function runClientSample(options: ClientOptions) {
     !Number.isFinite(options.dpr ?? 1) ||
     (options.dpr ?? 1) < 1 ||
     (options.dpr ?? 1) > 4 ||
-    !['canvas', 'webgl2'].includes(options.renderer ?? 'canvas')
+    !['canvas', 'webgl2', 'webgl2-direct'].includes(options.renderer ?? 'canvas')
   ) {
     throw new Error('Invalid client seed, viewport, or frame counts (maximum 3600 total frames)');
   }

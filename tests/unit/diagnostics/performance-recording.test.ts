@@ -308,7 +308,7 @@ test('ordinary sessions collect no performance observations', () => {
   recorder.recordFrameInterval(40, 40);
   expect(recorder.read()).toMatchObject({ metrics: {}, counters: {}, pendingJoin: false });
   expect(recorder.read().slowFrames).toMatchObject({ observedCount: 0, values: [] });
-  expect(recorder.read().renderer.frames).toEqual({ canvas: 0, webgl2: 0 });
+  expect(recorder.read().renderer.frames).toEqual({ canvas: 0, webgl2: 0, 'webgl2-direct': 0 });
 });
 
 test('a GPU recording keeps fallback frames visible and reads resource observations only on export', () => {
@@ -324,14 +324,32 @@ test('a GPU recording keeps fallback frames visible and reads resource observati
   expect(interval.renderer).toEqual({
     requested: 'webgl2',
     backend: 'webgl2',
-    frames: { canvas: 1, webgl2: 2 },
+    frames: { canvas: 1, webgl2: 2, 'webgl2-direct': 0 },
     gpuStats: null,
   });
-  expect(recorder.read().renderer.frames).toEqual({ canvas: 0, webgl2: 0 });
-  expect(interval.renderer.frames).toEqual({ canvas: 1, webgl2: 2 });
+  expect(recorder.read().renderer.frames).toEqual({ canvas: 0, webgl2: 0, 'webgl2-direct': 0 });
+  expect(interval.renderer.frames).toEqual({ canvas: 1, webgl2: 2, 'webgl2-direct': 0 });
   recorder.setRendererObservation('canvas', null);
   recorder.read();
   expect(observe).toHaveBeenCalledTimes(2);
+});
+
+test('direct composition has its own ledger and cannot hide copied GPU or Canvas frames', () => {
+  const recorder = new ClientPerformanceMetrics(true);
+  recorder.setRendererObservation('webgl2-direct', () => ({
+    backend: 'webgl2-direct',
+    gpuStats: null,
+  }));
+  recorder.recordRendererFrame('webgl2-direct');
+  recorder.recordRendererFrame('webgl2');
+  recorder.recordRendererFrame('canvas');
+  expect(recorder.read(true).renderer).toEqual({
+    requested: 'webgl2-direct',
+    backend: 'webgl2-direct',
+    gpuStats: null,
+    frames: { canvas: 1, webgl2: 1, 'webgl2-direct': 1 },
+  });
+  expect(recorder.read().renderer.frames).toEqual({ canvas: 0, webgl2: 0, 'webgl2-direct': 0 });
 });
 
 test('failed joins, reconnect exhaustion and invalid measurements remain in the report', () => {

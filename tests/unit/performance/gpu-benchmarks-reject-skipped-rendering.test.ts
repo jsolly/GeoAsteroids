@@ -19,6 +19,7 @@ function completedFrame(frames = 501) {
     submittedSegments: 200,
     nativeContourSegments: 0,
     rearBlits: 1,
+    directCompositions: 0,
     nativeStars: 80,
     nativeStarRects: 30,
     rearTextureBytes: 640_000,
@@ -105,6 +106,7 @@ test('missing resources and malformed observed counters fail the benchmark bound
     'submittedSegments',
     'nativeContourSegments',
     'rearBlits',
+    'directCompositions',
     'nativeStars',
     'nativeStarRects',
     'rearTextureBytes',
@@ -117,5 +119,46 @@ test('missing resources and malformed observed counters fail the benchmark bound
         expect(() => gpuFrameSequence({ ...completedFrame(), [name]: value })).toThrow();
       }
     }
+  }
+});
+
+test('direct composition records retained GPU stars without accepting copied or missing rear work', () => {
+  const direct = {
+    ...completedFrame(),
+    workload: 'direct-rear-gpu-stars-contours',
+    submittedStars: 80,
+    nativeStars: 0,
+    nativeStarRects: 0,
+    rearTextureBytes: 0,
+    rearTextureUploads: 0,
+    rearTextureUploadBytes: 0,
+    rearBlits: 0,
+    directCompositions: 1,
+  };
+  expect(observeGpuRenderedFrame(500, direct).work.directCompositions).toBe(1);
+  expect(
+    observeGpuRenderedFrame(500, {
+      ...direct,
+      contourMode: 'canvas-path',
+      contourReason: 'hairline',
+      nativeContourSegments: 200,
+      submittedSegments: 0,
+      geometryUploads: 1,
+      uploadedBytes: 960,
+    }).contourMode
+  ).toBe('canvas-path');
+  for (const invalid of [
+    { ...direct, submittedStars: 0 },
+    { ...direct, nativeStars: 1 },
+    { ...direct, nativeStarRects: 1 },
+    { ...direct, rearTextureBytes: 640_000 },
+    { ...direct, rearTextureUploads: 1 },
+    { ...direct, rearTextureUploadBytes: 640_000 },
+    { ...direct, rearBlits: 1 },
+    { ...direct, directCompositions: 0 },
+    { ...direct, directCompositions: 2 },
+    { ...direct, directCompositions: undefined },
+  ]) {
+    expect(() => observeGpuRenderedFrame(500, invalid)).toThrow();
   }
 });

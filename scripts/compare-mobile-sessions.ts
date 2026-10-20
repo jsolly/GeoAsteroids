@@ -79,8 +79,11 @@ function parseArm(value: unknown) {
   const arm = record(value);
   const renderer = arm['renderer'];
   assert(
-    renderer === undefined || renderer === 'canvas' || renderer === 'webgl2',
-    'Declare renderer canvas or webgl2'
+    renderer === undefined ||
+      renderer === 'canvas' ||
+      renderer === 'webgl2' ||
+      renderer === 'webgl2-direct',
+    'Declare renderer canvas, webgl2 or webgl2-direct'
   );
   if (experiment['kind'] === 'renderer') {
     assert(renderer !== undefined, 'Renderer experiment requires a backend for each arm');
@@ -440,6 +443,8 @@ async function summarize(path: unknown, arm: ReturnType<typeof parseArm>) {
     assert(Math.abs(phaseTotal - duration) < 10, 'Incomplete phase duration ledger');
     const graphics = record(interval['graphicsSettings']);
     if (experiment['kind'] === 'renderer') {
+      const requestedRenderer = arm.renderer;
+      assert(requestedRenderer !== undefined, 'Renderer experiment requires a selected backend');
       const renderer = record(interval['renderer']);
       assert.equal(
         renderer['requested'],
@@ -454,21 +459,27 @@ async function summarize(path: unknown, arm: ReturnType<typeof parseArm>) {
       const rendered = record(renderer['frames']);
       const canvas = number(rendered['canvas']);
       const webgl2 = number(rendered['webgl2']);
+      const direct =
+        rendered['webgl2-direct'] === undefined && arm.renderer !== 'webgl2-direct'
+          ? 0
+          : number(rendered['webgl2-direct']);
       assert(
-        Number.isSafeInteger(canvas) && Number.isSafeInteger(webgl2),
+        Number.isSafeInteger(canvas) &&
+          Number.isSafeInteger(webgl2) &&
+          Number.isSafeInteger(direct),
         'Invalid renderer frame counts'
       );
       const timedFrames = Object.entries(record(interval['metrics']))
         .filter(([name]) => name.endsWith('.frameCpuMs'))
         .reduce((total, [, metric]) => total + number(record(metric)['count']), 0);
       assert.equal(
-        canvas + webgl2,
+        canvas + webgl2 + direct,
         timedFrames,
         'Renderer observations do not cover every timed frame'
       );
       assert.equal(
-        rendered[arm.renderer === 'canvas' ? 'webgl2' : 'canvas'],
-        0,
+        rendered[requestedRenderer],
+        timedFrames,
         'Renderer fell back or changed during measurement'
       );
     }

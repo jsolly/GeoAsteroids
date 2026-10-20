@@ -1,5 +1,6 @@
 import '../index.css';
 import { CLIENT_ID_STORAGE_KEY } from '../src/network/services/clientIdentity';
+import type { RendererBackend } from '../src/rendering/rendererBackend';
 import {
   type ClientScene,
   type ClientSceneFrame,
@@ -19,8 +20,8 @@ export interface ClientOptions {
   seed: number;
   warmupFrames: number;
   measuredFrames: number;
-  viewport: 'desktop' | 'touch-portrait' | 'touch-landscape' | 'tablet';
-  renderer?: 'canvas' | 'webgl2';
+  viewport: 'desktop' | 'touch-portrait' | 'touch-landscape' | 'tablet' | 'fire-tablet';
+  renderer?: RendererBackend;
   dpr?: number;
   chromiumGpu?: boolean;
   scene?: ClientScene;
@@ -231,10 +232,10 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
 
       // The fixed harness also runs against revisions predating the GPU API.
       const surface: object = canvasManager;
-      function rendererBackend(): 'canvas' | 'webgl2' {
+      function rendererBackend(): RendererBackend {
         if ('getRendererBackend' in surface && typeof surface.getRendererBackend === 'function') {
           const backend: unknown = surface.getRendererBackend();
-          if (backend === 'canvas' || backend === 'webgl2') {
+          if (backend === 'canvas' || backend === 'webgl2' || backend === 'webgl2-direct') {
             return backend;
           }
           throw new Error('Unknown observed renderer backend');
@@ -457,13 +458,13 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
       };
       let previousRaf: number | undefined;
       let composedPixels: Uint8ClampedArray | undefined;
-      let observedBackend: 'canvas' | 'webgl2' = 'canvas';
+      let observedBackend: RendererBackend = 'canvas';
       let observedGpuStats: unknown = null;
-      const rendererFrames = { canvas: 0, webgl2: 0 };
+      const rendererFrames = { canvas: 0, webgl2: 0, 'webgl2-direct': 0 };
       let measuredGpuFrames = 0;
       const checkpointImages: { frame: number; sha256: string }[] = [];
       let observationCaptures = 0;
-      function captureFrame(backend: 'canvas' | 'webgl2') {
+      function captureFrame(backend: RendererBackend) {
         const composed = document.createElement('canvas');
         composed.width = canvas.width;
         composed.height = canvas.height;
@@ -471,7 +472,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
         if (!read) {
           throw new Error('Composed frame reader unavailable');
         }
-        if (backend === 'webgl2' && !opaqueFrame) {
+        if (backend !== 'canvas' && !opaqueFrame) {
           const rear = document.querySelector('#gameGpuCanvas');
           if (!(rear instanceof HTMLCanvasElement)) {
             throw new Error('Observed GPU backend has no rear canvas');
@@ -524,7 +525,9 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
             // Snapshot the sequence between update and render, outside both CPU intervals.
             // A large warmup count cannot stand in for this particular measured render.
             const gpuBefore =
-              measured && options.renderer === 'webgl2' ? gpuFrameSequence(gpuFrameStats()) : null;
+              measured && options.renderer !== undefined && options.renderer !== 'canvas'
+                ? gpuFrameSequence(gpuFrameStats())
+                : null;
             phase = 'render';
             countWork('calls');
             const renderStarted =
@@ -608,7 +611,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
               if (observedBackend !== (options.renderer ?? 'canvas')) {
                 throw new Error(`Requested renderer fell back to ${observedBackend}`);
               }
-              if (observedBackend === 'webgl2' && measuredGpuFrames !== options.measuredFrames) {
+              if (observedBackend !== 'canvas' && measuredGpuFrames !== options.measuredFrames) {
                 throw new Error('Incomplete per-render GPU observations');
               }
               if (options.observe) {
@@ -879,6 +882,7 @@ async function runClientFixture(options: ClientOptions & { observe: boolean }) {
               }),
           canvasRendererFrames: rendererFrames.canvas,
           webgl2RendererFrames: rendererFrames.webgl2,
+          webgl2DirectRendererFrames: rendererFrames['webgl2-direct'],
           ...measuredCalls,
           ...untimedCounts,
         },

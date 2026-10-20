@@ -17,14 +17,18 @@ const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(valu
 const fixtureManifest = { seed: 42, scenario: 'combat' };
 const fixtureHash = hash(fixtureManifest);
 const quality = { maxDpr: 'native', glow: 'full' };
-async function fixture(directory: string, kind: 'quality' | 'product' | 'renderer' = 'quality') {
+async function fixture(
+  directory: string,
+  kind: 'quality' | 'product' | 'renderer' = 'quality',
+  candidateRenderer: 'webgl2' | 'webgl2-direct' = 'webgl2'
+) {
   const aa: string[][] = [];
   const ab: string[][] = [];
   for (let index = 0; index < 12; index++) {
     const candidate = index >= 6 && index % 2 === 1;
     const arm = candidate && kind === 'product' ? 'candidate' : 'baseline';
     const graphics = candidate && kind === 'quality' ? { ...quality, maxDpr: 2 } : quality;
-    const renderer = candidate && kind === 'renderer' ? 'webgl2' : 'canvas';
+    const renderer = candidate && kind === 'renderer' ? candidateRenderer : 'canvas';
     const frames = Array.from({ length: 18750 }, (_, frame) =>
       frame < (candidate ? 94 : 375) ? 31 : 16
     );
@@ -144,8 +148,9 @@ async function fixture(directory: string, kind: 'quality' | 'product' | 'rendere
                         frames: {
                           canvas: renderer === 'canvas' ? 18750 : 0,
                           webgl2: renderer === 'webgl2' ? 18750 : 0,
+                          ...(renderer === 'webgl2-direct' ? { 'webgl2-direct': 18750 } : {}),
                         },
-                        gpuStats: renderer === 'webgl2' ? { frames: 18750 } : null,
+                        gpuStats: renderer !== 'canvas' ? { frames: 18750 } : null,
                       },
                     }
                   : {}),
@@ -188,7 +193,7 @@ async function fixture(directory: string, kind: 'quality' | 'product' | 'rendere
           sourceSha256: hash(kind === 'product' ? 'candidate' : 'baseline'),
           productSha256: hash(kind === 'product' ? 'product-candidate' : 'product-baseline'),
           quality: kind === 'quality' ? { ...quality, maxDpr: 2 } : quality,
-          ...(kind === 'renderer' ? { renderer: 'webgl2' } : {}),
+          ...(kind === 'renderer' ? { renderer: candidateRenderer } : {}),
         },
       },
       aa,
@@ -395,6 +400,48 @@ test('a GPU session cannot hide a Canvas fallback that recovered before collecti
       const damaged = structuredClone(originalManifest);
       mutation(damaged.experiment);
       await writeFile(manifest, JSON.stringify(damaged));
+      expect(() => run(manifest, output)).toThrow(error);
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('a direct GPU comparison keeps its identity and rejects hidden copied-mode frames', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'direct-renderer-comparison-'));
+  try {
+    const manifest = await fixture(directory, 'renderer', 'webgl2-direct');
+    const output = join(directory, 'comparison.json');
+    expect(run(manifest, output)).toContain('improved');
+    const path = join(directory, 'session-7.json');
+    const original = JSON.parse(await readFile(path, 'utf8'));
+    for (const [mutation, error] of [
+      [
+        (report: typeof original) => {
+          report.details.scenarios[0].intervals[0].renderer.frames = {
+            canvas: 0,
+            webgl2: 1,
+            'webgl2-direct': 18749,
+          };
+        },
+        'Renderer fell back or changed during measurement',
+      ],
+      [
+        (report: typeof original) => {
+          delete report.details.scenarios[0].intervals[0].renderer.frames['webgl2-direct'];
+        },
+        'Invalid numeric sample',
+      ],
+      [
+        (report: typeof original) => {
+          report.details.scenarios[0].intervals[0].renderer.backend = 'webgl2';
+        },
+        'Observed renderer backend differs from experiment arm',
+      ],
+    ] as const) {
+      const damaged = structuredClone(original);
+      mutation(damaged);
+      await writeFile(path, JSON.stringify(damaged));
       expect(() => run(manifest, output)).toThrow(error);
     }
   } finally {

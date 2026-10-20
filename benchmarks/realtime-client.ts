@@ -482,7 +482,10 @@ const seed = Number(values.seed);
 const network = values.network;
 const workload = values.scenario;
 const renderer = values.renderer;
-assert(renderer === 'canvas' || renderer === 'webgl2', 'renderer must be canvas or webgl2');
+assert(
+  renderer === 'canvas' || renderer === 'webgl2' || renderer === 'webgl2-direct',
+  'renderer must be canvas, webgl2 or webgl2-direct'
+);
 assert(Number.isFinite(dpr) && dpr >= 1 && dpr <= 4, 'dpr must be 1..4');
 assert([1, 4, 6].includes(cpuSlowdown), 'cpu-slowdown must be 1, 4, or 6');
 assert(
@@ -527,7 +530,11 @@ const cases = [
   { name: 'desktop', viewport: { width: 1920, height: 1080 }, hasTouch: false },
   { name: 'touch-portrait', viewport: { width: 390, height: 844 }, hasTouch: true },
   { name: 'touch-landscape', viewport: { width: 844, height: 390 }, hasTouch: true },
-].filter((item) => values.viewport === 'all' || values.viewport === item.name);
+  { name: 'fire-tablet', viewport: { width: 800, height: 1094 }, hasTouch: true },
+].filter(
+  (item) =>
+    (values.viewport === 'all' && item.name !== 'fire-tablet') || values.viewport === item.name
+);
 assert(cases.length > 0, 'Unknown viewport');
 assert(
   !regionalWorkload || cases.length === 1,
@@ -553,8 +560,12 @@ function requireMeasuredRenderer(interval: Interval): void {
   assert(frames && typeof frames === 'object', 'Missing renderer frame ledger');
   const counts = Object.fromEntries(Object.entries(frames));
   let observedFrames = 0;
-  for (const mode of ['canvas', 'webgl2']) {
-    const count = counts[mode];
+  for (const mode of ['canvas', 'webgl2', 'webgl2-direct']) {
+    // Older frozen Canvas/copied-GPU products have no direct-mode ledger.
+    const count =
+      mode === 'webgl2-direct' && renderer !== mode && counts[mode] === undefined
+        ? 0
+        : counts[mode];
     assert(
       typeof count === 'number' && Number.isSafeInteger(count) && count >= 0,
       'Invalid renderer frame count'
@@ -570,8 +581,8 @@ function requireMeasuredRenderer(interval: Interval): void {
     'Actual renderer observations do not cover every timed frame'
   );
   assert.equal(
-    counts[renderer === 'canvas' ? 'webgl2' : 'canvas'],
-    0,
+    counts[renderer],
+    observedFrames,
     'Renderer fell back or changed during measurement'
   );
 }

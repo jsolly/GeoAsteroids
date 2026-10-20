@@ -258,6 +258,17 @@ session. Build the first clean-network client session normally, then put
 ./scripts/test-runner.sh --benchmark-client --reuse-build --renderer webgl2 --network clean --viewport touch-portrait --dpr 3 --cpu-slowdown 4 --scenario combat --warmup 30 --seconds 300 --output .performance/renderer-next.json
 ```
 
+Use `--renderer webgl2-direct` for the separate direct-composition experiment.
+Its visible GPU rear uses retained stars and terrain below a transparent Canvas
+foreground, with no native rear upload or GPU-to-Canvas blit. Star edges and
+translucent blending may differ from the opaque modes. Reports keep its backend
+and frame counts separate; this selector is not a performance qualification.
+See the [direct GPU experiment](../docs/performance/fire-tablet-direct-gpu.md).
+Both manual client tools accept `--viewport fire-tablet` for the reported
+800 by 1094 CSS viewport; pair it with `--dpr 1.5` to reproduce the reported backing
+size. It is an explicit preset, excluded from realtime `--viewport all`. Browser
+emulation does not reproduce the Fire tablet's GPU, power state, or thermal limits.
+
 These two commands illustrate build ownership; the comparison still requires
 three distinct A/A pairs and three alternating A/B pairs with 300 foreground
 seconds and 300 completed measured input actions per session. The first build

@@ -6,6 +6,7 @@ export const GPU_WORK_COUNTERS = [
   'submittedSegments',
   'nativeContourSegments',
   'rearBlits',
+  'directCompositions',
   'nativeStars',
   'nativeStarRects',
   'rearTextureUploads',
@@ -47,6 +48,10 @@ export function observeGpuRenderedFrame(before: number, value: unknown) {
   if (!Number.isSafeInteger(before) || before < 0 || frames - before !== 1) {
     throw new Error('Measured render must advance exactly one GPU frame');
   }
+  const workload = Reflect.get(stats, 'workload');
+  if (workload !== 'native-rear-gpu-contours' && workload !== 'direct-rear-gpu-stars-contours') {
+    throw new Error('GPU observation has an unsupported workload contract');
+  }
   const work: GpuWorkCounters = {
     drawCalls: counter(stats, 'drawCalls'),
     geometryUploads: counter(stats, 'geometryUploads'),
@@ -55,14 +60,15 @@ export function observeGpuRenderedFrame(before: number, value: unknown) {
     submittedSegments: counter(stats, 'submittedSegments'),
     nativeContourSegments: counter(stats, 'nativeContourSegments'),
     rearBlits: counter(stats, 'rearBlits'),
+    directCompositions:
+      workload === 'native-rear-gpu-contours' && !('directCompositions' in stats)
+        ? 0
+        : counter(stats, 'directCompositions'),
     nativeStars: counter(stats, 'nativeStars'),
     nativeStarRects: counter(stats, 'nativeStarRects'),
     rearTextureUploads: counter(stats, 'rearTextureUploads'),
     rearTextureUploadBytes: counter(stats, 'rearTextureUploadBytes'),
   };
-  if (Reflect.get(stats, 'workload') !== 'native-rear-gpu-contours') {
-    throw new Error('GPU observation has an unsupported workload contract');
-  }
   const rearBytes = counter(stats, 'rearTextureBytes');
   const contourMode: unknown = Reflect.get(stats, 'contourMode');
   if (contourMode !== 'gpu-capsules' && contourMode !== 'canvas-path') {
@@ -75,24 +81,32 @@ export function observeGpuRenderedFrame(before: number, value: unknown) {
   if (contourMode === 'gpu-capsules' ? contourReason !== 'none' : contourReason !== 'hairline') {
     throw new Error('GPU observation has an invalid contour painter reason');
   }
-  if (
-    work.drawCalls === 0 ||
-    work.submittedStars !== 0 ||
-    work.nativeStars === 0 ||
-    work.nativeStarRects === 0 ||
-    work.nativeStarRects > work.nativeStars ||
-    work.rearTextureUploads !== 1 ||
-    rearBytes === 0 ||
-    work.rearTextureUploadBytes !== rearBytes ||
-    work.rearBlits !== 1 ||
-    (contourMode === 'gpu-capsules'
+  const contourMissing =
+    contourMode === 'gpu-capsules'
       ? work.submittedSegments === 0 || work.nativeContourSegments !== 0
-      : work.nativeContourSegments === 0 ||
-        work.submittedSegments !== 0 ||
-        work.drawCalls !== 1 ||
-        work.geometryUploads !== 0 ||
-        work.uploadedBytes !== 0)
-  ) {
+      : work.nativeContourSegments === 0 || work.submittedSegments !== 0;
+  const rearMissing =
+    workload === 'native-rear-gpu-contours'
+      ? work.submittedStars !== 0 ||
+        work.nativeStars === 0 ||
+        work.nativeStarRects === 0 ||
+        work.nativeStarRects > work.nativeStars ||
+        work.rearTextureUploads !== 1 ||
+        rearBytes === 0 ||
+        work.rearTextureUploadBytes !== rearBytes ||
+        work.rearBlits !== 1 ||
+        work.directCompositions !== 0 ||
+        (contourMode === 'canvas-path' &&
+          (work.drawCalls !== 1 || work.geometryUploads !== 0 || work.uploadedBytes !== 0))
+      : work.submittedStars === 0 ||
+        work.nativeStars !== 0 ||
+        work.nativeStarRects !== 0 ||
+        work.rearTextureUploads !== 0 ||
+        rearBytes !== 0 ||
+        work.rearTextureUploadBytes !== 0 ||
+        work.rearBlits !== 0 ||
+        work.directCompositions !== 1;
+  if (work.drawCalls === 0 || contourMissing || rearMissing) {
     throw new Error('GPU frame lacks actual drawing, exclusive contour work or composition');
   }
   return { frames, contourMode, contourReason, work };

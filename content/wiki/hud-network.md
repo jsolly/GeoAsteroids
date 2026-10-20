@@ -64,7 +64,7 @@ For a device performance check, open `/debug?performance=collect`, enter the gam
 
 Live diagnostics include a Device label: Low-end, Commodity, High-end, or Unknown. Unknown means the browser did not supply enough hardware information to classify it.
 
-Try the [experimental WebGL version](https://www.georoids.com/?renderer=webgl2) to compare graphics performance on your device. It uses the same scene and controls and falls back automatically if the renderer is unavailable. Reload the [standard version](https://www.georoids.com/) to return to the default renderer.
+Compare the [copied WebGL version](/?renderer=webgl2) or [direct GPU experiment](/?renderer=webgl2-direct) on your device. Both keep the same world and controls and fall back if unavailable; direct composition avoids frame copies but can change star edges and translucent colors. Reload the [standard version](/) to return to the default renderer.
 
 ## Campaign status
 

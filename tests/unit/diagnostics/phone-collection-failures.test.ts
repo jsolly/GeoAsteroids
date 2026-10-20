@@ -4,6 +4,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { parseDebugReportSubmission, sanitizeDebugDiagnostics } from '../../../shared/debugReports';
 import { ClientPerformanceMetrics } from '../../../src/diagnostics/performanceMetrics';
 import { createPhoneCollector } from '../../../src/diagnostics/phoneCollector';
+import type { GpuFrameStats } from '../../../src/rendering/gpuRearRenderer';
+import type { RendererBackend } from '../../../src/rendering/rendererBackend';
 import { installPhoneRecordingStorage as storage } from '../../support/phoneRecordingStorage';
 
 const collectors = new Set<ReturnType<typeof createPhoneCollector>>();
@@ -561,5 +563,202 @@ test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
         },
       },
     });
+  }
+);
+
+test('direct flight and intentional Canvas Simple Scan remain complete across real recorder chunks', async () => {
+  storage();
+  const metrics = new ClientPerformanceMetrics(true);
+  metrics.setPhase('play');
+  let backend: RendererBackend = 'webgl2-direct';
+  metrics.setRendererObservation('webgl2-direct', () => ({ backend, gpuStats: null }));
+  const subject = collector(metrics);
+  await subject.start('KFTUWI', 'Direct flight with live Simple Scan');
+  metrics.record('frameIntervalMs', 16);
+  metrics.recordRendererFrame(backend);
+  await vi.advanceTimersByTimeAsync(1000);
+  backend = 'canvas';
+  metrics.count('simpleScanFrames');
+  metrics.record('frameIntervalMs', 33);
+  metrics.recordRendererFrame(backend);
+  await vi.advanceTimersByTimeAsync(1000);
+  backend = 'webgl2-direct';
+  metrics.record('frameIntervalMs', 17);
+  metrics.recordRendererFrame(backend);
+  subject.stop();
+  const before = await artifact(subject);
+  expect(subject.readDiagnostics()).toMatchObject({
+    complete: true,
+    incompleteReasons: [],
+    provenance: { rendererRequested: 'webgl2-direct', rendererBackend: 'mixed' },
+    rendererFrames: { canvas: 1, webgl2: 0, 'webgl2-direct': 2 },
+    counters: { simpleScanFrames: 1 },
+    metrics: { 'play.frameIntervalMs': { count: 3, p95: 33, p99: 33 } },
+  });
+  expect((await artifact(subject)).content).toEqual(before.content);
+});
+
+test.each(['flight fallback', 'fallback beside Scan', 'copied GPU', 'no direct frames'])(
+  '%s cannot qualify as an intentional direct GPU and Simple Scan recording',
+  async (failure) => {
+    storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    let backend: RendererBackend = 'webgl2-direct';
+    metrics.setRendererObservation('webgl2-direct', () => ({ backend, gpuStats: null }));
+    const subject = collector(metrics);
+    await subject.start('KFTUWI', failure);
+    if (failure !== 'no direct frames') {
+      metrics.record('frameIntervalMs', 16);
+      metrics.recordRendererFrame(backend);
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+    backend = failure === 'copied GPU' ? 'webgl2' : 'canvas';
+    if (failure === 'fallback beside Scan' || failure === 'no direct frames') {
+      metrics.count('simpleScanFrames');
+      metrics.record('frameIntervalMs', 33);
+      metrics.recordRendererFrame(backend);
+    }
+    if (failure !== 'no direct frames') {
+      metrics.record('frameIntervalMs', 40);
+      metrics.recordRendererFrame(backend);
+    }
+    subject.stop();
+    const summary = subject.readDiagnostics();
+    expect(summary).toMatchObject({
+      complete: false,
+      incompleteReasons: [
+        failure === 'no direct frames'
+          ? 'No direct GPU frames observed during recording'
+          : 'Direct GPU recording contains unplanned renderer fallback',
+      ],
+      rendererFrames: {
+        canvas: failure === 'copied GPU' ? 0 : failure === 'fallback beside Scan' ? 2 : 1,
+        webgl2: failure === 'copied GPU' ? 1 : 0,
+        'webgl2-direct': failure === 'no direct frames' ? 0 : 1,
+      },
+      metrics: { 'play.frameIntervalMs': { p95: null, p99: null } },
+    });
+  }
+);
+
+function gpuObservation(): GpuFrameStats {
+  return {
+    state: 'ready',
+    workload: 'direct-rear-gpu-stars-contours',
+    contourMode: 'none',
+    contourReason: 'none',
+    directCompositions: 0,
+    totalDirectCompositions: 0,
+    nativeContourSegments: 0,
+    totalNativeContourSegments: 0,
+    frames: 0,
+    drawCalls: 0,
+    geometryUploads: 0,
+    uploadedBytes: 0,
+    submittedStars: 0,
+    submittedSegments: 0,
+    retainedBuffers: 0,
+    retainedBytes: 0,
+    maskBytes: 0,
+    rearTextureBytes: 0,
+    rearTextureUploads: 0,
+    rearTextureUploadBytes: 0,
+    totalRearTextureUploads: 0,
+    totalRearTextureUploadBytes: 0,
+    nativeStars: 0,
+    nativeStarRects: 0,
+    totalNativeStars: 0,
+    totalNativeStarRects: 0,
+    contextLosses: 0,
+    contextRestorations: 0,
+    totalDrawCalls: 0,
+    totalGeometryUploads: 0,
+    totalUploadedBytes: 0,
+    rearBlits: 0,
+    totalRearBlits: 0,
+  };
+}
+
+test.each(['failed', 'context loss', 'restored context'])(
+  'a GPU %s during Canvas Simple Scan invalidates qualification even with matching frame ledgers',
+  async (failure) => {
+    storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    let backend: RendererBackend = 'webgl2-direct';
+    const gpuStats = gpuObservation();
+    metrics.setRendererObservation('webgl2-direct', () => ({ backend, gpuStats }));
+    const subject = collector(metrics);
+    await subject.start('KFTUWI', failure);
+    metrics.record('frameIntervalMs', 16);
+    metrics.recordRendererFrame(backend);
+    await vi.advanceTimersByTimeAsync(1000);
+    backend = 'canvas';
+    if (failure === 'failed') {
+      gpuStats.state = 'failed';
+    } else {
+      gpuStats.state = failure === 'context loss' ? 'context-lost' : 'ready';
+      gpuStats.contextLosses = 1;
+      gpuStats.contextRestorations = failure === 'restored context' ? 1 : 0;
+    }
+    metrics.count('simpleScanFrames');
+    metrics.record('frameIntervalMs', 33);
+    metrics.recordRendererFrame(backend);
+    subject.stop();
+    expect(subject.readDiagnostics()).toMatchObject({
+      complete: false,
+      rendererFrames: { canvas: 1, webgl2: 0, 'webgl2-direct': 1 },
+      incompleteReasons:
+        failure === 'failed'
+          ? ['Direct GPU renderer was unavailable during recording']
+          : failure === 'context loss'
+            ? [
+                'Direct GPU renderer was unavailable during recording',
+                'Direct GPU recording contains GPU context interruption history',
+              ]
+            : ['Direct GPU recording contains GPU context interruption history'],
+      metrics: { 'play.frameIntervalMs': { count: 2, p95: null, p99: null } },
+    });
+  }
+);
+
+test.each(['legacy', 'null', 'negative', 'fractional', 'string'])(
+  'a persisted %s direct frame counter is handled without discarding its raw recording',
+  async (counter) => {
+    const saved = storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    const subject = collector(metrics);
+    await subject.start('Phone', 'Persisted renderer counter');
+    metrics.record('frameIntervalMs', 16);
+    metrics.recordRendererFrame('canvas');
+    subject.stop();
+    const sample = (await artifact(subject)).content.samples[0];
+    if (counter === 'legacy') {
+      delete sample.renderer.frames['webgl2-direct'];
+    } else {
+      sample.renderer.frames['webgl2-direct'] =
+        counter === 'null'
+          ? null
+          : counter === 'negative'
+            ? -1
+            : counter === 'fractional'
+              ? 0.5
+              : '1';
+    }
+    const id = saved.rows.get('latest');
+    saved.rows.set(`${id}:0`, JSON.stringify(sample));
+    const recovered = collector();
+    await recovered.recover();
+    expect(recovered.readDiagnostics()).toMatchObject(
+      counter === 'legacy'
+        ? { complete: true, rendererFrames: { canvas: 1, webgl2: 0, 'webgl2-direct': 0 } }
+        : {
+            complete: false,
+            incompleteReasons: ['Performance summary unavailable; recording remains local'],
+          }
+    );
+    expect((await artifact(recovered)).content.samples).toEqual([sample]);
   }
 );

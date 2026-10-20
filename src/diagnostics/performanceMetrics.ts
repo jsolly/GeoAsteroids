@@ -1,4 +1,5 @@
 import type { GpuFrameStats } from '../rendering/gpuRearRenderer';
+import type { RendererBackend } from '../rendering/rendererBackend';
 import { getClientReleaseId } from '../utils/buildInfo';
 import { logger } from '../utils/Logger';
 
@@ -194,22 +195,22 @@ export class ClientPerformanceMetrics {
   private readonly pendingProbes = new Map<number, number>();
   private readonly completedProbes = new Set<number>();
   private graphicsSettings: Record<string, string | number | boolean> = {};
-  private rendererRequested: 'canvas' | 'webgl2' = 'canvas';
-  private readonly rendererFrames = { canvas: 0, webgl2: 0 };
+  private rendererRequested: RendererBackend = 'canvas';
+  private readonly rendererFrames = { canvas: 0, webgl2: 0, 'webgl2-direct': 0 };
   private rendererObserver:
-    | (() => { backend: 'canvas' | 'webgl2'; gpuStats: GpuFrameStats | null })
+    | (() => { backend: RendererBackend; gpuStats: GpuFrameStats | null })
     | null = null;
 
   setRendererObservation(
-    requested: 'canvas' | 'webgl2',
-    observe: (() => { backend: 'canvas' | 'webgl2'; gpuStats: GpuFrameStats | null }) | null
+    requested: RendererBackend,
+    observe: (() => { backend: RendererBackend; gpuStats: GpuFrameStats | null }) | null
   ): void {
     this.rendererRequested = requested;
     this.rendererObserver = observe;
   }
 
   /** Called after the frame's CPU timing closes; no GPU queries or allocations. */
-  recordRendererFrame(backend: 'canvas' | 'webgl2'): void {
+  recordRendererFrame(backend: RendererBackend): void {
     if (this.enabled) {
       this.rendererFrames[backend]++;
     }
@@ -634,6 +635,7 @@ export class ClientPerformanceMetrics {
       this.observedSlowFrames = 0;
       this.rendererFrames.canvas = 0;
       this.rendererFrames.webgl2 = 0;
+      this.rendererFrames['webgl2-direct'] = 0;
       for (const phase of Object.keys(this.phaseDurations) as Phase[]) {
         this.phaseDurations[phase] = 0;
       }

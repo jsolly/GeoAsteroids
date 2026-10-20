@@ -10,7 +10,10 @@ import {
   GPU_REAR_FRAGMENT,
   GPU_SEGMENT_FRAGMENT,
   GPU_SEGMENT_VERTEX,
+  GPU_STAR_FRAGMENT,
+  GPU_STAR_VERTEX,
 } from './gpuShaders';
+import type { StarPoint } from './nativeStarPainter';
 
 type Segment = ContourLevel['segments'][number];
 export type GpuContourLayer = { index: number; segments: readonly Segment[] };
@@ -23,6 +26,7 @@ type GpuRearScene = {
   zoom: number;
   contourTransform: { a: number; b: number; c: number; d: number };
   contours: readonly GpuContourLayer[];
+  starTiles: readonly (readonly StarPoint[])[];
   rearSource: HTMLCanvasElement;
   nativeStars: number;
   nativeStarRects: number;
@@ -48,11 +52,24 @@ type CameraProgram = CameraUniforms & { program: WebGLProgram };
 type ReadyResources = {
   owner: GpuResources;
   segments: CameraProgram & { radius: WebGLUniformLocation };
-  rear: {
-    program: WebGLProgram;
-    array: WebGLVertexArrayObject;
-    source: WebGLUniformLocation;
-  };
+  rear:
+    | {
+        kind: 'copied';
+        program: WebGLProgram;
+        array: WebGLVertexArrayObject;
+        source: WebGLUniformLocation;
+        texture: WebGLTexture;
+      }
+    | {
+        kind: 'direct';
+        stars: CameraProgram & {
+          zoom: WebGLUniformLocation;
+          dpr: WebGLUniformLocation;
+          ink: WebGLUniformLocation;
+          starSize: WebGLUniformLocation;
+        };
+        starTiles: Map<readonly StarPoint[], Batch>;
+      };
   composite: {
     program: WebGLProgram;
     array: WebGLVertexArrayObject;
@@ -61,7 +78,6 @@ type ReadyResources = {
     coverage: WebGLUniformLocation;
   };
   mask: WebGLTexture;
-  rearTexture: WebGLTexture;
   framebuffer: WebGLFramebuffer;
   maskWidth: number;
   maskHeight: number;
@@ -79,7 +95,9 @@ type ContourPainter =
 
 export type GpuFrameStats = ContourPainter & {
   state: GpuState['kind'];
-  workload: 'native-rear-gpu-contours';
+  workload: 'native-rear-gpu-contours' | 'direct-rear-gpu-stars-contours';
+  directCompositions: number;
+  totalDirectCompositions: number;
   nativeContourSegments: number;
   totalNativeContourSegments: number;
   frames: number;
@@ -119,13 +137,15 @@ function rgb(hex: string): [number, number, number] {
 const BACKGROUND = rgb(PALETTE.BG);
 const CONTOUR_COLOR = rgb(PALETTE.CONTOUR);
 
-/** Only contiguous rear layers. The opaque Canvas receives one synchronous rear blit. */
+/** Contiguous rear layers, either copied into Canvas or composed directly below it. */
 export class GpuRearRenderer {
   private state: GpuState = { kind: 'failed' };
   private contourPainter: ContourPainter = { contourMode: 'none', contourReason: 'none' };
   private readonly maxSize: number;
   private readonly stats: Omit<GpuFrameStats, 'state' | keyof ContourPainter> = {
     workload: 'native-rear-gpu-contours',
+    directCompositions: 0,
+    totalDirectCompositions: 0,
     nativeContourSegments: 0,
     totalNativeContourSegments: 0,
     frames: 0,
@@ -157,7 +177,8 @@ export class GpuRearRenderer {
 
   static create(
     overlay: HTMLCanvasElement,
-    onAvailabilityChange: () => void
+    onAvailabilityChange: () => void,
+    presentation: 'copied' | 'direct' = 'copied'
   ): GpuRearRenderer | null {
     const parent = overlay.parentElement;
     if (!parent) {
@@ -167,6 +188,7 @@ export class GpuRearRenderer {
     canvas.id = 'gameGpuCanvas';
     canvas.className = 'gpu-rear-canvas';
     canvas.setAttribute('aria-hidden', 'true');
+    canvas.dataset['gpuPresentation'] = presentation;
     const gl = canvas.getContext('webgl2', {
       alpha: true,
       antialias: false,
@@ -177,7 +199,7 @@ export class GpuRearRenderer {
     if (!gl) {
       return null;
     }
-    const renderer = new GpuRearRenderer(canvas, gl, onAvailabilityChange);
+    const renderer = new GpuRearRenderer(canvas, gl, onAvailabilityChange, presentation);
     if (!renderer.available()) {
       renderer.destroy();
       return null;
@@ -189,14 +211,21 @@ export class GpuRearRenderer {
   private constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly gl: WebGL2RenderingContext,
-    private readonly onAvailabilityChange: () => void
+    private readonly onAvailabilityChange: () => void,
+    private readonly presentation: 'copied' | 'direct'
   ) {
+    this.stats.workload =
+      presentation === 'direct' ? 'direct-rear-gpu-stars-contours' : 'native-rear-gpu-contours';
     const maxSize: unknown = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     this.maxSize = typeof maxSize === 'number' ? maxSize : 0;
     canvas.hidden = true;
     canvas.addEventListener('webglcontextlost', this.contextLost);
     canvas.addEventListener('webglcontextrestored', this.contextRestored);
     this.initialize();
+  }
+
+  get backend(): 'webgl2' | 'webgl2-direct' {
+    return this.presentation === 'direct' ? 'webgl2-direct' : 'webgl2';
   }
 
   available(): boolean {
@@ -244,6 +273,7 @@ export class GpuRearRenderer {
     this.stats.nativeContourSegments = 0;
     this.contourPainter = { contourMode: 'none', contourReason: 'none' };
     this.stats.rearBlits = 0;
+    this.stats.directCompositions = 0;
     this.stats.rearTextureUploads = 0;
     this.stats.rearTextureUploadBytes = 0;
     this.stats.nativeStars = 0;
@@ -264,7 +294,11 @@ export class GpuRearRenderer {
       gl.enable(gl.BLEND);
       gl.blendEquation(gl.FUNC_ADD);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      this.drawNativeRear(scene, resources);
+      if (resources.rear.kind === 'direct') {
+        this.drawStars(scene, resources, resources.rear);
+      } else {
+        this.drawNativeRear(scene, resources.rear);
+      }
       // Skia switches thin strokes to a modulated hairline, with different
       // endpoint support and rounding. Preserve that native painter exactly.
       const matrix = scene.contourTransform;
@@ -284,6 +318,9 @@ export class GpuRearRenderer {
         this.drawContours(scene, resources);
       }
       this.prune(resources.contours, resources.owner);
+      if (resources.rear.kind === 'direct') {
+        this.prune(resources.rear.starTiles, resources.owner);
+      }
       this.stats.totalDrawCalls += this.stats.drawCalls;
       this.stats.totalGeometryUploads += this.stats.geometryUploads;
       this.stats.totalUploadedBytes += this.stats.uploadedBytes;
@@ -300,6 +337,11 @@ export class GpuRearRenderer {
       );
       return false;
     }
+  }
+
+  /** Another opaque painter owns this frame; retain geometry for the next GPU frame. */
+  hideSurface(): void {
+    this.canvas.hidden = true;
   }
 
   destroy(): void {
@@ -321,6 +363,15 @@ export class GpuRearRenderer {
     }
     context.save();
     try {
+      if (this.presentation === 'direct') {
+        // Browser composition places this transparent foreground over the GPU rear.
+        // Clearing physical pixels preserves the active scan transform and clip.
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        this.stats.directCompositions++;
+        this.stats.totalDirectCompositions++;
+        return true;
+      }
       // World painters may be inside the scan transform. Copy backing pixels
       // exactly, then restore that transform for all ordinary Canvas painters.
       context.setTransform(1, 0, 0, 1, 0, 0);
@@ -375,7 +426,6 @@ export class GpuRearRenderer {
     const owner = new GpuResources(gl);
     try {
       const segmentProgram = owner.program(GPU_SEGMENT_VERTEX, GPU_SEGMENT_FRAGMENT);
-      const rearProgram = owner.program(GPU_COMPOSITE_VERTEX, GPU_REAR_FRAGMENT);
       const compositeProgram = owner.program(GPU_COMPOSITE_VERTEX, GPU_COMPOSITE_FRAGMENT);
       const cameraUniforms = (program: WebGLProgram): CameraProgram => ({
         program,
@@ -384,6 +434,30 @@ export class GpuRearRenderer {
         view: owner.uniform(program, 'u_view'),
         scale: owner.uniform(program, 'u_scale'),
       });
+      let rear: ReadyResources['rear'];
+      if (this.presentation === 'copied') {
+        const program = owner.program(GPU_COMPOSITE_VERTEX, GPU_REAR_FRAGMENT);
+        rear = {
+          kind: 'copied',
+          program,
+          array: owner.vertexArray(),
+          source: owner.uniform(program, 'u_rear'),
+          texture: owner.texture(),
+        };
+      } else {
+        const program = owner.program(GPU_STAR_VERTEX, GPU_STAR_FRAGMENT);
+        rear = {
+          kind: 'direct',
+          stars: {
+            ...cameraUniforms(program),
+            zoom: owner.uniform(program, 'u_zoom'),
+            dpr: owner.uniform(program, 'u_dpr'),
+            ink: owner.uniform(program, 'u_ink'),
+            starSize: owner.uniform(program, 'u_starSize'),
+          },
+          starTiles: new Map(),
+        };
+      }
       this.state = {
         kind: 'ready',
         resources: {
@@ -392,11 +466,7 @@ export class GpuRearRenderer {
             ...cameraUniforms(segmentProgram),
             radius: owner.uniform(segmentProgram, 'u_radius'),
           },
-          rear: {
-            program: rearProgram,
-            array: owner.vertexArray(),
-            source: owner.uniform(rearProgram, 'u_rear'),
-          },
+          rear,
           composite: {
             program: compositeProgram,
             array: owner.vertexArray(),
@@ -405,7 +475,6 @@ export class GpuRearRenderer {
             coverage: owner.uniform(compositeProgram, 'u_coverage'),
           },
           mask: owner.texture(),
-          rearTexture: owner.texture(),
           framebuffer: owner.framebuffer(),
           maskWidth: 0,
           maskHeight: 0,
@@ -446,12 +515,14 @@ export class GpuRearRenderer {
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
       throw new Error('GPU contour coverage target is incomplete');
     }
-    gl.bindTexture(gl.TEXTURE_2D, resources.rearTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.stats.rearTextureBytes = width * height * 4;
+    if (resources.rear.kind === 'copied') {
+      gl.bindTexture(gl.TEXTURE_2D, resources.rear.texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    this.stats.rearTextureBytes = this.presentation === 'copied' ? width * height * 4 : 0;
     resources.maskWidth = width;
     resources.maskHeight = height;
     this.stats.maskBytes = width * height;
@@ -474,7 +545,47 @@ export class GpuRearRenderer {
     gl.uniform1f(program.scale, scale);
   }
 
-  private drawNativeRear(scene: GpuRearScene, resources: ReadyResources): void {
+  private drawStars(
+    scene: GpuRearScene,
+    resources: ReadyResources,
+    rear: Extract<ReadyResources['rear'], { kind: 'direct' }>
+  ): void {
+    const gl = this.gl;
+    const program = rear.stars;
+    gl.useProgram(program.program);
+    gl.uniform1f(program.zoom, scene.zoom);
+    gl.uniform1f(program.dpr, scene.dpr);
+    gl.uniform1f(program.starSize, VISUAL.STAR_SIZE);
+    gl.uniform3f(program.ink, ...rgb(PALETTE.STARS));
+    for (const tile of scene.starTiles) {
+      const first = tile[0];
+      if (!first) {
+        continue;
+      }
+      let batch = rear.starTiles.get(tile);
+      if (!batch) {
+        const data = new Float32Array(tile.length * 3);
+        for (const [index, star] of tile.entries()) {
+          data[index * 3] = star.x - first.x;
+          data[index * 3 + 1] = star.y - first.y;
+          data[index * 3 + 2] = Math.round(star.alpha * 100) / 100;
+        }
+        batch = this.upload(resources.owner, data, 3, first.x, first.y);
+        rear.starTiles.set(tile, batch);
+      }
+      batch.frame = this.stats.frames;
+      this.setCamera(program, scene, batch, scene.scale);
+      gl.bindVertexArray(batch.array);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, batch.count);
+      this.stats.submittedStars += batch.count;
+      this.stats.drawCalls++;
+    }
+  }
+
+  private drawNativeRear(
+    scene: GpuRearScene,
+    rear: Extract<ReadyResources['rear'], { kind: 'copied' }>
+  ): void {
     if (
       scene.rearSource.width !== this.canvas.width ||
       scene.rearSource.height !== this.canvas.height
@@ -484,7 +595,7 @@ export class GpuRearRenderer {
     const gl = this.gl;
     gl.disable(gl.BLEND);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, resources.rearTexture);
+    gl.bindTexture(gl.TEXTURE_2D, rear.texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
@@ -502,9 +613,9 @@ export class GpuRearRenderer {
     this.stats.nativeStarRects = scene.nativeStarRects;
     this.stats.totalNativeStars += scene.nativeStars;
     this.stats.totalNativeStarRects += scene.nativeStarRects;
-    gl.useProgram(resources.rear.program);
-    gl.uniform1i(resources.rear.source, 0);
-    gl.bindVertexArray(resources.rear.array);
+    gl.useProgram(rear.program);
+    gl.uniform1i(rear.source, 0);
+    gl.bindVertexArray(rear.array);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.stats.drawCalls++;
     gl.enable(gl.BLEND);
@@ -624,6 +735,7 @@ export class GpuRearRenderer {
   private clearRetainedStats(): void {
     this.contourPainter = { contourMode: 'none', contourReason: 'none' };
     this.stats.nativeContourSegments = 0;
+    this.stats.directCompositions = 0;
     this.stats.drawCalls = 0;
     this.stats.geometryUploads = 0;
     this.stats.uploadedBytes = 0;

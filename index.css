@@ -97,6 +97,18 @@
     display: none;
   }
 
+  .gpu-rear-canvas[data-gpu-presentation="direct"]:not([hidden]) {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  #gameCanvas[data-gpu-presentation="direct"] {
+    position: relative;
+    background: transparent;
+  }
+
   .universe-map-dialog kbd {
     padding: 0.08rem 0.25rem;
     border: 1px solid currentColor;

@@ -36,11 +36,15 @@ export function sampleOptions(
     viewport === 'desktop' ||
       viewport === 'touch-portrait' ||
       viewport === 'touch-landscape' ||
-      viewport === 'tablet',
+      viewport === 'tablet' ||
+      viewport === 'fire-tablet',
     'Unknown viewport'
   );
   assert(kind === 'client' || viewport === 'desktop', 'Only client measurements accept a viewport');
-  assert(renderer === 'canvas' || renderer === 'webgl2', 'Unknown renderer');
+  assert(
+    renderer === 'canvas' || renderer === 'webgl2' || renderer === 'webgl2-direct',
+    'Unknown renderer'
+  );
   const dpr = Number(dprText);
   assert(Number.isFinite(dpr) && dpr >= 1 && dpr <= 4, 'dpr must be 1..4');
   assert(

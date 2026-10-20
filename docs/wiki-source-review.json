@@ -5,7 +5,7 @@
     "docs/diagnostics.md": "sha256:b7b86e027618c1aeed4bbee8d2ffbbb09578993b8f276e7d814e22cf0d5e3599",
     "docs/protocol/snapshot-v3.md": "sha256:466d9bf94b7f001cb0d4750a418685f547806a39b328f7fda2b9d23a8f6b9bc6",
     "docs/sounds.md": "sha256:e1ba73957bfee66bf16a062a9ad58690884bfa51eaa40ce57dd8f618e7ba8bd2",
-    "index.css": "sha256:6f758f11ca56b4b312836cc3d3330633e8d904de918be510d7498cba00abbb4c",
+    "index.css": "sha256:d0e47faf392902a85f73f84857cf9f4cad3d5b13f2978b991037ade4ec32e5f8",
     "package.json": "sha256:7f37664cb85dabb7c462eb70530ef219e1e1768a25f5db24d45a49d9fd894f83",
     "public/music/README.md": "sha256:4fe5586c0f903329e343427a33538bda6e301ff577b89976e15e4ba7684bcc8d",
     "public/music/danger-bed.mp3": "sha256:1ef1e5df3e06fa787c45599409d8180c2e5e31aea289c3ededa58cf5dd31e509",
@@ -58,7 +58,7 @@
     "scripts/client-build.ts": "sha256:abe7ea029d9606ce316a76b6cef432aa7002420783f8dc739622af74a90e5892",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
     "scripts/wiki-check.ts": "sha256:c4146d2130c4d46fcbffdeca2b205821c57d0bab2e860954fefbe24a7f3ecfc7",
-    "scripts/wiki-content.ts": "sha256:190a89be185ac685e37e7ae3d962d1fabb059a2a39fc3eee2f9cc09567e8a162",
+    "scripts/wiki-content.ts": "sha256:6cc023e62b0b36cd991806401a4e9ca5d5c825c49efd9f7bf133ebd634a114a0",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-node-shim.ts": "sha256:207fc4dd954b499d622d428632ed3b55c196a2f604065a987da1d3fbd20cacae",
     "scripts/wiki-media-requirements.txt": "sha256:5dd5a7db938c69c025039265a023c0253f450704efd947dd579e6958a14c964d",
@@ -166,7 +166,7 @@
     "src/core/services/InputManager.ts": "sha256:4bda2decc191b6a716d58fac1a7c3d0ce67476eb3666bc65d81de2660e8b7d43",
     "src/diagnostics/clientDiagnostics.ts": "sha256:0f5273bfe8f1950abcdd8a994a2e1d22d9806c414a3c4fcd2076241d4ba2a0f8",
     "src/diagnostics/debugHudMetrics.ts": "sha256:c2188e5bc06730ab3511b8a8089e091c4bbf4ed7a934868476c3645bbc43644d",
-    "src/diagnostics/performanceMetrics.ts": "sha256:8cebc2e73465bc3215d0f0f2ad5d9c0e80cff83fc158032976ae5838c8c21cf0",
+    "src/diagnostics/performanceMetrics.ts": "sha256:7a8b3a57597f72819610c7fc9e85a64500ca3dc724166555b550c1a1be671300",
     "src/entities/laser/AuthoritativeProjectileField.ts": "sha256:01f08320e6968fa4e8b07d798fe226117b29042aecada94cfb373517334aad67",
     "src/entities/laser/Laser.ts": "sha256:d482cbf287826e87b2aa4d17db13fd7495af82d44c24ca653434f8de0738ea16",
     "src/entities/laser/laserUtils.ts": "sha256:e7e20a0c5f6f6cb577898bb0f531b19866c833c44a090d56da833d1c71c97b01",
@@ -228,7 +228,7 @@
     "src/rendering/boundaryRenderer.ts": "sha256:5d3208fc26a8352f8292664504956a1c1757a16ab03845d816ee5de50496819b",
     "src/rendering/canvas.ts": "sha256:cdc45d45672137c4524237e8702657bf795808ca1089a5f4d62f1177a72b6bb2",
     "src/rendering/canvasBackground.ts": "sha256:aa0fcb20a82cd5c7e9bf65c8661bb2da121a346a08f16dff223095546636ef75",
-    "src/rendering/canvasSurface.ts": "sha256:31bb57b97d7a43785c14c35313d1a625885dad765e0f55081a1c1319025bd878",
+    "src/rendering/canvasSurface.ts": "sha256:0ae5a9b60e66930b734f7a634ba65098273841355058ac93f4c43c03d574f785",
     "src/rendering/cargoHoldRenderer.ts": "sha256:9d9fa3eb3da559c7d0c05fc2997460742e2ad3fb4e0c55841c0304408e435f5c",
     "src/rendering/cargoOffloadRenderer.ts": "sha256:c4b2f3a0bda19a35fc03b6016d8c77ef81cd2aa02519610cf020f574569e826d",
     "src/rendering/contourLaserRenderer.ts": "sha256:04532b8a5538ee8d683acf10ad4d7a73e5d181d03cb31e5bcc2c2968d15979a9",
@@ -239,9 +239,9 @@
     "src/rendering/devicePixelRatioWatcher.ts": "sha256:f5bb015239f43c33ec954e43bf3fa5b6ff0cfb2db1b8e044bf29d1623a2be748",
     "src/rendering/drawingContext.ts": "sha256:e7559e853594a0f04218f6f3f6b56696fc5fdb89cc38df13663c176160dee8c2",
     "src/rendering/furnaceRenderer.ts": "sha256:73a4ff537830936d3e9b31a33eda7e25566cfd6d942ea816d76b2611ef2d80c6",
-    "src/rendering/gpuRearRenderer.ts": "sha256:d15d65438b71907737ea17ecf7bcea54f9e7f5a0d9b3a1eca585f35f2a75bbd5",
+    "src/rendering/gpuRearRenderer.ts": "sha256:edb4c0fc8c5e1217be8e59c9197d66537f6e1b6f60be3be8b4aae622294c5092",
     "src/rendering/gpuResources.ts": "sha256:4771865e5866b12493b676e8b61f37af7e719738786388e0e59fa88e296ccef6",
-    "src/rendering/gpuShaders.ts": "sha256:8fc33f8f855677b975875343ed51caf0b00245546284ce8e5841db91ad654999",
+    "src/rendering/gpuShaders.ts": "sha256:0e2e606876048b47da79da6f14e505fc6d40e73ba07ddce150905751ede45f8a",
     "src/rendering/headingCueRenderer.ts": "sha256:88e36fd2455459f0b4fa9003ac5fe441accd5a7f2cef41b5f41b5732f8aa9d89",
     "src/rendering/hud/furnaceMapMark.ts": "sha256:257822ef3315370b3b7abd1378d5322bcf6252851a6be959c542ed46b6089087",
     "src/rendering/hud/gameInfo.ts": "sha256:39bf465d1638db5914d7346740119265569fb092702889c5a9c91af3db68dceb",
@@ -563,12 +563,13 @@
     "config/typescript/tsconfig.json": "sha256:bcfd4a8c97fd1c4c0a49e85badf4f98457895b76698b50b0cdc688ce2403f01d",
     "tsconfig.json": "sha256:1d3be74b9a82eac608077229d85ae81baa5fca7983b0e0813d2ff45bfd95ffdb",
     "src/diagnostics/reportInputDiagnostics.ts": "sha256:6dca366e212141f3b034b4f3109625a80f32c916cec4c33c66edde00b1d8518e",
-    "src/diagnostics/phoneRecordingSummary.ts": "sha256:54faff2b4b0033b44b7f40c133b98a0468fbd53afa01c1ad372a0da9c61de8e4",
+    "src/diagnostics/phoneRecordingSummary.ts": "sha256:5e1e2ee3a143f2f5e91c1606a172e242b1ef2b08110d2fa7995a23966b2b03f7",
     "src/rendering/scanSceneryCache.ts": "sha256:9d74511e177f7c481d2bdeb92af12279090dd1e06ba9f5699a7e180858dc51b1",
     "src/rendering/scanDetailPolicy.ts": "sha256:2b3c60bf266b4d32c9d991dba8ff20e8deeb7b983421fcf1bdb932f421a89bb4",
     "src/rendering/simpleScanNavigation.ts": "sha256:d0f95d73652425d4baf3cee5a94131af6714c7030e13d69cd95b0856ce62d797",
     "src/rendering/simpleScanRenderer.ts": "sha256:83bf8d2f8bcc75f724460d69fead352c06f68ad384670d4e7d1cad535db75ca5",
-    "src/rendering/simpleScanTerrain.ts": "sha256:f5f6323bbb69fba3f13ae7c1f1a53127aa06ca85ad2f3d6c3a5bcb05a4748e60"
+    "src/rendering/simpleScanTerrain.ts": "sha256:f5f6323bbb69fba3f13ae7c1f1a53127aa06ca85ad2f3d6c3a5bcb05a4748e60",
+    "src/rendering/rendererBackend.ts": "sha256:cb8de50b3234ceb68f7d458b028155d47f3f2dfaa1dad11794d4d363fe5ba254"
   },
   "reviews": [
     {
@@ -6826,6 +6827,28 @@
       "topics": ["controls", "hud-network", "scout"],
       "media": [],
       "owners": {}
+    },
+    {
+      "note": "Reviewed direct GPU opt-in and Canvas Simple Scan handoff, failure fallback, truthful hybrid frame accounting, and same-origin Wiki comparison links. Controls and Scout rules stay unchanged; existing native demonstration rendering remains applicable. Focused 48 tests passed; local embedded desktop/mobile gameplay, GPU layer hiding/resume and Wiki checks observed with clean consoles. This does not qualify Fire GPU performance.",
+      "sources": [
+        "index.css",
+        "scripts/wiki-content.ts",
+        "src/diagnostics/performanceMetrics.ts",
+        "src/diagnostics/phoneRecordingSummary.ts",
+        "src/rendering/canvasSurface.ts",
+        "src/rendering/gpuRearRenderer.ts",
+        "src/rendering/gpuShaders.ts",
+        "src/rendering/rendererBackend.ts"
+      ],
+      "topics": ["controls", "hud-network", "scout"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-content.ts": "hud-network",
+        "src/rendering/gpuRearRenderer.ts": "hud-network",
+        "src/rendering/gpuShaders.ts": "hud-network",
+        "src/diagnostics/phoneRecordingSummary.ts": "hud-network",
+        "src/rendering/rendererBackend.ts": "hud-network"
+      }
     }
   ]
 }

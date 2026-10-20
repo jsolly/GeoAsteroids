@@ -57,6 +57,15 @@ test('an editor adds a formatted searchable article without changing application
   );
 });
 
+test('renderer comparisons stay on the active game origin without admitting unknown routes', () => {
+  const root = fixture();
+  addArticle(root, '[Direct GPU](/?renderer=webgl2-direct&scanDetail=full)');
+  const article = readWikiArticles(root).find((entry) => entry.id === 'practice');
+  expect(article?.html).toContain('href="/?renderer=webgl2-direct&amp;scanDetail=full"');
+  addArticle(root, '[Missing](/missing?renderer=webgl2-direct)');
+  expect(() => readWikiArticles(root)).toThrow(BROKEN_LINK_PATTERN);
+});
+
 test('an editor cannot publish a broken article link or a missing image', () => {
   const root = fixture();
   addArticle(root, '[Missing](/wiki/#does-not-exist)');

@@ -203,7 +203,7 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
   let durationMs = 0;
   let provenance: Record<string, DebugJsonValue> | null = null;
   let provenanceKey = '';
-  const rendererFrames = { canvas: 0, webgl2: 0 };
+  const rendererFrames = { canvas: 0, webgl2: 0, 'webgl2-direct': 0 };
   const slowFrames: ReturnType<typeof slowFrame>[] = [];
   let slowFrameChunks = 0;
   let observedSlowIntervals = 0;
@@ -216,8 +216,41 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
     }
     const renderer = object(sample['renderer']);
     const frames = object(renderer['frames']);
-    rendererFrames.canvas = count(rendererFrames.canvas + count(frames['canvas']));
-    rendererFrames.webgl2 = count(rendererFrames.webgl2 + count(frames['webgl2']));
+    const chunkFrames = {
+      canvas: count(frames['canvas']),
+      webgl2: count(frames['webgl2']),
+      // Persisted recordings made before the direct renderer have no direct ledger.
+      'webgl2-direct': frames['webgl2-direct'] === undefined ? 0 : count(frames['webgl2-direct']),
+    };
+    for (const backend of ['canvas', 'webgl2', 'webgl2-direct'] as const) {
+      rendererFrames[backend] = count(rendererFrames[backend] + chunkFrames[backend]);
+    }
+    const sampleCounters = object(sample['counters']);
+    const requested = text(renderer['requested'], 32);
+    const backend = text(renderer['backend'], 32);
+    if (requested === 'webgl2-direct') {
+      const simpleScanFrames =
+        sampleCounters['simpleScanFrames'] === undefined
+          ? 0
+          : count(sampleCounters['simpleScanFrames']);
+      // Simple Scan deliberately paints Canvas; every other completed frame must remain direct.
+      if (
+        chunkFrames.canvas !== simpleScanFrames ||
+        chunkFrames.webgl2 !== 0 ||
+        (backend !== 'canvas' && backend !== 'webgl2-direct')
+      ) {
+        reasons.add('Direct GPU recording contains unplanned renderer fallback');
+      }
+      if (renderer['gpuStats'] !== null && renderer['gpuStats'] !== undefined) {
+        const gpu = object(renderer['gpuStats']);
+        if (text(gpu['state'], 32) !== 'ready') {
+          reasons.add('Direct GPU renderer was unavailable during recording');
+        }
+        if (count(gpu['contextLosses']) > 0 || count(gpu['contextRestorations']) > 0) {
+          reasons.add('Direct GPU recording contains GPU context interruption history');
+        }
+      }
+    }
     if (sample['slowFrames'] !== undefined) {
       const context = object(sample['slowFrames']);
       const observed = count(context['observedCount']);
@@ -243,8 +276,9 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
       clientReleaseId: text(sample['clientReleaseId'], 128),
       serverReleaseId: text(sample['serverReleaseId'], 128),
       graphics: settings(sample['graphicsSettings']),
-      rendererRequested: text(renderer['requested'], 32),
-      rendererBackend: text(renderer['backend'], 32),
+      rendererRequested: requested,
+      // The observed frame ledgers below describe the intentional direct/Canvas hybrid.
+      rendererBackend: requested === 'webgl2-direct' ? requested : backend,
     };
     const currentProvenanceKey = JSON.stringify(current);
     if (provenance === null) {
@@ -253,7 +287,7 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
     } else if (currentProvenanceKey !== provenanceKey) {
       reasons.add('Release, graphics, or renderer changed during recording');
     }
-    for (const [key, value] of Object.entries(object(sample['counters']))) {
+    for (const [key, value] of Object.entries(sampleCounters)) {
       if (!COUNTER_NAME.test(key)) {
         throw new Error('Invalid counter');
       }
@@ -313,6 +347,16 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
   }
   if ((aggregates.get('play.frameIntervalMs')?.count ?? 0) === 0) {
     reasons.add('No gameplay frame samples');
+  }
+  if (provenance?.['rendererRequested'] === 'webgl2-direct') {
+    if (rendererFrames['webgl2-direct'] === 0) {
+      reasons.add('No direct GPU frames observed during recording');
+    }
+    const observedBackends = Object.entries(rendererFrames)
+      .filter(([, frames]) => frames > 0)
+      .map(([backend]) => backend);
+    provenance['rendererBackend'] =
+      observedBackends.length > 1 ? 'mixed' : (observedBackends[0] ?? 'unobserved');
   }
   const complete = reasons.size === 0;
   const metrics: Record<string, DebugJsonValue> = {};

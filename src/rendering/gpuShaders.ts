@@ -79,3 +79,45 @@ void main() {
   if (alphaByte == 0.0) { discard; }
   outColor = vec4((premultiplied - 0.499) / 255.0, alphaByte / 256.0);
 }`;
+
+// Stars retain immutable local world coordinates. Camera movement only changes uniforms.
+// Round in the virtual CSS viewport before applying the scan zoom, like the native painter.
+export const GPU_STAR_VERTEX = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 a_star;
+uniform vec2 u_camera;
+uniform vec2 u_size;
+uniform vec2 u_view;
+uniform float u_scale;
+uniform float u_zoom;
+uniform float u_dpr;
+uniform float u_starSize;
+flat out vec4 v_rect;
+flat out float v_alpha;
+void main() {
+  vec2 virtualCenter = u_view / (2.0 * u_zoom * u_dpr);
+  vec2 cssPosition = virtualCenter + (a_star.xy - u_camera) * u_scale;
+  vec2 rounded = trunc(cssPosition + vec2(0.5));
+  vec2 topLeft = (u_view * 0.5) + (rounded - virtualCenter) * u_zoom * u_dpr;
+  v_rect = vec4(topLeft, topLeft + vec2(u_starSize * u_zoom * u_dpr));
+  v_alpha = a_star.z;
+  int corners[6] = int[6](0, 1, 2, 2, 1, 3);
+  int corner = corners[gl_VertexID];
+  vec2 point = vec2((corner & 1) == 0 ? floor(v_rect.x) : ceil(v_rect.z),
+                    (corner & 2) == 0 ? floor(v_rect.y) : ceil(v_rect.w));
+  gl_Position = vec4(point / u_size * vec2(2.0, -2.0) + vec2(-1.0, 1.0), 0.0, 1.0);
+}`;
+
+export const GPU_STAR_FRAGMENT = `#version 300 es
+precision highp float;
+uniform vec2 u_size;
+uniform vec3 u_ink;
+flat in vec4 v_rect;
+flat in float v_alpha;
+out vec4 outColor;
+void main() {
+  vec2 point = vec2(gl_FragCoord.x, u_size.y - gl_FragCoord.y);
+  vec2 coverage = max(vec2(0.0), min(v_rect.zw, point + 0.5) - max(v_rect.xy, point - 0.5));
+  float alpha = coverage.x * coverage.y * v_alpha;
+  outColor = vec4(u_ink * alpha, alpha);
+}`;
