@@ -3,6 +3,7 @@ import type { Position } from '../../shared-types';
 import { PALETTE, VISUAL } from '../constants';
 import type { ContourLevel } from '../physics/terrain/contours';
 import { logger } from '../utils/Logger';
+import type { GpuContourPolicy } from './gpuContourPolicy';
 import { GpuResources } from './gpuResources';
 import {
   GPU_COMPOSITE_FRAGMENT,
@@ -91,7 +92,7 @@ type GpuState =
 
 type ContourPainter =
   | { contourMode: 'none' | 'gpu-capsules'; contourReason: 'none' }
-  | { contourMode: 'canvas-path'; contourReason: 'hairline' };
+  | { contourMode: 'canvas-path'; contourReason: 'hairline' | 'diagnostic-forced' };
 
 export type GpuFrameStats = ContourPainter & {
   state: GpuState['kind'];
@@ -178,7 +179,8 @@ export class GpuRearRenderer {
   static create(
     overlay: HTMLCanvasElement,
     onAvailabilityChange: () => void,
-    presentation: 'copied' | 'direct' = 'copied'
+    presentation: 'copied' | 'direct' = 'copied',
+    contourPolicy: GpuContourPolicy = 'auto'
   ): GpuRearRenderer | null {
     const parent = overlay.parentElement;
     if (!parent) {
@@ -199,7 +201,13 @@ export class GpuRearRenderer {
     if (!gl) {
       return null;
     }
-    const renderer = new GpuRearRenderer(canvas, gl, onAvailabilityChange, presentation);
+    const renderer = new GpuRearRenderer(
+      canvas,
+      gl,
+      onAvailabilityChange,
+      presentation,
+      contourPolicy
+    );
     if (!renderer.available()) {
       renderer.destroy();
       return null;
@@ -212,7 +220,8 @@ export class GpuRearRenderer {
     private readonly canvas: HTMLCanvasElement,
     private readonly gl: WebGL2RenderingContext,
     private readonly onAvailabilityChange: () => void,
-    private readonly presentation: 'copied' | 'direct'
+    private readonly presentation: 'copied' | 'direct',
+    private readonly contourPolicy: GpuContourPolicy
   ) {
     this.stats.workload =
       presentation === 'direct' ? 'direct-rear-gpu-stars-contours' : 'native-rear-gpu-contours';
@@ -311,9 +320,11 @@ export class GpuRearRenderer {
       // A whole native rotated Path2D can have different coverage from the
       // maximum of isolated capsules. Keep its complete source-ordered painter.
       this.contourPainter =
-        fastLength(matrix.a, matrix.b) <= 1 && fastLength(matrix.c, matrix.d) <= 1
-          ? { contourMode: 'canvas-path', contourReason: 'hairline' }
-          : { contourMode: 'gpu-capsules', contourReason: 'none' };
+        this.contourPolicy === 'canvas'
+          ? { contourMode: 'canvas-path', contourReason: 'diagnostic-forced' }
+          : fastLength(matrix.a, matrix.b) <= 1 && fastLength(matrix.c, matrix.d) <= 1
+            ? { contourMode: 'canvas-path', contourReason: 'hairline' }
+            : { contourMode: 'gpu-capsules', contourReason: 'none' };
       if (this.contourPainter.contourMode === 'gpu-capsules') {
         this.drawContours(scene, resources);
       }

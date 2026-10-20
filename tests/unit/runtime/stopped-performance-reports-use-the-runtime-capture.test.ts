@@ -9,7 +9,11 @@ import { installPhoneRecordingStorage } from '../../support/phoneRecordingStorag
 
 // Set the real feature flag before the metrics singleton and runtime are imported.
 vi.hoisted(() =>
-  window.history.replaceState(null, '', '/debug?performance=collect&scanScenery=cache')
+  window.history.replaceState(
+    null,
+    '',
+    '/debug?performance=collect&scanScenery=cache&gpuContours=canvas'
+  )
 );
 
 // Logging transport is external to the runtime and recorder under test.
@@ -116,6 +120,7 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   expect(wire).not.toContain(tokenCanary);
   const parsed = parseDebugReportSubmission(JSON.parse(wire));
   expect(parsed.diagnostics.state['graphics']).toMatchObject({
+    gpuContours: 'canvas',
     scanScenery: 'cache',
     sceneryCache: { scope: 'canvas-lifetime', ownedPixels: 0, peakOwnedPixels: 0, sourceRadius: 0 },
   });
@@ -127,6 +132,7 @@ test('stopping the runtime recorder attaches a private, parseable performance su
       conditions: 'Token canary [redacted]',
       provenance: {
         graphics: {
+          gpuContours: 'canvas',
           scanScenery: 'cache',
           scanSceneryMaxPixels: 8_000_000,
           deviceCategory: 'unknown',

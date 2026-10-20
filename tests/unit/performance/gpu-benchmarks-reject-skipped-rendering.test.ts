@@ -45,52 +45,56 @@ test('a long benchmark warmup cannot hide a stale, skipped, or extra measured GP
   expect(() => observeGpuRenderedFrame(-1, completedFrame(0))).toThrow();
 });
 
-test('each measured GPU frame must record native stars, one source upload and opaque blit, and its exclusive contour painter', () => {
-  const gpu = completedFrame();
-  expect(observeGpuRenderedFrame(500, gpu).contourMode).toBe('gpu-capsules');
-  const native = {
-    ...gpu,
-    contourMode: 'canvas-path',
-    contourReason: 'hairline',
-    drawCalls: 1,
-    submittedSegments: 0,
-    nativeContourSegments: 200,
-  };
-  expect(observeGpuRenderedFrame(500, native).contourMode).toBe('canvas-path');
-  expect(() =>
-    observeGpuRenderedFrame(500, { ...native, contourReason: 'rotated-path-coverage' })
-  ).toThrow();
-  for (const invalid of [
-    { ...gpu, drawCalls: 0 },
-    { ...gpu, submittedStars: 1 },
-    { ...gpu, nativeStars: 0 },
-    { ...gpu, nativeStarRects: 0 },
-    { ...gpu, nativeStarRects: 81 },
-    { ...gpu, rearTextureUploads: 0 },
-    { ...gpu, rearTextureUploads: 2 },
-    { ...gpu, rearTextureUploadBytes: 639_999 },
-    { ...gpu, rearTextureBytes: 0 },
-    { ...gpu, workload: 'legacy-gpu-stars' },
-    { ...gpu, rearBlits: 0 },
-    { ...gpu, rearBlits: 2 },
-    { ...gpu, submittedSegments: 0 },
-    { ...gpu, nativeContourSegments: 1 },
-    { ...native, nativeContourSegments: 0 },
-    { ...native, submittedSegments: 1 },
-    { ...native, drawCalls: 2 },
-    { ...native, geometryUploads: 1 },
-    { ...native, uploadedBytes: 1 },
-    { ...gpu, contourMode: 'none' },
-    { ...gpu, contourMode: 'other' },
-    { ...gpu, contourReason: undefined },
-    { ...gpu, contourReason: 'hairline' },
-    { ...native, contourReason: undefined },
-    { ...native, contourReason: 'none' },
-    { ...native, contourReason: 'other' },
-  ]) {
-    expect(() => observeGpuRenderedFrame(500, invalid)).toThrow();
+test.each(['hairline', 'diagnostic-forced'])(
+  'each measured GPU frame must record native stars, one source upload and opaque blit, and its exclusive %s contour painter',
+  (contourReason) => {
+    const gpu = completedFrame();
+    expect(observeGpuRenderedFrame(500, gpu).contourMode).toBe('gpu-capsules');
+    const native = {
+      ...gpu,
+      contourMode: 'canvas-path',
+      contourReason,
+      drawCalls: 1,
+      submittedSegments: 0,
+      nativeContourSegments: 200,
+    };
+    expect(observeGpuRenderedFrame(500, native).contourMode).toBe('canvas-path');
+    expect(() =>
+      observeGpuRenderedFrame(500, { ...native, contourReason: 'rotated-path-coverage' })
+    ).toThrow();
+    for (const invalid of [
+      { ...gpu, drawCalls: 0 },
+      { ...gpu, submittedStars: 1 },
+      { ...gpu, nativeStars: 0 },
+      { ...gpu, nativeStarRects: 0 },
+      { ...gpu, nativeStarRects: 81 },
+      { ...gpu, rearTextureUploads: 0 },
+      { ...gpu, rearTextureUploads: 2 },
+      { ...gpu, rearTextureUploadBytes: 639_999 },
+      { ...gpu, rearTextureBytes: 0 },
+      { ...gpu, workload: 'legacy-gpu-stars' },
+      { ...gpu, rearBlits: 0 },
+      { ...gpu, rearBlits: 2 },
+      { ...gpu, submittedSegments: 0 },
+      { ...gpu, nativeContourSegments: 1 },
+      { ...native, nativeContourSegments: 0 },
+      { ...native, submittedSegments: 1 },
+      { ...native, drawCalls: 2 },
+      { ...native, geometryUploads: 1 },
+      { ...native, uploadedBytes: 1 },
+      { ...gpu, contourMode: 'none' },
+      { ...gpu, contourMode: 'other' },
+      { ...gpu, contourReason: undefined },
+      { ...gpu, contourReason: 'hairline' },
+      { ...gpu, contourReason: 'diagnostic-forced' },
+      { ...native, contourReason: undefined },
+      { ...native, contourReason: 'none' },
+      { ...native, contourReason: 'other' },
+    ]) {
+      expect(() => observeGpuRenderedFrame(500, invalid)).toThrow();
+    }
   }
-});
+);
 
 test('missing resources and malformed observed counters fail the benchmark boundary', () => {
   for (const invalid of [null, [], {}, { ...completedFrame(), state: 'context-lost' }]) {
@@ -136,17 +140,20 @@ test('direct composition records retained GPU stars without accepting copied or 
     directCompositions: 1,
   };
   expect(observeGpuRenderedFrame(500, direct).work.directCompositions).toBe(1);
-  expect(
-    observeGpuRenderedFrame(500, {
+  for (const contourReason of ['hairline', 'diagnostic-forced']) {
+    const native = {
       ...direct,
       contourMode: 'canvas-path',
-      contourReason: 'hairline',
+      contourReason,
       nativeContourSegments: 200,
       submittedSegments: 0,
       geometryUploads: 1,
       uploadedBytes: 960,
-    }).contourMode
-  ).toBe('canvas-path');
+    };
+    expect(observeGpuRenderedFrame(500, native).contourMode).toBe('canvas-path');
+    expect(() => observeGpuRenderedFrame(500, { ...native, submittedSegments: 1 })).toThrow();
+    expect(() => observeGpuRenderedFrame(500, { ...native, nativeContourSegments: 0 })).toThrow();
+  }
   for (const invalid of [
     { ...direct, submittedStars: 0 },
     { ...direct, nativeStars: 1 },

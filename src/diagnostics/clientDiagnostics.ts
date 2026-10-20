@@ -49,6 +49,7 @@ export function captureClientDiagnostics(): DebugDiagnosticSnapshot {
       maxDpr: graphics['maxDpr'],
       glow: graphics['glow'],
       source: graphics['source'],
+      gpuContours: graphics['gpuContours'],
       scanScenery: graphics['scanScenery'],
       scanSceneryMaxPixels: graphics['scanSceneryMaxPixels'],
       sceneryCache: { scope: 'canvas-lifetime', ...canvasManager.getScanSceneryStats() },

@@ -3,8 +3,11 @@
 ## Status
 
 Sustained 60 FPS on the Fire HD 10, 13th generation, is the acceptance target.
-Physical tablet performance, thermal behavior, and soft-keyboard behavior remain
-unverified. Canvas stays the default renderer. The existing copied
+Initial Fire recordings measured 57.8 flight FPS with Canvas and 28.9 with direct
+GPU at native DPR 1.5, glow off, and full Scan detail. These short, unequal runs
+show a regression worth isolating; they do not establish sustained performance
+or thermal behavior. Soft-keyboard behavior remains unverified. Canvas stays the
+default renderer. The existing copied
 `?renderer=webgl2` experiment remains available with its native rear painter.
 
 Use `?renderer=webgl2-direct` to test direct GPU rear composition. It renders
@@ -19,10 +22,51 @@ first successful detailed flight frame; retained geometry is reused. Reports kee
 actual Canvas and direct GPU frame counts, and distinguish intentional Scan frames
 from an unavailable or failed GPU.
 
-For an isolated GPU comparison, pin `scanDetail=full` on both Canvas and direct
-GPU links. An automatic simplified Scan run measures hybrid gameplay, not GPU
-acceleration of its overview. Strict renderer benchmarks still reject fallback
+For the diagnostic comparison below, use automatic Scan detail in every arm.
+On the Fire, simplified Scan uses Canvas in all three arms, so compare flight
+and Scan timings separately. Strict renderer benchmarks still reject fallback
 frames.
+
+## Fire diagnostic matrix
+
+Keep the same browser, orientation, native DPR, glow off, power state, and scene.
+Use these query strings on the preview's `/debug` route:
+
+| Arm | Query | Flight rear painter |
+| --- | --- | --- |
+| A | `?performance=collect&renderer=canvas&renderDpr=native&renderGlow=off&scanDetail=auto&gpuContours=auto` | Standard Canvas |
+| B | `?performance=collect&renderer=webgl2-direct&renderDpr=native&renderGlow=off&scanDetail=auto&gpuContours=auto` | Current GPU stars and terrain, native hairlines |
+| C | `?performance=collect&renderer=webgl2-direct&renderDpr=native&renderGlow=off&scanDetail=auto&gpuContours=canvas` | GPU background and stars, native Canvas terrain at every width |
+
+Run A, B, then C. For each arm, enter the game and warm up for 30
+seconds, choose **Start**, then fly normally for 90 seconds while steering and
+firing. Trigger three Scans, letting each return fully to normal flight. Choose
+**Stop**, then send a report labeled with the arm and run order before reloading
+for the next arm. Download the recording before starting another collection if
+you need the raw samples.
+
+Reporting permits three submissions per client address per hour and 30 globally
+per UTC day. Reserve the three available submissions for the tablet runs. If a
+quota blocks a report, retain that stopped recording and wait for submission to
+be available; do not replay completed gameplay or start the next collection.
+
+Compare `play.flightFrameIntervalMs` separately from `play.scanFrameIntervalMs`
+and its enter, wide, and return stages. Whole-run FPS blends different painters.
+B versus C screens the terrain-policy difference, while A versus C compares the
+complete direct rear package. A single run per arm leaves scene, order, and
+thermal drift uncontrolled. Close rankings or different conditions are
+inconclusive; request a matched repeat in a later reporting window if needed.
+This sequence screens candidates rather than proving a precise cause or sustained
+performance.
+
+`gpuContours=canvas` is honored only with `performance=1` or
+`performance=collect`; otherwise selection stays `auto`. Reports retain the
+selected arm in graphics settings. `gpuNativeContourFrames` and
+`gpuCapsuleContourFrames` count successful GPU compositions by the terrain
+painter chosen that frame, including empty terrain. Failed compositions and
+Canvas Simple Scan frames increment neither counter. Arm C retains the same two
+surfaces and GPU stars as B and adds no rear upload or blit; mask allocation is
+unchanged.
 
 ## Architectural choice
 
@@ -69,7 +113,7 @@ Run unprofiled comparisons with matching dimensions, DPR, glow, browser, scene,
 power state, and foreground duration. Use the existing
 [measurement runbook](mobile-measurement-runbook.md) and
 [benchmark guide](../../benchmarks/README.md); keep timing isolated from builds,
-tests, and other workloads. Compare native Canvas, copied WebGL2, and direct
-WebGL2 before combining lower DPR or glow-off controls. Raw work reduction and a
-short host screening are preliminary evidence. Physical Fire tablet acceptance
+tests, and other workloads. Follow the A/B/C matrix above before changing DPR or
+combining other controls. Raw work reduction and a short host screening are
+preliminary evidence. Physical Fire tablet acceptance
 requires sustained gameplay with readable cues at the required 60 Hz cadence.

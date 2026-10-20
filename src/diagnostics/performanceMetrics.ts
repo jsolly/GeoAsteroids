@@ -465,6 +465,8 @@ export class ClientPerformanceMetrics {
       | 'scanSceneryFallbacks'
       | 'simpleScanFrames'
       | 'fullScanFrames'
+      | 'gpuNativeContourFrames'
+      | 'gpuCapsuleContourFrames'
       | 'simpleScanRasterBuilds'
       | 'simpleScanTerrainBuilds'
       | 'simpleScanDirectFallbackFrames'

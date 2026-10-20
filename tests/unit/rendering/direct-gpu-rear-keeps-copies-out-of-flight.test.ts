@@ -2,11 +2,19 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { FurnaceField } from '../../../shared/furnaceField';
 import { ensureTerrain, getTerrainField } from '../../../shared/terrainField';
 import { PALETTE } from '../../../src/constants';
+import { clientPerformance } from '../../../src/diagnostics/performanceMetrics';
 import { createPlayer } from '../../../src/entities/player/createPlayer';
+import { RoidBelt } from '../../../src/entities/roid/Roid';
+import * as terrain from '../../../src/physics/terrain/terrainSession';
+import { drawGame } from '../../../src/rendering/canvas';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
+import { resolveGpuContours } from '../../../src/rendering/gpuContourPolicy';
 import { GpuRearRenderer } from '../../../src/rendering/gpuRearRenderer';
 import type { SimpleScanScene } from '../../../src/rendering/simpleScanRenderer';
+import { TestPath2D } from '../../support/TestPath2D';
 import { setWindowViewport } from '../../support/viewport';
+
+vi.hoisted(() => window.history.replaceState(null, '', '/?performance=collect'));
 
 const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
 const originalTerrain = getTerrainField();
@@ -26,7 +34,9 @@ afterEach(() => {
   if (originalDpr) {
     Object.defineProperty(window, 'devicePixelRatio', originalDpr);
   }
+  clientPerformance.read(true);
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 /** Only the external GPU driver is substituted. Resource and scene owners execute normally. */
@@ -125,6 +135,106 @@ function scene() {
     nativeStarRects: 0,
   };
 }
+
+test.each(['', '?performance=0&', '?performance=invalid&'])(
+  'GPU contour selection ignores overrides outside diagnostic mode %s',
+  (prefix) => {
+    const separator = prefix === '' ? '?' : prefix;
+    expect(resolveGpuContours(`${separator}gpuContours=canvas`)).toBe('auto');
+    expect(resolveGpuContours(`${separator}gpuContours=invalid`)).toBe('auto');
+  }
+);
+
+test.each(['1', 'collect'])('diagnostic mode %s validates the GPU contour arm', (mode) => {
+  expect(resolveGpuContours(`?performance=${mode}`)).toBe('auto');
+  expect(resolveGpuContours(`?performance=${mode}&gpuContours=auto`)).toBe('auto');
+  expect(resolveGpuContours(`?performance=${mode}&gpuContours=canvas`)).toBe('canvas');
+  for (const value of ['', 'native', 'gpu', 'Canvas']) {
+    expect(() => resolveGpuContours(`?performance=${mode}&gpuContours=${value}`)).toThrow(
+      'gpuContours must be auto or canvas'
+    );
+  }
+});
+
+test('the diagnostic native arm paints real flight contours at DPR 1.5 while keeping GPU stars and no copies', () => {
+  const gl = gpuDriver();
+  restoreViewport = setWindowViewport(800, 1094, 1.5);
+  history.replaceState(null, '', '/?performance=collect&renderer=webgl2-direct&gpuContours=canvas');
+  vi.stubGlobal('Path2D', TestPath2D);
+  vi.spyOn(terrain, 'getTerrainContours').mockReturnValue([
+    { index: 0, height: 0, segments: [{ ax: -100, ay: 150, bx: 100, by: 150 }] },
+  ]);
+  canvasManager.initialize(overlay);
+  const context = canvasManager.requireContext();
+  const nativeStroke = context.stroke.bind(context);
+  let contourStrokes = 0;
+  vi.spyOn(context, 'stroke').mockImplementation((...paths: [] | [Path2D]) => {
+    const path = paths[0];
+    if (path instanceof TestPath2D) {
+      contourStrokes++;
+      context.beginPath();
+      for (const command of path.commands) {
+        context[command.kind](command.x, command.y);
+      }
+      nativeStroke();
+    } else {
+      Reflect.apply(nativeStroke, context, paths);
+    }
+  });
+  const blits = vi.spyOn(context, 'drawImage');
+  const pilot = createPlayer({
+    id: 'native-contour-pilot',
+    name: 'Pilot',
+    type: 'local',
+    kitId: 'scout',
+    position: { x: 0, y: 0 },
+  });
+  pilot.ship.health = 0;
+  drawGame(pilot, new RoidBelt(), [pilot]);
+  expect(contourStrokes).toBe(1);
+  const contourPixels = context.getImageData(595, 1044, 10, 4).data;
+  expect(
+    Array.from(contourPixels)
+      .filter((_, index) => index % 4 === 3)
+      .some((alpha) => alpha > 0)
+  ).toBe(true);
+  expect(canvasManager.getRendererBackend()).toBe('webgl2-direct');
+  expect(canvasManager.getGpuFrameStats()).toMatchObject({
+    contourMode: 'canvas-path',
+    contourReason: 'diagnostic-forced',
+    submittedSegments: 0,
+    nativeContourSegments: 1,
+    rearTextureUploads: 0,
+    rearTextureUploadBytes: 0,
+    rearBlits: 0,
+    directCompositions: 1,
+  });
+  expect(canvasManager.getGpuFrameStats()?.submittedStars).toBeGreaterThan(0);
+  expect(gl.drawArraysInstanced).toHaveBeenCalled();
+  expect(blits).not.toHaveBeenCalled();
+  for (const call of gl.texImage2D.mock.calls) {
+    expect(call.at(-1)).toBeNull();
+  }
+  expect(clientPerformance.read()).toMatchObject({
+    graphicsSettings: { gpuContours: 'canvas', deviceDpr: 1.5, effectiveDpr: 1.5 },
+    counters: { gpuNativeContourFrames: 1 },
+  });
+  expect(clientPerformance.read().counters['gpuCapsuleContourFrames']).toBeUndefined();
+
+  // A successful frame still selects its painter when no contour segment is visible.
+  expect(canvasManager.drawGpuRear({ ...scene(), contours: [] })).toBe(true);
+  expect(canvasManager.composeGpuRear(context)).toBe(true);
+  expect(clientPerformance.read().counters['gpuNativeContourFrames']).toBe(2);
+
+  // Failed composition never increments the successful painter ledger.
+  vi.spyOn(context, 'clearRect').mockImplementationOnce(() => {
+    throw new Error('Foreground clear failed');
+  });
+  expect(canvasManager.drawGpuRear(scene())).toBe(true);
+  expect(canvasManager.composeGpuRear(context)).toBe(false);
+  expect(canvasManager.getRendererBackend()).toBe('canvas');
+  expect(clientPerformance.read().counters['gpuNativeContourFrames']).toBe(2);
+});
 
 test('moving the camera reuses local star and contour buffers without full-frame transfers', () => {
   const gl = gpuDriver();
@@ -312,6 +422,7 @@ test.each(['available', 'restored'] as const)(
       expect(canvasManager.composeGpuRear(context)).toBe(true);
     };
     drawRear();
+    expect(clientPerformance.read().counters['gpuCapsuleContourFrames']).toBe(1);
     const rear = document.querySelector<HTMLCanvasElement>('#gameGpuCanvas');
     if (!rear) {
       throw new Error('Expected the composed rear surface');
@@ -371,6 +482,8 @@ test.each(['available', 'restored'] as const)(
       expect(rear.hidden).toBe(true);
       expect(composites.mock.calls.at(-1)?.[0]).toBe(scanSurface);
     }
+    expect(clientPerformance.read().counters['gpuCapsuleContourFrames']).toBe(1);
+    expect(clientPerformance.read().counters['gpuNativeContourFrames']).toBeUndefined();
     expect(gl.drawArraysInstanced).toHaveBeenCalledTimes(submittedBeforeScan);
     // Restored GPU resources stay unallocated while Simple Scan owns the view.
     expect(gl.texImage2D).toHaveBeenCalledTimes(transfersBeforeScan);
@@ -386,6 +499,7 @@ test.each(['available', 'restored'] as const)(
     });
     composites.mockClear();
     drawRear();
+    expect(clientPerformance.read().counters['gpuCapsuleContourFrames']).toBe(2);
     expect(rear.hidden).toBe(false);
     expect(canvasManager.getRendererBackend()).toBe('webgl2-direct');
     expect(composites).not.toHaveBeenCalled();

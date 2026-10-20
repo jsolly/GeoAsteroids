@@ -6,6 +6,7 @@ import { shouldUseTouchControls } from '../ui/viewportChrome';
 import { logger } from '../utils/Logger';
 import { paintOpaqueBackground } from './canvasBackground';
 import { watchDevicePixelRatio } from './devicePixelRatioWatcher';
+import { resolveGpuContours } from './gpuContourPolicy';
 import { type GpuContourLayer, GpuRearRenderer } from './gpuRearRenderer';
 import {
   clearHudLayoutCache,
@@ -83,6 +84,7 @@ class CanvasManager {
   private worldLayersZoomed = false;
   private gpuRenderer: GpuRearRenderer | null = null;
   private gpuRequested = false;
+  private gpuContours: ReturnType<typeof resolveGpuContours> = 'auto';
   private gpuFrameActive = false;
   private inputMediaQueries: MediaQueryList[] = [];
   private scanDetail: ReturnType<typeof resolveScanDetail> = {
@@ -114,6 +116,7 @@ class CanvasManager {
     if (!canvas) {
       throw new Error('The game canvas is missing.');
     }
+    this.gpuContours = resolveGpuContours(window.location.search);
     this.sceneryPolicy = scanSceneryMode(window.location.search);
     this.sceneryCache = new ScanSceneryCache();
     this.canvas = canvas;
@@ -155,7 +158,8 @@ class CanvasManager {
               this.gpuFrameActive = false;
             }
           },
-          direct ? 'direct' : 'copied'
+          direct ? 'direct' : 'copied',
+          this.gpuContours
         );
       } catch (error) {
         this.gpuRenderer = null;
@@ -259,6 +263,7 @@ class CanvasManager {
     }
     this.devicePixelRatio = dpr;
     clientPerformance.setGraphicsSettings({
+      gpuContours: this.gpuContours,
       scanScenery: this.sceneryPolicy,
       scanSceneryMaxPixels: SCAN_SCENERY_MAX_PIXELS,
       deviceDpr,
@@ -351,6 +356,7 @@ class CanvasManager {
     clientPerformance.setScanScene('flight');
     this.gpuRenderer = null;
     this.gpuRequested = false;
+    this.gpuContours = 'auto';
     this.gpuFrameActive = false;
     if (this.canvas) {
       delete this.canvas.dataset['gpuPresentation'];
@@ -438,6 +444,13 @@ class CanvasManager {
   composeGpuRear(context: CanvasRenderingContext2D): boolean {
     this.gpuFrameActive = this.gpuRenderer?.composeInto(context) ?? false;
     this.replayScanTransform(context);
+    if (this.gpuFrameActive) {
+      clientPerformance.count(
+        this.gpuRenderer?.usesNativeContours() === true
+          ? 'gpuNativeContourFrames'
+          : 'gpuCapsuleContourFrames'
+      );
+    }
     return this.gpuFrameActive;
   }
 

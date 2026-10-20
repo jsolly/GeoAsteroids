@@ -520,13 +520,18 @@ test.each(['missing metadata', 'scan stage', 'build cause', 'selection'])(
   }
 );
 
-test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
+test.each(['graphics', 'renderer', 'server release', 'scan scenery', 'GPU contours'])(
   'changing %s between real recording chunks preserves counts but invalidates percentiles',
   async (changed) => {
     storage();
     const metrics = new ClientPerformanceMetrics(true);
     metrics.setPhase('play');
-    metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'full', scanScenery: 'native' });
+    metrics.setGraphicsSettings({
+      maxDpr: 'native',
+      glow: 'full',
+      scanScenery: 'native',
+      gpuContours: 'auto',
+    });
     let serverRelease = 'server-before';
     metrics.observeServerRelease(() => serverRelease);
     const subject = collector(metrics);
@@ -535,9 +540,26 @@ test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
     metrics.recordRendererFrame('canvas');
     await vi.advanceTimersByTimeAsync(1000);
     if (changed === 'graphics') {
-      metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'off', scanScenery: 'native' });
+      metrics.setGraphicsSettings({
+        maxDpr: 'native',
+        glow: 'off',
+        scanScenery: 'native',
+        gpuContours: 'auto',
+      });
     } else if (changed === 'scan scenery') {
-      metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'full', scanScenery: 'cache' });
+      metrics.setGraphicsSettings({
+        maxDpr: 'native',
+        glow: 'full',
+        scanScenery: 'cache',
+        gpuContours: 'auto',
+      });
+    } else if (changed === 'GPU contours') {
+      metrics.setGraphicsSettings({
+        maxDpr: 'native',
+        glow: 'full',
+        scanScenery: 'native',
+        gpuContours: 'canvas',
+      });
     } else if (changed === 'renderer') {
       metrics.setRendererObservation('webgl2', () => ({ backend: 'webgl2', gpuStats: null }));
     } else {
@@ -566,37 +588,90 @@ test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
   }
 );
 
-test('direct flight and intentional Canvas Simple Scan remain complete across real recorder chunks', async () => {
-  storage();
-  const metrics = new ClientPerformanceMetrics(true);
-  metrics.setPhase('play');
-  let backend: RendererBackend = 'webgl2-direct';
-  metrics.setRendererObservation('webgl2-direct', () => ({ backend, gpuStats: null }));
-  const subject = collector(metrics);
-  await subject.start('KFTUWI', 'Direct flight with live Simple Scan');
-  metrics.record('frameIntervalMs', 16);
-  metrics.recordRendererFrame(backend);
-  await vi.advanceTimersByTimeAsync(1000);
-  backend = 'canvas';
-  metrics.count('simpleScanFrames');
-  metrics.record('frameIntervalMs', 33);
-  metrics.recordRendererFrame(backend);
-  await vi.advanceTimersByTimeAsync(1000);
-  backend = 'webgl2-direct';
-  metrics.record('frameIntervalMs', 17);
-  metrics.recordRendererFrame(backend);
-  subject.stop();
-  const before = await artifact(subject);
-  expect(subject.readDiagnostics()).toMatchObject({
-    complete: true,
-    incompleteReasons: [],
-    provenance: { rendererRequested: 'webgl2-direct', rendererBackend: 'mixed' },
-    rendererFrames: { canvas: 1, webgl2: 0, 'webgl2-direct': 2 },
-    counters: { simpleScanFrames: 1 },
-    metrics: { 'play.frameIntervalMs': { count: 3, p95: 33, p99: 33 } },
-  });
-  expect((await artifact(subject)).content).toEqual(before.content);
-});
+test.each(['auto', 'canvas'] as const)(
+  'direct flight with %s contours and intentional Canvas Simple Scan remain complete across real recorder chunks',
+  async (gpuContours) => {
+    storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    let backend: RendererBackend = 'webgl2-direct';
+    metrics.setRendererObservation('webgl2-direct', () => ({ backend, gpuStats: null }));
+    metrics.setGraphicsSettings({ gpuContours });
+    const subject = collector(metrics);
+    await subject.start('KFTUWI', 'Direct flight with live Simple Scan');
+    metrics.count('gpuNativeContourFrames');
+    metrics.record('frameIntervalMs', 16);
+    metrics.recordRendererFrame(backend);
+    await vi.advanceTimersByTimeAsync(1000);
+    backend = 'canvas';
+    metrics.count('simpleScanFrames');
+    metrics.record('frameIntervalMs', 33);
+    metrics.recordRendererFrame(backend);
+    await vi.advanceTimersByTimeAsync(1000);
+    backend = 'webgl2-direct';
+    metrics.count(gpuContours === 'canvas' ? 'gpuNativeContourFrames' : 'gpuCapsuleContourFrames');
+    metrics.record('frameIntervalMs', 17);
+    metrics.recordRendererFrame(backend);
+    subject.stop();
+    const before = await artifact(subject);
+    expect(subject.readDiagnostics()).toMatchObject({
+      complete: true,
+      incompleteReasons: [],
+      provenance: {
+        rendererRequested: 'webgl2-direct',
+        rendererBackend: 'mixed',
+        graphics: { gpuContours },
+      },
+      rendererFrames: { canvas: 1, webgl2: 0, 'webgl2-direct': 2 },
+      counters:
+        gpuContours === 'canvas'
+          ? { simpleScanFrames: 1, gpuNativeContourFrames: 2 }
+          : { simpleScanFrames: 1, gpuNativeContourFrames: 1, gpuCapsuleContourFrames: 1 },
+      metrics: { 'play.frameIntervalMs': { count: 3, p95: 33, p99: 33 } },
+    });
+    expect((await artifact(subject)).content).toEqual(before.content);
+  }
+);
+
+test.each(['missing', 'short', 'extra', 'capsules'])(
+  'a forced native recording with %s contour counts stays local and cannot qualify',
+  async (failure) => {
+    const saved = storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    metrics.setGraphicsSettings({ gpuContours: 'canvas' });
+    metrics.setRendererObservation('webgl2-direct', () => ({
+      backend: 'webgl2-direct',
+      gpuStats: null,
+    }));
+    const subject = collector(metrics);
+    await subject.start('KFTUWI', 'Forced native contour evidence');
+    for (const interval of [16, 17]) {
+      metrics.count('gpuNativeContourFrames');
+      metrics.record('frameIntervalMs', interval);
+      metrics.recordRendererFrame('webgl2-direct');
+    }
+    subject.stop();
+    const sample = (await artifact(subject)).content.samples[0];
+    if (failure === 'missing') {
+      delete sample.counters.gpuNativeContourFrames;
+    } else if (failure === 'capsules') {
+      sample.counters.gpuCapsuleContourFrames = 1;
+    } else {
+      sample.counters.gpuNativeContourFrames = failure === 'short' ? 1 : 3;
+    }
+    const id = saved.rows.get('latest');
+    saved.rows.set(`${id}:0`, JSON.stringify(sample));
+    const recovered = collector();
+    await recovered.recover();
+    expect(recovered.readDiagnostics()).toMatchObject({
+      complete: false,
+      incompleteReasons: ['Forced native GPU contours do not match successful direct frames'],
+      metrics: { 'play.frameIntervalMs': { count: 2, p95: null, p99: null } },
+    });
+    expect((await artifact(recovered)).content.samples).toEqual([sample]);
+  }
+);
 
 test.each(['flight fallback', 'fallback beside Scan', 'copied GPU', 'no direct frames'])(
   '%s cannot qualify as an intentional direct GPU and Simple Scan recording',

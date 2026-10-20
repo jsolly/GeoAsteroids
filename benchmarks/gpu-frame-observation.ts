@@ -75,10 +75,11 @@ export function observeGpuRenderedFrame(before: number, value: unknown) {
     throw new Error('GPU observation has an inactive contour painter');
   }
   const contourReason: unknown = Reflect.get(stats, 'contourReason');
-  if (contourReason !== 'none' && contourReason !== 'hairline') {
-    throw new Error('GPU observation has an invalid contour painter reason');
-  }
-  if (contourMode === 'gpu-capsules' ? contourReason !== 'none' : contourReason !== 'hairline') {
+  if (
+    contourMode === 'gpu-capsules'
+      ? contourReason !== 'none'
+      : contourReason !== 'hairline' && contourReason !== 'diagnostic-forced'
+  ) {
     throw new Error('GPU observation has an invalid contour painter reason');
   }
   const contourMissing =

@@ -62,6 +62,7 @@ const GRAPHICS_KEYS = [
   'cssHeight',
   'backingWidth',
   'backingHeight',
+  'gpuContours',
   'scanScenery',
   'scanSceneryMaxPixels',
   'deviceCategory',
@@ -226,9 +227,17 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
       rendererFrames[backend] = count(rendererFrames[backend] + chunkFrames[backend]);
     }
     const sampleCounters = object(sample['counters']);
+    const graphics = settings(sample['graphicsSettings']);
     const requested = text(renderer['requested'], 32);
     const backend = text(renderer['backend'], 32);
     if (requested === 'webgl2-direct') {
+      if (
+        graphics['gpuContours'] === 'canvas' &&
+        (count(sampleCounters['gpuNativeContourFrames'] ?? 0) !== chunkFrames['webgl2-direct'] ||
+          count(sampleCounters['gpuCapsuleContourFrames'] ?? 0) !== 0)
+      ) {
+        reasons.add('Forced native GPU contours do not match successful direct frames');
+      }
       const simpleScanFrames =
         sampleCounters['simpleScanFrames'] === undefined
           ? 0
@@ -275,7 +284,7 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
     const current = {
       clientReleaseId: text(sample['clientReleaseId'], 128),
       serverReleaseId: text(sample['serverReleaseId'], 128),
-      graphics: settings(sample['graphicsSettings']),
+      graphics,
       rendererRequested: requested,
       // The observed frame ledgers below describe the intentional direct/Canvas hybrid.
       rendererBackend: requested === 'webgl2-direct' ? requested : backend,
