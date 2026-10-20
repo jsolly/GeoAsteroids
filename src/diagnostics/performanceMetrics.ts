@@ -13,6 +13,8 @@ type Metric =
   | 'updateMs'
   | 'renderMs'
   | 'frameCpuMs'
+  | 'simpleScanRasterBuildMs'
+  | 'simpleScanTerrainBuildMs'
   | 'messageMs'
   | 'keyframeMessageMs'
   | 'deltaMessageMs'
@@ -273,6 +275,11 @@ export class ClientPerformanceMetrics {
       | 'invalidSamples'
       | 'recoveryAttempts'
       | 'recoveryFailures'
+      | 'simpleScanFrames'
+      | 'fullScanFrames'
+      | 'simpleScanRasterBuilds'
+      | 'simpleScanTerrainBuilds'
+      | 'simpleScanDirectFallbackFrames'
   ): void {
     if (this.enabled) {
       this.counters[name] = (this.counters[name] ?? 0) + 1;

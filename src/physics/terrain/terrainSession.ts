@@ -28,6 +28,7 @@ const contourPatches = new Map<string, ContourPatch>();
 let contourPatchBuilds = 0;
 let contourPatchAccess = 0;
 let prefetchTimer: ReturnType<typeof setTimeout> | undefined;
+let prefetchSuspended = false;
 
 // A large world needs a local contour patch. Overlap between adjacent patches
 // keeps the camera from seeing a gap when it crosses a patch boundary.
@@ -45,6 +46,14 @@ export function stopTerrainPrefetch(): void {
   if (prefetchTimer !== undefined) {
     clearTimeout(prefetchTimer);
     prefetchTimer = undefined;
+  }
+}
+
+/** Keep required local navigation geometry, but retire speculative work during simple Scan. */
+export function suspendTerrainPrefetch(suspended: boolean): void {
+  prefetchSuspended = suspended;
+  if (suspended) {
+    stopTerrainPrefetch();
   }
 }
 
@@ -141,7 +150,7 @@ function scheduleNeighborPrefetch(
   region: ContourRegion,
   center: Position
 ): void {
-  if (prefetchTimer !== undefined) {
+  if (prefetchSuspended || prefetchTimer !== undefined) {
     return;
   }
   prefetchTimer = setTimeout(() => {

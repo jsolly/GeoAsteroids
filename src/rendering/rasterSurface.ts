@@ -20,6 +20,8 @@ export function prepareRasterSurface(
   canvas.height = height;
   const context = reusable?.context ?? canvas.getContext('2d');
   if (!context) {
+    canvas.width = 0;
+    canvas.height = 0;
     throw new Error(unavailableMessage);
   }
   return reusable ?? { canvas, context };

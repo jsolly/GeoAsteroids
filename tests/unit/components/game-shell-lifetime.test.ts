@@ -573,6 +573,7 @@ test('canceling an unsubmitted report recaptures the current incident before reo
   const diagnosticView: GamePresentation = {
     ...initialView,
     debug: {
+      device: 'Unknown',
       playerId: '',
       sessionId: 'test-page',
       hudHidden: false,

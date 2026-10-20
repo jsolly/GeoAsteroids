@@ -1,6 +1,6 @@
 import { probePosition } from '../../shared/surveyProbe';
 import { SPIDER, spiderHash, spiderScale } from '../../shared/terrainSpider';
-import type { Position, TerrainSpider } from '../../shared-types';
+import type { Position, SpiderFieldState, TerrainSpider } from '../../shared-types';
 import { updateSpiderScore } from '../audio/spiderScore';
 import { drawSurveyProbe } from '../entities/roid/surveyProbeRenderer';
 import type { ContourLevel } from '../physics/terrain/contours';
@@ -8,6 +8,7 @@ import { getSpiderField, spiderDanger } from '../physics/terrain/spiderSession';
 import { getTerrainContours } from '../physics/terrain/terrainSession';
 import { canvasManager } from './canvasSurface';
 import { createContourQuery } from './contourSpatialIndex';
+import type { PlayfieldSize } from './playfieldCamera';
 import { spiderFootContacts } from './spiderFootContacts';
 
 const healthHistory = new Map<string, { health: number; flashUntil: number }>();
@@ -225,6 +226,18 @@ export function drawTerrainSpiders(position: Position, playerId: string, alive: 
       drawSurveyProbe(ctx, spider.probe, screen, scale, Date.now());
     }
   }
+  drawSpiderDanger(ctx, viewport, position, field, playerId, alive);
+}
+
+/** Audio and the hunted border follow live danger in either world renderer. */
+export function drawSpiderDanger(
+  ctx: CanvasRenderingContext2D,
+  viewport: Readonly<PlayfieldSize>,
+  position: Position,
+  field: SpiderFieldState,
+  playerId: string,
+  alive: boolean
+): void {
   const danger = alive ? spiderDanger(position, field, playerId) : 'quiet';
   updateSpiderScore(danger);
   if (danger === 'hunted') {

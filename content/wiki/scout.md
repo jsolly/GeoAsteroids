@@ -17,6 +17,8 @@ media:
 
 Scout starts with Mineral Scan and turns faster than Hauler. Select Mineral Scan in Inventory, then press E or Scan to send one pulse that shares nearby mineral classification and earns banked credit whenever a scanned rock is delivered (barren rocks pay only a token amount). The pulse also reveals the chart across its whole range and repels spiders in range while it lasts, then the scan must recharge before it can fire again.
 
+On supported low-end devices, Scan uses a simpler wide view with coarse distant terrain and clear mineral symbols. Hazards, ships, shots and controls stay live, and detailed scenery returns as the camera comes back to flight.
+
 ## Survey probe
 
 Find Survey Probe as a rare equipment drop, usually in a spider nest, then equip it in Inventory and aim at a rock or spider and press E to shoot a beacon that attaches on contact. Missed probes disintegrate and still use the shared Scan recharge. An attached beacon scans along its host's route and earns delivery credit, but can be shot off, expires, and is lost on a server restart; probes do not repel spiders.

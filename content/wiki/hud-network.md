@@ -60,6 +60,8 @@ Visit `/debug` for player and page session IDs, frame rate, and connection healt
 
 ## Graphics option
 
+Live diagnostics include a Device label: Low-end, Commodity, High-end, or Unknown. Unknown means the browser did not supply enough hardware information to classify it.
+
 Try the [experimental WebGL version](https://www.georoids.com/?renderer=webgl2) to compare graphics performance on your device. It uses the same scene and controls and falls back automatically if the renderer is unavailable. Reload the [standard version](https://www.georoids.com/) to return to the default renderer.
 
 ## Campaign status

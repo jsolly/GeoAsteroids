@@ -171,6 +171,7 @@ test.each(['resolve', 'reject'] as const)(
 
 test('the in-flight diagnostics toggle hides and restores the actual metric panel', () => {
   start('/debug', true);
+  expect(target?.querySelector('#debug-hud-device')?.textContent).toBe('Unknown');
   const toggle = target?.querySelector<HTMLButtonElement>('#debug-hud-toggle');
   const hud = target?.querySelector<HTMLFieldSetElement>('#debug-hud');
   expect(hud?.hidden).toBe(false);
