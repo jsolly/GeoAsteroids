@@ -13,7 +13,7 @@ import {
   peekBuiltContourPatch,
   stopTerrainPrefetch,
 } from '../../../src/physics/terrain/terrainSession';
-import { drawGame } from '../../../src/rendering/canvas';
+import { drawGame, scanCameraZoom } from '../../../src/rendering/canvas';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
 import * as rasterSurface from '../../../src/rendering/rasterSurface';
 import type { SimpleScanScene } from '../../../src/rendering/simpleScanRenderer';
@@ -142,6 +142,55 @@ test('one bounded Scan raster survives fractional zoom, then flight releases its
     ownedPixels: 0,
   });
 });
+
+test.each(['simple', 'full'] as const)(
+  '%s Scan restores its flight rendering at the intended return cadence',
+  (mode) => {
+    const ctx = mount(mode);
+    const draw = observeComposites(ctx);
+    const world = scene();
+    world.localPlayer.ship.abilityActiveFrames = SHIP_ABILITY.SCAN_FRAMES;
+    const target = scanCameraZoom(world.localPlayer.ship, 800, 1094);
+    for (let frame = 0; frame <= 72; frame++) {
+      canvasManager.easeZoomToward(target, (frame * 1000) / 60);
+    }
+    canvasManager.beginWorldLayers(ctx);
+    const wideViewport = canvasManager.getViewportSize();
+    expect(Math.min(wideViewport.width, wideViewport.height) / 2).toBeGreaterThanOrEqual(
+      SHIP_ABILITY.SCAN_RANGE
+    );
+    canvasManager.endWorldLayers(ctx);
+    if (mode === 'simple') {
+      canvasManager.drawSimpleScan(world, 1200);
+    }
+    const surface = mode === 'simple' ? drawnSurface(draw) : undefined;
+    for (let frame = 1; frame <= 36; frame++) {
+      canvasManager.easeZoomToward(1, 1200 + (frame * 1000) / 60);
+    }
+    expect(canvasManager.usesSimpleScan()).toBe(mode === 'simple');
+    for (let frame = 37; frame <= 54; frame++) {
+      canvasManager.easeZoomToward(1, 1200 + (frame * 1000) / 60);
+    }
+    const nativeTransform = ctx.getTransform();
+    canvasManager.beginWorldLayers(ctx);
+    const viewport = { ...canvasManager.getViewportSize() };
+    if (mode === 'simple') {
+      expect(viewport).toEqual({ width: 800, height: 1094 });
+      expect(ctx.getTransform()).toEqual(nativeTransform);
+    } else {
+      expect(viewport.width).toBeGreaterThan(800);
+    }
+    canvasManager.endWorldLayers(ctx);
+    expect(canvasManager.usesSimpleScan()).toBe(false);
+    expect(canvasManager.readSimpleScanDiagnostics().ownedPixels).toBe(0);
+    if (surface) {
+      expect({ width: surface.width, height: surface.height }).toEqual({
+        width: 0,
+        height: 0,
+      });
+    }
+  }
+);
 
 test.each([
   { width: 2000, height: 2000, expected: { width: 1000, height: 1000 } },

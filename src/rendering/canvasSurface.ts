@@ -490,7 +490,9 @@ class CanvasManager {
     const seconds = target < this.zoom ? CAMERA_ZOOM_OUT_SECONDS : CAMERA_ZOOM_IN_SECONDS;
     const blend = 1 - Math.exp(-Math.min(dtSeconds, 1) / seconds);
     const next = Math.exp(Math.log(this.zoom) + (Math.log(target) - Math.log(this.zoom)) * blend);
-    this.zoom = Math.abs(next - target) < 0.002 ? target : next;
+    // Retire simplified art once the returning view is visually back at flight scale.
+    const snapTolerance = this.scanDetail.mode === 'simple' && target === 1 ? 0.02 : 0.002;
+    this.zoom = Math.abs(next - target) < snapTolerance ? target : next;
     if (target < 1) {
       this.scanWideZoom = target;
     }

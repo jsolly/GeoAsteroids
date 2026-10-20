@@ -228,7 +228,7 @@
     "src/rendering/boundaryRenderer.ts": "sha256:5d3208fc26a8352f8292664504956a1c1757a16ab03845d816ee5de50496819b",
     "src/rendering/canvas.ts": "sha256:cdc45d45672137c4524237e8702657bf795808ca1089a5f4d62f1177a72b6bb2",
     "src/rendering/canvasBackground.ts": "sha256:aa0fcb20a82cd5c7e9bf65c8661bb2da121a346a08f16dff223095546636ef75",
-    "src/rendering/canvasSurface.ts": "sha256:e9abf4dd4f3dc1930c40d28f4a1025e7e5d389060b90af899f0f9dbec311b949",
+    "src/rendering/canvasSurface.ts": "sha256:31bb57b97d7a43785c14c35313d1a625885dad765e0f55081a1c1319025bd878",
     "src/rendering/cargoHoldRenderer.ts": "sha256:9d9fa3eb3da559c7d0c05fc2997460742e2ad3fb4e0c55841c0304408e435f5c",
     "src/rendering/cargoOffloadRenderer.ts": "sha256:c4b2f3a0bda19a35fc03b6016d8c77ef81cd2aa02519610cf020f574569e826d",
     "src/rendering/contourLaserRenderer.ts": "sha256:04532b8a5538ee8d683acf10ad4d7a73e5d181d03cb31e5bcc2c2968d15979a9",
@@ -6819,6 +6819,13 @@
         "src/wiki/gameReference.ts": "scout",
         "src/diagnostics/phoneRecordingSummary.ts": "hud-network"
       }
+    },
+    {
+      "note": "Reviewed simple-only return snap and actual Fire report against Scout, controls and HUD articles. Existing copy remains accurate: detailed flight art returns with the camera, input and abilities are unchanged, and Device is label-only. No demonstration change; full-detail and zoom-out easing unchanged.",
+      "sources": ["src/rendering/canvasSurface.ts"],
+      "topics": ["controls", "hud-network", "scout"],
+      "media": [],
+      "owners": {}
     }
   ]
 }
