@@ -40,6 +40,8 @@ const METRICS = new Set([
   'scanDeltaDecodeMs',
   'scanApplyMs',
   'scanSceneryBuildMs',
+  'simpleScanRasterBuildMs',
+  'simpleScanTerrainBuildMs',
   'inputToRenderMs',
   'rttMs',
   'messageGapMs',
@@ -62,6 +64,13 @@ const GRAPHICS_KEYS = [
   'backingHeight',
   'scanScenery',
   'scanSceneryMaxPixels',
+  'deviceCategory',
+  'scanDetail',
+  'scanDetailReason',
+  'scanDeviceMemory',
+  'scanLogicalCores',
+  'simpleScanDprCap',
+  'simpleScanPixelCap',
 ];
 const SLOW_FRAME_LIMIT = 16;
 const SCENERY_FALLBACK_REASONS = [

@@ -79,6 +79,8 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   clientPerformance.setPhase('play');
   clientPerformance.recordFrameInterval(16, 16);
   clientPerformance.setScanScene('enter');
+  clientPerformance.record('simpleScanRasterBuildMs', 3);
+  clientPerformance.record('simpleScanTerrainBuildMs', 2);
   clientPerformance.setSceneryFrame({ kind: 'built', cause: 'cold' });
   clientPerformance.recordVisibleSpiders(2);
   clientPerformance.recordFrameWork(1, 10, 11);
@@ -124,9 +126,21 @@ test('stopping the runtime recorder attaches a private, parseable performance su
       device: 'KFTUWI *',
       conditions: 'Token canary [redacted]',
       provenance: {
-        graphics: { scanScenery: 'cache', scanSceneryMaxPixels: 8_000_000 },
+        graphics: {
+          scanScenery: 'cache',
+          scanSceneryMaxPixels: 8_000_000,
+          deviceCategory: 'unknown',
+          scanDetail: 'full',
+          scanDetailReason: 'default-full',
+          scanDeviceMemory: 'unknown',
+          scanLogicalCores: navigator.hardwareConcurrency || 'unknown',
+          simpleScanDprCap: 0.75,
+          simpleScanPixelCap: 1_000_000,
+        },
       },
       metrics: {
+        'play.simpleScanRasterBuildMs': { count: 1, sum: 3 },
+        'play.simpleScanTerrainBuildMs': { count: 1, sum: 2 },
         'play.frameIntervalMs': { count: 4, sum: 136, p95: 50, p99: 50 },
         'play.scanFrameIntervalMs': { count: 3, sum: 120 },
         'play.scanEnterFrameIntervalMs': {

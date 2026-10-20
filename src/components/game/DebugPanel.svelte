@@ -26,6 +26,7 @@
     }
   }
   const rows = [
+    ['device', 'Device'],
     ['fps', 'FPS'],
     ['rtt', 'RTT'],
     ['snapshot', 'SNAP'],
@@ -34,6 +35,7 @@
     ['releases', 'REL'],
   ] as const;
   const ids = {
+    device: 'device',
     fps: 'fps',
     rtt: 'rtt',
     snapshot: 'snap',

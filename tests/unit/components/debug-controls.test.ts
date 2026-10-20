@@ -172,6 +172,7 @@ test.each(['resolve', 'reject'] as const)(
 
 test('the bug button starts collapsed and toggles the entire diagnostics panel', () => {
   start('/debug', true);
+  expect(target?.querySelector('#debug-hud-device')?.textContent).toBe('Unknown');
   const toggle = target?.querySelector<HTMLButtonElement>('#debug-hud-toggle');
   const hud = target?.querySelector<HTMLElement>('#debug-hud');
   expect(hud?.hidden).toBe(true);

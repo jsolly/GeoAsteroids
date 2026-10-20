@@ -11,6 +11,11 @@ export function setBeltRecovery(warnings: readonly BeltRecoveryWarning[] = []): 
   recovery = warnings;
 }
 
+/** Current snapshot warnings, shared by both render paths. */
+export function getBeltRecovery(): readonly BeltRecoveryWarning[] {
+  return recovery;
+}
+
 function drawCrawler(
   ctx: CanvasRenderingContext2D,
   spider: TerrainSpider,

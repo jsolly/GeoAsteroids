@@ -1,6 +1,7 @@
 import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import type { Position } from '../../shared-types';
 import { clientPerformance } from '../diagnostics/performanceMetrics';
+import { suspendTerrainPrefetch } from '../physics/terrain/terrainSession';
 import { shouldUseTouchControls } from '../ui/viewportChrome';
 import { logger } from '../utils/Logger';
 import { paintOpaqueBackground } from './canvasBackground';
@@ -17,8 +18,11 @@ import {
   type PlayfieldSize,
   projectWorldToScreenInto,
 } from './playfieldCamera';
+import { discardRasterSurface, prepareRasterSurface, type RasterSurface } from './rasterSurface';
 import { configureRenderQuality } from './renderQuality';
+import { classifyScanDevice, resolveScanDetail } from './scanDetailPolicy';
 import { SCAN_SCENERY_MAX_PIXELS, ScanSceneryCache, scanSceneryMode } from './scanSceneryCache';
+import { SimpleScanRenderer, type SimpleScanScene } from './simpleScanRenderer';
 
 /** Placement values only; the shell owns all surrounding DOM styles. */
 export interface PlayfieldGeometry {
@@ -35,6 +39,9 @@ const TOGGLE_STEP_PX = 52;
 /** Time constants for the camera easing out to a wide view and back to flight. */
 const CAMERA_ZOOM_OUT_SECONDS = 0.14;
 const CAMERA_ZOOM_IN_SECONDS = 0.2;
+const SIMPLE_SCAN_MAX_PIXELS = 1_000_000;
+const SIMPLE_SCAN_MAX_DIMENSION = 1536;
+const SIMPLE_SCAN_DPR = 0.75;
 
 /** Map and Inventory tops. Short touch screens keep Inventory under the radar. */
 export function playfieldToggleOffsets(
@@ -77,6 +84,22 @@ class CanvasManager {
   private gpuRequested = false;
   private gpuFrameActive = false;
   private inputMediaQueries: MediaQueryList[] = [];
+  private scanDetail: ReturnType<typeof resolveScanDetail> = {
+    mode: 'full',
+    reason: 'default-full',
+  };
+  private scanHints: { deviceMemory: number | 'unknown'; hardwareConcurrency: number | 'unknown' } =
+    {
+      deviceMemory: 'unknown',
+      hardwareConcurrency: 'unknown',
+    };
+  private simpleScanActive = false;
+  private deviceCategory: ReturnType<typeof classifyScanDevice> = 'unknown';
+  private readonly simpleScanRenderer = new SimpleScanRenderer();
+  private simpleScanSurface: RasterSurface | undefined;
+  private simpleScanSurfaceFailed = false;
+  private simpleScanPeakPixels = 0;
+  private simpleScanLastStats: ReturnType<SimpleScanRenderer['draw']> | null = null;
 
   private publishGeometry: ((geometry: PlayfieldGeometry) => void) | undefined;
 
@@ -94,6 +117,20 @@ class CanvasManager {
     this.sceneryCache = new ScanSceneryCache();
     this.canvas = canvas;
     this.publishGeometry = publishGeometry;
+    const memory =
+      'deviceMemory' in navigator && typeof navigator.deviceMemory === 'number'
+        ? navigator.deviceMemory
+        : null;
+    const cores = navigator.hardwareConcurrency;
+    this.scanHints = { deviceMemory: memory ?? 'unknown', hardwareConcurrency: cores || 'unknown' };
+    const deviceHints = {
+      userAgent: navigator.userAgent,
+      coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+      deviceMemory: memory,
+      hardwareConcurrency: cores,
+    };
+    this.deviceCategory = classifyScanDevice(deviceHints);
+    this.scanDetail = resolveScanDetail(window.location.search, deviceHints);
     const gpuRequested = new URLSearchParams(window.location.search).get('renderer') === 'webgl2';
     this.gpuRequested = gpuRequested;
     this.context = canvas.getContext('2d', { alpha: false });
@@ -220,6 +257,13 @@ class CanvasManager {
       cssHeight: height,
       backingWidth,
       backingHeight,
+      scanDetail: this.scanDetail.mode,
+      deviceCategory: this.deviceCategory,
+      scanDetailReason: this.scanDetail.reason,
+      scanDeviceMemory: this.scanHints.deviceMemory,
+      scanLogicalCores: this.scanHints.hardwareConcurrency,
+      simpleScanDprCap: SIMPLE_SCAN_DPR,
+      simpleScanPixelCap: SIMPLE_SCAN_MAX_PIXELS,
     });
     return backingSizeChanged || devicePixelRatioChanged;
   }
@@ -251,6 +295,9 @@ class CanvasManager {
       const changed = this.applyViewportSize();
 
       if (changed) {
+        this.releaseSimpleScanSurface();
+        this.simpleScanSurfaceFailed = false;
+        this.simpleScanRenderer.reset();
         this.context.imageSmoothingEnabled = true;
         this.context.imageSmoothingQuality = 'high';
       }
@@ -258,6 +305,13 @@ class CanvasManager {
   }
 
   destroy(): void {
+    this.releaseSimpleScanSurface();
+    this.simpleScanRenderer.reset();
+    this.simpleScanSurfaceFailed = false;
+    this.simpleScanPeakPixels = 0;
+    this.simpleScanLastStats = null;
+    this.simpleScanActive = false;
+    suspendTerrainPrefetch(false);
     this.publishGeometry = undefined;
     this.stopDevicePixelRatioWatcher?.();
     this.stopDevicePixelRatioWatcher = null;
@@ -292,6 +346,8 @@ class CanvasManager {
     this.zoom = 1;
     this.zoomUpdatedAt = null;
     this.worldLayersZoomed = false;
+    this.scanDetail = { mode: 'full', reason: 'default-full' };
+    this.deviceCategory = 'unknown';
     configureRenderQuality('', false);
     clearHudLayoutCache();
   }
@@ -428,10 +484,11 @@ class CanvasManager {
 
   /** Ease the camera toward `target` (1 = flight view, below 1 = zoomed out) in log space. */
   easeZoomToward(target: number, now: number): void {
-    const dtSeconds = this.zoomUpdatedAt === null ? 0 : (now - this.zoomUpdatedAt) / 1000;
+    const dtSeconds =
+      this.zoomUpdatedAt === null ? 0 : Math.max(0, (now - this.zoomUpdatedAt) / 1000);
     this.zoomUpdatedAt = now;
     const seconds = target < this.zoom ? CAMERA_ZOOM_OUT_SECONDS : CAMERA_ZOOM_IN_SECONDS;
-    const blend = 1 - Math.exp(-Math.min(dtSeconds, 0.1) / seconds);
+    const blend = 1 - Math.exp(-Math.min(dtSeconds, 1) / seconds);
     const next = Math.exp(Math.log(this.zoom) + (Math.log(target) - Math.log(this.zoom)) * blend);
     this.zoom = Math.abs(next - target) < 0.002 ? target : next;
     if (target < 1) {
@@ -442,6 +499,20 @@ class CanvasManager {
     );
     if (this.zoom === 1) {
       this.sceneryCache.reset();
+    }
+    const scanning = target < 1 || this.zoom < 1;
+    const simple = this.scanDetail.mode === 'simple' && scanning;
+    if (simple !== this.simpleScanActive) {
+      this.simpleScanActive = simple;
+      suspendTerrainPrefetch(simple);
+      if (!simple) {
+        this.releaseSimpleScanSurface();
+        this.simpleScanRenderer.reset();
+        this.simpleScanSurfaceFailed = false;
+      }
+    }
+    if (scanning && !simple) {
+      clientPerformance.count('fullScanFrames');
     }
   }
 
@@ -476,6 +547,127 @@ class CanvasManager {
 
   getScanSceneryStats() {
     return this.sceneryCache.getStats();
+  }
+
+  usesSimpleScan(): boolean {
+    return this.simpleScanActive;
+  }
+
+  getDeviceCategory(): ReturnType<typeof classifyScanDevice> {
+    return this.deviceCategory;
+  }
+
+  private releaseSimpleScanSurface(): void {
+    if (this.simpleScanSurface) {
+      discardRasterSurface(this.simpleScanSurface);
+      this.simpleScanSurface = undefined;
+    }
+  }
+
+  readSimpleScanDiagnostics() {
+    const surface = this.simpleScanSurface?.canvas;
+    return {
+      active: this.simpleScanActive,
+      mode: this.scanDetail.mode,
+      reason: this.scanDetail.reason,
+      ownedPixels: surface ? surface.width * surface.height : 0,
+      peakOwnedPixels: this.simpleScanPeakPixels,
+      backingWidth: surface?.width ?? 0,
+      backingHeight: surface?.height ?? 0,
+      directFallback: this.simpleScanSurfaceFailed,
+      lastFrame: this.simpleScanLastStats,
+    };
+  }
+
+  private recordSimpleScanTerrainBuild(): void {
+    if (this.simpleScanLastStats?.terrainBuilt) {
+      clientPerformance.count('simpleScanTerrainBuilds');
+      clientPerformance.record('simpleScanTerrainBuildMs', this.simpleScanLastStats.terrainBuildMs);
+    }
+  }
+
+  /** The simple world stays live in one fixed screen-sized buffer; the HUD remains native. */
+  drawSimpleScan(scene: SimpleScanScene, now: number): void {
+    const context = this.requireContext();
+    const { width, height } = this.viewport;
+    const view = {
+      viewport: this.viewport,
+      viewer: scene.localPlayer.ship.position,
+      worldScale: this.getPlayfieldScale() * this.zoom,
+      zoom: this.zoom,
+      now,
+      serverNow: Date.now() + scene.localPlayer.ship.furnaceClockOffsetMs,
+    };
+    this.gpuFrameActive = false;
+    if (!this.simpleScanSurfaceFailed) {
+      try {
+        const dpr = Math.min(
+          this.devicePixelRatio,
+          SIMPLE_SCAN_DPR,
+          Math.sqrt(SIMPLE_SCAN_MAX_PIXELS / (width * height)),
+          SIMPLE_SCAN_MAX_DIMENSION / Math.max(width, height)
+        );
+        const backingWidth = Math.max(1, Math.floor(width * dpr));
+        const backingHeight = Math.max(1, Math.floor(height * dpr));
+        if (
+          !this.simpleScanSurface ||
+          this.simpleScanSurface.canvas.width !== backingWidth ||
+          this.simpleScanSurface.canvas.height !== backingHeight ||
+          this.simpleScanSurface.context.isContextLost?.()
+        ) {
+          this.releaseSimpleScanSurface();
+          const started = performance.now();
+          this.simpleScanSurface = prepareRasterSurface(
+            backingWidth,
+            backingHeight,
+            undefined,
+            'Simple Scan canvas context unavailable'
+          );
+          if (this.simpleScanSurface.context.isContextLost?.()) {
+            throw new Error('Simple Scan canvas context was lost during allocation');
+          }
+          this.simpleScanPeakPixels = Math.max(
+            this.simpleScanPeakPixels,
+            backingWidth * backingHeight
+          );
+          clientPerformance.count('simpleScanRasterBuilds');
+          clientPerformance.record('simpleScanRasterBuildMs', performance.now() - started);
+        }
+        const surface = this.simpleScanSurface;
+        surface.context.setTransform(backingWidth / width, 0, 0, backingHeight / height, 0, 0);
+        this.simpleScanLastStats = this.simpleScanRenderer.draw(surface.context, view, scene);
+        this.recordSimpleScanTerrainBuild();
+        context.save();
+        try {
+          context.globalAlpha = 1;
+          context.globalCompositeOperation = 'source-over';
+          context.shadowBlur = 0;
+          context.drawImage(surface.canvas, 0, 0, width, height);
+        } finally {
+          context.restore();
+        }
+      } catch (error) {
+        this.releaseSimpleScanSurface();
+        this.simpleScanSurfaceFailed = true;
+        logger.error(
+          'RENDER',
+          'Simple Scan surface failed; painting live overview directly',
+          boundedDiagnosticError(error, 'Unknown canvas failure')
+        );
+      }
+    }
+    if (this.simpleScanSurfaceFailed) {
+      context.save();
+      try {
+        this.simpleScanLastStats = this.simpleScanRenderer.draw(context, view, scene);
+        this.recordSimpleScanTerrainBuild();
+      } finally {
+        context.restore();
+      }
+      clientPerformance.count('simpleScanDirectFallbackFrames');
+    }
+    clientPerformance.recordVisibleSpiders(this.simpleScanLastStats?.visibleSpiders ?? 0);
+    clientPerformance.count('simpleScanFrames');
   }
 
   /**

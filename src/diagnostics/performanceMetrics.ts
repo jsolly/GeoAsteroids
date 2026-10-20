@@ -28,6 +28,8 @@ type Metric =
   | 'scanDeltaDecodeMs'
   | 'scanApplyMs'
   | 'scanSceneryBuildMs'
+  | 'simpleScanRasterBuildMs'
+  | 'simpleScanTerrainBuildMs'
   | 'messageMs'
   | 'keyframeMessageMs'
   | 'deltaMessageMs'
@@ -460,6 +462,11 @@ export class ClientPerformanceMetrics {
       | 'scanSceneryMisses'
       | 'scanSceneryBuilds'
       | 'scanSceneryFallbacks'
+      | 'simpleScanFrames'
+      | 'fullScanFrames'
+      | 'simpleScanRasterBuilds'
+      | 'simpleScanTerrainBuilds'
+      | 'simpleScanDirectFallbackFrames'
   ): void {
     if (this.enabled) {
       this.counters[name] = (this.counters[name] ?? 0) + 1;
