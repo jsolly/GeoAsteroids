@@ -13,11 +13,17 @@ Use the repeatable benchmark framework in [`benchmarks/README.md`](../benchmarks
 
 The current framework produces separate client, server, codec and transport measurements with workload counts and outcome witnesses. The broader plan still calls for an automated report connecting frame pacing, client update/render/decode time, server tick deadlines, and transport pressure to the same workload and release. Follow it with small changes to terrain traversal, HUD work, clock recovery, and collision candidate selection where traces show material cost. Every optimization must preserve authoritative combat, touch controls, readable projectiles, and reconnect behavior.
 
-This is an implementation plan, not a claim that the app already meets the proposed targets. The benchmark work in this change makes no optimization or supported-capacity claim. Physical Android/iPhone measurements, Railway capacity tests, and production performance distributions remain unmeasured. Complete those measurements in the phases below before declaring a supported capacity or a mobile frame-rate guarantee.
+This is an implementation plan, not a claim that the app already meets the proposed targets. The benchmark work in this change makes no optimization or supported-capacity claim. A later [short Fire tablet recording](performance/fire-tablet-experiments.md) measured about 59 FPS in Canvas play with glow off. Sustained and full-glow device acceptance, iPhone measurements, Railway capacity tests, and production performance distributions remain unqualified. Complete the relevant measurements before declaring a supported capacity or a mobile frame-rate guarantee.
 
 ## Evidence and current architecture
 
 The historical repository baseline is [`54d8c18d4ce25b3ea6af731582bd615666761a85`](https://github.com/jsolly/GeoRoids/tree/54d8c18d4ce25b3ea6af731582bd615666761a85). Repository observations below refer to that archived revision; links use local paths for navigation. Public documentation was checked on September 8, 2026. Recheck the current implementation branch before editing because rendering and protocol work is active.
+
+Current flight rendering multiplies CSS dimensions by effective device DPR.
+Low-end Mineral Scan uses a separate bounded visible canvas and returns to flight
+resolution afterward. Use the [current quality policy](performance/mobile-quality-decisions.md)
+and [Fire tablet record](performance/fire-tablet-experiments.md) for later measurements;
+the table below describes the archived baseline.
 
 | Area | Existing behavior and evidence | Consequence for the plan |
 | --- | --- | --- |
