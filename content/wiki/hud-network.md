@@ -54,11 +54,15 @@ A disconnected-from-server banner can mean your nickname is in use by an online 
 
 ## Diagnostics
 
-On `/debug`, choose **Report a problem**, describe what happened, and choose **Send** to save a diagnostic report for the GeoRoids team. **Saved, pending delivery** means the server has your report; **Delivered** means it reached the team's review inbox. Do not include secrets, and keep or download the report if saving is not confirmed.
+On `/debug`, open **Report a problem** on the title screen or from the bug icon during play, describe the issue, then **Send**. **Saved, pending delivery** confirms server storage; **Delivered** confirms the team's inbox. Opening the report button after delivery starts a fresh report; **New report** beside a pending or blocked receipt opens another editor without closing the dialog. Reports include editor event counts and focus state to diagnose keyboard trouble, without recording keys or clipboard content; keep secrets out and save a copy until storage is confirmed.
 
-Visit `/debug` for player and page session IDs, frame rate, and connection health. Logging defaults to Info; add `?log-level=debug`, `info`, or `warn` to change it for that visit. Use Copy Diagnostics when reporting trouble, including silent audio or unexpected Contour Lock releases. Lock-release records name the cause; server position or heading rejections also record rail distance, alignment, and the acquisition window.
+The bug icon expands or collapses player and page session IDs, frame rate, and connection health; this browser remembers your choice. Logging defaults to Info; add `?log-level=debug`, `info`, or `warn` to change it for that visit. Use Copy Diagnostics when reporting trouble, including silent audio or unexpected Contour Lock releases. Lock-release records name the cause; server position or heading rejections also record rail distance, alignment, and the acquisition window.
+
+For a device performance check, open `/debug?performance=collect`, enter the game, warm up, then choose **Start**. Choose **Stop** after the run, then send a report with the test conditions; it includes a timing summary. Download the full recording before starting another collection, and treat incomplete runs as unverified.
 
 ## Graphics option
+
+Live diagnostics include a Device label: Low-end, Commodity, High-end, or Unknown. Unknown means the browser did not supply enough hardware information to classify it.
 
 Try the [experimental WebGL version](https://www.georoids.com/?renderer=webgl2) to compare graphics performance on your device. It uses the same scene and controls and falls back automatically if the renderer is unavailable. Reload the [standard version](https://www.georoids.com/) to return to the default renderer.
 

@@ -2,9 +2,15 @@
 
 ## Send a problem report
 
-Visit `/debug` and choose **Report a problem**, before joining or during play.
+Visit `/debug` and choose **Report a problem** on the title screen. During play,
+tap or click the bug icon to expand the diagnostics panel and find the report button;
+tap it again to collapse the whole panel. The panel starts collapsed and this browser
+remembers your later choice.
 Describe what happened and choose **Send**. The form captures diagnostics when
-it opens, before typing changes the input state. Inspect **Diagnostic preview**
+it opens, before typing changes the game input state. At Send, it adds bounded
+report-editor event counts, focus, selection and text lengths to help diagnose
+keyboard failures; it does not record keys, composition text or clipboard content.
+Inspect **Diagnostic preview**
 or use **Copy report** or **Download report** to keep your own copy.
 
 The report includes the current diagnostic snapshot and up to 80 recent client
@@ -16,6 +22,9 @@ of the shared `jsolly/GeoRoids` Todoist project can read the report.
 
 **Saved, pending delivery** means the separate Railway report database committed
 the report. **Delivered** means Todoist contains the verified complete bundle.
+Opening **Report a problem** after delivery starts a fresh report. For a pending or
+blocked receipt, **New report** opens the editor in the same dialog and captures
+fresh diagnostics.
 **Saved, delivery blocked** means the report is retained but needs credential,
 permission or project-capacity repair. The browser stores an immutable submission
 before sending; reload or retry reuses its identity, including after a lost response.
@@ -26,6 +35,20 @@ open; it does not pause the shared world.
 Reports appear as tasks in **jsolly/GeoRoids → Debug reports**. Submission does
 not start an agent or authorize repairs. Ask an agent to "Review GeoRoids debug
 reports" and state whether to investigate or implement fixes.
+
+## Record a device performance session
+
+Open `/debug?performance=collect` and enter the game. In **Performance collection**,
+fill in the device and test conditions, warm up before choosing **Start**, then
+play the planned route with the same graphics settings and workload. Choose
+**Stop** before opening **Report a problem** and sending a description that names
+the run and settings.
+
+The report includes a bounded timing summary of that collection, including its
+sample counts and completeness. **Download** retains the full recording for
+further analysis; starting another collection replaces the saved session, so
+download it first. An incomplete collection cannot establish a performance result.
+Reports from ordinary sessions do not include a collection summary.
 
 ## Review reports as an agent
 
@@ -315,3 +338,44 @@ contour strokes. Measure repeated primitives, state changes and text work before
 adding caches or layers. Preserve smooth vector motion and the existing visual
 style; image-coordinate rounding advice does not justify quantizing ship or
 asteroid simulation coordinates.
+
+## Compare cached Scan scenery
+
+The Canvas renderer has an opt-in scenery-cache prototype. Open
+`/debug?performance=collect&scanScenery=cache` to collect it, and use
+`scanScenery=native` with the same collection, DPR, glow and orientation as the
+control. Outside performance mode the parameter has no effect. The default
+renderer stays native. A requested WebGL2 backend bypasses this Canvas prototype,
+even when GPU initialization fails and the existing renderer falls back to Canvas.
+
+The prototype reuses only the background, stars and neutral contours through the
+wide Mineral Scan. Moving ships, spiders, rocks, shots, controls, labels and radar
+stay live. Static stars and thin contour lines can look softer or change pixel
+coverage while the cached image scales; gameplay coordinates and glow settings
+are unchanged. Inspect contour navigation and hazard readability before treating
+this as an acceptable device preset.
+
+One active buffer and one temporary replacement share an 8-million-pixel limit,
+approximately 32 MB of RGBA before browser overhead. Each backing dimension is
+limited to 4096. A missing terrain source, coverage gap, limit or drawing failure
+uses the complete existing renderer. Allocation and painting failures disable the
+cache for that projection until resize, DPR, terrain or scan-session invalidation;
+source misses can recover once the existing renderer has built the needed patch.
+The first cold scan can still pay existing contour extraction and a measured
+raster build. A requested cache mode is not evidence that frames used it.
+
+Compare scan entry, stable wide view and return separately. Cache hits, builds,
+misses and native fallback counts describe the actual rendering path; build
+latency includes selection, allocation and paint. Scan-conditioned frame
+intervals describe the preceding completed scene, while conditioned CPU work
+describes the scene just rendered. These observations do not prove GPU
+presentation or identify a complete event timeline. Physical-device frame cadence
+and live steering/firing remain required for performance acceptance.
+
+Copied diagnostics include `graphics.sceneryCache`: current and peak owned backing
+pixels plus the last source-patch radius, scoped to the canvas lifetime. These
+changing observations are separate from the recording's fixed graphics settings.
+Stopped phone reports retain the 16 largest recorded intervals over 25 ms across
+all chunks, with the preceding completed frame's Scan stage, scenery path, visible
+spider count and CPU work. The report includes the total number of slow intervals;
+the retained examples are neither a complete event timeline nor causal attribution.

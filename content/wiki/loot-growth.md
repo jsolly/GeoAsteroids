@@ -53,4 +53,4 @@ Cargo protects your hull by spilling recoverable points when a hazard hits; hull
 
 Store purchases spend your bank, never carried cargo. See [Town Square](/wiki/#controls) for the store and [survival](/wiki/#combat-survival) for damage and respawns.
 
-A full hold slows cruise to 70%; half a hold slows it to 85%.
+Cargo and saved hull mass do not change acceleration or ship speed.

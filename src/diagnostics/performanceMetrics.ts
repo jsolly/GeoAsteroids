@@ -3,6 +3,7 @@ import { getClientReleaseId } from '../utils/buildInfo';
 import { logger } from '../utils/Logger';
 
 const SAMPLE_LIMIT = 4096;
+const SLOW_FRAME_LIMIT = 16;
 export const APPLIED_SNAPSHOT_SAMPLE_LIMIT = SAMPLE_LIMIT;
 const encoder = new TextEncoder();
 type Metric =
@@ -13,6 +14,22 @@ type Metric =
   | 'updateMs'
   | 'renderMs'
   | 'frameCpuMs'
+  | 'scanFrameIntervalMs'
+  | 'flightFrameIntervalMs'
+  | 'scanEnterFrameIntervalMs'
+  | 'scanWideFrameIntervalMs'
+  | 'scanReturnFrameIntervalMs'
+  | 'unclassifiedFrameIntervalMs'
+  | 'scanUpdateMs'
+  | 'scanRenderMs'
+  | 'scanFrameCpuMs'
+  | 'scanParseMs'
+  | 'scanKeyframeDecodeMs'
+  | 'scanDeltaDecodeMs'
+  | 'scanApplyMs'
+  | 'scanSceneryBuildMs'
+  | 'simpleScanRasterBuildMs'
+  | 'simpleScanTerrainBuildMs'
   | 'messageMs'
   | 'keyframeMessageMs'
   | 'deltaMessageMs'
@@ -25,6 +42,54 @@ type Metric =
   | 'joinMs'
   | 'recoveryMs';
 type Phase = 'menu' | 'play' | 'respawn' | 'hidden';
+type ScanStage = 'flight' | 'enter' | 'wide' | 'return';
+export type SceneryFrame = Readonly<
+  | { kind: 'native' }
+  | { kind: 'cached' }
+  | { kind: 'built'; cause: 'cold' | 'pan' }
+  | {
+      kind: 'fallback';
+      reason:
+        | 'source'
+        | 'coverage'
+        | 'pixel-limit'
+        | 'dimension-limit'
+        | 'allocation'
+        | 'paint'
+        | 'composite'
+        | 'unsupported'
+        | 'backend'
+        | 'disabled';
+    }
+>;
+type SlowFrame = {
+  atMs: number;
+  intervalMs: number;
+  previousFrame: {
+    stage: ScanStage;
+    scenery: SceneryFrame;
+    visibleSpiders: number;
+    updateMs: number;
+    renderMs: number;
+    frameCpuMs: number;
+  } | null;
+};
+const NATIVE_SCENERY: SceneryFrame = Object.freeze({ kind: 'native' });
+const STAGE_INTERVAL: Record<ScanStage, Metric> = {
+  flight: 'flightFrameIntervalMs',
+  enter: 'scanEnterFrameIntervalMs',
+  wide: 'scanWideFrameIntervalMs',
+  return: 'scanReturnFrameIntervalMs',
+};
+const SCAN_ALIASES: Partial<Record<Metric, Metric>> = {
+  updateMs: 'scanUpdateMs',
+  renderMs: 'scanRenderMs',
+  frameCpuMs: 'scanFrameCpuMs',
+  parseMs: 'scanParseMs',
+  keyframeDecodeMs: 'scanKeyframeDecodeMs',
+  deltaDecodeMs: 'scanDeltaDecodeMs',
+  applyMs: 'scanApplyMs',
+};
 type Samples = { values: number[]; count: number; sum: number; max: number; over33Ms: number };
 type AppliedSnapshot = {
   appliedAt: number;
@@ -40,6 +105,18 @@ type AppliedSnapshot = {
 export class ClientPerformanceMetrics {
   private readonly series = new Map<string, Samples>();
   private readonly counters: Record<string, number> = {};
+  private scanStage: ScanStage = 'flight';
+  private sceneryFrame: SceneryFrame = NATIVE_SCENERY;
+  private visibleSpiders = 0;
+  private previousFrameValid = false;
+  private previousStage: ScanStage = 'flight';
+  private previousScenery: SceneryFrame = NATIVE_SCENERY;
+  private previousVisibleSpiders = 0;
+  private previousUpdateMs = 0;
+  private previousRenderMs = 0;
+  private previousCpuMs = 0;
+  private observedSlowFrames = 0;
+  private readonly slowFrames: SlowFrame[] = [];
   private lastSnapshot:
     | {
         sequence: number;
@@ -225,7 +302,107 @@ export class ClientPerformanceMetrics {
     this.phase = phase;
     if (phase !== 'play' && phase !== 'respawn') {
       this.pendingInputAt = undefined;
+      this.resetFrameScene();
     }
+  }
+
+  /** Camera stages include the ease-back tail after the ability timer ends. */
+  setScanScene(stage: ScanStage): void {
+    if (!this.enabled) {
+      return;
+    }
+    this.scanStage = stage;
+    this.sceneryFrame = NATIVE_SCENERY;
+    this.visibleSpiders = 0;
+  }
+
+  setSceneryFrame(frame: SceneryFrame): void {
+    if (this.enabled) {
+      this.sceneryFrame = frame;
+    }
+  }
+
+  recordVisibleSpiders(count: number): void {
+    if (this.enabled) {
+      this.visibleSpiders = count;
+    }
+  }
+
+  /** A lifecycle break has no preceding presented scene to attribute. */
+  resetFrameScene(): void {
+    this.scanStage = 'flight';
+    this.sceneryFrame = NATIVE_SCENERY;
+    this.visibleSpiders = 0;
+    this.previousFrameValid = false;
+    this.previousScenery = NATIVE_SCENERY;
+  }
+
+  /** Called before update; this interval follows the last completed render. */
+  recordFrameInterval(milliseconds: number, rafTime: number): void {
+    this.record('frameIntervalMs', milliseconds);
+    if (!this.enabled || !Number.isFinite(milliseconds) || milliseconds < 0) {
+      return;
+    }
+    this.retainSample(
+      this.previousFrameValid ? STAGE_INTERVAL[this.previousStage] : 'unclassifiedFrameIntervalMs',
+      milliseconds
+    );
+    if (this.previousFrameValid && this.previousStage !== 'flight') {
+      this.retainSample('scanFrameIntervalMs', milliseconds);
+    }
+    if (milliseconds <= 25) {
+      return;
+    }
+    this.observedSlowFrames++;
+    const smallest = this.slowFrames.at(-1);
+    if (
+      this.slowFrames.length === SLOW_FRAME_LIMIT &&
+      smallest !== undefined &&
+      milliseconds <= smallest.intervalMs
+    ) {
+      return;
+    }
+    this.slowFrames.push({
+      atMs: rafTime,
+      intervalMs: milliseconds,
+      previousFrame: this.previousFrameValid
+        ? {
+            stage: this.previousStage,
+            scenery: { ...this.previousScenery },
+            visibleSpiders: this.previousVisibleSpiders,
+            updateMs: this.previousUpdateMs,
+            renderMs: this.previousRenderMs,
+            frameCpuMs: this.previousCpuMs,
+          }
+        : null,
+    });
+    this.slowFrames.sort(
+      (left, right) => right.intervalMs - left.intervalMs || left.atMs - right.atMs
+    );
+    this.slowFrames.length = Math.min(SLOW_FRAME_LIMIT, this.slowFrames.length);
+  }
+
+  /** Timings close before retaining context or allocating a slow-frame witness. */
+  recordFrameWork(updateMs: number, renderMs: number, frameCpuMs: number): void {
+    if (!this.enabled) {
+      return;
+    }
+    this.record('updateMs', updateMs);
+    this.record('renderMs', renderMs);
+    this.record('frameCpuMs', frameCpuMs);
+    this.previousFrameValid =
+      Number.isFinite(updateMs) &&
+      Number.isFinite(renderMs) &&
+      Number.isFinite(frameCpuMs) &&
+      updateMs >= 0 &&
+      renderMs >= 0 &&
+      frameCpuMs >= 0;
+    this.previousStage = this.scanStage;
+    this.previousScenery = this.sceneryFrame;
+    this.previousVisibleSpiders = this.visibleSpiders;
+    this.previousUpdateMs = updateMs;
+    this.previousRenderMs = renderMs;
+    this.previousCpuMs = frameCpuMs;
   }
 
   record(metric: Metric, milliseconds: number): void {
@@ -236,6 +413,14 @@ export class ClientPerformanceMetrics {
       this.count('invalidSamples');
       return;
     }
+    this.retainSample(metric, milliseconds);
+    const scanAlias = SCAN_ALIASES[metric];
+    if (this.scanStage !== 'flight' && scanAlias !== undefined) {
+      this.retainSample(scanAlias, milliseconds);
+    }
+  }
+
+  private retainSample(metric: Metric, milliseconds: number): void {
     const key = `${this.phase}.${metric}`;
     let samples = this.series.get(key);
     if (!samples) {
@@ -273,6 +458,15 @@ export class ClientPerformanceMetrics {
       | 'invalidSamples'
       | 'recoveryAttempts'
       | 'recoveryFailures'
+      | 'scanSceneryHits'
+      | 'scanSceneryMisses'
+      | 'scanSceneryBuilds'
+      | 'scanSceneryFallbacks'
+      | 'simpleScanFrames'
+      | 'fullScanFrames'
+      | 'simpleScanRasterBuilds'
+      | 'simpleScanTerrainBuilds'
+      | 'simpleScanDirectFallbackFrames'
   ): void {
     if (this.enabled) {
       this.counters[name] = (this.counters[name] ?? 0) + 1;
@@ -410,6 +604,17 @@ export class ClientPerformanceMetrics {
       pendingJoin: this.joinStartedAt !== undefined,
       pendingRecovery: this.recoveryStartedAt !== undefined,
       counters: { ...this.counters },
+      slowFrames: {
+        observedCount: this.observedSlowFrames,
+        limit: SLOW_FRAME_LIMIT,
+        selection: 'largest intervals over 25 ms; work belongs to preceding completed render',
+        values: this.slowFrames.map((frame) => ({
+          ...frame,
+          previousFrame: frame.previousFrame
+            ? { ...frame.previousFrame, scenery: { ...frame.previousFrame.scenery } }
+            : null,
+        })),
+      },
       metrics: Object.fromEntries(
         [...this.series].map(([key, samples]) => [
           key,
@@ -425,6 +630,8 @@ export class ClientPerformanceMetrics {
       this.appliedSnapshots.length = 0;
       this.appliedSnapshotCount = 0;
       this.series.clear();
+      this.slowFrames.length = 0;
+      this.observedSlowFrames = 0;
       this.rendererFrames.canvas = 0;
       this.rendererFrames.webgl2 = 0;
       for (const phase of Object.keys(this.phaseDurations) as Phase[]) {
