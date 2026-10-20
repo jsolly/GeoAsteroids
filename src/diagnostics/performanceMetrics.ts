@@ -28,7 +28,6 @@ type Metric =
   | 'scanDeltaDecodeMs'
   | 'scanApplyMs'
   | 'scanSceneryBuildMs'
-  | 'simpleScanRasterBuildMs'
   | 'simpleScanTerrainBuildMs'
   | 'messageMs'
   | 'keyframeMessageMs'
@@ -43,6 +42,16 @@ type Metric =
   | 'recoveryMs';
 type Phase = 'menu' | 'play' | 'respawn' | 'hidden';
 type ScanStage = 'flight' | 'enter' | 'wide' | 'return';
+type Presentation = {
+  mode: 'flight' | 'simple-scan';
+  cssWidth: number;
+  cssHeight: number;
+  backingWidth: number;
+  backingHeight: number;
+  dprX: number;
+  dprY: number;
+};
+const PRESENTATION_STATE_LIMIT = 16;
 export type SceneryFrame = Readonly<
   | { kind: 'native' }
   | { kind: 'cached' }
@@ -194,6 +203,37 @@ export class ClientPerformanceMetrics {
   private readonly pendingProbes = new Map<number, number>();
   private readonly completedProbes = new Set<number>();
   private graphicsSettings: Record<string, string | number | boolean> = {};
+  private graphicsPolicyChanges = 0;
+  private presentation: Presentation | null = null;
+  private presentationStateKey = '';
+  private presentationDirty = true;
+  private presentationStateCount = 0;
+  private readonly presentationStates: Array<Presentation & { stage: ScanStage }> = [];
+
+  setPresentation(presentation: Presentation | null): void {
+    this.presentation = presentation ? { ...presentation } : null;
+    this.presentationDirty = true;
+    this.observePresentation();
+  }
+
+  private observePresentation(): void {
+    if (!this.presentationDirty) {
+      return;
+    }
+    this.presentationDirty = false;
+    const current = this.presentation ? { ...this.presentation, stage: this.scanStage } : null;
+    const key = JSON.stringify(current);
+    if (key === this.presentationStateKey) {
+      return;
+    }
+    this.presentationStateKey = key;
+    if (this.enabled && current) {
+      this.presentationStateCount++;
+      if (this.presentationStates.length < PRESENTATION_STATE_LIMIT) {
+        this.presentationStates.push(current);
+      }
+    }
+  }
   private rendererRequested: 'canvas' | 'webgl2' = 'canvas';
   private readonly rendererFrames = { canvas: 0, webgl2: 0 };
   private rendererObserver:
@@ -208,14 +248,24 @@ export class ClientPerformanceMetrics {
     this.rendererObserver = observe;
   }
 
-  /** Called after the frame's CPU timing closes; no GPU queries or allocations. */
+  /** After CPU timing closes, retain changed presentation stages without GPU queries. */
   recordRendererFrame(backend: 'canvas' | 'webgl2'): void {
+    this.observePresentation();
     if (this.enabled) {
       this.rendererFrames[backend]++;
     }
   }
 
   setGraphicsSettings(settings: Record<string, string | number | boolean>): void {
+    const keys = Object.keys(settings);
+    if (
+      this.enabled &&
+      Object.keys(this.graphicsSettings).length > 0 &&
+      (keys.length !== Object.keys(this.graphicsSettings).length ||
+        keys.some((key) => settings[key] !== this.graphicsSettings[key]))
+    ) {
+      this.graphicsPolicyChanges++;
+    }
     this.graphicsSettings = { ...settings };
   }
 
@@ -308,10 +358,13 @@ export class ClientPerformanceMetrics {
 
   /** Camera stages include the ease-back tail after the ability timer ends. */
   setScanScene(stage: ScanStage): void {
+    if (this.scanStage !== stage) {
+      this.scanStage = stage;
+      this.presentationDirty = true;
+    }
     if (!this.enabled) {
       return;
     }
-    this.scanStage = stage;
     this.sceneryFrame = NATIVE_SCENERY;
     this.visibleSpiders = 0;
   }
@@ -464,9 +517,8 @@ export class ClientPerformanceMetrics {
       | 'scanSceneryFallbacks'
       | 'simpleScanFrames'
       | 'fullScanFrames'
-      | 'simpleScanRasterBuilds'
       | 'simpleScanTerrainBuilds'
-      | 'simpleScanDirectFallbackFrames'
+      | 'simpleScanDirectFrames'
   ): void {
     if (this.enabled) {
       this.counters[name] = (this.counters[name] ?? 0) + 1;
@@ -591,6 +643,14 @@ export class ClientPerformanceMetrics {
       messageBytes: Object.fromEntries(this.messageBytes),
       messageCounts: Object.fromEntries(this.messageCounts),
       graphicsSettings: { ...this.graphicsSettings },
+      graphicsPolicyChanges: this.graphicsPolicyChanges,
+      presentation: this.presentation ? { ...this.presentation, stage: this.scanStage } : null,
+      presentationStates: {
+        observedCount: this.presentationStateCount,
+        omittedStates: this.presentationStateCount - this.presentationStates.length,
+        limit: PRESENTATION_STATE_LIMIT,
+        values: this.presentationStates.map((state) => ({ ...state })),
+      },
       renderer: {
         requested: this.rendererRequested,
         backend: renderer?.backend ?? 'canvas',
@@ -627,6 +687,12 @@ export class ClientPerformanceMetrics {
       ),
     };
     if (reset) {
+      this.graphicsPolicyChanges = 0;
+      this.presentationStates.length = 0;
+      this.presentationStateCount = 0;
+      this.presentationStateKey = '';
+      this.presentationDirty = true;
+      this.observePresentation();
       this.appliedSnapshots.length = 0;
       this.appliedSnapshotCount = 0;
       this.series.clear();

@@ -20,7 +20,6 @@ import {
 } from '../../../src/physics/terrain/terrainSession';
 import { drawGame } from '../../../src/rendering/canvas';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
-import * as rasterSurface from '../../../src/rendering/rasterSurface';
 import { simpleScanNavigation } from '../../../src/rendering/simpleScanNavigation';
 import { TestPath2D, type TestPathCommand } from '../../support/TestPath2D';
 import { setWindowViewport } from '../../support/viewport';
@@ -157,7 +156,7 @@ test('an active rail and charged bridge remain drawn while full and simple Scan 
   expect(before.reverse).toEqual({ height: 0.16, direction: -1 });
 
   type Stroke = {
-    origin: 'native' | 'raster';
+    origin: 'native';
     path: TestPath2D | null;
     commands: readonly TestPathCommand[];
     ink: string | CanvasGradient | CanvasPattern;
@@ -223,12 +222,6 @@ test('an active rail and charged bridge remain drawn while full and simple Scan 
     });
   }
   record(ctx, 'native');
-  const originalAllocate = rasterSurface.prepareRasterSurface;
-  vi.spyOn(rasterSurface, 'prepareRasterSurface').mockImplementation((...args) => {
-    const surface = originalAllocate(...args);
-    record(surface.context, 'raster');
-    return surface;
-  });
   const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
   const belt = new RoidBelt();
   drawGame(pilot, belt, [pilot]);
@@ -280,7 +273,7 @@ test('an active rail and charged bridge remain drawn while full and simple Scan 
   expect(
     labels.some(
       (label) =>
-        label.origin === 'raster' &&
+        label.origin === 'native' &&
         label.text === '3 · DRAFT' &&
         label.x === 400 &&
         label.y === 538 &&
@@ -290,7 +283,7 @@ test('an active rail and charged bridge remain drawn while full and simple Scan 
   expect(
     strokes.some(
       (stroke) =>
-        stroke.origin === 'raster' &&
+        stroke.origin === 'native' &&
         stroke.ink === '#a4eeff' &&
         stroke.width === 2 &&
         stroke.commands[0]?.kind === 'moveTo' &&

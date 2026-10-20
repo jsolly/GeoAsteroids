@@ -3,13 +3,18 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { parseDebugReportSubmission } from '../../../shared/debugReports';
 import { clientPerformance } from '../../../src/diagnostics/performanceMetrics';
 import { storeResumeCredential } from '../../../src/network/services/resumeCredential';
+import { canvasManager } from '../../../src/rendering/canvasSurface';
 import { createGameRuntime, type GameRuntime } from '../../../src/runtime/gameRuntime';
 import type { GamePresentation } from '../../../src/runtime/uiTypes';
 import { installPhoneRecordingStorage } from '../../support/phoneRecordingStorage';
 
 // Set the real feature flag before the metrics singleton and runtime are imported.
 vi.hoisted(() =>
-  window.history.replaceState(null, '', '/debug?performance=collect&scanScenery=cache')
+  window.history.replaceState(
+    null,
+    '',
+    '/debug?performance=collect&scanScenery=cache&scanDetail=simple'
+  )
 );
 
 // Logging transport is external to the runtime and recorder under test.
@@ -78,8 +83,8 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   expect(views.at(-1)?.phone?.phase).toBe('recording');
   clientPerformance.setPhase('play');
   clientPerformance.recordFrameInterval(16, 16);
+  canvasManager.easeZoomToward(0.25, 0);
   clientPerformance.setScanScene('enter');
-  clientPerformance.record('simpleScanRasterBuildMs', 3);
   clientPerformance.record('simpleScanTerrainBuildMs', 2);
   clientPerformance.setSceneryFrame({ kind: 'built', cause: 'cold' });
   clientPerformance.recordVisibleSpiders(2);
@@ -87,6 +92,7 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   clientPerformance.recordRendererFrame('canvas');
   await vi.advanceTimersByTimeAsync(1000);
   clientPerformance.recordFrameInterval(40, 56);
+  canvasManager.easeZoomToward(0.25, 1000);
   clientPerformance.setScanScene('wide');
   clientPerformance.setSceneryFrame({ kind: 'cached' });
   clientPerformance.recordVisibleSpiders(3);
@@ -94,6 +100,7 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   clientPerformance.recordRendererFrame('canvas');
   await vi.advanceTimersByTimeAsync(1000);
   clientPerformance.recordFrameInterval(30, 86);
+  canvasManager.easeZoomToward(1, 1016);
   clientPerformance.setScanScene('return');
   clientPerformance.setSceneryFrame({ kind: 'built', cause: 'pan' });
   clientPerformance.recordVisibleSpiders(1);
@@ -101,6 +108,7 @@ test('stopping the runtime recorder attaches a private, parseable performance su
   clientPerformance.recordRendererFrame('canvas');
   await vi.advanceTimersByTimeAsync(1000);
   clientPerformance.recordFrameInterval(50, 136);
+  canvasManager.easeZoomToward(1, 3016);
   runtime.commands.stopPhoneCollection();
   expect(views.at(-1)?.phone?.phase).toBe('stopped');
   const captured = runtime.commands.captureDiagnostics();
@@ -130,16 +138,30 @@ test('stopping the runtime recorder attaches a private, parseable performance su
           scanScenery: 'cache',
           scanSceneryMaxPixels: 8_000_000,
           deviceCategory: 'unknown',
-          scanDetail: 'full',
-          scanDetailReason: 'default-full',
+          scanDetail: 'simple',
+          scanDetailReason: 'forced-simple',
           scanDeviceMemory: 'unknown',
           scanLogicalCores: navigator.hardwareConcurrency || 'unknown',
           simpleScanDprCap: 0.75,
           simpleScanPixelCap: 1_000_000,
+          simpleScanMaxDimension: 1536,
+          presentationPolicy: 'visible-canvas-simple-scan-v1',
+          flightEffectiveDpr: devicePixelRatio,
         },
       },
+      observedPresentation: {
+        values: expect.arrayContaining([
+          expect.objectContaining({
+            mode: 'simple-scan',
+            stage: 'enter',
+            backingWidth: Math.floor(innerWidth * 0.75),
+            backingHeight: Math.floor(innerHeight * 0.75),
+            dprX: Math.floor(innerWidth * 0.75) / innerWidth,
+            dprY: Math.floor(innerHeight * 0.75) / innerHeight,
+          }),
+        ]),
+      },
       metrics: {
-        'play.simpleScanRasterBuildMs': { count: 1, sum: 3 },
         'play.simpleScanTerrainBuildMs': { count: 1, sum: 2 },
         'play.frameIntervalMs': { count: 4, sum: 136, p95: 50, p99: 50 },
         'play.scanFrameIntervalMs': { count: 3, sum: 120 },

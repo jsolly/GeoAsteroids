@@ -54,6 +54,7 @@ const METRICS = new Set([
 const GRAPHICS_KEYS = [
   'deviceDpr',
   'effectiveDpr',
+  'flightEffectiveDpr',
   'maxDpr',
   'glow',
   'source',
@@ -62,6 +63,8 @@ const GRAPHICS_KEYS = [
   'cssHeight',
   'backingWidth',
   'backingHeight',
+  'flightBackingWidth',
+  'flightBackingHeight',
   'scanScenery',
   'scanSceneryMaxPixels',
   'deviceCategory',
@@ -71,6 +74,8 @@ const GRAPHICS_KEYS = [
   'scanLogicalCores',
   'simpleScanDprCap',
   'simpleScanPixelCap',
+  'simpleScanMaxDimension',
+  'presentationPolicy',
 ];
 const SLOW_FRAME_LIMIT = 16;
 const SCENERY_FALLBACK_REASONS = [
@@ -185,6 +190,27 @@ function slowFrame(value: unknown) {
   };
 }
 
+function presentation(value: unknown): Record<string, DebugJsonValue> {
+  const row = object(value);
+  if (row['mode'] !== 'flight' && row['mode'] !== 'simple-scan') {
+    throw new Error('Invalid presentation mode');
+  }
+  const stage = row['stage'];
+  if (stage !== 'flight' && stage !== 'enter' && stage !== 'wide' && stage !== 'return') {
+    throw new Error('Invalid presentation stage');
+  }
+  return {
+    mode: row['mode'],
+    stage,
+    cssWidth: number(row['cssWidth']),
+    cssHeight: number(row['cssHeight']),
+    backingWidth: count(row['backingWidth']),
+    backingHeight: count(row['backingHeight']),
+    dprX: number(row['dprX']),
+    dprY: number(row['dprY']),
+  };
+}
+
 /** Reads existing chunks only when a report opens. Recording and raw exports stay untouched. */
 export function summarizePhoneRecording(recording: Recording): Record<string, DebugJsonValue> {
   const reasons = new Set<string>();
@@ -207,6 +233,9 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
   const slowFrames: ReturnType<typeof slowFrame>[] = [];
   let slowFrameChunks = 0;
   let observedSlowIntervals = 0;
+  const observedPresentations = new Map<string, Record<string, DebugJsonValue>>();
+  let omittedPresentationStates = 0;
+  let observedPresentationCount = 0;
   for (const serialized of recording.samples) {
     const sample = object(JSON.parse(serialized));
     durationMs += number(sample['durationMs']);
@@ -237,6 +266,39 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
           (left, right) => right.intervalMs - left.intervalMs || left.atMs - right.atMs
         );
         slowFrames.length = Math.min(SLOW_FRAME_LIMIT, slowFrames.length);
+      }
+    }
+    if (
+      sample['graphicsPolicyChanges'] !== undefined &&
+      count(sample['graphicsPolicyChanges']) > 0
+    ) {
+      reasons.add('Release, graphics, or renderer changed during recording');
+    }
+    if (sample['presentationStates'] !== undefined) {
+      const states = object(sample['presentationStates']);
+      const values = states['values'];
+      const observed = count(states['observedCount']);
+      const omitted = count(states['omittedStates']);
+      if (
+        states['limit'] !== 16 ||
+        !Array.isArray(values) ||
+        values.length > 16 ||
+        observed !== values.length + omitted
+      ) {
+        throw new Error('Invalid presentation states');
+      }
+      observedPresentationCount += observed;
+      omittedPresentationStates += omitted;
+      for (const value of values) {
+        const state = presentation(value);
+        const key = JSON.stringify(state);
+        if (!observedPresentations.has(key)) {
+          if (observedPresentations.size < 32) {
+            observedPresentations.set(key, state);
+          } else {
+            omittedPresentationStates++;
+          }
+        }
       }
     }
     const current = {
@@ -373,6 +435,13 @@ export function summarizePhoneRecording(recording: Recording): Record<string, De
       'Metric framesPerSecond uses completed frame intervals; fullWindowFramesPerSecond uses the whole declared phase duration',
     provenance,
     rendererFrames,
+    observedPresentation: {
+      selection:
+        'Distinct observed presentation states, bounded to 32; not recording policy or a complete frame timeline',
+      observedCount: observedPresentationCount,
+      omittedStates: omittedPresentationStates,
+      values: [...observedPresentations.values()],
+    },
     counters,
     slowFrameContext: {
       availability:

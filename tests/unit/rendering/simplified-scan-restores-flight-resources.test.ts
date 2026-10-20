@@ -3,6 +3,7 @@ import { FurnaceField } from '../../../shared/furnaceField';
 import { SHIP_ABILITY } from '../../../shared/shipKits';
 import { ensureTerrain, getTerrainField } from '../../../shared/terrainField';
 import { isMusicThreatActive, resetMusicThreats } from '../../../src/audio/musicThreat';
+import { Laser } from '../../../src/entities/laser/Laser';
 import { createPlayer } from '../../../src/entities/player/createPlayer';
 import { Roid, RoidBelt } from '../../../src/entities/roid/Roid';
 import * as contours from '../../../src/physics/terrain/contours';
@@ -15,7 +16,6 @@ import {
 } from '../../../src/physics/terrain/terrainSession';
 import { drawGame, scanCameraZoom } from '../../../src/rendering/canvas';
 import { canvasManager } from '../../../src/rendering/canvasSurface';
-import * as rasterSurface from '../../../src/rendering/rasterSurface';
 import type { SimpleScanScene } from '../../../src/rendering/simpleScanRenderer';
 import * as spiderFeet from '../../../src/rendering/spiderFootContacts';
 import { TestPath2D } from '../../support/TestPath2D';
@@ -86,68 +86,61 @@ function returnToFlight(from: number) {
   }
 }
 
-function observeComposites(ctx: CanvasRenderingContext2D) {
-  return vi.spyOn(ctx, 'drawImage');
+function backing() {
+  const canvas = canvasManager.requireCanvas();
+  return { width: canvas.width, height: canvas.height };
 }
 
-function drawnSurface(draw: ReturnType<typeof observeComposites>) {
-  const source = draw.mock.calls.at(-1)?.[0];
-  if (!(source instanceof HTMLCanvasElement)) {
-    throw new Error('Expected the live Scan raster to be composited from a canvas');
-  }
-  return source;
+function presentationTransform(width = 800, height = 1094) {
+  const canvas = canvasManager.requireCanvas();
+  return { a: canvas.width / width, b: 0, c: 0, d: canvas.height / height, e: 0, f: 0 };
 }
 
-test('one bounded Scan raster survives fractional zoom, then flight releases its backing storage', () => {
+test('Scan paints directly at bounded visible resolution and restores native flight before its next paint', () => {
   const ctx = mount('simple');
+  const canvas = canvasManager.requireCanvas();
   const draw = vi.spyOn(ctx, 'drawImage');
+  const created = vi.spyOn(document, 'createElement');
   const world = scene();
+  expect(backing()).toEqual({ width: 1200, height: 1641 });
   scanAt(0);
-  expect(canvasManager.usesSimpleScan()).toBe(true);
-  canvasManager.drawSimpleScan(world, 0);
-  const surface = drawnSurface(draw);
-  expect({ width: surface.width, height: surface.height }).toEqual({ width: 600, height: 820 });
-  expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
-    active: true,
-    ownedPixels: 492000,
-    mode: 'simple',
-    reason: 'forced-simple',
-  });
-
-  for (const now of [16, 50, 125, 300, 700]) {
+  expect(backing()).toEqual({ width: 600, height: 820 });
+  expect(canvas.style.width).toBe('800px');
+  expect(canvas.style.height).toBe('1094px');
+  for (const now of [0, 16, 50, 125, 300, 700]) {
     scanAt(now);
     canvasManager.drawSimpleScan(world, now);
-    expect(drawnSurface(draw)).toBe(surface);
+    expect(canvasManager.requireCanvas()).toBe(canvas);
+    expect(backing()).toEqual({ width: 600, height: 820 });
+    expect(ctx.getTransform()).toMatchObject(presentationTransform());
   }
+  expect(draw).not.toHaveBeenCalled();
+  expect(created.mock.calls.filter(([tag]) => tag === 'canvas')).toEqual([]);
   expect(canvasManager.getViewportSize()).toEqual({ width: 800, height: 1094 });
-  expect(ctx.getTransform()).toMatchObject({ a: 1.5, b: 0, c: 0, d: 1.5, e: 0, f: 0 });
-
   canvasManager.easeZoomToward(1, 716);
   expect(canvasManager.usesSimpleScan()).toBe(true);
-  canvasManager.drawSimpleScan(world, 716);
-  expect(drawnSurface(draw)).toBe(surface);
+  expect(backing()).toEqual({ width: 600, height: 820 });
   returnToFlight(716);
   expect(canvasManager.usesSimpleScan()).toBe(false);
-  expect(canvasManager.readSimpleScanDiagnostics().ownedPixels).toBe(0);
-  expect({ width: surface.width, height: surface.height }).toEqual({ width: 0, height: 0 });
-
+  expect(backing()).toEqual({ width: 1200, height: 1641 });
+  expect(ctx.getTransform()).toMatchObject(presentationTransform());
   scanAt(3200);
-  canvasManager.drawSimpleScan(world, 3200);
-  const nextSurface = drawnSurface(draw);
-  expect(nextSurface).not.toBe(surface);
+  expect(backing()).toEqual({ width: 600, height: 820 });
   canvasManager.destroy();
-  expect({ width: nextSurface.width, height: nextSurface.height }).toEqual({ width: 0, height: 0 });
+  expect(canvasManager.getCanvas()).toBeNull();
   expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
     active: false,
-    ownedPixels: 0,
+    backingWidth: 0,
+    backingHeight: 0,
   });
+  mount('simple');
+  expect(backing()).toEqual({ width: 1200, height: 1641 });
 });
 
 test.each(['simple', 'full'] as const)(
   '%s Scan restores its flight rendering at the intended return cadence',
   (mode) => {
     const ctx = mount(mode);
-    const draw = observeComposites(ctx);
     const world = scene();
     world.localPlayer.ship.abilityActiveFrames = SHIP_ABILITY.SCAN_FRAMES;
     const target = scanCameraZoom(world.localPlayer.ship, 800, 1094);
@@ -163,7 +156,6 @@ test.each(['simple', 'full'] as const)(
     if (mode === 'simple') {
       canvasManager.drawSimpleScan(world, 1200);
     }
-    const surface = mode === 'simple' ? drawnSurface(draw) : undefined;
     for (let frame = 1; frame <= 36; frame++) {
       canvasManager.easeZoomToward(1, 1200 + (frame * 1000) / 60);
     }
@@ -182,13 +174,7 @@ test.each(['simple', 'full'] as const)(
     }
     canvasManager.endWorldLayers(ctx);
     expect(canvasManager.usesSimpleScan()).toBe(false);
-    expect(canvasManager.readSimpleScanDiagnostics().ownedPixels).toBe(0);
-    if (surface) {
-      expect({ width: surface.width, height: surface.height }).toEqual({
-        width: 0,
-        height: 0,
-      });
-    }
+    expect(backing()).toEqual({ width: 1200, height: 1641 });
   }
 );
 
@@ -196,79 +182,69 @@ test.each([
   { width: 2000, height: 2000, expected: { width: 1000, height: 1000 } },
   { width: 5000, height: 200, expected: { width: 1535, height: 61 } },
 ])(
-  'the Scan raster obeys its pixel and dimension caps for $width by $height',
+  'the visible Scan backing obeys pixel and dimension caps for $width by $height',
   ({ width, height, expected }) => {
-    const ctx = mount('simple', width, height, 1);
-    const draw = vi.spyOn(ctx, 'drawImage');
+    mount('simple', width, height, 1);
     scanAt(0);
-    canvasManager.drawSimpleScan(scene(), 0);
-    const surface = drawnSurface(draw);
-    expect({ width: surface.width, height: surface.height }).toEqual(expected);
-    expect(surface.width * surface.height).toBeLessThanOrEqual(1_000_000);
-    expect(Math.max(surface.width, surface.height)).toBeLessThanOrEqual(1536);
+    expect(backing()).toEqual(expected);
+    expect(backing().width * backing().height).toBeLessThanOrEqual(1_000_000);
+    expect(Math.max(backing().width, backing().height)).toBeLessThanOrEqual(1536);
   }
 );
 
-test('resizing an active Scan releases the old raster before painting its replacement', () => {
+test.each([
+  {
+    dpr: 0.5,
+    renderDpr: 'native',
+    scan: { width: 400, height: 547 },
+    flight: { width: 400, height: 547 },
+  },
+  {
+    dpr: 3,
+    renderDpr: '1.5',
+    scan: { width: 600, height: 820 },
+    flight: { width: 1200, height: 1641 },
+  },
+])(
+  'Scan respects device DPR $dpr and the user flight cap $renderDpr',
+  ({ dpr, renderDpr, scan, flight }) => {
+    mount('simple', 800, 1094, dpr);
+    window.history.replaceState(
+      null,
+      '',
+      `/?performance=collect&scanDetail=simple&renderDpr=${renderDpr}`
+    );
+    scanAt(0);
+    expect(backing()).toEqual(scan);
+    scanAt(400);
+    returnToFlight(400);
+    expect(backing()).toEqual(flight);
+  }
+);
+
+test('orientation and DPR changes keep the live Scan bounded and restore the new flight backing with correct axes and smoothing', () => {
   vi.useFakeTimers();
   const ctx = mount('simple');
-  const draw = vi.spyOn(ctx, 'drawImage');
-  const world = scene();
   scanAt(0);
-  canvasManager.drawSimpleScan(world, 0);
-  const first = drawnSurface(draw);
-
-  restoreViewports.push(setWindowViewport(1094, 800, 1.5));
+  ctx.imageSmoothingEnabled = false;
+  restoreViewports.push(setWindowViewport(1094, 800, 2));
   window.dispatchEvent(new Event('resize'));
   vi.advanceTimersByTime(20);
-  expect({ width: first.width, height: first.height }).toEqual({ width: 0, height: 0 });
-  expect(canvasManager.readSimpleScanDiagnostics().ownedPixels).toBe(0);
+  expect(backing()).toEqual({ width: 820, height: 600 });
   expect(canvasManager.usesSimpleScan()).toBe(true);
-  canvasManager.drawSimpleScan(world, 20);
-  const second = drawnSurface(draw);
-  expect(second).not.toBe(first);
-  expect({ width: second.width, height: second.height }).toEqual({ width: 820, height: 600 });
-  expect(canvasManager.getViewportSize()).toEqual({ width: 1094, height: 800 });
+  expect(ctx.getTransform()).toMatchObject(presentationTransform(1094, 800));
+  expect(ctx.imageSmoothingEnabled).toBe(true);
+  expect(ctx.imageSmoothingQuality).toBe('high');
+  scanAt(400);
+  returnToFlight(400);
+  expect(backing()).toEqual({ width: 2188, height: 1600 });
+  expect(ctx.getTransform()).toMatchObject(presentationTransform(1094, 800));
 });
 
-test('a lost Scan context releases its bitmap before painting on a new bounded canvas', () => {
+test('direct Scan draws changing live asteroids and projectiles without a detached canvas or copy', () => {
   const ctx = mount('simple');
-  const draw = vi.spyOn(ctx, 'drawImage');
-  const world = scene();
-  scanAt(0);
-  canvasManager.drawSimpleScan(world, 0);
-  const first = drawnSurface(draw);
-  const firstContext = first.getContext('2d');
-  if (!firstContext) {
-    throw new Error('Expected the initially available Scan context');
-  }
-  Object.defineProperty(firstContext, 'isContextLost', { configurable: true, value: () => true });
-  canvasManager.drawSimpleScan(world, 16);
-  const second = drawnSurface(draw);
-  expect(second).not.toBe(first);
-  expect({ width: first.width, height: first.height }).toEqual({ width: 0, height: 0 });
-  expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
-    directFallback: false,
-    ownedPixels: 492000,
-    peakOwnedPixels: 492000,
-  });
-});
-
-test('a context lost during allocation falls back once and continues drawing live asteroid changes', () => {
-  const ctx = mount('simple');
-  const originalAllocate = rasterSurface.prepareRasterSurface;
-  const allocations = vi
-    .spyOn(rasterSurface, 'prepareRasterSurface')
-    .mockImplementation((...args) => {
-      const allocated = originalAllocate(...args);
-      Object.defineProperty(allocated.context, 'isContextLost', {
-        configurable: true,
-        value: () => true,
-      });
-      return allocated;
-    });
   const asteroid = new Roid({
-    id: 'live-fallback-rock',
+    id: 'live-scan-rock',
     position: { x: 100, y: 100 },
     velocity: { x: 0, y: 0 },
     size: 30,
@@ -281,97 +257,43 @@ test('a context lost during allocation falls back once and continues drawing liv
     jaggedness: 0,
   });
   const world = { ...scene(), roids: [asteroid] };
-  const composites = vi.spyOn(ctx, 'drawImage');
+  const shot = new Laser({ x: 100, y: 200 }, { x: 10, y: 0 }, 0, 0);
+  world.localPlayer.ship.lasers = [shot];
+  const created = vi.spyOn(document, 'createElement');
+  const copies = vi.spyOn(ctx, 'drawImage');
+  const moves = vi.spyOn(ctx, 'moveTo');
   scanAt(0);
   canvasManager.drawSimpleScan(world, 0);
   expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
-    active: true,
-    directFallback: true,
-    ownedPixels: 0,
-    lastFrame: { visibleAsteroids: 1 },
+    lastFrame: { visibleAsteroids: 1, visibleShots: 1 },
   });
-  const allocated = allocations.mock.results[0];
-  if (allocated?.type !== 'return') {
-    throw new Error('Expected the failed canvas allocation handle');
-  }
-  expect({ width: allocated.value.canvas.width, height: allocated.value.canvas.height }).toEqual({
-    width: 0,
-    height: 0,
-  });
+  expect(moves).toHaveBeenCalledWith(500, 747);
+  moves.mockClear();
+  shot.position = { x: 120, y: 240 };
   asteroid.position = { x: 1_000_000, y: 1_000_000 };
   canvasManager.drawSimpleScan(world, 16);
+  expect(moves).toHaveBeenCalledWith(520, 787);
   expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
-    lastFrame: { visibleAsteroids: 0 },
+    lastFrame: { visibleAsteroids: 0, visibleShots: 1 },
   });
-  expect(allocations).toHaveBeenCalledTimes(1);
-  expect(composites).not.toHaveBeenCalled();
+  expect(copies).not.toHaveBeenCalled();
+  expect(created.mock.calls.filter(([tag]) => tag === 'canvas')).toEqual([]);
 });
 
-test('an unavailable raster context frees the detached allocation before reporting failure', () => {
-  const created = vi.spyOn(document, 'createElement');
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValueOnce(null);
-  expect(() => rasterSurface.prepareRasterSurface(600, 820, undefined, 'No Scan context')).toThrow(
-    'No Scan context'
-  );
-  const result = created.mock.results[0];
-  if (result?.type !== 'return' || !(result.value instanceof HTMLCanvasElement)) {
-    throw new Error('Expected the detached raster canvas');
-  }
-  expect({ width: result.value.width, height: result.value.height }).toEqual({
-    width: 0,
-    height: 0,
+test('a direct Scan painter failure restores the actual axis transform and permits the next live paint', () => {
+  const ctx = mount('simple');
+  scanAt(0);
+  const failure = new Error('Scan terrain paint failed');
+  const stroke = vi.spyOn(ctx, 'stroke').mockImplementationOnce(() => {
+    throw failure;
   });
+  expect(() => canvasManager.drawSimpleScan(scene(), 0)).toThrow(failure);
+  canvasManager.endWorldLayers(ctx, true);
+  expect(ctx.getTransform()).toMatchObject(presentationTransform());
+  expect(ctx.imageSmoothingEnabled).toBe(true);
+  stroke.mockRestore();
+  expect(() => canvasManager.drawSimpleScan(scene(), 16)).not.toThrow();
 });
-
-test.each(['allocation', 'composition'])(
-  'a %s failure keeps the world live directly, avoids frame retries, and recovers on resize',
-  (failureAt) => {
-    vi.useFakeTimers();
-    const ctx = mount('simple');
-    const world = scene();
-    const allocations = vi.spyOn(rasterSurface, 'prepareRasterSurface');
-    const composites = vi.spyOn(ctx, 'drawImage');
-    const failure = new Error(`Forced Scan ${failureAt} failure`);
-    if (failureAt === 'allocation') {
-      allocations.mockImplementationOnce(() => {
-        throw failure;
-      });
-    } else {
-      composites.mockImplementationOnce(() => {
-        throw failure;
-      });
-    }
-    const directFills = vi.spyOn(ctx, 'fillRect');
-    scanAt(0);
-    canvasManager.drawSimpleScan(world, 0);
-    expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
-      active: true,
-      directFallback: true,
-      ownedPixels: 0,
-      lastFrame: { visibleAsteroids: 0 },
-    });
-    expect(directFills).toHaveBeenCalledWith(0, 0, 800, 1094);
-    expect(allocations).toHaveBeenCalledTimes(1);
-    const firstFills = directFills.mock.calls.length;
-    world.localPlayer.ship.position = { x: 10, y: 20 };
-    canvasManager.drawSimpleScan(world, 16);
-    expect(directFills.mock.calls.length).toBeGreaterThan(firstFills);
-    expect(allocations).toHaveBeenCalledTimes(1);
-    expect(composites).toHaveBeenCalledTimes(failureAt === 'allocation' ? 0 : 1);
-    expect(ctx.getTransform()).toMatchObject({ a: 1.5, d: 1.5, e: 0, f: 0 });
-
-    restoreViewports.push(setWindowViewport(1094, 800, 1.5));
-    window.dispatchEvent(new Event('resize'));
-    vi.advanceTimersByTime(20);
-    canvasManager.drawSimpleScan(world, 36);
-    expect(allocations).toHaveBeenCalledTimes(2);
-    expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
-      active: true,
-      directFallback: false,
-      ownedPixels: 492000,
-    });
-  }
-);
 
 test('forcing full detail never enables the simple route or suspends ordinary terrain prefetch', () => {
   vi.useFakeTimers();
@@ -386,7 +308,6 @@ test('forcing full detail never enables the simple route or suspends ordinary te
     mode: 'full',
     reason: 'forced-full',
     active: false,
-    ownedPixels: 0,
   });
   vi.runAllTimers();
   expect(builtContourPatchCount()).toBe(5);
@@ -433,7 +354,6 @@ test('the forced full game route keeps using detailed terrain instead of the sim
   expect(canvasManager.readSimpleScanDiagnostics()).toMatchObject({
     mode: 'full',
     active: false,
-    ownedPixels: 0,
   });
   expect(canvasManager.getViewportSize()).toEqual({ width: 800, height: 1094 });
 });
@@ -500,7 +420,7 @@ test('camera easing covers equal elapsed time at smooth and stalled frame cadenc
   expect(stalled).toBeCloseTo(target, 2);
 });
 
-test('the game route paints the simple world, exact nearby lines and native HUD, and survives an overlay failure', () => {
+test('the game route paints the simple world, exact nearby lines and canvas HUD, and survives an overlay failure', () => {
   const ctx = mount('simple');
   ensureTerrain(915, { cx: 0, cy: 0, radius: 100_000 });
   const center = { x: 1000, y: 1000 };
@@ -526,7 +446,7 @@ test('the game route paints the simple world, exact nearby lines and native HUD,
   const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
   const marches = vi.spyOn(contours, 'extractIsoContours');
   const composites = vi.spyOn(ctx, 'drawImage');
-  const baseTransform = { a: 1.5, b: 0, c: 0, d: 1.5, e: 0, f: 0 };
+  const baseTransform = { a: 0.75, b: 0, c: 0, d: 820 / 1094, e: 0, f: 0 };
   const nativeStroke = ctx.stroke.bind(ctx);
   const overlayTransforms: DOMMatrix[] = [];
   const failure = new Error('Nearby contour paint failed');
@@ -565,10 +485,13 @@ test('the game route paints the simple world, exact nearby lines and native HUD,
       ([source]) =>
         source instanceof HTMLCanvasElement && source.width === 600 && source.height === 820
     )
-  ).toBe(true);
+  ).toBe(false);
+  expect(backing()).toEqual({ width: 600, height: 820 });
   expect(overlayTransforms.some((transform) => transform.a < 1.5)).toBe(true);
   expect(hudTransforms).toHaveLength(2);
-  expect(hudTransforms.every((transform) => transform.a === 1.5 && transform.d === 1.5)).toBe(true);
+  expect(
+    hudTransforms.every((transform) => transform.a === 0.75 && transform.d === 820 / 1094)
+  ).toBe(true);
   expect(marches.mock.calls.some(([, grid]) => grid === 32)).toBe(true);
   for (const [, grid, , bounds] of marches.mock.calls) {
     if (grid === 96) {
@@ -661,7 +584,7 @@ test('a live simple Scan starts and releases spider danger music and the native 
   expect(borders).toHaveLength(2);
   for (const border of borders) {
     expect(border.box).toEqual([2.5, 2.5, 795, 1089]);
-    expect(border.transform).toMatchObject({ a: 1.5, b: 0, c: 0, d: 1.5, e: 0, f: 0 });
+    expect(border.transform).toMatchObject(presentationTransform());
     expect(border.ink).toBe('rgba(229, 56, 82, 0.65)');
     expect(border.width).toBe(5);
   }
