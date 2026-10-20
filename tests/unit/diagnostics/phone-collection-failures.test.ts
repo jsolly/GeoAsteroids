@@ -518,7 +518,7 @@ test.each(['missing metadata', 'scan stage', 'build cause', 'selection'])(
   }
 );
 
-test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
+test.each(['graphics', 'renderer', 'server release', 'scan scenery', 'legacy backing'])(
   'changing %s between real recording chunks preserves counts but invalidates percentiles',
   async (changed) => {
     storage();
@@ -536,6 +536,15 @@ test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
       metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'off', scanScenery: 'native' });
     } else if (changed === 'scan scenery') {
       metrics.setGraphicsSettings({ maxDpr: 'native', glow: 'full', scanScenery: 'cache' });
+    } else if (changed === 'legacy backing') {
+      metrics.setGraphicsSettings({
+        maxDpr: 'native',
+        glow: 'full',
+        scanScenery: 'native',
+        effectiveDpr: 0.75,
+        backingWidth: 600,
+        backingHeight: 820,
+      });
     } else if (changed === 'renderer') {
       metrics.setRendererObservation('webgl2', () => ({ backend: 'webgl2', gpuStats: null }));
     } else {
@@ -563,3 +572,137 @@ test.each(['graphics', 'renderer', 'server release', 'scan scenery'])(
     });
   }
 );
+
+test('short Scan presentation changes remain complete and retain actual backing states within one collector chunk', async () => {
+  storage();
+  const metrics = new ClientPerformanceMetrics(true);
+  metrics.setPhase('play');
+  const policy = {
+    deviceDpr: 1.5,
+    flightEffectiveDpr: 1.5,
+    flightBackingWidth: 1200,
+    flightBackingHeight: 1641,
+    cssWidth: 800,
+    cssHeight: 1094,
+    maxDpr: 'native',
+    glow: 'off',
+    simpleScanDprCap: 0.75,
+    simpleScanPixelCap: 1_000_000,
+    simpleScanMaxDimension: 1536,
+    presentationPolicy: 'visible-canvas-simple-scan-v1',
+  };
+  const flight = {
+    mode: 'flight',
+    cssWidth: 800,
+    cssHeight: 1094,
+    backingWidth: 1200,
+    backingHeight: 1641,
+    dprX: 1.5,
+    dprY: 1.5,
+  } as const;
+  metrics.setGraphicsSettings(policy);
+  metrics.setPresentation(flight);
+  const subject = collector(metrics);
+  await subject.start('KFTUWI', 'Short Scan inside one drain');
+  metrics.record('frameIntervalMs', 16);
+  metrics.setScanScene('enter');
+  metrics.setPresentation({
+    ...flight,
+    mode: 'simple-scan',
+    backingWidth: 600,
+    backingHeight: 820,
+    dprX: 0.75,
+    dprY: 820 / 1094,
+  });
+  metrics.setGraphicsSettings(policy);
+  metrics.setScanScene('return');
+  metrics.setScanScene('flight');
+  metrics.setPresentation(flight);
+  subject.stop();
+  expect(subject.readDiagnostics()).toMatchObject({
+    complete: true,
+    provenance: { graphics: policy },
+    observedPresentation: {
+      omittedStates: 0,
+      values: expect.arrayContaining([
+        { ...flight, stage: 'flight' },
+        expect.objectContaining({
+          mode: 'simple-scan',
+          stage: 'enter',
+          backingWidth: 600,
+          backingHeight: 820,
+          dprY: 820 / 1094,
+        }),
+      ]),
+    },
+  });
+  const saved = await artifact(subject);
+  expect(saved.content.samples[0].presentation).toEqual({ ...flight, stage: 'flight' });
+  expect(saved.content.samples[0].graphicsPolicyChanges).toBe(0);
+});
+
+test.each(['viewport', 'device DPR', 'quality'])(
+  'a %s policy change reverted inside one chunk still invalidates the recording',
+  async (change) => {
+    storage();
+    const metrics = new ClientPerformanceMetrics(true);
+    metrics.setPhase('play');
+    const original = { cssWidth: 800, deviceDpr: 1.5, flightEffectiveDpr: 1.5, glow: 'off' };
+    metrics.setGraphicsSettings(original);
+    const subject = collector(metrics);
+    await subject.start('KFTUWI', 'Policy changed and reverted');
+    metrics.record('frameIntervalMs', 16);
+    metrics.setGraphicsSettings({
+      ...original,
+      ...(change === 'viewport'
+        ? { cssWidth: 1094 }
+        : change === 'device DPR'
+          ? { deviceDpr: 2 }
+          : { glow: 'full' }),
+    });
+    metrics.setGraphicsSettings(original);
+    subject.stop();
+    expect(subject.readDiagnostics()).toMatchObject({
+      complete: false,
+      incompleteReasons: ['Release, graphics, or renderer changed during recording'],
+    });
+    expect((await artifact(subject)).content.samples[0].graphicsPolicyChanges).toBe(2);
+  }
+);
+
+test('presentation observations remain bounded across repeated Scan transitions and collection chunks', async () => {
+  storage();
+  const metrics = new ClientPerformanceMetrics(true);
+  metrics.setPhase('play');
+  const subject = collector(metrics);
+  await subject.start('KFTUWI', 'Bounded observations');
+  for (let chunk = 0; chunk < 4; chunk++) {
+    for (let state = 0; state < 30; state++) {
+      metrics.setPresentation({
+        mode: state % 2 === 0 ? 'flight' : 'simple-scan',
+        cssWidth: 800,
+        cssHeight: 1094,
+        backingWidth: 600 + chunk * 30 + state,
+        backingHeight: 820,
+        dprX: (600 + chunk * 30 + state) / 800,
+        dprY: 820 / 1094,
+      });
+    }
+    metrics.record('frameIntervalMs', 16);
+    await vi.advanceTimersByTimeAsync(1000);
+  }
+  subject.stop();
+  const summary = subject.readDiagnostics();
+  expect(summary).toMatchObject({
+    observedPresentation: { values: expect.any(Array), omittedStates: expect.any(Number) },
+  });
+  const observed = summary?.['observedPresentation'];
+  if (observed === null || typeof observed !== 'object' || Array.isArray(observed)) {
+    throw new Error('Missing observed presentation summary');
+  }
+  expect(observed['values']).toHaveLength(32);
+  expect(observed['omittedStates']).toBeGreaterThan(0);
+  for (const sample of (await artifact(subject)).content.samples) {
+    expect(sample.presentationStates.values.length).toBeLessThanOrEqual(16);
+  }
+});

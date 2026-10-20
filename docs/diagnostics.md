@@ -50,6 +50,27 @@ further analysis; starting another collection replaces the saved session, so
 download it first. An incomplete collection cannot establish a performance result.
 Reports from ordinary sessions do not include a collection summary.
 
+Simplified Scan paints directly into the visible game canvas, capped at 0.75 DPR,
+one million backing pixels and 1536 pixels per dimension. Its world, canvas HUD
+and minimap are temporarily softer; DOM controls and CSS/input coordinates stay
+unchanged. Flight backing resolution returns when the camera reaches flight scale.
+The full-detail Scan path keeps its normal resolution.
+
+Recordings compare fixed flight policy (`flightEffectiveDpr`, `flightBackingWidth`,
+`flightBackingHeight`) and the Scan caps. `presentation` reports current actual
+backing dimensions and both DPR axes. Bounded `presentationStates` retain short
+Scan transitions between collection drains, and the report's `observedPresentation`
+collects those states separately from fixed policy. A viewport, device DPR or
+quality-policy change, including a change reverted within a drain, makes a run
+incomplete. Historical recordings keep strict comparison of their older backing
+fields.
+
+For the Fire Tablet check, warm up with native DPR, glow off and automatic Scan
+detail. Record one 90-second route with three Mineral Scans, steering and firing
+through each entry, wide view and return. Keep the raw download and compare
+flight/Scan frame intervals, CPU time, resolution states and live hazards. This
+protocol alone does not establish 60 FPS; the physical tablet's samples do.
+
 ## Review reports as an agent
 
 1. Find the **Debug reports** section in Todoist project `6hWp83X3jfHJpW8v`.
