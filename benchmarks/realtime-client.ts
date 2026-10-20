@@ -22,6 +22,7 @@ import {
 import type { Position, ServerGameSnapshot } from '../shared-types';
 import type { ClientPerformanceMetrics } from '../src/diagnostics/performanceMetrics';
 import { PLAYFIELD_CLOSE_SCALE } from '../src/rendering/playfieldCamera';
+import { parseRenderDprLimit } from '../src/rendering/renderQuality';
 import {
   type AppliedFreshness,
   appliedFreshness,
@@ -500,7 +501,7 @@ assert(
 const combatWorkload = workload !== 'traversal';
 const compression = readBenchmarkCompression(process.env['GEOROIDS_BENCHMARK_COMPRESSION']);
 const regionalWorkload = workload === 'regional-combat';
-assert(['native', '2', '1.5'].includes(values['render-dpr']), 'Invalid render-dpr');
+parseRenderDprLimit(values['render-dpr']);
 assert(['full', 'off'].includes(values['render-glow']), 'Invalid render-glow');
 assert(values.browser === 'chromium' || cpuSlowdown === 1, 'CPU slowdown requires Chromium');
 assert(

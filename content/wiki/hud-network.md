@@ -66,6 +66,8 @@ Live diagnostics include a Device label: Low-end, Commodity, High-end, or Unknow
 
 Try the [experimental WebGL version](https://www.georoids.com/?renderer=webgl2) to compare graphics performance on your device. It uses the same scene and controls and falls back automatically if the renderer is unavailable. Reload the [standard version](https://www.georoids.com/) to return to the default renderer.
 
+For a flight-resolution comparison, open `/debug?performance=collect&renderDpr=1`; test `&renderGlow=off` separately at the original resolution. Lower resolution softens canvas details; these diagnostic choices apply only to that visit. Low-end [Mineral Scan](/wiki/#scout) keeps its separate resolution limit.
+
 ## Campaign status
 
 Campaign-enabled servers show the shared Deep Scanner ore total and UTC hazard warnings above the playfield. Crew signals and downed beacons appear nearby, at the playfield edge and on the chart; rescue and sac countdowns use the server clock. Downed deadlines and permanent frontier progress survive reconnects and server restarts, subject to the normal last-checkpoint crash window.

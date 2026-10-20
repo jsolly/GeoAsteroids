@@ -165,7 +165,7 @@
     "src/core/services/GameStateManager.ts": "sha256:f7558f319c4164fe7e008b526556e61e65a89cd13bb81637c4582842cf8fd8a7",
     "src/core/services/InputManager.ts": "sha256:4bda2decc191b6a716d58fac1a7c3d0ce67476eb3666bc65d81de2660e8b7d43",
     "src/diagnostics/clientDiagnostics.ts": "sha256:a4775c68fcd740081832385689f432dc68dab693f7ef9ee2300b1a9e4341f26c",
-    "src/diagnostics/debugHudMetrics.ts": "sha256:c2188e5bc06730ab3511b8a8089e091c4bbf4ed7a934868476c3645bbc43644d",
+    "src/diagnostics/debugHudMetrics.ts": "sha256:1fdc39cbd4819a46ac4d36bc8cd631cb307689a5a76244476891d30b57f6d04f",
     "src/diagnostics/performanceMetrics.ts": "sha256:79b113b8768651349ba1a3e4c6b0ea2d645b2884b08541c139df0c61957ec06d",
     "src/entities/laser/AuthoritativeProjectileField.ts": "sha256:01f08320e6968fa4e8b07d798fe226117b29042aecada94cfb373517334aad67",
     "src/entities/laser/Laser.ts": "sha256:d482cbf287826e87b2aa4d17db13fd7495af82d44c24ca653434f8de0738ea16",
@@ -252,7 +252,7 @@
     "src/rendering/nativeStarPainter.ts": "sha256:afbcce6099c3a30ff212a39485511a697e33b546fa8b1ae6624d1f21a0c7df48",
     "src/rendering/playfieldCamera.ts": "sha256:be7436b3f86acb7aabd3e120759f83747e6f2e72b06a84760953517ec265fd81",
     "src/rendering/rasterSurface.ts": "sha256:4f0f4b38fa398df8c0facdbf2eab75ddd49d1d3b52a43e8f74632731208e3953",
-    "src/rendering/renderQuality.ts": "sha256:db30b72fcf8016e57878c49f9408e792e6e71d9d9e3062203e691b56d7077059",
+    "src/rendering/renderQuality.ts": "sha256:91f2cb79a8fe1041302da0fdecedbde68d418c2623e44188cde47533dbb516a3",
     "src/rendering/ricochetCourtRenderer.ts": "sha256:31a3dc6c279e3264cea263868787f08c89cbd149b90199a9d6c83ee73674feac",
     "src/rendering/spiderFootContacts.ts": "sha256:242a4dd6d0056d31cb1f3e803352df26a2178b62c090f1261ab58e4a8ebb4505",
     "src/rendering/spiderRenderer.ts": "sha256:803b166e4fa3cfbe49fa0ba2762d43dd87f5bb98d08b4b67976ae55f0af42076",
@@ -295,7 +295,7 @@
     "src/wiki/search.ts": "sha256:1ea0f78400fe463ce11c6e1b7f8b2d503729599b222b2409606cf16035f87e41",
     "src/wiki/shipScorecard.ts": "sha256:df06f04db9394ca431cafe6fbd590ad475d118acd26c558a1d3037538ab63055",
     "tests/unit/audio/title-and-play-loop-music-beds.test.ts": "sha256:5b117d30340357b3d24641a8690be93e5b79b6875dd04d4f965301a3098e6e6d",
-    "tests/unit/diagnostics/debugHudMetrics.test.ts": "sha256:30bef1e4766b95b7c5923bb6816b958581d68ec2f7cf79194ef132adf28216e0",
+    "tests/unit/diagnostics/debugHudMetrics.test.ts": "sha256:a9e226c0a5fd460f3c0a0e820c793b3526b31300d3a932390d806a0fa236c457",
     "tests/unit/entities/asteroids.test.ts": "sha256:fd39b80d39f4fa18bb382b54e0671010ac211d2d6c693c574b45371962a7d428",
     "tests/unit/entities/combatDamage.test.ts": "sha256:ea9f152d36b69574381bc2d091207eab311d8eb9b8f6bc673b2ef83273f34a81",
     "tests/unit/entities/eoSatelliteRoster.test.ts": "sha256:8e1ad144bb2a03d19ff52b48f9011e8168fde9f0b5b779530728e94e8ecca9a3",
@@ -6844,6 +6844,22 @@
         "src/diagnostics/phoneRecordingSummary.ts": "hud-network",
         "src/wiki/gameReference.ts": "scout"
       }
+    },
+    {
+      "note": "Reviewed elapsed-frame FPS accounting and diagnostic DPR caps against 14 passing focused unit tests. Embedded-browser game and HUD checks passed at desktop and tablet-sized viewports; flight backing size was 600x821 at cap 0.75. Updated HUD Wiki copy and its Mineral Scan link were verified. No gameplay geometry or demonstration media changed; no new physical-device measurement is claimed.",
+      "sources": ["src/diagnostics/debugHudMetrics.ts", "src/rendering/renderQuality.ts"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {
+        "src/rendering/renderQuality.ts": "hud-network"
+      }
+    },
+    {
+      "note": "Reviewed and passed the FPS regression cases for elapsed-time averaging, visible foreground stalls, invalid intervals, bounded storage and window recovery. HUD wording and demonstrations remain accurate; no gameplay rule or media change.",
+      "sources": ["tests/unit/diagnostics/debugHudMetrics.test.ts"],
+      "topics": ["hud-network"],
+      "media": [],
+      "owners": {}
     }
   ]
 }

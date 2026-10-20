@@ -1,4 +1,4 @@
-type DprLimit = 'native' | 1.5 | 2;
+type DprLimit = 'native' | 0.75 | 1 | 1.5 | 2;
 type Glow = 'full' | 'off';
 
 type RenderQuality = Readonly<{
@@ -7,11 +7,29 @@ type RenderQuality = Readonly<{
   source: 'desktop-default' | 'touch-default' | 'diagnostic';
 }>;
 
-// No reduced production preset is accepted until both physical-phone cohorts pass.
-// See docs/performance/mobile-quality-decisions.md for evidence and retirement rules.
+// Flight remains native/full; low-end Scan has its own bounded presentation policy.
+// See docs/performance/mobile-quality-decisions.md for measured scope and tradeoffs.
 const FULL_QUALITY = Object.freeze({ maxDpr: 'native', glow: 'full' } as const);
 const TOUCH_PRESET = FULL_QUALITY;
 let activeQuality: RenderQuality = { ...FULL_QUALITY, source: 'desktop-default' };
+
+/** Shared by the client and manual benchmark so a requested cap cannot silently differ. */
+export function parseRenderDprLimit(value: string): DprLimit {
+  switch (value) {
+    case 'native':
+      return 'native';
+    case '0.75':
+      return 0.75;
+    case '1':
+      return 1;
+    case '1.5':
+      return 1.5;
+    case '2':
+      return 2;
+    default:
+      throw new Error('renderDpr must be native, 2, 1.5, 1, or 0.75');
+  }
+}
 
 /** Resolve once at the canvas resize/session boundary, never inside a drawing loop. */
 export function configureRenderQuality(search: string, touchControls: boolean): RenderQuality {
@@ -23,19 +41,7 @@ export function configureRenderQuality(search: string, touchControls: boolean): 
   const dprOverride = diagnostic ? params.get('renderDpr') : null;
   const glowOverride = diagnostic ? params.get('renderGlow') : null;
   if (dprOverride !== null) {
-    switch (dprOverride) {
-      case 'native':
-        maxDpr = 'native';
-        break;
-      case '1.5':
-        maxDpr = 1.5;
-        break;
-      case '2':
-        maxDpr = 2;
-        break;
-      default:
-        throw new Error('renderDpr must be native, 2, or 1.5');
-    }
+    maxDpr = parseRenderDprLimit(dprOverride);
   }
   if (glowOverride !== null) {
     if (glowOverride !== 'full' && glowOverride !== 'off') {

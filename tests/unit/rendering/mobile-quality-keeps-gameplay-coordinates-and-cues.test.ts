@@ -46,6 +46,31 @@ test('diagnostic rendering caps never increase a lower-density display backing s
   );
 });
 
+test.each([
+  ['1', 1],
+  ['0.75', 0.75],
+] as const)(
+  'a DPR-1.5 tablet can lower backing resolution to %s while keeping its view',
+  (cap, effectiveDpr) => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1.5 });
+    window.history.replaceState(null, '', '?performance=collect&renderDpr=native');
+    canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'));
+    const position = { x: 2240, y: 3545 };
+    const target = { x: 2310, y: 3505 };
+    const viewport = { ...canvasManager.getViewportSize() };
+    const screen = canvasManager.worldToScreen(position, target);
+    canvasManager.destroy();
+
+    window.history.replaceState(null, '', `?performance=collect&renderDpr=${cap}`);
+    canvasManager.initialize(document.querySelector<HTMLCanvasElement>('#gameCanvas'));
+    expect(canvasManager.getViewportSize()).toEqual(viewport);
+    expect(canvasManager.requireCanvas().width).toBe(Math.round(viewport.width * effectiveDpr));
+    expect(canvasManager.requireCanvas().height).toBe(Math.round(viewport.height * effectiveDpr));
+    expect(canvasManager.requireContext().getTransform().a).toBe(effectiveDpr);
+    expect(canvasManager.worldToScreen(position, target)).toEqual(screen);
+  }
+);
+
 test('ordinary touch play keeps full quality and rejects invalid experiments only in diagnostic mode', () => {
   expect(configureRenderQuality('?renderDpr=1.5&renderGlow=off', true)).toEqual({
     maxDpr: 'native',
