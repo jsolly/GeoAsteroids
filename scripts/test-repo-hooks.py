@@ -470,6 +470,18 @@ if sys.argv[1] == 'which':
                          os.path.join(os.environ['FIXTURE_NODE'], 'bin', sys.argv[2])))
 sys.exit(0)
 ''')
+        self.write_script(self.bin / 'git', '''#!/usr/bin/env python3
+import json, os, sys
+with open(os.environ['SETUP_LOG'], 'a') as log:
+    log.write(json.dumps(['git', *sys.argv[1:]]) + '\\n')
+    if sys.argv[1:3] != ['config', '--get']:
+        log.write(json.dumps(['git-env', os.environ.get('GIT_TERMINAL_PROMPT'), os.environ.get('GIT_SSH_COMMAND')]) + '\\n')
+if sys.argv[1:3] == ['config', '--get']:
+    configured = os.environ.get('FIXTURE_SSH_CONFIG')
+    print(configured or '', end='')
+    sys.exit(0 if configured else 1)
+sys.exit(int(os.environ.get('GIT_FAILURE', '0')))
+''')
         self.write_script(self.bin / 'node', '#!/usr/bin/env bash\nexit 0\n')
         # mise resolves node and its npm wrapper inside one installation prefix.
         self.node = self.root / 'node-install'
@@ -546,6 +558,8 @@ else:
         self.assertEqual((self.root / '.env').read_text(), 'fixture setting\n')
         # A warm resume compares the receipt without starting Node, npm or the tree check.
         self.assertEqual([c for c in self.commands() if c[0] == 'npm' or c[1] == 'exec'], [])
+        # A current installed bundle never touches the network.
+        self.assertNotIn('git', [c[0] for c in self.commands()])
         self.assertNotIn(tree_check, self.commands())
         self.assertNotIn(['npm', 'ci'], self.commands())
         self.assertNotIn(['mise', 'install'], self.commands())
@@ -686,9 +700,32 @@ else:
         stale = {'HOOK_VERIFY_ERROR': message}
         self.log.write_text('')
         self.assert_ready(self.setup('--session-hook', extra=stale))
-        self.assertEqual([c[:2] for c in self.commands() if c[0] == 'hooks'], [['hooks', 'verify'], ['hooks', 'install']])
+        # The trust anchor is refreshed from origin before the trust-gated install.
+        refresh = ['git', '-c', 'credential.interactive=false', '-c', 'http.lowSpeedLimit=1000',
+                   '-c', 'http.lowSpeedTime=20', 'fetch', '--quiet', '--no-tags', '--no-write-fetch-head',
+                   '--no-auto-maintenance', 'origin', '+refs/heads/main:refs/remotes/origin/main']
+        batch_ssh = 'ssh -o BatchMode=yes -o ConnectTimeout=20'
+
+        def sequence():
+            return [c if c[0] in ('git', 'git-env') else c[:2] for c in self.commands()
+                    if c[0] in ('hooks', 'git', 'git-env') and c[1:3] != ['config', '--get']]
+
+        self.assertEqual(sequence(), [['hooks', 'verify'], refresh, ['git-env', '0', batch_ssh], ['hooks', 'install']])
         self.assertNotIn(['npm', 'ci'], self.commands())
         self.assertEqual(self.tree(), before)
+        # A user's own SSH command still wins over the non-interactive default.
+        for extra, expected in (({'FIXTURE_SSH_CONFIG': 'ssh -i key'}, 'ssh -i key'),
+                                ({'GIT_SSH_COMMAND': 'ssh -F cfg'}, 'ssh -F cfg')):
+            with self.subTest(ssh=expected):
+                self.log.write_text('')
+                self.assert_ready(self.setup('--session-hook', extra={**stale, **extra}))
+                self.assertIn(['git-env', '0', expected], self.commands())
+        # An unreachable origin still reaches install, which compares against the local copy.
+        self.log.write_text('')
+        result = self.setup('--session-hook', extra={**stale, 'GIT_FAILURE': '128'})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Could not refresh origin/main', result.stderr)
+        self.assertEqual(sequence(), [['hooks', 'verify'], refresh, ['git-env', '0', batch_ssh], ['hooks', 'install']])
         # Install still enforces trust: an untrusted current bundle fails the hook.
         result = self.setup('--session-hook', extra={**stale, 'HOOK_FAILURE': '17'})
         self.assertEqual(result.returncode, 17)
@@ -703,6 +740,7 @@ else:
                 self.assertEqual(result.returncode, 1)
                 self.assertIn(error, result.stderr)
                 self.assertNotIn('install', [c[1] for c in self.commands() if c[0] == 'hooks'])
+                self.assertNotIn('git', [c[0] for c in self.commands()])
                 self.assertEqual(self.tree(), before)
 
 
