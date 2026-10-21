@@ -215,20 +215,15 @@ function consumedFile(path) {
 export function identity(root, inputEnvironment = process.env) {
   const env = receiptEnvironment(root, inputEnvironment);
   const source = sourceRows(root);
-  // The Node interpreter reaches this call as a PATH entry, its resolved target
-  // and npm_node_execpath; hashing its ~120 MB once per call keeps hosts without
-  // SHA instructions inside the gate-contract time budget.
+  // The node row, its target and npm_node_execpath name the same resolved
+  // interpreter; hashing its ~120 MB once per call keeps hosts without SHA
+  // instructions inside the gate-contract time budget.
   const runtimeRecords = new Map();
   const runtimeRecord = (path) => {
-    const stat = lstatSync(path);
-    if (!stat.isFile()) {
-      return fileRecord(path);
+    if (!runtimeRecords.has(path)) {
+      runtimeRecords.set(path, fileRecord(path));
     }
-    const key = `${stat.dev}:${stat.ino}`;
-    if (!runtimeRecords.has(key)) {
-      runtimeRecords.set(key, fileRecord(path));
-    }
-    return runtimeRecords.get(key);
+    return runtimeRecords.get(path);
   };
   const runtimes = ['node', 'npm', 'bash', 'git', 'uvx'].map((name) => {
     const path = executable(name, env);
