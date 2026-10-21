@@ -56,7 +56,10 @@ closed. The dispatcher executes a verified snapshot, then runs quality scripts i
 the committing checkout. Re-run reviewed setup after changing tool setup on main.
 A warm session hook reinstalls hooks itself only when the installed bundle is
 stale and the current one is trusted, as in a cached cloud environment built
-before a reviewed bundle change. That repair applies no new provisioning steps,
+before a reviewed bundle change. Those environments check out the session commit
+without updating `origin/main`, so the repair first refreshes that trust anchor from
+the remote; if it cannot, install compares against the local copy and fails closed
+for a newer bundle. The repair applies no new provisioning steps,
 such as native APT packages; explicit setup or the environment's next build does.
 
 This is hook-registration integrity, not a sandbox. Never check out or execute

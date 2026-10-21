@@ -124,6 +124,16 @@ if $session_hook && [[ -e node_modules || -L node_modules ]]; then
     printf '%s\n' "$hooks_out"
   elif [[ "$hooks_out" == 'repo-hooks: Installed bundle is stale; run reviewed repository setup' ]]; then
     echo 'Installed hooks predate the trusted current bundle; reinstalling them' >&2
+    # Cloud environments check out the session commit without updating origin/main,
+    # so refresh that trust anchor before install compares the bundle against it.
+    # A session hook must never wait on a credential, passphrase or host-key prompt;
+    # a user's own SSH command or core.sshCommand still takes precedence.
+    ssh_command="${GIT_SSH_COMMAND:-$(git config --get core.sshCommand || echo 'ssh -o BatchMode=yes -o ConnectTimeout=20')}"
+    GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_command" \
+      git -c credential.interactive=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 \
+      fetch --quiet --no-tags --no-write-fetch-head --no-auto-maintenance origin \
+      '+refs/heads/main:refs/remotes/origin/main' ||
+      echo 'Could not refresh origin/main; install compares against the local copy' >&2
     bash scripts/repo-python.sh scripts/repo-hooks.py install --root "$root"
   else
     printf '%s\n' "$hooks_out" >&2
