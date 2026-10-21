@@ -215,13 +215,28 @@ function consumedFile(path) {
 export function identity(root, inputEnvironment = process.env) {
   const env = receiptEnvironment(root, inputEnvironment);
   const source = sourceRows(root);
+  // The Node interpreter reaches this call as a PATH entry, its resolved target
+  // and npm_node_execpath; hashing its ~120 MB once per call keeps hosts without
+  // SHA instructions inside the gate-contract time budget.
+  const runtimeRecords = new Map();
+  const runtimeRecord = (path) => {
+    const stat = lstatSync(path);
+    if (!stat.isFile()) {
+      return fileRecord(path);
+    }
+    const key = `${stat.dev}:${stat.ino}`;
+    if (!runtimeRecords.has(key)) {
+      runtimeRecords.set(key, fileRecord(path));
+    }
+    return runtimeRecords.get(key);
+  };
   const runtimes = ['node', 'npm', 'bash', 'git', 'uvx'].map((name) => {
     const path = executable(name, env);
     const target = realpathSync(path);
-    return [name, path, fileRecord(path), target, fileRecord(target)];
+    return [name, path, runtimeRecord(path), target, runtimeRecord(target)];
   });
   const python = pythonRuntime(root, env);
-  runtimes.push(['python', python, fileRecord(python)]);
+  runtimes.push(['python', python, runtimeRecord(python)]);
   // The actual npm lifecycle identifies the CLI and interpreter behind wrappers.
   for (const name of ['npm_execpath', 'npm_node_execpath']) {
     const value = env[name];
@@ -229,7 +244,7 @@ export function identity(root, inputEnvironment = process.env) {
       throw new Error('Missing actual npm runtime from validation lifecycle');
     }
     const path = realpathSync(value);
-    runtimes.push([name, path, fileRecord(path)]);
+    runtimes.push([name, path, runtimeRecord(path)]);
   }
   const allowed = new Set([
     'NODE_ENV',
