@@ -22,16 +22,19 @@ tools and lockfile dependencies, and leaves browser binaries to explicitly reque
 Claude Code's `startup|resume` hook passes `--session-hook`. A fresh checkout
 without `node_modules` runs setup; an existing tree is checked without installing
 tools or dependencies. Setup records the manifest, lockfile, repository tool and
-npm settings, actual Node/npm runtime, installed lock and package manifests after
+npm settings, resolved Node/npm runtime, installed lock and package manifests after
 a successful install and complete `npm ls --all` check. Warm hooks require that
-receipt and repeat dependency validation.
+receipt to match without starting Node, npm or the tree check, because a new cloud
+session's first disk reads are slow.
 
 Changed inputs, missing packages, failed installs and older trees without a receipt
 fail the hook instead of replacing dependencies underneath a running service.
 Stop this checkout's services with `npm run dev:kill`, then run
 `bash scripts/setup-agent-environment.sh` explicitly to repair and record the tree.
 Manual setup deliberately reinstalls dependencies; stop services before using it.
-The receipt detects install drift, not arbitrary changes to every package file.
+The receipt detects install drift, not arbitrary changes to every package file;
+warm hooks also miss packages outside the installed lock or an invalid dependency
+graph until the next explicit setup.
 
 Automated code checks never launch or download browsers. Run the repo's documented quality gate with its pinned tools:
 
