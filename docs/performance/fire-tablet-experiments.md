@@ -1,7 +1,7 @@
 # Fire HD 10 measurement record
 
 The target remains sustained 60 FPS on the Fire HD 10, 13th generation.
-GPU work in PR #854 remains paused.
+The unmerged direct-GPU experiment in PR #854 was retired on October 20, 2026.
 
 ## Historical capture
 
@@ -49,6 +49,45 @@ Sustained, thermal, battery, full-glow and GPU performance remain unqualified.
 John waived the longer test as a shipping condition; it was not performed or
 passed.
 
+## Retired direct-GPU experiment
+
+[PR #854](https://github.com/jsolly/GeoRoids/pull/854) tested direct GPU background
+composition and a GPU terrain path. John retired it without merging after the
+Fire tablet comparisons showed no advantage over Canvas. This retires that
+prototype; the earlier optional WebGL2 renderer and shared measurement tools
+already on main remain available.
+
+The first short comparison measured about 57.8 FPS in Canvas flight and 28.9 FPS
+in direct-GPU flight. Both used native DPR 1.5 and glow off, with forced full-detail
+Scan; their tiny Scan samples cannot establish a useful Scan comparison.
+
+A later three-arm comparison used the same preview build, native DPR 1.5, glow
+off, an 800 by 1094 CSS viewport and 1200 by 1641 flight backing canvas. All arms
+used automatic simplified Scan:
+
+| Arm | Recorded seconds | Flight FPS | Flight p95 / p99 interval, ms | Scan FPS |
+| --- | ---: | ---: | ---: | ---: |
+| A: Canvas | 40.65 | 59.58 | 16.8 / 16.9 | 40.24 |
+| B: direct GPU with GPU terrain | 44.21 | 28.41 | 50.0 / 66.7 | 38.22 |
+| C: GPU background and stars, Canvas terrain | 51.70 | 59.62 | 16.8 / 17.2 | 40.21 |
+
+Keeping terrain on Canvas recovered flight cadence but did not demonstrate an
+improvement over Canvas. The GPU arms used Canvas intentionally during simplified
+Scan; their recorded Canvas frame counts matched those Scan intervals. Scan
+still ran around 38 to 40 FPS in this matrix, before the separate PR #855 change.
+
+FPS here is completed animation-frame intervals divided by total foreground seconds,
+not measured GPU execution or guaranteed display presentation. These were short,
+sequential manual runs with different scenes and unequal durations; power and
+temperature were uncontrolled, and sustained acceptance was not completed.
+They support retiring this candidate on this tablet, not a universal GPU verdict.
+
+The matrix source head was `09322a61678ae3bbeda3a03bf2cf25dd7f2c9b3f`; its preview
+client release identifier was `698b02474f517360232e6ee42c705fd899aaa349`. The
+[retirement receipt](fire-tablet-gpu-retirement-receipt.json) lists the exact
+retained report and arithmetic locations, byte sizes and SHA-256 checksums.
+No GPU testing handoff remains open.
+
 ## Optional future comparisons
 
 For any future authorized device comparison, follow the
@@ -56,4 +95,4 @@ For any future authorized device comparison, follow the
 flight resolution on this native-DPR-1.5 tablet; cap 1 can isolate flight pixel
 cost. Compare resolution and glow independently, and record Scan mode and actual
 backing dimensions separately. These are optional experiments, not an active
-testing handoff or a restart of the paused GPU work.
+testing handoff or a continuation of the retired GPU work.
