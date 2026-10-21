@@ -452,6 +452,8 @@ class SessionBootstrap(unittest.TestCase):
         self.write_script(scripts / 'repo-hooks.py', '''import os, sys
 with open(os.environ['SETUP_LOG'], 'a') as log:
     log.write(__import__('json').dumps(['hooks', *sys.argv[1:]]) + '\\n')
+if sys.argv[1] == 'verify' and os.environ.get('HOOK_VERIFY_ERROR'):
+    sys.exit('repo-hooks: ' + os.environ['HOOK_VERIFY_ERROR'])
 sys.exit(int(os.environ.get('HOOK_FAILURE', '0')))
 ''')
         self.write_script(self.bin / 'uname', '#!/usr/bin/env bash\necho Linux\n')
@@ -674,6 +676,34 @@ else:
         self.assertEqual(result.returncode, 17)
         self.assertEqual(len(self.commands()), 1)
         self.assertFalse((self.root / 'node_modules').exists())
+
+    def test_warm_resume_reinstalls_only_a_stale_trusted_bundle(self):
+        self.assert_ready(self.setup())
+        before = self.tree()
+        message = 'Installed bundle is stale; run reviewed repository setup'
+        # Setup matches this exact verify message; rewording it must update both.
+        self.assertIn(f"raise ValueError('{message}')", (SOURCE / 'scripts/repo-hooks.py').read_text())
+        stale = {'HOOK_VERIFY_ERROR': message}
+        self.log.write_text('')
+        self.assert_ready(self.setup('--session-hook', extra=stale))
+        self.assertEqual([c[:2] for c in self.commands() if c[0] == 'hooks'], [['hooks', 'verify'], ['hooks', 'install']])
+        self.assertNotIn(['npm', 'ci'], self.commands())
+        self.assertEqual(self.tree(), before)
+        # Install still enforces trust: an untrusted current bundle fails the hook.
+        result = self.setup('--session-hook', extra={**stale, 'HOOK_FAILURE': '17'})
+        self.assertEqual(result.returncode, 17)
+        self.assertEqual(self.tree(), before)
+        # Any other verify failure, including a path that merely contains the
+        # stale phrase, keeps failing without an install attempt.
+        for error in ('Current source bundle is not trusted',
+                      "[Errno 2] No such file or directory: '/x/versions/Installed bundle is stale/installation.json'"):
+            with self.subTest(error=error):
+                self.log.write_text('')
+                result = self.setup('--session-hook', extra={'HOOK_VERIFY_ERROR': error})
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(error, result.stderr)
+                self.assertNotIn('install', [c[1] for c in self.commands() if c[0] == 'hooks'])
+                self.assertEqual(self.tree(), before)
 
 
 class PytestSubtestReporting(unittest.TestCase):
