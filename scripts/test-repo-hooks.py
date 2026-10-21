@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import stat
 import subprocess
@@ -462,12 +463,22 @@ with open(os.environ['SETUP_LOG'], 'a') as log:
 if sys.argv[1] == 'exec':
     assert os.environ.get('MISE_EXEC_AUTO_INSTALL') == 'false' or sys.argv[3:] == ['npm', 'ci']
     os.execvp(sys.argv[3], sys.argv[3:])
+if sys.argv[1] == 'which':
+    print(os.environ.get(f'FIXTURE_{sys.argv[2].upper()}_PATH',
+                         os.path.join(os.environ['FIXTURE_NODE'], 'bin', sys.argv[2])))
 sys.exit(0)
 ''')
-        self.write_script(self.bin / 'node', '''#!/usr/bin/env python3
-import os
-print(os.environ.get('FIXTURE_RUNTIME', '["v24.16.0","137","linux","x64"]'))
-''')
+        self.write_script(self.bin / 'node', '#!/usr/bin/env bash\nexit 0\n')
+        # mise resolves node and its npm wrapper inside one installation prefix.
+        self.node = self.root / 'node-install'
+        (self.node / 'include/node').mkdir(parents=True)
+        (self.node / 'lib/node_modules/npm').mkdir(parents=True)
+        (self.node / 'bin').mkdir()
+        for name in ('node', 'npm'):
+            self.write_script(self.node / 'bin' / name, '#!/usr/bin/env bash\nexit 0\n')
+        self.write_node_version(24, 16, 0)
+        (self.node / 'lib/node_modules/npm/package.json').write_text('{"version":"11.12.0"}\n')
+        self.env['FIXTURE_NODE'] = str(self.node)
         self.write_script(self.bin / 'npm', '''#!/usr/bin/env python3
 import json, os, pathlib, sys
 with open(os.environ['SETUP_LOG'], 'a') as log:
@@ -495,6 +506,12 @@ else:
         path.write_text(text)
         path.chmod(0o755)
 
+    def write_node_version(self, major, minor, patch):
+        (self.node / 'include/node/node_version.h').write_text(
+            f'#define NODE_MAJOR_VERSION {major}\n#define NODE_MINOR_VERSION {minor}\n'
+            f'#define NODE_PATCH_VERSION {patch}\n#define NODE_MODULE_VERSION NODE_EMBEDDER_MODULE_VERSION\n'
+            '#define NODE_MODULE_VERSION 137\n')
+
     def setup(self, *args, extra=None):
         return subprocess.run([str(self.bin / 'bash'), 'scripts/setup-agent-environment.sh', *args],
                               cwd=self.root, env={**self.env, **(extra or {})}, text=True, capture_output=True)
@@ -514,12 +531,20 @@ else:
         self.assert_ready(self.setup('--session-hook'))
         receipt = self.root / 'node_modules/.georoids-setup.json'
         self.assertTrue(receipt.is_file())
+        tree_check = ['npm', 'ls', '--all', '--include=dev', '--include=optional', '--include=peer']
+        self.assertIn(tree_check, self.commands())
+        self.assertEqual(json.loads(receipt.read_text())['runtime'], json.dumps(
+            ['v24.16.0', '137', platform.system().lower(),
+             {'x86_64': 'x64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine()]], separators=(',', ':')))
+        self.assertEqual(json.loads(receipt.read_text())['npm'], '11.12.0')
         before = self.tree()
         self.log.write_text('')
         self.assert_ready(self.setup('--session-hook'))
         self.assertEqual(self.tree(), before)
         self.assertEqual((self.root / '.env').read_text(), 'fixture setting\n')
-        self.assertIn(['npm', 'ls', '--all', '--include=dev', '--include=optional', '--include=peer'], self.commands())
+        # A warm resume compares the receipt without starting Node, npm or the tree check.
+        self.assertEqual([c for c in self.commands() if c[0] == 'npm' or c[1] == 'exec'], [])
+        self.assertNotIn(tree_check, self.commands())
         self.assertNotIn(['npm', 'ci'], self.commands())
         self.assertNotIn(['mise', 'install'], self.commands())
         self.assertNotIn(['mise', 'trust', str(self.root / '.mise.toml')], self.commands())
@@ -566,16 +591,40 @@ else:
                 self.assertNotIn(['npm', 'ci'], self.commands())
                 self.assert_ready(self.setup())
 
-    def test_changed_runtime_or_invalid_dependency_graph_refuses_warm_resume(self):
+    def test_changed_runtime_or_foreign_npm_refuses_warm_resume(self):
         self.assert_ready(self.setup())
         before = self.tree()
-        for extra in ({'FIXTURE_RUNTIME': 'changed runtime'}, {'TREE_FAILURE': '1'}):
-            with self.subTest(extra=extra):
+        npm_manifest = self.node / 'lib/node_modules/npm/package.json'
+        changes = {
+            'node version': lambda: self.write_node_version(24, 17, 0),
+            'npm version': lambda: npm_manifest.write_text('{"version":"11.13.0"}\n'),
+            'missing runtime header': lambda: (self.node / 'include/node/node_version.h').unlink(),
+        }
+        for name, change in changes.items():
+            with self.subTest(change=name):
+                change()
                 self.log.write_text('')
-                result = self.setup('--session-hook', extra=extra)
+                result = self.setup('--session-hook')
                 self.assertNotEqual(result.returncode, 0)
+                self.assertIn('npm run dev:kill', result.stderr)
                 self.assertEqual(self.tree(), before)
                 self.assertNotIn(['npm', 'ci'], self.commands())
+                self.write_node_version(24, 16, 0)
+                npm_manifest.write_text('{"version":"11.12.0"}\n')
+                self.assert_ready(self.setup('--session-hook'))
+        foreign = self.root / 'other-npm/bin/npm'
+        foreign.parent.mkdir(parents=True)
+        self.write_script(foreign, '#!/usr/bin/env bash\nexit 0\n')
+        result = self.setup('--session-hook', extra={'FIXTURE_NPM_PATH': str(foreign)})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('npm does not belong to the resolved Node installation', result.stderr)
+        self.assertEqual(self.tree(), before)
+        for unexpected in ('', 'relative/bin/node', str(self.node / 'node'), str(self.node / 'bin/nodejs')):
+            with self.subTest(node_path=unexpected):
+                result = self.setup('--session-hook', extra={'FIXTURE_NODE_PATH': unexpected})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('mise resolved node to an unexpected path', result.stderr)
+                self.assertEqual(self.tree(), before)
 
     def test_failed_explicit_repair_invalidates_receipt_and_failure_propagates(self):
         self.assert_ready(self.setup())
