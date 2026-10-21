@@ -54,6 +54,10 @@ bundle must match current reviewed `origin/main`, or a deliberately approved exa
 bundle digest. Missing files, symlinks, unreviewed modes and a foreign origin fail
 closed. The dispatcher executes a verified snapshot, then runs quality scripts in
 the committing checkout. Re-run reviewed setup after changing tool setup on main.
+A warm session hook reinstalls hooks itself only when the installed bundle is
+stale and the current one is trusted, as in a cached cloud environment built
+before a reviewed bundle change. That repair applies no new provisioning steps,
+such as native APT packages; explicit setup or the environment's next build does.
 
 This is hook-registration integrity, not a sandbox. Never check out or execute
 third-party/fork PR code in a trusted clone; review its diff through GitHub. Do not

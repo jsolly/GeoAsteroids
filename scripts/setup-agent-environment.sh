@@ -116,7 +116,19 @@ PYTHON
 # A warm hook must not reinstall dependencies or tools beneath a running service.
 # An old or incomplete tree needs a deliberate repair after its services stop.
 if $session_hook && [[ -e node_modules || -L node_modules ]]; then
-  bash scripts/repo-python.sh scripts/repo-hooks.py verify --root "$root"
+  # A cached cloud environment keeps hooks installed from the bundle reviewed when it
+  # was built. Reinstall only that stale case; install refuses a bundle not yet trusted.
+  hooks_rc=0
+  hooks_out="$(bash scripts/repo-python.sh scripts/repo-hooks.py verify --root "$root" 2>&1)" || hooks_rc=$?
+  if ((hooks_rc == 0)); then
+    printf '%s\n' "$hooks_out"
+  elif [[ "$hooks_out" == 'repo-hooks: Installed bundle is stale; run reviewed repository setup' ]]; then
+    echo 'Installed hooks predate the trusted current bundle; reinstalling them' >&2
+    bash scripts/repo-python.sh scripts/repo-hooks.py install --root "$root"
+  else
+    printf '%s\n' "$hooks_out" >&2
+    exit "$hooks_rc"
+  fi
   if ! dependency_receipt verify; then
     echo "Stop this checkout's services with npm run dev:kill, then run bash scripts/setup-agent-environment.sh explicitly to repair dependencies." >&2
     exit 1
