@@ -158,8 +158,12 @@ test.each([
     expect(world.engine.handleAsteroidHit('pickup-race-rock', actor.id, 'laser').outcome).toBe(
       'destroyed'
     );
-    const collected = world.engine.collectLoot();
-    expect(collected.some((receipt) => receipt.collectorId === actor.id)).toBe(true);
+    const points = world.engine.getLoot().find((drop) => drop.kind === 'points');
+    expect(points).toBeDefined();
+    world.engine.collectLoot();
+    expect(world.engine.drainLootCollections()).toContainEqual(
+      expect.objectContaining({ collectorId: actor.id, lootId: points?.id, kind: 'points' })
+    );
     expect(actor.cargo).toBeGreaterThan(0);
     const outcome = world.engine.playerMotion.acceptFreePose(
       pilot.socket,
@@ -418,8 +422,12 @@ test('equipment loot preserves the contour lock and current motion epoch', () =>
   expect(pose(0).ok).toBe(true);
   const epoch = actor.playerMotion?.epoch;
   const mass = actor.mass;
-  world.engine.dropEquipmentAt(actor.position, 'survey_probe');
-  expect(world.engine.collectLoot()).toHaveLength(1);
+  const drop = world.engine.dropEquipmentAt(actor.position, 'survey_probe');
+  world.engine.collectLoot();
+  expect(world.engine.drainLootCollections()).toEqual([
+    expect.objectContaining({ collectorId: actor.id, lootId: drop.id, kind: 'survey_probe' }),
+  ]);
+  expect(actor.equipment).toContain('survey_probe');
   expect(actor.mass).toBe(mass);
   expect(actor.contourLock).toEqual(state);
   expect(actor.playerMotion?.epoch).toBe(epoch);

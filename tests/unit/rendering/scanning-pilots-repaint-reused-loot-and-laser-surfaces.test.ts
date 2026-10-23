@@ -24,10 +24,6 @@ function scene() {
   vi.spyOn(canvasManager, 'getCanvas').mockReturnValue(canvas);
   vi.spyOn(canvasManager, 'getViewportSize').mockReturnValue({ width: 400, height: 200 });
   const scale = vi.spyOn(canvasManager, 'getPlayfieldScale').mockReturnValue(1);
-  vi.spyOn(canvasManager, 'worldToScreen').mockImplementation((position) => ({
-    x: position.x,
-    y: position.y,
-  }));
   vi.spyOn(canvasManager, 'worldToScreenInto').mockImplementation((out, position) =>
     Object.assign(out, position)
   );

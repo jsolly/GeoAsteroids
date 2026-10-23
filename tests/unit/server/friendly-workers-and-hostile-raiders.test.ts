@@ -52,7 +52,17 @@ function world(store?: WorldStore) {
     return actor;
   }
   frame(AI_SHIPS.spawnDelayFrames);
-  return { engine, pilot, socket, frame, bot };
+  function elapse(ms: number): void {
+    elapsed += ms;
+  }
+  function restart(epoch = clock.now()): GameEngine {
+    assert(store, 'Restart requires the fixture store');
+    const restartedClock = new ServerClock({ wallNow: () => epoch, monotonicNow: () => 0 });
+    const restored = new GameEngine(82, restartedClock, new InlineWorldPersistence(store));
+    cleanup.push(() => restored.stopGameLoop());
+    return restored;
+  }
+  return { engine, pilot, socket, frame, bot, clock, elapse, restart };
 }
 
 test('one bot of each role moves without becoming a human, stale socket or saved pilot', () => {
@@ -77,7 +87,7 @@ test('one bot of each role moves without becoming a human, stale socket or saved
 test('a worker banks recovered points in the shared settlement and leaves equipment for humans', () => {
   const store = new WorldStore(':memory:');
   cleanup.push(() => store.close());
-  const { engine, pilot, frame, bot } = world(store);
+  const { engine, pilot, frame, bot, restart } = world(store);
   const worker = bot('worker');
   // A real hazard spill produces recoverable points; the worker must find and offload them.
   pilot.position = { x: worker.position.x + 100, y: worker.position.y };
@@ -105,8 +115,7 @@ test('a worker banks recovered points in the shared settlement and leaves equipm
   expect(engine.getLoot().some((drop) => drop.id === gear.id)).toBe(true);
   engine.checkpointWorld();
   expect(store.loadPilots().map((entry) => entry.id)).toEqual(['pilot']);
-  const restored = new GameEngine(82, undefined, new InlineWorldPersistence(store));
-  cleanup.push(() => restored.stopGameLoop());
+  const restored = restart();
   expect(restored.getSnapshotState().settlement.points).toBe(
     engine.getSnapshotState().settlement.points
   );
@@ -168,7 +177,7 @@ test('a raider aims and fires through the real authoritative shot path', () => {
 test('bot death respawns outside town, and final human removal spills holds before checkpoint', () => {
   const store = new WorldStore(':memory:');
   cleanup.push(() => store.close());
-  const { engine, pilot, bot, frame } = world(store);
+  const { engine, pilot, bot, frame, restart } = world(store);
   const raider = bot('raider');
   delete raider.spawnProtectionTimer;
   expect(engine.handleShipDamage(raider.id, 'crew-fire', 1000).isDestroyed).toBe(true);
@@ -179,8 +188,7 @@ test('bot death respawns outside town, and final human removal spills holds befo
   const worker = bot('worker');
   worker.cargo = 42;
   engine.checkpointWorld();
-  const crashRecovery = new GameEngine(82, undefined, new InlineWorldPersistence(store));
-  cleanup.push(() => crashRecovery.stopGameLoop());
+  const crashRecovery = restart();
   expect(crashRecovery.getLoot().filter((drop) => drop.points === 42)).toHaveLength(1);
   expect(crashRecovery.getSnapshotState().entities).toEqual([]);
   engine.removePlayer(pilot.id);
@@ -188,9 +196,53 @@ test('bot death respawns outside town, and final human removal spills holds befo
   expect(engine.getSnapshotState().entities).toEqual([]);
   expect(engine.getLoot().some((drop) => drop.points === 42)).toBe(true);
   expect(store.loadPilots().some((entry) => entry.id === worker.id)).toBe(false);
-  const restored = new GameEngine(82, undefined, new InlineWorldPersistence(store));
-  cleanup.push(() => restored.stopGameLoop());
+  const restored = restart();
   expect(restored.getLoot().some((drop) => drop.points === 42)).toBe(true);
+});
+
+test('worker hold checkpoints refresh only recovery deadlines on the engine clock and retain them through restart', () => {
+  const wall = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+  cleanup.push(() => wall.mockRestore());
+  const store = new WorldStore(':memory:');
+  cleanup.push(() => store.close());
+  const { engine, pilot, bot, clock, elapse, restart } = world(store);
+  const worker = bot('worker');
+  worker.cargo = 42;
+  const checkpointNow = clock.now();
+  engine.checkpointWorld();
+  const first = store
+    .load()
+    .economy?.pointLoot.find((drop) => drop.id === `bot-cargo-${worker.id}`);
+  assert(first);
+  expect(first).toMatchObject({ points: 42, expiresAt: checkpointNow + 120_000 });
+
+  // Live held cargo has no TTL; a later checkpoint starts a fresh recovery window.
+  elapse(120_001);
+  wall.mockReturnValue(50_000_000);
+  pilot.lastUpdate = clock.now();
+  engine.advanceOneFrame(clock.now());
+  expect(worker.cargo).toBe(42);
+  engine.checkpointWorld();
+  const refreshed = store.load().economy?.pointLoot.find((drop) => drop.id === first.id);
+  assert(refreshed);
+  expect(refreshed.expiresAt).toBe(first.expiresAt + 120_001);
+  expect(refreshed.points).toBe(42);
+  wall.mockReturnValue(1);
+  elapse(1);
+  engine.checkpointWorld();
+  const final = store.load().economy?.pointLoot.find((drop) => drop.id === first.id);
+  assert(final);
+  expect(final.expiresAt).toBe(refreshed.expiresAt + 1);
+
+  const beforeExpiry = restart(final.expiresAt - 1);
+  expect(beforeExpiry.getLoot().find((drop) => drop.id === final.id)).toMatchObject({ points: 42 });
+  expect(beforeExpiry.getSnapshotState().entities).toEqual([]);
+  const atExpiry = restart(final.expiresAt);
+  expect(atExpiry.getLoot().some((drop) => drop.id === final.id)).toBe(false);
+  // Loading does not rebase or rewrite the persisted absolute deadline.
+  expect(store.load().economy?.pointLoot.find((drop) => drop.id === final.id)?.expiresAt).toBe(
+    final.expiresAt
+  );
 });
 
 test('decoded snapshots retain distant humans while bot geometry enters and leaves local interest', () => {
@@ -242,7 +294,7 @@ test('a dropped human transport stops both bots during reconnect grace and recov
 test('workers leave silk and equipment untouched and raiders collect no cargo', () => {
   const rng = new RNGService(82);
   const entities = new EntityManager(rng);
-  const loot = new LootManager(rng);
+  const loot = new LootManager(rng, () => Date.now());
   const worker = entities.addBot('worker', 'worker', { x: 800, y: 0 });
   const raider = entities.addBot('raider', 'raider', { x: 800, y: 0 });
   const silk = loot.spawnSilk(worker.position, 0, { x: 0, y: 0 });

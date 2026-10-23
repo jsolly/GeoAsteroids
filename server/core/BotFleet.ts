@@ -84,14 +84,14 @@ export class BotFleet {
   }
 
   /** A crash recovers transient holds as ordinary loose points, in the same economy batch. */
-  savedCargo(): SavedPointLoot[] {
+  savedCargo(now: number): SavedPointLoot[] {
     return [...this.bots.values()]
       .filter(({ actor }) => actor.cargo > 0)
       .map(({ actor }) => ({
         id: `bot-cargo-${actor.id}`,
         position: { ...actor.position },
         points: actor.cargo,
-        expiresAt: Date.now() + (ECONOMY.pointLootFrames / GAME.FPS) * 1000,
+        expiresAt: now + ECONOMY.pointLootMs,
       }));
   }
 

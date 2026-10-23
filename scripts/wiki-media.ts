@@ -1209,7 +1209,7 @@ function drawLootDiamond(
 
 function makeLootDemo(): Demo {
   const displayScale = 0.28;
-  const lootManager = new LootManager(new RNGService(0x55aa1122));
+  const lootManager = new LootManager(new RNGService(0x55aa1122), () => 0);
   const firstDrop = lootManager.spawnShard({ x: 0, y: 0 }, 0, 0.4);
   const secondDrop = lootManager.spawnShard({ x: 60, y: 0 }, 0, 0.25);
   const rock = makeAsteroid('loot-rock', { x: 44, y: 0 }, 22, 'rubble');
