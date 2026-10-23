@@ -10,6 +10,7 @@ import { tickAbilityHost } from '../../shared/shipAbilities';
 import { applyShipMass, GROWTH, resetShipMass } from '../../shared/shipGrowth';
 import { applyShipKitStats, DEFAULT_SHIP_KIT_ID } from '../../shared/shipKits';
 import type {
+  BotRole,
   ContourLockState,
   CrewSignal,
   EquipmentId,
@@ -27,6 +28,7 @@ import type { RNGService } from './RNGService';
 
 /** Authoritative live ship state; GameEngine owns persisted pilot progress. */
 export interface GameEntity {
+  botRole?: BotRole;
   downedUntil?: number | null;
   rescue?: RescueState | null;
   crewSignal?: CrewSignal | null;
@@ -177,7 +179,7 @@ export class EntityManager {
   public addPlayer(
     id: string,
     name: string,
-    ws: WebSocket,
+    ws?: WebSocket,
     position?: Position,
     kitId?: ShipKitId
   ): GameEntity {
@@ -206,7 +208,7 @@ export class EntityManager {
       mass: GROWTH.BASE_MASS,
       lastUpdate: this.now(),
       spawnProtectionTimer: SHIP.INVINCIBILITY_DURATION_FRAMES,
-      ws,
+      ...(ws ? { ws } : {}),
       kitId: DEFAULT_SHIP_KIT_ID,
       abilityCooldownFrames: 0,
       abilityActiveFrames: 0,
@@ -216,6 +218,19 @@ export class EntityManager {
 
     this.addEntity(entity);
     return entity;
+  }
+
+  public addBot(id: string, role: BotRole, position: Position): GameEntity {
+    const actor = this.addPlayer(
+      id,
+      role === 'worker' ? 'AI Worker' : 'AI Raider',
+      undefined,
+      position,
+      role === 'worker' ? 'hauler' : 'scout'
+    );
+    actor.botRole = role;
+    actor.color = role === 'worker' ? '#65d6a4' : '#ff615c';
+    return actor;
   }
 
   // Environmental damage is authoritative; unbounced crew lasers never enter this path.
@@ -367,7 +382,10 @@ export class EntityManager {
     delete entity.explodeTime;
     delete entity.deathCause;
 
-    this.placeEntityInArena(entity);
+    // BotFleet places revived bots beside a human, outside the town sanctuary.
+    if (entity.botRole === undefined) {
+      this.placeEntityInArena(entity);
+    }
     delete entity.overlayHold;
     entity.spawnProtectionTimer = SHIP.INVINCIBILITY_DURATION_FRAMES;
   }
@@ -389,7 +407,7 @@ export class EntityManager {
     const staleIds: string[] = [];
 
     for (const [entityId, entity] of this.entities) {
-      if (now - entity.lastUpdate > 30000) {
+      if (entity.botRole === undefined && now - entity.lastUpdate > 30000) {
         staleIds.push(entityId);
       }
     }

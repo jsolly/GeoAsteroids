@@ -208,7 +208,10 @@ export function createGameRuntime(hosts: GameRuntimeHosts, signal: AbortSignal):
         pilots: Object.freeze(
           ConnectionManager.getInstance()
             .getAllPlayers()
-            .filter((pilot) => pilot.ship.health > 0 && !pilot.ship.exploding)
+            .filter(
+              (pilot) =>
+                pilot.botRole === undefined && pilot.ship.health > 0 && !pilot.ship.exploding
+            )
             .map((pilot) =>
               Object.freeze({
                 id: pilot.id,

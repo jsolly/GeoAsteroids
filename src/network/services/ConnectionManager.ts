@@ -1381,6 +1381,11 @@ export class ConnectionManager {
           delete entity.ship.playerMotion;
         }
         entity.name = entityData.name;
+        if (entityData.botRole) {
+          entity.botRole = entityData.botRole;
+        } else {
+          delete entity.botRole;
+        }
         if (entity.type !== 'local') {
           entityData.kitId ??= DEFAULT_SHIP_KIT_ID;
         }

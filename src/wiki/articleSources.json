@@ -403,7 +403,10 @@
     "tests/unit/network/cooperative-state-survives-snapshot-v3.test.ts",
     "shared/chargedWeapon.ts",
     "tests/unit/server/charged-beams-use-server-time-and-cancel-on-death.test.ts",
-    "tests/unit/rendering/ship-deployment-assembles-existing-hull-parts.test.ts"
+    "tests/unit/rendering/ship-deployment-assembles-existing-hull-parts.test.ts",
+    "shared/aiShips.ts",
+    "server/core/BotFleet.ts",
+    "tests/unit/server/friendly-workers-and-hostile-raiders.test.ts"
   ],
   "hud-network": [
     "src/components/UpdateNotice.svelte",
@@ -714,6 +717,9 @@
     "tests/unit/server/physical-supplies-restore-frontier.test.ts",
     "tests/unit/network/cooperative-state-survives-snapshot-v3.test.ts",
     "shared/contourBridge.ts",
-    "server/core/CooperativeContourBridges.ts"
+    "server/core/CooperativeContourBridges.ts",
+    "shared/aiShips.ts",
+    "server/core/BotFleet.ts",
+    "tests/unit/server/friendly-workers-and-hostile-raiders.test.ts"
   ]
 }

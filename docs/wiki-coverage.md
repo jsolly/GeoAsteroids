@@ -53,6 +53,7 @@ while the surviving deterministic cases define the automated proof.
 | What happens when towed cargo hits another rock or ship? | hauler, asteroids, combat-survival | server/core/CollisionAuthority.ts, GameEngine.ts, authoritative combat tests |
 | Which satellite am I facing and what does a pickup do? | satellites | shared/eoSatellites.ts, pickup manager, pickup collision tests |
 | How do contours give my ship a speed bonus? | terrain | shared/heightfield.ts, shared/terrainTravel.ts, src/physics/terrain/, terrain and contour tests |
+| How do friendly workers help, and how do I fight raiders? | teamwork, combat-survival | shared/aiShips.ts, BotFleet.ts, GameEngine.ts, bot scenario tests |
 | What damages me, protects me, and resets on respawn? | combat-survival, teamwork | shared/combat.ts, EntityManager.ts, GameEngine.ts, combat tests |
 | How do harvested fields regrow while the shared field continues? | teamwork, hud-network | shared/exploration.ts, shared/world.ts, shared/player.ts, GameEngine.ts |
 | How do I read the HUD, open the universe map, and recover from a disconnect? | hud-network | src/rendering/hud/, universe map input and renderer, ConnectionManager.ts, broadcaster, snapshot protocol |

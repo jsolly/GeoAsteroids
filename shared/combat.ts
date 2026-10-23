@@ -1,4 +1,4 @@
-import type { Position } from '../shared-types';
+import type { BotRole, Position } from '../shared-types';
 
 interface CombatantState {
   exploding: boolean;
@@ -83,7 +83,7 @@ export function isWorldHazard(attackerId: string): boolean {
   );
 }
 
-/** Direct crew shots pass through hulls; a bounce arms the bolt as a hazard. */
-export function laserDamagesShips(bounces: number): boolean {
-  return bounces > 0;
+/** Allied direct shots pass through hulls; opposing factions and ricochets can hit. */
+export function laserDamagesShips(bounces: number, attacker?: BotRole, target?: BotRole): boolean {
+  return bounces > 0 || (attacker === 'raider') !== (target === 'raider');
 }

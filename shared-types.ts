@@ -410,7 +410,11 @@ export interface RescueState {
   completesAt: number;
 }
 
+export type BotRole = 'worker' | 'raider';
+
 export interface ServerEntityData {
+  /** Server-controlled hull; omitted for human pilots. */
+  botRole?: BotRole;
   downedUntil?: number | null;
   rescue?: RescueState | null;
   crewSignal?: CrewSignal | null;
