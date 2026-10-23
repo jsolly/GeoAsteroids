@@ -7,6 +7,7 @@ import {
   noteDebugSnapshot,
   readDebugHudMetrics,
   resetDebugHudMetricsForTests,
+  resetDebugHudSession,
   shortReleaseId,
 } from '../../../src/diagnostics/debugHudMetrics';
 
@@ -60,10 +61,72 @@ test('invalid frame intervals never replace valid frame evidence', () => {
   expect(readDebugHudMetrics(50).fps).toBe(20);
 });
 
-test('RTT is the time from the last ping send to its pong', () => {
-  noteDebugPingSent(1000);
-  noteDebugPong(1028);
+test('RTT is the elapsed time for the matching pending ping', () => {
+  noteDebugPingSent(1, 1000);
+  noteDebugPong(1, 1028);
   expect(readDebugHudMetrics(1030).rttMs).toBe(28);
+});
+
+test('a delayed earlier reply cannot be measured from a newer ping', () => {
+  noteDebugPingSent(1, 1000);
+  noteDebugPingSent(2, 3000);
+  noteDebugPong(1, 3100);
+  expect(readDebugHudMetrics(3100).rttMs).toBeUndefined();
+  noteDebugPong(2, 3120);
+  expect(readDebugHudMetrics(3120).rttMs).toBe(120);
+});
+
+test('pending pings and duplicate replies retain the last valid latency', () => {
+  noteDebugPingSent(1, 1000);
+  noteDebugPong(1, 1028);
+  noteDebugPingSent(2, 3000);
+  expect(readDebugHudMetrics(3000).rttMs).toBe(28);
+  noteDebugPong(1, 3100);
+  expect(readDebugHudMetrics(3100).rttMs).toBe(28);
+  noteDebugPong(2, 3120);
+  noteDebugPong(2, 3200);
+  expect(readDebugHudMetrics(3200).rttMs).toBe(120);
+});
+
+test.each([undefined, null, '1', 0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+  'a malformed or bare pong identity %s cannot complete a pending ping',
+  (probeId) => {
+    noteDebugPingSent(1, 1000);
+    noteDebugPong(probeId, 1028);
+    expect(readDebugHudMetrics(1030).rttMs).toBeUndefined();
+    noteDebugPong(1, 1040);
+    expect(readDebugHudMetrics(1040).rttMs).toBe(40);
+  }
+);
+
+test.each([999, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+  'an invalid reply time %s does not consume the pending probe',
+  (now) => {
+    noteDebugPingSent(1, 1000);
+    noteDebugPong(1, now);
+    expect(readDebugHudMetrics(1030).rttMs).toBeUndefined();
+    noteDebugPong(1, 1040);
+    expect(readDebugHudMetrics(1040).rttMs).toBe(40);
+  }
+);
+
+test('a session reset clears displayed latency and rejects the previous pending reply', () => {
+  noteDebugPingSent(1, 1000);
+  noteDebugPong(1, 1028);
+  noteDebugPingSent(2, 2000);
+  noteDebugSnapshot(10, 2010);
+  resetDebugHudSession();
+  noteDebugPong(2, 2030);
+  expect(readDebugHudMetrics(2030)).toMatchObject({
+    rttMs: undefined,
+    snapshotSequence: undefined,
+    snapshotAgeMs: undefined,
+  });
+  noteDebugPingSent(3, 3000);
+  noteDebugPong(2, 3010);
+  expect(readDebugHudMetrics(3010).rttMs).toBeUndefined();
+  noteDebugPong(3, 3040);
+  expect(readDebugHudMetrics(3040).rttMs).toBe(40);
 });
 
 test('snapshot age is measured from the last accepted snapshot', () => {

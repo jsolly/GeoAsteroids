@@ -10,6 +10,7 @@ import {
   SnapshotBroadcastCapture,
   SnapshotEncoder,
 } from '../../shared/snapshotProtocol';
+import { boundedDiagnosticError } from '../../shared/stateDiagnostics';
 import { isActiveScanner } from '../../shared/surveyScan';
 import {
   asteroidReach,
@@ -729,12 +730,7 @@ export class GameStateBroadcaster {
       recordOutbound(outboundClass(message), 'failed');
       logger.error('Failed to serialize direct message', {
         type: messageType(message),
-        error:
-          error instanceof Error
-            ? error.message
-            : typeof error === 'string'
-              ? error
-              : JSON.stringify(error),
+        error: boundedDiagnosticError(error, 'Unserializable direct message'),
       });
       return;
     }
@@ -767,16 +763,9 @@ export class GameStateBroadcaster {
     try {
       messageStr = JSON.stringify(message);
     } catch (error) {
-      // A circular Timeout on player.ws used to kill the process here and
-      // flap every client into the Reconnecting banner (#485 live miss).
       logger.error('Failed to serialize broadcast', {
         type: messageType(message),
-        error:
-          error instanceof Error
-            ? error.message
-            : typeof error === 'string'
-              ? error
-              : JSON.stringify(error),
+        error: boundedDiagnosticError(error, 'Unserializable broadcast'),
       });
       return;
     }
