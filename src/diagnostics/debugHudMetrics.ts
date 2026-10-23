@@ -6,19 +6,26 @@ const frameIntervals = new Float64Array(512);
 let firstFrame = 0;
 let frameCount = 0;
 let frameElapsedMs = 0;
-let lastPingSentAt = Number.NaN;
+let pendingPing: { probeId: number; sentAt: number } | undefined;
 let lastRttMs = Number.NaN;
 let lastSnapshotSequence = 0;
 let lastSnapshotAt = Number.NaN;
 
-export function noteDebugPingSent(now: number): void {
-  lastPingSentAt = now;
+export function noteDebugPingSent(probeId: number, now: number): void {
+  pendingPing = { probeId, sentAt: now };
 }
 
-export function noteDebugPong(now: number): void {
-  if (Number.isFinite(lastPingSentAt) && now >= lastPingSentAt) {
-    lastRttMs = now - lastPingSentAt;
+export function noteDebugPong(probeId: unknown, now: number): void {
+  if (
+    pendingPing === undefined ||
+    probeId !== pendingPing.probeId ||
+    !Number.isFinite(now) ||
+    now < pendingPing.sentAt
+  ) {
+    return;
   }
+  lastRttMs = now - pendingPing.sentAt;
+  pendingPing = undefined;
 }
 
 export function noteDebugSnapshot(sequence: number, now: number): void {
@@ -51,7 +58,7 @@ export function noteDebugFrame(dtMs: number): void {
 }
 
 export function resetDebugHudSession(): void {
-  lastPingSentAt = Number.NaN;
+  pendingPing = undefined;
   lastRttMs = Number.NaN;
   lastSnapshotSequence = 0;
   lastSnapshotAt = Number.NaN;

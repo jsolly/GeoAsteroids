@@ -733,11 +733,12 @@ export class ConnectionManager {
     }
 
     const pingNow = performance.now();
-    this.pingPayload.probeId = clientPerformance.probe(pingNow);
+    const probeId = clientPerformance.probe(pingNow);
+    this.pingPayload.probeId = probeId;
     if (!this.sendPayload(this.pingPayload)) {
       return;
     }
-    noteDebugPingSent(pingNow);
+    noteDebugPingSent(probeId, pingNow);
 
     if (isConnectionStale(this.lastServerMessageAt, Date.now())) {
       logger.warn('NETWORK', 'No server traffic within timeout; treating connection as lost', {
@@ -948,7 +949,7 @@ export class ConnectionManager {
       case 'pong': {
         const now = performance.now();
         clientPerformance.pong(message.probeId, now);
-        noteDebugPong(now);
+        noteDebugPong(message.probeId, now);
         return;
       }
       case 'playerShotFired':
