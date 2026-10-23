@@ -1645,7 +1645,8 @@ test('stalled npm script-shell setup is owned, cancelled and cleaned without exp
       const report = `const fs = require('node:fs');
         const start = require('node:child_process').spawnSync('ps', ['-p', String(process.pid), '-o', 'lstart='], {encoding:'utf8'}).stdout.trim();
         if (process.env.TERM_RESISTANT === '1') process.on('SIGTERM', () => {});
-        fs.writeFileSync(process.argv[1], JSON.stringify({pid:process.pid,start}));
+        fs.writeFileSync(process.argv[1] + '.tmp', JSON.stringify({pid:process.pid,start}));
+        fs.renameSync(process.argv[1] + '.tmp', process.argv[1]);
         setInterval(() => {}, 1000);`;
       const shell = join(f.root, 'stalled-shell.cjs');
       writeFileSync(
@@ -1655,7 +1656,8 @@ test('stalled npm script-shell setup is owned, cancelled and cleaned without exp
         const cp = require('node:child_process');
         if (process.env.TERM_RESISTANT === '1') process.on('SIGTERM', () => {});
         const start = cp.spawnSync('ps', ['-p', String(process.pid), '-o', 'lstart='], {encoding:'utf8'}).stdout.trim();
-        fs.writeFileSync(${JSON.stringify(records[0])}, JSON.stringify({pid:process.pid,start}));
+        fs.writeFileSync(${JSON.stringify(`${records[0]}.tmp`)}, JSON.stringify({pid:process.pid,start}));
+        fs.renameSync(${JSON.stringify(`${records[0]}.tmp`)}, ${JSON.stringify(records[0])});
         cp.spawn(process.execPath, ['-e', ${JSON.stringify(report)}, ${JSON.stringify(records[1])}], {stdio:'inherit'});
         process.stdout.write(${JSON.stringify(privateValue)});
         if (${JSON.stringify(fault)} === 'overflow') {

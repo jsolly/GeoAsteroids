@@ -1397,21 +1397,26 @@ export class ConnectionManager {
         const scoutToolSelected =
           entity.ship.kitId === 'scout' && snapshotUtility !== 'mineral_scan';
         const serverCooldown = entityData.abilityCooldownFrames ?? 0;
-        // Mineral Scan predicts its cooldown on send. A snapshot that still
-        // reads 0 must not clear that timer before the server echo. Failed
+        // Mineral Scan predicts its timers on send. A snapshot that still
+        // reads 0 must not reverse its camera before the server echo. Death
+        // and the first live echo after death always accept authority. Failed
         // probe launches and furnace builds stay at 0 and remain usable.
         if (
           entity.type !== 'local' ||
           entity.ship.kitId !== 'scout' ||
           scoutToolSelected ||
+          entityData.health <= 0 ||
+          entityData.exploding ||
+          entity.ship.health <= 0 ||
+          entity.ship.exploding ||
           serverCooldown > 0 ||
           entity.ship.abilityCooldownFrames <= 0
         ) {
           entity.ship.abilityCooldownFrames = serverCooldown;
+          entity.ship.abilityActiveFrames = scoutToolSelected
+            ? 0
+            : (entityData.abilityActiveFrames ?? 0);
         }
-        entity.ship.abilityActiveFrames = scoutToolSelected
-          ? 0
-          : (entityData.abilityActiveFrames ?? 0);
 
         entity.ship.furnaceClockOffsetMs = data.serverTime - Date.now();
         if (isLocalPlayer && entityData.bankedCargo !== undefined) {
