@@ -70,7 +70,7 @@
     "scripts/client-build.ts": "sha256:abe7ea029d9606ce316a76b6cef432aa7002420783f8dc739622af74a90e5892",
     "scripts/client-release-sha.ts": "sha256:e4d51752d83d1324cd254fbc9720a8f10970e323ad245b3541226a3463aee9ba",
     "scripts/generate-sounds.ts": "sha256:69e4621285bcc733acdd2c486a129a4630cbcc502f6ca784680ba49c9992b94d",
-    "scripts/wiki-check.ts": "sha256:c4146d2130c4d46fcbffdeca2b205821c57d0bab2e860954fefbe24a7f3ecfc7",
+    "scripts/wiki-check.ts": "sha256:83a1b4263d6cd5a698384556b75e78e0ab62d845182736c782c968263fa1bea9",
     "scripts/wiki-content.ts": "sha256:190a89be185ac685e37e7ae3d962d1fabb059a2a39fc3eee2f9cc09567e8a162",
     "scripts/wiki-media-encode.py": "sha256:78f7034494f83ad6ddee39305c95577aef5d17c5779ff9a5504212c09879d475",
     "scripts/wiki-media-fonts.ts": "sha256:6f2554c263f3812b7734f721adb197d559b2838a4ce7b34f74731768878c9509",
@@ -315,7 +315,7 @@
     "src/input/pointerSteering.ts": "sha256:7c85e4a3f553223a44cbc097f09a66bec4d7258b38399ef1f998f64829cfa729",
     "src/input/touchAbility.ts": "sha256:06700bc6fcee05b0a2f3163092cc73d6a10dee5f6cec86acc01fca02802e4c92",
     "src/input/touchControls.ts": "sha256:92df9136722ef0e66117cd5a2da5ec387b79ce3a4b0f70bc444b26e9125cf697",
-    "src/network/services/ConnectionManager.ts": "sha256:fe0f79785c963774787a2df1f782ffee8010523df976791bd1376dbe7516603e",
+    "src/network/services/ConnectionManager.ts": "sha256:18bcfcda3ae514abec7ea74c660bbc58356f6329d70330b102e24484e155d216",
     "src/network/services/PlayerMotionReconciliation.ts": "sha256:a13a7eb3c813fc97bd4ac9c757735f0712065a1b12ba8c1f889ea662ada808e1",
     "src/network/services/asteroidFieldSync.ts": "sha256:4e6a002c4e6340547bd12b005730a6ab26f9c8d289a2c0836992357687bd7cd0",
     "src/network/services/clientIdentity.ts": "sha256:6e5e8ae1c32a257f7fe2c26ceb2e5cdb59134182a3771b520bc355dff659d79d",
@@ -7055,6 +7055,45 @@
       "sources": ["src/rendering/furnaceRenderer.ts", "src/rendering/ricochetCourtRenderer.ts"],
       "topics": ["combat-survival", "hauler", "hud-network", "scout", "teamwork", "terrain"],
       "media": ["hauler"],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed Mineral Scan prediction and authoritative timer reconciliation against the Scout, HUD and teamwork articles. Existing pulse, cooldown, low-end view and return descriptions remain correct; no editorial or demonstration change is needed. The stale-snapshot regression failed before the fix; all 72 affected snapshot and Scan camera tests pass after it. Current local Chrome checks cover simple touch-size Scan with delayed genuine server snapshots and desktop full-detail Scan; no physical Fire qualification is claimed.",
+      "sources": ["src/network/services/ConnectionManager.ts"],
+      "topics": ["hud-network", "scout", "teamwork"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed callable Wiki checker and retained CLI status/output, all invalidation selectors, filesystem/media validation, scoped atomic acceptance and real pinned Biome formatting with its unchanged 10000ms deadline. Fixture retains every source addition/edit/deletion and rejection assertion; player rules, prose and demonstration output are unchanged.",
+      "sources": ["scripts/wiki-check.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-check.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed authoritative Scan cancellation on incoming death and the first live snapshot after local death. Existing Scout/HUD/teamwork rules and illustrations remain accurate; no prose or media change needed. Three actual transport/snapshot regressions fail before correction and pass afterward, including downed/exploding rejection, lifecycle ticks, respawn camera target and ability readiness. All75affected snapshot/camera/resource tests pass; original alive stale-snapshot protection remains covered.",
+      "sources": ["src/network/services/ConnectionManager.ts"],
+      "topics": ["hud-network", "scout", "teamwork"],
+      "media": [],
+      "owners": {}
+    },
+    {
+      "note": "Reviewed asynchronous real-Biome formatter IPC after the synchronous formatter timed out again in the full gate. Preserve the same command/configuration,10000msdeadline,16MiBoutput bound and atomic ledger replacement. Await process and stdin pipeline, propagate either failure and prefer formatter diagnostics on early input closure. All original fixture assertions/selectors and6CLI boundary checks remain; all3Wiki tests pass, including malformed-formatter-config rejection and unchanged ledger. Player rules and media are unaffected.",
+      "sources": ["scripts/wiki-check.ts"],
+      "topics": ["field-manual"],
+      "media": [],
+      "owners": {
+        "scripts/wiki-check.ts": "field-manual"
+      }
+    },
+    {
+      "note": "Reviewed the combined current-main ping/pong probe bookkeeping and local Scan timer reconciliation, including death and respawn authority. The changes occupy separate paths and preserve existing Scout, HUD and teamwork rules; no prose or demonstration change is required. Both upstream and local review histories are retained. Full integrated gate validation follows this source review.",
+      "sources": ["src/network/services/ConnectionManager.ts"],
+      "topics": ["hud-network", "scout", "teamwork"],
+      "media": [],
       "owners": {}
     }
   ]

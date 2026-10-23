@@ -35,6 +35,7 @@ import { cooperativeActive, getWorldCampaign } from '../../../src/network/worldC
 import { worldFurnaces } from '../../../src/network/worldExploration';
 import { getContourBridges } from '../../../src/physics/terrain/contourBridgeSession';
 import { getRolyPolys } from '../../../src/physics/terrain/rolyPolySession';
+import { scanCameraZoom } from '../../../src/rendering/canvas';
 import { sendCrewAction } from '../../../src/runtime/crewRescue';
 import { setSelectedShipKitId } from '../../../src/runtime/shipSelection';
 import { logger } from '../../../src/utils/Logger';
@@ -1847,12 +1848,13 @@ describe('actual ConnectionManager WebSocket message path', () => {
     expect(player.ship.abilityActiveFrames).toBe(0);
   });
 
-  test('a stale snapshot does not clear a predicted Mineral Scan cooldown', async () => {
+  test('a stale snapshot preserves predicted Mineral Scan until the server echo, then accepts its end', async () => {
     const player = createPlayer({
       name: 'Runtime pilot',
       type: 'local',
       position: { x: 500, y: 100 },
       kitId: 'scout',
+      combatNetwork: manager.combatNetwork,
     });
     vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
     const ws = await connect();
@@ -1865,20 +1867,95 @@ describe('actual ConnectionManager WebSocket message path', () => {
     zeroEntity.abilityCooldownFrames = 0;
     ws.receive('snapshot', new SnapshotEncoder(zero).encode(1));
     player.ship.scoutUtility = 'mineral_scan';
-    player.ship.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.scout;
+    expect(player.ship.activateAbility()).toBe(true);
+    expect(ws.sent.at(-1)?.type).toBe('useAbility');
+    expect(player.ship.abilityActiveFrames).toBe(SHIP_ABILITY.SCAN_FRAMES);
     const stale = captureSnapshot(zero);
     const staleEntity = stale.entities[0];
     assert.ok(staleEntity, 'stale snapshot entity');
     staleEntity.abilityCooldownFrames = 0;
     ws.receive('snapshot', new SnapshotEncoder(stale).encode(2));
     expect(player.ship.abilityCooldownFrames).toBe(SHIP_ABILITY.COOLDOWN_FRAMES.scout);
+    expect(player.ship.abilityActiveFrames).toBe(SHIP_ABILITY.SCAN_FRAMES);
     const echoed = captureSnapshot(stale);
     const echoedEntity = echoed.entities[0];
     assert.ok(echoedEntity, 'echoed snapshot entity');
     echoedEntity.abilityCooldownFrames = SHIP_ABILITY.COOLDOWN_FRAMES.scout - 4;
+    echoedEntity.abilityActiveFrames = SHIP_ABILITY.SCAN_FRAMES - 4;
     ws.receive('snapshot', new SnapshotEncoder(echoed).encode(3));
     expect(player.ship.abilityCooldownFrames).toBe(SHIP_ABILITY.COOLDOWN_FRAMES.scout - 4);
+    expect(player.ship.abilityActiveFrames).toBe(SHIP_ABILITY.SCAN_FRAMES - 4);
+    const ended = captureSnapshot(echoed);
+    const endedEntity = ended.entities[0];
+    assert.ok(endedEntity, 'ended snapshot entity');
+    endedEntity.abilityCooldownFrames =
+      SHIP_ABILITY.COOLDOWN_FRAMES.scout - SHIP_ABILITY.SCAN_FRAMES;
+    endedEntity.abilityActiveFrames = 0;
+    ws.receive('snapshot', new SnapshotEncoder(ended).encode(4));
+    expect(player.ship.abilityActiveFrames).toBe(0);
   });
+
+  test.each(['downed', 'exploding', 'locally predicted death'])(
+    'a Scan rejected during %s stays cancelled through respawn',
+    async (death) => {
+      vi.spyOn(Date, 'now').mockReturnValue(123_000);
+      const player = createPlayer({
+        name: 'Runtime pilot',
+        type: 'local',
+        position: { x: 500, y: 100 },
+        kitId: 'scout',
+        combatNetwork: manager.combatNetwork,
+      });
+      vi.spyOn(PlayerManager.getInstance(), 'getLocalPlayer').mockReturnValue(player);
+      const ws = await connect();
+      acknowledge(ws);
+      const ready = captureSnapshot(snapshotFixture());
+      const readyEntity = ready.entities[0];
+      assert.ok(readyEntity, 'ready snapshot entity');
+      readyEntity.id = manager.getClientId();
+      readyEntity.kitId = 'scout';
+      ws.receive('snapshot', new SnapshotEncoder(ready).encode(1));
+      player.ship.scoutUtility = 'mineral_scan';
+      expect(player.ship.activateAbility()).toBe(true);
+      expect(ws.sent.at(-1)?.type).toBe('useAbility');
+      expect(scanCameraZoom(player.ship, 800, 1094)).toBeLessThan(1);
+
+      if (death === 'locally predicted death') {
+        // Death and respawn may happen between received snapshots.
+        player.ship.takeDamage(player.ship.maxHealth);
+      } else {
+        // The server rejects the in-flight request after the pilot dies,
+        // so it never starts either authoritative ability timer.
+        const rejected = captureSnapshot(ready);
+        const rejectedEntity = rejected.entities[0];
+        assert.ok(rejectedEntity, 'rejected snapshot entity');
+        rejectedEntity.health = 0;
+        rejectedEntity.exploding = death === 'exploding';
+        rejectedEntity.downedUntil = death === 'downed' ? 183_000 : null;
+        ws.receive('snapshot', new SnapshotEncoder(rejected).encode(2));
+        expect(player.ship.abilityActiveFrames).toBe(0);
+        expect(player.ship.abilityCooldownFrames).toBe(0);
+      }
+      expect(player.ship.health).toBe(0);
+      expect(scanCameraZoom(player.ship, 800, 1094)).toBe(1);
+      for (let frame = 0; frame < SHIP_ABILITY.SCAN_FRAMES; frame++) {
+        player.ship.updateLifecycle();
+      }
+
+      const revived = captureSnapshot(ready);
+      const revivedEntity = revived.entities[0];
+      assert.ok(revivedEntity, 'respawn snapshot entity');
+      revivedEntity.spawnProtectionTimer = 60;
+      ws.receive('snapshot', new SnapshotEncoder(revived).encode(3));
+      expect(player.ship.health).toBe(player.ship.maxHealth);
+      expect(player.ship.exploding).toBe(false);
+      expect(player.ship.abilityActiveFrames).toBe(0);
+      expect(player.ship.abilityCooldownFrames).toBe(0);
+      expect(scanCameraZoom(player.ship, 800, 1094)).toBe(1);
+      expect(player.ship.activateAbility()).toBe(true);
+      expect(player.ship.abilityActiveFrames).toBe(SHIP_ABILITY.SCAN_FRAMES);
+    }
+  );
 
   test('a probe miss snapshot keeps the Scout ability ready', async () => {
     const player = createPlayer({
