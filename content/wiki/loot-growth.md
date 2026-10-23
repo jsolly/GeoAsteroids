@@ -17,7 +17,7 @@ media:
 
 ## Collecting loot
 
-Mined rocks leave point drops, the main source of cargo; they pull toward any ship and expire after two minutes. Shards and metal Tap canisters add smaller amounts; other [Tap salvage](/wiki/#hauler) repairs damage or supplies materials and navigation help. Tap canisters and silk pull toward Haulers while one is flying, and collecting loot keeps Contour Lock engaged.
+Mined rocks leave point drops, the main source of cargo; they pull toward human pilots and AI Workers and expire after two minutes. Shards and metal Tap canisters add smaller amounts; other [Tap salvage](/wiki/#hauler) repairs damage or supplies materials and navigation help. Tap canisters and silk pull toward Haulers while one is flying, and collecting loot keeps Contour Lock engaged.
 
 Shards, Tap canisters, and silk normally expire quickly; nest caches last longer, with lifetimes in the reference below. A Scout can collect Tap canisters and silk by touching them even when their attraction favors a nearby Hauler.
 
