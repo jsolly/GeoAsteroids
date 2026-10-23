@@ -56,7 +56,9 @@ export function drawLeaderboard(
     return;
   }
 
-  const entries = players.toSorted((a, b) => b.score - a.score);
+  const entries = players
+    .filter((player) => player.botRole === undefined)
+    .toSorted((a, b) => b.score - a.score);
 
   const { x: boardX, y: boardY, width: boardWidth, rowHeight, maxRows } = layout.leaderboard;
   const visible = entries.slice(0, maxRows);

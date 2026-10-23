@@ -18,7 +18,11 @@ media:
 
 ## Firing while moving
 
-Shots inherit your ship's motion; hold Space to repeat them, while a mouse click fires once. Direct crew shots mine rocks and kill spiders without hurting pilots. After a wall, reflective-rock, or court-panel bounce, a shot becomes a dangerous ricochet that can hit anyone.
+Shots inherit your ship's motion; hold Space to repeat them, while a mouse click fires once. Direct crew shots mine rocks, kill spiders, and damage AI Raiders without hurting friendly pilots or AI Workers. After a wall, reflective-rock, or court-panel bounce, a shot becomes a dangerous ricochet that can hit anyone.
+
+## AI Raiders
+
+Red ships named AI Raider pursue nearby pilots and workers and fire ordinary damaging bolts. Shoot them directly, or return to the Town Square sanctuary where raider bolts cannot hurt you; normal protection still applies outside town. Raiders respawn and carry no kill bounty.
 
 ## Charged beam
 

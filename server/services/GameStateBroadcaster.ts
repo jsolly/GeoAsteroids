@@ -262,13 +262,19 @@ export class GameStateBroadcaster {
                 (recipient.worldRemains && isWithinWorldInterest(asset.position, player.position))
             ),
 
-            entities: gameState.entities.map((entity) =>
-              entity.id === player.id ||
-              !entity.utilityFlight ||
-              isWithinWorldInterest(entity.utilityFlight.position, player.position)
-                ? entity
-                : { ...entity, utilityFlight: null }
-            ),
+            entities: gameState.entities
+              .filter(
+                (entity) =>
+                  entity.botRole === undefined ||
+                  isWithinWorldInterest(entity.position, player.position)
+              )
+              .map((entity) =>
+                entity.id === player.id ||
+                !entity.utilityFlight ||
+                isWithinWorldInterest(entity.utilityFlight.position, player.position)
+                  ? entity
+                  : { ...entity, utilityFlight: null }
+              ),
             asteroids,
             loot: this.gameEngine
               .getNearbyLoot(player.position)
@@ -594,6 +600,25 @@ export class GameStateBroadcaster {
       timestamp: Date.now(),
     };
 
+    const target = this.gameEngine.getPlayer(targetPlayerId);
+    if (target?.botRole !== undefined) {
+      // A bot can take damage before its first local snapshot, or after leaving
+      // another pilot's interest region. Only recipients with that hull may
+      // apply this event; its next snapshot already carries current health.
+      for (const pilot of this.gameEngine.getAllPlayers()) {
+        const ws = pilot.ws;
+        const recipient = ws ? this.snapshotRecipients.get(ws) : undefined;
+        if (
+          ws &&
+          recipient &&
+          !recipient.pending &&
+          recipient.baseline?.state.entities.some((entity) => entity.id === targetPlayerId)
+        ) {
+          this.sendToWebSocket(ws, message);
+        }
+      }
+      return;
+    }
     this.broadcastToAll(message);
   }
 

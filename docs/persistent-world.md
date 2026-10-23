@@ -126,3 +126,7 @@ cannot turn a newly ejected spill into an immediate pickup. Old point rows witho
 motion resume at rest with no lockout. The live cumulative deposit counter is
 presentation evidence only and restarts with the motion session; it is not bank
 balance and spending cannot erase a completion effect.
+
+## AI ship cargo recovery
+
+AI Workers and AI Raiders are transient server-owned hulls with no saved pilot account or private resume token. They stop when no pilot is connected and do not keep distant sectors awake. Their consumed cargo and settlement deposits use the existing atomic economy checkpoint. A checkpoint stores a worker's undeposited hold as recoverable loose points at its current position, so restarting restores the cargo without duplicating the worker. Removal also spills the hold before the next checkpoint. These recovery drops have the ordinary point-drop lifetime starting at that checkpoint; healthy carried cargo does not expire. No database migration or production reset is required.

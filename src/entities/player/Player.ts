@@ -3,6 +3,7 @@ import { applyShipKitToShip } from '../../../shared/shipKits';
 import { DEFAULT_HAULER_UTILITY, DEFAULT_SCOUT_UTILITY } from '../../../shared/shipUtilities';
 import { purchasedHullColor } from '../../../shared/townStore';
 import type {
+  BotRole,
   ContourLockState,
   CrewSignal,
   EquipmentId,
@@ -38,6 +39,7 @@ function copyVec2(dest: { x: number; y: number }, src: { x: number; y: number })
 }
 
 export class Player {
+  botRole?: BotRole;
   id: string;
   name: string;
   type: 'local' | 'remote';

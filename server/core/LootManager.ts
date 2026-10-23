@@ -411,7 +411,11 @@ export class LootManager {
       }
       const winner = collectors.find((entity) => {
         // Prior drops in this same collection pass may have filled this pilot.
-        if (!canCollectLoot(entity)) {
+        if (
+          !canCollectLoot(entity) ||
+          entity.botRole === 'raider' ||
+          (entity.botRole === 'worker' && drop.kind !== 'points')
+        ) {
           return false;
         }
         if (
@@ -470,8 +474,9 @@ export class LootManager {
   public expire(gameTime: number, collectors: readonly GameEntity[] = []): void {
     const wallNow = Date.now();
     const liveCollectors = collectors.filter((entity) => canCollectLoot(entity));
-    const magnetPositions = liveCollectors.map((entity) => entity.position);
-    const haulerPositions = liveCollectors
+    const humanCollectors = liveCollectors.filter((entity) => entity.botRole === undefined);
+    const magnetPositions = humanCollectors.map((entity) => entity.position);
+    const haulerPositions = humanCollectors
       .filter((entity) => entity.kitId === 'hauler')
       .map((entity) => entity.position);
 
@@ -509,12 +514,19 @@ export class LootManager {
         const equipment = drop.kind;
         addLootMagnetPull(
           drop,
-          liveCollectors
+          humanCollectors
             .filter((entity) => canCollectEquipment(entity, equipment))
             .map((entity) => entity.position)
         );
       } else {
-        addLootMagnetPull(drop, magnetPositions);
+        addLootMagnetPull(
+          drop,
+          drop.kind === 'points'
+            ? liveCollectors
+                .filter((entity) => entity.botRole !== 'raider')
+                .map((entity) => entity.position)
+            : magnetPositions
+        );
       }
       drop.position.x += drop.velocity.x;
       drop.position.y += drop.velocity.y;

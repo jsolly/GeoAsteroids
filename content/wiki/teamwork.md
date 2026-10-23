@@ -16,7 +16,11 @@ media: []
 
 ## One crew
 
-Everyone flies on the same team, with informal duels at the [Ricochet Court](/wiki/#combat-survival). Direct lasers and ship collisions are safe, but ricochets and towed rocks can hurt teammates.
+Human pilots fly on the same team, with informal duels at the [Ricochet Court](/wiki/#combat-survival). Direct lasers and ship collisions are safe, but ricochets and towed rocks can hurt teammates.
+
+## AI Workers
+
+Green ships named AI Worker collect nearby loose point cargo and return it to a lit furnace, contributing to the shared settlement rather than a pilot's bank. They leave equipment, silk, and satellites for you; protect them from [AI Raiders](/wiki/#combat-survival). The world has one worker and one raider while pilots are connected; workers need a lit furnace near the crew to offload.
 
 ## Scan, tow, deliver
 

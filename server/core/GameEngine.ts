@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import { logger } from '../../setup/serverLogger';
+import { AI_SHIPS, inBotSanctuary } from '../../shared/aiShips';
 import type { BeltSlotState } from '../../shared/asteroidBelt';
 import { boostOwnerIds, removeBoostOwner } from '../../shared/asteroidBoost';
 import { asteroidShardMass } from '../../shared/asteroidMaterials';
@@ -109,6 +110,7 @@ import { WORLD } from '../../shared/world';
 import { hazardPhase } from '../../shared/worldHazards';
 import type {
   AsteroidData,
+  BotRole,
   CivicModule,
   CrewAction,
   ExplorationTile,
@@ -151,6 +153,7 @@ import {
   AsteroidManager,
 } from './AsteroidManager.ts';
 import { BeltCrawlerManager } from './BeltCrawlerManager';
+import { BotFleet } from './BotFleet';
 import { CollisionAuthority, separateShipFromAsteroid } from './CollisionAuthority';
 import { CooperativeContourBridges } from './CooperativeContourBridges';
 import { EntityManager, type GameEntity } from './EntityManager';
@@ -172,6 +175,7 @@ import { WorldHazards } from './WorldHazards';
 const PILOT_RESUME_TOKEN_PATTERN = /^[a-f0-9]{64}$/u;
 
 interface ServerLaser {
+  attackerRole?: BotRole;
   id: string;
   ownerId: string;
   miningDamage: number;
@@ -282,7 +286,9 @@ interface FlushedWorldRow {
 
 export class GameEngine {
   private settlement = emptySettlement();
-  private lastSavedEconomy: { settlement: SettlementState; pointRevision: number } | undefined;
+  private lastSavedEconomy:
+    | { settlement: SettlementState; pointRevision: number; botCargo: boolean }
+    | undefined;
   private exploration = new ExplorationMap();
   private mapAssets = new MapAssets(this.exploration);
   private readonly remains = new WorldRemains();
@@ -422,6 +428,8 @@ export class GameEngine {
       targetAfter,
     });
   }
+
+  private readonly bots = new BotFleet();
 
   constructor(
     rngSeed?: number,
@@ -666,6 +674,36 @@ export class GameEngine {
       this.removePlayer(id);
       this.departedPlayers.push(id);
     }
+    this.bots.advance({
+      humans: this.getAllPlayers().filter(
+        (actor) => actor.ws !== undefined && actor.playerMotion !== undefined
+      ),
+      frame: this.gameTime,
+      spawn: (id, role, position) => this.entityManager.addBot(id, role, position),
+      remove: (id) => {
+        this.removePlayer(id);
+        this.departedPlayers.push(id);
+      },
+      lootNear: (position) => this.lootManager.queryCircle(position, AI_SHIPS.workRadius),
+      rocksNear: (position) =>
+        this.asteroidManager
+          .spatialIndex()
+          .query(spatialQueryBounds(position, AI_SHIPS.avoidRadius)),
+      furnaceNear: (position) => this.furnaces.nearest(position),
+      fire: (actor) => {
+        const dx = Math.cos(actor.angle);
+        const dy = -Math.sin(actor.angle);
+        const reach = (4 / 3) * hullRadiusForKit(actor.kitId);
+        this.spawnPlayerLaser(
+          actor.id,
+          { x: actor.position.x + dx * reach, y: actor.position.y + dy * reach },
+          {
+            x: actor.velocity.x + (dx * LASER.SPEED) / GAME.FPS,
+            y: actor.velocity.y + (dy * LASER.SPEED) / GAME.FPS,
+          }
+        );
+      },
+    });
     for (const pilot of this.entityManager.getAllEntities()) {
       const began = this.weaponCharges.get(pilot);
       if (
@@ -768,6 +806,11 @@ export class GameEngine {
 
     if (playerCount === 0 && !this.isPaused) {
       this.isPaused = true;
+      // Spill transient holds before the final-human checkpoint.
+      this.bots.clear((id) => {
+        this.removePlayer(id);
+        this.departedPlayers.push(id);
+      });
       logger.info('🔄 Game paused - no players online');
       this.lasers = [];
       this.clearPendingFeedback();
@@ -918,6 +961,7 @@ export class GameEngine {
     this.mapAssets.reset();
     this.clearTown();
     this.playerMotion.reset();
+    this.bots.clear((id) => this.entityManager.removeEntity(id));
     this.entityManager.clearAll();
 
     // Keep gameTime monotonic for the process lifetime. Zeroing it when the
@@ -969,6 +1013,11 @@ export class GameEngine {
     if (traveler?.furnaceTransit) {
       this.finishFurnaceTravel(traveler, this.getServerTime());
     }
+    if (traveler?.botRole && traveler.cargo > 0) {
+      this.lootManager.spawnPoints(traveler.position, traveler.cargo);
+      traveler.cargo = 0;
+    }
+    this.bots.forget(id);
     this.capturePilot(id);
     this.playerMotion.forgetActor(id);
     const departing = this.getPlayer(id);
@@ -1113,6 +1162,9 @@ export class GameEngine {
     socket: WebSocket,
     clientReleaseId?: string
   ): ReturnType<PlayerMotionService['register']> {
+    if (actor.botRole !== undefined) {
+      return { ok: false, error: 'AI ships cannot register pilot credentials' };
+    }
     const result = this.playerMotion.register(actor, socket, this.getServerTime());
     if (!result.ok) {
       return result;
@@ -1306,14 +1358,22 @@ export class GameEngine {
         }
       }
       const worldRow = this.worldRowIfChanged();
+      const botCargo = this.bots.savedCargo();
       const economyChanged =
         this.lastSavedEconomy?.settlement !== this.settlement ||
-        this.lastSavedEconomy?.pointRevision !== this.lootManager.pointRevision;
+        this.lastSavedEconomy?.pointRevision !== this.lootManager.pointRevision ||
+        botCargo.length > 0 ||
+        this.lastSavedEconomy?.botCargo === true;
       const cooperative = this.cooperative.checkpoint();
       this.persistence.persist({
         ...(cooperative ? { cooperative } : {}),
         ...(economyChanged
-          ? { economy: { settlement: this.settlement, pointLoot: this.lootManager.savedPoints() } }
+          ? {
+              economy: {
+                settlement: this.settlement,
+                pointLoot: [...this.lootManager.savedPoints(), ...botCargo],
+              },
+            }
           : {}),
         ...(worldRow ? { world: worldRow.world } : {}),
         // Custom diagnostic belts do not belong to regional activation or sleep bookkeeping.
@@ -1328,6 +1388,7 @@ export class GameEngine {
       this.lastSavedEconomy = {
         settlement: this.settlement,
         pointRevision: this.lootManager.pointRevision,
+        botCargo: botCargo.length > 0,
       };
       this.dirtyPilots.clear();
       this.cooperative.saved();
@@ -1525,7 +1586,7 @@ export class GameEngine {
   }
 
   public getAllPlayers(): GameEntity[] {
-    return this.entityManager.getAllEntities();
+    return this.entityManager.getAllEntities().filter((actor) => actor.botRole === undefined);
   }
 
   public getSpiderField() {
@@ -1562,7 +1623,7 @@ export class GameEngine {
       return;
     }
     this.updateSpiderBudget();
-    this.hazards.advance(now, this.getAllPlayers(), (id) =>
+    this.hazards.advance(now, this.entityManager.getAllEntities(), (id) =>
       this.handleShipDamage(id, 'asteroid', 50)
     );
   }
@@ -1605,7 +1666,7 @@ export class GameEngine {
       },
       players: this.entityManager
         .getAllEntities()
-        .filter((entity) => Boolean(entity.ws))
+        .filter((entity) => Boolean(entity.ws) || entity.botRole !== undefined)
         .map((entity) => ({
           id: entity.id,
           position: entity.position,
@@ -1673,7 +1734,7 @@ export class GameEngine {
         index: this.asteroidManager.spatialIndex(),
         players: this.entityManager
           .getAllEntities()
-          .filter((entity) => Boolean(entity.ws))
+          .filter((entity) => Boolean(entity.ws) || entity.botRole !== undefined)
           .map((entity) => ({
             id: entity.id,
             position: entity.position,
@@ -1699,7 +1760,7 @@ export class GameEngine {
   }
 
   public getPlayerCount(): number {
-    return this.entityManager.getAllEntities().length;
+    return this.getAllPlayers().length;
   }
 
   /**
@@ -1854,7 +1915,7 @@ export class GameEngine {
     return this.regionalField.update(
       this.asteroidManager,
       [
-        ...this.entityManager.getAllEntities().map((entity) => entity.position),
+        ...this.getAllPlayers().map((entity) => entity.position),
         ...this.surveyProbeManager.observerPositions(),
       ],
       this.getServerTime()
@@ -1912,7 +1973,7 @@ export class GameEngine {
     if (this.isPaused) {
       return;
     }
-    const owners = this.entityManager.getAllEntities().map((entity) => ({
+    const owners = this.getAllPlayers().map((entity) => ({
       id: entity.id,
       position: entity.position,
       radius: hullRadiusForKit(entity.kitId),
@@ -1940,8 +2001,7 @@ export class GameEngine {
   }
 
   private collectNearbySatellitePickups(): void {
-    const players = this.entityManager
-      .getAllEntities()
+    const players = this.getAllPlayers()
       .filter(
         (entity) =>
           entity.health > 0 &&
@@ -2026,9 +2086,13 @@ export class GameEngine {
     damage: number
   ): { applied: boolean; isDestroyed: boolean; entity?: GameEntity } {
     logger.debug('handleShipDamage called', { targetId, attackerId, damage });
-    // Direct crew shots and rams never apply. World hazards, including bounced
-    // lasers, still remove health.
-    if (!isWorldHazard(attackerId)) {
+    // Crew remain safe from allied fire and rams. Opposing factions and world
+    // hazards, including bounced lasers, use the same authoritative damage path.
+    const target = this.entityManager.getEntity(targetId);
+    const opposedShot =
+      (attackerId === 'raider' && target?.botRole !== 'raider') ||
+      (attackerId === 'crew-fire' && target?.botRole === 'raider');
+    if (!isWorldHazard(attackerId) && !opposedShot) {
       return { applied: false, isDestroyed: false };
     }
 
@@ -2066,7 +2130,7 @@ export class GameEngine {
       return { applied: true, isDestroyed: false, entity: damaged };
     }
 
-    if (this.cooperative.activated) {
+    if (this.cooperative.activated && damaged.botRole === undefined) {
       this.downShip(damaged, attackerId);
     } else {
       this.applyShipDeath(damaged, attackerId);
@@ -2312,13 +2376,6 @@ export class GameEngine {
       targetType: outcome.entity.type,
     };
     return broadcast;
-  }
-
-  private applyRicochetHullHit(targetId: string, damage: number): void {
-    const result = this.applyDirectedHit(targetId, 'ricochet', damage);
-    if (result) {
-      this.combatSink?.(result);
-    }
   }
 
   public cooperativeEnabled(): boolean {
@@ -2800,9 +2857,11 @@ export class GameEngine {
     }
 
     this.laserSeq += 1;
+    const attackerRole = this.getPlayer(ownerId)?.botRole;
     const laser: ServerLaser = {
       id: `server-laser-${this.laserNonce}-${ownerId}-${this.laserSeq}`,
       ownerId,
+      ...(attackerRole ? { attackerRole } : {}),
       miningDamage: this.miningDamage(ownerId),
       position: { x: position.x, y: position.y },
       prevPosition: { x: position.x, y: position.y },
@@ -2926,17 +2985,20 @@ export class GameEngine {
       const surface = findLaserSurfaceImpact(start, end);
       const distance = Math.hypot(end.x - start.x, end.y - start.y);
       const owner = this.getPlayer(laser.ownerId);
-      const hulls = laserDamagesShips(laser.bounces)
-        ? this.entityManager
-            .getAllEntities()
-            .filter((entity) => !isCombatantImmune(entity))
-            .map((entity) => ({
-              id: entity.id,
-              position: entity.position,
-              radius: hullRadiusForKit(entity.kitId) + LASER.HIT_RADIUS,
-              kind: 'ship' as const,
-            }))
-        : [];
+      const hulls = this.entityManager
+        .getAllEntities()
+        .filter(
+          (entity) =>
+            !isCombatantImmune(entity) &&
+            laserDamagesShips(laser.bounces, laser.attackerRole, entity.botRole) &&
+            !(laser.attackerRole === 'raider' && inBotSanctuary(entity.position))
+        )
+        .map((entity) => ({
+          id: entity.id,
+          position: entity.position,
+          radius: hullRadiusForKit(entity.kitId) + LASER.HIT_RADIUS,
+          kind: 'ship' as const,
+        }));
       const probeTargets: LaserAuxiliaryTarget[] = this.surveyProbeManager
         .targetsIn([...nearbyRocks, ...this.spiderManager.getBodies()])
         .map((target) => ({ ...target, kind: 'surveyProbe' as const }));
@@ -3035,7 +3097,20 @@ export class GameEngine {
         } else if (auxiliary.kind === 'surveyProbe') {
           this.damageSurveyProbe(auxiliary.hostId, DAMAGE.LASER_HIT * laser.energy);
         } else {
-          this.applyRicochetHullHit(auxiliary.id, DAMAGE.LASER_HIT * laser.energy);
+          const cause =
+            laser.bounces > 0
+              ? 'ricochet'
+              : laser.attackerRole === 'raider'
+                ? 'raider'
+                : 'crew-fire';
+          const result = this.applyDirectedHit(
+            auxiliary.id,
+            cause,
+            DAMAGE.LASER_HIT * laser.energy
+          );
+          if (result) {
+            this.combatSink?.(result);
+          }
         }
         this.observeFixtureTerminal(
           laser,
@@ -3263,6 +3338,7 @@ export class GameEngine {
         (entity) =>
           ({
             id: entity.id,
+            ...(entity.botRole ? { botRole: entity.botRole } : {}),
             furnaceTransit: entity.furnaceTransit ?? null,
             downedUntil: entity.downedUntil ?? null,
             rescue: entity.rescue ?? null,
@@ -3941,7 +4017,7 @@ export class GameEngine {
   public setHaulerUtility(entityId: string, utilityId: unknown): boolean {
     const entity = this.entityManager.getEntity(entityId);
     if (
-      !entity ||
+      entity === undefined ||
       (entity.downedUntil != null &&
         entity.downedUntil !== 0 &&
         !Number.isNaN(entity.downedUntil)) ||
@@ -4359,7 +4435,9 @@ export class GameEngine {
   private awardPilotPoints(entityId: string, points: number): number | undefined {
     const entity = this.getPlayer(entityId);
     if (entity) {
-      entity.score += points;
+      if (entity.botRole === undefined) {
+        entity.score += points;
+      }
       this.settlement = advanceSettlement({
         ...this.settlement,
         points: this.settlement.points + points,

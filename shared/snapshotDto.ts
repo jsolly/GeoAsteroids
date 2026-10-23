@@ -141,6 +141,7 @@ const transit = shape<FurnaceTransit>({
     value <= FURNACE_TRAVEL.MAX_DURATION_MS,
 });
 const entity = shape<ServerEntityData>({
+  botRole: optional(choice('worker', 'raider')),
   downedUntil: optional((value) => value === null || counter(value)),
   rescue: optional(
     (value) => value === null || shape({ targetId: string, completesAt: counter })(value)
