@@ -474,7 +474,7 @@ export class GameEngine {
         this.gameTime
       );
     });
-    this.lootManager = new LootManager(this.rngService, this.mapAssets);
+    this.lootManager = new LootManager(this.rngService, () => this.getServerTime(), this.mapAssets);
     this.lootManager.restorePoints(loaded?.economy?.pointLoot ?? []);
     this.mapAssets.primeInitialLoot();
     this.satellitePickupManager = new SatellitePickupManager(this.rngService);
@@ -1358,7 +1358,7 @@ export class GameEngine {
         }
       }
       const worldRow = this.worldRowIfChanged();
-      const botCargo = this.bots.savedCargo();
+      const botCargo = this.bots.savedCargo(this.getServerTime());
       const economyChanged =
         this.lastSavedEconomy?.settlement !== this.settlement ||
         this.lastSavedEconomy?.pointRevision !== this.lootManager.pointRevision ||
@@ -4312,9 +4312,8 @@ export class GameEngine {
   }
 
   /** Server-authoritative pickup: first overlapping live ship wins. */
-  public collectLoot(): Array<{ collectorId: string; lootId: string; mass: number }> {
+  public collectLoot(): void {
     const collected = this.lootManager.collectOverlaps(this.entityManager.getAllEntities());
-    const results: Array<{ collectorId: string; lootId: string; mass: number }> = [];
     const events: LootCollected[] = [];
     for (const { collector, loot } of collected) {
       events.push({
@@ -4327,13 +4326,11 @@ export class GameEngine {
       if (isEquipmentId(loot.kind)) {
         collector.equipment = [...(collector.equipment ?? []), loot.kind];
         collector.lastUpdate = this.getServerTime();
-        results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
         this.capturePilot(collector.id);
         continue;
       }
       if ((loot.points ?? 0) > 0) {
         this.capturePilot(collector.id);
-        results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
         continue;
       }
       if (loot.salvage === 'ice') {
@@ -4349,11 +4346,9 @@ export class GameEngine {
         collector.silk = (collector.silk ?? 0) + 1;
         collector.lastUpdate = this.getServerTime();
         this.capturePilot(collector.id);
-        results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
         continue;
       }
       collector.lastUpdate = this.getServerTime();
-      results.push({ collectorId: collector.id, lootId: loot.id, mass: collector.mass });
       logger.debug('LOOT', 'Collected loot', {
         collectorId: collector.id,
         lootId: loot.id,
@@ -4362,15 +4357,12 @@ export class GameEngine {
         maxHealth: collector.maxHealth,
       });
     }
-    if (results.length > 0) {
-      for (const event of events) {
-        if (this.pendingLootCollections.length >= MAX_PENDING_LOOT_COLLECTIONS) {
-          this.pendingLootCollections.shift();
-        }
-        this.pendingLootCollections.push(event);
+    for (const event of events) {
+      if (this.pendingLootCollections.length >= MAX_PENDING_LOOT_COLLECTIONS) {
+        this.pendingLootCollections.shift();
       }
+      this.pendingLootCollections.push(event);
     }
-    return results;
   }
 
   /**
