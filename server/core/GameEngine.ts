@@ -319,7 +319,10 @@ export class GameEngine {
   private readonly commissioned = new Set<string>();
   private readonly lastCrewSignalAt = new Map<string, number>();
   private clockPrimed: boolean = false;
-  private readonly loopHealth = new GameLoopHealth();
+  private readonly loopHealth = new GameLoopHealth(() => ({
+    players: this.getPlayerCount(),
+    persistence: this.persistence?.diagnostics(),
+  }));
   /** Pilots whose saved row changed since the last flush; live pilots are captured at flush time. */
   private readonly dirtyPilots = new Set<string>();
   private lastFlushedWorldRow: FlushedWorldRow | undefined;
@@ -624,8 +627,6 @@ export class GameEngine {
       discardedMs,
       now: finished,
       gameTime: this.gameTime,
-      players: this.getPlayerCount(),
-      persistence: this.persistence?.diagnostics(),
     });
     return frames;
   }
@@ -1907,9 +1908,9 @@ export class GameEngine {
     return this.satellitePickupManager.createPickups();
   }
 
-  public tickSatellitePickups(): SatellitePickupData[] {
+  public tickSatellitePickups(): void {
     if (this.isPaused) {
-      return this.getAllSatellitePickups();
+      return;
     }
     const owners = this.entityManager.getAllEntities().map((entity) => ({
       id: entity.id,
@@ -1920,7 +1921,6 @@ export class GameEngine {
     }));
     this.satellitePickupManager.update(owners);
     this.collectNearbySatellitePickups();
-    return this.getAllSatellitePickups();
   }
 
   public equipSatellite(entityId: string, pickupId: string): boolean {
@@ -3336,7 +3336,12 @@ export class GameEngine {
       }
       const activated = activateAbilityOnHost(entity, { asteroids: [] }).activated;
       if (activated) {
-        this.surveyNearbyAsteroids(entity);
+        this.surveyFromPosition(
+          entity.id,
+          entity.position,
+          this.getAllAsteroids(),
+          SHIP_ABILITY.SCAN_RANGE
+        );
       }
       return activated;
     }
@@ -3405,14 +3410,6 @@ export class GameEngine {
     return isTowCableUtility(entity) && !asteroid.boost;
   }
 
-  private surveyNearbyAsteroids(
-    scout: GameEntity,
-    asteroids = this.getAllAsteroids(),
-    range: number = SHIP_ABILITY.SCAN_RANGE
-  ): void {
-    this.surveyFromPosition(scout.id, scout.position, asteroids, range);
-  }
-
   private surveyFromPosition(
     ownerId: string,
     position: Position,
@@ -3420,6 +3417,15 @@ export class GameEngine {
     range: number
   ): void {
     this.revealArea(position, range);
+    this.markSurveyedAsteroids(ownerId, position, asteroids, range);
+  }
+
+  private markSurveyedAsteroids(
+    ownerId: string,
+    position: Position,
+    asteroids: readonly AsteroidData[],
+    range: number
+  ): void {
     for (const rock of asteroids) {
       if (
         rock.health <= 0 ||
@@ -3834,33 +3840,23 @@ export class GameEngine {
     for (const entity of this.entityManager.getAllEntities()) {
       entity.contourDraftFrames = Math.max(0, (entity.contourDraftFrames ?? 0) - 1);
       entity.navigationAssistFrames = Math.max(0, (entity.navigationAssistFrames ?? 0) - 1);
-      if (!entity.exploding && entity.health > 0 && entity.respawnTimer === undefined) {
-        this.revealArea(
-          entity.position,
-          entity.kitId === 'scout' && entity.abilityActiveFrames > 0
-            ? SHIP_ABILITY.SCAN_RANGE
-            : EXPLORATION_RANGE[entity.kitId]
-        );
-      }
       const scanRange =
         entity.kitId === 'scout' && entity.abilityActiveFrames > 0
           ? SHIP_ABILITY.SCAN_RANGE
           : this.satellitePickupManager.countOrbitingFor(entity.id) > 0
             ? SATELLITE_PICKUP.SCAN_RANGE
             : 0;
-      if (
-        scanRange > 0 &&
-        !entity.exploding &&
-        entity.health > 0 &&
-        entity.respawnTimer === undefined
-      ) {
-        const nearbyAsteroids = this.asteroidManager.spatialIndex().query({
-          minX: entity.position.x - scanRange,
-          minY: entity.position.y - scanRange,
-          maxX: entity.position.x + scanRange,
-          maxY: entity.position.y + scanRange,
-        });
-        this.surveyNearbyAsteroids(entity, nearbyAsteroids, scanRange);
+      if (!entity.exploding && entity.health > 0 && entity.respawnTimer === undefined) {
+        this.revealArea(entity.position, Math.max(EXPLORATION_RANGE[entity.kitId], scanRange));
+        if (scanRange > 0) {
+          const nearbyAsteroids = this.asteroidManager.spatialIndex().query({
+            minX: entity.position.x - scanRange,
+            minY: entity.position.y - scanRange,
+            maxX: entity.position.x + scanRange,
+            maxY: entity.position.y + scanRange,
+          });
+          this.markSurveyedAsteroids(entity.id, entity.position, nearbyAsteroids, scanRange);
+        }
       }
       const spider =
         entity.harpoonTargetId != null && entity.harpoonTargetId !== ''
