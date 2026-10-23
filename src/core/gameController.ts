@@ -38,6 +38,8 @@ import { getSpiderField } from '../physics/terrain/spiderSession';
 import { stopTerrainPrefetch } from '../physics/terrain/terrainSession';
 import { drawGame } from '../rendering/canvas';
 import { canvasManager } from '../rendering/canvasSurface';
+import { clearStaticFurnaceArtwork } from '../rendering/furnaceRenderer';
+import { clearStaticCourtArtwork } from '../rendering/ricochetCourtRenderer';
 import { getSelectedShipKitId } from '../runtime/shipSelection';
 import { syncCargoFullHint } from '../ui/cargoFullHint';
 import { mountFurnaceTravelPrompt, syncFurnaceTravelPrompt } from '../ui/furnaceTravelPrompt';
@@ -137,6 +139,8 @@ export class GameController {
   }
 
   detachRuntime(): void {
+    clearStaticFurnaceArtwork();
+    clearStaticCourtArtwork();
     this.joinGeneration++;
     this.gameStateManager.setIsGameRunning(false);
     this.runtimeListeners?.abort();
@@ -163,6 +167,8 @@ export class GameController {
 
   // Game lifecycle methods
   newGame(playerName?: string, kitId?: ShipKitId): void {
+    clearStaticFurnaceArtwork();
+    clearStaticCourtArtwork();
     clearAsteroidShatters();
     resetFurnacePipePulses();
     this.simulationAccumulatorMs = 0;

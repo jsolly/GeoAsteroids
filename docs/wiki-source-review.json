@@ -265,7 +265,7 @@
     "src/constants/user-preferences.ts": "sha256:72f374ecb53b0ad9abaacd349620852928c63b6f16ed4c6e33b0f1f374ac361a",
     "src/content.config.ts": "sha256:36cd5fa9c536571a40d5464019e6572e98904b0d335bb849389df299a5deef77",
     "src/core/eventLoop.ts": "sha256:84377f7ccf49339bd0a7f78bfe77236776c42971e9ca3cdd788137a37f058f47",
-    "src/core/gameController.ts": "sha256:5aadcf0ec8f8745a364e7a9a8a8a439a1e989901559c97aca1043698f54298dc",
+    "src/core/gameController.ts": "sha256:9fb5b20dc29c2d59b54ecd9fed1fc9bb65574e0dde14a0d769d8506d1d731f03",
     "src/core/services/GameStateManager.ts": "sha256:f7558f319c4164fe7e008b526556e61e65a89cd13bb81637c4582842cf8fd8a7",
     "src/core/services/InputManager.ts": "sha256:4bda2decc191b6a716d58fac1a7c3d0ce67476eb3666bc65d81de2660e8b7d43",
     "src/diagnostics/clientDiagnostics.ts": "sha256:a4775c68fcd740081832385689f432dc68dab693f7ef9ee2300b1a9e4341f26c",
@@ -345,7 +345,7 @@
     "src/rendering/campaignRenderer.ts": "sha256:e1337a231b46068872f8ede65f815fe5f514417fc77b110511765086ff8d540f",
     "src/rendering/canvas.ts": "sha256:cdc45d45672137c4524237e8702657bf795808ca1089a5f4d62f1177a72b6bb2",
     "src/rendering/canvasBackground.ts": "sha256:aa0fcb20a82cd5c7e9bf65c8661bb2da121a346a08f16dff223095546636ef75",
-    "src/rendering/canvasSurface.ts": "sha256:b3875601bab9930c654924b4e6f0dad4e7ace4992ae7a8948594eaede9c79771",
+    "src/rendering/canvasSurface.ts": "sha256:026d69739d69f27f48e66904ecd1ac270007e0d808831b0016732274fe559237",
     "src/rendering/cargoHoldRenderer.ts": "sha256:9d9fa3eb3da559c7d0c05fc2997460742e2ad3fb4e0c55841c0304408e435f5c",
     "src/rendering/cargoOffloadRenderer.ts": "sha256:c4b2f3a0bda19a35fc03b6016d8c77ef81cd2aa02519610cf020f574569e826d",
     "src/rendering/contourBridgeRenderer.ts": "sha256:7a9431bc0fce2d22f57fdd550ccb0e82d79b812a6f6b9af11c104e43e81fea22",
@@ -357,7 +357,7 @@
     "src/rendering/crewSignalRenderer.ts": "sha256:3dd933457fb43fd631c91441bf4b805fc8d82d6c7813d0fe27006c445f120ab7",
     "src/rendering/devicePixelRatioWatcher.ts": "sha256:f5bb015239f43c33ec954e43bf3fa5b6ff0cfb2db1b8e044bf29d1623a2be748",
     "src/rendering/drawingContext.ts": "sha256:e7559e853594a0f04218f6f3f6b56696fc5fdb89cc38df13663c176160dee8c2",
-    "src/rendering/furnaceRenderer.ts": "sha256:73a4ff537830936d3e9b31a33eda7e25566cfd6d942ea816d76b2611ef2d80c6",
+    "src/rendering/furnaceRenderer.ts": "sha256:3108bbc1875ece13f178a636138f248587db5f1d6df8cbc98bc596f4e11a579e",
     "src/rendering/gpuRearRenderer.ts": "sha256:d15d65438b71907737ea17ecf7bcea54f9e7f5a0d9b3a1eca585f35f2a75bbd5",
     "src/rendering/gpuResources.ts": "sha256:4771865e5866b12493b676e8b61f37af7e719738786388e0e59fa88e296ccef6",
     "src/rendering/gpuShaders.ts": "sha256:8fc33f8f855677b975875343ed51caf0b00245546284ce8e5841db91ad654999",
@@ -373,7 +373,7 @@
     "src/rendering/rasterSurface.ts": "sha256:4f0f4b38fa398df8c0facdbf2eab75ddd49d1d3b52a43e8f74632731208e3953",
     "src/rendering/remainsRenderer.ts": "sha256:f43d3df268dd839054c2214c394930cf559d99714cd8a99117cea399b482ab19",
     "src/rendering/renderQuality.ts": "sha256:91f2cb79a8fe1041302da0fdecedbde68d418c2623e44188cde47533dbb516a3",
-    "src/rendering/ricochetCourtRenderer.ts": "sha256:31a3dc6c279e3264cea263868787f08c89cbd149b90199a9d6c83ee73674feac",
+    "src/rendering/ricochetCourtRenderer.ts": "sha256:c087819882bc8106c415686ba39d9824278ea5cfe381a0fb072e5f7d1442ee0f",
     "src/rendering/rolyPolyRenderer.ts": "sha256:be70bfa399633a71396bca885dfddf4d4a37563087d3aed209e17ec13db0f740",
     "src/rendering/routeWaypoints.ts": "sha256:0fee65f107d3c3064803b2dbb3b2cce749d8f0db43274c21447a0b1ad5e0f66b",
     "src/rendering/scanDetailPolicy.ts": "sha256:2b3c60bf266b4d32c9d991dba8ff20e8deeb7b983421fcf1bdb932f421a89bb4",
@@ -7028,6 +7028,34 @@
         "scripts/wiki-media.ts": "field-manual",
         "src/wiki/gameReference.ts": "loot-growth"
       }
+    },
+    {
+      "note": "Reviewed lifecycle, flight versus Scan rendering, furnace delivery artwork and court geometry against the eight mapped articles. No gameplay, controls or Wiki copy changes. Portable furnace painter retains the original composition used by the Hauler demonstration; native baseline and candidate furnace pixels inspected at DPR 1, 1.5 and 2. Fifteen focused regressions pass; native Chrome desktop/mobile gameplay and Scout/Hauler Wiki captures inspected. Full glow and live flames retained. Gameplay had an AudioContext autoplay warning; Wiki console had no warnings or errors.",
+      "sources": [
+        "src/core/gameController.ts",
+        "src/rendering/canvasSurface.ts",
+        "src/rendering/furnaceRenderer.ts",
+        "src/rendering/ricochetCourtRenderer.ts"
+      ],
+      "topics": [
+        "combat-survival",
+        "controls",
+        "field-manual",
+        "hauler",
+        "hud-network",
+        "scout",
+        "teamwork",
+        "terrain"
+      ],
+      "media": ["hauler"],
+      "owners": {}
+    },
+    {
+      "note": "Canvas-state failure fix only: preserved paint order, geometry, glow and timing. Reviewed six mapped topics and portable Hauler illustration painter; no Wiki copy or media changes needed.21affected tests pass; all five new allocation/blit state regressions fail against saved pre-fix painters and pass fixed. Native Chrome confirms all five errors propagate with zero leaked saves, restored transforms and successful next paint. Type check passes.",
+      "sources": ["src/rendering/furnaceRenderer.ts", "src/rendering/ricochetCourtRenderer.ts"],
+      "topics": ["combat-survival", "hauler", "hud-network", "scout", "teamwork", "terrain"],
+      "media": ["hauler"],
+      "owners": {}
     }
   ]
 }

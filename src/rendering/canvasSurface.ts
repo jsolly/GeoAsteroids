@@ -687,6 +687,11 @@ class CanvasManager {
     return Math.hypot(transform.a, transform.b);
   }
 
+  /** Static flight artwork must not rebuild a bitmap at every Scan easing step. */
+  isFlightView(): boolean {
+    return this.zoom === 1;
+  }
+
   getPlayfieldScale(): number {
     return PLAYFIELD_CLOSE_SCALE;
   }
